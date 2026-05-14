@@ -9,7 +9,7 @@ import logRoutes from "./routes/logRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import segmentRoutes from "./routes/segmentRoutes.js";
 import { initializeRuntime } from "./bootstrap.js";
-import { getCorsOrigins } from "./config/environment.js";
+import { getCorsOrigins, isAllowedVercelOrigin } from "./config/environment.js";
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 
 function buildCorsOptions() {
@@ -17,7 +17,9 @@ function buildCorsOptions() {
 
   return {
     origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin.replace(/\/$/, ""))) {
+      const normalizedOrigin = origin?.replace(/\/$/, "");
+
+      if (!origin || allowedOrigins.includes(normalizedOrigin) || isAllowedVercelOrigin(normalizedOrigin)) {
         callback(null, true);
         return;
       }

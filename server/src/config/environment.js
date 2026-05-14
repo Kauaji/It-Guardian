@@ -20,9 +20,19 @@ export function getCorsOrigins() {
       "http://127.0.0.1:5173",
       process.env.CLIENT_ORIGIN,
       process.env.FRONTEND_URL,
-      process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null
+      process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
+      process.env.VERCEL_BRANCH_URL ? `https://${process.env.VERCEL_BRANCH_URL}` : null
     ].filter(Boolean).map((origin) => origin.replace(/\/$/, "")))
   );
+}
+
+export function isAllowedVercelOrigin(origin) {
+  try {
+    const url = new URL(origin);
+    return isVercel && url.protocol === "https:" && url.hostname.endsWith(".vercel.app");
+  } catch (_error) {
+    return false;
+  }
 }
 
 export function getJwtSecret() {
