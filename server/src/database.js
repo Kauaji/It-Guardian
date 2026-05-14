@@ -33,6 +33,18 @@ export async function query(text, params = []) {
   return pool.query(text, params);
 }
 
+async function queryIgnoringDuplicateConstraint(text, params = []) {
+  try {
+    return await query(text, params);
+  } catch (error) {
+    if (error.code === "42710" || /already exists/i.test(error.message || "")) {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
 export async function initializeDatabase() {
   await query(`
     CREATE TABLE IF NOT EXISTS users (
@@ -101,12 +113,7 @@ export async function initializeDatabase() {
     ADD COLUMN IF NOT EXISTS group_id TEXT;
   `);
 
-  await query(`
-    ALTER TABLE inventory_segments
-    DROP CONSTRAINT IF EXISTS inventory_segments_group_id_fkey;
-  `);
-
-  await query(`
+  await queryIgnoringDuplicateConstraint(`
     ALTER TABLE inventory_segments
     ADD CONSTRAINT inventory_segments_group_id_fkey
     FOREIGN KEY (group_id) REFERENCES segment_groups(id) ON DELETE SET NULL;
