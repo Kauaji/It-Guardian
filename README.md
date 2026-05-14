@@ -1,172 +1,216 @@
 # IT Guardian
 
-IT Guardian is a functional infrastructure monitoring MVP. It combines Zabbix-style metrics with OCS Inventory-style hardware/software data and exposes an admin dashboard for operations teams.
+IT Guardian e um MVP funcional para monitoramento e inventario de infraestrutura de TI. A versao atual foi preparada para duas fases de deploy:
+
+- Fase atual: frontend React e API Express leve no Vercel, usando PostgreSQL externo via Supabase ou Neon.
+- Fase futura: backend completo em VPS para ping real, OCS Inventory, Zabbix e jobs continuos dentro da rede da empresa.
 
 ## Stack
 
-- Backend: Node.js, Express, JWT, WebSocket
-- Frontend: React, Vite, Recharts, Lucide icons
-- Database: PostgreSQL
-- Deploy: Docker Compose with API, web app and Postgres
-- Integrations: service adapters prepared for Zabbix and OCS APIs, using realistic mock data by default
+- Frontend: React, Vite, dnd-kit, Recharts, Lucide
+- API leve: Node.js, Express, JWT
+- Banco: PostgreSQL externo por `DATABASE_URL`
+- Demo/offline: `DATABASE_URL=memory` apenas em desenvolvimento
+- Deploy demo/TCC: Vercel + Supabase ou Neon
 
-## Features
-
-- User registration and login
-- JWT protected API
-- Role-based access control: `admin`, `operator`, `viewer`
-- PostgreSQL persistence for users, audit logs and alert acknowledgements
-- Dashboard with monitored devices
-- Device status: Online, Offline, Problem
-- CPU, RAM, disk, network and uptime metrics
-- Hardware and software inventory with segment organization
-- Vertical inventory segment cards with drag-and-drop, move actions and custom segment colors
-- Active and historical alerts
-- Persistent alert acknowledgement
-- Search and filters by name, IP and status
-- Device detail page with charts
-- Visual toast notifications
-- WebSocket updates on `/ws` plus polling fallback every 15 seconds
-
-## Project Structure
+## Estrutura
 
 ```text
 it-guardian/
-  client/        React + Vite app
-  server/        Express API
-  server/src/
-    controllers/ HTTP controllers
-    data/        mock Zabbix and OCS datasets
-    middleware/  auth and RBAC middleware
-    repositories/PostgreSQL repositories
-    routes/      API route definitions
-    services/    Zabbix, OCS, alerts and realtime orchestration
+  api/index.js                 Funcao serverless do Vercel
+  client/                      React + Vite
+  server/src/app.js            Express app sem app.listen()
+  server/src/server.js         Entrada local com app.listen()
+  server/src/bootstrap.js      Inicializacao idempotente de banco/seeds
+  server/src/config/           Ambiente, CORS, DATABASE_URL, JWT
+  server/src/controllers/      Controllers HTTP
+  server/src/routes/           Rotas HTTP
+  server/src/repositories/     Persistencia PostgreSQL
+  server/src/services/         Orquestracao de dominio
+  server/src/integrations/     Adaptadores mock/reais futuros
+  server/src/jobs/             Jobs futuros para VPS
 ```
 
-## Run With Docker Compose
+## Rodar Localmente
 
-Make sure Docker Desktop or the Docker daemon is running.
-
-```bash
-npm run docker:up
-```
-
-Open:
-
-- Frontend: http://localhost:5173
-- Backend health: http://localhost:4000/api/health
-- WebSocket: ws://localhost:4000/ws
-
-Stop:
-
-```bash
-npm run docker:down
-```
-
-## Run Locally
-
-Install dependencies:
+Instale dependencias:
 
 ```bash
 npm install
 ```
 
-Start Postgres:
+Crie os arquivos de ambiente:
+
+```bash
+cp .env.example .env
+cp server/.env.example server/.env
+cp client/.env.example client/.env
+```
+
+Para usar Postgres local:
 
 ```bash
 docker compose up db -d
 ```
 
-If you already have PostgreSQL running, set `DATABASE_URL` in `server/.env` instead.
+Ou, para demo offline sem Postgres, use no `server/.env`:
 
-Create backend environment file:
-
-```bash
-cp server/.env.example server/.env
+```env
+DATABASE_URL=memory
 ```
 
-Start the backend:
+Suba o frontend:
+
+```bash
+npm run dev
+```
+
+Suba a API local em outro terminal:
 
 ```bash
 npm run dev:server
 ```
 
-In another terminal, start the frontend:
+URLs locais:
 
-```bash
-npm run dev:client
-```
+- Frontend: http://localhost:5173
+- API health: http://localhost:4000/api/health
+- WebSocket local: ws://localhost:4000/ws
 
-## Demo Account
+Conta demo:
 
 ```text
 email: admin@itguardian.local
-password: admin123
-role: admin
+senha: admin123
 ```
 
-Newly registered users receive the `operator` role by default.
+## Deploy no Vercel
 
-## API Overview
+1. Suba o repositorio no GitHub.
+2. Importe o projeto no Vercel.
+3. Use o build command `npm run build`.
+4. Use output directory `client/dist`.
+5. Configure as variaveis de ambiente no Vercel.
 
-Protected routes require:
+Variaveis recomendadas:
 
-```http
-Authorization: Bearer <token>
+```env
+NODE_ENV=production
+DATABASE_URL=postgresql://...
+JWT_SECRET=uma-chave-grande-e-segura
+FRONTEND_URL=https://seu-projeto.vercel.app
+PING_MODE=mock
+OCS_MODE=mock
+ZABBIX_MODE=mock
 ```
 
-Endpoints:
+Variaveis de frontend:
 
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `GET /api/auth/me`
-- `GET /api/devices?search=&status=`
-- `GET /api/devices/:id`
-- `PATCH /api/devices/:id/segment` (`admin`, `operator`)
-- `GET /api/segments`
-- `POST /api/segments` (`admin`, `operator`)
-- `PATCH /api/segments/:id` (`admin`, `operator`) for name and color updates
-- `DELETE /api/segments/:id` (`admin`, `operator`)
-- `GET /api/alerts`
-- `GET /api/alerts/history`
-- `POST /api/alerts/:id/acknowledge` (`admin`, `operator`)
-- `DELETE /api/alerts/:id/acknowledge` (`admin`, `operator`)
-- `GET /api/logs` (`admin`)
-- `GET /api/users` (`admin`)
-- `PATCH /api/users/:id/role` (`admin`)
+```env
+VITE_FRONTEND_URL=https://seu-projeto.vercel.app
+```
 
-## Database
+`VITE_API_URL` nao e obrigatoria no Vercel. Em producao, o frontend chama a API por `/api`.
 
-The API creates these tables on startup when they do not exist:
+## Banco Supabase ou Neon
+
+O backend usa `DATABASE_URL`. Em producao, a API bloqueia:
+
+- `DATABASE_URL=memory`
+- ausencia de `DATABASE_URL`
+
+Supabase e Neon exigem SSL na maior parte dos cenarios. O projeto ativa SSL automaticamente em producao ou quando a URL parecer Supabase/Neon. Se precisar forcar:
+
+```env
+DB_SSL=true
+```
+
+Tabelas criadas automaticamente no bootstrap:
 
 - `users`
 - `audit_logs`
 - `alert_acknowledgements`
+- `segment_groups`
 - `inventory_segments`
 - `device_segments`
+- `manual_network_assets`
+- `device_metadata`
+- `asset_history`
 
-Default local connection:
+## API e CORS
+
+Local:
+
+- Frontend: `http://localhost:5173`
+- API: `http://localhost:4000/api`
+
+Vercel:
+
+- Frontend e API no mesmo dominio
+- Frontend chama `/api`
+- CORS aceita `FRONTEND_URL`, `CLIENT_ORIGIN`, `VERCEL_URL` e localhost em desenvolvimento
+
+## QR Code
+
+Os QR Codes usam a URL publica do frontend:
 
 ```text
-postgres://itguardian:itguardian@localhost:5432/itguardian
+https://seu-projeto.vercel.app/assets/:assetId
 ```
 
-## Integration Notes
+Localmente, usam `VITE_FRONTEND_URL` ou `window.location.origin`.
 
-The MVP still uses mock monitoring data, but the backend is organized so real integrations can replace the mock clients:
+## Limites do Vercel
 
-- `server/src/services/zabbixService.js`
-- `server/src/services/ocsService.js`
+O Vercel serve bem para demo/TCC, CRUD, login, inventario, segmentos, grupos, ativos manuais, historico e QR Code.
 
-For production, replace those methods with API calls to:
+Ping real, OCS Inventory real, Zabbix real e monitoramento continuo precisam de uma VPS ou agente dentro da rede da empresa, porque IPs internos como `10.10.x.x` nao sao acessiveis diretamente pelo Vercel.
 
-- Zabbix JSON-RPC API for hosts, triggers, items and history
-- OCS Inventory REST API for hardware and software inventory
+## Fase Futura em VPS
 
-## Production Hardening Ideas
+Os pontos de troca ja estao isolados:
 
-- Move schema migrations to a dedicated migration tool
-- Store JWT secrets in a secret manager
-- Add refresh tokens and session revocation
-- Add alert ownership and escalation workflows
-- Add WebSocket horizontal scaling through Redis pub/sub
+- `server/src/integrations/ping/PingService.js`
+- `server/src/integrations/ocs/OcsInventoryService.js`
+- `server/src/integrations/zabbix/ZabbixService.js`
+- `server/src/jobs/`
+
+Na VPS, a ideia e alterar `PING_MODE`, `OCS_MODE` e `ZABBIX_MODE` para modos reais e implementar os clientes internos sem reescrever controllers, rotas ou frontend.
+
+## Scripts
+
+```bash
+npm run dev          # frontend Vite
+npm run dev:server   # API local
+npm run dev:client   # frontend Vite
+npm run build        # build do frontend para producao
+npm run start        # API local em modo start
+npm run docker:up    # stack local Docker
+npm run docker:down
+```
+
+## Endpoints Principais
+
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/auth/me`
+- `GET /api/devices`
+- `GET /api/devices/:id`
+- `GET /api/devices/public/:id`
+- `POST /api/devices/manual`
+- `PATCH /api/devices/:id/manual`
+- `PATCH /api/devices/:id/type`
+- `POST /api/devices/:id/ping`
+- `PATCH /api/devices/:id/segment`
+- `GET /api/segments`
+- `POST /api/segments`
+- `PATCH /api/segments/:id`
+- `DELETE /api/segments/:id`
+- `GET /api/segments/groups`
+- `POST /api/segments/groups`
+- `PATCH /api/segments/groups/:id`
+- `DELETE /api/segments/groups/:id`
+- `GET /api/alerts`
+- `GET /api/alerts/history`
+- `POST /api/alerts/:id/acknowledge`
+- `DELETE /api/alerts/:id/acknowledge`

@@ -7,8 +7,8 @@ export default function QRCodePrint({ machine, alias }) {
   const [qrSrc, setQrSrc] = useState("");
   const [printingAssetId, setPrintingAssetId] = useState(null);
   const assetUrl = useMemo(() => {
-    const baseUrl = window.location.origin + window.location.pathname;
-    return `${baseUrl}?asset=${encodeURIComponent(machine.id)}`;
+    const baseUrl = (import.meta.env.VITE_FRONTEND_URL || window.location.origin).replace(/\/$/, "");
+    return `${baseUrl}/assets/${encodeURIComponent(machine.id)}`;
   }, [machine.id]);
   const assetTag = machine.hardware?.assetTag || machine.manualAsset?.assetTag || "";
 

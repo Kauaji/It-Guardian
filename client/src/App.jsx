@@ -38,26 +38,32 @@ import {
   acknowledgeAlert,
   createManualAsset,
   createSegment,
+  createSegmentGroup,
   createMonitoringSocket,
   deleteSegment,
+  deleteSegmentGroup as deleteSegmentGroupApi,
   fetchAlertHistory,
   fetchAlerts,
   fetchDevice,
   fetchDevices,
+  fetchSegmentGroups,
   fetchSegments,
   login,
   removeAlertAcknowledgement,
   renameSegment,
   register,
   refreshAssetPing,
+  updateSegmentGroup,
   updateDeviceType,
   updateDeviceSegment
 } from "./api.js";
 import AssetPublicView from "./components/inventory/AssetPublicView.jsx";
+import BulkAssetLabelPrint from "./components/inventory/BulkAssetLabelPrint.jsx";
 import InventoryBoard from "./components/inventory/InventoryBoard.jsx";
 import ManualAssetForm from "./components/inventory/ManualAssetForm.jsx";
 import { MachineCardPreview } from "./components/inventory/MachineCard.jsx";
 import SegmentFormModal from "./components/inventory/SegmentFormModal.jsx";
+import SegmentGroupFormModal from "./components/inventory/SegmentGroupFormModal.jsx";
 import SidebarSegmentFilter from "./components/inventory/SidebarSegmentFilter.jsx";
 import { useInventoryDragAndDrop } from "./components/inventory/useInventoryDragAndDrop.js";
 
@@ -66,6 +72,8 @@ const userKey = "it_guardian_user";
 const aliasKey = "it_guardian_machine_aliases";
 const observationsKey = "it_guardian_machine_observations";
 const themeKey = "it_guardian_theme";
+const peripheralRemovalsKey = "it_guardian_removed_peripherals";
+const peripheralHistoryKey = "it_guardian_peripheral_history";
 
 const segmentPalette = [
   "#2563eb",
@@ -92,11 +100,52 @@ const inventoryDropAnimation = {
   easing: "cubic-bezier(0.22, 1, 0.36, 1)"
 };
 
+function keepAssetOverlayNearCursor({ activatorEvent, active, activeNodeRect, overlayNodeRect, transform }) {
+  if (active?.data?.current?.type !== "machine" || !activatorEvent || !activeNodeRect || !overlayNodeRect) {
+    return transform;
+  }
+
+  const point = "touches" in activatorEvent
+    ? activatorEvent.touches?.[0]
+    : activatorEvent;
+
+  if (!point || typeof point.clientX !== "number" || typeof point.clientY !== "number") {
+    return transform;
+  }
+
+  const initialOffsetX = point.clientX - activeNodeRect.left;
+  const initialOffsetY = point.clientY - activeNodeRect.top;
+  const desiredOffsetX = Math.min(42, overlayNodeRect.width * 0.28);
+  const desiredOffsetY = Math.min(28, overlayNodeRect.height * 0.22);
+
+  return {
+    ...transform,
+    x: transform.x + initialOffsetX - desiredOffsetX,
+    y: transform.y + initialOffsetY - desiredOffsetY
+  };
+}
+
 function inventoryCollisionDetection(args) {
-  const { pointerCoordinates, droppableContainers, droppableRects } = args;
+  const { active, pointerCoordinates, droppableContainers, droppableRects } = args;
+  const activeType = active?.data?.current?.type;
+
+  if (activeType === "segment") {
+    const groupContainers = droppableContainers.filter(
+      (container) =>
+        container.data.current?.type === "segment-group-drop" ||
+        container.data.current?.type === "sidebar-segment-group-drop"
+    );
+    return closestCenter({ ...args, droppableContainers: groupContainers });
+  }
+
+  const machineContainers = droppableContainers.filter(
+    (container) =>
+      container.data.current?.type !== "segment-group-drop" &&
+      container.data.current?.type !== "sidebar-segment-group-drop"
+  );
 
   if (pointerCoordinates) {
-    const sidebarCandidates = droppableContainers
+    const sidebarCandidates = machineContainers
       .filter((container) => container.data.current?.type === "sidebar-segment")
       .map((container) => {
         const rect = droppableRects.get(container.id);
@@ -132,7 +181,7 @@ function inventoryCollisionDetection(args) {
     }
   }
 
-  return closestCenter(args);
+  return closestCenter({ ...args, droppableContainers: machineContainers });
 }
 
 function metricClass(value) {
@@ -181,6 +230,47 @@ function upsertSegmentList(current, segment) {
   return [...current, segment];
 }
 
+function getSegmentGroupId(segment, groups) {
+  return segment?.groupId || groups.find((group) => (group.segmentIds || []).includes(segment?.id))?.id || "";
+}
+
+function applySegmentGroups(segmentList, groups) {
+  return segmentList.map((segment) => ({
+    ...segment,
+    groupId: getSegmentGroupId(segment, groups)
+  }));
+}
+
+function assignSegmentToGroup(groups, segmentId, groupId) {
+  return groups.map((group) => {
+    const segmentIds = (group.segmentIds || []).filter((id) => id !== segmentId);
+
+    return group.id === groupId
+      ? { ...group, segmentIds: [...segmentIds, segmentId] }
+      : { ...group, segmentIds };
+  });
+}
+
+function peripheralKey(peripheral) {
+  return peripheral?.id || `${peripheral?.type || "item"}-${peripheral?.brand || ""}-${peripheral?.assetTag || ""}`;
+}
+
+function applyInventoryLocalState(devices, removedPeripherals, peripheralHistory) {
+  return devices.map((device) => {
+    const removed = new Set(removedPeripherals[device.id] || []);
+    const peripherals = device.hardware?.peripherals || [];
+
+    return {
+      ...device,
+      assetHistory: [...(peripheralHistory[device.id] || []), ...(device.assetHistory || [])],
+      hardware: {
+        ...device.hardware,
+        peripherals: peripherals.filter((peripheral) => !removed.has(peripheralKey(peripheral)))
+      }
+    };
+  });
+}
+
 function Toast({ message, tone, onClose }) {
   useEffect(() => {
     if (!message) return undefined;
@@ -214,7 +304,7 @@ function AuthScreen({ onAuth, notify }) {
       notify(mode === "login" ? "Login realizado com sucesso." : "Conta criada com sucesso.", "ok");
     } catch (error) {
       if (error.statusCode === 401) {
-        notify("Sessao expirada. Faca login novamente.", "danger");
+        notify("E-mail ou senha invalidos.", "danger");
         return;
       }
       notify(error.message, "danger");
@@ -517,7 +607,7 @@ function DeviceDetails({ device }) {
       {isManualAsset ? (
         <div className="network-card">
           <Network size={18} />
-          <span>{device.pingMessage}</span>
+          <span>Status por ping: {device.statusLabel || (device.status === "offline" ? "Erro" : "Online")}</span>
         </div>
       ) : (
         <>
@@ -592,6 +682,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   const [severityFilter, setSeverityFilter] = useState("all");
   const [alertStatusFilter, setAlertStatusFilter] = useState("all");
   const [inventorySearch, setInventorySearch] = useState("");
+  const [selectedInventoryGroup, setSelectedInventoryGroup] = useState("all");
   const [selectedInventorySegment, setSelectedInventorySegment] = useState("all");
   const [machineAliases, setMachineAliases] = useState(() =>
     JSON.parse(localStorage.getItem(aliasKey) || "{}")
@@ -599,13 +690,28 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   const [machineObservations, setMachineObservations] = useState(() =>
     JSON.parse(localStorage.getItem(observationsKey) || "{}")
   );
+  const [removedPeripherals, setRemovedPeripherals] = useState(() =>
+    JSON.parse(localStorage.getItem(peripheralRemovalsKey) || "{}")
+  );
+  const [peripheralHistory, setPeripheralHistory] = useState(() =>
+    JSON.parse(localStorage.getItem(peripheralHistoryKey) || "{}")
+  );
+  const [segmentGroups, setSegmentGroups] = useState([]);
   const [moveModal, setMoveModal] = useState(null);
   const [moveTarget, setMoveTarget] = useState("");
   const [segmentForm, setSegmentForm] = useState(null);
+  const [segmentGroupForm, setSegmentGroupForm] = useState(null);
   const [manualAssetFormOpen, setManualAssetFormOpen] = useState(false);
   const [manualAssetSaving, setManualAssetSaving] = useState(false);
+  const [segmentGroupSaving, setSegmentGroupSaving] = useState(false);
   const [activeDragMachine, setActiveDragMachine] = useState(null);
+  const [activeSidebarDragSegment, setActiveSidebarDragSegment] = useState(null);
   const [activeDragRect, setActiveDragRect] = useState(null);
+  const [selectedAssetIds, setSelectedAssetIds] = useState(() => new Set());
+  const [bulkMoveTarget, setBulkMoveTarget] = useState("");
+  const [bulkPrintAssets, setBulkPrintAssets] = useState([]);
+  const bulkPrintCleanupTimer = useRef(null);
+  const bulkPrintAfterprintHandler = useRef(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [sidebarDragActive, setSidebarDragActive] = useState(false);
   const [segmentSaving, setSegmentSaving] = useState(false);
@@ -627,6 +733,8 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   const filteredInventoryDevices = useMemo(() => allDevices.filter((device) => {
     const term = inventorySearch.trim().toLowerCase();
     if (!term) return true;
+    const segment = segments.find((item) => item.id === device.segmentId);
+    const group = segment?.groupId ? segmentGroups.find((item) => item.id === segment.groupId) : null;
 
     return [
       device.name,
@@ -634,6 +742,8 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
       device.ip,
       device.statusLabel,
       device.segmentName,
+      segment?.name,
+      group?.name,
       device.assetType,
       device.type,
       device.source,
@@ -653,7 +763,11 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     ]
       .filter(Boolean)
       .some((value) => value.toLowerCase().includes(term));
-  }), [allDevices, inventorySearch, machineAliases]);
+  }), [allDevices, inventorySearch, machineAliases, segmentGroups, segments]);
+  const selectedAssets = useMemo(
+    () => allDevices.filter((device) => selectedAssetIds.has(device.id)),
+    [allDevices, selectedAssetIds]
+  );
   const {
     handleDragEnd: handleInventoryDragEnd,
     machinesBySegment,
@@ -662,23 +776,31 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     devices: allDevices,
     filteredDevices: filteredInventoryDevices,
     segments,
-    onMoveMachine: handleMoveMachine
+    selectedAssetIds,
+    onMoveMachine: handleMoveMachine,
+    onMoveMachines: handleMoveMachines
   });
 
   async function loadData(silent = false) {
     if (!silent) setLoading(true);
     try {
-      const [deviceData, allDeviceData, segmentData, activeAlertData, alertHistoryData] = await Promise.all([
+      const [deviceData, allDeviceData, segmentData, groupData, activeAlertData, alertHistoryData] = await Promise.all([
         fetchDevices(token, { search, status }),
         fetchDevices(token),
         fetchSegments(token),
+        fetchSegmentGroups(token),
         fetchAlerts(token),
         fetchAlertHistory(token)
       ]);
 
-      setDevices(deviceData.devices);
-      setAllDevices(allDeviceData.devices);
-      setSegments(segmentData.segments);
+      const nextDevices = applyInventoryLocalState(deviceData.devices, removedPeripherals, peripheralHistory);
+      const nextAllDevices = applyInventoryLocalState(allDeviceData.devices, removedPeripherals, peripheralHistory);
+      const nextGroups = groupData.groups || [];
+      const nextSegments = applySegmentGroups(segmentData.segments, nextGroups);
+      setDevices(nextDevices);
+      setAllDevices(nextAllDevices);
+      setSegmentGroups(nextGroups);
+      setSegments(nextSegments);
       setSummary(deviceData.summary);
       setAlerts(activeAlertData.alerts);
       setHistory(alertHistoryData.alerts);
@@ -720,6 +842,8 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   useEffect(() => {
     const socket = createMonitoringSocket(token);
 
+    if (!socket) return undefined;
+
     socket.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data);
@@ -730,7 +854,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
         setLastUpdated(new Date(payload.updatedAt));
         setAllDevices(payload.devices);
         if (payload.segments) {
-          setSegments(payload.segments);
+          setSegments(applySegmentGroups(payload.segments, segmentGroups));
         }
 
         if (!search && !status) {
@@ -753,7 +877,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     };
 
     return () => socket.close();
-  }, [token, search, status]);
+  }, [token, search, status, segmentGroups]);
 
   useEffect(() => {
     if (selectedInventorySegment === "all") return;
@@ -766,6 +890,34 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
       setSelectedInventorySegment("all");
     }
   }, [allDevices, selectedInventorySegment, segments]);
+
+  useEffect(() => {
+    if (selectedInventoryGroup === "all" || selectedInventoryGroup === "ungrouped") return;
+
+    if (!segmentGroups.some((group) => group.id === selectedInventoryGroup)) {
+      setSelectedInventoryGroup("all");
+      setSelectedInventorySegment("all");
+    }
+  }, [selectedInventoryGroup, segmentGroups]);
+
+  function selectInventoryGroup(groupId) {
+    setSelectedInventoryGroup(groupId);
+    setSelectedInventorySegment("all");
+  }
+
+  function selectInventorySegment(segmentId) {
+    setSelectedInventorySegment(segmentId);
+
+    if (segmentId === "all") {
+      setSelectedInventoryGroup("all");
+      return;
+    }
+
+    const segment = segments.find((item) => item.id === segmentId);
+    if (segment) {
+      setSelectedInventoryGroup(segment.groupId || "ungrouped");
+    }
+  }
 
   async function selectDevice(id) {
     setSelectedId(id);
@@ -808,6 +960,11 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
       return;
     }
 
+    if (selectedAssetIds.has(machine.id) && selectedAssetIds.size > 1) {
+      await handleMoveMachines(Array.from(selectedAssetIds), segmentId);
+      return;
+    }
+
     const target = segments.find((segment) => segment.id === segmentId);
     const previousSegment = { id: machine.segmentId, name: machine.segmentName };
 
@@ -819,10 +976,113 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
       updateDeviceSegmentInState(machine.id, response.device.segmentId, response.device.segmentName);
       notify(`${machine.name} movida para ${response.device.segmentName}.`, "ok");
       await loadData(true);
+      clearAssetSelection();
     } catch (error) {
       updateDeviceSegmentInState(machine.id, previousSegment.id, previousSegment.name);
       notify(error.message, "danger");
     }
+  }
+
+  async function handleMoveMachines(machineIds, segmentId) {
+    if (!machineIds.length || !segmentId) return;
+
+    const target = segments.find((segment) => segment.id === segmentId);
+    const machinesToMove = allDevices.filter(
+      (device) => machineIds.includes(device.id) && device.segmentId !== segmentId
+    );
+
+    if (!machinesToMove.length) {
+      clearAssetSelection();
+      return;
+    }
+
+    const previous = new Map(machinesToMove.map((machine) => [
+      machine.id,
+      { id: machine.segmentId, name: machine.segmentName }
+    ]));
+
+    machinesToMove.forEach((machine) => {
+      updateDeviceSegmentInState(machine.id, segmentId, target?.name || "Segmento");
+    });
+    setMoveModal(null);
+
+    try {
+      await Promise.all(machinesToMove.map((machine) => updateDeviceSegment(token, machine.id, segmentId)));
+      notify(`${machinesToMove.length} equipamentos movidos para ${target?.name || "Segmento"}.`, "ok");
+      await loadData(true);
+      clearAssetSelection();
+    } catch (error) {
+      machinesToMove.forEach((machine) => {
+        const fallback = previous.get(machine.id);
+        updateDeviceSegmentInState(machine.id, fallback.id, fallback.name);
+      });
+      notify(error.message, "danger");
+    }
+  }
+
+  function handleSelectAsset(machine, { additive = false } = {}) {
+    setSelectedAssetIds((current) => {
+      const next = additive ? new Set(current) : new Set();
+
+      if (additive && next.has(machine.id)) {
+        next.delete(machine.id);
+      } else {
+        next.add(machine.id);
+      }
+
+      return next;
+    });
+  }
+
+  function toggleAssetSelection(machineId) {
+    setSelectedAssetIds((current) => {
+      const next = new Set(current);
+      if (next.has(machineId)) {
+        next.delete(machineId);
+      } else {
+        next.add(machineId);
+      }
+      return next;
+    });
+  }
+
+  function clearAssetSelection() {
+    setSelectedAssetIds(new Set());
+    setBulkMoveTarget("");
+  }
+
+  function handleBulkMove() {
+    if (!bulkMoveTarget || !selectedAssetIds.size) return;
+    handleMoveMachines(Array.from(selectedAssetIds), bulkMoveTarget);
+  }
+
+  function finishBulkPrint() {
+    document.body.classList.remove("qr-print-mode", "bulk-qr-print-mode");
+    setBulkPrintAssets([]);
+    window.clearTimeout(bulkPrintCleanupTimer.current);
+    if (bulkPrintAfterprintHandler.current) {
+      window.removeEventListener("afterprint", bulkPrintAfterprintHandler.current);
+      bulkPrintAfterprintHandler.current = null;
+    }
+  }
+
+  function handleBulkPrint() {
+    if (!selectedAssets.length) return;
+
+    finishBulkPrint();
+    setBulkPrintAssets(selectedAssets);
+    document.body.classList.add("qr-print-mode", "bulk-qr-print-mode");
+    bulkPrintAfterprintHandler.current = finishBulkPrint;
+    window.addEventListener("afterprint", bulkPrintAfterprintHandler.current);
+  }
+
+  function handleBulkPrintReady() {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.print();
+        bulkPrintCleanupTimer.current = window.setTimeout(finishBulkPrint, 1800);
+      });
+    });
   }
 
   function upsertDeviceInState(device) {
@@ -886,6 +1146,9 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     if (activeView !== "inventory") return;
 
     const machineId = event.active?.data?.current?.machineId;
+    const segmentId = event.active?.data?.current?.segmentId;
+    const activeType = event.active?.data?.current?.type;
+    const origin = event.active?.data?.current?.origin;
     const rect = event.active?.rect?.current?.initial;
     dragStartScrollY.current = window.scrollY;
     sidebarWasCollapsedBeforeDrag.current = sidebarCollapsed;
@@ -893,11 +1156,20 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     setSidebarDragActive(true);
     setSidebarCollapsed(false);
     setActiveDragMachine(allDevices.find((device) => device.id === machineId) || null);
+    setActiveSidebarDragSegment(
+      activeType === "segment" && origin === "sidebar"
+        ? segments.find((segment) => segment.id === segmentId) || null
+        : null
+    );
     setActiveDragRect(rect ? { width: rect.width, height: rect.height } : null);
+    if (machineId && !selectedAssetIds.has(machineId)) {
+      setSelectedAssetIds(new Set([machineId]));
+    }
   }
 
   function handleInventoryDragCancel() {
     setActiveDragMachine(null);
+    setActiveSidebarDragSegment(null);
     setActiveDragRect(null);
     setSidebarDragActive(false);
     if (sidebarWasCollapsedBeforeDrag.current) {
@@ -925,7 +1197,34 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   function handleInventoryBoardDragEnd(event) {
     let result = null;
     if (activeView === "inventory") {
-      result = handleInventoryDragEnd(event);
+      const activeType = event.active?.data?.current?.type;
+
+      if (activeType === "segment") {
+        const segmentId = event.active?.data?.current?.segmentId;
+        const groupId = event.over?.data?.current?.groupId;
+        const overType = event.over?.data?.current?.type;
+
+        if (
+          segmentId &&
+          (overType === "segment-group-drop" || overType === "sidebar-segment-group-drop") &&
+          groupId !== undefined
+        ) {
+          const segment = segments.find((item) => item.id === segmentId);
+          const currentGroupId = getSegmentGroupId(segment, segmentGroups);
+
+          if (segment && !segment.isDefault && currentGroupId !== groupId) {
+            moveSegmentToGroup(segmentId, groupId);
+            notify(
+              groupId
+                ? `${segment.name} movido para ${segmentGroups.find((group) => group.id === groupId)?.name || "grupo"}.`
+                : `${segment.name} movido para Sem grupo.`,
+              "ok"
+            );
+          }
+        }
+      } else {
+        result = handleInventoryDragEnd(event);
+      }
     }
     handleInventoryDragCancel();
     animateScrollForDrop(result);
@@ -970,29 +1269,205 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     notify("Observacao adicionada.", "ok");
   }
 
-  function handleCreateSegment() {
-    setSegmentForm({ mode: "create", segment: null });
+  function removeMachinePeripheral(machineId, peripheral) {
+    const confirmed = window.confirm(`Remover periferico "${peripheral.type}" deste ativo?`);
+    if (!confirmed) return null;
+
+    const removedKey = peripheralKey(peripheral);
+    const event = {
+      id: `${machineId}-peripheral-removed-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      user: user.name,
+      change: `Periferico removido: ${peripheral.type}`,
+      message: `${peripheral.type} - ${peripheral.brand || "Sem marca"} - ${peripheral.assetTag || "Sem patrimonio"}`,
+      field: "peripherals",
+      oldValue: `${peripheral.type} ${peripheral.brand || ""} ${peripheral.assetTag || ""}`.trim(),
+      newValue: "Removido"
+    };
+
+    setRemovedPeripherals((current) => {
+      const next = {
+        ...current,
+        [machineId]: Array.from(new Set([...(current[machineId] || []), removedKey]))
+      };
+      localStorage.setItem(peripheralRemovalsKey, JSON.stringify(next));
+      return next;
+    });
+
+    setPeripheralHistory((current) => {
+      const next = {
+        ...current,
+        [machineId]: [event, ...(current[machineId] || [])]
+      };
+      localStorage.setItem(peripheralHistoryKey, JSON.stringify(next));
+      return next;
+    });
+
+    const update = (device) =>
+      device.id === machineId
+        ? {
+            ...device,
+            assetHistory: [event, ...(device.assetHistory || [])],
+            hardware: {
+              ...device.hardware,
+              peripherals: (device.hardware?.peripherals || []).filter((item) => peripheralKey(item) !== removedKey)
+            }
+          }
+        : device;
+
+    setAllDevices((current) => current.map(update));
+    setDevices((current) => current.map(update));
+    setSelectedDevice((current) => (current?.id === machineId ? update(current) : current));
+    notify("Periferico removido e registrado no historico.", "ok");
+    return event;
   }
 
-  async function submitSegmentForm(name) {
+  function saveSegmentGroups(nextGroups) {
+    setSegmentGroups(nextGroups);
+  }
+
+  function createSegmentGroup() {
+    setSegmentGroupForm({ mode: "create", group: null });
+  }
+
+  function renameSegmentGroup(groupId) {
+    const group = segmentGroups.find((item) => item.id === groupId);
+    if (!group) return;
+    setSegmentGroupForm({ mode: "edit", group });
+  }
+
+  async function submitSegmentGroupForm(name) {
     const cleanName = name.trim();
-    const duplicate = segments.some(
-      (segment) =>
-        segment.id !== segmentForm?.segment?.id &&
-        segment.name.trim().toLowerCase() === cleanName.toLowerCase()
+    const duplicate = segmentGroups.some(
+      (group) =>
+        group.id !== segmentGroupForm?.group?.id &&
+        group.name.trim().toLowerCase() === cleanName.toLowerCase()
     );
 
     if (duplicate) {
-      notify("Ja existe um segmento com esse nome.", "danger");
+      notify("Ja existe um grupo com esse nome.", "danger");
+      return;
+    }
+
+    setSegmentGroupSaving(true);
+    try {
+      if (segmentGroupForm?.mode === "create") {
+        const response = await createSegmentGroup(token, {
+          name: cleanName,
+          color: pickSegmentColor(segments)
+        });
+        saveSegmentGroups([...segmentGroups, response.group]);
+        notify("Grupo criado.", "ok");
+      } else if (segmentGroupForm?.group?.id) {
+        const response = await updateSegmentGroup(token, segmentGroupForm.group.id, { name: cleanName });
+        saveSegmentGroups(
+          segmentGroups.map((item) =>
+            item.id === segmentGroupForm.group.id ? { ...item, ...response.group } : item
+          )
+        );
+        notify("Grupo renomeado.", "ok");
+      }
+
+      setSegmentGroupForm(null);
+      await loadData(true);
+    } catch (error) {
+      notify(error.message, "danger");
+    } finally {
+      setSegmentGroupSaving(false);
+    }
+  }
+
+  function toggleSegmentGroup(groupId) {
+    const group = segmentGroups.find((item) => item.id === groupId);
+    if (!group) return;
+
+    const collapsed = !group.collapsed;
+    saveSegmentGroups(segmentGroups.map((item) => (item.id === groupId ? { ...item, collapsed } : item)));
+    updateSegmentGroup(token, groupId, { collapsed }).catch((error) => notify(error.message, "danger"));
+  }
+
+  async function deleteSegmentGroup(groupId) {
+    const group = segmentGroups.find((item) => item.id === groupId);
+    if (!group) return;
+
+    const segmentCount = segments.filter((segment) => getSegmentGroupId(segment, segmentGroups) === groupId).length;
+    const confirmed = segmentCount
+      ? window.confirm(`Excluir o grupo "${group.name}" e mover ${segmentCount} segmento(s) para Sem grupo?`)
+      : window.confirm(`Excluir o grupo "${group.name}"?`);
+
+    if (!confirmed) return;
+
+    try {
+      await deleteSegmentGroupApi(token, groupId);
+      saveSegmentGroups(segmentGroups.filter((item) => item.id !== groupId));
+      setSegments((current) =>
+        current.map((segment) => (segment.groupId === groupId ? { ...segment, groupId: "" } : segment))
+      );
+
+      if (selectedInventoryGroup === groupId) {
+        setSelectedInventoryGroup("all");
+        setSelectedInventorySegment("all");
+      }
+
+      notify("Grupo excluido. Segmentos mantidos em Sem grupo.", "ok");
+      await loadData(true);
+    } catch (error) {
+      notify(error.message, "danger");
+    }
+  }
+
+  function moveSegmentToGroup(segmentId, groupId) {
+    const previousGroups = segmentGroups;
+    const nextGroups = assignSegmentToGroup(segmentGroups, segmentId, groupId);
+    saveSegmentGroups(nextGroups.map((group) => (group.id === groupId ? { ...group, collapsed: false } : group)));
+    setSegments((current) =>
+      current.map((segment) => (segment.id === segmentId ? { ...segment, groupId: groupId || "" } : segment))
+    );
+    renameSegment(token, segmentId, { groupId: groupId || null }).catch(async (error) => {
+      saveSegmentGroups(previousGroups);
+      await loadData(true);
+      notify(error.message, "danger");
+    });
+  }
+
+  function handleCreateSegment() {
+    const groupId =
+      selectedInventoryGroup === "all" || selectedInventoryGroup === "ungrouped"
+        ? ""
+        : selectedInventoryGroup;
+    setSegmentForm({ mode: "create", segment: null, groupId });
+  }
+
+  async function submitSegmentForm(name, groupId = "") {
+    const cleanName = name.trim();
+    const targetGroupId = groupId || "";
+    const duplicate = segments.some(
+      (segment) =>
+        segment.id !== segmentForm?.segment?.id &&
+        segment.name.trim().toLowerCase() === cleanName.toLowerCase() &&
+        getSegmentGroupId(segment, segmentGroups) === targetGroupId
+    );
+
+    if (duplicate) {
+      notify("Ja existe um segmento com esse nome neste grupo.", "danger");
       return;
     }
 
     setSegmentSaving(true);
     try {
       if (segmentForm?.mode === "rename") {
-        const response = await renameSegment(token, segmentForm.segment.id, { name: cleanName });
+        const response = await renameSegment(token, segmentForm.segment.id, {
+          name: cleanName,
+          groupId: targetGroupId || null
+        });
+        const nextGroups = assignSegmentToGroup(segmentGroups, segmentForm.segment.id, targetGroupId);
+        saveSegmentGroups(nextGroups);
         setSegments((current) =>
-          current.map((item) => (item.id === segmentForm.segment.id ? { ...item, name: response.segment.name } : item))
+          current.map((item) =>
+            item.id === segmentForm.segment.id
+              ? { ...item, name: response.segment.name, groupId: response.segment.groupId || "" }
+              : item
+          )
         );
         setAllDevices((current) =>
           current.map((device) =>
@@ -1001,11 +1476,20 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
         );
         notify("Segmento renomeado.", "ok");
       } else {
-        const response = await createSegment(token, { name: cleanName, color: pickSegmentColor(segments) });
-        setSegments((current) => upsertSegmentList(current, response.segment));
+        const response = await createSegment(token, {
+          name: cleanName,
+          color: pickSegmentColor(segments),
+          groupId: targetGroupId || null
+        });
+        const nextSegment = { ...response.segment, groupId: response.segment.groupId || targetGroupId };
+        setSegments((current) => upsertSegmentList(current, nextSegment));
+        if (targetGroupId) {
+          saveSegmentGroups(assignSegmentToGroup(segmentGroups, response.segment.id, targetGroupId));
+        }
         notify(`Segmento ${response.segment.name} criado.`, "ok");
       }
       setSegmentForm(null);
+      await loadData(true);
     } catch (error) {
       notify(error.message, "danger");
     } finally {
@@ -1014,7 +1498,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   }
 
   function handleRenameSegment(segment) {
-    setSegmentForm({ mode: "rename", segment });
+    setSegmentForm({ mode: "rename", segment, groupId: segment.groupId || "" });
   }
 
   async function handleChangeSegmentColor(segment, color) {
@@ -1046,6 +1530,8 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
 
     try {
       await deleteSegment(token, segment.id);
+      saveSegmentGroups(assignSegmentToGroup(segmentGroups, segment.id, ""));
+      setSegments((current) => current.filter((item) => item.id !== segment.id));
       notify("Segmento excluido. Maquinas movidas para Nao organizadas.", "ok");
       await loadData(true);
     } catch (error) {
@@ -1093,8 +1579,12 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
             <SidebarSegmentFilter
               devices={allDevices}
               segments={segments}
+              groups={segmentGroups}
+              selectedGroupId={selectedInventoryGroup}
               selectedSegmentId={selectedInventorySegment}
-              onSelectSegment={setSelectedInventorySegment}
+              onSelectGroup={selectInventoryGroup}
+              onSelectSegment={selectInventorySegment}
+              onToggleGroup={toggleSegmentGroup}
             />
           )}
         </nav>
@@ -1125,7 +1615,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
               <section className="summary-grid">
                 <SummaryCard icon={Server} label="Dispositivos" value={summary.totalDevices} />
                 <SummaryCard icon={ShieldCheck} label="Online" value={summary.online} tone="ok" />
-                <SummaryCard icon={WifiOff} label="Offline" value={summary.offline} tone="danger" />
+                <SummaryCard icon={WifiOff} label="Erro" value={summary.offline} tone="danger" />
                 <SummaryCard icon={AlertTriangle} label="Criticos" value={summary.criticalAlerts} tone="danger" />
               </section>
             )}
@@ -1139,7 +1629,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
                 <option value="">Todos os status</option>
                 <option value="online">Online</option>
                 <option value="problem">Problema</option>
-                <option value="offline">Offline</option>
+                <option value="offline">Erro</option>
               </select>
             </section>
 
@@ -1207,7 +1697,10 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
             machinesBySegment={machinesBySegment}
             search={inventorySearch}
             setSearch={setInventorySearch}
+            selectedGroupId={selectedInventoryGroup}
             selectedSegmentId={selectedInventorySegment}
+            selectedAssetIds={selectedAssetIds}
+            bulkMoveTarget={bulkMoveTarget}
             aliases={machineAliases}
             observations={machineObservations}
             userName={user.name}
@@ -1222,6 +1715,20 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
             onAliasSave={saveMachineAlias}
             onAddObservation={addMachineObservation}
             onMoveMachine={handleMoveMachine}
+            onBulkMoveTargetChange={setBulkMoveTarget}
+            onBulkMove={handleBulkMove}
+            onBulkPrint={handleBulkPrint}
+            onClearSelection={clearAssetSelection}
+            onSelectAsset={handleSelectAsset}
+            onToggleSelection={toggleAssetSelection}
+            groups={segmentGroups}
+            onSelectGroup={selectInventoryGroup}
+            onCreateGroup={createSegmentGroup}
+            onRenameGroup={renameSegmentGroup}
+            onDeleteGroup={deleteSegmentGroup}
+            onToggleGroup={toggleSegmentGroup}
+            onMoveSegmentToGroup={moveSegmentToGroup}
+            onRemovePeripheral={removeMachinePeripheral}
             onCreateManualAsset={() => setManualAssetFormOpen(true)}
             onRefreshPing={handleRefreshPing}
             onChangeDeviceType={handleChangeDeviceType}
@@ -1234,9 +1741,19 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
         mode={segmentForm?.mode}
         segment={segmentForm?.segment}
         segments={segments}
+        groups={segmentGroups}
+        selectedGroupId={segmentForm?.groupId || ""}
         saving={segmentSaving}
         onClose={() => setSegmentForm(null)}
         onSubmit={submitSegmentForm}
+      />
+      <SegmentGroupFormModal
+        mode={segmentGroupForm?.mode}
+        group={segmentGroupForm?.group}
+        groups={segmentGroups}
+        saving={segmentGroupSaving}
+        onClose={() => setSegmentGroupForm(null)}
+        onSubmit={submitSegmentGroupForm}
       />
       <ManualAssetForm
         open={manualAssetFormOpen}
@@ -1245,22 +1762,42 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
         onSubmit={handleCreateManualAsset}
       />
     </main>
-    <DragOverlay zIndex={1000} dropAnimation={inventoryDropAnimation}>
-      <MachineCardPreview
-        machine={activeDragMachine}
-        segments={segments}
-        canManage={canManageInventory}
-        segmentColor={segments.find((segment) => segment.id === activeDragMachine?.segmentId)?.color}
-        alias={activeDragMachine ? machineAliases[activeDragMachine.id] : ""}
-        overlayStyle={activeDragRect ? { width: activeDragRect.width, minHeight: activeDragRect.height } : undefined}
-      />
+    <DragOverlay zIndex={1000} dropAnimation={inventoryDropAnimation} modifiers={[keepAssetOverlayNearCursor]}>
+      {activeDragMachine ? (
+        <MachineCardPreview
+          machine={activeDragMachine}
+          segments={segments}
+          canManage={canManageInventory}
+          segmentColor={segments.find((segment) => segment.id === activeDragMachine?.segmentId)?.color}
+          alias={activeDragMachine ? machineAliases[activeDragMachine.id] : ""}
+          selected={Boolean(activeDragMachine && selectedAssetIds.has(activeDragMachine.id))}
+          selectionCount={activeDragMachine && selectedAssetIds.has(activeDragMachine.id) ? selectedAssetIds.size : 0}
+          overlayStyle={activeDragRect ? { width: activeDragRect.width, minHeight: activeDragRect.height } : undefined}
+        />
+      ) : activeSidebarDragSegment ? (
+        <div
+          className="sidebar-segment-drag-overlay"
+          style={{ "--segment-color": activeSidebarDragSegment.color || "#1f7a61" }}
+        >
+          <span />
+          {activeSidebarDragSegment.name}
+        </div>
+      ) : null}
     </DragOverlay>
+    <BulkAssetLabelPrint
+      assets={bulkPrintAssets}
+      aliases={machineAliases}
+      onReadyToPrint={handleBulkPrintReady}
+    />
     </DndContext>
   );
 }
 
 export default function App() {
-  const assetId = new URLSearchParams(window.location.search).get("asset");
+  const pathAssetId = window.location.pathname.match(/^\/assets\/([^/]+)/)?.[1];
+  const assetId = pathAssetId
+    ? decodeURIComponent(pathAssetId)
+    : new URLSearchParams(window.location.search).get("asset");
   const [token, setToken] = useState(localStorage.getItem(tokenKey));
   const [user, setUser] = useState(() => JSON.parse(localStorage.getItem(userKey) || "null"));
   const [toast, setToast] = useState({ message: "", tone: "ok" });

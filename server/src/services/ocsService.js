@@ -1,10 +1,9 @@
-import { ocsInventory } from "../data/mockOcs.js";
+import { ocsInventoryService } from "../integrations/ocs/OcsInventoryService.js";
 
 export async function getInventory() {
-  return ocsInventory;
+  return ocsInventoryService.listInventory();
 }
 
 export async function getInventoryByHostId(hostId) {
-  return ocsInventory.find((item) => item.hostId === hostId) || null;
+  return ocsInventoryService.getInventoryByHostId(hostId);
 }
-

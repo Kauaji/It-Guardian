@@ -8,15 +8,43 @@ import alertRoutes from "./routes/alertRoutes.js";
 import logRoutes from "./routes/logRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import segmentRoutes from "./routes/segmentRoutes.js";
+import { initializeRuntime } from "./bootstrap.js";
+import { getCorsOrigins } from "./config/environment.js";
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 
-export function createApp() {
+function buildCorsOptions() {
+  const allowedOrigins = getCorsOrigins();
+
+  return {
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.includes(origin.replace(/\/$/, ""))) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`Origem nao permitida pelo CORS: ${origin}`));
+    }
+  };
+}
+
+export function createApp({ initializeOnRequest = false } = {}) {
   const app = express();
 
   app.use(helmet());
-  app.use(cors({ origin: process.env.CLIENT_ORIGIN || "http://localhost:5173" }));
+  app.use(cors(buildCorsOptions()));
   app.use(express.json());
-  app.use(morgan("dev"));
+  app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
+
+  if (initializeOnRequest) {
+    app.use(async (_req, _res, next) => {
+      try {
+        await initializeRuntime();
+        next();
+      } catch (error) {
+        next(error);
+      }
+    });
+  }
 
   app.get("/api/health", (_req, res) => {
     res.json({
@@ -38,3 +66,7 @@ export function createApp() {
 
   return app;
 }
+
+const app = createApp({ initializeOnRequest: true });
+
+export default app;

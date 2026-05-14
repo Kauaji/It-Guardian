@@ -11,6 +11,7 @@ import QRCodePrint from "./QRCodePrint.jsx";
 
 const tabs = [
   { id: "general", label: "Geral" },
+  { id: "alerts", label: "Alertas" },
   { id: "hardware", label: "Hardware" },
   { id: "software", label: "Softwares" },
   { id: "network", label: "Rede" },
@@ -39,6 +40,148 @@ function formatDate(value) {
   }).format(new Date(value));
 }
 
+function buildMetricAlert({ metric, label, value, warningLimit = 70, criticalLimit = 85 }) {
+  if (value == null || value < warningLimit) return null;
+
+  const isCritical = value >= criticalLimit;
+  return {
+    id: `metric-${metric}`,
+    description: `${label} acima do limite: ${value}%`,
+    detectedAt: new Date().toISOString(),
+    type: "Metrica",
+    severity: isCritical ? "Critico" : "Atencao",
+    metric: label,
+    value: `${value}%`,
+    limit: `${isCritical ? criticalLimit : warningLimit}%`,
+    status: "Ativo"
+  };
+}
+
+function buildActiveAlerts(machine) {
+  if (!machine) return [];
+
+  const alerts = [];
+  const metrics = machine.metrics || {};
+
+  [buildMetricAlert({ metric: "cpu", label: "CPU", value: metrics.cpu }),
+    buildMetricAlert({ metric: "ram", label: "RAM", value: metrics.ram }),
+    buildMetricAlert({ metric: "disk", label: "Disco", value: metrics.disk })]
+    .filter(Boolean)
+    .forEach((alert) => alerts.push(alert));
+
+  if (machine.status === "offline") {
+    alerts.push({
+      id: "ping-offline",
+      description: "Maquina nao responde ping",
+      detectedAt: machine.lastPingAt || new Date().toISOString(),
+      type: "Conectividade",
+      severity: "Critico",
+      metric: "Ping",
+      value: "Sem resposta",
+      limit: "Resposta esperada",
+      status: "Ativo"
+    });
+  }
+
+  for (const alert of machine.alerts || []) {
+    if (alert.status !== "active") continue;
+    alerts.push({
+      id: alert.id,
+      description: alert.description || alert.title || "Alerta ativo no monitoramento",
+      detectedAt: alert.startedAt,
+      type: alert.title || "Alerta ativo",
+      severity: alert.severity === "critical" ? "Critico" : "Atencao",
+      metric: alert.metric || "Monitoramento",
+      value: alert.value || "Ativo",
+      limit: alert.limit || "Regra Zabbix",
+      status: "Ativo"
+    });
+  }
+
+  if (machine.status === "problem" && !alerts.length) {
+    alerts.push({
+      id: "monitoring-problem",
+      description: "Alerta ativo no monitoramento",
+      detectedAt: new Date().toISOString(),
+      type: "Monitoramento",
+      severity: "Atencao",
+      metric: "Status",
+      value: "Problema",
+      limit: "Operacao normal",
+      status: "Ativo"
+    });
+  }
+
+  return alerts;
+}
+
+function buildResolvedAlerts(machine, hardware) {
+  return [...(machine?.assetHistory || []), ...(hardware?.changeHistory || [])]
+    .filter((item) => /resolvid|normal|voltou|restaur/i.test(`${item.change || ""} ${item.message || ""}`))
+    .map((item) => ({
+      id: item.id || `${item.detectedAt || item.createdAt}-${item.change || item.message}`,
+      description: item.change || item.message || "Erro resolvido",
+      detectedAt: item.detectedAt || item.createdAt,
+      type: "Historico",
+      severity: "Informativo",
+      metric: item.field || "Ativo",
+      value: item.newValue || "Normal",
+      limit: item.oldValue || "Anterior",
+      status: "Resolvido"
+    }));
+}
+
+function ErrorAlertList({ alerts, resolvedAlerts }) {
+  return (
+    <section className="asset-tab-content">
+      <div className="error-alert-section">
+        <div>
+          <h3>Alertas ativos</h3>
+          <span>{alerts.length} em andamento</span>
+        </div>
+        <div className="error-alert-list">
+          {alerts.map((alert) => (
+            <article key={alert.id} className={`error-alert-card ${alert.severity === "Critico" ? "critical" : "warning"}`}>
+              <header>
+                <strong>{alert.description}</strong>
+                <span>{alert.status}</span>
+              </header>
+              <dl>
+                <div><dt>Detectado</dt><dd>{formatDate(alert.detectedAt)}</dd></div>
+                <div><dt>Tipo</dt><dd>{alert.type}</dd></div>
+                <div><dt>Severidade</dt><dd>{alert.severity}</dd></div>
+                <div><dt>Metrica</dt><dd>{alert.metric}</dd></div>
+                <div><dt>Valor atual</dt><dd>{alert.value}</dd></div>
+                <div><dt>Limite</dt><dd>{alert.limit}</dd></div>
+              </dl>
+            </article>
+          ))}
+          {!alerts.length && <p className="empty">Nenhum alerta ativo neste momento.</p>}
+        </div>
+      </div>
+
+      <div className="error-alert-section resolved">
+        <div>
+          <h3>Resolvidos no historico</h3>
+          <span>{resolvedAlerts.length} registros</span>
+        </div>
+        <div className="error-alert-list compact">
+          {resolvedAlerts.map((alert) => (
+            <article key={alert.id} className="error-alert-card resolved">
+              <header>
+                <strong>{alert.description}</strong>
+                <span>{alert.status}</span>
+              </header>
+              <p>{alert.metric}: {alert.limit} para {alert.value} em {formatDate(alert.detectedAt)}</p>
+            </article>
+          ))}
+          {!resolvedAlerts.length && <p className="empty">Nenhum erro resolvido registrado ainda.</p>}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function MachineDetailsModal({
   machine,
   alias,
@@ -49,6 +192,7 @@ export default function MachineDetailsModal({
   onAddObservation,
   onChangeDeviceType,
   onRefreshPing,
+  onRemovePeripheral,
   onClose
 }) {
   const [activeTab, setActiveTab] = useState("general");
@@ -59,6 +203,8 @@ export default function MachineDetailsModal({
     () => [...(machine?.assetHistory || []), ...(hardware.changeHistory || [])][0],
     [hardware.changeHistory, machine?.assetHistory]
   );
+  const activeAlerts = useMemo(() => buildActiveAlerts(machine), [machine]);
+  const resolvedAlerts = useMemo(() => buildResolvedAlerts(machine, hardware), [hardware, machine]);
 
   if (!machine) return null;
 
@@ -157,13 +303,6 @@ export default function MachineDetailsModal({
                 <DetailItem label={isManualAsset ? "MAC Address" : "Uptime"} value={isManualAsset ? hardware.macAddress : `${machine.uptimeHours} h`} />
               </div>
 
-              {isManualAsset && machine.status === "offline" && (
-                <div className="latest-change warning-note">
-                  <strong>Ativo offline</strong>
-                  <span>{machine.pingMessage}</span>
-                </div>
-              )}
-
               {latestChange && (
                 <div className="latest-change">
                   <strong>Ultima alteracao detectada</strong>
@@ -196,6 +335,10 @@ export default function MachineDetailsModal({
                 {isManualAsset && <p className="empty">Ativo de rede sem coleta OCS de discos ou CPU.</p>}
               </div>
             </section>
+          )}
+
+          {activeTab === "alerts" && (
+            <ErrorAlertList alerts={activeAlerts} resolvedAlerts={resolvedAlerts} />
           )}
 
           {activeTab === "software" && (
@@ -234,7 +377,12 @@ export default function MachineDetailsModal({
                   <span>Ativos de rede nao sao perifericos USB. Eles possuem IP proprio e aparecem como itens independentes.</span>
                 </div>
               ) : (
-                <PeripheralList peripherals={hardware.peripherals || []} segmentColor={segmentColor} />
+                <PeripheralList
+                  peripherals={hardware.peripherals || []}
+                  segmentColor={segmentColor}
+                  canManage
+                  onRemove={onRemovePeripheral}
+                />
               )}
             </section>
           )}
@@ -249,6 +397,25 @@ export default function MachineDetailsModal({
 
           {activeTab === "history" && (
             <section className="asset-tab-content">
+              {resolvedAlerts.length > 0 && (
+                <div className="error-alert-section resolved">
+                  <div>
+                    <h3>Erros resolvidos</h3>
+                    <span>{resolvedAlerts.length} registros</span>
+                  </div>
+                  <div className="error-alert-list compact">
+                    {resolvedAlerts.map((alert) => (
+                      <article key={alert.id} className="error-alert-card resolved">
+                        <header>
+                          <strong>{alert.description}</strong>
+                          <span>{alert.status}</span>
+                        </header>
+                        <p>{alert.metric}: {alert.limit} para {alert.value} em {formatDate(alert.detectedAt)}</p>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              )}
               <HardwareHistory changes={machine.assetHistory || []} />
               <HardwareHistory changes={hardware.changeHistory || []} />
             </section>

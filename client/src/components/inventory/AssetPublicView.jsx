@@ -99,13 +99,6 @@ export default function AssetPublicView({ assetId }) {
           <DetailItem label="Localizacao" value={machine.manualAsset?.location} />
         </div>
 
-        {isManualAsset && machine.status === "offline" && (
-          <div className="latest-change warning-note">
-            <strong>Ativo offline</strong>
-            <span>{machine.pingMessage}</span>
-          </div>
-        )}
-
         {!isManualAsset && (
           <section className="asset-public-section">
             <h2>Perifericos</h2>

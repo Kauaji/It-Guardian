@@ -1,22 +1,23 @@
-import { zabbixAlerts, zabbixHosts } from "../data/mockZabbix.js";
+import { zabbixService } from "../integrations/zabbix/ZabbixService.js";
 
 export async function getHosts() {
-  return zabbixHosts;
+  return zabbixService.getHosts();
 }
 
 export async function getHostById(id) {
-  return zabbixHosts.find((host) => host.id === id) || null;
+  return zabbixService.getHostById(id);
 }
 
 export async function getActiveAlerts() {
-  return zabbixAlerts.filter((alert) => alert.status === "active");
+  const alerts = await zabbixService.getAlerts();
+  return alerts.filter((alert) => alert.status === "active");
 }
 
 export async function getAlertHistory() {
-  return zabbixAlerts;
+  return zabbixService.getAlerts();
 }
 
 export async function getHostAlerts(hostId) {
-  return zabbixAlerts.filter((alert) => alert.hostId === hostId);
+  const alerts = await zabbixService.getAlerts();
+  return alerts.filter((alert) => alert.hostId === hostId);
 }
-

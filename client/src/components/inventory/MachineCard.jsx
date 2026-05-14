@@ -1,15 +1,16 @@
-import { ChevronDown, Clock3, Cpu, Info, MemoryStick, MoveRight, RefreshCw } from "lucide-react";
+import { ChevronDown, Clock3, Cpu, HardDrive, Info, MemoryStick, MoveRight } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import AssetTypeIcon from "./AssetTypeIcon.jsx";
 import { assetTypeLabel } from "./assetTypes.js";
 import PeripheralList from "./PeripheralList.jsx";
+import SelectionCheckbox from "./SelectionCheckbox.jsx";
 
 function statusLabel(status) {
   return {
     online: "Online",
-    offline: "Offline",
+    offline: "Erro",
     problem: "Problema"
   }[status] || "Desconhecido";
 }
@@ -17,7 +18,7 @@ function statusLabel(status) {
 function statusTone(status) {
   return {
     online: "online",
-    offline: "offline",
+    offline: "error",
     problem: "unknown"
   }[status] || "unknown";
 }
@@ -28,6 +29,16 @@ function metricTone(value) {
   return "ok";
 }
 
+function DiskIndicator({ value }) {
+  if (value == null) return null;
+  return (
+    <span className={`disk-indicator ${metricTone(value)}`} title={`Disco ${value}%`}>
+      <HardDrive size={12} />
+      {value}%
+    </span>
+  );
+}
+
 function MachineCardContent({
   machine,
   segments = [],
@@ -35,18 +46,28 @@ function MachineCardContent({
   dragHandleProps = {},
   segmentColor,
   alias,
+  selected = false,
+  selectionCount = 0,
   isDragging = false,
   isOverlay = false,
   onMoveMachine = () => {},
   onOpenDetails = () => {},
   onOpenMoveModal = () => {},
   onRefreshPing = () => {},
+  onSelect = () => {},
+  onToggleSelection = () => {},
+  onRemovePeripheral = () => {},
+  activePopoverId = null,
+  setActivePopoverId = () => {},
   setNodeRef,
   style
 }) {
-  const [moveMenuOpen, setMoveMenuOpen] = useState(false);
-  const [expanded, setExpanded] = useState(false);
   const menuRef = useRef(null);
+  const detailsRef = useRef(null);
+  const movePopoverId = `move-${machine.id}`;
+  const detailsPopoverId = `peripherals-${machine.id}`;
+  const moveMenuOpen = activePopoverId === movePopoverId;
+  const expanded = activePopoverId === detailsPopoverId;
   const availableSegments = segments.filter((segment) => segment.id !== machine.segmentId);
   const showMoveMenu = availableSegments.length > 0;
   const showDetails = true;
@@ -57,40 +78,65 @@ function MachineCardContent({
     ? new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(new Date(machine.lastPingAt))
     : "--:--";
 
-  useEffect(() => {
-    if (!moveMenuOpen) return undefined;
-
-    function closeOnOutsideClick(event) {
-      if (!menuRef.current?.contains(event.target)) {
-        setMoveMenuOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", closeOnOutsideClick);
-    return () => document.removeEventListener("mousedown", closeOnOutsideClick);
-  }, [moveMenuOpen]);
-
   function moveToSegment(segmentId) {
-    setMoveMenuOpen(false);
+    setActivePopoverId(null);
     onMoveMachine(machine, segmentId);
+  }
+
+  function handleCardClick(event) {
+    if (isOverlay) return;
+    setActivePopoverId(null);
+    onSelect(machine, { additive: event.ctrlKey || event.metaKey });
   }
 
   return (
     <article
       ref={setNodeRef}
       style={style}
-      className={`machine-card ${isDragging ? "dragging" : ""} ${isOverlay ? "drag-overlay" : ""}`}
+      className={`machine-card ${selected ? "selected" : ""} ${expanded ? "details-open" : ""} ${moveMenuOpen ? "move-menu-open" : ""} ${isDragging ? "dragging" : ""} ${isOverlay ? "drag-overlay" : ""}`}
+      onClick={handleCardClick}
     >
+      {!isOverlay && (
+        <SelectionCheckbox checked={selected} onToggle={() => onToggleSelection(machine.id)} />
+      )}
+      {isOverlay && selectionCount > 1 && (
+        <span className="drag-selection-badge">+{selectionCount - 1} equipamentos</span>
+      )}
       <div className="machine-card-header">
         <div>
-          <button className="asset-drag-handle" type="button" {...dragHandleProps} title="Arrastar ativo">
+          <button
+            className="asset-drag-handle"
+            type="button"
+            {...dragHandleProps}
+            title="Arrastar ativo"
+            onClick={(event) => event.stopPropagation()}
+          >
             <AssetTypeIcon type={machine.assetType || machine.type} size={16} />
           </button>
           <strong>{alias || machine.name}</strong>
         </div>
-        <span className={`status-dot ${statusTone(machine.status)}`}>{statusLabel(machine.status)}</span>
       </div>
-      <span className="machine-ip">{machine.ip} - {typeLabel}</span>
+      <div className="machine-badge-row">
+        {isManualAsset ? (
+          <button
+            type="button"
+            className={`status-dot status-action ${statusTone(machine.status)}`}
+            disabled={!canManage}
+            onClick={(event) => {
+              event.stopPropagation();
+              setActivePopoverId(null);
+              onRefreshPing(machine);
+            }}
+            title="Atualizar ping"
+          >
+            {statusLabel(machine.status)}
+          </button>
+        ) : (
+          <span className={`status-dot ${statusTone(machine.status)}`}>{statusLabel(machine.status)}</span>
+        )}
+        <span className="asset-type-badge">{typeLabel}</span>
+      </div>
+      <span className="machine-ip">{machine.ip}</span>
 
       {isManualAsset ? (
         <div className="network-asset-facts">
@@ -120,33 +166,59 @@ function MachineCardContent({
         </div>
       )}
 
-      {isManualAsset && machine.status === "offline" && (
-        <p className="network-offline-note">{machine.pingMessage}</p>
-      )}
-
       {showDetails && (
         <div className="machine-card-actions">
-          {isManualAsset && (
-            <button type="button" disabled={!canManage} onClick={() => onRefreshPing(machine)} title="Atualizar ping">
-              <RefreshCw size={15} />
-              Ping
-            </button>
-          )}
+          {!isManualAsset && <DiskIndicator value={metrics.disk} />}
+          <button
+            type="button"
+            className={`details-toggle ${expanded ? "expanded" : ""}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              setActivePopoverId(expanded ? null : detailsPopoverId);
+            }}
+            aria-label="Perifericos"
+            aria-expanded={expanded}
+            title={expanded ? "Ocultar perifericos" : "Perifericos"}
+          >
+            <ChevronDown size={15} />
+          </button>
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              setActivePopoverId(null);
+              onOpenDetails(machine);
+            }}
+            aria-label="Ficha"
+            title="Ficha"
+          >
+            <Info size={15} />
+          </button>
           {showMoveMenu && (
             <div className="move-menu" ref={menuRef}>
               <button
                 type="button"
                 disabled={!canManage}
-                onClick={() => setMoveMenuOpen((current) => !current)}
-                title="Mover maquina"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setActivePopoverId(moveMenuOpen ? null : movePopoverId);
+                }}
+                aria-label="Mover"
+                title="Mover"
               >
                 <MoveRight size={15} />
-                Mover
               </button>
               {moveMenuOpen && (
-                <div className="move-menu-popover">
+                <div className="move-menu-popover" onClick={(event) => event.stopPropagation()}>
                   {availableSegments.map((segment) => (
-                    <button key={segment.id} type="button" onClick={() => moveToSegment(segment.id)}>
+                    <button
+                      key={segment.id}
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        moveToSegment(segment.id);
+                      }}
+                    >
                       <span style={{ backgroundColor: segment.color || "#1f7a61" }} />
                       {segment.name}
                     </button>
@@ -155,32 +227,27 @@ function MachineCardContent({
               )}
             </div>
           )}
-          <button
-            type="button"
-            className={`details-toggle ${expanded ? "expanded" : ""}`}
-            onClick={() => setExpanded((current) => !current)}
-            aria-expanded={expanded}
-            title={expanded ? "Ocultar perifericos" : "Mostrar perifericos"}
-          >
-            <ChevronDown size={15} />
-            Perifericos
-          </button>
-          <button type="button" onClick={() => onOpenDetails(machine)} title="Abrir ficha completa">
-            <Info size={15} />
-            Ficha
-          </button>
         </div>
       )}
 
       {showDetails && (
-        <div className={`machine-details ${expanded ? "expanded" : ""}`}>
+        <div
+          ref={detailsRef}
+          className={`machine-details ${expanded ? "expanded" : ""}`}
+          onClick={(event) => event.stopPropagation()}
+        >
           {isManualAsset ? (
             <div className="manual-asset-mini">
               <span>{machine.manualAsset?.location || "Sem localizacao"}</span>
               <strong>{machine.manualAsset?.hostname || machine.manualAsset?.macAddress || "Sem hostname/MAC"}</strong>
             </div>
           ) : (
-            <PeripheralList peripherals={machine.hardware?.peripherals || []} segmentColor={segmentColor} />
+            <PeripheralList
+              peripherals={machine.hardware?.peripherals || []}
+              segmentColor={segmentColor}
+              canManage={canManage}
+              onRemove={(peripheral) => onRemovePeripheral(machine.id, peripheral)}
+            />
           )}
         </div>
       )}
@@ -194,6 +261,8 @@ export function MachineCardPreview({
   canManage = false,
   segmentColor,
   alias,
+  selected = false,
+  selectionCount = 0,
   overlayStyle
 }) {
   if (!machine) return null;
@@ -205,6 +274,8 @@ export function MachineCardPreview({
       canManage={canManage}
       segmentColor={segmentColor}
       alias={alias}
+      selected={selected}
+      selectionCount={selectionCount}
       isOverlay
       style={overlayStyle}
     />
@@ -217,10 +288,16 @@ export default function MachineCard({
   canManage,
   segmentColor,
   alias,
+  selected,
   onMoveMachine,
   onOpenDetails,
   onOpenMoveModal,
-  onRefreshPing
+  onRefreshPing,
+  onSelect,
+  onToggleSelection,
+  onRemovePeripheral,
+  activePopoverId,
+  setActivePopoverId
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: machine.id,
@@ -239,10 +316,16 @@ export default function MachineCard({
       canManage={canManage}
       segmentColor={segmentColor}
       alias={alias}
+      selected={selected}
       onMoveMachine={onMoveMachine}
       onOpenDetails={onOpenDetails}
       onOpenMoveModal={onOpenMoveModal}
       onRefreshPing={onRefreshPing}
+      onSelect={onSelect}
+      onToggleSelection={onToggleSelection}
+      onRemovePeripheral={onRemovePeripheral}
+      activePopoverId={activePopoverId}
+      setActivePopoverId={setActivePopoverId}
       dragHandleProps={{ ...attributes, ...listeners }}
       isDragging={isDragging}
       setNodeRef={setNodeRef}

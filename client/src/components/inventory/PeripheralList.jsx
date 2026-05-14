@@ -15,7 +15,7 @@ const peripheralTypes = [
   "Outro"
 ];
 
-export default function PeripheralList({ peripherals = [], segmentColor }) {
+export default function PeripheralList({ peripherals = [], segmentColor, canManage = false, onRemove = () => {} }) {
   const [items, setItems] = useState(peripherals);
   const [draft, setDraft] = useState({
     type: "Monitor",
@@ -54,7 +54,19 @@ export default function PeripheralList({ peripherals = [], segmentColor }) {
 
       <ul className="peripheral-list">
         {items.map((peripheral) => (
-          <PeripheralItem key={peripheral.id || `${peripheral.type}-${peripheral.assetTag}`} peripheral={peripheral} />
+          <PeripheralItem
+            key={peripheral.id || `${peripheral.type}-${peripheral.assetTag}`}
+            peripheral={peripheral}
+            canRemove={canManage}
+            onRemove={(item) => {
+              const removed = onRemove(item);
+              if (!removed) return;
+              setItems((current) => current.filter((peripheralItem) =>
+                (peripheralItem.id || `${peripheralItem.type}-${peripheralItem.brand}-${peripheralItem.assetTag}`) !==
+                (item.id || `${item.type}-${item.brand}-${item.assetTag}`)
+              ));
+            }}
+          />
         ))}
         {!items.length && <li className="peripheral-empty">Nenhum periferico vinculado.</li>}
       </ul>

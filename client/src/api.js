@@ -1,15 +1,43 @@
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
-const WS_URL = import.meta.env.VITE_WS_URL || API_URL.replace(/^http/, "ws").replace(/\/api$/, "/ws");
+export const API_BASE_URL =
+  import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:4000" : "/api");
+
+function normalizeBaseUrl(baseUrl) {
+  return String(baseUrl || "").replace(/\/$/, "");
+}
+
+function buildApiUrl(path) {
+  const baseUrl = normalizeBaseUrl(API_BASE_URL);
+  const apiPrefix = baseUrl.endsWith("/api") ? "" : "/api";
+  return `${baseUrl}${apiPrefix}${path}`;
+}
+
+function buildWsUrl() {
+  if (import.meta.env.VITE_ENABLE_WS !== "true" && !import.meta.env.DEV) {
+    return null;
+  }
+
+  const configured = import.meta.env.VITE_WS_URL;
+  if (configured) return configured;
+
+  const apiUrl = buildApiUrl("").replace(/\/$/, "");
+  return apiUrl.replace(/^http/, "ws").replace(/\/api$/, "/ws");
+}
 
 export async function apiFetch(path, { token, ...options } = {}) {
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers || {})
-    }
-  });
+  let response;
+
+  try {
+    response = await fetch(buildApiUrl(path), {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options.headers || {})
+      }
+    });
+  } catch (error) {
+    throw new Error("Nao foi possivel conectar ao servidor.");
+  }
 
   const data = await response.json().catch(() => ({}));
 
@@ -92,6 +120,10 @@ export function fetchSegments(token) {
   return apiFetch("/segments", { token });
 }
 
+export function fetchSegmentGroups(token) {
+  return apiFetch("/segments/groups", { token });
+}
+
 export function createSegment(token, nameOrPayload) {
   const payload = typeof nameOrPayload === "string" ? { name: nameOrPayload } : nameOrPayload;
 
@@ -112,6 +144,29 @@ export function renameSegment(token, id, updates) {
 
 export function deleteSegment(token, id) {
   return apiFetch(`/segments/${id}`, {
+    token,
+    method: "DELETE"
+  });
+}
+
+export function createSegmentGroup(token, payload) {
+  return apiFetch("/segments/groups", {
+    token,
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function updateSegmentGroup(token, id, payload) {
+  return apiFetch(`/segments/groups/${id}`, {
+    token,
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function deleteSegmentGroup(token, id) {
+  return apiFetch(`/segments/groups/${id}`, {
     token,
     method: "DELETE"
   });
@@ -141,5 +196,8 @@ export function removeAlertAcknowledgement(token, id) {
 }
 
 export function createMonitoringSocket(token) {
-  return new WebSocket(`${WS_URL}?token=${encodeURIComponent(token)}`);
+  const wsUrl = buildWsUrl();
+  if (!wsUrl) return null;
+
+  return new WebSocket(`${wsUrl}?token=${encodeURIComponent(token)}`);
 }

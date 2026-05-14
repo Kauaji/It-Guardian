@@ -1,0 +1,71 @@
+import dotenv from "dotenv";
+
+dotenv.config();
+
+export const isVercel = process.env.VERCEL === "1";
+export const isProduction = process.env.NODE_ENV === "production";
+export const isProductionLike = isProduction || isVercel;
+
+export function getFrontendUrl() {
+  if (process.env.FRONTEND_URL) return process.env.FRONTEND_URL.replace(/\/$/, "");
+  if (process.env.CLIENT_ORIGIN) return process.env.CLIENT_ORIGIN.replace(/\/$/, "");
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return "http://localhost:5173";
+}
+
+export function getCorsOrigins() {
+  return Array.from(
+    new Set([
+      "http://localhost:5173",
+      "http://127.0.0.1:5173",
+      process.env.CLIENT_ORIGIN,
+      process.env.FRONTEND_URL,
+      process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null
+    ].filter(Boolean).map((origin) => origin.replace(/\/$/, "")))
+  );
+}
+
+export function getJwtSecret() {
+  const secret = process.env.JWT_SECRET;
+
+  if (isProductionLike && (!secret || secret === "dev-secret" || secret === "change-me-in-production")) {
+    const error = new Error("JWT_SECRET precisa ser configurado com uma chave segura em producao.");
+    error.statusCode = 500;
+    throw error;
+  }
+
+  return secret || "dev-secret";
+}
+
+export function resolveDatabaseConfig() {
+  const databaseUrl = process.env.DATABASE_URL || "";
+  const wantsMemory = databaseUrl === "memory" || process.env.DB_MODE === "memory";
+
+  if (isProductionLike && wantsMemory) {
+    const error = new Error("DATABASE_URL=memory nao pode ser usado em producao. Configure Supabase ou Neon.");
+    error.statusCode = 500;
+    throw error;
+  }
+
+  if (isProductionLike && !databaseUrl) {
+    const error = new Error("Erro ao conectar ao banco de dados. Configure DATABASE_URL no ambiente de producao.");
+    error.statusCode = 500;
+    throw error;
+  }
+
+  if (wantsMemory) {
+    return { mode: "memory" };
+  }
+
+  const connectionString = databaseUrl || "postgres://itguardian:itguardian@localhost:5432/itguardian";
+  const shouldUseSsl =
+    process.env.DB_SSL === "true" ||
+    (process.env.DB_SSL !== "false" &&
+      (isProductionLike || /supabase|neon\.tech|pooler/i.test(connectionString)));
+
+  return {
+    mode: "postgres",
+    connectionString,
+    ssl: shouldUseSsl ? { rejectUnauthorized: false } : false
+  };
+}

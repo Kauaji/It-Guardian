@@ -13,7 +13,7 @@ import {
 function normalizeStatus(status) {
   return {
     online: "Online",
-    offline: "Offline",
+    offline: "Erro",
     problem: "Problema"
   }[status] || status;
 }

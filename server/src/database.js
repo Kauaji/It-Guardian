@@ -1,5 +1,11 @@
+import { resolveDatabaseConfig } from "./config/environment.js";
+
+let poolPromise;
+
 async function createPool() {
-  if (process.env.DATABASE_URL === "memory" || process.env.DB_MODE === "memory") {
+  const config = resolveDatabaseConfig();
+
+  if (config.mode === "memory") {
     const { newDb } = await import("pg-mem");
     const db = newDb({ autoCreateForeignKeyIndices: true });
     const { Pool } = db.adapters.createPg();
@@ -7,18 +13,23 @@ async function createPool() {
   }
 
   const { Pool } = await import("pg");
-  const connectionString =
-    process.env.DATABASE_URL || "postgres://itguardian:itguardian@localhost:5432/itguardian";
 
   return new Pool({
-    connectionString,
-    ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : false
+    connectionString: config.connectionString,
+    ssl: config.ssl
   });
 }
 
-export const pool = await createPool();
+export function getPool() {
+  if (!poolPromise) {
+    poolPromise = createPool();
+  }
+
+  return poolPromise;
+}
 
 export async function query(text, params = []) {
+  const pool = await getPool();
   return pool.query(text, params);
 }
 
@@ -58,9 +69,22 @@ export async function initializeDatabase() {
   await query(`
     CREATE TABLE IF NOT EXISTS inventory_segments (
       id TEXT PRIMARY KEY,
-      name TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
       color TEXT NOT NULL DEFAULT '#1f7a61',
+      group_id TEXT,
       is_default BOOLEAN NOT NULL DEFAULT FALSE,
+      created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS segment_groups (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      color TEXT NOT NULL DEFAULT '#8b9bb0',
+      collapsed BOOLEAN NOT NULL DEFAULT FALSE,
       created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -70,6 +94,31 @@ export async function initializeDatabase() {
   await query(`
     ALTER TABLE inventory_segments
     ADD COLUMN IF NOT EXISTS color TEXT NOT NULL DEFAULT '#1f7a61';
+  `);
+
+  await query(`
+    ALTER TABLE inventory_segments
+    ADD COLUMN IF NOT EXISTS group_id TEXT;
+  `);
+
+  await query(`
+    ALTER TABLE inventory_segments
+    DROP CONSTRAINT IF EXISTS inventory_segments_group_id_fkey;
+  `);
+
+  await query(`
+    ALTER TABLE inventory_segments
+    ADD CONSTRAINT inventory_segments_group_id_fkey
+    FOREIGN KEY (group_id) REFERENCES segment_groups(id) ON DELETE SET NULL;
+  `);
+
+  await query(`
+    ALTER TABLE inventory_segments
+    DROP CONSTRAINT IF EXISTS inventory_segments_name_key;
+  `);
+
+  await query(`
+    DROP INDEX IF EXISTS inventory_segments_name_key;
   `);
 
   await query(`
@@ -140,6 +189,11 @@ export async function initializeDatabase() {
   await query(`
     CREATE INDEX IF NOT EXISTS idx_device_segments_segment_id
     ON device_segments (segment_id);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_inventory_segments_group_id
+    ON inventory_segments (group_id);
   `);
 
   await query(`

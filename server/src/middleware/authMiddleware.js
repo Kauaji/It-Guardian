@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import { getJwtSecret } from "../config/environment.js";
 import { findUserById } from "../repositories/userRepository.js";
 
 export async function requireAuth(req, res, next) {
@@ -10,7 +11,7 @@ export async function requireAuth(req, res, next) {
       return res.status(401).json({ message: "Authentication token is required" });
     }
 
-    const payload = jwt.verify(token, process.env.JWT_SECRET || "dev-secret");
+    const payload = jwt.verify(token, getJwtSecret());
     const user = await findUserById(payload.sub);
 
     if (!user) {
