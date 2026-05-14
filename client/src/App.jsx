@@ -38,7 +38,7 @@ import {
   acknowledgeAlert,
   createManualAsset,
   createSegment,
-  createSegmentGroup,
+  createSegmentGroup as createSegmentGroupApi,
   createMonitoringSocket,
   deleteSegment,
   deleteSegmentGroup as deleteSegmentGroupApi,
@@ -1326,7 +1326,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     setSegmentGroups(nextGroups);
   }
 
-  function createSegmentGroup() {
+  function openSegmentGroupForm() {
     setSegmentGroupForm({ mode: "create", group: null });
   }
 
@@ -1352,7 +1352,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     setSegmentGroupSaving(true);
     try {
       if (segmentGroupForm?.mode === "create") {
-        const response = await createSegmentGroup(token, {
+        const response = await createSegmentGroupApi(token, {
           name: cleanName,
           color: pickSegmentColor(segments)
         });
@@ -1723,7 +1723,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
             onToggleSelection={toggleAssetSelection}
             groups={segmentGroups}
             onSelectGroup={selectInventoryGroup}
-            onCreateGroup={createSegmentGroup}
+            onCreateGroup={openSegmentGroupForm}
             onRenameGroup={renameSegmentGroup}
             onDeleteGroup={deleteSegmentGroup}
             onToggleGroup={toggleSegmentGroup}
