@@ -42,7 +42,18 @@ export async function apiFetch(path, { token, ...options } = {}) {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    const error = new Error(data.message || "Request failed");
+    const message = data.message || "Request failed";
+
+    if (
+      response.status === 401 &&
+      token &&
+      /token|sess/i.test(message) &&
+      typeof window !== "undefined"
+    ) {
+      window.dispatchEvent(new CustomEvent("it-guardian:auth-expired", { detail: { message } }));
+    }
+
+    const error = new Error(message);
     error.statusCode = response.status;
     throw error;
   }

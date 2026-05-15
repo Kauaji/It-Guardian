@@ -2213,6 +2213,19 @@ export default function App() {
     setToast({ message, tone });
   }
 
+  useEffect(() => {
+    function handleAuthExpired() {
+      localStorage.removeItem(tokenKey);
+      localStorage.removeItem(userKey);
+      setToken(null);
+      setUser(null);
+      notify("Sessao expirada. Faca login novamente.", "danger");
+    }
+
+    window.addEventListener("it-guardian:auth-expired", handleAuthExpired);
+    return () => window.removeEventListener("it-guardian:auth-expired", handleAuthExpired);
+  }, []);
+
   function toggleTheme() {
     setTheme((current) => (current === "dark" ? "light" : "dark"));
   }
