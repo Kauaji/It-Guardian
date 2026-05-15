@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
+import ColorPickerSegment from "./ColorPickerSegment.jsx";
+
+const fallbackGroupColor = "#2563eb";
 
 export default function SegmentGroupFormModal({
   mode,
@@ -10,9 +13,11 @@ export default function SegmentGroupFormModal({
   onSubmit
 }) {
   const [name, setName] = useState("");
+  const [color, setColor] = useState("");
 
   useEffect(() => {
     setName(group?.name || "");
+    setColor(group?.color || "");
   }, [group]);
 
   const normalizedName = name.trim().toLowerCase();
@@ -29,7 +34,7 @@ export default function SegmentGroupFormModal({
   function submit(event) {
     event.preventDefault();
     if (name.trim().length < 2 || duplicateName || saving) return;
-    onSubmit(name.trim());
+    onSubmit(name.trim(), color || undefined);
   }
 
   return (
@@ -59,6 +64,16 @@ export default function SegmentGroupFormModal({
           />
         </label>
         {duplicateName && <span className="form-error">Ja existe um grupo com esse nome.</span>}
+
+        <div className="group-color-field">
+          <span>Cor do grupo</span>
+          <ColorPickerSegment
+            color={color || fallbackGroupColor}
+            disabled={saving}
+            onChange={setColor}
+            title="Alterar cor do grupo"
+          />
+        </div>
 
         <div className="modal-actions">
           <button type="button" className="ghost-action" onClick={onClose}>Cancelar</button>

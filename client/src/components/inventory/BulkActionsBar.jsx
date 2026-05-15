@@ -7,12 +7,16 @@ export default function BulkActionsBar({
   onTargetChange,
   onMove,
   onPrint,
-  onClear
+  onClear,
+  isDragActive = false
 }) {
-  if (!count) return null;
+  if (count < 2) return null;
 
   return (
-    <section className="bulk-actions-bar" aria-label="Acoes em massa">
+    <section
+      className={`bulk-actions-bar ${isDragActive ? "drag-safe-zone" : ""}`}
+      aria-label="Acoes em massa"
+    >
       <strong>{count} selecionados</strong>
       <select value={currentTarget} onChange={(event) => onTargetChange(event.target.value)}>
         <option value="">Alterar segmento...</option>

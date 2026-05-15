@@ -7,6 +7,8 @@ import { assetTypeLabel } from "./assetTypes.js";
 import PeripheralList from "./PeripheralList.jsx";
 import SelectionCheckbox from "./SelectionCheckbox.jsx";
 
+const pingTimeFormatter = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
 function statusLabel(status) {
   return {
     online: "Online",
@@ -74,8 +76,9 @@ function MachineCardContent({
   const isManualAsset = machine.source === "manual";
   const metrics = machine.metrics || {};
   const typeLabel = assetTypeLabel(machine.assetType || machine.type);
+  const { onPointerDown: onDragPointerDown, ...safeDragHandleProps } = dragHandleProps;
   const lastPing = machine.lastPingAt
-    ? new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(new Date(machine.lastPingAt))
+    ? pingTimeFormatter.format(new Date(machine.lastPingAt))
     : "--:--";
 
   function moveToSegment(segmentId) {
@@ -107,8 +110,12 @@ function MachineCardContent({
           <button
             className="asset-drag-handle"
             type="button"
-            {...dragHandleProps}
+            {...safeDragHandleProps}
             title="Arrastar ativo"
+            onPointerDown={(event) => {
+              setActivePopoverId(null);
+              onDragPointerDown?.(event);
+            }}
             onClick={(event) => event.stopPropagation()}
           >
             <AssetTypeIcon type={machine.assetType || machine.type} size={16} />
@@ -255,33 +262,6 @@ function MachineCardContent({
   );
 }
 
-export function MachineCardPreview({
-  machine,
-  segments = [],
-  canManage = false,
-  segmentColor,
-  alias,
-  selected = false,
-  selectionCount = 0,
-  overlayStyle
-}) {
-  if (!machine) return null;
-
-  return (
-    <MachineCardContent
-      machine={machine}
-      segments={segments}
-      canManage={canManage}
-      segmentColor={segmentColor}
-      alias={alias}
-      selected={selected}
-      selectionCount={selectionCount}
-      isOverlay
-      style={overlayStyle}
-    />
-  );
-}
-
 export default function MachineCard({
   machine,
   segments,
@@ -305,7 +285,7 @@ export default function MachineCard({
   });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: isDragging ? undefined : CSS.Transform.toString(transform),
     transition
   };
 

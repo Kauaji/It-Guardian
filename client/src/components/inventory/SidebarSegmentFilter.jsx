@@ -1,6 +1,6 @@
 import { useDraggable, useDroppable } from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { getSegmentGroupId } from "./inventoryUtils.js";
 
 function SidebarSegmentDropItem({ segment, selected, count, onSelectSegment }) {
   const { isOver, setNodeRef } = useDroppable({
@@ -11,16 +11,12 @@ function SidebarSegmentDropItem({ segment, selected, count, onSelectSegment }) {
     attributes,
     listeners,
     setNodeRef: setDragNodeRef,
-    transform,
     isDragging
   } = useDraggable({
     id: `sidebar-segment-drag-${segment.id}`,
     data: { type: "segment", segmentId: segment.id, origin: "sidebar" },
     disabled: segment.isDefault
   });
-  const dragStyle = {
-    transform: CSS.Translate.toString(transform)
-  };
 
   return (
     <button
@@ -29,16 +25,15 @@ function SidebarSegmentDropItem({ segment, selected, count, onSelectSegment }) {
       className={`sidebar-segment-item ${selected ? "active" : ""} ${isOver ? "drop-over" : ""}`}
       onClick={() => onSelectSegment(segment.id)}
     >
-      <span className="segment-filter-dot" style={{ backgroundColor: segment.color || "#1f7a61" }} />
       <span
         ref={setDragNodeRef}
-        className={`sidebar-filter-label sidebar-segment-name-handle ${isDragging ? "dragging" : ""}`}
-        style={dragStyle}
+        className={`sidebar-segment-drag-handle ${isDragging ? "dragging" : ""}`}
         title={segment.isDefault ? "Segmento padrao nao pode ser movido" : "Mover segmento"}
         {...attributes}
         {...listeners}
       >
-        {segment.name}
+        <span className="segment-filter-dot" style={{ backgroundColor: segment.color || "#1f7a61" }} />
+        <span className="sidebar-filter-label">{segment.name}</span>
       </span>
       <small>{count}</small>
     </button>
@@ -73,17 +68,31 @@ export default function SidebarSegmentFilter({
   onToggleGroup
 }) {
   const [ungroupedCollapsed, setUngroupedCollapsed] = useState(false);
-  const visibleSegments = segments.filter(
-    (segment) => !segment.isDefault || devices.some((device) => device.segmentId === segment.id)
-  );
-  const getGroupId = (segment) =>
-    segment.groupId || groups.find((group) => (group.segmentIds || []).includes(segment.id))?.id || "";
-  const ungrouped = visibleSegments.filter((segment) => !getGroupId(segment));
-  const countBySegment = new Map();
+  const visibleSegments = segments;
+  const countBySegment = useMemo(() => {
+    const next = new Map();
+    for (const device of devices) {
+      next.set(device.segmentId, (next.get(device.segmentId) || 0) + 1);
+    }
+    return next;
+  }, [devices]);
+  const segmentsByGroupId = useMemo(() => {
+    const next = new Map([["", []]]);
 
-  for (const device of devices) {
-    countBySegment.set(device.segmentId, (countBySegment.get(device.segmentId) || 0) + 1);
-  }
+    for (const group of groups) {
+      next.set(group.id, []);
+    }
+
+    for (const segment of visibleSegments) {
+      const groupId = getSegmentGroupId(segment, groups);
+      const list = next.get(groupId) || [];
+      list.push(segment);
+      next.set(groupId, list);
+    }
+
+    return next;
+  }, [groups, visibleSegments]);
+  const ungrouped = segmentsByGroupId.get("") || [];
 
   function groupCount(groupSegments) {
     return groupSegments.reduce((total, segment) => total + (countBySegment.get(segment.id) || 0), 0);
@@ -101,7 +110,7 @@ export default function SidebarSegmentFilter({
         <small>{devices.length}</small>
       </button>
       {groups.map((group) => {
-        const groupSegments = visibleSegments.filter((segment) => getGroupId(segment) === group.id);
+        const groupSegments = segmentsByGroupId.get(group.id) || [];
         const count = groupCount(groupSegments);
 
         return (

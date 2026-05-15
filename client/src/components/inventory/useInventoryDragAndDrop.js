@@ -20,11 +20,18 @@ export function useInventoryDragAndDrop({
   useEffect(() => {
     setOrderedIds((current) => {
       const incoming = devices.map((device) => device.id);
-      const kept = current.filter((id) => incoming.includes(id));
-      const added = incoming.filter((id) => !kept.includes(id));
+      const incomingSet = new Set(incoming);
+      const kept = current.filter((id) => incomingSet.has(id));
+      const keptSet = new Set(kept);
+      const added = incoming.filter((id) => !keptSet.has(id));
       return [...kept, ...added];
     });
   }, [devices]);
+
+  const deviceById = useMemo(
+    () => new Map(devices.map((device) => [device.id, device])),
+    [devices]
+  );
 
   const sortedDevices = useMemo(() => {
     const orderMap = new Map(orderedIds.map((id, index) => [id, index]));
@@ -53,11 +60,11 @@ export function useInventoryDragAndDrop({
 
     if (!machineId || !targetSegmentId) return null;
 
-    const machine = devices.find((device) => device.id === machineId);
+    const machine = deviceById.get(machineId);
     if (!machine) return null;
     const selectedIds = selectedAssetIds.has(machineId) ? Array.from(selectedAssetIds) : [machineId];
     const movingMachines = selectedIds
-      .map((id) => devices.find((device) => device.id === id))
+      .map((id) => deviceById.get(id))
       .filter(Boolean);
 
     if (overMachineId && machineId !== overMachineId && selectedIds.length === 1) {
@@ -79,7 +86,7 @@ export function useInventoryDragAndDrop({
       onMoveMachine(machine, targetSegmentId);
     }
     return { machine, machineIds: selectedIds, targetSegmentId, targetType, moved: true };
-  }, [devices, onMoveMachine, onMoveMachines, selectedAssetIds]);
+  }, [deviceById, onMoveMachine, onMoveMachines, selectedAssetIds]);
 
   return {
     handleDragEnd,

@@ -1,9 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
-
-function getSegmentGroupId(segment, groups) {
-  return segment?.groupId || groups.find((group) => (group.segmentIds || []).includes(segment?.id))?.id || "";
-}
+import { hasDuplicateSegmentName } from "./inventoryUtils.js";
 
 export default function SegmentFormModal({
   mode,
@@ -26,13 +23,12 @@ export default function SegmentFormModal({
   const normalizedName = name.trim().toLowerCase();
   const selectedGroupForValidation = groupId || "";
   const duplicateName = useMemo(
-    () =>
-      Boolean(normalizedName) &&
-      segments.some((item) =>
-        item.id !== segment?.id &&
-        item.name.trim().toLowerCase() === normalizedName &&
-        getSegmentGroupId(item, groups) === selectedGroupForValidation
-      ),
+    () => hasDuplicateSegmentName(segments, {
+      name: normalizedName,
+      groupId: selectedGroupForValidation,
+      excludeId: segment?.id,
+      groups
+    }),
     [normalizedName, selectedGroupForValidation, segment?.id, groups, segments]
   );
   const isCreate = mode === "create";
