@@ -418,6 +418,188 @@ export const zabbixHosts = [
       { time: "10:00", cpu: 39, ram: 49, disk: 42 },
       { time: "11:00", cpu: 37, ram: 48, disk: 42 }
     ]
+  },
+  {
+    id: "srv-erp-01",
+    name: "SRV-ERP-01",
+    ip: "10.10.1.33",
+    status: "online",
+    uptimeHours: 884,
+    metrics: { cpu: 52, ram: 68, disk: 74, networkInMbps: 96, networkOutMbps: 58 },
+    history: [
+      { time: "08:00", cpu: 43, ram: 63, disk: 73 },
+      { time: "09:00", cpu: 49, ram: 66, disk: 73 },
+      { time: "10:00", cpu: 56, ram: 69, disk: 74 },
+      { time: "11:00", cpu: 52, ram: 68, disk: 74 }
+    ]
+  },
+  {
+    id: "srv-vmhost-02",
+    name: "SRV-VMHOST-02",
+    ip: "10.10.1.34",
+    status: "online",
+    uptimeHours: 1678,
+    metrics: { cpu: 38, ram: 72, disk: 66, networkInMbps: 180, networkOutMbps: 126 },
+    history: [
+      { time: "08:00", cpu: 31, ram: 68, disk: 65 },
+      { time: "09:00", cpu: 36, ram: 70, disk: 66 },
+      { time: "10:00", cpu: 42, ram: 73, disk: 66 },
+      { time: "11:00", cpu: 38, ram: 72, disk: 66 }
+    ]
+  },
+  {
+    id: "srv-mail-01",
+    name: "SRV-MAIL-01",
+    ip: "10.10.1.44",
+    status: "online",
+    uptimeHours: 704,
+    metrics: { cpu: 24, ram: 55, disk: 59, networkInMbps: 37, networkOutMbps: 44 },
+    history: [
+      { time: "08:00", cpu: 18, ram: 52, disk: 58 },
+      { time: "09:00", cpu: 23, ram: 54, disk: 58 },
+      { time: "10:00", cpu: 28, ram: 56, disk: 59 },
+      { time: "11:00", cpu: 24, ram: 55, disk: 59 }
+    ]
+  },
+  {
+    id: "srv-mon-01",
+    name: "SRV-MON-01",
+    ip: "10.10.1.50",
+    status: "problem",
+    uptimeHours: 612,
+    metrics: { cpu: 64, ram: 86, disk: 78, networkInMbps: 72, networkOutMbps: 36 },
+    history: [
+      { time: "08:00", cpu: 45, ram: 73, disk: 76 },
+      { time: "09:00", cpu: 58, ram: 80, disk: 77 },
+      { time: "10:00", cpu: 67, ram: 87, disk: 78 },
+      { time: "11:00", cpu: 64, ram: 86, disk: 78 }
+    ]
+  },
+  {
+    id: "ws-contab-01",
+    name: "WS-CONTAB-01",
+    ip: "10.10.7.51",
+    status: "online",
+    uptimeHours: 78,
+    metrics: { cpu: 22, ram: 46, disk: 54, networkInMbps: 8, networkOutMbps: 5 },
+    history: [
+      { time: "08:00", cpu: 18, ram: 42, disk: 54 },
+      { time: "09:00", cpu: 21, ram: 45, disk: 54 },
+      { time: "10:00", cpu: 25, ram: 47, disk: 54 },
+      { time: "11:00", cpu: 22, ram: 46, disk: 54 }
+    ]
+  },
+  {
+    id: "ws-contab-02",
+    name: "WS-CONTAB-02",
+    ip: "10.10.7.52",
+    status: "online",
+    uptimeHours: 64,
+    metrics: { cpu: 29, ram: 52, disk: 62, networkInMbps: 10, networkOutMbps: 6 },
+    history: [
+      { time: "08:00", cpu: 24, ram: 48, disk: 61 },
+      { time: "09:00", cpu: 28, ram: 50, disk: 61 },
+      { time: "10:00", cpu: 32, ram: 53, disk: 62 },
+      { time: "11:00", cpu: 29, ram: 52, disk: 62 }
+    ]
+  },
+  {
+    id: "ws-juridico-01",
+    name: "WS-JURIDICO-01",
+    ip: "10.10.5.41",
+    status: "online",
+    uptimeHours: 96,
+    metrics: { cpu: 17, ram: 39, disk: 47, networkInMbps: 6, networkOutMbps: 4 },
+    history: [
+      { time: "08:00", cpu: 14, ram: 36, disk: 47 },
+      { time: "09:00", cpu: 16, ram: 38, disk: 47 },
+      { time: "10:00", cpu: 20, ram: 40, disk: 47 },
+      { time: "11:00", cpu: 17, ram: 39, disk: 47 }
+    ]
+  },
+  {
+    id: "ws-compras-04",
+    name: "WS-COMPRAS-04",
+    ip: "10.10.5.64",
+    status: "online",
+    uptimeHours: 41,
+    metrics: { cpu: 34, ram: 57, disk: 58, networkInMbps: 12, networkOutMbps: 9 },
+    history: [
+      { time: "08:00", cpu: 26, ram: 53, disk: 57 },
+      { time: "09:00", cpu: 31, ram: 55, disk: 57 },
+      { time: "10:00", cpu: 38, ram: 58, disk: 58 },
+      { time: "11:00", cpu: 34, ram: 57, disk: 58 }
+    ]
+  },
+  {
+    id: "ws-logistica-06",
+    name: "WS-LOGISTICA-06",
+    ip: "10.10.9.46",
+    status: "offline",
+    uptimeHours: 0,
+    metrics: { cpu: 0, ram: 0, disk: 64, networkInMbps: 0, networkOutMbps: 0 },
+    history: [
+      { time: "08:00", cpu: 28, ram: 49, disk: 64 },
+      { time: "09:00", cpu: 30, ram: 51, disk: 64 },
+      { time: "10:00", cpu: 0, ram: 0, disk: 64 },
+      { time: "11:00", cpu: 0, ram: 0, disk: 64 }
+    ]
+  },
+  {
+    id: "ws-suporte-02",
+    name: "WS-SUPORTE-02",
+    ip: "10.10.4.32",
+    status: "online",
+    uptimeHours: 135,
+    metrics: { cpu: 48, ram: 61, disk: 55, networkInMbps: 18, networkOutMbps: 15 },
+    history: [
+      { time: "08:00", cpu: 36, ram: 56, disk: 55 },
+      { time: "09:00", cpu: 42, ram: 59, disk: 55 },
+      { time: "10:00", cpu: 51, ram: 62, disk: 55 },
+      { time: "11:00", cpu: 48, ram: 61, disk: 55 }
+    ]
+  },
+  {
+    id: "nb-gerencia-03",
+    name: "NB-GERENCIA-03",
+    ip: "10.10.8.73",
+    status: "online",
+    uptimeHours: 33,
+    metrics: { cpu: 26, ram: 54, disk: 60, networkInMbps: 15, networkOutMbps: 10 },
+    history: [
+      { time: "08:00", cpu: 20, ram: 49, disk: 59 },
+      { time: "09:00", cpu: 24, ram: 52, disk: 60 },
+      { time: "10:00", cpu: 29, ram: 55, disk: 60 },
+      { time: "11:00", cpu: 26, ram: 54, disk: 60 }
+    ]
+  },
+  {
+    id: "nb-ti-01",
+    name: "NB-TI-01",
+    ip: "10.10.4.81",
+    status: "online",
+    uptimeHours: 19,
+    metrics: { cpu: 44, ram: 67, disk: 57, networkInMbps: 31, networkOutMbps: 20 },
+    history: [
+      { time: "08:00", cpu: 35, ram: 61, disk: 56 },
+      { time: "09:00", cpu: 40, ram: 64, disk: 56 },
+      { time: "10:00", cpu: 48, ram: 68, disk: 57 },
+      { time: "11:00", cpu: 44, ram: 67, disk: 57 }
+    ]
+  },
+  {
+    id: "prd-print-02",
+    name: "PRD-PRINT-02",
+    ip: "10.10.3.19",
+    status: "online",
+    uptimeHours: 244,
+    metrics: { cpu: 9, ram: 31, disk: 39, networkInMbps: 4, networkOutMbps: 3 },
+    history: [
+      { time: "08:00", cpu: 8, ram: 29, disk: 39 },
+      { time: "09:00", cpu: 10, ram: 30, disk: 39 },
+      { time: "10:00", cpu: 11, ram: 31, disk: 39 },
+      { time: "11:00", cpu: 9, ram: 31, disk: 39 }
+    ]
   }
 ];
 
@@ -512,5 +694,25 @@ export const zabbixAlerts = [
     description: "CPU e memoria permaneceram acima do esperado por 15 minutos.",
     status: "active",
     startedAt: "2026-05-05T11:31:00.000Z"
+  },
+  {
+    id: "alert-1009",
+    hostId: "srv-mon-01",
+    hostName: "SRV-MON-01",
+    severity: "warning",
+    title: "Monitoramento com memoria elevada",
+    description: "Servidor de monitoramento esta usando mais de 85% de RAM.",
+    status: "active",
+    startedAt: "2026-05-06T10:18:00.000Z"
+  },
+  {
+    id: "alert-1010",
+    hostId: "ws-logistica-06",
+    hostName: "WS-LOGISTICA-06",
+    severity: "critical",
+    title: "Estacao da logistica indisponivel",
+    description: "Estacao nao responde desde a ultima coleta do agente.",
+    status: "active",
+    startedAt: "2026-05-06T10:24:00.000Z"
   }
 ];

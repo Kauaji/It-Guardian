@@ -637,5 +637,316 @@ export const ocsInventory = [
     ],
     software: ["visitor-kiosk", "Chrome", "ocs-agent"],
     lastInventoryAt: "2026-05-05T08:28:00.000Z"
+  },
+  {
+    hostId: "srv-erp-01",
+    manufacturer: "Dell",
+    model: "PowerEdge R650",
+    assetTag: "ATV-SRV-0007",
+    serialNumber: "DL-R650-ERP01",
+    loggedUser: "svc-erp",
+    macAddress: "00:1B:44:91:33:01",
+    os: "Windows Server 2022",
+    cpuModel: "Intel Xeon Silver 4316",
+    cpuCores: 40,
+    ramGb: 128,
+    disks: [
+      { label: "OS Mirror", sizeGb: 960, type: "SSD" },
+      { label: "ERP Data", sizeGb: 4096, type: "NVMe" }
+    ],
+    peripherals: [{ id: "per-erp-01", type: "Monitor", brand: "Dell", assetTag: "PAT-4501" }],
+    changeHistory: [
+      {
+        id: "chg-erp-01",
+        detectedAt: "2026-05-06T08:31:00.000Z",
+        change: "Servico ERP atualizado",
+        oldValue: "ERP 2025.4",
+        newValue: "ERP 2026.1"
+      }
+    ],
+    software: ["ERP Server", "SQL Server Client", "IIS", "zabbix-agent2", "ocs-agent"],
+    lastInventoryAt: "2026-05-06T08:31:00.000Z"
+  },
+  {
+    hostId: "srv-vmhost-02",
+    manufacturer: "HPE",
+    model: "ProLiant DL385 Gen11",
+    assetTag: "ATV-SRV-0008",
+    serialNumber: "HPE-DL385-VM02",
+    loggedUser: "hypervisor",
+    macAddress: "00:25:90:31:34:02",
+    os: "VMware ESXi 8.0",
+    cpuModel: "AMD EPYC 9354",
+    cpuCores: 64,
+    ramGb: 512,
+    disks: [
+      { label: "Boot", sizeGb: 480, type: "SSD" },
+      { label: "Datastore-02", sizeGb: 8192, type: "NVMe" }
+    ],
+    peripherals: [{ id: "per-vm02-01", type: "Outro", brand: "HPE iLO", assetTag: "PAT-4601" }],
+    changeHistory: [
+      {
+        id: "chg-vm02-01",
+        detectedAt: "2026-05-06T07:52:00.000Z",
+        change: "Novo datastore detectado",
+        oldValue: "4096 GB",
+        newValue: "8192 GB"
+      }
+    ],
+    software: ["esxi", "vcenter-agent", "zabbix-agent2"],
+    lastInventoryAt: "2026-05-06T08:20:00.000Z"
+  },
+  {
+    hostId: "srv-mail-01",
+    manufacturer: "Lenovo",
+    model: "ThinkSystem SR630 V3",
+    assetTag: "ATV-SRV-0009",
+    serialNumber: "LEN-SR630-MAIL01",
+    loggedUser: "svc-mail",
+    macAddress: "3C:EC:EF:91:44:01",
+    os: "Ubuntu Server 24.04 LTS",
+    cpuModel: "Intel Xeon Silver 4410T",
+    cpuCores: 20,
+    ramGb: 64,
+    disks: [
+      { label: "System Volume", sizeGb: 480, type: "SSD" },
+      { label: "Mail Queue", sizeGb: 2048, type: "SSD" }
+    ],
+    peripherals: [{ id: "per-mail-01", type: "Monitor", brand: "Lenovo", assetTag: "PAT-4701" }],
+    changeHistory: [
+      {
+        id: "chg-mail-01",
+        detectedAt: "2026-05-05T18:12:00.000Z",
+        change: "Fila de email normalizada",
+        oldValue: "Fila acima de 12 GB",
+        newValue: "Fila abaixo de 2 GB"
+      }
+    ],
+    software: ["postfix", "rspamd", "dovecot", "zabbix-agent2", "ocs-agent"],
+    lastInventoryAt: "2026-05-06T08:14:00.000Z"
+  },
+  {
+    hostId: "srv-mon-01",
+    manufacturer: "Dell",
+    model: "PowerEdge R450",
+    assetTag: "ATV-SRV-0010",
+    serialNumber: "DL-R450-MON01",
+    loggedUser: "svc-monitoring",
+    macAddress: "00:1B:44:91:50:01",
+    os: "Debian 12",
+    cpuModel: "Intel Xeon Silver 4310",
+    cpuCores: 24,
+    ramGb: 96,
+    disks: [
+      { label: "System", sizeGb: 480, type: "SSD" },
+      { label: "Monitoring Data", sizeGb: 4096, type: "HDD" }
+    ],
+    peripherals: [{ id: "per-mon-01", type: "Monitor", brand: "AOC", assetTag: "PAT-4801" }],
+    changeHistory: [
+      {
+        id: "chg-mon-01",
+        detectedAt: "2026-05-06T09:10:00.000Z",
+        change: "Memoria acima do esperado",
+        oldValue: "Uso medio 63%",
+        newValue: "Uso medio 86%"
+      }
+    ],
+    software: ["zabbix-server", "grafana", "postgresql", "ocs-agent"],
+    lastInventoryAt: "2026-05-06T08:19:00.000Z"
+  },
+  {
+    hostId: "ws-contab-01",
+    manufacturer: "Dell",
+    model: "OptiPlex 7010",
+    assetTag: "ATV-WS-0015",
+    serialNumber: "DL-OP7010-CONT01",
+    loggedUser: "contab01",
+    macAddress: "D8:BB:C1:70:51:01",
+    os: "Windows 11 Pro",
+    cpuModel: "Intel Core i5-13500",
+    cpuCores: 14,
+    ramGb: 16,
+    disks: [{ label: "C:", sizeGb: 512, type: "NVMe" }],
+    peripherals: [
+      { id: "per-cont01-01", type: "Monitor", brand: "Dell", assetTag: "PAT-5511" },
+      { id: "per-cont01-02", type: "Mouse", brand: "Dell", assetTag: "PAT-5512" },
+      { id: "per-cont01-03", type: "Teclado", brand: "Dell", assetTag: "PAT-5513" }
+    ],
+    changeHistory: [],
+    software: ["Microsoft 365", "Domínio Contabil", "Chrome", "ocs-agent"],
+    lastInventoryAt: "2026-05-06T08:02:00.000Z"
+  },
+  {
+    hostId: "ws-contab-02",
+    manufacturer: "HP",
+    model: "ProDesk 400 G9",
+    assetTag: "ATV-WS-0016",
+    serialNumber: "HP-PD400-CONT02",
+    loggedUser: "contab02",
+    macAddress: "F4:39:09:70:52:02",
+    os: "Windows 11 Pro",
+    cpuModel: "Intel Core i5-12500",
+    cpuCores: 12,
+    ramGb: 16,
+    disks: [{ label: "C:", sizeGb: 512, type: "NVMe" }],
+    peripherals: [
+      { id: "per-cont02-01", type: "Monitor", brand: "HP", assetTag: "PAT-5521" },
+      { id: "per-cont02-02", type: "Headset", brand: "Jabra", assetTag: "PAT-5522" }
+    ],
+    changeHistory: [],
+    software: ["Microsoft 365", "Domínio Contabil", "Chrome", "ocs-agent"],
+    lastInventoryAt: "2026-05-06T08:04:00.000Z"
+  },
+  {
+    hostId: "ws-juridico-01",
+    manufacturer: "Lenovo",
+    model: "ThinkCentre M80q",
+    assetTag: "ATV-WS-0017",
+    serialNumber: "LEN-M80Q-JUR01",
+    loggedUser: "juridico01",
+    macAddress: "A8:7E:EA:45:41:01",
+    os: "Windows 11 Pro",
+    cpuModel: "Intel Core i5-12400T",
+    cpuCores: 12,
+    ramGb: 16,
+    disks: [{ label: "C:", sizeGb: 512, type: "NVMe" }],
+    peripherals: [
+      { id: "per-jur01-01", type: "Monitor", brand: "Samsung", assetTag: "PAT-5611" },
+      { id: "per-jur01-02", type: "Webcam", brand: "Logitech", assetTag: "PAT-5612" }
+    ],
+    changeHistory: [],
+    software: ["Microsoft 365", "PJe Office", "Adobe Reader", "ocs-agent"],
+    lastInventoryAt: "2026-05-06T08:06:00.000Z"
+  },
+  {
+    hostId: "ws-compras-04",
+    manufacturer: "Dell",
+    model: "OptiPlex 7000",
+    assetTag: "ATV-WS-0018",
+    serialNumber: "DL-OP7000-COMP04",
+    loggedUser: "compras04",
+    macAddress: "D8:BB:C1:70:64:04",
+    os: "Windows 11 Pro",
+    cpuModel: "Intel Core i5-12500",
+    cpuCores: 12,
+    ramGb: 16,
+    disks: [{ label: "C:", sizeGb: 512, type: "NVMe" }],
+    peripherals: [
+      { id: "per-comp04-01", type: "Monitor", brand: "AOC", assetTag: "PAT-5641" },
+      { id: "per-comp04-02", type: "Mouse", brand: "Logitech", assetTag: "PAT-5642" }
+    ],
+    changeHistory: [],
+    software: ["Microsoft 365", "ERP Client", "Chrome", "ocs-agent"],
+    lastInventoryAt: "2026-05-06T08:08:00.000Z"
+  },
+  {
+    hostId: "ws-logistica-06",
+    manufacturer: "HP",
+    model: "EliteDesk 800 G8",
+    assetTag: "ATV-WS-0019",
+    serialNumber: "HP-ED800-LOG06",
+    loggedUser: "logistica06",
+    macAddress: "F4:39:09:90:46:06",
+    os: "Windows 11 Pro",
+    cpuModel: "Intel Core i5-11500",
+    cpuCores: 12,
+    ramGb: 16,
+    disks: [{ label: "C:", sizeGb: 512, type: "SSD" }],
+    peripherals: [
+      { id: "per-log06-01", type: "Monitor", brand: "LG", assetTag: "PAT-5906" },
+      { id: "per-log06-02", type: "Scanner", brand: "Zebra", assetTag: "PAT-5907" }
+    ],
+    changeHistory: [
+      {
+        id: "chg-log06-01",
+        detectedAt: "2026-05-06T10:20:00.000Z",
+        change: "Host ficou indisponivel",
+        oldValue: "Online",
+        newValue: "Sem telemetria"
+      }
+    ],
+    software: ["WMS Client", "Chrome", "ocs-agent"],
+    lastInventoryAt: "2026-05-06T09:58:00.000Z"
+  },
+  {
+    hostId: "ws-suporte-02",
+    manufacturer: "Lenovo",
+    model: "ThinkStation P3 Tiny",
+    assetTag: "ATV-WS-0020",
+    serialNumber: "LEN-P3-SUP02",
+    loggedUser: "suporte02",
+    macAddress: "A8:7E:EA:44:32:02",
+    os: "Windows 11 Pro",
+    cpuModel: "Intel Core i7-13700T",
+    cpuCores: 24,
+    ramGb: 32,
+    disks: [{ label: "C:", sizeGb: 1024, type: "NVMe" }],
+    peripherals: [
+      { id: "per-sup02-01", type: "Monitor", brand: "Dell", assetTag: "PAT-5409" },
+      { id: "per-sup02-02", type: "Headset", brand: "Jabra", assetTag: "PAT-5410" }
+    ],
+    changeHistory: [],
+    software: ["Microsoft 365", "AnyDesk", "PuTTY", "Wireshark", "ocs-agent"],
+    lastInventoryAt: "2026-05-06T08:10:00.000Z"
+  },
+  {
+    hostId: "nb-gerencia-03",
+    manufacturer: "Dell",
+    model: "Latitude 7450",
+    assetTag: "ATV-NB-0008",
+    serialNumber: "DL-LAT7450-GER03",
+    loggedUser: "gerencia03",
+    macAddress: "D8:BB:C1:88:73:03",
+    os: "Windows 11 Pro",
+    cpuModel: "Intel Core Ultra 7 165U",
+    cpuCores: 14,
+    ramGb: 32,
+    disks: [{ label: "C:", sizeGb: 1024, type: "NVMe" }],
+    peripherals: [
+      { id: "per-ger03-01", type: "Notebook", brand: "Dell", assetTag: "PAT-7803" },
+      { id: "per-ger03-02", type: "Dockstation", brand: "Dell", assetTag: "PAT-7804" }
+    ],
+    changeHistory: [],
+    software: ["Microsoft 365", "Teams", "Power BI Desktop", "ocs-agent"],
+    lastInventoryAt: "2026-05-06T08:12:00.000Z"
+  },
+  {
+    hostId: "nb-ti-01",
+    manufacturer: "Lenovo",
+    model: "ThinkPad P14s Gen 5",
+    assetTag: "ATV-NB-0009",
+    serialNumber: "LEN-P14S-TI01",
+    loggedUser: "ti01",
+    macAddress: "C8:5B:76:21:81:01",
+    os: "Windows 11 Pro",
+    cpuModel: "Intel Core Ultra 7 155H",
+    cpuCores: 22,
+    ramGb: 32,
+    disks: [{ label: "C:", sizeGb: 1024, type: "NVMe" }],
+    peripherals: [
+      { id: "per-ti01-01", type: "Notebook", brand: "Lenovo", assetTag: "PAT-7901" },
+      { id: "per-ti01-02", type: "Dockstation", brand: "Lenovo", assetTag: "PAT-7902" }
+    ],
+    changeHistory: [],
+    software: ["VS Code", "Node.js", "Docker Desktop", "PowerShell", "ocs-agent"],
+    lastInventoryAt: "2026-05-06T08:15:00.000Z"
+  },
+  {
+    hostId: "prd-print-02",
+    manufacturer: "HP",
+    model: "Color LaserJet Enterprise MFP M480",
+    assetTag: "ATV-PRD-0002",
+    serialNumber: "HP-M480-PRINT02",
+    loggedUser: "spooler",
+    macAddress: "F8:BC:12:10:03:19",
+    os: "Embedded Linux",
+    cpuModel: "ARM Cortex-A9",
+    cpuCores: 4,
+    ramGb: 2,
+    disks: [{ label: "Internal Flash", sizeGb: 16, type: "Flash" }],
+    peripherals: [{ id: "per-prd02-01", type: "Impressora", brand: "HP", assetTag: "PAT-8121" }],
+    changeHistory: [],
+    software: ["print-service", "snmp-agent"],
+    lastInventoryAt: "2026-05-06T08:16:00.000Z"
   }
 ];
