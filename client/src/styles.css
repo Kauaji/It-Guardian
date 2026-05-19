@@ -24,6 +24,8 @@
   --sidebar-muted: #c6d6e7;
   --accent: #1f7a61;
   --accent-hover: #176b54;
+  --system-neutral: #64748b;
+  --system-neutral-soft: #e2e8f0;
   --shadow-sm: 0 8px 20px rgba(24, 33, 47, 0.07);
   --shadow-md: 0 18px 42px rgba(24, 33, 47, 0.11);
   --ease-premium: cubic-bezier(0.22, 1, 0.36, 1);
@@ -61,6 +63,8 @@
   --sidebar-muted: #c8d7e8;
   --accent: #34d399;
   --accent-hover: #10b981;
+  --system-neutral: #94a3b8;
+  --system-neutral-soft: #1f2937;
   --shadow-sm: 0 12px 30px rgba(0, 0, 0, 0.26);
   --shadow-md: 0 24px 54px rgba(0, 0, 0, 0.34);
 }
@@ -254,13 +258,21 @@ select {
     linear-gradient(180deg, color-mix(in srgb, var(--sidebar-bg-2) 62%, var(--sidebar-bg)), var(--sidebar-bg));
   padding: 16px 14px;
   color: var(--sidebar-text);
-  box-shadow: 10px 0 34px rgba(7, 13, 22, 0.16);
+  box-shadow: 8px 0 24px rgba(7, 13, 22, 0.14);
   transform: translateX(0);
   transition:
     transform 190ms var(--ease-premium),
     background 220ms var(--ease-premium),
     box-shadow 170ms var(--ease-premium);
   will-change: transform;
+}
+
+body.machine-details-open {
+  overscroll-behavior: contain;
+}
+
+body.machine-details-open .sidebar {
+  pointer-events: none;
 }
 
 .sidebar-collapsed .sidebar {
@@ -422,6 +434,12 @@ select {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: transform 160ms var(--ease-premium), color 160ms var(--ease-premium);
+}
+
+.app-shell.sidebar-drag-active .sidebar-segment-group .sidebar-filter-label,
+.app-shell.sidebar-drag-active .sidebar-segment-item .sidebar-filter-label {
+  transform: translateX(10px);
 }
 
 .sidebar-group-row {
@@ -647,7 +665,7 @@ select {
 }
 
 .segment-filter-dot.all {
-  background: #d6a21f;
+  background: var(--system-neutral);
 }
 
 .workspace {
@@ -1297,14 +1315,15 @@ tbody tr.selected {
   display: grid;
   gap: 0;
   min-width: 0;
-  border: 1px solid color-mix(in srgb, var(--active-tab-color, #2563eb) 28%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--active-tab-color, #2563eb) 40%, var(--border));
   border-radius: 18px;
   background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--active-tab-color, #2563eb) 16%, transparent), transparent 38%),
-    linear-gradient(180deg, color-mix(in srgb, var(--active-tab-color, #2563eb) 9%, var(--surface)), var(--app-bg) 52%);
+    radial-gradient(circle at top left, color-mix(in srgb, var(--active-tab-color, #2563eb) 22%, transparent), transparent 38%),
+    linear-gradient(180deg, color-mix(in srgb, var(--active-tab-color, #2563eb) 14%, var(--surface)), var(--app-bg) 54%);
   padding: 10px 12px 12px;
   box-shadow: var(--shadow-sm);
   transition:
+    padding-right 220ms var(--ease-premium),
     border-color 200ms var(--ease-premium),
     background 240ms var(--ease-premium);
 }
@@ -1346,14 +1365,14 @@ tbody tr.selected {
 .inventory-tabs-shell {
   margin: -18px -12px -1px;
   padding: 0 12px;
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: visible;
   scrollbar-width: thin;
 }
 
 .inventory-tabs-list {
-  min-width: max-content;
+  min-width: 0;
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
   gap: 4px;
   padding: 0;
@@ -1361,40 +1380,39 @@ tbody tr.selected {
 
 .inventory-tab {
   --tab-color: #2563eb;
-  min-width: 112px;
-  min-height: 39px;
-  border: 1px solid color-mix(in srgb, var(--tab-color) 30%, var(--border));
+  min-width: 116px;
+  min-height: 38px;
+  border: 1px solid color-mix(in srgb, var(--tab-color) 42%, var(--border));
   border-bottom: 0;
-  border-radius: 14px 14px 0 0;
+  border-radius: 16px 16px 0 0;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--tab-color) 12%, var(--surface)), color-mix(in srgb, var(--tab-color) 5%, var(--surface)));
+    linear-gradient(180deg, color-mix(in srgb, var(--tab-color) 20%, var(--surface)), color-mix(in srgb, var(--tab-color) 9%, var(--surface)));
   color: var(--text-muted);
   display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
   cursor: pointer;
-  box-shadow: 0 10px 20px color-mix(in srgb, var(--tab-color) 6%, transparent);
+  box-shadow: 0 6px 14px color-mix(in srgb, var(--tab-color) 7%, transparent);
   transform-origin: bottom;
   transition:
-    min-width 180ms var(--ease-premium),
-    min-height 180ms var(--ease-premium),
     background 180ms var(--ease-premium),
+    border-color 160ms var(--ease-premium),
     color 160ms var(--ease-premium),
     transform 160ms var(--ease-premium),
     box-shadow 160ms var(--ease-premium);
 }
 
 .inventory-tab.active {
-  min-width: 112px;
-  min-height: 42px;
-  border-color: color-mix(in srgb, var(--tab-color) 42%, var(--border-strong));
+  min-width: 128px;
+  min-height: 44px;
+  border-color: color-mix(in srgb, var(--tab-color) 64%, var(--border-strong));
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--tab-color) 18%, var(--surface)), color-mix(in srgb, var(--tab-color) 8%, var(--surface)));
+    linear-gradient(180deg, color-mix(in srgb, var(--tab-color) 34%, var(--surface)), color-mix(in srgb, var(--tab-color) 16%, var(--surface)));
   color: var(--text-strong);
   box-shadow:
-    inset 0 2px 0 var(--tab-color),
-    0 10px 22px color-mix(in srgb, var(--tab-color) 12%, transparent);
+    inset 0 3px 0 var(--tab-color),
+    0 12px 24px color-mix(in srgb, var(--tab-color) 15%, transparent);
   transform: translateY(1px);
   z-index: 2;
 }
@@ -1426,6 +1444,8 @@ tbody tr.selected {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  position: relative;
+  z-index: 3;
 }
 
 .inventory-tab.active .inventory-tab-actions {
@@ -1439,8 +1459,8 @@ tbody tr.selected {
   height: 31px;
   min-height: 31px;
   border: 1px solid color-mix(in srgb, var(--tab-color, #2563eb) 24%, var(--border));
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--surface) 88%, var(--tab-color, #2563eb));
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--surface) 86%, var(--tab-color, #2563eb));
   color: var(--text-muted);
   display: inline-flex;
   align-items: center;
@@ -1471,11 +1491,11 @@ tbody tr.selected {
 
 .inventory-tab-panel {
   margin-top: -1px;
-  border: 1px solid color-mix(in srgb, var(--active-tab-color, #2563eb) 30%, var(--border));
-  border-radius: 0 14px 14px;
+  border: 1px solid color-mix(in srgb, var(--active-tab-color, #2563eb) 42%, var(--border));
+  border-radius: 0 16px 16px;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--active-tab-color, #2563eb) 10%, var(--surface)), var(--surface) 80%);
-  padding: 12px;
+    linear-gradient(180deg, color-mix(in srgb, var(--active-tab-color, #2563eb) 15%, var(--surface)), var(--surface) 82%);
+  padding: 14px;
   box-shadow: var(--shadow-sm);
 }
 
@@ -1746,13 +1766,13 @@ tbody tr.selected {
   position: relative;
   display: grid;
   gap: 14px;
-  border: 1px solid color-mix(in srgb, var(--group-color) 38%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--group-color) 54%, var(--border));
   border-radius: 16px;
   background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--group-color) 16%, transparent), transparent 32%),
-    linear-gradient(180deg, color-mix(in srgb, var(--group-color) 14%, var(--surface)), color-mix(in srgb, var(--group-color) 6%, var(--surface)) 82%);
+    radial-gradient(circle at top left, color-mix(in srgb, var(--group-color) 22%, transparent), transparent 32%),
+    linear-gradient(180deg, color-mix(in srgb, var(--group-color) 22%, var(--surface)), color-mix(in srgb, var(--group-color) 10%, var(--surface)) 84%);
   padding: 12px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--group-color) 8%, transparent);
   transition:
     border-color 180ms var(--ease-premium),
     box-shadow 180ms var(--ease-premium),
@@ -1763,8 +1783,8 @@ tbody tr.selected {
 .segment-group-section.group-drop-over {
   border-color: color-mix(in srgb, var(--group-color) 82%, var(--accent));
   box-shadow:
-    0 0 0 3px color-mix(in srgb, var(--group-color) 22%, transparent),
-    var(--shadow-md);
+    0 0 0 3px color-mix(in srgb, var(--group-color) 18%, transparent),
+    0 10px 24px color-mix(in srgb, var(--group-color) 12%, transparent);
   transform: translateY(-1px);
 }
 
@@ -1790,12 +1810,12 @@ tbody tr.selected {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  border: 1px solid color-mix(in srgb, var(--group-color) 24%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--group-color) 34%, var(--border));
   border-radius: 12px;
   background:
-    linear-gradient(90deg, color-mix(in srgb, var(--group-color) 18%, var(--surface)), color-mix(in srgb, var(--group-color) 8%, var(--surface)));
+    linear-gradient(90deg, color-mix(in srgb, var(--group-color) 25%, var(--surface)), color-mix(in srgb, var(--group-color) 12%, var(--surface)));
   padding: 10px 12px;
-  box-shadow: 0 10px 24px color-mix(in srgb, var(--group-color) 8%, transparent);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--group-color) 8%, transparent);
   overflow: hidden;
 }
 
@@ -1812,6 +1832,8 @@ tbody tr.selected {
   flex-wrap: wrap;
   gap: 7px;
   min-width: 0;
+  transition: transform 170ms var(--ease-premium);
+  will-change: transform;
 }
 
 .group-title-copy strong {
@@ -1833,6 +1855,7 @@ tbody tr.selected {
   justify-content: flex-end;
   gap: 8px;
   margin-left: auto;
+  position: relative;
 }
 
 .segment-group-section.ungrouped-section > header {
@@ -1912,11 +1935,11 @@ tbody tr.selected {
   --segment-color: #1f7a61;
   width: 100%;
   overflow: visible;
-  border: 1px solid color-mix(in srgb, var(--segment-color) 62%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--segment-color) 46%, var(--border));
   border-radius: 16px;
   background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--segment-color) 18%, transparent), transparent 34%),
-    linear-gradient(180deg, color-mix(in srgb, var(--segment-color) 18%, var(--surface)), var(--surface) 82%);
+    radial-gradient(circle at top left, color-mix(in srgb, var(--segment-color) 10%, transparent), transparent 34%),
+    linear-gradient(180deg, color-mix(in srgb, var(--segment-color) 11%, var(--surface)), var(--surface) 84%);
   background-clip: padding-box;
   isolation: isolate;
   box-shadow: var(--shadow-sm);
@@ -1928,26 +1951,49 @@ tbody tr.selected {
 }
 
 .segment-card:hover {
-  border-color: color-mix(in srgb, var(--segment-color) 74%, var(--border-strong));
+  border-color: color-mix(in srgb, var(--segment-color) 62%, var(--border-strong));
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--segment-color) 10%, transparent),
-    var(--shadow-md);
+    0 0 0 1px color-mix(in srgb, var(--segment-color) 8%, transparent),
+    0 10px 24px color-mix(in srgb, var(--segment-color) 9%, transparent);
+}
+
+.segment-card.segment-selected {
+  border-color: color-mix(in srgb, var(--segment-color) 86%, var(--accent));
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--segment-color) 18%, transparent),
+    0 10px 24px color-mix(in srgb, var(--segment-color) 10%, transparent);
 }
 
 .segment-card.drop-over {
   border-color: var(--segment-color);
   box-shadow:
-    0 0 0 2px color-mix(in srgb, var(--segment-color) 28%, transparent),
-    0 14px 30px rgba(24, 33, 47, 0.1);
+    0 0 0 2px color-mix(in srgb, var(--segment-color) 22%, transparent),
+    0 10px 24px rgba(24, 33, 47, 0.08);
 }
 
 .segment-card.drop-confirm-highlight {
   border-color: var(--segment-color);
   box-shadow:
-    0 0 0 4px color-mix(in srgb, var(--segment-color) 26%, transparent),
-    0 18px 38px color-mix(in srgb, var(--segment-color) 18%, transparent),
-    var(--shadow-md);
-  animation: drop-confirm-pulse 900ms var(--ease-premium);
+    0 0 0 3px color-mix(in srgb, var(--segment-color) 20%, transparent),
+    0 10px 24px color-mix(in srgb, var(--segment-color) 12%, transparent);
+  animation: drop-confirm-pulse 620ms var(--ease-premium);
+}
+
+.segment-card.default-segment-card {
+  --segment-color: var(--system-neutral);
+  margin-top: 4px;
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--system-neutral) 46%, var(--border));
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--system-neutral) 10%, transparent), transparent 34%),
+    linear-gradient(180deg, color-mix(in srgb, var(--system-neutral) 12%, var(--surface)), var(--surface) 86%);
+}
+
+.segment-card.default-segment-card:hover {
+  border-color: color-mix(in srgb, var(--system-neutral) 58%, var(--border-strong));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--system-neutral) 8%, transparent),
+    0 8px 18px color-mix(in srgb, var(--system-neutral) 8%, transparent);
 }
 
 @keyframes drop-confirm-pulse {
@@ -1969,12 +2015,18 @@ tbody tr.selected {
   padding: 16px 18px 14px;
   border-radius: 15px 15px 0 0;
   background:
-    linear-gradient(90deg, color-mix(in srgb, var(--segment-color) 30%, var(--surface)), color-mix(in srgb, var(--segment-color) 14%, var(--surface)));
-  border-bottom: 1px solid color-mix(in srgb, var(--segment-color) 34%, var(--border));
+    linear-gradient(90deg, color-mix(in srgb, var(--segment-color) 18%, var(--surface)), color-mix(in srgb, var(--segment-color) 8%, var(--surface)));
+  border-bottom: 1px solid color-mix(in srgb, var(--segment-color) 24%, var(--border));
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+}
+
+.segment-card.default-segment-card .segment-card-header {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--system-neutral) 18%, var(--surface)), color-mix(in srgb, var(--system-neutral) 8%, var(--surface)));
+  border-bottom-color: color-mix(in srgb, var(--system-neutral) 24%, var(--border));
 }
 
 .segment-title-row {
@@ -2001,6 +2053,13 @@ tbody tr.selected {
   align-items: flex-start;
   gap: 3px;
   min-width: 0;
+  transition: transform 170ms var(--ease-premium);
+  will-change: transform;
+}
+
+.app-shell:not(.sidebar-collapsed) .workspace .segment-stack .group-title-copy,
+.app-shell:not(.sidebar-collapsed) .workspace .segment-stack .segment-title-copy {
+  transform: translateX(calc(var(--sidebar-open-width) - var(--sidebar-rail-width) + 12px));
 }
 
 .segment-title-copy span {
@@ -2068,8 +2127,8 @@ tbody tr.selected {
   cursor: default;
   pointer-events: none;
   box-shadow:
-    0 0 0 4px color-mix(in srgb, var(--segment-color) 20%, transparent),
-    0 8px 18px color-mix(in srgb, var(--segment-color) 22%, transparent);
+    0 0 0 4px color-mix(in srgb, var(--segment-color) 17%, transparent),
+    0 6px 14px color-mix(in srgb, var(--segment-color) 16%, transparent);
   transition:
     transform 160ms var(--ease-premium),
     box-shadow 160ms var(--ease-premium),
@@ -2096,8 +2155,8 @@ tbody tr.selected {
 .segment-card.segment-dragging {
   z-index: 70;
   box-shadow:
-    0 0 0 3px color-mix(in srgb, var(--segment-color) 22%, transparent),
-    var(--shadow-md);
+    0 0 0 3px color-mix(in srgb, var(--segment-color) 16%, transparent),
+    var(--shadow-sm);
 }
 
 .segment-header-tools {
@@ -2106,6 +2165,7 @@ tbody tr.selected {
   justify-content: flex-end;
   flex-wrap: wrap;
   gap: 8px;
+  position: relative;
 }
 
 .segment-header-tools button,
@@ -2149,6 +2209,143 @@ tbody tr.selected {
   color: #536074;
 }
 
+.segment-actions-menu-wrap,
+.inventory-tab-actions {
+  position: relative;
+}
+
+.action-menu-popover {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 9px);
+  z-index: 140;
+  min-width: 190px;
+  display: grid;
+  gap: 5px;
+  padding: 8px;
+  border: 1px solid color-mix(in srgb, var(--segment-color, var(--active-tab-color, #2563eb)) 24%, var(--border));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 96%, var(--segment-color, var(--active-tab-color, #2563eb)));
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.14);
+  animation: popover-soft-in 130ms var(--ease-premium);
+}
+
+.tab-actions-menu {
+  --segment-color: var(--tab-color, var(--active-tab-color, #2563eb));
+  top: calc(100% + 8px);
+  left: 0;
+  right: auto;
+}
+
+.group-actions-menu {
+  --segment-color: var(--group-color, var(--active-tab-color, #2563eb));
+}
+
+.action-menu-item,
+.action-menu-select {
+  width: 100%;
+  min-height: 34px;
+  display: flex !important;
+  align-items: center;
+  justify-content: flex-start !important;
+  gap: 9px;
+  border: 0 !important;
+  border-radius: 9px !important;
+  padding: 7px 9px !important;
+  background: transparent !important;
+  color: var(--text) !important;
+  font-size: 13px;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 150ms var(--ease-premium),
+    color 150ms var(--ease-premium),
+    transform 150ms var(--ease-premium);
+}
+
+.action-menu-item:hover,
+.action-menu-select:hover {
+  background: color-mix(in srgb, var(--segment-color, #2563eb) 12%, var(--surface-soft)) !important;
+  color: var(--text-strong) !important;
+  transform: translateX(2px);
+}
+
+.action-menu-item.danger {
+  color: #c24141 !important;
+}
+
+.action-menu-item.danger:hover {
+  background: color-mix(in srgb, #dc2626 12%, var(--surface-soft)) !important;
+  color: #b91c1c !important;
+}
+
+.action-menu-item.color-action {
+  justify-content: space-between !important;
+  cursor: default;
+}
+
+.action-menu-item.color-action:hover,
+.action-menu-select:hover {
+  transform: none;
+}
+
+.action-menu-select {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  cursor: default;
+}
+
+.action-menu-select select,
+.segment-group-select,
+.group-filter-select,
+.bulk-actions-bar select,
+.modal-panel select,
+.manual-asset-form select {
+  transition:
+    border-color 160ms var(--ease-premium),
+    box-shadow 160ms var(--ease-premium),
+    background 160ms var(--ease-premium),
+    color 160ms var(--ease-premium);
+}
+
+.action-menu-select select:hover,
+.segment-group-select:hover,
+.group-filter-select:hover,
+.bulk-actions-bar select:hover,
+.modal-panel select:hover,
+.manual-asset-form select:hover {
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--border-strong));
+  box-shadow: var(--shadow-sm);
+}
+
+.action-menu-select select:focus-visible,
+.segment-group-select:focus-visible,
+.group-filter-select:focus-visible,
+.bulk-actions-bar select:focus-visible,
+.modal-panel select:focus-visible,
+.manual-asset-form select:focus-visible {
+  outline: 0;
+  border-color: color-mix(in srgb, var(--accent) 62%, var(--border-strong));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.rotated {
+  transform: rotate(-90deg);
+}
+
+@keyframes popover-soft-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .segment-collapse svg {
   transition: transform 160ms ease;
 }
@@ -2185,6 +2382,8 @@ tbody tr.selected {
   min-width: 32px;
   padding: 0;
   overflow: visible;
+  border-radius: 9px !important;
+  background: color-mix(in srgb, var(--surface) 88%, var(--segment-color, var(--active-tab-color, #2563eb))) !important;
 }
 
 .segment-color-trigger svg {
@@ -2206,15 +2405,15 @@ tbody tr.selected {
   position: absolute;
   right: 0;
   top: calc(100% + 9px);
-  z-index: 120;
+  z-index: 160;
   display: grid;
   grid-template-columns: repeat(4, 24px);
   gap: 8px;
   padding: 10px;
   border: 1px solid #dfe5ee;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #ffffff;
-  box-shadow: 0 18px 44px rgba(24, 33, 47, 0.18);
+  box-shadow: 0 14px 32px rgba(24, 33, 47, 0.14);
 }
 
 .segment-color-popover button {
@@ -2327,8 +2526,8 @@ tbody tr.selected {
   pointer-events: none;
   opacity: 0.99;
   border-color: var(--border-strong);
-  box-shadow: 0 14px 30px rgba(10, 20, 30, 0.2);
-  transform: translateZ(0) scale(1.01);
+  box-shadow: 0 10px 22px rgba(10, 20, 30, 0.14);
+  transform: translateZ(0) scale(1.005);
   will-change: transform;
   transition: box-shadow 120ms var(--ease-premium), opacity 120ms var(--ease-premium);
 }
@@ -2349,7 +2548,7 @@ tbody tr.selected {
   background: color-mix(in srgb, var(--surface) 94%, var(--overlay-segment-color));
   color: var(--text-strong);
   padding: 7px 10px;
-  box-shadow: 0 12px 26px rgba(10, 20, 30, 0.16);
+  box-shadow: 0 8px 18px rgba(10, 20, 30, 0.13);
   pointer-events: none;
   will-change: transform;
 }
@@ -2998,19 +3197,37 @@ tbody tr.selected {
 }
 
 .asset-modal-backdrop {
-  z-index: 55;
+  z-index: 160;
+  place-items: center;
+  padding: 22px;
+  background: rgba(9, 15, 23, 0.64);
+  backdrop-filter: blur(2px);
+  overscroll-behavior: contain;
 }
 
 .asset-modal {
-  width: min(1080px, calc(100vw - 32px));
-  max-height: calc(100vh - 32px);
+  width: min(1280px, 95vw);
+  height: min(920px, 94dvh);
+  max-height: 94dvh;
   display: grid;
-  grid-template-rows: auto auto 1fr;
+  grid-template-rows: auto auto minmax(0, 1fr);
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 18px;
   background: var(--surface);
   box-shadow: 0 28px 80px rgba(10, 20, 30, 0.3);
+  animation: modal-focus-in 180ms var(--ease-premium);
+}
+
+@keyframes modal-focus-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .asset-modal-header {
@@ -3048,11 +3265,14 @@ tbody tr.selected {
   display: flex;
   gap: 6px;
   overflow-x: auto;
+  overflow-y: hidden;
   padding: 10px 18px 0;
   border-bottom: 1px solid #edf1f6;
+  scrollbar-width: thin;
 }
 
 .machine-tabs button {
+  flex: 0 0 auto;
   border: 0;
   border-bottom: 2px solid transparent;
   background: transparent;
@@ -3069,8 +3289,11 @@ tbody tr.selected {
 }
 
 .asset-modal-body {
-  overflow: auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 18px 22px 22px;
+  overscroll-behavior: contain;
 }
 
 .asset-tab-content {
@@ -3818,14 +4041,26 @@ table strong,
 
 :root[data-theme="dark"] .segment-card {
   background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--segment-color) 24%, transparent), transparent 34%),
-    linear-gradient(180deg, color-mix(in srgb, var(--segment-color) 24%, var(--surface)), var(--surface) 78%);
+    radial-gradient(circle at top left, color-mix(in srgb, var(--segment-color) 16%, transparent), transparent 34%),
+    linear-gradient(180deg, color-mix(in srgb, var(--segment-color) 17%, var(--surface)), var(--surface) 80%);
 }
 
 :root[data-theme="dark"] .segment-card-header {
   background:
-    linear-gradient(90deg, color-mix(in srgb, var(--segment-color) 34%, var(--surface)), color-mix(in srgb, var(--segment-color) 16%, var(--surface)));
-  border-bottom-color: color-mix(in srgb, var(--segment-color) 40%, var(--border));
+    linear-gradient(90deg, color-mix(in srgb, var(--segment-color) 24%, var(--surface)), color-mix(in srgb, var(--segment-color) 12%, var(--surface)));
+  border-bottom-color: color-mix(in srgb, var(--segment-color) 30%, var(--border));
+}
+
+:root[data-theme="dark"] .segment-card.default-segment-card {
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--system-neutral) 13%, transparent), transparent 34%),
+    linear-gradient(180deg, color-mix(in srgb, var(--system-neutral) 13%, var(--surface)), var(--surface) 84%);
+}
+
+:root[data-theme="dark"] .segment-card.default-segment-card .segment-card-header {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--system-neutral) 20%, var(--surface)), color-mix(in srgb, var(--system-neutral) 10%, var(--surface)));
+  border-bottom-color: color-mix(in srgb, var(--system-neutral) 28%, var(--border));
 }
 
 :root[data-theme="dark"] .segment-color-mark {
@@ -3936,7 +4171,8 @@ table strong,
 }
 
 :root[data-theme="dark"] .segment-color-popover,
-:root[data-theme="dark"] .move-menu-popover {
+:root[data-theme="dark"] .move-menu-popover,
+:root[data-theme="dark"] .action-menu-popover {
   background: #111827;
   border-color: var(--border);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.38);
@@ -4095,7 +4331,9 @@ table strong,
 
   .asset-modal {
     width: calc(100vw - 20px);
-    max-height: calc(100vh - 20px);
+    height: calc(100dvh - 20px);
+    max-height: calc(100dvh - 20px);
+    border-radius: 14px;
   }
 
   .asset-modal-header {

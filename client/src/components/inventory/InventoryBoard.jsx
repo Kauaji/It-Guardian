@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
-import { ArrowDown, ArrowUp, ChevronDown, Database, Edit3, ListFilter, Plus, Search, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, Database, Edit3, ListFilter, MoreHorizontal, Plus, Search, Trash2 } from "lucide-react";
 import SegmentCard from "./SegmentCard.jsx";
 import MoveMachineModal from "./MoveMachineModal.jsx";
 import MachineDetailsModal from "./MachineDetailsModal.jsx";
@@ -45,6 +45,7 @@ export default function InventoryBoard({
   onCreateSegment,
   onRenameSegment,
   onDeleteSegment,
+  onDuplicateSegment,
   onChangeSegmentColor,
   onAliasSave,
   onAddObservation,
@@ -82,6 +83,7 @@ export default function InventoryBoard({
   const [selectedMachine, setSelectedMachine] = useState(null);
   const [activePopoverId, setActivePopoverId] = useState(null);
   const [searchFocused, setSearchFocused] = useState(false);
+  const [selectedSegmentIds, setSelectedSegmentIds] = useState(new Set());
   const segmentGroupIdMap = useMemo(() => {
     const next = new Map();
 
@@ -180,7 +182,34 @@ export default function InventoryBoard({
 
   useEffect(() => {
     setActivePopoverId(null);
+    setSelectedSegmentIds(new Set());
   }, [activeTabId, selectedGroupId, selectedSegmentId]);
+
+  useEffect(() => {
+    if (!selectedMachine) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    const previousPaddingRight = document.body.style.paddingRight;
+    document.body.style.overflow = "hidden";
+    document.body.classList.add("machine-details-open");
+    setActivePopoverId(null);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.paddingRight = previousPaddingRight;
+      document.body.classList.remove("machine-details-open");
+    };
+  }, [selectedMachine]);
+
+  function handleSelectSegment(segmentId, additive = false) {
+    setSelectedSegmentIds((current) => {
+      if (!additive) return new Set([segmentId]);
+      const next = new Set(current);
+      if (next.has(segmentId)) next.delete(segmentId);
+      else next.add(segmentId);
+      return next;
+    });
+  }
 
   return (
     <section
@@ -270,56 +299,83 @@ export default function InventoryBoard({
               <div className="group-header-actions">
                 <button
                   type="button"
-                  className={`group-icon-action ${group.collapsed ? "collapsed" : ""}`}
-                  onClick={() => onToggleGroup(group.id)}
-                  title={group.collapsed ? "Expandir grupo" : "Ocultar grupo"}
-                  aria-label={group.collapsed ? "Expandir grupo" : "Ocultar grupo"}
+                  className="group-icon-action group-options-trigger"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setActivePopoverId(activePopoverId === `group-actions-${group.id}` ? null : `group-actions-${group.id}`);
+                  }}
+                  title="Acoes do grupo"
+                  aria-label="Acoes do grupo"
+                  aria-expanded={activePopoverId === `group-actions-${group.id}`}
                 >
-                  <ChevronDown size={16} />
+                  <MoreHorizontal size={16} />
                 </button>
-                {canManage && (
-                  <>
-                    {groupIndex > 0 && (
+                {activePopoverId === `group-actions-${group.id}` && (
+                  <div className="action-menu-popover group-actions-menu" onClick={(event) => event.stopPropagation()}>
+                    <button
+                      type="button"
+                      className="action-menu-item"
+                      onClick={() => {
+                        onToggleGroup(group.id);
+                        setActivePopoverId(null);
+                      }}
+                    >
+                      <ChevronDown size={15} className={group.collapsed ? "rotated" : ""} />
+                      {group.collapsed ? "Expandir grupo" : "Ocultar grupo"}
+                    </button>
+                    {canManage && groupIndex > 0 && (
                       <button
                         type="button"
-                        className="group-icon-action"
-                        onClick={() => onMoveGroupOrder?.(group.id, "up")}
-                        title="Subir grupo"
-                        aria-label="Subir grupo"
+                        className="action-menu-item"
+                        onClick={() => {
+                          onMoveGroupOrder?.(group.id, "up");
+                          setActivePopoverId(null);
+                        }}
                       >
                         <ArrowUp size={15} />
+                        Subir grupo
                       </button>
                     )}
-                    {groupIndex < groupedSections.length - 1 && (
+                    {canManage && groupIndex < groupedSections.length - 1 && (
                       <button
                         type="button"
-                        className="group-icon-action"
-                        onClick={() => onMoveGroupOrder?.(group.id, "down")}
-                        title="Descer grupo"
-                        aria-label="Descer grupo"
+                        className="action-menu-item"
+                        onClick={() => {
+                          onMoveGroupOrder?.(group.id, "down");
+                          setActivePopoverId(null);
+                        }}
                       >
                         <ArrowDown size={15} />
+                        Descer grupo
                       </button>
                     )}
-                    <button
-                      type="button"
-                      className="group-icon-action"
-                      onClick={() => onRenameGroup(group.id)}
-                      title="Renomear grupo"
-                      aria-label="Renomear grupo"
-                    >
-                      <Edit3 size={15} />
-                    </button>
-                    <button
-                      type="button"
-                      className="group-icon-action"
-                      onClick={() => onDeleteGroup(group.id)}
-                      title="Excluir grupo"
-                      aria-label="Excluir grupo"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </>
+                    {canManage && (
+                      <button
+                        type="button"
+                        className="action-menu-item"
+                        onClick={() => {
+                          onRenameGroup(group.id);
+                          setActivePopoverId(null);
+                        }}
+                      >
+                        <Edit3 size={15} />
+                        Renomear grupo
+                      </button>
+                    )}
+                    {canManage && (
+                      <button
+                        type="button"
+                        className="action-menu-item danger"
+                        onClick={() => {
+                          onDeleteGroup(group.id);
+                          setActivePopoverId(null);
+                        }}
+                      >
+                        <Trash2 size={14} />
+                        Excluir grupo
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             </header>
@@ -336,6 +392,7 @@ export default function InventoryBoard({
                   canManage={canManage}
                   onRename={onRenameSegment}
                   onDelete={onDeleteSegment}
+                  onDuplicate={onDuplicateSegment}
                   onColorChange={onChangeSegmentColor}
                   onMoveMachine={onMoveMachine}
                   onOpenDetails={setSelectedMachine}
@@ -347,6 +404,8 @@ export default function InventoryBoard({
                   onMoveSegmentOrder={onMoveSegmentOrder}
                   canMoveSegmentUp={segmentIndex > 0}
                   canMoveSegmentDown={segmentIndex < group.segments.length - 1}
+                  selected={selectedSegmentIds.has(segment.id)}
+                  onSelectSegment={handleSelectSegment}
                   onRemovePeripheral={onRemovePeripheral}
                   activePopoverId={activePopoverId}
                   setActivePopoverId={setActivePopoverId}
@@ -359,35 +418,6 @@ export default function InventoryBoard({
               )
             )}
           </SegmentGroupContainer>
-        ))}
-        {defaultUngroupedSegments.map((segment) => (
-          <SegmentCard
-            key={segment.id}
-            segment={segment}
-            machines={machinesBySegment.get(segment.id) || []}
-            segments={segments}
-            groups={groups}
-            aliases={aliases}
-            selectedAssetIds={selectedAssetIds}
-            canManage={canManage}
-            onRename={onRenameSegment}
-            onDelete={onDeleteSegment}
-            onColorChange={onChangeSegmentColor}
-            onMoveMachine={onMoveMachine}
-            onOpenDetails={setSelectedMachine}
-            onOpenMoveModal={onOpenMoveModal}
-            onRefreshPing={onRefreshPing}
-            onSelectAsset={onSelectAsset}
-            onToggleSelection={onToggleSelection}
-            onMoveSegmentToGroup={onMoveSegmentToGroup}
-            onMoveSegmentOrder={onMoveSegmentOrder}
-            canMoveSegmentUp={false}
-            canMoveSegmentDown={false}
-            hideGroupSelect
-            onRemovePeripheral={onRemovePeripheral}
-            activePopoverId={activePopoverId}
-            setActivePopoverId={setActivePopoverId}
-          />
         ))}
         {showUngroupedSection && (
           <SegmentGroupContainer groupId="" className="ungrouped-section" color={activeTab?.color}>
@@ -412,6 +442,7 @@ export default function InventoryBoard({
                 canManage={canManage}
                 onRename={onRenameSegment}
                 onDelete={onDeleteSegment}
+                onDuplicate={onDuplicateSegment}
                 onColorChange={onChangeSegmentColor}
                 onMoveMachine={onMoveMachine}
                 onOpenDetails={setSelectedMachine}
@@ -423,6 +454,8 @@ export default function InventoryBoard({
                 onMoveSegmentOrder={onMoveSegmentOrder}
                 canMoveSegmentUp={segmentIndex > 0}
                 canMoveSegmentDown={segmentIndex < regularUngroupedSegments.length - 1}
+                selected={selectedSegmentIds.has(segment.id)}
+                onSelectSegment={handleSelectSegment}
                 onRemovePeripheral={onRemovePeripheral}
                 activePopoverId={activePopoverId}
                 setActivePopoverId={setActivePopoverId}
@@ -430,6 +463,38 @@ export default function InventoryBoard({
             ))}
           </SegmentGroupContainer>
         )}
+        {defaultUngroupedSegments.map((segment) => (
+          <SegmentCard
+            key={segment.id}
+            segment={segment}
+            machines={machinesBySegment.get(segment.id) || []}
+            segments={segments}
+            groups={groups}
+            aliases={aliases}
+            selectedAssetIds={selectedAssetIds}
+            canManage={canManage}
+            onRename={onRenameSegment}
+            onDelete={onDeleteSegment}
+            onDuplicate={onDuplicateSegment}
+            onColorChange={onChangeSegmentColor}
+            onMoveMachine={onMoveMachine}
+            onOpenDetails={setSelectedMachine}
+            onOpenMoveModal={onOpenMoveModal}
+            onRefreshPing={onRefreshPing}
+            onSelectAsset={onSelectAsset}
+            onToggleSelection={onToggleSelection}
+            onMoveSegmentToGroup={onMoveSegmentToGroup}
+            onMoveSegmentOrder={onMoveSegmentOrder}
+            canMoveSegmentUp={false}
+            canMoveSegmentDown={false}
+            hideGroupSelect
+            selected={selectedSegmentIds.has(segment.id)}
+            onSelectSegment={handleSelectSegment}
+            onRemovePeripheral={onRemovePeripheral}
+            activePopoverId={activePopoverId}
+            setActivePopoverId={setActivePopoverId}
+          />
+        ))}
         {!visibleSegments.length && (
           <section className="segment-card empty-only">
             <Database size={24} />

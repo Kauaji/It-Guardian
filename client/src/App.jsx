@@ -113,6 +113,17 @@ function pickSegmentColor(segments) {
   return segmentPalette[(index + 1) % segmentPalette.length];
 }
 
+function pickUnusedPaletteColor(items = []) {
+  const usedColors = new Set(
+    items
+      .map((item) => item?.color?.toLowerCase())
+      .filter(Boolean)
+  );
+  const unusedColor = segmentPalette.find((color) => !usedColors.has(color.toLowerCase()));
+
+  return unusedColor || pickSegmentColor(items);
+}
+
 function readStoredJson(key, fallback) {
   try {
     return JSON.parse(localStorage.getItem(key) || "null") ?? fallback;
@@ -1442,6 +1453,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
 
           if (segment && !segment.isDefault && currentGroupId !== groupId) {
             moveSegmentToGroup(segmentId, groupId);
+            result = { moved: true, targetSegmentId: segmentId };
             notify(
               groupId
                 ? `${segment.name} movido para ${activeSegmentGroups.find((group) => group.id === groupId)?.name || "grupo"}.`
@@ -1566,7 +1578,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
 
   async function submitSegmentGroupForm(name, color) {
     const cleanName = name.trim();
-    const nextColor = color || pickSegmentColor(activeSegmentGroups);
+    const nextColor = color || pickUnusedPaletteColor(activeSegmentGroups);
     const duplicate = activeSegmentGroups.some(
       (group) =>
         group.id !== segmentGroupForm?.group?.id &&
@@ -1791,6 +1803,54 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     }
   }
 
+  async function duplicateSegment(segment) {
+    if (!segment || segment.isDefault) return;
+
+    const targetGroupId = getSegmentGroupId(segment, activeSegmentGroups);
+    const baseName = `${segment.name} (copia)`;
+    let copyName = baseName;
+    let copyIndex = 2;
+
+    while (
+      hasDuplicateSegmentName(activeSegments, {
+        name: copyName,
+        groupId: targetGroupId,
+        groups: activeSegmentGroups
+      })
+    ) {
+      copyName = `${baseName} ${copyIndex}`;
+      copyIndex += 1;
+    }
+
+    setSegmentSaving(true);
+    try {
+      const response = await createSegment(token, {
+        name: copyName,
+        color: segment.color || pickUnusedPaletteColor(activeSegments),
+        groupId: targetGroupId || null
+      });
+      const nextSegment = { ...response.segment, groupId: response.segment.groupId || targetGroupId };
+      const targetSiblings = activeSegments.filter(
+        (item) => getSegmentGroupId(item, activeSegmentGroups) === targetGroupId
+      );
+
+      setSegments((current) => upsertSegmentList(current, nextSegment));
+      updateInventoryMeta("segments", response.segment.id, {
+        tabId: activeInventoryTab.id,
+        order: targetSiblings.length
+      });
+      if (targetGroupId) {
+        saveSegmentGroups(assignSegmentToGroup(segmentGroups, response.segment.id, targetGroupId));
+      }
+      notify(`Segmento ${response.segment.name} copiado.`, "ok");
+      await loadData(true);
+    } catch (error) {
+      notify(error.message, "danger");
+    } finally {
+      setSegmentSaving(false);
+    }
+  }
+
   function selectInventoryTab(tabId) {
     if (!inventoryTabs.some((tab) => tab.id === tabId)) return;
     setActiveInventoryTabId(tabId);
@@ -1803,7 +1863,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     const nextTab = {
       id: `tab-${Date.now()}`,
       name: cleanName,
-      color: pickSegmentColor(inventoryTabs),
+      color: pickUnusedPaletteColor(inventoryTabs),
       order: inventoryTabs.length
     };
 
@@ -2107,6 +2167,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
             onCreateSegment={handleCreateSegment}
             onRenameSegment={handleRenameSegment}
             onDeleteSegment={handleDeleteSegment}
+            onDuplicateSegment={duplicateSegment}
             onChangeSegmentColor={handleChangeSegmentColor}
             onAliasSave={saveMachineAlias}
             onAddObservation={addMachineObservation}
@@ -2157,6 +2218,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
         mode={segmentGroupForm?.mode}
         group={segmentGroupForm?.group}
         groups={activeSegmentGroups}
+        suggestedColor={pickUnusedPaletteColor(activeSegmentGroups)}
         saving={segmentGroupSaving}
         onClose={() => setSegmentGroupForm(null)}
         onSubmit={submitSegmentGroupForm}

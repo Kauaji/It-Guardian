@@ -1,4 +1,4 @@
-import { Edit3, Plus, Trash2 } from "lucide-react";
+import { Edit3, MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import ColorPickerSegment from "./ColorPickerSegment.jsx";
 
 export default function InventoryTabs({
@@ -15,6 +15,8 @@ export default function InventoryTabs({
   function renderTab(tab, active = false) {
     const rawLabel = tab.name?.trim() || "";
     const label = tab.id === "tab-default" && rawLabel === "Sem nome" ? "" : rawLabel;
+    const actionsMenuId = `tab-actions-${tab.id}`;
+    const actionsOpen = activePopoverId === actionsMenuId;
 
     return (
       <article
@@ -33,20 +35,50 @@ export default function InventoryTabs({
         <strong className={!label ? "empty-tab-label" : ""}>{label}</strong>
         {active && (
           <div className="inventory-tab-actions" onClick={(event) => event.stopPropagation()}>
-            <ColorPickerSegment
-              color={tab.color}
-              onChange={(color) => onColorChange(tab.id, color)}
-              popoverId={`tab-color-${tab.id}`}
-              activePopoverId={activePopoverId}
-              setActivePopoverId={setActivePopoverId}
-              title="Alterar cor da aba"
-            />
-            <button type="button" onClick={() => onRename(tab.id)} title="Renomear aba" aria-label="Renomear aba">
-              <Edit3 size={14} />
+            <button
+              type="button"
+              className="tab-options-trigger"
+              onClick={() => setActivePopoverId(actionsOpen ? null : actionsMenuId)}
+              title="Acoes da aba"
+              aria-label="Acoes da aba"
+              aria-expanded={actionsOpen}
+            >
+              <MoreHorizontal size={15} />
             </button>
-            <button type="button" onClick={() => onDelete(tab.id)} title="Excluir aba" aria-label="Excluir aba">
-              <Trash2 size={14} />
-            </button>
+            {actionsOpen && (
+              <div className="action-menu-popover tab-actions-menu" onClick={(event) => event.stopPropagation()}>
+                <div className="action-menu-item color-action" role="group" aria-label="Cor da aba">
+                  <span>Cor</span>
+                  <ColorPickerSegment
+                    color={tab.color}
+                    onChange={(color) => onColorChange(tab.id, color)}
+                    title="Alterar cor da aba"
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="action-menu-item"
+                  onClick={() => {
+                    onRename(tab.id);
+                    setActivePopoverId(null);
+                  }}
+                >
+                  <Edit3 size={14} />
+                  Renomear aba
+                </button>
+                <button
+                  type="button"
+                  className="action-menu-item danger"
+                  onClick={() => {
+                    onDelete(tab.id);
+                    setActivePopoverId(null);
+                  }}
+                >
+                  <Trash2 size={14} />
+                  Excluir aba
+                </button>
+              </div>
+            )}
           </div>
         )}
       </article>

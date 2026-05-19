@@ -8,6 +8,7 @@ export default function SegmentGroupFormModal({
   mode,
   group,
   groups,
+  suggestedColor,
   saving,
   onClose,
   onSubmit
@@ -68,7 +69,7 @@ export default function SegmentGroupFormModal({
         <div className="group-color-field">
           <span>Cor do grupo</span>
           <ColorPickerSegment
-            color={color || fallbackGroupColor}
+            color={color || suggestedColor || fallbackGroupColor}
             disabled={saving}
             onChange={setColor}
             title="Alterar cor do grupo"
