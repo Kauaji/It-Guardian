@@ -165,8 +165,20 @@ export async function initializeDatabase() {
       device_id TEXT PRIMARY KEY,
       asset_type TEXT NOT NULL,
       updated_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+      removed_at TIMESTAMPTZ,
+      removed_by TEXT REFERENCES users(id) ON DELETE SET NULL,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+  `);
+
+  await query(`
+    ALTER TABLE device_metadata
+    ADD COLUMN IF NOT EXISTS removed_at TIMESTAMPTZ;
+  `);
+
+  await query(`
+    ALTER TABLE device_metadata
+    ADD COLUMN IF NOT EXISTS removed_by TEXT REFERENCES users(id) ON DELETE SET NULL;
   `);
 
   await query(`

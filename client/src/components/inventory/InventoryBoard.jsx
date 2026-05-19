@@ -6,6 +6,7 @@ import MoveMachineModal from "./MoveMachineModal.jsx";
 import MachineDetailsModal from "./MachineDetailsModal.jsx";
 import BulkActionsBar from "./BulkActionsBar.jsx";
 import InventoryTabs from "./InventoryTabs.jsx";
+import ColorPickerSegment from "./ColorPickerSegment.jsx";
 
 function SegmentGroupContainer({ groupId, color, className = "", children }) {
   const { isOver, setNodeRef } = useDroppable({
@@ -45,7 +46,6 @@ export default function InventoryBoard({
   onCreateSegment,
   onRenameSegment,
   onDeleteSegment,
-  onDuplicateSegment,
   onChangeSegmentColor,
   onAliasSave,
   onAddObservation,
@@ -61,6 +61,7 @@ export default function InventoryBoard({
   onCreateGroup,
   onRenameGroup,
   onDeleteGroup,
+  onChangeGroupColor,
   onToggleGroup,
   onMoveGroupOrder,
   onMoveSegmentToGroup,
@@ -77,6 +78,8 @@ export default function InventoryBoard({
   onCreateManualAsset,
   onRefreshPing,
   onChangeDeviceType,
+  onPutMaintenance,
+  onRemoveMachine,
   onCloseMoveModal,
   onOpenMoveModal
 }) {
@@ -297,6 +300,85 @@ export default function InventoryBoard({
                 </div>
               </div>
               <div className="group-header-actions">
+                {activePopoverId === `group-actions-${group.id}` && (
+                  <div className="inline-action-strip group-inline-actions" onClick={(event) => event.stopPropagation()}>
+                    <button
+                      type="button"
+                      className="inline-action-button"
+                      onClick={() => {
+                        onToggleGroup(group.id);
+                        setActivePopoverId(null);
+                      }}
+                      title={group.collapsed ? "Expandir grupo" : "Ocultar grupo"}
+                      aria-label={group.collapsed ? "Expandir grupo" : "Ocultar grupo"}
+                    >
+                      <ChevronDown size={15} className={group.collapsed ? "rotated" : ""} />
+                    </button>
+                    {canManage && groupIndex > 0 && (
+                      <button
+                        type="button"
+                        className="inline-action-button"
+                        onClick={() => {
+                          onMoveGroupOrder?.(group.id, "up");
+                          setActivePopoverId(null);
+                        }}
+                        title="Subir grupo"
+                        aria-label="Subir grupo"
+                      >
+                        <ArrowUp size={15} />
+                      </button>
+                    )}
+                    {canManage && groupIndex < groupedSections.length - 1 && (
+                      <button
+                        type="button"
+                        className="inline-action-button"
+                        onClick={() => {
+                          onMoveGroupOrder?.(group.id, "down");
+                          setActivePopoverId(null);
+                        }}
+                        title="Descer grupo"
+                        aria-label="Descer grupo"
+                      >
+                        <ArrowDown size={15} />
+                      </button>
+                    )}
+                    {canManage && (
+                      <ColorPickerSegment
+                        color={group.color || activeTab?.color}
+                        onChange={(color) => onChangeGroupColor?.(group.id, color)}
+                        title="Alterar cor do grupo"
+                      />
+                    )}
+                    {canManage && (
+                      <button
+                        type="button"
+                        className="inline-action-button"
+                        onClick={() => {
+                          onRenameGroup(group.id);
+                          setActivePopoverId(null);
+                        }}
+                        title="Renomear grupo"
+                        aria-label="Renomear grupo"
+                      >
+                        <Edit3 size={15} />
+                      </button>
+                    )}
+                    {canManage && (
+                      <button
+                        type="button"
+                        className="inline-action-button danger"
+                        onClick={() => {
+                          onDeleteGroup(group.id);
+                          setActivePopoverId(null);
+                        }}
+                        title="Excluir grupo"
+                        aria-label="Excluir grupo"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    )}
+                  </div>
+                )}
                 <button
                   type="button"
                   className="group-icon-action group-options-trigger"
@@ -310,73 +392,6 @@ export default function InventoryBoard({
                 >
                   <MoreHorizontal size={16} />
                 </button>
-                {activePopoverId === `group-actions-${group.id}` && (
-                  <div className="action-menu-popover group-actions-menu" onClick={(event) => event.stopPropagation()}>
-                    <button
-                      type="button"
-                      className="action-menu-item"
-                      onClick={() => {
-                        onToggleGroup(group.id);
-                        setActivePopoverId(null);
-                      }}
-                    >
-                      <ChevronDown size={15} className={group.collapsed ? "rotated" : ""} />
-                      {group.collapsed ? "Expandir grupo" : "Ocultar grupo"}
-                    </button>
-                    {canManage && groupIndex > 0 && (
-                      <button
-                        type="button"
-                        className="action-menu-item"
-                        onClick={() => {
-                          onMoveGroupOrder?.(group.id, "up");
-                          setActivePopoverId(null);
-                        }}
-                      >
-                        <ArrowUp size={15} />
-                        Subir grupo
-                      </button>
-                    )}
-                    {canManage && groupIndex < groupedSections.length - 1 && (
-                      <button
-                        type="button"
-                        className="action-menu-item"
-                        onClick={() => {
-                          onMoveGroupOrder?.(group.id, "down");
-                          setActivePopoverId(null);
-                        }}
-                      >
-                        <ArrowDown size={15} />
-                        Descer grupo
-                      </button>
-                    )}
-                    {canManage && (
-                      <button
-                        type="button"
-                        className="action-menu-item"
-                        onClick={() => {
-                          onRenameGroup(group.id);
-                          setActivePopoverId(null);
-                        }}
-                      >
-                        <Edit3 size={15} />
-                        Renomear grupo
-                      </button>
-                    )}
-                    {canManage && (
-                      <button
-                        type="button"
-                        className="action-menu-item danger"
-                        onClick={() => {
-                          onDeleteGroup(group.id);
-                          setActivePopoverId(null);
-                        }}
-                      >
-                        <Trash2 size={14} />
-                        Excluir grupo
-                      </button>
-                    )}
-                  </div>
-                )}
               </div>
             </header>
             {!group.collapsed && (
@@ -392,7 +407,6 @@ export default function InventoryBoard({
                   canManage={canManage}
                   onRename={onRenameSegment}
                   onDelete={onDeleteSegment}
-                  onDuplicate={onDuplicateSegment}
                   onColorChange={onChangeSegmentColor}
                   onMoveMachine={onMoveMachine}
                   onOpenDetails={setSelectedMachine}
@@ -442,7 +456,6 @@ export default function InventoryBoard({
                 canManage={canManage}
                 onRename={onRenameSegment}
                 onDelete={onDeleteSegment}
-                onDuplicate={onDuplicateSegment}
                 onColorChange={onChangeSegmentColor}
                 onMoveMachine={onMoveMachine}
                 onOpenDetails={setSelectedMachine}
@@ -475,7 +488,6 @@ export default function InventoryBoard({
             canManage={canManage}
             onRename={onRenameSegment}
             onDelete={onDeleteSegment}
-            onDuplicate={onDuplicateSegment}
             onColorChange={onChangeSegmentColor}
             onMoveMachine={onMoveMachine}
             onOpenDetails={setSelectedMachine}
@@ -521,6 +533,14 @@ export default function InventoryBoard({
         onAddObservation={(text) => onAddObservation(selectedMachine.id, text)}
         onChangeDeviceType={handleSelectedTypeChange}
         onRefreshPing={handleSelectedPingRefresh}
+        onPutMaintenance={async () => {
+          const moved = await onPutMaintenance?.(selectedMachine);
+          if (moved) setSelectedMachine(null);
+        }}
+        onRemoveMachine={async () => {
+          const removed = await onRemoveMachine?.(selectedMachine);
+          if (removed) setSelectedMachine(null);
+        }}
         onRemovePeripheral={(peripheral) => {
           const event = onRemovePeripheral(selectedMachine.id, peripheral);
           if (event) {

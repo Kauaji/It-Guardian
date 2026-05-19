@@ -3,10 +3,24 @@ import { query } from "../database.js";
 
 export const DEFAULT_SEGMENT_ID = "unorganized";
 export const DEFAULT_SEGMENT_NAME = "Nao organizadas";
-export const DEFAULT_SEGMENT_COLOR = "#1f7a61";
+export const DEFAULT_SEGMENT_COLOR = "#64748b";
 
 function normalizeColor(color) {
   return /^#[0-9a-f]{6}$/i.test(color || "") ? color : DEFAULT_SEGMENT_COLOR;
+}
+
+function normalizeReservedName(name = "") {
+  return name
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
+function isReservedSegmentName(name = "") {
+  const normalizedName = normalizeReservedName(name);
+  return normalizedName === "manutencao" || normalizedName === "nao organizadas";
 }
 
 export async function seedDefaultSegment() {
@@ -57,8 +71,8 @@ export async function findSegmentById(id) {
   return result.rows[0] ? fromRow(result.rows[0]) : null;
 }
 
-export async function createSegment({ name, color, groupId = null, userId }) {
-  await assertSegmentNameAvailable({ name, groupId });
+export async function createSegment({ name, color, groupId = null, userId, allowReservedName = false }) {
+  await assertSegmentNameAvailable({ name, groupId, allowReservedName });
 
   const result = await query(
     `
@@ -210,7 +224,13 @@ function normalizeGroupId(groupId) {
   return groupId ? String(groupId) : null;
 }
 
-async function assertSegmentNameAvailable({ name, groupId = null, ignoreId = null }) {
+async function assertSegmentNameAvailable({ name, groupId = null, ignoreId = null, allowReservedName = false }) {
+  if (!allowReservedName && isReservedSegmentName(name)) {
+    const error = new Error("Esse nome e reservado pelo sistema.");
+    error.statusCode = 400;
+    throw error;
+  }
+
   const result = await query(
     `
       SELECT id

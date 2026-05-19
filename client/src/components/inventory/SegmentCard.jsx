@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, ChevronDown, Copy, Edit3, MoreHorizontal, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, Edit3, MoreHorizontal, Trash2 } from "lucide-react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { SortableContext, rectSortingStrategy } from "@dnd-kit/sortable";
 import { useState } from "react";
@@ -15,7 +15,6 @@ export default function SegmentCard({
   canManage,
   onRename,
   onDelete,
-  onDuplicate,
   onColorChange,
   onMoveMachine,
   onOpenDetails,
@@ -116,6 +115,85 @@ export default function SegmentCard({
             </button>
           ) : (
             <div className="segment-actions-menu-wrap">
+              {actionsOpen && (
+                <div className="inline-action-strip segment-inline-actions" onClick={(event) => event.stopPropagation()}>
+                  <button
+                    type="button"
+                    className="inline-action-button"
+                    onClick={() => {
+                      setCollapsed((current) => !current);
+                      closeActions();
+                    }}
+                    title={collapsed ? "Expandir segmento" : "Recolher segmento"}
+                    aria-label={collapsed ? "Expandir segmento" : "Recolher segmento"}
+                  >
+                    <ChevronDown size={15} className={collapsed ? "rotated" : ""} />
+                  </button>
+                  {canManage && canMoveSegmentUp && (
+                    <button
+                      type="button"
+                      className="inline-action-button"
+                      onClick={() => {
+                        onMoveSegmentOrder?.(segment, "up");
+                        closeActions();
+                      }}
+                      title="Subir segmento"
+                      aria-label="Subir segmento"
+                    >
+                      <ArrowUp size={15} />
+                    </button>
+                  )}
+                  {canManage && canMoveSegmentDown && (
+                    <button
+                      type="button"
+                      className="inline-action-button"
+                      onClick={() => {
+                        onMoveSegmentOrder?.(segment, "down");
+                        closeActions();
+                      }}
+                      title="Descer segmento"
+                      aria-label="Descer segmento"
+                    >
+                      <ArrowDown size={15} />
+                    </button>
+                  )}
+                  {canManage && (
+                    <ColorPickerSegment
+                      color={color}
+                      disabled={!canManage}
+                      onChange={(nextColor) => onColorChange(segment, nextColor)}
+                    />
+                  )}
+                  {canManage && (
+                    <button
+                      type="button"
+                      className="inline-action-button"
+                      onClick={() => {
+                        onRename(segment);
+                        closeActions();
+                      }}
+                      title="Renomear segmento"
+                      aria-label="Renomear segmento"
+                    >
+                      <Edit3 size={15} />
+                    </button>
+                  )}
+                  {canManage && (
+                    <button
+                      type="button"
+                      className="inline-action-button danger"
+                      onClick={() => {
+                        onDelete(segment);
+                        closeActions();
+                      }}
+                      title="Excluir segmento"
+                      aria-label="Excluir segmento"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  )}
+                </div>
+              )}
               <button
                 type="button"
                 className="segment-options-trigger"
@@ -129,113 +207,6 @@ export default function SegmentCard({
               >
                 <MoreHorizontal size={16} />
               </button>
-              {actionsOpen && (
-                <div className="action-menu-popover segment-actions-menu" onClick={(event) => event.stopPropagation()}>
-                  <button
-                    type="button"
-                    className="action-menu-item"
-                    onClick={() => {
-                      setCollapsed((current) => !current);
-                      closeActions();
-                    }}
-                  >
-                    <ChevronDown size={15} className={collapsed ? "rotated" : ""} />
-                    {collapsed ? "Expandir segmento" : "Recolher segmento"}
-                  </button>
-                  {canManage && canMoveSegmentUp && (
-                    <button
-                      type="button"
-                      className="action-menu-item"
-                      onClick={() => {
-                        onMoveSegmentOrder?.(segment, "up");
-                        closeActions();
-                      }}
-                    >
-                      <ArrowUp size={15} />
-                      Subir segmento
-                    </button>
-                  )}
-                  {canManage && canMoveSegmentDown && (
-                    <button
-                      type="button"
-                      className="action-menu-item"
-                      onClick={() => {
-                        onMoveSegmentOrder?.(segment, "down");
-                        closeActions();
-                      }}
-                    >
-                      <ArrowDown size={15} />
-                      Descer segmento
-                    </button>
-                  )}
-                  {canManage && (
-                    <div className="action-menu-item color-action" role="group" aria-label="Cor do segmento">
-                      <span>Cor</span>
-                      <ColorPickerSegment
-                        color={color}
-                        disabled={!canManage}
-                        onChange={(nextColor) => onColorChange(segment, nextColor)}
-                      />
-                    </div>
-                  )}
-                  {canManage && (
-                    <button
-                      type="button"
-                      className="action-menu-item"
-                      onClick={() => {
-                        onRename(segment);
-                        closeActions();
-                      }}
-                    >
-                      <Edit3 size={15} />
-                      Renomear
-                    </button>
-                  )}
-                  {canManage && (
-                    <button
-                      type="button"
-                      className="action-menu-item"
-                      onClick={() => {
-                        onDuplicate?.(segment);
-                        closeActions();
-                      }}
-                    >
-                      <Copy size={15} />
-                      Copiar segmento
-                    </button>
-                  )}
-                  {canManage && !hideGroupSelect && (
-                    <label className="action-menu-select">
-                      Grupo
-                      <select
-                        className="segment-group-select"
-                        value={segment.groupId || groups.find((group) => (group.segmentIds || []).includes(segment.id))?.id || ""}
-                        onChange={(event) => {
-                          onMoveSegmentToGroup(segment.id, event.target.value);
-                          closeActions();
-                        }}
-                        title="Mover segmento para grupo"
-                      >
-                        <option value="">Sem grupo</option>
-                        {groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
-                      </select>
-                    </label>
-                  )}
-                  {canManage && (
-                    <button
-                      type="button"
-                      className="action-menu-item danger"
-                      onClick={() => {
-                        onDelete(segment);
-                        closeActions();
-                      }}
-                    >
-                      <Trash2 size={15} />
-                      Excluir
-                    </button>
-                  )}
-                </div>
-              )}
             </div>
           )}
         </div>

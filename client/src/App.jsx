@@ -40,6 +40,7 @@ import {
   createSegment,
   createSegmentGroup as createSegmentGroupApi,
   createMonitoringSocket,
+  deleteDevice,
   deleteSegment,
   deleteSegmentGroup as deleteSegmentGroupApi,
   fetchAlertHistory,
@@ -61,6 +62,7 @@ import AssetPublicView from "./components/inventory/AssetPublicView.jsx";
 import AssetDragCompactOverlay from "./components/inventory/AssetDragCompactOverlay.jsx";
 import BulkAssetLabelPrint from "./components/inventory/BulkAssetLabelPrint.jsx";
 import InventoryBoard from "./components/inventory/InventoryBoard.jsx";
+import InventoryTabFormModal from "./components/inventory/InventoryTabFormModal.jsx";
 import ManualAssetForm from "./components/inventory/ManualAssetForm.jsx";
 import SegmentDragOverlay from "./components/inventory/SegmentDragOverlay.jsx";
 import SegmentFormModal from "./components/inventory/SegmentFormModal.jsx";
@@ -85,10 +87,11 @@ const peripheralHistoryKey = "it_guardian_peripheral_history";
 const inventoryTabsKey = "it_guardian_inventory_tabs";
 const activeInventoryTabKey = "it_guardian_active_inventory_tab";
 const inventoryTabMetaKey = "it_guardian_inventory_tab_meta";
+const maintenanceRecordsKey = "it_guardian_maintenance_records";
 
 const defaultInventoryTab = {
   id: "tab-default",
-  name: "Sem nome",
+  name: "Novo ambiente",
   color: "#2563eb",
   order: 0
 };
@@ -124,6 +127,34 @@ function pickUnusedPaletteColor(items = []) {
   return unusedColor || pickSegmentColor(items);
 }
 
+function normalizeMaintenanceName(name = "") {
+  return name
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .trim()
+    .toLowerCase();
+}
+
+function isMaintenanceSegmentName(name = "") {
+  return normalizeMaintenanceName(name) === "manutencao";
+}
+
+function isReservedSegmentName(name = "") {
+  const normalizedName = normalizeMaintenanceName(name).replace(/\s+/g, " ");
+  return normalizedName === "manutencao" || normalizedName === "nao organizadas";
+}
+
+function getNextInventoryTabName(tabs = []) {
+  const usedNames = new Set(tabs.map((tab) => tab.name?.trim().toLowerCase()).filter(Boolean));
+  if (!usedNames.has("novo ambiente")) return "Novo ambiente";
+
+  let nextNumber = 2;
+  while (usedNames.has(`novo ambiente ${nextNumber}`)) {
+    nextNumber += 1;
+  }
+  return `Novo ambiente ${nextNumber}`;
+}
+
 function readStoredJson(key, fallback) {
   try {
     return JSON.parse(localStorage.getItem(key) || "null") ?? fallback;
@@ -134,15 +165,26 @@ function readStoredJson(key, fallback) {
 
 function normalizeInventoryTabs(value) {
   const tabs = Array.isArray(value) && value.length ? value : [defaultInventoryTab];
-  return tabs
-    .map((tab, index) => ({
+  const normalized = [];
+
+  for (const [index, tab] of tabs.entries()) {
+    const requestedName = tab.name?.trim();
+    const name =
+      !requestedName || requestedName === "Sem nome"
+        ? getNextInventoryTabName(normalized)
+        : requestedName;
+
+    normalized.push({
       ...defaultInventoryTab,
       ...tab,
       id: tab.id || `tab-${index}`,
-      name: tab.name || "Sem nome",
+      name,
       color: tab.color || segmentPalette[index % segmentPalette.length],
       order: Number.isFinite(tab.order) ? tab.order : index
-    }))
+    });
+  }
+
+  return normalized
     .sort((left, right) => left.order - right.order);
 }
 
@@ -303,13 +345,16 @@ function peripheralKey(peripheral) {
   return peripheral?.id || `${peripheral?.type || "item"}-${peripheral?.brand || ""}-${peripheral?.assetTag || ""}`;
 }
 
-function applyInventoryLocalState(devices, removedPeripherals, peripheralHistory) {
+function applyInventoryLocalState(devices, removedPeripherals, peripheralHistory, maintenanceRecords = {}) {
   return devices.map((device) => {
     const removed = new Set(removedPeripherals[device.id] || []);
     const peripherals = device.hardware?.peripherals || [];
+    const maintenanceRecord = maintenanceRecords[device.id];
 
     return {
       ...device,
+      maintenance: Boolean(maintenanceRecord?.active),
+      maintenanceOrigin: maintenanceRecord?.origin || null,
       assetHistory: [...(peripheralHistory[device.id] || []), ...(device.assetHistory || [])],
       hardware: {
         ...device.hardware,
@@ -744,6 +789,9 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   const [peripheralHistory, setPeripheralHistory] = useState(() =>
     JSON.parse(localStorage.getItem(peripheralHistoryKey) || "{}")
   );
+  const [maintenanceRecords, setMaintenanceRecords] = useState(() =>
+    readStoredJson(maintenanceRecordsKey, {})
+  );
   const [inventoryTabs, setInventoryTabs] = useState(() =>
     normalizeInventoryTabs(readStoredJson(inventoryTabsKey, [defaultInventoryTab]))
   );
@@ -758,6 +806,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   const [moveTarget, setMoveTarget] = useState("");
   const [segmentForm, setSegmentForm] = useState(null);
   const [segmentGroupForm, setSegmentGroupForm] = useState(null);
+  const [inventoryTabForm, setInventoryTabForm] = useState(null);
   const [manualAssetFormOpen, setManualAssetFormOpen] = useState(false);
   const [manualAssetSaving, setManualAssetSaving] = useState(false);
   const [segmentGroupSaving, setSegmentGroupSaving] = useState(false);
@@ -801,6 +850,14 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     setInventoryTabMeta((current) => {
       const next = normalizeInventoryTabMeta(typeof updater === "function" ? updater(current) : updater);
       localStorage.setItem(inventoryTabMetaKey, JSON.stringify(next));
+      return next;
+    });
+  }
+
+  function saveMaintenanceRecords(updater) {
+    setMaintenanceRecords((current) => {
+      const next = typeof updater === "function" ? updater(current) : updater;
+      localStorage.setItem(maintenanceRecordsKey, JSON.stringify(next));
       return next;
     });
   }
@@ -910,18 +967,45 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     () => decoratedAllDevices.filter((device) => device.isGlobalUnorganized || device.tabId === activeInventoryTab.id),
     [activeInventoryTab.id, decoratedAllDevices]
   );
+  const activeMaintenanceSegmentIds = useMemo(
+    () => {
+      const next = new Set(
+        activeAllDevices
+          .filter((device) => device.maintenance || isMaintenanceSegmentName(device.segmentName))
+          .map((device) => device.segmentId)
+          .filter(Boolean)
+      );
+
+      for (const segment of decoratedSegments) {
+        if (
+          !segment.isDefault &&
+          segment.tabId === activeInventoryTab.id &&
+          isMaintenanceSegmentName(segment.name) &&
+          Number(segment.machineCount || 0) > 0
+        ) {
+          next.add(segment.id);
+        }
+      }
+
+      return next;
+    },
+    [activeAllDevices, activeInventoryTab.id, decoratedSegments]
+  );
   const activeSegmentGroups = useMemo(
     () => decoratedSegmentGroups.filter((group) => group.tabId === activeInventoryTab.id),
     [activeInventoryTab.id, decoratedSegmentGroups]
   );
   const activeSegments = useMemo(() => {
     const activeNonDefaultSegments = decoratedSegments.filter(
-      (segment) => !segment.isDefault && segment.tabId === activeInventoryTab.id
+      (segment) =>
+        !segment.isDefault &&
+        segment.tabId === activeInventoryTab.id &&
+        (!isMaintenanceSegmentName(segment.name) || activeMaintenanceSegmentIds.has(segment.id))
     );
     const sharedDefaultSegments = decoratedSegments.filter((segment) => segment.isDefault);
 
     return [...sharedDefaultSegments, ...activeNonDefaultSegments];
-  }, [activeInventoryTab.id, decoratedSegments]);
+  }, [activeInventoryTab.id, activeMaintenanceSegmentIds, decoratedSegments]);
   const activeSegmentById = useMemo(
     () => new Map(activeSegments.map((segment) => [segment.id, segment])),
     [activeSegments]
@@ -1005,8 +1089,25 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
         fetchAlertHistory(token)
       ]);
 
-      const nextDevices = applyInventoryLocalState(deviceData.devices, removedPeripherals, peripheralHistory);
-      const nextAllDevices = applyInventoryLocalState(allDeviceData.devices, removedPeripherals, peripheralHistory);
+      const nextMaintenanceRecords = { ...maintenanceRecords };
+      let maintenanceRecordsChanged = false;
+
+      for (const device of allDeviceData.devices) {
+        if (
+          nextMaintenanceRecords[device.id]?.active &&
+          !isMaintenanceSegmentName(device.segmentName)
+        ) {
+          delete nextMaintenanceRecords[device.id];
+          maintenanceRecordsChanged = true;
+        }
+      }
+
+      if (maintenanceRecordsChanged) {
+        setMaintenanceRecords(nextMaintenanceRecords);
+        localStorage.setItem(maintenanceRecordsKey, JSON.stringify(nextMaintenanceRecords));
+      }
+      const nextDevices = applyInventoryLocalState(deviceData.devices, removedPeripherals, peripheralHistory, nextMaintenanceRecords);
+      const nextAllDevices = applyInventoryLocalState(allDeviceData.devices, removedPeripherals, peripheralHistory, nextMaintenanceRecords);
       const nextGroups = groupData.groups || [];
       const nextSegments = applySegmentGroups(segmentData.segments, nextGroups);
       setDevices(nextDevices);
@@ -1169,57 +1270,69 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     }
   }
 
-  function updateDeviceSegmentInState(deviceId, segmentId, segmentName) {
+  function updateDeviceSegmentInState(deviceId, segmentId, segmentName, extra = {}) {
     const update = (device) =>
-      device.id === deviceId ? { ...device, segmentId, segmentName } : device;
+      device.id === deviceId ? { ...device, segmentId, segmentName, ...extra } : device;
 
     setAllDevices((current) => current.map(update));
     setDevices((current) => current.map(update));
     setSelectedDevice((current) => (current?.id === deviceId ? update(current) : current));
   }
 
-  async function handleMoveMachine(machine, segmentId) {
+  async function handleMoveMachine(machine, segmentId, options = {}) {
     if (!machine || !segmentId || machine.segmentId === segmentId) {
       setMoveModal(null);
-      return;
+      return false;
     }
 
     if (selectedAssetIds.has(machine.id) && selectedAssetIds.size > 1) {
-      await handleMoveMachines(Array.from(selectedAssetIds), segmentId);
-      return;
+      return handleMoveMachines(Array.from(selectedAssetIds), segmentId, options);
     }
 
-    const target = activeSegments.find((segment) => segment.id === segmentId) || segments.find((segment) => segment.id === segmentId);
+    const target =
+      activeSegments.find((segment) => segment.id === segmentId) ||
+      decoratedSegments.find((segment) => segment.id === segmentId) ||
+      segments.find((segment) => segment.id === segmentId);
     const previousSegment = { id: machine.segmentId, name: machine.segmentName };
 
     updateDeviceTabOwnership(machine.id, target);
-    updateDeviceSegmentInState(machine.id, segmentId, target?.name || "Segmento");
+    updateDeviceSegmentInState(machine.id, segmentId, target?.name || "Segmento", options.reason === "maintenance" ? { maintenance: true } : {});
     setMoveModal(null);
 
     try {
-      const response = await updateDeviceSegment(token, machine.id, segmentId);
-      updateDeviceSegmentInState(machine.id, response.device.segmentId, response.device.segmentName);
+      const response = await updateDeviceSegment(token, machine.id, segmentId, options.reason ? { reason: options.reason } : {});
+      updateDeviceSegmentInState(
+        machine.id,
+        response.device.segmentId,
+        response.device.segmentName,
+        options.reason === "maintenance" ? { maintenance: true } : {}
+      );
       notify(`${machine.name} movida para ${response.device.segmentName}.`, "ok");
       await loadData(true);
       clearAssetSelection();
+      return true;
     } catch (error) {
       updateDeviceTabOwnership(machine.id, activeSegments.find((segment) => segment.id === previousSegment.id) || segments.find((segment) => segment.id === previousSegment.id));
       updateDeviceSegmentInState(machine.id, previousSegment.id, previousSegment.name);
       notify(error.message, "danger");
+      return false;
     }
   }
 
-  async function handleMoveMachines(machineIds, segmentId) {
-    if (!machineIds.length || !segmentId) return;
+  async function handleMoveMachines(machineIds, segmentId, options = {}) {
+    if (!machineIds.length || !segmentId) return false;
 
-    const target = activeSegments.find((segment) => segment.id === segmentId) || segments.find((segment) => segment.id === segmentId);
+    const target =
+      activeSegments.find((segment) => segment.id === segmentId) ||
+      decoratedSegments.find((segment) => segment.id === segmentId) ||
+      segments.find((segment) => segment.id === segmentId);
     const machinesToMove = activeAllDevices.filter(
       (device) => machineIds.includes(device.id) && device.segmentId !== segmentId
     );
 
     if (!machinesToMove.length) {
       clearAssetSelection();
-      return;
+      return false;
     }
 
     const previous = new Map(machinesToMove.map((machine) => [
@@ -1234,10 +1347,15 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     setMoveModal(null);
 
     try {
-      await Promise.all(machinesToMove.map((machine) => updateDeviceSegment(token, machine.id, segmentId)));
+      await Promise.all(
+        machinesToMove.map((machine) =>
+          updateDeviceSegment(token, machine.id, segmentId, options.reason ? { reason: options.reason } : {})
+        )
+      );
       notify(`${machinesToMove.length} equipamentos movidos para ${target?.name || "Segmento"}.`, "ok");
       await loadData(true);
       clearAssetSelection();
+      return true;
     } catch (error) {
       machinesToMove.forEach((machine) => {
         const fallback = previous.get(machine.id);
@@ -1245,6 +1363,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
         updateDeviceSegmentInState(machine.id, fallback.id, fallback.name);
       });
       notify(error.message, "danger");
+      return false;
     }
   }
 
@@ -1327,6 +1446,171 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
       return current;
     });
     setSelectedDevice((current) => (current?.id === device.id ? device : current));
+  }
+
+  function appendDeviceHistoryEvent(machineId, event) {
+    const update = (device) =>
+      device.id === machineId
+        ? { ...device, assetHistory: [event, ...(device.assetHistory || [])] }
+        : device;
+
+    setAllDevices((current) => current.map(update));
+    setDevices((current) => current.map(update));
+    setSelectedDevice((current) => (current?.id === machineId ? update(current) : current));
+  }
+
+  async function getOrCreateMaintenanceSegment(sourceGroupId = "") {
+    const existingActive = decoratedSegments.find(
+      (segment) =>
+        !segment.isDefault &&
+        segment.tabId === activeInventoryTab.id &&
+        isMaintenanceSegmentName(segment.name) &&
+        getSegmentGroupId(segment, activeSegmentGroups) === sourceGroupId
+    );
+    if (existingActive) return existingActive;
+
+    const response = await createSegment(token, {
+      name: "Manutencao",
+      color: "#f59e0b",
+      groupId: sourceGroupId || null,
+      systemSegment: "maintenance"
+    });
+    const nextSegment = { ...response.segment, groupId: response.segment.groupId || sourceGroupId };
+    const targetSiblings = activeSegments.filter(
+      (segment) => getSegmentGroupId(segment, activeSegmentGroups) === sourceGroupId
+    );
+
+    setSegments((current) => upsertSegmentList(current, nextSegment));
+    updateInventoryMeta("segments", response.segment.id, {
+      tabId: activeInventoryTab.id,
+      order: targetSiblings.length
+    });
+    if (sourceGroupId) {
+      saveSegmentGroups(assignSegmentToGroup(segmentGroups, response.segment.id, sourceGroupId));
+    }
+
+    return nextSegment;
+  }
+
+  async function putMachineInMaintenance(machine) {
+    if (!machine) return false;
+
+    try {
+      if (machine.maintenance || isMaintenanceSegmentName(machine.segmentName)) {
+        return removeMachineFromMaintenance(machine);
+      }
+
+      const originSegment = activeSegments.find((segment) => segment.id === machine.segmentId);
+      const originGroupId = originSegment ? getSegmentGroupId(originSegment, activeSegmentGroups) : "";
+      const maintenanceSegment = await getOrCreateMaintenanceSegment(originGroupId);
+      const previousSegment = machine.segmentName || "Nao organizadas";
+      const maintenanceRecord = {
+        active: true,
+        origin: {
+          tabId: activeInventoryTab.id,
+          groupId: originGroupId,
+          segmentId: machine.segmentId,
+          segmentName: previousSegment
+        }
+      };
+
+      const moved = await handleMoveMachine(machine, maintenanceSegment.id, { reason: "maintenance" });
+      if (!moved) return false;
+      saveMaintenanceRecords((current) => ({
+        ...current,
+        [machine.id]: maintenanceRecord
+      }));
+      updateDeviceSegmentInState(machine.id, maintenanceSegment.id, maintenanceSegment.name, {
+        maintenance: true,
+        maintenanceOrigin: maintenanceRecord.origin
+      });
+      appendDeviceHistoryEvent(machine.id, {
+        id: `${machine.id}-maintenance-${Date.now()}`,
+        createdAt: new Date().toISOString(),
+        userName: user.name,
+        eventType: "maintenance",
+        message: "Maquina colocada em manutencao",
+        oldValue: previousSegment,
+        newValue: maintenanceSegment.name
+      });
+      notify(`${machine.name} colocada em manutencao.`, "ok");
+      return true;
+    } catch (error) {
+      notify(error.message, "danger");
+      return false;
+    }
+  }
+
+  async function removeMachineFromMaintenance(machine) {
+    if (!machine) return false;
+
+    const record = maintenanceRecords[machine.id];
+    const origin = record?.origin || machine.maintenanceOrigin;
+    const fallbackSegment = activeSegments.find((segment) => segment.isDefault);
+    const originSegment =
+      origin?.segmentId &&
+      !isMaintenanceSegmentName(origin.segmentName) &&
+      activeSegments.find((segment) => segment.id === origin.segmentId);
+    const targetSegment = originSegment || fallbackSegment;
+
+    if (!targetSegment) {
+      notify("Nao foi possivel localizar o segmento de retorno.", "danger");
+      return false;
+    }
+
+    const machineForMove = { ...machine, maintenance: true };
+    const moved = await handleMoveMachine(machineForMove, targetSegment.id, { reason: "maintenance_exit" });
+    if (!moved) return false;
+
+    saveMaintenanceRecords((current) => {
+      const next = { ...current };
+      delete next[machine.id];
+      return next;
+    });
+    updateDeviceSegmentInState(machine.id, targetSegment.id, targetSegment.name, {
+      maintenance: false,
+      maintenanceOrigin: null
+    });
+    appendDeviceHistoryEvent(machine.id, {
+      id: `${machine.id}-maintenance-exit-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      userName: user.name,
+      eventType: "maintenance",
+      message: originSegment
+        ? "Maquina retirada da manutencao"
+        : "Maquina retirada da manutencao, mas o segmento original nao existe mais. Movida para Nao organizadas.",
+      oldValue: machine.segmentName || "Manutencao",
+      newValue: targetSegment.name
+    });
+    notify(`${machine.name} retirada da manutencao.`, "ok");
+    return true;
+  }
+
+  async function removeMachineFromInventory(machine) {
+    if (!machine) return false;
+
+    const confirmed = window.confirm(
+      `Remover "${machine.name}" do inventario?\n\nA maquina/ativo deixara de aparecer no inventario. Esta acao deve ser usada apenas quando o equipamento saiu do ambiente monitorado.`
+    );
+    if (!confirmed) return false;
+
+    try {
+      await deleteDevice(token, machine.id);
+      setAllDevices((current) => current.filter((device) => device.id !== machine.id));
+      setDevices((current) => current.filter((device) => device.id !== machine.id));
+      setSelectedDevice((current) => (current?.id === machine.id ? null : current));
+      setSelectedAssetIds((current) => {
+        const next = new Set(current);
+        next.delete(machine.id);
+        return next;
+      });
+      notify(`${machine.name} removida do inventario.`, "ok");
+      await loadData(true);
+      return true;
+    } catch (error) {
+      notify(error.message, "danger");
+      return false;
+    }
   }
 
   async function handleCreateManualAsset(payload) {
@@ -1634,6 +1918,25 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     updateSegmentGroup(token, groupId, { collapsed }).catch((error) => notify(error.message, "danger"));
   }
 
+  async function changeSegmentGroupColor(groupId, color) {
+    const group = activeSegmentGroups.find((item) => item.id === groupId);
+    if (!group || !color || group.color === color) return;
+
+    saveSegmentGroups(segmentGroups.map((item) => (item.id === groupId ? { ...item, color } : item)));
+
+    try {
+      const response = await updateSegmentGroup(token, groupId, { color });
+      saveSegmentGroups(
+        segmentGroups.map((item) =>
+          item.id === groupId ? { ...item, ...response.group } : item
+        )
+      );
+    } catch (error) {
+      saveSegmentGroups(segmentGroups);
+      notify(error.message, "danger");
+    }
+  }
+
   async function deleteSegmentGroup(groupId) {
     const group = activeSegmentGroups.find((item) => item.id === groupId);
     if (!group) return;
@@ -1697,6 +2000,12 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   async function submitSegmentForm(name, groupId = "") {
     const cleanName = name.trim();
     const targetGroupId = groupId || "";
+
+    if (isReservedSegmentName(cleanName)) {
+      notify("Esse nome e reservado pelo sistema.", "danger");
+      return;
+    }
+
     const duplicate = hasDuplicateSegmentName(activeSegments, {
       name: cleanName,
       groupId: targetGroupId,
@@ -1793,61 +2102,43 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     if (!confirmed) return;
 
     try {
+      const wasMaintenanceSegment = isMaintenanceSegmentName(segment.name);
+      const affectedMaintenanceMachines = wasMaintenanceSegment
+        ? activeAllDevices.filter((device) => device.segmentId === segment.id)
+        : [];
       await deleteSegment(token, segment.id);
       saveSegmentGroups(assignSegmentToGroup(segmentGroups, segment.id, ""));
       setSegments((current) => current.filter((item) => item.id !== segment.id));
+      if (wasMaintenanceSegment && affectedMaintenanceMachines.length) {
+        saveMaintenanceRecords((current) => {
+          const next = { ...current };
+          for (const machine of affectedMaintenanceMachines) {
+            delete next[machine.id];
+          }
+          return next;
+        });
+        const defaultSegment = activeSegments.find((item) => item.isDefault);
+        const eventTime = new Date().toISOString();
+        for (const machine of affectedMaintenanceMachines) {
+          updateDeviceSegmentInState(machine.id, defaultSegment?.id, defaultSegment?.name || "Nao organizadas", {
+            maintenance: false,
+            maintenanceOrigin: null
+          });
+          appendDeviceHistoryEvent(machine.id, {
+            id: `${machine.id}-maintenance-segment-removed-${Date.now()}`,
+            createdAt: eventTime,
+            userName: user.name,
+            eventType: "maintenance",
+            message: "Segmento Manutencao removido. Maquina movida para Nao organizadas.",
+            oldValue: segment.name,
+            newValue: defaultSegment?.name || "Nao organizadas"
+          });
+        }
+      }
       notify("Segmento excluido. Maquinas movidas para Nao organizadas.", "ok");
       await loadData(true);
     } catch (error) {
       notify(error.message, "danger");
-    }
-  }
-
-  async function duplicateSegment(segment) {
-    if (!segment || segment.isDefault) return;
-
-    const targetGroupId = getSegmentGroupId(segment, activeSegmentGroups);
-    const baseName = `${segment.name} (copia)`;
-    let copyName = baseName;
-    let copyIndex = 2;
-
-    while (
-      hasDuplicateSegmentName(activeSegments, {
-        name: copyName,
-        groupId: targetGroupId,
-        groups: activeSegmentGroups
-      })
-    ) {
-      copyName = `${baseName} ${copyIndex}`;
-      copyIndex += 1;
-    }
-
-    setSegmentSaving(true);
-    try {
-      const response = await createSegment(token, {
-        name: copyName,
-        color: segment.color || pickUnusedPaletteColor(activeSegments),
-        groupId: targetGroupId || null
-      });
-      const nextSegment = { ...response.segment, groupId: response.segment.groupId || targetGroupId };
-      const targetSiblings = activeSegments.filter(
-        (item) => getSegmentGroupId(item, activeSegmentGroups) === targetGroupId
-      );
-
-      setSegments((current) => upsertSegmentList(current, nextSegment));
-      updateInventoryMeta("segments", response.segment.id, {
-        tabId: activeInventoryTab.id,
-        order: targetSiblings.length
-      });
-      if (targetGroupId) {
-        saveSegmentGroups(assignSegmentToGroup(segmentGroups, response.segment.id, targetGroupId));
-      }
-      notify(`Segmento ${response.segment.name} copiado.`, "ok");
-      await loadData(true);
-    } catch (error) {
-      notify(error.message, "danger");
-    } finally {
-      setSegmentSaving(false);
     }
   }
 
@@ -1857,8 +2148,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   }
 
   function createInventoryTab() {
-    const nextNumber = inventoryTabs.length + 1;
-    const cleanName = `Novo ambiente ${nextNumber}`;
+    const cleanName = getNextInventoryTabName(inventoryTabs);
 
     const nextTab = {
       id: `tab-${Date.now()}`,
@@ -1875,11 +2165,23 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   function renameInventoryTab(tabId) {
     const tab = inventoryTabs.find((item) => item.id === tabId);
     if (!tab) return;
-    const name = window.prompt("Nome da aba/ambiente", tab.name);
-    const cleanName = name?.trim();
-    if (!cleanName) return;
+    setInventoryTabForm(tab);
+  }
+
+  function submitInventoryTabForm(name) {
+    const cleanName = name.trim();
+    const tabId = inventoryTabForm?.id;
+    if (!cleanName || !tabId) return;
+    const duplicate = inventoryTabs.some(
+      (item) => item.id !== tabId && item.name.trim().toLowerCase() === cleanName.toLowerCase()
+    );
+    if (duplicate) {
+      notify("Ja existe uma aba com esse nome.", "danger");
+      return;
+    }
 
     saveInventoryTabs(inventoryTabs.map((item) => (item.id === tabId ? { ...item, name: cleanName } : item)));
+    setInventoryTabForm(null);
     notify("Ambiente renomeado.", "ok");
   }
 
@@ -2167,7 +2469,6 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
             onCreateSegment={handleCreateSegment}
             onRenameSegment={handleRenameSegment}
             onDeleteSegment={handleDeleteSegment}
-            onDuplicateSegment={duplicateSegment}
             onChangeSegmentColor={handleChangeSegmentColor}
             onAliasSave={saveMachineAlias}
             onAddObservation={addMachineObservation}
@@ -2183,6 +2484,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
             onCreateGroup={openSegmentGroupForm}
             onRenameGroup={renameSegmentGroup}
             onDeleteGroup={deleteSegmentGroup}
+            onChangeGroupColor={changeSegmentGroupColor}
             onToggleGroup={toggleSegmentGroup}
             onMoveGroupOrder={moveGroupOrder}
             onMoveSegmentToGroup={moveSegmentToGroup}
@@ -2199,6 +2501,8 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
             onCreateManualAsset={() => setManualAssetFormOpen(true)}
             onRefreshPing={handleRefreshPing}
             onChangeDeviceType={handleChangeDeviceType}
+            onPutMaintenance={putMachineInMaintenance}
+            onRemoveMachine={removeMachineFromInventory}
             onCloseMoveModal={() => setMoveModal(null)}
             onOpenMoveModal={openMoveModal}
           />
@@ -2222,6 +2526,12 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
         saving={segmentGroupSaving}
         onClose={() => setSegmentGroupForm(null)}
         onSubmit={submitSegmentGroupForm}
+      />
+      <InventoryTabFormModal
+        tab={inventoryTabForm}
+        tabs={inventoryTabs}
+        onClose={() => setInventoryTabForm(null)}
+        onSubmit={submitInventoryTabForm}
       />
       <ManualAssetForm
         open={manualAssetFormOpen}

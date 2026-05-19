@@ -89,7 +89,7 @@ senha: admin123
 1. Suba o repositorio no GitHub.
 2. Importe o projeto no Vercel.
 3. Use o build command `npm run build`.
-4. Use output directory `client/dist`.
+4. Use output directory `dist`.
 5. Configure as variaveis de ambiente no Vercel.
 
 Variaveis recomendadas:
@@ -188,6 +188,58 @@ npm run start        # API local em modo start
 npm run docker:up    # stack local Docker
 npm run docker:down
 ```
+
+## Fase 1 - Inventario
+
+A Fase 1 consolida o IT Guardian como um inventario tecnico para demonstracao/TCC, com foco em organizacao de ativos, segmentacao e ficha detalhada de maquinas.
+
+Principais recursos estabilizados:
+
+- login e cadastro com JWT;
+- dashboard de infraestrutura e alertas mockados;
+- inventario por abas/ambientes;
+- grupos e segmentos por ambiente;
+- segmento especial `Nao organizadas`;
+- cadastro manual de ativos de rede;
+- maquinas OCS/mockadas e ativos manuais no mesmo inventario;
+- drag-and-drop de maquinas, selecao multipla e movimentacao pela sidebar;
+- drag-and-drop de segmentos entre grupos;
+- busca e filtros por grupo/segmento;
+- ficha grande da maquina/ativo com abas internas;
+- historico, observacoes e perifericos;
+- status de ping mockado/preparado para integracao real;
+- fluxo de manutencao com segmento automatico `Manutencao`;
+- QR Code individual com impressao em etiqueta Zebra;
+- modo claro/noturno.
+
+Detalhes e decisoes da Fase 1 estao em [`docs/FASE-1-INVENTARIO.md`](docs/FASE-1-INVENTARIO.md).
+
+## Checklist de Teste Manual
+
+Antes de publicar ou fazer uma entrega, validar:
+
+- entrar com a conta demo ou uma conta cadastrada;
+- abrir Dashboard e Inventario;
+- criar, renomear, colorir e excluir uma aba;
+- criar grupo e segmento;
+- criar segmento com mesmo nome em grupos diferentes;
+- bloquear nomes reservados de segmento, como `Manutencao` e `Nao organizadas`;
+- mover uma maquina entre segmentos;
+- selecionar multiplas maquinas e mover em massa;
+- mover uma maquina pela sidebar;
+- mover um segmento para outro grupo;
+- buscar por nome, IP, tipo, marca, modelo, patrimonio e segmento;
+- filtrar por grupo e segmento;
+- abrir ficha da maquina;
+- editar nome fantasia;
+- alterar tipo do aparelho;
+- abrir e remover periferico;
+- adicionar observacao;
+- colocar maquina em manutencao e retirar da manutencao;
+- imprimir QR Code individual em etiqueta;
+- alternar modo claro/noturno;
+- testar layout com poucos cards e com muitos cards;
+- rodar `npm run build`.
 
 ## Endpoints Principais
 

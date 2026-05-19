@@ -88,11 +88,18 @@ export function fetchPublicDevice(id) {
   return apiFetch(`/devices/public/${id}`);
 }
 
-export function updateDeviceSegment(token, id, segmentId) {
+export function updateDeviceSegment(token, id, segmentId, extra = {}) {
   return apiFetch(`/devices/${id}/segment`, {
     token,
     method: "PATCH",
-    body: JSON.stringify({ segmentId })
+    body: JSON.stringify({ segmentId, ...extra })
+  });
+}
+
+export function deleteDevice(token, id) {
+  return apiFetch(`/devices/${id}`, {
+    token,
+    method: "DELETE"
   });
 }
 

@@ -303,3 +303,23 @@ export async function refreshManualAssetPing({ id, user = null }) {
 
   return { asset: fromRow(result.rows[0]), ping };
 }
+
+export async function deleteManualAsset({ id, user }) {
+  const current = await findManualAssetById(id);
+  if (!current) return null;
+
+  await addAssetHistory({
+    assetId: id,
+    eventType: "removed",
+    message: "Ativo removido do inventario",
+    oldValue: `${current.name} (${current.ip})`,
+    newValue: "Removido",
+    userId: user?.id,
+    userName: user?.name
+  });
+
+  await query("DELETE FROM device_segments WHERE device_id = $1", [id]);
+  await query("DELETE FROM manual_network_assets WHERE id = $1", [id]);
+
+  return current;
+}

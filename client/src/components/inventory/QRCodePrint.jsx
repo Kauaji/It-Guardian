@@ -1,5 +1,5 @@
 import QRCode from "qrcode";
-import { Printer, QrCode } from "lucide-react";
+import { Printer } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import AssetLabelPrint from "./AssetLabelPrint.jsx";
 
@@ -48,17 +48,9 @@ export default function QRCodePrint({ machine, alias }) {
 
   return (
     <section className="qr-panel">
-      <div className="qr-card">
-        {qrSrc ? <img src={qrSrc} alt={`QR Code ${machine.name}`} /> : <QrCode size={80} />}
-        <div>
-          <span>Ficha tecnica</span>
-          <strong>{alias || machine.name}</strong>
-          <p>{assetUrl}</p>
-        </div>
-      </div>
       <button type="button" className="ghost-action print-action" onClick={() => printAssetQRCode(machine.id)}>
         <Printer size={15} />
-        Imprimir somente QR Code
+        Imprimir QR Code
       </button>
       {printingAssetId === machine.id && (
         <AssetLabelPrint

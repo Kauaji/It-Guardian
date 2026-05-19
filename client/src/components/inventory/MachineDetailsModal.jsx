@@ -1,5 +1,5 @@
-import { Clock3, Cpu, HardDrive, MemoryStick, Network, RefreshCw, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Clock3, Cpu, HardDrive, KeyRound, MemoryStick, Network, RefreshCw, Trash2, Wrench, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import AssetTypeIcon from "./AssetTypeIcon.jsx";
 import { assetTypeLabel, assetTypeOptions } from "./assetTypes.js";
 import HardwareHistory from "./HardwareHistory.jsx";
@@ -24,7 +24,7 @@ function DetailItem({ label, value }) {
   return (
     <div className="detail-item">
       <span>{label}</span>
-      <strong>{value || "Nao informado"}</strong>
+      <strong>{value || "Nao disponivel"}</strong>
     </div>
   );
 }
@@ -131,6 +131,55 @@ function buildResolvedAlerts(machine, hardware) {
     }));
 }
 
+function normalizeSoftware(software) {
+  if (typeof software === "string") {
+    return {
+      name: software,
+      version: null,
+      manufacturer: null,
+      installedAt: null
+    };
+  }
+
+  return {
+    name: software?.name || software?.title || "Software sem nome",
+    version: software?.version || null,
+    manufacturer: software?.manufacturer || software?.publisher || null,
+    installedAt: software?.installedAt || software?.installDate || null
+  };
+}
+
+function getDiskHealth(hardware = {}) {
+  const directHealth =
+    hardware.diskHealth ||
+    hardware.storageHealth ||
+    hardware.smartHealth ||
+    hardware.smartStatus;
+
+  if (directHealth) {
+    if (typeof directHealth === "object") {
+      return directHealth.status || directHealth.value || directHealth.health || "Nao disponivel";
+    }
+    return directHealth;
+  }
+
+  const diskWithHealth = (hardware.disks || []).find((disk) =>
+    disk.health || disk.smartStatus || disk.healthPercent !== undefined || disk.status
+  );
+
+  if (!diskWithHealth) return "Nao disponivel";
+  if (diskWithHealth.healthPercent !== undefined) return `${diskWithHealth.healthPercent}%`;
+  return diskWithHealth.health || diskWithHealth.smartStatus || diskWithHealth.status || "Nao disponivel";
+}
+
+function isMaintenanceSegmentName(name = "") {
+  return name
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .trim()
+    .toLowerCase() === "manutencao";
+}
+
 function ErrorAlertList({ alerts, resolvedAlerts }) {
   return (
     <section className="asset-tab-content">
@@ -192,6 +241,8 @@ export default function MachineDetailsModal({
   onAddObservation,
   onChangeDeviceType,
   onRefreshPing,
+  onPutMaintenance,
+  onRemoveMachine,
   onRemovePeripheral,
   onClose
 }) {
@@ -199,12 +250,28 @@ export default function MachineDetailsModal({
   const hardware = machine?.hardware || {};
   const manualAsset = machine?.manualAsset;
   const isManualAsset = machine?.source === "manual";
+  const inMaintenance = Boolean(machine?.maintenance) || isMaintenanceSegmentName(machine?.segmentName);
   const latestChange = useMemo(
     () => [...(machine?.assetHistory || []), ...(hardware.changeHistory || [])][0],
     [hardware.changeHistory, machine?.assetHistory]
   );
   const activeAlerts = useMemo(() => buildActiveAlerts(machine), [machine]);
   const resolvedAlerts = useMemo(() => buildResolvedAlerts(machine, hardware), [hardware, machine]);
+  const visibleTabs = useMemo(
+    () => tabs.filter((tab) => tab.id !== "alerts" || activeAlerts.length > 0 || resolvedAlerts.length > 0),
+    [activeAlerts.length, resolvedAlerts.length]
+  );
+  const softwareRows = useMemo(
+    () => (hardware.software || []).map(normalizeSoftware),
+    [hardware.software]
+  );
+  const diskHealth = useMemo(() => getDiskHealth(hardware), [hardware]);
+
+  useEffect(() => {
+    if (!visibleTabs.some((tab) => tab.id === activeTab)) {
+      setActiveTab("general");
+    }
+  }, [activeTab, visibleTabs]);
 
   if (!machine) return null;
 
@@ -217,12 +284,27 @@ export default function MachineDetailsModal({
             <h2>{alias || machine.name}</h2>
             <p>{machine.name} - {machine.ip}</p>
           </div>
-          <button type="button" className="icon-button" onClick={onClose} title="Fechar">
-            <X size={18} />
-          </button>
+          <div className="asset-modal-header-actions">
+            <button
+              type="button"
+              className={`ghost-action maintenance-action ${inMaintenance ? "active" : ""}`}
+              onClick={onPutMaintenance}
+              title={inMaintenance ? "Retirar da manutencao" : "Colocar em manutencao"}
+            >
+              <Wrench size={15} />
+              {inMaintenance ? "Retirar da manutencao" : "Colocar em manutencao"}
+            </button>
+            <button type="button" className="ghost-action danger-action" onClick={onRemoveMachine} title="Remover maquina do inventario">
+              <Trash2 size={15} />
+              Remover
+            </button>
+            <button type="button" className="icon-button" onClick={onClose} title="Fechar">
+              <X size={18} />
+            </button>
+          </div>
         </header>
 
-        <MachineTabs activeTab={activeTab} tabs={tabs} onChange={setActiveTab} />
+        <MachineTabs activeTab={activeTab} tabs={visibleTabs} onChange={setActiveTab} />
 
         <div className="asset-modal-body">
           {activeTab === "general" && (
@@ -268,6 +350,11 @@ export default function MachineDetailsModal({
                       <span>Disco</span>
                       <strong>{machine.metrics.disk}%</strong>
                     </article>
+                    <article>
+                      <HardDrive size={18} />
+                      <span>Saude do disco</span>
+                      <strong>{diskHealth}</strong>
+                    </article>
                   </>
                 )}
               </div>
@@ -297,6 +384,7 @@ export default function MachineDetailsModal({
                 <DetailItem label="Tipo" value={assetTypeLabel(machine.assetType)} />
                 <DetailItem label="IP" value={machine.ip} />
                 <DetailItem label={isManualAsset ? "Hostname" : "Sistema operacional"} value={isManualAsset ? manualAsset?.hostname : hardware.os} />
+                <DetailItem label="Arquitetura" value={hardware.architecture} />
                 <DetailItem label="Patrimonio" value={hardware.assetTag} />
                 <DetailItem label={isManualAsset ? "Localizacao" : "Usuario logado"} value={isManualAsset ? manualAsset?.location : hardware.loggedUser} />
                 <DetailItem label={isManualAsset ? "Ultima verificacao" : "Ultimo inventario"} value={formatDate(isManualAsset ? machine.lastPingAt : hardware.lastInventoryAt)} />
@@ -317,12 +405,20 @@ export default function MachineDetailsModal({
           {activeTab === "hardware" && (
             <section className="asset-tab-content">
               <div className="detail-grid">
+                <DetailItem label="Hostname" value={machine.name} />
+                <DetailItem label="Sistema operacional" value={hardware.os} />
+                <DetailItem label="Versao do SO" value={hardware.osVersion || hardware.os} />
+                <DetailItem label="Arquitetura" value={hardware.architecture} />
                 <DetailItem label="Fabricante" value={hardware.manufacturer} />
                 <DetailItem label="Modelo" value={hardware.model} />
                 <DetailItem label="Serial number" value={hardware.serialNumber} />
                 <DetailItem label="Processador" value={hardware.cpuModel} />
                 <DetailItem label="Nucleos" value={hardware.cpuCores} />
                 <DetailItem label="Memoria RAM" value={hardware.ramGb ? `${hardware.ramGb} GB` : null} />
+                <DetailItem label="Saude da memoria" value={hardware.memoryHealth?.status || hardware.memoryHealth} />
+                <DetailItem label="Licenca Windows" value={hardware.licenses?.windowsKey || hardware.windowsKey} />
+                <DetailItem label="Office" value={hardware.licenses?.officeVersion || hardware.officeVersion} />
+                <DetailItem label="Licenca Office" value={hardware.licenses?.officeKey || hardware.officeKey} />
               </div>
               <div className="disk-detail-list">
                 {(hardware.disks || []).map((disk) => (
@@ -330,9 +426,18 @@ export default function MachineDetailsModal({
                     <HardDrive size={16} />
                     <strong>{disk.label}</strong>
                     <span>{disk.sizeGb} GB - {disk.type}</span>
+                    <small>SMART: {disk.smartStatus || disk.health || "Nao disponivel"}</small>
+                    <small>Temperatura: {disk.temperatureC ? `${disk.temperatureC} C` : "Nao disponivel"}</small>
+                    <small>Horas ligadas: {disk.powerOnHours || "Nao disponivel"}</small>
+                    <small>Setores realocados: {disk.reallocatedSectors ?? "Nao disponivel"}</small>
+                    <small>TB escritos: {disk.tbWritten || "Nao disponivel"}</small>
                   </article>
                 ))}
                 {isManualAsset && <p className="empty">Ativo de rede sem coleta OCS de discos ou CPU.</p>}
+              </div>
+              <div className="license-note">
+                <KeyRound size={16} />
+                <span>Licencas e saude fisica sao exibidas apenas quando OCS/Zabbix disponibilizam esses dados.</span>
               </div>
             </section>
           )}
@@ -342,8 +447,18 @@ export default function MachineDetailsModal({
           )}
 
           {activeTab === "software" && (
-            <section className="asset-tab-content software-tab-list">
-              {(hardware.software || []).map((software) => <span key={software}>{software}</span>)}
+            <section className="asset-tab-content">
+              <div className="software-table-list">
+                {softwareRows.map((software) => (
+                  <article key={`${software.name}-${software.version || "sem-versao"}`}>
+                    <strong>{software.name}</strong>
+                    <span>Versao: {software.version || "Nao disponivel"}</span>
+                    <span>Fabricante: {software.manufacturer || "Nao disponivel"}</span>
+                    <span>Instalacao: {software.installedAt ? formatDate(software.installedAt) : "Nao disponivel"}</span>
+                  </article>
+                ))}
+              </div>
+              {!softwareRows.length && !isManualAsset && <p className="empty">Nenhum software retornado pelo OCS.</p>}
               {isManualAsset && <p className="empty">Softwares nao se aplicam a este ativo manual.</p>}
             </section>
           )}

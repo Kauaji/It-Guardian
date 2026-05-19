@@ -111,14 +111,16 @@ export async function listDevices({ search = "", status = "" }) {
   const term = search.trim().toLowerCase();
 
   return [
-    ...hosts.map((host) =>
-      enrichDevice(
-        host,
-        inventory.find((item) => item.hostId === host.id),
-        deviceSegments.get(host.id),
-        metadataMap.get(host.id)
-      )
-    ),
+    ...hosts
+      .filter((host) => !metadataMap.get(host.id)?.removedAt)
+      .map((host) =>
+        enrichDevice(
+          host,
+          inventory.find((item) => item.hostId === host.id),
+          deviceSegments.get(host.id),
+          metadataMap.get(host.id)
+        )
+      ),
     ...manualAssets.map((asset) => buildManualDevice(asset, deviceSegments.get(asset.id)))
   ]
     .filter((device) => {
@@ -157,6 +159,8 @@ export async function getDeviceDetails(id) {
   ]);
 
   if (host) {
+    if (metadata?.removedAt) return null;
+
     return {
       ...enrichDevice(host, inventory, deviceSegments.get(host.id), metadata),
       assetHistory: await listAssetHistory(id),

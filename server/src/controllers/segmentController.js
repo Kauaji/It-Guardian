@@ -74,7 +74,8 @@ export async function create(req, res, next) {
       name,
       color: req.body.color,
       groupId: req.body.groupId || null,
-      userId: req.user.id
+      userId: req.user.id,
+      allowReservedName: req.body.systemSegment === "maintenance"
     });
     await addLog({
       type: "segment_create",

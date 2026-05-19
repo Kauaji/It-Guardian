@@ -7,6 +7,7 @@ import {
   moveToSegment,
   publicDetails,
   refreshPing,
+  removeDevice,
   updateManual
 } from "../controllers/deviceController.js";
 import { requireAuth, requireRole } from "../middleware/authMiddleware.js";
@@ -22,5 +23,6 @@ router.patch("/:id/type", requireRole("admin", "operator"), changeDeviceType);
 router.post("/:id/ping", requireRole("admin", "operator"), refreshPing);
 router.patch("/:id/segment", requireRole("admin", "operator"), moveToSegment);
 router.get("/:id", details);
+router.delete("/:id", requireRole("admin", "operator"), removeDevice);
 
 export default router;

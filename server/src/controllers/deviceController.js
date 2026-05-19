@@ -1,7 +1,7 @@
 import { addLog } from "../repositories/logRepository.js";
 import { addAssetHistory } from "../repositories/assetHistoryRepository.js";
-import { updateDeviceType } from "../repositories/deviceMetadataRepository.js";
-import { createManualAsset, refreshManualAssetPing, updateManualAsset } from "../repositories/manualAssetRepository.js";
+import { markDeviceRemoved, updateDeviceType } from "../repositories/deviceMetadataRepository.js";
+import { createManualAsset, deleteManualAsset, refreshManualAssetPing, updateManualAsset } from "../repositories/manualAssetRepository.js";
 import { updateDeviceSegment } from "../repositories/segmentRepository.js";
 import { getDashboardSummary, getDeviceDetails, listDevices } from "../services/monitoringService.js";
 import { broadcastSnapshot } from "../services/realtimeService.js";
@@ -229,6 +229,24 @@ export async function moveToSegment(req, res, next) {
       userId: req.user.id
     });
 
+    const reason = req.body.reason;
+    const maintenanceMessage =
+      reason === "maintenance"
+        ? "Maquina colocada em manutencao"
+        : reason === "maintenance_exit"
+          ? "Maquina retirada da manutencao"
+          : "Mudanca de segmento";
+
+    await addAssetHistory({
+      assetId: device.id,
+      eventType: reason === "maintenance" || reason === "maintenance_exit" ? "maintenance" : "segment",
+      message: maintenanceMessage,
+      oldValue: device.segmentName,
+      newValue: assignment.segmentName,
+      userId: req.user.id,
+      userName: req.user.name
+    });
+
     await addLog({
       type: "device_segment_update",
       message: `Device moved to segment: ${device.name}`,
@@ -243,6 +261,50 @@ export async function moveToSegment(req, res, next) {
     const updatedDevice = await getDeviceDetails(req.params.id);
 
     return res.json({ assignment, device: updatedDevice });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function removeDevice(req, res, next) {
+  try {
+    const device = await getDeviceDetails(req.params.id);
+
+    if (!device) {
+      return res.status(404).json({ message: "Device not found" });
+    }
+
+    if (device.source === "manual") {
+      await deleteManualAsset({ id: device.id, user: req.user });
+    } else {
+      await addAssetHistory({
+        assetId: device.id,
+        eventType: "removed",
+        message: "Maquina removida do inventario",
+        oldValue: device.segmentName,
+        newValue: "Removida",
+        userId: req.user.id,
+        userName: req.user.name
+      });
+      await markDeviceRemoved({
+        deviceId: device.id,
+        assetType: device.assetType || "desktop",
+        userId: req.user.id
+      });
+    }
+
+    await addLog({
+      type: "device_remove",
+      message: `Device removed from inventory: ${device.name}`,
+      userId: req.user.id,
+      meta: { deviceId: device.id, source: device.source }
+    });
+
+    broadcastSnapshot().catch((error) => {
+      console.error("Realtime broadcast failed after device remove", error);
+    });
+
+    return res.json({ removed: true, deviceId: device.id });
   } catch (error) {
     next(error);
   }
