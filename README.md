@@ -81,8 +81,10 @@ Conta demo:
 
 ```text
 email: admin@itguardian.local
-senha: admin123
+senha: 123456
 ```
+
+A conta demo e os demais dados ficticios sao semeados apenas em desenvolvimento/demo. Em ambiente de producao ou preview com `NODE_ENV=production`, o bootstrap cria a estrutura basica, mas nao injeta usuarios ou dados operacionais demo.
 
 ## Deploy no Vercel
 
@@ -128,6 +130,7 @@ DB_SSL=true
 Tabelas criadas automaticamente no bootstrap:
 
 - `users`
+- `sectors`
 - `audit_logs`
 - `alert_acknowledgements`
 - `segment_groups`
@@ -136,6 +139,16 @@ Tabelas criadas automaticamente no bootstrap:
 - `manual_network_assets`
 - `device_metadata`
 - `asset_history`
+- `service_orders`
+- `service_order_history`
+- `service_order_items`
+- `app_settings`
+- `clients`
+- `products`
+- `service_catalog`
+- `technicians`
+- `problem_types`
+- `priority_rules`
 
 ## API e CORS
 
@@ -214,6 +227,53 @@ Principais recursos estabilizados:
 
 Detalhes e decisoes da Fase 1 estao em [`docs/FASE-1-INVENTARIO.md`](docs/FASE-1-INVENTARIO.md).
 
+## Fase 2 - Ordens de Servico
+
+A Fase 2 inicia o controle de atendimentos tecnicos dentro do IT Guardian. A primeira entrega cria a base do modulo, mantendo o Inventario como Fase 1 estavel.
+
+Recursos iniciais:
+
+- menu e tela `Ordens de Servico`;
+- criacao manual de OS;
+- listagem por status: Aberta, Em atendimento, Aguardando e Finalizada;
+- vinculo opcional com maquina/ativo do inventario;
+- vinculo com ambiente/cliente;
+- detalhe da OS com abas internas;
+- registro de atendimento, diagnostico, solucao e pecas trocadas em texto simples;
+- historico basico da OS;
+- regra para exigir tecnico responsavel antes de avancar a OS;
+- OS automatica ao colocar maquina em manutencao;
+- finalizacao de OS de manutencao retirando a maquina da manutencao;
+- tela de Configuracoes com cadastros de clientes, produtos e tecnicos;
+- Tipos de Problema e Regras de Prioridade para sugerir urgencia de OS;
+- tela publica isolada `/abrir-chamado` para usuario final abrir solicitacao sem acessar o painel;
+- importacao CSV inicial para clientes e produtos;
+- persistencia em `service_orders` e `service_order_history`.
+
+Detalhes e proximos passos estao em [`docs/FASE-2-ORDENS-SERVICO.md`](docs/FASE-2-ORDENS-SERVICO.md).
+
+## Fase 3 - Preparacao para Implementacao Real
+
+A Fase 3 separa melhor o que deve ficar no frontend e o que deve ser regra do backend. O estado atual ja coloca Ordens de Servico, usuarios, setores, permissoes e configuracoes importantes sob controle da API.
+
+Documentos:
+
+- [`docs/FASE-3-AUDITORIA-TECNICA.md`](docs/FASE-3-AUDITORIA-TECNICA.md)
+- [`docs/FASE-3-PLANO-MIGRACAO-BACKEND.md`](docs/FASE-3-PLANO-MIGRACAO-BACKEND.md)
+- [`docs/FASE-3-IMPLEMENTACAO-REAL.md`](docs/FASE-3-IMPLEMENTACAO-REAL.md)
+- [`docs/FASE-3-CHECKLIST-TESTES.md`](docs/FASE-3-CHECKLIST-TESTES.md)
+
+Resumo tecnico da Fase 3:
+
+- `systemMode` agora e persistido por `/api/system-settings`;
+- OS usa backend para numero, status, prioridade, historico, itens e valores;
+- usuarios, setores e permissoes sao validados no backend;
+- configuracoes de regra da OS usam API e nao dependem mais do navegador;
+- seeds demo ficam restritos a ambiente nao produtivo;
+- cadastros de OS usam permissao `service_orders.settings`;
+- preferencias visuais simples continuam no frontend;
+- OCS, Zabbix e ping real continuam planejados para VPS/coletor.
+
 ## Checklist de Teste Manual
 
 Antes de publicar ou fazer uma entrega, validar:
@@ -237,6 +297,18 @@ Antes de publicar ou fazer uma entrega, validar:
 - adicionar observacao;
 - colocar maquina em manutencao e retirar da manutencao;
 - imprimir QR Code individual em etiqueta;
+- abrir Ordens de Servico;
+- criar OS manual;
+- vincular OS a uma maquina;
+- alterar tecnico/prioridade e salvar atendimento;
+- tentar avancar OS sem tecnico e conferir bloqueio;
+- mudar status ate Finalizada e verificar historico;
+- abrir `/abrir-chamado`, enviar uma solicitacao e conferir a OS em Aberta;
+- abrir Configuracoes;
+- cadastrar cliente, produto e tecnico;
+- cadastrar tipo de problema;
+- cadastrar regra simples de prioridade;
+- importar clientes/produtos via CSV simples;
 - alternar modo claro/noturno;
 - testar layout com poucos cards e com muitos cards;
 - rodar `npm run build`.
@@ -266,3 +338,33 @@ Antes de publicar ou fazer uma entrega, validar:
 - `GET /api/alerts/history`
 - `POST /api/alerts/:id/acknowledge`
 - `DELETE /api/alerts/:id/acknowledge`
+- `GET /api/service-orders`
+- `GET /api/service-orders/:id`
+- `POST /api/service-orders`
+- `PATCH /api/service-orders/:id`
+- `PATCH /api/service-orders/:id/status`
+- `POST /api/service-orders/:id/history`
+- `GET /api/public/support-options`
+- `POST /api/public/service-orders`
+- `GET /api/clients`
+- `POST /api/clients`
+- `PATCH /api/clients/:id`
+- `DELETE /api/clients/:id`
+- `POST /api/clients/import`
+- `GET /api/products`
+- `POST /api/products`
+- `PATCH /api/products/:id`
+- `DELETE /api/products/:id`
+- `POST /api/products/import`
+- `GET /api/technicians`
+- `POST /api/technicians`
+- `PATCH /api/technicians/:id`
+- `DELETE /api/technicians/:id`
+- `GET /api/problem-types`
+- `POST /api/problem-types`
+- `PATCH /api/problem-types/:id`
+- `DELETE /api/problem-types/:id`
+- `GET /api/priority-rules`
+- `POST /api/priority-rules`
+- `PATCH /api/priority-rules/:id`
+- `DELETE /api/priority-rules/:id`

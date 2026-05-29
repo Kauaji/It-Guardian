@@ -20,7 +20,7 @@ function normalizeReservedName(name = "") {
 
 function isReservedSegmentName(name = "") {
   const normalizedName = normalizeReservedName(name);
-  return normalizedName === "manutencao" || normalizedName === "nao organizadas";
+  return normalizedName === "manutencao" || normalizedName === "nao organizadas" || normalizedName === "backup";
 }
 
 export async function seedDefaultSegment() {

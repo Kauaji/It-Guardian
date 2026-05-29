@@ -1,4 +1,4 @@
-import { Clock3, Cpu, HardDrive, KeyRound, MemoryStick, Network, RefreshCw, Trash2, Wrench, X } from "lucide-react";
+import { Archive, Clock3, Cpu, HardDrive, KeyRound, MemoryStick, Network, RefreshCw, Trash2, Wrench, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import AssetTypeIcon from "./AssetTypeIcon.jsx";
 import { assetTypeLabel, assetTypeOptions } from "./assetTypes.js";
@@ -242,6 +242,7 @@ export default function MachineDetailsModal({
   onChangeDeviceType,
   onRefreshPing,
   onPutMaintenance,
+  onToggleBackup,
   onRemoveMachine,
   onRemovePeripheral,
   onClose
@@ -251,6 +252,7 @@ export default function MachineDetailsModal({
   const manualAsset = machine?.manualAsset;
   const isManualAsset = machine?.source === "manual";
   const inMaintenance = Boolean(machine?.maintenance) || isMaintenanceSegmentName(machine?.segmentName);
+  const backupInUse = machine?.backupStatus === "in_use";
   const latestChange = useMemo(
     () => [...(machine?.assetHistory || []), ...(hardware.changeHistory || [])][0],
     [hardware.changeHistory, machine?.assetHistory]
@@ -280,7 +282,7 @@ export default function MachineDetailsModal({
       <section className="asset-modal" role="dialog" aria-modal="true" aria-label="Detalhes do ativo">
         <header className="asset-modal-header">
           <div>
-            <span className="asset-eyebrow">{isManualAsset ? "Ativo de rede manual" : "Inventario OCS"}</span>
+            <span className="asset-eyebrow">{isManualAsset ? "Ativo de rede manual" : "Inventário OCS"}</span>
             <h2>{alias || machine.name}</h2>
             <p>{machine.name} - {machine.ip}</p>
           </div>
@@ -293,6 +295,16 @@ export default function MachineDetailsModal({
             >
               <Wrench size={15} />
               {inMaintenance ? "Retirar da manutencao" : "Colocar em manutencao"}
+            </button>
+            <button
+              type="button"
+              className={`ghost-action backup-action ${machine?.isBackup ? "active" : ""}`}
+              onClick={() => onToggleBackup?.(!machine?.isBackup)}
+              disabled={backupInUse}
+              title={backupInUse ? "Backup em uso por uma OS" : machine?.isBackup ? "Remover da area de Backup" : "Marcar como Backup"}
+            >
+              <Archive size={15} />
+              {backupInUse ? "Backup em uso" : machine?.isBackup ? "Remover Backup" : "Marcar Backup"}
             </button>
             <button type="button" className="ghost-action danger-action" onClick={onRemoveMachine} title="Remover maquina do inventario">
               <Trash2 size={15} />

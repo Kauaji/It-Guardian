@@ -1,6 +1,6 @@
 import { addLog } from "../repositories/logRepository.js";
 import { addAssetHistory } from "../repositories/assetHistoryRepository.js";
-import { markDeviceRemoved, updateDeviceType } from "../repositories/deviceMetadataRepository.js";
+import { markDeviceRemoved, updateDeviceBackup, updateDeviceType } from "../repositories/deviceMetadataRepository.js";
 import { createManualAsset, deleteManualAsset, refreshManualAssetPing, updateManualAsset } from "../repositories/manualAssetRepository.js";
 import { updateDeviceSegment } from "../repositories/segmentRepository.js";
 import { getDashboardSummary, getDeviceDetails, listDevices } from "../services/monitoringService.js";
@@ -18,6 +18,8 @@ const assetTypes = new Set([
   "nas",
   "other"
 ]);
+
+const backupStatuses = new Set(["available", "in_use"]);
 
 function validateManualAsset(payload) {
   const required = ["name", "type", "brand", "model", "assetTag", "ip"];
@@ -235,11 +237,20 @@ export async function moveToSegment(req, res, next) {
         ? "Maquina colocada em manutencao"
         : reason === "maintenance_exit"
           ? "Maquina retirada da manutencao"
-          : "Mudanca de segmento";
+          : reason === "backup_in_use"
+            ? "Maquina Backup movida temporariamente"
+            : reason === "backup_return"
+              ? "Maquina Backup devolvida para a area de Backup"
+              : "Mudanca de segmento";
 
     await addAssetHistory({
       assetId: device.id,
-      eventType: reason === "maintenance" || reason === "maintenance_exit" ? "maintenance" : "segment",
+      eventType:
+        reason === "maintenance" || reason === "maintenance_exit"
+          ? "maintenance"
+          : reason === "backup_in_use" || reason === "backup_return"
+            ? "backup"
+            : "segment",
       message: maintenanceMessage,
       oldValue: device.segmentName,
       newValue: assignment.segmentName,
@@ -261,6 +272,65 @@ export async function moveToSegment(req, res, next) {
     const updatedDevice = await getDeviceDetails(req.params.id);
 
     return res.json({ assignment, device: updatedDevice });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function changeDeviceBackup(req, res, next) {
+  try {
+    const device = await getDeviceDetails(req.params.id);
+
+    if (!device) {
+      return res.status(404).json({ message: "Device not found" });
+    }
+
+    const isBackup = Boolean(req.body.isBackup);
+    const backupStatus = req.body.status || req.body.backupStatus || "available";
+
+    if (!backupStatuses.has(backupStatus)) {
+      return res.status(400).json({ message: "Status de Backup invalido." });
+    }
+
+    await updateDeviceBackup({
+      deviceId: device.id,
+      assetType: device.assetType || "desktop",
+      isBackup,
+      backupStatus,
+      backupOrderId: req.body.serviceOrderId || req.body.backupOrderId || null,
+      backupOriginalSegmentId: req.body.originalSegmentId || req.body.backupOriginalSegmentId || null,
+      backupOriginalSegmentName: req.body.originalSegmentName || req.body.backupOriginalSegmentName || null,
+      userId: req.user.id
+    });
+
+    const message = !isBackup
+      ? "Maquina removida da area de Backup"
+      : backupStatus === "in_use"
+        ? "Maquina Backup usada temporariamente"
+        : "Maquina marcada como Backup";
+
+    await addAssetHistory({
+      assetId: device.id,
+      eventType: "backup",
+      message,
+      oldValue: device.isBackup ? `${device.backupStatus || "available"}` : "normal",
+      newValue: isBackup ? backupStatus : "normal",
+      userId: req.user.id,
+      userName: req.user.name
+    });
+
+    await addLog({
+      type: "device_backup_update",
+      message: `Device backup status updated: ${device.name}`,
+      userId: req.user.id,
+      meta: { deviceId: device.id, isBackup, backupStatus }
+    });
+
+    broadcastSnapshot().catch((error) => {
+      console.error("Realtime broadcast failed after device backup update", error);
+    });
+
+    return res.json({ device: await getDeviceDetails(device.id) });
   } catch (error) {
     next(error);
   }

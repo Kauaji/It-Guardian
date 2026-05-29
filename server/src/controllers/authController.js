@@ -37,7 +37,7 @@ export async function login(req, res, next) {
     const { email, password } = req.body;
     const user = await findUserByEmail(email || "");
 
-    if (!user || !(await bcrypt.compare(password || "", user.passwordHash))) {
+    if (!user || user.active === false || !(await bcrypt.compare(password || "", user.passwordHash))) {
       return res.status(401).json({ message: "E-mail ou senha invalidos." });
     }
 

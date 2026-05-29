@@ -30,6 +30,16 @@ function inferAssetType(host, inventory) {
   return "desktop";
 }
 
+function backupMetadata(metadata) {
+  return {
+    isBackup: Boolean(metadata?.isBackup),
+    backupStatus: metadata?.backupStatus || "available",
+    backupOrderId: metadata?.backupOrderId || null,
+    backupOriginalSegmentId: metadata?.backupOriginalSegmentId || null,
+    backupOriginalSegmentName: metadata?.backupOriginalSegmentName || null
+  };
+}
+
 function enrichDevice(host, inventory, segment, metadata) {
   const assetType = metadata?.assetType || inferAssetType(host, inventory);
 
@@ -44,6 +54,7 @@ function enrichDevice(host, inventory, segment, metadata) {
     statusLabel: normalizeStatus(host.status),
     segmentId: segment?.segmentId || DEFAULT_SEGMENT_ID,
     segmentName: segment?.segmentName || DEFAULT_SEGMENT_NAME,
+    ...backupMetadata(metadata),
     uptimeHours: host.uptimeHours,
     metrics: host.metrics,
     history: host.history,
@@ -51,20 +62,22 @@ function enrichDevice(host, inventory, segment, metadata) {
   };
 }
 
-function buildManualDevice(asset, segment) {
+function buildManualDevice(asset, segment, metadata) {
   const lastPingAt = asset.lastPingAt || new Date().toISOString();
+  const assetType = metadata?.assetType || asset.type;
 
   return {
     id: asset.id,
     name: asset.name,
     source: "manual",
-    assetType: asset.type,
-    type: asset.type,
+    assetType,
+    type: assetType,
     ip: asset.ip,
     status: asset.status,
     statusLabel: normalizeStatus(asset.status),
     segmentId: segment?.segmentId || DEFAULT_SEGMENT_ID,
     segmentName: segment?.segmentName || DEFAULT_SEGMENT_NAME,
+    ...backupMetadata(metadata),
     uptimeHours: asset.status === "online" ? 1 : 0,
     metrics: null,
     lastPingAt,
@@ -121,7 +134,7 @@ export async function listDevices({ search = "", status = "" }) {
           metadataMap.get(host.id)
         )
       ),
-    ...manualAssets.map((asset) => buildManualDevice(asset, deviceSegments.get(asset.id)))
+    ...manualAssets.map((asset) => buildManualDevice(asset, deviceSegments.get(asset.id), metadataMap.get(asset.id)))
   ]
     .filter((device) => {
       const searchable = [
@@ -175,7 +188,7 @@ export async function getDeviceDetails(id) {
   }
 
   return {
-    ...buildManualDevice(manualAsset, deviceSegments.get(manualAsset.id)),
+    ...buildManualDevice(manualAsset, deviceSegments.get(manualAsset.id), metadata),
     assetHistory: manualAsset.manualHistory || [],
     alerts: []
   };

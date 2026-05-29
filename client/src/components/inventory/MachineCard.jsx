@@ -1,6 +1,5 @@
 import { ChevronDown, Clock3, Cpu, HardDrive, Info, MemoryStick, MoveRight } from "lucide-react";
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { useDraggable } from "@dnd-kit/core";
 import { useRef } from "react";
 import AssetTypeIcon from "./AssetTypeIcon.jsx";
 import { assetTypeLabel } from "./assetTypes.js";
@@ -70,10 +69,12 @@ function MachineCardContent({
   const detailsPopoverId = `peripherals-${machine.id}`;
   const moveMenuOpen = activePopoverId === movePopoverId;
   const expanded = activePopoverId === detailsPopoverId;
-  const availableSegments = segments.filter((segment) => segment.id !== machine.segmentId);
+  const availableSegments = segments.filter((segment) => segment.id !== machine.segmentId && !segment.isBackupSegment);
   const showMoveMenu = availableSegments.length > 0;
   const showDetails = true;
   const isManualAsset = machine.source === "manual";
+  const isBackup = Boolean(machine.isBackup);
+  const backupInUse = machine.backupStatus === "in_use";
   const metrics = machine.metrics || {};
   const typeLabel = assetTypeLabel(machine.assetType || machine.type);
   const { onPointerDown: onDragPointerDown, ...safeDragHandleProps } = dragHandleProps;
@@ -96,7 +97,7 @@ function MachineCardContent({
     <article
       ref={setNodeRef}
       style={style}
-      className={`machine-card ${selected ? "selected" : ""} ${expanded ? "details-open" : ""} ${moveMenuOpen ? "move-menu-open" : ""} ${isDragging ? "dragging" : ""} ${isOverlay ? "drag-overlay" : ""}`}
+      className={`machine-card ${isBackup ? "backup-card" : ""} ${backupInUse ? "backup-in-use" : ""} ${selected ? "selected" : ""} ${expanded ? "details-open" : ""} ${moveMenuOpen ? "move-menu-open" : ""} ${isDragging ? "dragging" : ""} ${isOverlay ? "drag-overlay" : ""}`}
       onClick={handleCardClick}
     >
       {!isOverlay && (
@@ -142,6 +143,11 @@ function MachineCardContent({
           <span className={`status-dot ${statusTone(machine.status)}`}>{statusLabel(machine.status)}</span>
         )}
         <span className="asset-type-badge">{typeLabel}</span>
+        {isBackup && (
+          <span className={`backup-badge ${backupInUse ? "in-use" : "available"}`}>
+            {backupInUse ? "Backup em uso" : "Backup disponivel"}
+          </span>
+        )}
       </div>
       <span className="machine-ip">{machine.ip}</span>
 
@@ -279,14 +285,14 @@ export default function MachineCard({
   activePopoverId,
   setActivePopoverId
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: machine.id,
     data: { type: "machine", machineId: machine.id, segmentId: machine.segmentId }
   });
 
   const style = {
-    transform: isDragging ? undefined : CSS.Transform.toString(transform),
-    transition
+    transform: undefined,
+    transition: undefined
   };
 
   return (

@@ -1,4 +1,4 @@
-import { Printer, Send, X } from "lucide-react";
+import { Archive, Printer, Send, X } from "lucide-react";
 
 export default function BulkActionsBar({
   count,
@@ -7,6 +7,7 @@ export default function BulkActionsBar({
   onTargetChange,
   onMove,
   onPrint,
+  onMarkBackup,
   onClear,
   isDragActive = false
 }) {
@@ -20,7 +21,7 @@ export default function BulkActionsBar({
       <strong>{count} selecionados</strong>
       <select value={currentTarget} onChange={(event) => onTargetChange(event.target.value)}>
         <option value="">Alterar segmento...</option>
-        {segments.map((segment) => (
+        {segments.filter((segment) => !segment.isBackupSegment).map((segment) => (
           <option key={segment.id} value={segment.id}>{segment.name}</option>
         ))}
       </select>
@@ -31,6 +32,10 @@ export default function BulkActionsBar({
       <button type="button" onClick={onPrint}>
         <Printer size={14} />
         Imprimir QR Codes
+      </button>
+      <button type="button" onClick={onMarkBackup}>
+        <Archive size={14} />
+        Marcar Backup
       </button>
       <button type="button" className="danger" onClick={onClear}>
         <X size={14} />

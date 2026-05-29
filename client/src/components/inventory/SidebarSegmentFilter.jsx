@@ -2,7 +2,7 @@ import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { useEffect, useMemo, useState } from "react";
 import { getSegmentGroupId } from "./inventoryUtils.js";
 
-function SidebarSegmentDropItem({ segment, selected, count, onSelectSegment }) {
+function SidebarSegmentDropItem({ segment, selected, count, machineDragActive, onSelectSegment }) {
   const { isOver, setNodeRef } = useDroppable({
     id: `sidebar-segment-${segment.id}`,
     data: { type: "sidebar-segment", segmentId: segment.id }
@@ -15,7 +15,7 @@ function SidebarSegmentDropItem({ segment, selected, count, onSelectSegment }) {
   } = useDraggable({
     id: `sidebar-segment-drag-${segment.id}`,
     data: { type: "segment", segmentId: segment.id, origin: "sidebar" },
-    disabled: segment.isDefault
+    disabled: segment.isDefault || machineDragActive
   });
 
   return (
@@ -40,15 +40,16 @@ function SidebarSegmentDropItem({ segment, selected, count, onSelectSegment }) {
   );
 }
 
-function SidebarGroupDropSection({ groupId, collapsed = false, onExpand, children }) {
+function SidebarGroupDropSection({ groupId, collapsed = false, machineDragActive, onExpand, children }) {
   const { isOver, setNodeRef } = useDroppable({
     id: `sidebar-group-${groupId || "ungrouped"}`,
-    data: { type: "sidebar-segment-group-drop", groupId }
+    data: { type: "sidebar-segment-group-drop", groupId },
+    disabled: machineDragActive
   });
 
   useEffect(() => {
-    if (isOver && collapsed) onExpand?.();
-  }, [collapsed, isOver, onExpand]);
+    if (!machineDragActive && isOver && collapsed) onExpand?.();
+  }, [collapsed, isOver, machineDragActive, onExpand]);
 
   return (
     <section ref={setNodeRef} className={`sidebar-segment-group ${isOver ? "sidebar-group-drop-over" : ""}`}>
@@ -63,6 +64,7 @@ export default function SidebarSegmentFilter({
   groups = [],
   selectedGroupId = "all",
   selectedSegmentId,
+  machineDragActive = false,
   onSelectGroup,
   onSelectSegment,
   onToggleGroup
@@ -118,6 +120,7 @@ export default function SidebarSegmentFilter({
             key={group.id}
             groupId={group.id}
             collapsed={group.collapsed}
+            machineDragActive={machineDragActive}
             onExpand={() => onToggleGroup?.(group.id)}
           >
             <div className="sidebar-group-row">
@@ -145,6 +148,7 @@ export default function SidebarSegmentFilter({
                 segment={segment}
                 selected={selectedSegmentId === segment.id}
                 count={countBySegment.get(segment.id) || 0}
+                machineDragActive={machineDragActive}
                 onSelectSegment={onSelectSegment}
               />
             ))}
@@ -155,6 +159,7 @@ export default function SidebarSegmentFilter({
         <SidebarGroupDropSection
           groupId=""
           collapsed={ungroupedCollapsed}
+          machineDragActive={machineDragActive}
           onExpand={() => setUngroupedCollapsed(false)}
         >
           <div className="sidebar-group-row">
@@ -182,6 +187,7 @@ export default function SidebarSegmentFilter({
               segment={segment}
               selected={selectedSegmentId === segment.id}
               count={countBySegment.get(segment.id) || 0}
+              machineDragActive={machineDragActive}
               onSelectSegment={onSelectSegment}
             />
           ))}
