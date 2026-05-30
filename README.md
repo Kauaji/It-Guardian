@@ -86,6 +86,15 @@ senha: 123456
 
 A conta demo e os demais dados ficticios sao semeados apenas em desenvolvimento/demo. Em ambiente de producao ou preview com `NODE_ENV=production`, o bootstrap cria a estrutura basica, mas nao injeta usuarios ou dados operacionais demo.
 
+Primeiro acesso em producao:
+
+1. Acesse a tela de login.
+2. Abra a aba `Cadastro`.
+3. Crie o primeiro administrador da instalacao.
+4. Depois que existir um administrador ativo, novos cadastros publicos sao bloqueados e os proximos usuarios devem ser criados em Configuracoes Gerais > Admin.
+
+Se tentar entrar em producao com `admin@itguardian.local` sem ter criado esse usuario no banco real, a API retornara `401`, pois essa credencial existe apenas em ambiente demo.
+
 ## Deploy no Vercel
 
 1. Suba o repositorio no GitHub.

@@ -429,11 +429,12 @@ function Toast({ message, tone, onClose }) {
 }
 
 function AuthScreen({ onAuth, notify }) {
+  const useDemoCredentials = import.meta.env.DEV || import.meta.env.VITE_ENABLE_DEMO_LOGIN === "true";
   const [mode, setMode] = useState("login");
   const [form, setForm] = useState({
     name: "",
-    email: "admin@itguardian.local",
-    password: "123456"
+    email: useDemoCredentials ? "admin@itguardian.local" : "",
+    password: useDemoCredentials ? "123456" : ""
   });
   const [loading, setLoading] = useState(false);
 
@@ -481,6 +482,11 @@ function AuthScreen({ onAuth, notify }) {
         </div>
 
         <form onSubmit={submit} className="auth-form">
+          {!useDemoCredentials && (
+            <p className="auth-helper">
+              Em produção, as contas demo não são criadas automaticamente. No primeiro acesso, use Cadastro para criar o administrador inicial.
+            </p>
+          )}
           {mode === "register" && (
             <label>
               Nome
