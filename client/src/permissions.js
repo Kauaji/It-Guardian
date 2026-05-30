@@ -8,7 +8,7 @@ export const permissionGroups = [
   },
   {
     id: "inventory",
-    label: "Inventário",
+    label: "Inventario",
     permissions: [
       { id: "inventory.view", label: "Visualizar inventario" },
       { id: "inventory.create_asset", label: "Criar ativos de rede" },
@@ -16,7 +16,7 @@ export const permissionGroups = [
       { id: "inventory.move_assets", label: "Mover maquinas entre segmentos" },
       { id: "inventory.manage_segments", label: "Criar grupos/segmentos" },
       { id: "inventory.view_machine", label: "Acessar ficha da maquina" },
-      { id: "inventory.print_qr", label: "Imprimir QR Code" }
+      { id: "inventory.print_qrcode", label: "Imprimir QR Code" }
     ]
   },
   {
@@ -30,7 +30,7 @@ export const permissionGroups = [
       { id: "service_orders.change_sector", label: "Alterar setor da OS" },
       { id: "service_orders.assign", label: "Assumir/atribuir tecnico" },
       { id: "service_orders.change_status", label: "Alterar status" },
-      { id: "service_orders.close", label: "Finalizar Ordem de Servico" },
+      { id: "service_orders.finish", label: "Finalizar Ordem de Servico" },
       { id: "service_orders.attendance", label: "Registrar atendimento" },
       { id: "service_orders.parts", label: "Registrar pecas trocadas" },
       { id: "service_orders.print", label: "Imprimir Ordem de Servico" },
@@ -41,7 +41,7 @@ export const permissionGroups = [
     id: "settings",
     label: "Configuracoes",
     permissions: [
-      { id: "settings.general", label: "Acessar configuracoes gerais" },
+      { id: "settings.view", label: "Acessar configuracoes gerais" },
       { id: "settings.appearance", label: "Alterar aparencia/usabilidade" },
       { id: "settings.system_mode", label: "Alterar modo do sistema" }
     ]
@@ -59,6 +59,16 @@ export const permissionGroups = [
 ];
 
 export const allPermissionIds = permissionGroups.flatMap((group) => group.permissions.map((permission) => permission.id));
+export const legacyPermissionAliases = {
+  "inventory.print_qr": "inventory.print_qrcode",
+  "service_orders.close": "service_orders.finish",
+  "settings.general": "settings.view"
+};
+const acceptedPermissionIds = new Set([...allPermissionIds, ...Object.keys(legacyPermissionAliases)]);
+
+function canonicalPermissionId(permission) {
+  return legacyPermissionAliases[permission] || permission;
+}
 
 const roleDefaultPermissions = {
   admin: allPermissionIds,
@@ -70,18 +80,18 @@ const roleDefaultPermissions = {
     "inventory.move_assets",
     "inventory.manage_segments",
     "inventory.view_machine",
-    "inventory.print_qr",
+    "inventory.print_qrcode",
     "service_orders.view",
     "service_orders.create",
     "service_orders.edit",
     "service_orders.assign",
     "service_orders.change_status",
-    "service_orders.close",
+    "service_orders.finish",
     "service_orders.attendance",
     "service_orders.parts",
     "service_orders.print",
     "service_orders.settings",
-    "settings.general",
+    "settings.view",
     "settings.appearance"
   ],
   viewer: []
@@ -98,24 +108,33 @@ export function normalizePermissions(value = []) {
     }
   }
 
-  return [...new Set((Array.isArray(source) ? source : []).filter((permission) => allPermissionIds.includes(permission)))];
+  return [
+    ...new Set(
+      (Array.isArray(source) ? source : [])
+        .map((permission) => canonicalPermissionId(permission))
+        .filter((permission) => acceptedPermissionIds.has(permission))
+    )
+  ];
 }
 
 export function getEffectivePermissions(user = {}) {
+  if (user.active === false) return [];
   if (user.role === "admin" || user.isAdmin) return allPermissionIds;
   if (Array.isArray(user.effectivePermissions) && user.effectivePermissions.length) {
-    return normalizePermissions(user.effectivePermissions);
+    return normalizePermissions(user.effectivePermissions).filter((permission) => !permission.startsWith("admin."));
   }
 
   return normalizePermissions([
     ...(roleDefaultPermissions[user.role] || roleDefaultPermissions.viewer),
     ...(user.sectorPermissions || []),
     ...(user.permissions || [])
-  ]);
+  ]).filter((permission) => !permission.startsWith("admin."));
 }
 
 export function hasPermission(user, permission) {
   if (!permission) return true;
   if (user?.role === "admin" || user?.isAdmin) return true;
-  return getEffectivePermissions(user).includes(permission);
+  const requested = canonicalPermissionId(permission);
+  if (requested.startsWith("admin.")) return false;
+  return getEffectivePermissions(user).includes(requested);
 }

@@ -25,7 +25,7 @@ import {
   updateSector,
   updateUserAccess
 } from "../../api.js";
-import { hasPermission, permissionGroups } from "../../permissions.js";
+import { permissionGroups } from "../../permissions.js";
 
 const accentColorKey = "it_guardian_accent_color";
 const generalPreferencesKey = "it_guardian_general_preferences";
@@ -464,7 +464,7 @@ export default function GeneralSettingsModal({
   const [savingAdmin, setSavingAdmin] = useState(false);
   const [userPermissionsOpen, setUserPermissionsOpen] = useState(false);
 
-  const isAdmin = user?.role === "admin" || user?.isAdmin || hasPermission(user, "admin.full");
+  const isAdmin = user?.role === "admin" || user?.isAdmin;
 
   const sections = useMemo(() => {
     const items = [

@@ -7,8 +7,13 @@ import { listSettingsRecords } from "./settingsRepository.js";
 export const serviceOrderPriorities = new Set(["low", "medium", "high", "critical"]);
 
 const serviceOrderSettingsKey = "service_orders";
+const serviceOrderSettingsRowId = "default";
 const serviceOrderNumberDigits = 4;
 const generalSector = { id: "sector-geral", name: "Geral" };
+const defaultServiceOrderSector = {
+  sectorId: generalSector.id,
+  sectorName: generalSector.name
+};
 export const maxServiceOrderStatuses = 10;
 const defaultPriorityColors = {
   low: "#16a34a",
@@ -270,7 +275,7 @@ async function resolveServiceOrderSector(payload = {}, current = null) {
   const requestedName = String(payload.sectorName || "").trim();
 
   if (!requestedId && !requestedName) {
-    return { ...generalSector };
+    return { ...defaultServiceOrderSector };
   }
 
   if (requestedId && requestedId !== generalSector.id) {
@@ -293,7 +298,7 @@ async function resolveServiceOrderSector(payload = {}, current = null) {
     }
   }
 
-  return { ...generalSector };
+  return { ...defaultServiceOrderSector };
 }
 
 function sanitizePriority(value, fallback = "medium") {
@@ -301,17 +306,13 @@ function sanitizePriority(value, fallback = "medium") {
 }
 
 async function resolveServiceOrderService(payload = {}, current = null) {
-  const hasServicePayload =
-    Object.prototype.hasOwnProperty.call(payload, "serviceId") ||
-    Object.prototype.hasOwnProperty.call(payload, "serviceCode") ||
-    Object.prototype.hasOwnProperty.call(payload, "serviceName");
-
-  if (!hasServicePayload && current) {
+  if (!hasServicePayload(payload) && current) {
     return {
       serviceId: current.serviceId || null,
       serviceCode: current.serviceCode || null,
       serviceName: current.serviceName || null,
-      defaultPriority: null
+      defaultPriority: null,
+      defaultValue: null
     };
   }
 
@@ -320,7 +321,7 @@ async function resolveServiceOrderService(payload = {}, current = null) {
   const requestedName = String(payload.serviceName || "").trim();
 
   if (!requestedId && !requestedCode && !requestedName) {
-    return { serviceId: null, serviceCode: null, serviceName: null, defaultPriority: null };
+    return { serviceId: null, serviceCode: null, serviceName: null, defaultPriority: null, defaultValue: null };
   }
 
   const clauses = [];
@@ -340,7 +341,7 @@ async function resolveServiceOrderService(payload = {}, current = null) {
 
   const result = await query(
     `
-      SELECT id, code, name, default_priority
+      SELECT id, code, name, default_priority, default_value
       FROM service_catalog
       WHERE active = TRUE
         AND (${clauses.join(" OR ")})
@@ -351,15 +352,30 @@ async function resolveServiceOrderService(payload = {}, current = null) {
 
   const service = result.rows[0];
   if (!service) {
-    return { serviceId: null, serviceCode: requestedCode || null, serviceName: requestedName || null, defaultPriority: null };
+    return {
+      serviceId: null,
+      serviceCode: requestedCode || null,
+      serviceName: requestedName || null,
+      defaultPriority: null,
+      defaultValue: null
+    };
   }
 
   return {
     serviceId: service.id,
     serviceCode: service.code,
     serviceName: service.name,
-    defaultPriority: service.default_priority
+    defaultPriority: service.default_priority,
+    defaultValue: service.default_value
   };
+}
+
+function hasServicePayload(payload = {}) {
+  return (
+    Object.prototype.hasOwnProperty.call(payload, "serviceId") ||
+    Object.prototype.hasOwnProperty.call(payload, "serviceCode") ||
+    Object.prototype.hasOwnProperty.call(payload, "serviceName")
+  );
 }
 
 function chooseHigherPriority(current, candidate) {
@@ -575,9 +591,180 @@ function fromHistoryRow(row) {
   };
 }
 
-export async function getServiceOrderSettings() {
+function parseJsonObject(value, fallback = {}) {
+  if (!value) return fallback;
+  if (typeof value === "object") return value;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function settingsFromDedicatedRow(row, statuses = []) {
+  if (!row) return null;
+
+  return normalizeServiceOrderSettings({
+    numberFormat: {
+      prefix: row.number_prefix,
+      useYear: row.use_year,
+      useMonth: row.use_month,
+      nextNumber: row.next_number
+    },
+    autoPriority: {
+      enabled: row.auto_priority_enabled,
+      lowToMediumHours: row.low_to_medium_hours,
+      mediumToHighHours: row.medium_to_high_hours,
+      highToCriticalHours: row.high_to_critical_hours
+    },
+    statuses,
+    priorityColors: parseJsonObject(row.priority_colors, defaultPriorityColors),
+    boardLayout: row.board_layout
+  });
+}
+
+async function readDedicatedServiceOrderSettings() {
+  const settingsResult = await query("SELECT * FROM service_order_settings WHERE id = $1", [serviceOrderSettingsRowId]);
+  const statusesResult = await query(
+    `
+      SELECT id, name, color, sort_order, is_initial, is_final
+      FROM service_order_statuses
+      WHERE active = TRUE
+      ORDER BY sort_order ASC, created_at ASC
+    `
+  );
+
+  const statuses = statusesResult.rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    color: row.color,
+    order: row.sort_order,
+    isInitial: row.is_initial,
+    isFinal: row.is_final
+  }));
+
+  return settingsFromDedicatedRow(settingsResult.rows[0], statuses);
+}
+
+async function readLegacyServiceOrderSettings() {
   const result = await query("SELECT value FROM app_settings WHERE key = $1", [serviceOrderSettingsKey]);
-  return normalizeServiceOrderSettings(result.rows[0]?.value || {});
+  return result.rows[0]?.value ? normalizeServiceOrderSettings(result.rows[0].value) : null;
+}
+
+function isDefaultSettings(settings) {
+  return JSON.stringify(normalizeServiceOrderSettings(settings)) ===
+    JSON.stringify(normalizeServiceOrderSettings(defaultServiceOrderSettings));
+}
+
+async function persistServiceOrderSettings(settings) {
+  const normalized = normalizeServiceOrderSettings(settings);
+
+  await query(
+    `
+      INSERT INTO service_order_settings (
+        id, number_prefix, use_year, use_month, next_number,
+        auto_priority_enabled, low_to_medium_hours, medium_to_high_hours,
+        high_to_critical_hours, priority_colors, board_layout, updated_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+      ON CONFLICT (id)
+      DO UPDATE SET
+        number_prefix = EXCLUDED.number_prefix,
+        use_year = EXCLUDED.use_year,
+        use_month = EXCLUDED.use_month,
+        next_number = EXCLUDED.next_number,
+        auto_priority_enabled = EXCLUDED.auto_priority_enabled,
+        low_to_medium_hours = EXCLUDED.low_to_medium_hours,
+        medium_to_high_hours = EXCLUDED.medium_to_high_hours,
+        high_to_critical_hours = EXCLUDED.high_to_critical_hours,
+        priority_colors = EXCLUDED.priority_colors,
+        board_layout = EXCLUDED.board_layout,
+        updated_at = NOW()
+    `,
+    [
+      serviceOrderSettingsRowId,
+      normalized.numberFormat.prefix,
+      normalized.numberFormat.useYear,
+      normalized.numberFormat.useMonth,
+      normalized.numberFormat.nextNumber,
+      normalized.autoPriority.enabled,
+      normalized.autoPriority.lowToMediumHours,
+      normalized.autoPriority.mediumToHighHours,
+      normalized.autoPriority.highToCriticalHours,
+      JSON.stringify(normalized.priorityColors),
+      normalized.boardLayout
+    ]
+  );
+
+  const statusIds = normalized.statuses.map((status) => status.id);
+  const placeholders = statusIds.map((_, index) => `$${index + 1}`).join(", ");
+  await query(`DELETE FROM service_order_statuses WHERE id NOT IN (${placeholders})`, statusIds);
+
+  for (const status of normalized.statuses) {
+    await query(
+      `
+        INSERT INTO service_order_statuses (
+          id, name, color, sort_order, is_initial, is_final, active, updated_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, TRUE, NOW())
+        ON CONFLICT (id)
+        DO UPDATE SET
+          name = EXCLUDED.name,
+          color = EXCLUDED.color,
+          sort_order = EXCLUDED.sort_order,
+          is_initial = EXCLUDED.is_initial,
+          is_final = EXCLUDED.is_final,
+          active = TRUE,
+          updated_at = NOW()
+      `,
+      [status.id, status.name, status.color, status.order, status.isInitial, status.isFinal]
+    );
+  }
+
+  await query(
+    `
+      INSERT INTO app_settings (key, value, updated_at)
+      VALUES ($1, $2, NOW())
+      ON CONFLICT (key)
+      DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
+    `,
+    [serviceOrderSettingsKey, JSON.stringify(normalized)]
+  );
+
+  return normalized;
+}
+
+async function assertRemovedStatusesAreUnused(currentStatuses = [], nextStatuses = []) {
+  const nextIds = new Set(nextStatuses.map((status) => status.id));
+  const removedIds = currentStatuses.map((status) => status.id).filter((id) => !nextIds.has(id));
+
+  if (!removedIds.length) return;
+
+  const placeholders = removedIds.map((_, index) => `$${index + 1}`).join(", ");
+  const result = await query(
+    `SELECT status, COUNT(*)::int AS total FROM service_orders WHERE status IN (${placeholders}) GROUP BY status`,
+    removedIds
+  );
+
+  if (result.rows.length) {
+    const error = new Error("Mova as OS dos status removidos antes de salvar as configuracoes.");
+    error.statusCode = 400;
+    throw error;
+  }
+}
+
+export async function getServiceOrderSettings() {
+  const dedicated = await readDedicatedServiceOrderSettings();
+  const legacy = await readLegacyServiceOrderSettings();
+
+  if (legacy && (!dedicated || (isDefaultSettings(dedicated) && !isDefaultSettings(legacy)))) {
+    return persistServiceOrderSettings(legacy);
+  }
+
+  if (dedicated) return dedicated;
+
+  return persistServiceOrderSettings(legacy || defaultServiceOrderSettings);
 }
 
 export async function updateServiceOrderSettings(payload = {}) {
@@ -599,18 +786,11 @@ export async function updateServiceOrderSettings(payload = {}) {
     boardLayout: payload.boardLayout || current.boardLayout
   });
 
-  const result = await query(
-    `
-      INSERT INTO app_settings (key, value, updated_at)
-      VALUES ($1, $2, NOW())
-      ON CONFLICT (key)
-      DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
-      RETURNING value
-    `,
-    [serviceOrderSettingsKey, JSON.stringify(normalized)]
-  );
+  if (Array.isArray(payload.statuses)) {
+    await assertRemovedStatusesAreUnused(current.statuses, normalized.statuses);
+  }
 
-  return normalizeServiceOrderSettings(result.rows[0]?.value || normalized);
+  return persistServiceOrderSettings(normalized);
 }
 
 async function serviceOrderNumberExists(number) {
@@ -791,74 +971,93 @@ export async function addServiceOrderHistory({ serviceOrderId, eventType, messag
   return fromHistoryRow(result.rows[0]);
 }
 
+function isDuplicateServiceOrderNumberError(error) {
+  return error?.code === "23505" &&
+    /service_orders.*number|idx_service_orders_number_unique|number/i.test(
+      `${error.constraint || ""} ${error.detail || ""} ${error.message || ""}`
+    );
+}
+
 export async function createServiceOrder({ payload, user }) {
-  const id = randomUUID();
-  const number = await nextServiceOrderNumber();
   const settings = await getServiceOrderSettings();
   const initialStatus = getInitialStatus(settings).id;
   const items = normalizeServiceOrderItems(payload.items || payload.serviceItems || []);
-  const serviceValue = toMoneyValue(payload.serviceValue);
-  const totalPartsValue = sumServiceOrderItems(items);
-  const totalValue = Math.round((serviceValue + totalPartsValue) * 100) / 100;
   const sector = await resolveServiceOrderSector(payload);
   const service = await resolveServiceOrderService(payload);
+  const serviceValue = payload.serviceValue !== undefined
+    ? toMoneyValue(payload.serviceValue)
+    : toMoneyValue(service.defaultValue);
+  const totalPartsValue = sumServiceOrderItems(items);
+  const totalValue = Math.round((serviceValue + totalPartsValue) * 100) / 100;
   const priority = await calculateConfiguredPriority(payload, sector, service);
+  let id = randomUUID();
 
-  const result = await query(
-    `
-      INSERT INTO service_orders (
-        id, number, title, description, status, priority, category, asset_id,
-        problem_type, environment_id, environment_name, requester_name, contact_info,
-        requester_department, requester_extension, related_asset_text, machine_scope, location,
-        source, assigned_technician_name, auto_priority_enabled, notes,
-        service_performed, attendance_notes,
-        service_value, total_parts_value, total_value, backup_asset_id, sector_id, sector_name,
-        service_id, service_code, service_name, created_by
-      )
-      VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-        $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
-        $31, $32, $33, $34
-      )
-      RETURNING *
-    `,
-    [
-      id,
-      number,
-      payload.title,
-      payload.description || "",
-      initialStatus,
-      priority,
-      payload.category || null,
-      payload.assetId || null,
-      payload.problemType || null,
-      payload.environmentId || null,
-      payload.environmentName || null,
-      payload.requesterName || null,
-      payload.contactInfo || null,
-      payload.requesterDepartment || null,
-      payload.requesterExtension || null,
-      payload.relatedAssetText || null,
-      payload.machineScope || null,
-      payload.location || null,
-      payload.source || null,
-      payload.assignedTechnicianName || null,
-      payload.autoPriorityEnabled ?? settings.autoPriority.enabled,
-      payload.notes || null,
-      payload.servicePerformed || null,
-      payload.attendanceNotes || null,
-      serviceValue,
-      totalPartsValue,
-      totalValue,
-      payload.backupAssetId || null,
-      sector.sectorId,
-      sector.sectorName,
-      service.serviceId,
-      service.serviceCode,
-      service.serviceName,
-      user?.id || null
-    ]
-  );
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    id = randomUUID();
+    const number = await nextServiceOrderNumber();
+
+    try {
+      await query(
+        `
+          INSERT INTO service_orders (
+            id, number, title, description, status, priority, category, asset_id,
+            problem_type, environment_id, environment_name, requester_name, contact_info,
+            requester_department, requester_extension, related_asset_text, machine_scope, location,
+            source, assigned_technician_name, auto_priority_enabled, notes,
+            service_performed, attendance_notes,
+            service_value, total_parts_value, total_value, backup_asset_id, sector_id, sector_name,
+            service_id, service_code, service_name, created_by
+          )
+          VALUES (
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+            $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
+            $31, $32, $33, $34
+          )
+          RETURNING *
+        `,
+        [
+          id,
+          number,
+          payload.title,
+          payload.description || "",
+          initialStatus,
+          priority,
+          payload.category || null,
+          payload.assetId || null,
+          payload.problemType || null,
+          payload.environmentId || null,
+          payload.environmentName || null,
+          payload.requesterName || null,
+          payload.contactInfo || null,
+          payload.requesterDepartment || null,
+          payload.requesterExtension || null,
+          payload.relatedAssetText || null,
+          payload.machineScope || null,
+          payload.location || null,
+          payload.source || null,
+          payload.assignedTechnicianName || null,
+          payload.autoPriorityEnabled ?? settings.autoPriority.enabled,
+          payload.notes || null,
+          payload.servicePerformed || null,
+          payload.attendanceNotes || null,
+          serviceValue,
+          totalPartsValue,
+          totalValue,
+          payload.backupAssetId || null,
+          sector.sectorId,
+          sector.sectorName,
+          service.serviceId,
+          service.serviceCode,
+          service.serviceName,
+          user?.id || null
+        ]
+      );
+      break;
+    } catch (error) {
+      if (attempt < 4 && isDuplicateServiceOrderNumberError(error)) continue;
+      throw error;
+    }
+  }
 
   if (items.length) {
     await replaceServiceOrderItems(id, items);
@@ -888,14 +1087,16 @@ export async function updateServiceOrder({ id, payload, user }) {
   const nextItems = hasItemsPayload
     ? normalizeServiceOrderItems(payload.items ?? payload.serviceItems ?? [])
     : normalizeServiceOrderItems(current.items || current.serviceItems || []);
+  const sector = await resolveServiceOrderSector(payload, current);
+  const service = await resolveServiceOrderService(payload, current);
   const serviceValue = payload.serviceValue !== undefined
     ? toMoneyValue(payload.serviceValue)
-    : toMoneyValue(current.serviceValue);
+    : hasServicePayload(payload) && service.defaultValue != null
+      ? toMoneyValue(service.defaultValue)
+      : toMoneyValue(current.serviceValue);
   const totalPartsValue = sumServiceOrderItems(nextItems);
   const totalValue = Math.round((serviceValue + totalPartsValue) * 100) / 100;
   const itemsChanged = hasItemsPayload && itemsSignature(current.items || []) !== itemsSignature(nextItems);
-  const sector = await resolveServiceOrderSector(payload, current);
-  const service = await resolveServiceOrderService(payload, current);
 
   const result = await query(
     `

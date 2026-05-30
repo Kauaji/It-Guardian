@@ -55,8 +55,8 @@ export async function updateSector(id, payload = {}) {
     [
       id,
       (payload.name || current.name).trim(),
-      payload.description?.trim() || null,
-      payload.active !== false,
+      Object.prototype.hasOwnProperty.call(payload, "description") ? payload.description?.trim() || null : current.description || null,
+      Object.prototype.hasOwnProperty.call(payload, "active") ? payload.active !== false : current.active,
       JSON.stringify(normalizePermissions(payload.permissions ?? current.permissions))
     ]
   );
@@ -113,7 +113,7 @@ export async function seedDefaultSectors() {
         "inventory.move_assets",
         "inventory.manage_segments",
         "inventory.view_machine",
-        "inventory.print_qr",
+        "inventory.print_qrcode",
         "service_orders.view",
         "service_orders.view_all",
         "service_orders.create",
@@ -121,7 +121,7 @@ export async function seedDefaultSectors() {
         "service_orders.assign",
         "service_orders.change_sector",
         "service_orders.change_status",
-        "service_orders.close",
+        "service_orders.finish",
         "service_orders.attendance",
         "service_orders.parts",
         "service_orders.print",
@@ -144,7 +144,7 @@ export async function seedDefaultSectors() {
         "service_orders.edit",
         "service_orders.attendance",
         "service_orders.change_status",
-        "service_orders.close",
+        "service_orders.finish",
         "service_orders.parts"
       ]
     ],

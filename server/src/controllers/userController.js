@@ -7,7 +7,8 @@ import {
   listUsers,
   updateUserAccess,
   updateUserPermissions,
-  updateUserRole
+  updateUserRole,
+  toPublicUser
 } from "../repositories/userRepository.js";
 
 const allowedRoles = new Set(["admin", "operator", "viewer"]);
@@ -70,7 +71,7 @@ export async function updateRole(req, res, next) {
 
 export async function createManaged(req, res, next) {
   try {
-    const { name, email, password, role = "operator" } = req.body;
+    const { name, email, password, role = "viewer" } = req.body;
 
     if (!name?.trim() || !email?.trim() || !password || password.length < 6) {
       return res.status(400).json({ message: "Informe nome, e-mail e senha com pelo menos 6 caracteres." });
@@ -96,7 +97,7 @@ export async function createManaged(req, res, next) {
       meta: { targetUserId: user.id }
     });
 
-    return res.status(201).json({ user });
+    return res.status(201).json({ user: toPublicUser(user) });
   } catch (error) {
     next(error);
   }

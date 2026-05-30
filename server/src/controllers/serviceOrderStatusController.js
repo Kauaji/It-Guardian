@@ -1,4 +1,5 @@
 import { addLog } from "../repositories/logRepository.js";
+import { query } from "../database.js";
 import {
   getServiceOrderSettings,
   maxServiceOrderStatuses,
@@ -129,6 +130,10 @@ export async function remove(req, res, next) {
     if (!current) return res.status(404).json({ message: "Status de OS nao encontrado." });
     if (settings.statuses.length <= 2) {
       return res.status(400).json({ message: "Mantenha pelo menos um status de abertura e um de finalizacao." });
+    }
+    const usageResult = await query("SELECT COUNT(*)::int AS total FROM service_orders WHERE status = $1", [current.id]);
+    if (Number(usageResult.rows[0]?.total || 0) > 0) {
+      return res.status(400).json({ message: "Mova as OS deste status antes de exclui-lo." });
     }
 
     const statuses = settings.statuses.filter((status) => status.id !== req.params.id);

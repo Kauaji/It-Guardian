@@ -18,7 +18,10 @@ const userSelect = `
     users.created_at,
     users.updated_at,
     sectors.name AS sector_name,
-    sectors.permissions AS sector_permissions
+    CASE
+      WHEN sectors.active = TRUE THEN sectors.permissions
+      ELSE '[]'::jsonb
+    END AS sector_permissions
   FROM users
   LEFT JOIN sectors ON sectors.id = users.sector_id
 `;
@@ -118,14 +121,23 @@ export async function updateUserAccess(id, payload = {}) {
   const normalizedPermissions = Object.prototype.hasOwnProperty.call(payload, "permissions")
     ? normalizePermissions(payload.permissions)
     : current.permissions;
+  const nextName = Object.prototype.hasOwnProperty.call(payload, "name") && payload.name?.trim()
+    ? payload.name.trim()
+    : current.name;
+  const nextSectorId = Object.prototype.hasOwnProperty.call(payload, "sectorId")
+    ? payload.sectorId || null
+    : current.sectorId || null;
+  const nextJobTitle = Object.prototype.hasOwnProperty.call(payload, "jobTitle")
+    ? payload.jobTitle || null
+    : current.jobTitle || null;
   const result = await query(
     `
       UPDATE users
-      SET name = COALESCE(NULLIF($2, ''), name),
+      SET name = $2,
           role = $3,
           active = $4,
-          sector_id = NULLIF($5, ''),
-          job_title = NULLIF($6, ''),
+          sector_id = $5,
+          job_title = $6,
           is_admin = $7,
           permissions = $8::jsonb,
           updated_at = NOW()
@@ -134,11 +146,11 @@ export async function updateUserAccess(id, payload = {}) {
     `,
     [
       id,
-      payload.name || "",
+      nextName,
       role,
       Object.prototype.hasOwnProperty.call(payload, "active") ? payload.active !== false : current.active,
-      Object.prototype.hasOwnProperty.call(payload, "sectorId") ? payload.sectorId || "" : current.sectorId || "",
-      Object.prototype.hasOwnProperty.call(payload, "jobTitle") ? payload.jobTitle || "" : current.jobTitle || "",
+      nextSectorId,
+      nextJobTitle,
       role === "admin",
       JSON.stringify(normalizedPermissions)
     ]
@@ -302,6 +314,46 @@ export async function seedDemoUsers() {
       role: "viewer",
       sectorId: "sector-geral",
       jobTitle: "Usuario novo",
+      isAdmin: false,
+      permissions: []
+    },
+    {
+      id: "seed-demo-tecnico-n1",
+      name: "Tecnico N1 Demo",
+      email: "tecnico.n1@itguardian.local",
+      role: "viewer",
+      sectorId: "sector-support-n1",
+      jobTitle: "Tecnico N1",
+      isAdmin: false,
+      permissions: []
+    },
+    {
+      id: "seed-demo-tecnico-n2",
+      name: "Tecnico N2 Demo",
+      email: "tecnico.n2@itguardian.local",
+      role: "viewer",
+      sectorId: "sector-suporte-n2",
+      jobTitle: "Tecnico N2",
+      isAdmin: false,
+      permissions: ["service_orders.edit", "service_orders.parts"]
+    },
+    {
+      id: "seed-demo-usuario-comum",
+      name: "Usuario Comum Demo",
+      email: "usuario.comum@itguardian.local",
+      role: "viewer",
+      sectorId: "sector-geral",
+      jobTitle: "Solicitante",
+      isAdmin: false,
+      permissions: ["service_orders.view", "service_orders.create"]
+    },
+    {
+      id: "seed-demo-sem-permissao",
+      name: "Sem Permissao Demo",
+      email: "sem.permissao@itguardian.local",
+      role: "viewer",
+      sectorId: "sector-geral",
+      jobTitle: "Usuario sem permissao",
       isAdmin: false,
       permissions: []
     }

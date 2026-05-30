@@ -15,8 +15,16 @@ O IT Guardian ja tem base de backend para Fase 3:
 - Numeracao de OS protegida por `UNIQUE` no banco e fila interna no processo da API.
 - Modo Local/Business persistido em backend.
 - Configuracoes de regra da OS persistidas no backend.
+- Configuracoes da OS podem ser lidas por usuarios com `service_orders.view`, enquanto alteracoes exigem `service_orders.settings`.
+- Status de OS sao persistidos em `service_order_statuses`, limitados a 10 e normalizados para exatamente um inicial e um final.
+- O backend bloqueia remocao de status que ainda possui OS vinculada.
+- Servicos sao persistidos em `service_catalog`, geram codigo automatico `SRV-0001` quando necessario, aceitam valor padrao e bloqueiam codigo duplicado.
 - Usuarios, setores e permissoes com bloqueio no backend.
 - Seeds demo restritos a ambientes nao produtivos; producao nao recebe usuarios/senhas ficticias automaticamente.
+- Cadastro publico cria apenas o primeiro administrador; depois disso, novos usuarios passam por rotas administrativas.
+- Permissoes canonicas usam `inventory.print_qrcode`, `service_orders.finish` e `settings.view`, com aliases legados aceitos somente para compatibilidade.
+- Permissoes administrativas (`admin.*`) nao sao efetivas para usuarios comuns, mesmo se forem gravadas por engano.
+- Setores inativos nao emprestam permissoes herdadas aos usuarios.
 
 ## O que ainda nao e implementacao real
 
@@ -45,6 +53,61 @@ Validacoes executadas contra a API local:
 - Detalhe de dispositivo e rota publica de QR responderam corretamente.
 - Browser local abriu login, painel autenticado, Ordens de Servico, Configuracao da OS e Configuracoes Gerais sem erros de console.
 - OS temporarias da auditoria foram removidas ao final do teste.
+
+## Hardening de usuarios e permissoes - 30/05/2026
+
+Validacoes executadas contra API local em memoria:
+
+- Login de administrador, tecnico N1 e usuario sem permissao.
+- `GET /api/users` retorna `401` sem token.
+- Usuario sem permissao recebe `403` em `/api/users` e `/api/devices`.
+- Tecnico N1 herda `service_orders.view` pelo setor.
+- Usuario gerenciado criado por admin retorna objeto publico sem `passwordHash`.
+- Usuario comum com `admin.full` individual nao ganha acesso administrativo efetivo.
+- Setor inativo nao concede permissao herdada.
+- Usuario inativo nao consegue logar.
+- Administrador auxiliar pode ser desativado.
+- Ultimo administrador ativo nao pode ser desativado.
+
+## Consolidacao de configuracoes - 30/05/2026
+
+Validacoes executadas contra API local em memoria:
+
+- `GET /api/system-settings` disponivel para usuario autenticado.
+- `PATCH /api/system-settings` exige `settings.system_mode`.
+- Modo Local/Business persistiu apos nova leitura.
+- `GET /api/service-order-settings` disponivel para usuario com `service_orders.view`.
+- `PATCH /api/service-order-settings` exige `service_orders.settings`.
+- Prefixo, ano, mes, proximo numero, prioridade automatica, cores de prioridade e layout do painel persistem no backend.
+- Status de OS respeitam limite de 10.
+- Troca de status inicial/final manteve exatamente um papel ativo de cada tipo.
+- Remocao de status em uso foi bloqueada em `DELETE /api/service-order-statuses/:id` e tambem via `PATCH /api/service-order-settings`.
+- Servico criado sem codigo recebeu codigo automatico e valor padrao.
+- Codigo duplicado de servico foi bloqueado.
+- Nova OS usou numero, status inicial, servico, valor e prioridade padrao definidos no backend.
+
+## Auditoria final pos-migracao - 30/05/2026
+
+Rodada executada antes de publicar a branch:
+
+- `npm run build` passou sem erro.
+- Vite manteve apenas o aviso conhecido de chunk principal acima de 500 kB.
+- Smoke test de API validou login admin, tecnico N1 e usuario sem permissao.
+- Rotas protegidas retornaram `401` sem token e `403` sem permissao.
+- Usuario inativo foi bloqueado no login.
+- Modo Local/Business e Configuracoes da OS foram lidos/salvos via API com permissao correta.
+- Servico criado pela API manteve codigo unico, valor padrao e prioridade padrao.
+- Duas OS criadas em sequencia receberam numeros diferentes gerados pelo backend.
+- OS com servico herdou valor e prioridade do backend.
+- Pecas/produtos atualizaram total de pecas.
+- Status final registrou `closed_at` e historico foi retornado pela API.
+- Remocao de status em uso foi bloqueada.
+- Producao bloqueou `DATABASE_URL=memory` e `JWT_SECRET` inseguro.
+
+Resultado: a Fase 3 esta pronta como base tecnica para a proxima etapa,
+mantendo OS, usuarios, setores, permissoes e configuracoes de regra no backend.
+As pendencias restantes estao concentradas em manutencao/Backup e
+abas/ambientes do Inventario.
 
 ## Preparacao recomendada
 

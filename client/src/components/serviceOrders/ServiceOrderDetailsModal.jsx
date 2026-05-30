@@ -130,6 +130,7 @@ export default function ServiceOrderDetailsModal({
   const businessMode = systemMode === "business";
   const canEditOrder = permissions.edit ?? true;
   const canChangeStatus = permissions.changeStatus ?? true;
+  const canFinishOrder = permissions.finish ?? canChangeStatus;
   const canRegisterAttendance = permissions.attendance ?? true;
   const canPrintOrder = permissions.print ?? true;
   const [activeTab, setActiveTab] = useState("general");
@@ -578,7 +579,9 @@ export default function ServiceOrderDetailsModal({
               onChange={(event) => onStatusChange(serviceOrder, event.target.value)}
             >
               {statusOptions.map((status) => (
-                <option key={status.id} value={status.id}>{status.name}</option>
+                <option key={status.id} value={status.id} disabled={status.isFinal && !canFinishOrder}>
+                  {status.name}
+                </option>
               ))}
             </select>
             {canEditOrder && (

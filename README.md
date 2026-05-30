@@ -269,10 +269,19 @@ Resumo tecnico da Fase 3:
 - OS usa backend para numero, status, prioridade, historico, itens e valores;
 - usuarios, setores e permissoes sao validados no backend;
 - configuracoes de regra da OS usam API e nao dependem mais do navegador;
+- status em uso nao pode ser removido sem mover as OS vinculadas;
+- servicos possuem codigo unico, valor padrao e prioridade padrao vindos da API;
 - seeds demo ficam restritos a ambiente nao produtivo;
 - cadastros de OS usam permissao `service_orders.settings`;
 - preferencias visuais simples continuam no frontend;
 - OCS, Zabbix e ping real continuam planejados para VPS/coletor.
+
+Auditoria final da Fase 3 em 30/05/2026:
+
+- `npm run build` passou;
+- smoke test de API validou login/permissoes, settings, OS, servicos, itens, historico e `closed_at`;
+- travas de producao bloquearam `DATABASE_URL=memory` e `JWT_SECRET` inseguro;
+- o aviso restante e apenas o chunk principal do Vite acima de 500 kB, planejado para code splitting futuro.
 
 ## Checklist de Teste Manual
 

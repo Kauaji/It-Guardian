@@ -6,6 +6,7 @@ import {
   createServiceOrder,
   deleteServiceOrder,
   findServiceOrderById,
+  getFinalStatus,
   getInitialStatus,
   getServiceOrderSettings,
   hasServiceOrderStatus,
@@ -123,6 +124,9 @@ export async function update(req, res, next) {
     if (req.body.status) {
       const settings = await getServiceOrderSettings();
       validateStatus(req.body.status, settings);
+      if (req.body.status === getFinalStatus(settings).id && !hasPermission(req.user, "service_orders.finish")) {
+        return res.status(403).json({ message: "Voce nao possui permissao para finalizar esta Ordem de Servico." });
+      }
     }
 
     const serviceOrder = await updateServiceOrder({ id: req.params.id, payload: req.body, user: req.user });
@@ -252,6 +256,10 @@ export async function changeStatus(req, res, next) {
 
     const current = await findServiceOrderById(req.params.id, req.user);
     if (!current) return res.status(404).json({ message: "Ordem de servico nao encontrada." });
+
+    if (status === getFinalStatus(settings).id && !hasPermission(req.user, "service_orders.finish")) {
+      return res.status(403).json({ message: "Voce nao possui permissao para finalizar esta Ordem de Servico." });
+    }
 
     if (status !== getInitialStatus(settings).id && !current.assignedTechnicianName?.trim()) {
       return res.status(400).json({

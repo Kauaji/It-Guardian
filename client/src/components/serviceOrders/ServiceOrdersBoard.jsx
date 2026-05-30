@@ -345,6 +345,7 @@ export default function ServiceOrdersBoard({
   const canCreateOrders = permissions.create ?? true;
   const canManageSettings = permissions.settings ?? true;
   const canChangeStatus = permissions.changeStatus ?? true;
+  const canFinishOrders = permissions.finish ?? canChangeStatus;
   const canViewAllSectors = permissions.viewAll ?? false;
   const canViewAllClients = permissions.viewAll ?? false;
   const canChangeSector = permissions.changeSector ?? permissions.edit ?? false;
@@ -681,6 +682,10 @@ export default function ServiceOrdersBoard({
     if (!order || order.status === targetStatus) return;
     if (!canChangeStatus) {
       notify?.("Você não possui permissão para alterar status de OS.", "danger");
+      return;
+    }
+    if (configuredStatuses.find((status) => status.id === targetStatus)?.isFinal && !canFinishOrders) {
+      notify?.("Voce nao possui permissao para finalizar esta Ordem de Servico.", "danger");
       return;
     }
     await onStatusChange(order, targetStatus);

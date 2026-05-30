@@ -418,6 +418,53 @@ export async function initializeDatabase() {
   `);
 
   await query(`
+    CREATE TABLE IF NOT EXISTS service_order_settings (
+      id TEXT PRIMARY KEY,
+      number_prefix TEXT NOT NULL DEFAULT 'OS',
+      use_year BOOLEAN NOT NULL DEFAULT FALSE,
+      use_month BOOLEAN NOT NULL DEFAULT FALSE,
+      next_number INTEGER,
+      auto_priority_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+      low_to_medium_hours NUMERIC NOT NULL DEFAULT 24,
+      medium_to_high_hours NUMERIC NOT NULL DEFAULT 48,
+      high_to_critical_hours NUMERIC NOT NULL DEFAULT 72,
+      priority_colors JSONB NOT NULL DEFAULT '{}'::jsonb,
+      board_layout TEXT NOT NULL DEFAULT 'horizontal',
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await query(`
+    INSERT INTO service_order_settings (id)
+    VALUES ('default')
+    ON CONFLICT (id) DO NOTHING;
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS service_order_statuses (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      color TEXT NOT NULL DEFAULT '#64748b',
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      is_initial BOOLEAN NOT NULL DEFAULT FALSE,
+      is_final BOOLEAN NOT NULL DEFAULT FALSE,
+      active BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await query(`
+    INSERT INTO service_order_statuses (id, name, color, sort_order, is_initial, is_final)
+    VALUES
+      ('open', 'Aberta', '#2563eb', 0, TRUE, FALSE),
+      ('in_progress', 'Em atendimento', '#d97706', 1, FALSE, FALSE),
+      ('waiting', 'Aguardando', '#7c3aed', 2, FALSE, FALSE),
+      ('closed', 'Finalizada', '#16a34a', 3, FALSE, TRUE)
+    ON CONFLICT (id) DO NOTHING;
+  `);
+
+  await query(`
     CREATE TABLE IF NOT EXISTS service_order_history (
       id TEXT PRIMARY KEY,
       service_order_id TEXT NOT NULL REFERENCES service_orders(id) ON DELETE CASCADE,
@@ -525,6 +572,11 @@ export async function initializeDatabase() {
   `);
 
   await query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_service_catalog_code_unique
+    ON service_catalog (lower(code));
+  `);
+
+  await query(`
     CREATE TABLE IF NOT EXISTS technicians (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -619,6 +671,16 @@ export async function initializeDatabase() {
   await query(`
     CREATE INDEX IF NOT EXISTS idx_service_orders_status
     ON service_orders (status, created_at DESC);
+  `);
+
+  await query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_service_orders_number_unique
+    ON service_orders (number);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_service_order_statuses_order
+    ON service_order_statuses (sort_order, created_at);
   `);
 
   await query(`

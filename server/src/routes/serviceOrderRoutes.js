@@ -21,7 +21,7 @@ const router = Router();
 router.use(requireAuth);
 router.get("/", requirePermission("service_orders.view"), list);
 router.post("/", requirePermission("service_orders.create"), create);
-router.get("/settings", requirePermission("service_orders.settings"), settings);
+router.get("/settings", requirePermission("service_orders.view"), settings);
 router.patch("/settings", requirePermission("service_orders.settings"), updateSettings);
 router.get("/:id", requirePermission("service_orders.view"), details);
 router.patch("/:id/priority", requirePermission("service_orders.edit"), changePriority);

@@ -895,7 +895,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   const canViewMachine = hasPermission(user, "inventory.view_machine");
   const canViewServiceOrders = hasPermission(user, "service_orders.view");
   const canOpenGeneralSettings =
-    hasPermission(user, "settings.general") ||
+    hasPermission(user, "settings.view") ||
     hasPermission(user, "settings.appearance") ||
     hasPermission(user, "settings.system_mode") ||
     hasPermission(user, "admin.full");
@@ -3362,6 +3362,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
               viewAll: hasPermission(user, "service_orders.view_all"),
               changeSector: hasPermission(user, "service_orders.change_sector"),
               changeStatus: hasPermission(user, "service_orders.change_status"),
+              finish: hasPermission(user, "service_orders.finish"),
               attendance: hasPermission(user, "service_orders.attendance"),
               parts: hasPermission(user, "service_orders.parts"),
               print: hasPermission(user, "service_orders.print"),
