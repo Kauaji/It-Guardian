@@ -210,7 +210,16 @@ export async function seedDefaultAdmin() {
     `
       INSERT INTO users (id, name, email, password_hash, role, is_admin, active, sector_id, job_title, permissions)
       VALUES ($1, $2, $3, $4, 'admin', TRUE, TRUE, $5, $6, $7::jsonb)
-      ON CONFLICT (email) DO NOTHING
+      ON CONFLICT (email) DO UPDATE SET
+        name = EXCLUDED.name,
+        password_hash = EXCLUDED.password_hash,
+        role = 'admin',
+        is_admin = TRUE,
+        active = TRUE,
+        sector_id = EXCLUDED.sector_id,
+        job_title = EXCLUDED.job_title,
+        permissions = EXCLUDED.permissions,
+        updated_at = NOW()
     `,
     [
       "seed-admin",
@@ -366,7 +375,16 @@ export async function seedDemoUsers() {
           id, name, email, password_hash, role, active, sector_id, job_title, is_admin, permissions
         )
         VALUES ($1, $2, LOWER($3), $4, $5, TRUE, $6, $7, $8, $9::jsonb)
-        ON CONFLICT (email) DO NOTHING
+        ON CONFLICT (email) DO UPDATE SET
+          name = EXCLUDED.name,
+          password_hash = EXCLUDED.password_hash,
+          role = EXCLUDED.role,
+          active = TRUE,
+          sector_id = EXCLUDED.sector_id,
+          job_title = EXCLUDED.job_title,
+          is_admin = EXCLUDED.is_admin,
+          permissions = EXCLUDED.permissions,
+          updated_at = NOW()
       `,
       [
         user.id,
