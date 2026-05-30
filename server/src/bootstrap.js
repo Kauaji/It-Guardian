@@ -1,4 +1,4 @@
-import { getJwtSecret, isProductionLike } from "./config/environment.js";
+import { getJwtSecret, shouldSeedDemoData } from "./config/environment.js";
 import { initializeDatabase } from "./database.js";
 import { seedDemoOperationalData } from "./repositories/demoDataRepository.js";
 import { seedManualAssets } from "./repositories/manualAssetRepository.js";
@@ -15,7 +15,7 @@ export function initializeRuntime() {
       await initializeDatabase();
       await seedDefaultSectors();
 
-      if (!isProductionLike) {
+      if (shouldSeedDemoData()) {
         await seedDefaultAdmin();
         await seedDemoUsers();
         await seedDefaultSegment();

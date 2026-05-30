@@ -84,7 +84,10 @@ email: admin@itguardian.local
 senha: 123456
 ```
 
-A conta demo e os demais dados ficticios sao semeados apenas em desenvolvimento/demo. Em ambiente de producao ou preview com `NODE_ENV=production`, o bootstrap cria a estrutura basica, mas nao injeta usuarios ou dados operacionais demo.
+A conta demo e os demais dados ficticios sao semeados em desenvolvimento e em deploys
+de preview da Vercel. Em producao real, o bootstrap cria a estrutura basica, mas nao
+injeta usuarios ou dados operacionais demo, a menos que `ENABLE_DEMO_SEED=true` seja
+configurado explicitamente.
 
 Primeiro acesso em producao:
 
@@ -94,6 +97,19 @@ Primeiro acesso em producao:
 4. Depois que existir um administrador ativo, novos cadastros publicos sao bloqueados e os proximos usuarios devem ser criados em Configuracoes Gerais > Admin.
 
 Se tentar entrar em producao com `admin@itguardian.local` sem ter criado esse usuario no banco real, a API retornara `401`, pois essa credencial existe apenas em ambiente demo.
+
+Para liberar contas de teste em um deploy temporario:
+
+```env
+ENABLE_DEMO_SEED=true
+```
+
+Depois do redeploy, use:
+
+```text
+email: admin@itguardian.local
+senha: 123456
+```
 
 ## Deploy no Vercel
 
