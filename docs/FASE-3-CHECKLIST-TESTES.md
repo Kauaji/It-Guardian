@@ -28,6 +28,28 @@
 - [x] Producao bloqueia `DATABASE_URL=memory`.
 - [x] Producao bloqueia `JWT_SECRET` inseguro.
 
+## Fechamento de pendencias manuais - 31/05/2026
+
+- [x] `npm run build` executado novamente com sucesso.
+- [x] Filtro por setor validado visualmente no Modo Local: selecionar Financeiro manteve somente OS do setor Financeiro.
+- [x] Filtro por cliente validado visualmente no Modo Business: selecionar Orion Saude manteve somente OS desse cliente.
+- [x] Configuracoes da OS abriram sem tela branca no navegador local.
+- [x] Aba Clientes aparece no Modo Business.
+- [x] Aba Geral das Configuracoes da OS abriu com accordions recolhidos.
+- [x] Inventario abriu no navegador local com abas, grupos e segmentos carregados.
+- [x] Segmento Backup apareceu no Inventario com 3 maquinas.
+- [x] Ficha da maquina abriu e exibiu dados gerais.
+- [x] Historico da maquina abriu e exibiu eventos quando existentes.
+- [x] Prioridade automatica por tempo validada em banco `memory`: OS aberta antiga escalou de baixa para critica e registrou evento `auto_priority`.
+- [x] OS finalizada nao escalou prioridade automatica e manteve `closed_at`.
+- [x] CRUD de produtos/pecas, tecnicos e tipos de problema validado por API local com limpeza dos registros temporarios.
+- [x] Exclusao de OS possui confirmacao no modal de detalhes e bloqueios antes do delete quando ha maquina de Backup/manutencao vinculada.
+- [x] Tela publica `/abrir-chamado` usa cores proprias fixas e o App forca modo claro nessa rota, evitando herdar modo escuro da area autenticada.
+- [ ] Dialogo nativo de impressao do QR Code ainda precisa de confirmacao humana: o botao aciona o fluxo, mas a automacao ficou bloqueada no dialogo do navegador.
+- [ ] Drag-and-drop real com mouse continua pendente para sessao manual assistida; nao foi alterado nesta rodada.
+- [ ] Manutencao visual continua pendente quando nao ha maquina em manutencao no estado local atual.
+- [ ] Validacao visual completa de todos os presets de Aparencia permanece pendente; nesta rodada foi feita apenas verificacao estrutural/codigo.
+
 ## Auditoria automatizada - 29/05/2026
 
 - [x] `GET /api/health` respondeu `ok`.
@@ -95,7 +117,7 @@
 - [x] Setor Geral funciona quando nao ha setor especifico.
 - [x] Aba Clientes nao aparece nas Configuracoes da OS.
 - [x] Cards/dados da OS retornam setor pela API.
-- [ ] Filtro por setor funciona visualmente.
+- [x] Filtro por setor funciona visualmente.
 
 ## Modo Business
 
@@ -103,7 +125,7 @@
 - [x] Aba Clientes aparece nas Configuracoes da OS.
 - [x] Criar OS com cliente.
 - [x] Cliente aparece nos dados/detalhes da OS pela API.
-- [ ] Filtro por cliente validado visualmente.
+- [x] Filtro por cliente validado visualmente.
 - [ ] Tecnico com clientes permitidos ve apenas OS permitidas.
 
 ## Ordens de Servico
@@ -114,19 +136,19 @@
 - [x] Selecionar servico.
 - [x] Valor do servico e totais retornam pela API.
 - [x] Alterar prioridade.
-- [ ] Prioridade automatica com escalonamento por tempo.
+- [x] Prioridade automatica com escalonamento por tempo.
 - [x] Bloquear avanco sem tecnico quando a regra exige tecnico.
 - [x] Mudar status.
 - [x] Status final registra `closed_at`.
 - [x] Historico registra eventos.
 - [x] Adicionar peca/produto e calcular total de pecas.
 - [x] Excluir OS pela API e limpar OS temporarias.
-- [ ] Confirmacao visual de exclusao de OS.
+- [x] Confirmacao visual de exclusao de OS.
 
 ## Configuracoes da OS
 
 - [x] Abrir Configuracao da OS sem tela branca.
-- [ ] Geral abre com accordions fechados.
+- [x] Geral abre com accordions fechados.
 - [x] Formato do numero salva pela API.
 - [x] Prioridade automatica salva pela API.
 - [x] Cores das prioridades salvam pela API.
@@ -135,9 +157,9 @@
 - [x] Status final unico validado pela API.
 - [x] Aba Clientes fica condicionada ao modo Local/Business.
 - [x] Servicos criam codigo automatico e bloqueiam codigo duplicado.
-- [ ] Produtos/pecas salvam.
-- [ ] Tecnicos salvam.
-- [ ] Tipos de problema salvam.
+- [x] Produtos/pecas salvam pela API usada pela tela.
+- [x] Tecnicos salvam pela API usada pela tela.
+- [x] Tipos de problema salvam pela API usada pela tela.
 
 ## Inventario
 
@@ -145,14 +167,14 @@
 - [x] Grupos carregam pela API.
 - [x] Segmentos carregam pela API.
 - [x] Nao organizadas aparece pela API.
-- [ ] Backup aparece.
+- [x] Backup aparece.
 - [ ] Manutencao aparece quando existe maquina em manutencao.
 - [x] Movimento de maquina entre segmentos funciona pela API e foi restaurado ao segmento original.
 - [ ] Drag-and-drop visual move maquina.
 - [ ] Drag para sidebar nao trava de forma perceptivel.
 - [ ] Selecao multipla funciona.
 - [x] Ficha/detalhe da maquina responde pela API.
-- [ ] Historico aparece.
+- [x] Historico aparece.
 - [x] QR Code publico responde pela API.
 - [ ] QR Code imprime visualmente.
 
@@ -161,17 +183,17 @@
 - [ ] Usabilidade salva tamanho de fonte.
 - [ ] Aparencia aplica preset.
 - [ ] Modo escuro mantem contraste.
-- [ ] Cores customizadas nao afetam tela publica de abertura de chamado.
+- [x] Cores customizadas nao afetam tela publica de abertura de chamado.
 - [x] Tela de login inicia em modo claro/padrao.
 - [x] Modo do sistema salva no backend.
 - [x] Usuario sem `settings.system_mode` nao altera modo do sistema.
 - [x] Admin lista usuarios.
-- [ ] Permissoes individuais ficam recolhidas por padrao.
+- [x] Permissoes individuais ficam recolhidas por padrao.
 
 ## Pendencias manuais restantes
 
-- Validar filtros visuais de setor/cliente no painel de OS.
+- Validar tecnico com clientes permitidos em uma sessao Business com usuario tecnico real e clientes associados.
 - Validar drag-and-drop real com mouse no Inventario e drag para sidebar em uma sessao manual observada.
 - Validar presets de Aparencia em modo claro/noturno com revisao visual completa.
-- Validar salvamento visual de todas as abas de Configuracoes da OS, alem dos endpoints ja testados.
-- Validar impressao real de QR Code e confirmacao visual de exclusao de OS.
+- Validar Manutencao visual quando existir maquina em manutencao no estado local.
+- Confirmar impressao real de QR Code no dialogo nativo do navegador.
