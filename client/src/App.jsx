@@ -482,11 +482,6 @@ function AuthScreen({ onAuth, notify }) {
         </div>
 
         <form onSubmit={submit} className="auth-form">
-          {!useDemoCredentials && (
-            <p className="auth-helper">
-              Em produção, as contas demo não são criadas automaticamente. No primeiro acesso, use Cadastro para criar o administrador inicial.
-            </p>
-          )}
           {mode === "register" && (
             <label>
               Nome
