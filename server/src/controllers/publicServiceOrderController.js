@@ -51,6 +51,14 @@ function sanitizePriority(value, fallback = "medium") {
   return serviceOrderPriorities.has(value) ? value : fallback;
 }
 
+function uniqueCategories(problemTypes) {
+  const configuredCategories = problemTypes
+    .map((item) => trim(item.category))
+    .filter(Boolean);
+
+  return Array.from(new Set([...configuredCategories, ...defaultCategories]));
+}
+
 function chooseHigherPriority(current, candidate) {
   const safeCandidate = sanitizePriority(candidate, "");
   if (!safeCandidate) return current;
@@ -101,10 +109,11 @@ async function calculatePriority({ category, problemType, environmentName }) {
 export async function supportOptions(_req, res, next) {
   try {
     const systemSettings = await getSystemSettings();
+    const problemTypes = await getActiveProblemTypes();
 
     res.json({
-      categories: defaultCategories,
-      problemTypes: await getActiveProblemTypes(),
+      categories: uniqueCategories(problemTypes),
+      problemTypes,
       systemMode: systemSettings.systemMode
     });
   } catch (error) {
@@ -119,6 +128,10 @@ export async function createPublicServiceOrder(req, res, next) {
     const category = trim(req.body.category);
     const requesterName = trim(req.body.requesterName);
     const problemType = trim(req.body.problemType);
+    const systemSettings = await getSystemSettings();
+    const businessMode = systemSettings.systemMode === "business";
+    const contactInfo = businessMode ? trim(req.body.contactInfo) : "";
+    const extension = businessMode ? trim(req.body.extension) : "";
 
     if (title.length < 3) {
       return res.status(400).json({ message: "Informe um titulo com pelo menos 3 caracteres." });
@@ -140,6 +153,14 @@ export async function createPublicServiceOrder(req, res, next) {
       return res.status(400).json({ message: "Selecione o tipo de problema." });
     }
 
+    if (businessMode && !contactInfo) {
+      return res.status(400).json({ message: "Informe um contato para abrir o chamado." });
+    }
+
+    if (businessMode && !extension) {
+      return res.status(400).json({ message: "Informe o ramal para abrir o chamado." });
+    }
+
     const environmentName = trim(req.body.environmentName) || "Nao identificado";
     const machineScope = trim(req.body.machineScope) || "mine";
     const relatedAssetText = trim(req.body.relatedAssetText);
@@ -148,7 +169,7 @@ export async function createPublicServiceOrder(req, res, next) {
     const notes = [
       "Origem: formulario publico/atalho do usuario",
       trim(req.body.department) ? `Setor: ${trim(req.body.department)}` : "",
-      trim(req.body.extension) ? `Ramal: ${trim(req.body.extension)}` : "",
+      extension ? `Ramal: ${extension}` : "",
       trim(req.body.location) ? `Localizacao: ${trim(req.body.location)}` : "",
       relatedAssetText ? `Maquina/equipamento informado: ${relatedAssetText}` : "",
       trim(req.body.machineNotes) ? `Observacao do equipamento: ${trim(req.body.machineNotes)}` : ""
@@ -164,9 +185,9 @@ export async function createPublicServiceOrder(req, res, next) {
         assetId: trim(req.body.assetId) || null,
         environmentName,
         requesterName,
-        contactInfo: trim(req.body.contactInfo) || null,
+        contactInfo: contactInfo || null,
         requesterDepartment: trim(req.body.department) || null,
-        requesterExtension: trim(req.body.extension) || null,
+        requesterExtension: extension || null,
         relatedAssetText: relatedAssetText || null,
         machineScope,
         location: trim(req.body.location) || null,

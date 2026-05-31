@@ -35,6 +35,17 @@ const priorityLabels = {
   critical: "Critica"
 };
 
+function findProblemType(problemTypes, value) {
+  return problemTypes.find(
+    (problemType) => problemType.name === value || problemType.id === value
+  );
+}
+
+function getFirstProblemTypeForCategory(problemTypes, category) {
+  return problemTypes.find((problemType) => !problemType.category || problemType.category === category) ||
+    problemTypes[0];
+}
+
 function readSystemMode() {
   return "local";
 }
@@ -107,8 +118,13 @@ export default function PublicSupportRequest() {
         setOptions({ categories, problemTypes });
         setForm((current) => ({
           ...current,
-          category: current.category || categories[0],
-          problemType: current.problemType || problemTypes[0]?.name || ""
+          category: categories.includes(current.category) ? current.category : categories[0] || "",
+          problemType: findProblemType(problemTypes, current.problemType)?.name ||
+            getFirstProblemTypeForCategory(
+              problemTypes,
+              categories.includes(current.category) ? current.category : categories[0]
+            )?.name ||
+            ""
         }));
       })
       .catch(() => {
@@ -124,10 +140,7 @@ export default function PublicSupportRequest() {
     (problemType) => problemType.name === form.problemType || problemType.id === form.problemType
   );
   const calculatedPriority = selectedProblemType?.defaultPriority || "medium";
-  const filteredProblemTypes = options.problemTypes.filter(
-    (problemType) => !problemType.category || problemType.category === form.category
-  );
-  const visibleProblemTypes = filteredProblemTypes.length ? filteredProblemTypes : options.problemTypes;
+  const visibleProblemTypes = options.problemTypes;
 
   function updateField(field, value) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -135,13 +148,23 @@ export default function PublicSupportRequest() {
   }
 
   function updateCategory(category) {
-    const nextProblemType =
-      options.problemTypes.find((problemType) => !problemType.category || problemType.category === category) ||
-      options.problemTypes[0];
+    const nextProblemType = getFirstProblemTypeForCategory(options.problemTypes, category);
     setForm((current) => ({
       ...current,
       category,
       problemType: nextProblemType?.name || current.problemType
+    }));
+    setError("");
+  }
+
+  function updateProblemType(value) {
+    const nextProblemType = findProblemType(options.problemTypes, value);
+    setForm((current) => ({
+      ...current,
+      problemType: nextProblemType?.name || value,
+      category: nextProblemType?.category && options.categories.includes(nextProblemType.category)
+        ? nextProblemType.category
+        : current.category
     }));
     setError("");
   }
@@ -163,6 +186,8 @@ export default function PublicSupportRequest() {
     try {
       const response = await createPublicServiceOrder({
         ...form,
+        contactInfo: businessMode ? form.contactInfo : "",
+        extension: businessMode ? form.extension : "",
         relatedAssetText: buildRelatedAssetText(form)
       });
       setSuccess(response.serviceOrder);
@@ -254,7 +279,7 @@ export default function PublicSupportRequest() {
             <select
               required
               value={form.problemType}
-              onChange={(event) => updateField("problemType", event.target.value)}
+              onChange={(event) => updateProblemType(event.target.value)}
             >
               {visibleProblemTypes.map((problemType) => (
                 <option key={problemType.id || problemType.name} value={problemType.name}>
@@ -285,14 +310,17 @@ export default function PublicSupportRequest() {
             />
           </label>
 
-          <label>
-            Contato
-            <input
-              value={form.contactInfo}
-              onChange={(event) => updateField("contactInfo", event.target.value)}
-              placeholder="Telefone, e-mail ou chat"
-            />
-          </label>
+          {businessMode && (
+            <label>
+              Contato
+              <input
+                required
+                value={form.contactInfo}
+                onChange={(event) => updateField("contactInfo", event.target.value)}
+                placeholder="Telefone, e-mail ou chat"
+              />
+            </label>
+          )}
 
           <label>
             Setor
@@ -303,14 +331,17 @@ export default function PublicSupportRequest() {
             />
           </label>
 
-          <label>
-            Ramal
-            <input
-              value={form.extension}
-              onChange={(event) => updateField("extension", event.target.value)}
-              placeholder="Opcional"
-            />
-          </label>
+          {businessMode && (
+            <label>
+              Ramal
+              <input
+                required
+                value={form.extension}
+                onChange={(event) => updateField("extension", event.target.value)}
+                placeholder="Ramal ou identificador do contato"
+              />
+            </label>
+          )}
 
           <section className="public-support-machine public-support-wide">
             <div className="public-support-section-title">
