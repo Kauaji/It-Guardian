@@ -632,7 +632,7 @@ export async function initializeDatabase() {
     DROP CONSTRAINT IF EXISTS priority_rules_rule_type_check;
   `);
 
-  await query(`
+  await queryIgnoringDuplicateConstraint(`
     ALTER TABLE priority_rules
     ADD CONSTRAINT priority_rules_rule_type_check
       CHECK (rule_type IN ('client', 'sector', 'problem_type', 'service', 'category', 'open_time', 'equipment_category'));
