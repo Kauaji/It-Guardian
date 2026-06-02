@@ -19,8 +19,8 @@ const fallbackCategories = [
 ];
 
 const fallbackProblemTypes = [
-  { id: "computer-power", name: "Computador nao liga", category: "Computador", defaultPriority: "high" },
-  { id: "printer", name: "Impressora nao imprime", category: "Impressora", defaultPriority: "medium" },
+  { id: "computer-power", name: "Computador não liga", category: "Computador", defaultPriority: "high" },
+  { id: "printer", name: "Impressora não imprime", category: "Impressora", defaultPriority: "medium" },
   { id: "network", name: "Internet lenta", category: "Rede", defaultPriority: "medium" },
   { id: "system", name: "Sistema travando", category: "Sistema", defaultPriority: "medium" },
   { id: "monitor", name: "Monitor sem imagem", category: "Monitor", defaultPriority: "medium" },
@@ -30,9 +30,9 @@ const fallbackProblemTypes = [
 
 const priorityLabels = {
   low: "Baixa",
-  medium: "Media",
+  medium: "Média",
   high: "Alta",
-  critical: "Critica"
+  critical: "Crítica"
 };
 
 function findProblemType(problemTypes, value) {
@@ -70,7 +70,7 @@ function readMachineContext() {
 function buildRelatedAssetText(form) {
   return [
     form.machineName ? `Nome: ${form.machineName}` : "",
-    form.assetTag ? `Patrimonio: ${form.assetTag}` : "",
+    form.assetTag ? `Patrimônio: ${form.assetTag}` : "",
     form.location ? `Local: ${form.location}` : ""
   ].filter(Boolean).join(" | ");
 }
@@ -96,7 +96,7 @@ export default function PublicSupportRequest() {
     assetId: machineContext.assetId,
     machineName: machineContext.machineName,
     assetTag: machineContext.assetTag,
-    environmentName: machineContext.environmentName || "Nao identificado",
+    environmentName: machineContext.environmentName || "Não identificado",
     location: "",
     machineNotes: ""
   });
@@ -175,9 +175,9 @@ export default function PublicSupportRequest() {
 
     if (
       businessMode &&
-      (!form.environmentName.trim() || form.environmentName.trim().toLowerCase() === "nao identificado")
+      (!form.environmentName.trim() || form.environmentName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") === "nao identificado")
     ) {
-      setError("No modo Business, selecione um cliente para abrir a Ordem de Servico.");
+      setError("No modo Business, selecione um cliente para abrir a Ordem de Serviço.");
       return;
     }
 
@@ -192,7 +192,7 @@ export default function PublicSupportRequest() {
       });
       setSuccess(response.serviceOrder);
     } catch (submitError) {
-      setError(submitError.message || "Nao foi possivel enviar a solicitacao.");
+      setError(submitError.message || "Não foi possível enviar a solicitação.");
     } finally {
       setLoading(false);
     }
@@ -206,22 +206,22 @@ export default function PublicSupportRequest() {
             <ShieldCheck size={34} />
             <div>
               <strong>IT Guardian</strong>
-              <span>Suporte tecnico</span>
+              <span>Suporte técnico</span>
             </div>
           </div>
           <CheckCircle size={54} />
-          <h1>Solicitacao enviada com sucesso.</h1>
+          <h1>Solicitação enviada com sucesso.</h1>
           <p>A equipe tecnica recebeu o chamado e ira analisar as informacoes enviadas.</p>
           <div className="public-support-ticket">
             <span>Numero da OS</span>
             <strong>{success.number}</strong>
           </div>
           <div className="public-support-meta">
-            <span>Prioridade inicial: {priorityLabels[success.priority] || "Media"}</span>
+            <span>Prioridade inicial: {priorityLabels[success.priority] || "Média"}</span>
             <span>{new Date(success.createdAt).toLocaleString("pt-BR")}</span>
           </div>
           <button className="primary-action" onClick={() => window.location.reload()}>
-            Abrir outra solicitacao
+            Abrir outra solicitação
           </button>
         </section>
       </main>
@@ -243,8 +243,8 @@ export default function PublicSupportRequest() {
             <h1>Abrir chamado de suporte</h1>
             <p>
               {businessMode
-                ? "Envie sua solicitacao com cliente/ambiente identificado. Esta tela nao da acesso ao painel administrativo."
-                : "Envie sua solicitacao para a equipe tecnica. Esta tela nao da acesso ao painel administrativo."}
+                ? "Envie sua solicitação com cliente/ambiente identificado. Esta tela não dá acesso ao painel administrativo."
+                : "Envie sua solicitação para a equipe técnica. Esta tela não dá acesso ao painel administrativo."}
             </p>
           </div>
         </header>
@@ -257,7 +257,7 @@ export default function PublicSupportRequest() {
               minLength={3}
               value={form.title}
               onChange={(event) => updateField("title", event.target.value)}
-              placeholder="Ex: Computador nao inicia"
+              placeholder="Ex: Computador não inicia"
             />
           </label>
 
@@ -290,7 +290,7 @@ export default function PublicSupportRequest() {
           </label>
 
           <label className="public-support-wide">
-            Observacoes / descricao do problema
+            Observações / descrição do problema
             <textarea
               required
               minLength={5}
@@ -347,8 +347,8 @@ export default function PublicSupportRequest() {
             <div className="public-support-section-title">
               <Monitor size={18} />
               <div>
-                <strong>Maquina relacionada</strong>
-                <span>O navegador nao consegue identificar tudo sozinho. Um atalho/agente podera preencher isso no futuro.</span>
+                <strong>Máquina relacionada</strong>
+                <span>O navegador não consegue identificar tudo sozinho. Um atalho/agente poderá preencher isso no futuro.</span>
               </div>
             </div>
             <div className="public-support-choices">
@@ -359,7 +359,7 @@ export default function PublicSupportRequest() {
                   checked={form.machineScope === "mine"}
                   onChange={() => updateField("machineScope", "mine")}
                 />
-                O problema e na minha maquina
+                O problema é na minha máquina
               </label>
               <label className={form.machineScope === "other" ? "selected" : ""}>
                 <input
@@ -368,21 +368,21 @@ export default function PublicSupportRequest() {
                   checked={form.machineScope === "other"}
                   onChange={() => updateField("machineScope", "other")}
                 />
-                O problema e em outra maquina/equipamento
+                O problema é em outra máquina/equipamento
               </label>
             </div>
 
             <div className="public-support-machine-grid">
               <label>
-                Nome da maquina/equipamento
+                Nome da máquina/equipamento
                 <input
                   value={form.machineName}
                   onChange={(event) => updateField("machineName", event.target.value)}
-                  placeholder="Hostname, nome ou descricao"
+                  placeholder="Hostname, nome ou descrição"
                 />
               </label>
               <label>
-                Patrimonio
+                Patrimônio
                 <input
                   value={form.assetTag}
                   onChange={(event) => updateField("assetTag", event.target.value)}
@@ -394,11 +394,11 @@ export default function PublicSupportRequest() {
                 <input
                   value={form.environmentName}
                   onChange={(event) => updateField("environmentName", event.target.value)}
-                  placeholder={businessMode ? "Cliente, filial ou ambiente" : "Nao identificado"}
+                  placeholder={businessMode ? "Cliente, filial ou ambiente" : "Não identificado"}
                 />
               </label>
               <label>
-                Localizacao
+                Localização
                 <input
                   value={form.location}
                   onChange={(event) => updateField("location", event.target.value)}
@@ -411,7 +411,7 @@ export default function PublicSupportRequest() {
           <div className="public-support-priority public-support-wide">
             <HelpCircle size={18} />
             <span>Prioridade calculada pelo sistema:</span>
-            <strong>{priorityLabels[calculatedPriority] || "Media"}</strong>
+            <strong>{priorityLabels[calculatedPriority] || "Média"}</strong>
           </div>
 
           {error && <div className="public-support-error public-support-wide">{error}</div>}
@@ -419,7 +419,7 @@ export default function PublicSupportRequest() {
           <div className="public-support-actions public-support-wide">
             <button className="primary-action" disabled={loading}>
               <Send size={18} />
-              {loading ? "Enviando..." : "Enviar solicitacao"}
+              {loading ? "Enviando..." : "Enviar solicitação"}
             </button>
           </div>
         </form>

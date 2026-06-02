@@ -8,41 +8,41 @@ export const permissionGroups = [
   },
   {
     id: "inventory",
-    label: "Inventario",
+    label: "Inventário",
     permissions: [
-      { id: "inventory.view", label: "Visualizar inventario" },
+      { id: "inventory.view", label: "Visualizar inventário" },
       { id: "inventory.create_asset", label: "Criar ativos de rede" },
       { id: "inventory.edit_asset", label: "Editar ativos" },
-      { id: "inventory.move_assets", label: "Mover maquinas entre segmentos" },
+      { id: "inventory.move_assets", label: "Mover máquinas entre segmentos" },
       { id: "inventory.manage_segments", label: "Criar grupos/segmentos" },
-      { id: "inventory.view_machine", label: "Acessar ficha da maquina" },
+      { id: "inventory.view_machine", label: "Acessar ficha da máquina" },
       { id: "inventory.print_qrcode", label: "Imprimir QR Code" }
     ]
   },
   {
     id: "service_orders",
-    label: "Ordens de Servico",
+    label: "Ordens de Serviço",
     permissions: [
-      { id: "service_orders.view", label: "Visualizar Ordens de Servico" },
+      { id: "service_orders.view", label: "Visualizar Ordens de Serviço" },
       { id: "service_orders.view_all", label: "Visualizar OS de todos os setores" },
-      { id: "service_orders.create", label: "Criar Ordem de Servico" },
-      { id: "service_orders.edit", label: "Editar Ordem de Servico" },
+      { id: "service_orders.create", label: "Criar Ordem de Serviço" },
+      { id: "service_orders.edit", label: "Editar Ordem de Serviço" },
       { id: "service_orders.change_sector", label: "Alterar setor da OS" },
-      { id: "service_orders.assign", label: "Assumir/atribuir tecnico" },
+      { id: "service_orders.assign", label: "Assumir/atribuir técnico" },
       { id: "service_orders.change_status", label: "Alterar status" },
-      { id: "service_orders.finish", label: "Finalizar Ordem de Servico" },
+      { id: "service_orders.finish", label: "Finalizar Ordem de Serviço" },
       { id: "service_orders.attendance", label: "Registrar atendimento" },
-      { id: "service_orders.parts", label: "Registrar pecas trocadas" },
-      { id: "service_orders.print", label: "Imprimir Ordem de Servico" },
-      { id: "service_orders.settings", label: "Acessar configuracoes da OS" }
+      { id: "service_orders.parts", label: "Registrar peças trocadas" },
+      { id: "service_orders.print", label: "Imprimir Ordem de Serviço" },
+      { id: "service_orders.settings", label: "Acessar configurações da OS" }
     ]
   },
   {
     id: "settings",
-    label: "Configuracoes",
+    label: "Configurações",
     permissions: [
-      { id: "settings.view", label: "Acessar configuracoes gerais" },
-      { id: "settings.appearance", label: "Alterar aparencia/usabilidade" },
+      { id: "settings.view", label: "Acessar configurações gerais" },
+      { id: "settings.appearance", label: "Alterar aparência/usabilidade" },
       { id: "settings.system_mode", label: "Alterar modo do sistema" }
     ]
   },
@@ -51,9 +51,9 @@ export const permissionGroups = [
     label: "Admin",
     permissions: [
       { id: "admin.full", label: "Acesso total administrativo" },
-      { id: "admin.users", label: "Administrar usuarios" },
+      { id: "admin.users", label: "Administrar usuários" },
       { id: "admin.sectors", label: "Administrar setores" },
-      { id: "admin.permissions", label: "Alterar permissoes" }
+      { id: "admin.permissions", label: "Alterar permissões" }
     ]
   }
 ];

@@ -36,7 +36,7 @@ export async function apiFetch(path, { token, ...options } = {}) {
       }
     });
   } catch (error) {
-    throw new Error("Nao foi possivel conectar ao servidor.");
+    throw new Error("Não foi possível conectar ao servidor.");
   }
 
   const data = await response.json().catch(() => ({}));

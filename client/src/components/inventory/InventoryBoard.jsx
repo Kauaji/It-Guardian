@@ -389,8 +389,8 @@ export default function InventoryBoard({
                     event.stopPropagation();
                     setActivePopoverId(activePopoverId === `group-actions-${group.id}` ? null : `group-actions-${group.id}`);
                   }}
-                  title="Acoes do grupo"
-                  aria-label="Acoes do grupo"
+                  title="Ações do grupo"
+                  aria-label="Ações do grupo"
                   aria-expanded={activePopoverId === `group-actions-${group.id}`}
                 >
                   <MoreHorizontal size={16} />

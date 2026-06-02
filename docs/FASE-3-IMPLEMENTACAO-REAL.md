@@ -26,6 +26,24 @@ O IT Guardian ja tem base de backend para Fase 3:
 - Permissoes administrativas (`admin.*`) nao sao efetivas para usuarios comuns, mesmo se forem gravadas por engano.
 - Setores inativos nao emprestam permissoes herdadas aos usuarios.
 
+## Auditoria geral de código - 02/06/2026
+
+Foi criada a documentação `docs/AUDITORIA-GERAL-CODIGO.md` com a rodada de estabilização pós-migração.
+
+Pontos confirmados:
+
+- Build de produção executado com sucesso.
+- Sintaxe dos arquivos rastreados do backend validada com `node --check`.
+- Textos visíveis em `client/src` revisados para PT-BR nos pontos encontrados pela varredura.
+- Formulário de criação de OS ajustado para usar checkbox compacto em “É uma OS de terceiros?”.
+- Carregamento de técnicos/clientes do modal de criação de OS ajustado para evitar refetch causado por dependência instável.
+
+Pendências mantidas para próxima etapa:
+
+- Code splitting do frontend, pois o bundle principal ainda passa de 500 kB.
+- Consolidação de estados locais remanescentes do Inventário.
+- Validação visual manual de fluxos bloqueados por diálogo nativo ou pelo cliente do navegador.
+
 ## O que ainda nao e implementacao real
 
 - OCS ainda usa mock.

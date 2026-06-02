@@ -158,7 +158,7 @@ function MachineCardContent({
             <strong>{machine.manualAsset?.brand} {machine.manualAsset?.model}</strong>
           </div>
           <div>
-            <span>Patrimonio</span>
+            <span>Patrimônio</span>
             <strong>{machine.manualAsset?.assetTag}</strong>
           </div>
           <div>

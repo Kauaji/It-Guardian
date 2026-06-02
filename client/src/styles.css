@@ -6467,6 +6467,31 @@ table strong,
   font-weight: 750;
 }
 
+.service-order-third-party-field {
+  align-self: end;
+}
+
+.service-order-third-party-check {
+  width: fit-content;
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-strong);
+  padding: 0 12px;
+  font-weight: 850;
+}
+
+.service-order-third-party-check input {
+  width: 16px;
+  min-width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
 .service-order-collapsible-editor {
   display: grid;
   border: 1px solid var(--border);

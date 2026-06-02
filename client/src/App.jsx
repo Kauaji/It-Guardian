@@ -1598,7 +1598,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
             await addServiceOrderSystemHistory(response.serviceOrder.id, {
               eventType: "maintenance",
               message: "OS finalizada e máquina retirada da manutenção.",
-              oldValue: asset.segmentName || "Manutencao"
+              oldValue: asset.segmentName || "Manutenção"
             });
           }
         }
@@ -1924,7 +1924,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     if (existingActive) return existingActive;
 
     const response = await createSegment(token, {
-      name: "Manutencao",
+      name: "Manutenção",
       color: "#f59e0b",
       groupId: sourceGroupId || null,
       systemSegment: "maintenance"
@@ -2070,10 +2070,10 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
 
       if (!hasOpenMaintenanceOrder) {
         const response = await createServiceOrder(token, {
-          title: `Manutencao - ${machine.name}`,
+          title: `Manutenção - ${machine.name}`,
           description: `Máquina ${machine.name} colocada em manutenção. Preencha o diagnóstico, atendimento e solução antes de finalizar.`,
           priority: "medium",
-          category: "Manutencao",
+          category: "Manutenção",
           assetId: machine.id,
           environmentId: activeInventoryTab.id,
           environmentName: activeInventoryTab.name || "Novo ambiente",
@@ -2143,7 +2143,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
         : originSegment
           ? "Máquina retirada da manutenção"
           : "Máquina retirada da manutenção, mas o segmento original não existe mais. Movida para Não organizadas.",
-      oldValue: machine.segmentName || "Manutencao",
+      oldValue: machine.segmentName || "Manutenção",
       newValue: targetSegment.name
     });
     notify(`${machine.name} retirada da manutencao.`, "ok");

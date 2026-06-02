@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { fetchClients, fetchTechnicians } from "../../api.js";
-import { assetTypeLabel } from "../inventory/assetTypes.js";
+import { assetTypeLabel, assetTypeOptions } from "../inventory/assetTypes.js";
 
 const priorities = [
   { value: "low", label: "Baixa" },
@@ -9,6 +9,12 @@ const priorities = [
   { value: "high", label: "Alta" },
   { value: "critical", label: "Crítica" }
 ];
+
+function getDeviceContext(device) {
+  const groupName = device.groupName || device.segmentGroupName || device.segmentGroup || device.group?.name || "";
+  const segmentName = device.segmentName || device.segment?.name || "";
+  return [groupName, segmentName].filter(Boolean).join(" / ");
+}
 
 export default function ServiceOrderFormModal({
   open,
@@ -37,6 +43,7 @@ export default function ServiceOrderFormModal({
     category: "",
     notes: ""
   });
+  const [thirdPartyRequester, setThirdPartyRequester] = useState(false);
   const [technicians, setTechnicians] = useState([]);
   const [clients, setClients] = useState([]);
   const [formError, setFormError] = useState("");
@@ -49,6 +56,7 @@ export default function ServiceOrderFormModal({
   useEffect(() => {
     if (!open) return;
     setFormError("");
+    setThirdPartyRequester(false);
     setForm((current) => ({
       ...current,
       environmentId: businessMode ? "" : activeTab?.id || "",
@@ -99,6 +107,12 @@ export default function ServiceOrderFormModal({
     setFormError("");
   }
 
+  function toggleThirdPartyRequester(checked) {
+    setThirdPartyRequester(checked);
+    setForm((current) => ({ ...current, requesterName: "" }));
+    setFormError("");
+  }
+
   function submit(event) {
     event.preventDefault();
     const title = form.title.trim();
@@ -144,7 +158,7 @@ export default function ServiceOrderFormModal({
       title,
       description,
       requesterName,
-      assignedTechnicianName: form.assignedTechnicianName.trim(),
+      assignedTechnicianName: "",
       category,
       notes: form.notes.trim(),
       sectorId: selectedSector?.id || "sector-geral",
@@ -198,11 +212,12 @@ export default function ServiceOrderFormModal({
 
         <label>
           Categoria
-          <input
-            value={form.category}
-            onChange={(event) => updateField("category", event.target.value)}
-            placeholder="Hardware, rede, impressora..."
-          />
+          <select value={form.category} onChange={(event) => updateField("category", event.target.value)}>
+            <option value="">Selecione</option>
+            {assetTypeOptions.map((option) => (
+              <option key={option.value} value={option.label}>{option.label}</option>
+            ))}
+          </select>
         </label>
 
         <label>
@@ -230,45 +245,56 @@ export default function ServiceOrderFormModal({
           Máquina/ativo{businessMode ? "" : " (quando possível)"}
           <select value={form.assetId} onChange={(event) => updateField("assetId", event.target.value)}>
             <option value="">Sem ativo vinculado</option>
-            {devices.map((device) => (
-              <option key={device.id} value={device.id}>
-                {device.name} - {device.ip}
-              </option>
-            ))}
+            {devices.map((device) => {
+              const context = getDeviceContext(device);
+              return (
+                <option key={device.id} value={device.id}>
+                  {device.name} - {device.ip}{context ? ` - ${context}` : ""}
+                </option>
+              );
+            })}
           </select>
         </label>
 
         {selectedAsset && (
           <div className="service-order-asset-preview service-order-wide">
             <strong>{selectedAsset.name}</strong>
-            <span>{selectedAsset.ip} - {assetTypeLabel(selectedAsset.assetType)} - {selectedAsset.segmentName}</span>
+            <span>
+              {selectedAsset.ip} - {assetTypeLabel(selectedAsset.assetType)}
+              {getDeviceContext(selectedAsset) ? ` - ${getDeviceContext(selectedAsset)}` : ""}
+            </span>
           </div>
         )}
 
         <label>
           Solicitante
-          <input
-            value={form.requesterName}
-            onChange={(event) => updateField("requesterName", event.target.value)}
-            placeholder="Nome do solicitante"
-          />
-        </label>
-
-        <label>
-          Técnico responsável{businessMode ? " (necessário para avançar status)" : " (opcional no início)"}
-          {technicians.length ? (
-            <select
-              value={form.assignedTechnicianName}
-              onChange={(event) => updateField("assignedTechnicianName", event.target.value)}
-            >
-              <option value="">Sem técnico definido</option>
+          {thirdPartyRequester ? (
+            <input
+              value={form.requesterName}
+              onChange={(event) => updateField("requesterName", event.target.value)}
+              placeholder="Nome do solicitante real"
+            />
+          ) : technicians.length ? (
+            <select value={form.requesterName} onChange={(event) => updateField("requesterName", event.target.value)}>
+              <option value="">Selecione o técnico</option>
               {technicians.map((technician) => (
                 <option key={technician.id} value={technician.name}>{technician.name}</option>
               ))}
             </select>
           ) : (
-            <div className="service-order-inline-empty">Não existem técnicos cadastrados. Cadastre técnicos nas Configurações da OS.</div>
+            <div className="service-order-inline-empty">Não existem técnicos cadastrados.</div>
           )}
+        </label>
+
+        <label className="service-order-third-party-field">
+          <span className="service-order-third-party-check">
+            <input
+              type="checkbox"
+              checked={thirdPartyRequester}
+              onChange={(event) => toggleThirdPartyRequester(event.target.checked)}
+            />
+            <span>É uma OS de terceiros?</span>
+          </span>
         </label>
 
         <label className="service-order-wide">

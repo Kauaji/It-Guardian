@@ -685,7 +685,7 @@ export default function ServiceOrdersBoard({
       return;
     }
     if (configuredStatuses.find((status) => status.id === targetStatus)?.isFinal && !canFinishOrders) {
-      notify?.("Voce nao possui permissao para finalizar esta Ordem de Servico.", "danger");
+      notify?.("Você não possui permissão para finalizar esta Ordem de Serviço.", "danger");
       return;
     }
     await onStatusChange(order, targetStatus);

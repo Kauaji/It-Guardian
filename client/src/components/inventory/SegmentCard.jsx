@@ -196,8 +196,8 @@ export default function SegmentCard({
               <button
                 type="button"
                 className="segment-options-trigger"
-                title="Acoes do segmento"
-                aria-label="Acoes do segmento"
+                title="Ações do segmento"
+                aria-label="Ações do segmento"
                 aria-expanded={actionsOpen}
                 onClick={(event) => {
                   event.stopPropagation();

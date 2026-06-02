@@ -19,9 +19,9 @@ export default function HardwareHistory({ changes = [], compact = false }) {
           <time>{formatDateTime(change.detectedAt || change.createdAt)}</time>
           <strong>{change.change || change.message}</strong>
           <p>
-            <span>{change.oldValue || "Nao informado"}</span>
+            <span>{change.oldValue || "Não informado"}</span>
             <b>-&gt;</b>
-            <span>{change.newValue || "Nao informado"}</span>
+            <span>{change.newValue || "Não informado"}</span>
           </p>
         </article>
       ))}

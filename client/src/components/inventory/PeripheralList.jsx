@@ -90,7 +90,7 @@ export default function PeripheralList({ peripherals = [], segmentColor, canMana
         <input
           value={draft.assetTag}
           onChange={(event) => setDraft({ ...draft, assetTag: event.target.value })}
-          placeholder="Patrimonio"
+          placeholder="Patrimônio"
         />
         <button type="submit" title="Adicionar periferico">
           <Plus size={14} />

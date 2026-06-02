@@ -7,6 +7,19 @@
 - [x] Corrigir erros de import, sintaxe ou build. Nenhum erro restante no build final.
 - [ ] Avaliar code splitting futuro: Vite ainda alerta que o chunk principal passa de 500 kB.
 
+## Auditoria geral de código - 02/06/2026
+
+- [x] `npm run build` executado com sucesso.
+- [x] `node --check` executado nos arquivos JavaScript rastreados do backend.
+- [x] Varredura em `client/src` por mojibake (`Ã`, `Â`, `�`) sem ocorrências restantes.
+- [x] Varredura em `client/src` por textos visíveis comuns sem acento sem ocorrências restantes.
+- [x] Formulário de criação de OS ajustado: “É uma OS de terceiros?” agora é checkbox compacto.
+- [x] Categoria da OS usa o seletor de tipos de ativo do Inventário.
+- [x] Seletor de máquina/ativo da OS mostra contexto de grupo/segmento quando disponível.
+- [x] Removida dependência instável no carregamento de técnicos/clientes do modal de criação de OS.
+- [x] Relatório criado em `docs/AUDITORIA-GERAL-CODIGO.md`.
+- [ ] Validação visual no navegador integrado não concluída: abertura local foi bloqueada pelo cliente do navegador com `ERR_BLOCKED_BY_CLIENT`.
+
 ## Auditoria final - 30/05/2026
 
 - [x] `npm run build` executado com sucesso.
