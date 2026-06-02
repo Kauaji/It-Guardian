@@ -139,7 +139,7 @@ export default function ServiceOrderDetailsModal({
   const [services, setServices] = useState([]);
   const [assetDetails, setAssetDetails] = useState(null);
   const [linkingAsset, setLinkingAsset] = useState(false);
-  const [linkDraft, setLinkDraft] = useState({ tabId: "", segmentId: "", search: "" });
+  const [linkDraft, setLinkDraft] = useState({ tabId: "", groupId: "", segmentId: "", search: "" });
   const [partDraft, setPartDraft] = useState({ productId: "", quantity: 1, unitPrice: "0" });
   const [partSearch, setPartSearch] = useState("");
   const [partSuggestionsOpen, setPartSuggestionsOpen] = useState(false);
@@ -311,20 +311,42 @@ export default function ServiceOrderDetailsModal({
     };
   }, [serviceOrder?.assetId, token]);
 
+  const visibleGroupsForLink = useMemo(() => {
+    const groups = new Map();
+    segments
+      .filter((segment) => !segment.isDefault && (!linkDraft.tabId || segment.tabId === linkDraft.tabId))
+      .forEach((segment) => {
+        const groupId = segment.groupId || segment.group?.id || "ungrouped";
+        const groupName = segment.groupName || segment.group?.name || "Sem grupo";
+        groups.set(groupId, { id: groupId, name: groupName });
+      });
+    return [...groups.values()].sort((left, right) => left.name.localeCompare(right.name, "pt-BR"));
+  }, [segments, linkDraft.tabId]);
   const visibleSegmentsForLink = useMemo(
-    () => segments.filter((segment) => !segment.isDefault && segment.tabId === linkDraft.tabId),
-    [segments, linkDraft.tabId]
+    () => segments.filter((segment) => {
+      if (segment.isDefault) return false;
+      if (linkDraft.tabId && segment.tabId !== linkDraft.tabId) return false;
+      if (linkDraft.groupId) {
+        const groupId = segment.groupId || segment.group?.id || "ungrouped";
+        if (groupId !== linkDraft.groupId) return false;
+      }
+      return true;
+    }),
+    [segments, linkDraft.groupId, linkDraft.tabId]
   );
   const visibleDevicesForLink = useMemo(() => {
-    const term = linkDraft.search.trim().toLowerCase();
+    const term = normalizeSearchText(linkDraft.search);
     return devices.filter((device) => {
       if (linkDraft.tabId && device.tabId !== linkDraft.tabId && !device.isGlobalUnorganized) return false;
       if (linkDraft.segmentId && device.segmentId !== linkDraft.segmentId) return false;
+      if (linkDraft.groupId) {
+        const deviceGroupId = device.groupId || device.segmentGroupId || device.group?.id || "";
+        if (deviceGroupId && deviceGroupId !== linkDraft.groupId) return false;
+      }
       if (!term) return true;
-      return [device.name, device.ip, device.statusLabel, device.segmentName]
+      return normalizeSearchText([device.name, device.ip, device.statusLabel, device.segmentName, device.groupName, device.segmentGroupName]
         .filter(Boolean)
-        .join(" ")
-        .toLowerCase()
+        .join(" "))
         .includes(term);
     });
   }, [devices, linkDraft]);
@@ -360,28 +382,40 @@ export default function ServiceOrderDetailsModal({
     setDraft((current) => ({
       ...current,
       servicePerformed: service.name,
-      serviceValue: !parseCurrency(current.serviceValue) && service.defaultValue != null
-        ? String(service.defaultValue)
-        : current.serviceValue
+      serviceValue: businessMode
+        ? (!parseCurrency(current.serviceValue) && service.defaultValue != null
+          ? String(service.defaultValue)
+          : current.serviceValue)
+        : "0"
     }));
   }
 
   function confirmServicePerformed() {
-    const matchedService = services.find((service) => service.id === selectedServiceId);
-    if (!matchedService) return;
-    updateServicePerformed(matchedService);
+    const typedService = serviceSearch.trim();
+    const matchedService = services.find((service) => service.id === selectedServiceId)
+      || services.find((service) => normalizeSearchText(service.name) === normalizeSearchText(typedService));
+    if (matchedService) {
+      updateServicePerformed(matchedService);
+      return;
+    }
+    if (!typedService) return;
+    setDraft((current) => ({ ...current, servicePerformed: typedService }));
+    setServiceSuggestionsOpen(false);
   }
 
   function addPartToDraft() {
-    const product = products.find((item) => item.id === partDraft.productId);
-    if (!product) return;
+    const product = products.find((item) => item.id === partDraft.productId)
+      || products.find((item) => normalizeSearchText(item.name) === normalizeSearchText(partSearch));
+    const manualProductName = partSearch.trim();
+    if (!product && !manualProductName) return;
 
     const quantity = normalizeQuantity(partDraft.quantity);
     const unitPrice = parseCurrency(partDraft.unitPrice);
     const subtotal = Math.round(quantity * unitPrice * 100) / 100;
+    const productName = product?.name || manualProductName;
     const line = unitPrice
-      ? `${product.name} x${quantity} - ${formatCurrency(subtotal)}`
-      : `${product.name} x${quantity}`;
+      ? `${productName} x${quantity} - ${formatCurrency(subtotal)}`
+      : `${productName} x${quantity}`;
 
     setDraft((current) => ({
       ...current,
@@ -389,9 +423,9 @@ export default function ServiceOrderDetailsModal({
       items: [
         ...normalizeItems(current.items),
         {
-          id: `${product.id}-${Date.now()}`,
-          productId: product.id,
-          productName: product.name,
+          id: `${product?.id || "manual"}-${Date.now()}`,
+          productId: product?.id || "",
+          productName,
           quantity,
           unitPrice,
           subtotal,
@@ -414,10 +448,10 @@ export default function ServiceOrderDetailsModal({
     event.preventDefault();
     const payload = {
       ...draft,
-      serviceValue: serviceValueNumber,
+      serviceValue: businessMode ? serviceValueNumber : 0,
       items: serviceItems,
-      totalPartsValue: partsTotal,
-      totalValue
+      totalPartsValue: businessMode ? partsTotal : 0,
+      totalValue: businessMode ? totalValue : 0
     };
 
     onUpdate(serviceOrder.id, payload);
@@ -452,7 +486,7 @@ export default function ServiceOrderDetailsModal({
         <table>
           <thead>
             <tr>
-              <th>Peca/produto</th>
+              <th>Peça/produto</th>
               <th>Qtd.</th>
               <th>Valor unit.</th>
               <th>Subtotal</th>
@@ -518,7 +552,7 @@ export default function ServiceOrderDetailsModal({
             <h2>Atendimento</h2>
             <div class="text">${escapeHtml([
               draft.servicePerformed || serviceOrder.servicePerformed ? `Serviço realizado: ${draft.servicePerformed || serviceOrder.servicePerformed}` : "",
-              draft.diagnosis || serviceOrder.diagnosis ? `Diagnostico: ${draft.diagnosis || serviceOrder.diagnosis}` : "",
+              draft.diagnosis || serviceOrder.diagnosis ? `Diagnóstico: ${draft.diagnosis || serviceOrder.diagnosis}` : "",
               draft.attendanceNotes || serviceOrder.attendanceNotes ? `Observações: ${draft.attendanceNotes || serviceOrder.attendanceNotes}` : ""
             ].filter(Boolean).join("\n\n") || "Sem atendimento registrado.")}</div>
           </section>
@@ -622,13 +656,23 @@ export default function ServiceOrderDetailsModal({
         <div className="asset-modal-body">
           {activeTab === "general" && (
             <div className="service-order-general-stack">
+              <section className="service-order-text-panel">
+                <h3>Solicitação</h3>
+                <p>{serviceOrder.description || "Sem descrição informada."}</p>
+                {serviceOrder.notes && (
+                  <>
+                    <h3>Observações iniciais</h3>
+                    <p>{serviceOrder.notes}</p>
+                  </>
+                )}
+              </section>
               <section className="service-order-detail-grid">
-                <DetailItem label="Numero" value={serviceOrder.number} />
+                <DetailItem label="Número" value={serviceOrder.number} />
                 <DetailItem label="Status" value={statusLabelMap[serviceOrder.status] || serviceOrder.status} />
                 <DetailItem label="Prioridade" value={priorityLabels[serviceOrder.priority]} />
                 {canChangeSector ? (
                   <label className="service-order-detail-item service-order-sector-edit">
-                    <span>Setor responsavel</span>
+                    <span>Setor responsável</span>
                     <select
                       value={serviceOrder.sectorId || "sector-geral"}
                       disabled={saving}
@@ -640,7 +684,7 @@ export default function ServiceOrderDetailsModal({
                     </select>
                   </label>
                 ) : (
-                  <DetailItem label="Setor responsavel" value={serviceOrder.sectorName || "Geral"} />
+                  <DetailItem label="Setor responsável" value={serviceOrder.sectorName || "Geral"} />
                 )}
                 <DetailItem label={environmentLabel} value={serviceOrder.environmentName} />
                 <DetailItem label="Máquina/ativo" value={asset?.name || serviceOrder.assetId} />
@@ -659,15 +703,13 @@ export default function ServiceOrderDetailsModal({
                 <DetailItem label="Aberta em" value={formatDate(serviceOrder.createdAt)} />
                 <DetailItem label="Atualizada em" value={formatDate(serviceOrder.updatedAt)} />
                 <DetailItem label="Finalizada em" value={formatDate(serviceOrder.closedAt)} />
-                <DetailItem label="Valor do serviço" value={serviceOrder.serviceValue ? formatCurrency(serviceOrder.serviceValue) : "Não informado"} />
-                <DetailItem label="Total de peças" value={formatCurrency(serviceOrder.totalPartsValue)} />
-                <DetailItem label="Total estimado" value={formatCurrency(serviceOrder.totalValue)} />
-              </section>
-              <section className="service-order-text-panel">
-                <h3>Solicitação</h3>
-                <p>{serviceOrder.description || "Sem descrição informada."}</p>
-                <h3>Observações iniciais</h3>
-                <p>{serviceOrder.notes || "Sem observações."}</p>
+                {businessMode && (
+                  <>
+                    <DetailItem label="Valor do serviço" value={serviceOrder.serviceValue ? formatCurrency(serviceOrder.serviceValue) : "Não informado"} />
+                    <DetailItem label="Total de peças" value={formatCurrency(serviceOrder.totalPartsValue)} />
+                    <DetailItem label="Total estimado" value={formatCurrency(serviceOrder.totalValue)} />
+                  </>
+                )}
               </section>
             </div>
           )}
@@ -756,7 +798,7 @@ export default function ServiceOrderDetailsModal({
                           placeholder="Digite para buscar um serviço"
                           autoComplete="off"
                         />
-                        {serviceSuggestionsOpen && filteredServiceSuggestions.length > 0 && (
+                        {serviceSuggestionsOpen && (filteredServiceSuggestions.length > 0 || serviceSearch.trim()) && (
                           <div className="service-order-suggestions" role="listbox">
                             {filteredServiceSuggestions.map((service) => (
                               <button
@@ -769,6 +811,16 @@ export default function ServiceOrderDetailsModal({
                                 {service.category && <span>{service.category}</span>}
                               </button>
                             ))}
+                            {!filteredServiceSuggestions.length && serviceSearch.trim() && (
+                              <button
+                                type="button"
+                                onMouseDown={(event) => event.preventDefault()}
+                                onClick={confirmServicePerformed}
+                              >
+                                <strong>Usar "{serviceSearch.trim()}"</strong>
+                                <span>Registrar serviço digitado manualmente</span>
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>
@@ -777,13 +829,14 @@ export default function ServiceOrderDetailsModal({
                       type="button"
                       className="primary-action compact-action service-order-add-icon"
                       onClick={confirmServicePerformed}
-                      disabled={!selectedServiceId}
+                      disabled={!selectedServiceId && !serviceSearch.trim()}
                       title="Adicionar serviço"
                       aria-label="Adicionar serviço"
                     >
                       <Plus size={18} />
                     </button>
-                    <label className="service-order-service-value-field">
+                    {businessMode && (
+                      <label className="service-order-service-value-field">
                       Valor do serviço
                       <input
                         type="text"
@@ -793,7 +846,8 @@ export default function ServiceOrderDetailsModal({
                         onBlur={() => updateDraft("serviceValue", String(serviceValueNumber))}
                         placeholder="R$ 0,00"
                       />
-                    </label>
+                      </label>
+                    )}
                     {!services.length && <p className="empty">Nenhum serviço cadastrado. Cadastre serviços nas Configurações da OS.</p>}
                   </div>
                 )}
@@ -815,7 +869,7 @@ export default function ServiceOrderDetailsModal({
                   <div className="service-order-section-body">
                     <div className={`service-order-parts-grid ${businessMode ? "business" : ""}`}>
                       <label className="service-order-part-product-field">
-                        Produto/peca
+                        Produto/peça
                         <div className="service-order-autocomplete">
                           <input
                             value={partSearch}
@@ -826,10 +880,10 @@ export default function ServiceOrderDetailsModal({
                             }}
                             onFocus={() => setPartSuggestionsOpen(true)}
                             onBlur={() => window.setTimeout(() => setPartSuggestionsOpen(false), 120)}
-                            placeholder="Digite para buscar uma peca"
+                            placeholder="Digite para buscar uma peça"
                             autoComplete="off"
                           />
-                          {partSuggestionsOpen && filteredProductSuggestions.length > 0 && (
+                          {partSuggestionsOpen && (filteredProductSuggestions.length > 0 || partSearch.trim()) && (
                             <div className="service-order-suggestions" role="listbox">
                               {filteredProductSuggestions.map((product) => (
                                 <button
@@ -844,6 +898,16 @@ export default function ServiceOrderDetailsModal({
                                   )}
                                 </button>
                               ))}
+                              {!filteredProductSuggestions.length && partSearch.trim() && (
+                                <button
+                                  type="button"
+                                  onMouseDown={(event) => event.preventDefault()}
+                                  onClick={addPartToDraft}
+                                >
+                                  <strong>Usar "{partSearch.trim()}"</strong>
+                                  <span>Registrar peça digitada manualmente</span>
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>
@@ -867,7 +931,7 @@ export default function ServiceOrderDetailsModal({
                       </label>
                       {businessMode && (
                         <label className="service-order-part-price-field">
-                          Valor unitario
+                          Valor unitário
                           <input
                             type="text"
                             inputMode="decimal"
@@ -881,9 +945,9 @@ export default function ServiceOrderDetailsModal({
                         type="button"
                         className="primary-action compact-action service-order-add-icon"
                         onClick={addPartToDraft}
-                        disabled={!partDraft.productId}
-                        title="Adicionar peca"
-                        aria-label="Adicionar peca"
+                        disabled={!partDraft.productId && !partSearch.trim()}
+                        title="Adicionar peça"
+                        aria-label="Adicionar peça"
                       >
                         <Plus size={18} />
                       </button>
@@ -892,7 +956,7 @@ export default function ServiceOrderDetailsModal({
                   </div>
                 )}
               </section>
-              {Boolean(serviceItems.length || serviceValueNumber || partsTotal) && (
+              {businessMode && Boolean(serviceItems.length || serviceValueNumber || partsTotal) && (
                 <div className="service-order-financial-panel service-order-financial-panel-standalone">
                   {serviceItems.length ? (
                     <div className="service-order-items-list">
@@ -1021,7 +1085,7 @@ export default function ServiceOrderDetailsModal({
                     1. Aba/Ambiente
                     <select
                       value={linkDraft.tabId}
-                      onChange={(event) => setLinkDraft({ tabId: event.target.value, segmentId: "", search: "" })}
+                      onChange={(event) => setLinkDraft({ tabId: event.target.value, groupId: "", segmentId: "", search: "" })}
                     >
                       <option value="">Selecione</option>
                       {inventoryTabs.map((tab) => (
@@ -1030,7 +1094,20 @@ export default function ServiceOrderDetailsModal({
                     </select>
                   </label>
                   <label>
-                    2. Segmento
+                    2. Grupo
+                    <select
+                      value={linkDraft.groupId}
+                      disabled={!linkDraft.tabId}
+                      onChange={(event) => setLinkDraft((current) => ({ ...current, groupId: event.target.value, segmentId: "", search: "" }))}
+                    >
+                      <option value="">Todos os grupos</option>
+                      {visibleGroupsForLink.map((group) => (
+                        <option key={group.id} value={group.id}>{group.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    3. Segmento
                     <select
                       value={linkDraft.segmentId}
                       disabled={!linkDraft.tabId}
@@ -1058,7 +1135,7 @@ export default function ServiceOrderDetailsModal({
                         <span>{device.ip || "Sem IP"} - {device.statusLabel || "Sem status"}</span>
                       </button>
                     )) : (
-                      <p className="empty">Escolha uma aba e um segmento para listar máquinas.</p>
+                      <p className="empty">Escolha uma aba, grupo e segmento para listar máquinas.</p>
                     )}
                   </div>
                 </section>
@@ -1082,7 +1159,7 @@ export default function ServiceOrderDetailsModal({
                     </div>
                   </article>
                 )) : (
-                  <p className="empty">Sem historico de OS registrado.</p>
+                  <p className="empty">Sem histórico de OS registrado.</p>
                 )}
                 {(asset?.assetHistory || []).map((event) => (
                   <article key={`asset-${event.id}`}>
@@ -1116,7 +1193,7 @@ export default function ServiceOrderDetailsModal({
               <table>
                 <thead>
                   <tr>
-                    <th>Peca/produto</th>
+                    <th>Peça/produto</th>
                     <th>Qtd.</th>
                     <th>Valor unit.</th>
                     <th>Subtotal</th>

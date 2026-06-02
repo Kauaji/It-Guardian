@@ -5034,9 +5034,9 @@ table strong,
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: 9px;
-  background: var(--surface);
+  background: transparent;
   color: var(--text-strong);
   padding: 0 10px;
   font-size: 0.88rem;
@@ -5581,7 +5581,7 @@ table strong,
 
 .service-order-status-row {
   display: grid;
-  grid-template-columns: 16px minmax(220px, 260px) 46px minmax(150px, 1fr) minmax(170px, 1fr) auto;
+  grid-template-columns: 16px minmax(190px, 240px) 46px minmax(150px, 170px) minmax(170px, 190px) minmax(116px, auto);
   align-items: center;
   gap: 10px;
   border: 1px solid var(--border);
@@ -5619,6 +5619,7 @@ table strong,
 .service-order-status-row label {
   display: inline-flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 8px;
   color: var(--text-muted);
   font-size: 0.82rem;
@@ -5644,6 +5645,7 @@ table strong,
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
+  min-width: 116px;
 }
 
 .service-order-status-row-actions .icon-button:disabled {
@@ -6468,25 +6470,26 @@ table strong,
 }
 
 .service-order-third-party-field {
-  align-self: end;
+  align-self: center;
+  display: inline-flex !important;
 }
 
 .service-order-third-party-check {
   width: fit-content;
-  min-height: 42px;
+  min-height: 24px;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  border: 1px solid var(--border-strong);
-  border-radius: 10px;
-  background: var(--surface);
+  gap: 8px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--text-strong);
-  padding: 0 12px;
+  padding: 0;
   font-weight: 850;
 }
 
 .service-order-third-party-check input {
-  width: 16px;
+  width: 16px !important;
   min-width: 16px;
   height: 16px;
   accent-color: var(--accent);
@@ -6503,6 +6506,7 @@ table strong,
 .service-order-collapsible-editor.open {
   background: color-mix(in srgb, var(--accent) 4%, var(--surface));
   border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+  overflow: visible;
 }
 
 .service-order-section-toggle {
@@ -6572,7 +6576,7 @@ table strong,
   top: calc(100% + 6px);
   left: 0;
   right: 0;
-  z-index: 30;
+  z-index: 1600;
   display: grid;
   gap: 4px;
   max-height: 220px;
@@ -6867,7 +6871,7 @@ table strong,
 
 .service-order-link-wizard {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -7057,11 +7061,12 @@ table strong,
   display: grid;
   gap: 8px;
   overflow-x: auto;
+  padding-bottom: 4px;
 }
 
 .settings-table-head,
 .settings-table-row {
-  min-width: 820px;
+  min-width: min(820px, 100%);
   display: grid;
   gap: 10px;
   align-items: center;
@@ -7076,6 +7081,9 @@ table strong,
 
 .settings-actions-heading {
   color: transparent;
+  position: sticky;
+  right: 0;
+  background: var(--surface);
 }
 
 .settings-table-row {
@@ -7090,6 +7098,15 @@ table strong,
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.settings-row-actions {
+  position: sticky;
+  right: 0;
+  justify-self: end;
+  background: color-mix(in srgb, var(--surface-soft) 92%, transparent);
+  border-radius: 12px;
+  padding-left: 6px;
 }
 
 .settings-category-input {
@@ -7281,6 +7298,7 @@ table strong,
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--surface-soft);
+  box-shadow: inset 0 0 0 1px transparent;
 }
 
 .general-settings-accordion > button {
@@ -7294,6 +7312,7 @@ table strong,
   color: var(--text-strong);
   padding: 12px 14px;
   text-align: left;
+  border-radius: inherit;
 }
 
 .general-settings-accordion > button span {

@@ -13,6 +13,12 @@ IT Guardian e um MVP funcional para monitoramento e inventario de infraestrutura
 - Demo/offline: `DATABASE_URL=memory` apenas em desenvolvimento
 - Deploy demo/TCC: Vercel + Supabase ou Neon
 
+## Documentacao tecnica
+
+- [Fase 1 - Inventario](docs/FASE-1-INVENTARIO.md)
+- [Fase 2 - Ordens de Servico](docs/FASE-2-ORDENS-SERVICO.md)
+- [Documentacao completa do codigo](docs/DOCUMENTACAO-CODIGO-COMPLETA.md)
+
 ## Estrutura
 
 ```text

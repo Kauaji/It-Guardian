@@ -148,7 +148,7 @@ const configs = {
       { name: "description", label: "Descrição", type: "textarea", wide: true },
       { name: "category", label: "Categoria" },
       { name: "defaultPriority", label: "Prioridade padrão", type: "select", options: priorityOptions },
-      { name: "defaultValue", label: "Valor do serviço", type: "currency" },
+      { name: "defaultValue", label: "Valor do serviço", type: "currency", businessOnly: true },
       { name: "active", label: "Status", type: "status" }
     ],
     columns: [
@@ -156,7 +156,7 @@ const configs = {
       { key: "name", label: "Serviço" },
       { key: "category", label: "Categoria" },
       { key: "defaultPriority", label: "Prioridade", type: "priority" },
-      { key: "defaultValue", label: "Valor", type: "currency" },
+      { key: "defaultValue", label: "Valor", type: "currency", businessOnly: true },
       { key: "active", label: "Status", type: "status" }
     ]
   },

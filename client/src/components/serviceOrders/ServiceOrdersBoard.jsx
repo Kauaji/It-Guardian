@@ -361,12 +361,20 @@ export default function ServiceOrdersBoard({
     () => normalizeStatuses(serviceOrderSettings.statuses),
     [serviceOrderSettings.statuses]
   );
+  const finalStatusIds = useMemo(
+    () => new Set(configuredStatuses.filter((status) => status.isFinal).map((status) => status.id)),
+    [configuredStatuses]
+  );
   const availableSectors = useMemo(() => normalizeSectorList(sectors), [sectors]);
   const monthFilteredServiceOrders = useMemo(
     () => monthFilter
-      ? serviceOrders.filter((order) => getMonthValue(order.createdAt) === monthFilter)
+      ? serviceOrders.filter((order) => {
+          const createdMonth = getMonthValue(order.createdAt);
+          const isFinalized = Boolean(order.closedAt) || finalStatusIds.has(order.status);
+          return createdMonth === monthFilter || (!isFinalized && createdMonth && createdMonth <= monthFilter);
+        })
       : serviceOrders,
-    [serviceOrders, monthFilter]
+    [finalStatusIds, serviceOrders, monthFilter]
   );
   const sectorFilteredServiceOrders = useMemo(() => {
     if (sectorFilter === "all" && canViewAllSectors) return monthFilteredServiceOrders;
@@ -1180,7 +1188,7 @@ export default function ServiceOrdersBoard({
                         min="1"
                         value={serviceOrderSettings.numberFormat.nextNumber || ""}
                         onChange={(event) => updateServiceOrderSettingsField("numberFormat", "nextNumber", event.target.value)}
-                        placeholder="Automatico"
+                        placeholder="Automático"
                       />
                     </label>
                     <div className="service-order-number-preview">
@@ -1212,7 +1220,7 @@ export default function ServiceOrdersBoard({
                   <header>
                     <div>
                       <strong>Prioridade automática</strong>
-                      <span>Define a subida de urgencia pelo tempo em aberto.</span>
+                      <span>Define a subida de urgência pelo tempo em aberto.</span>
                     </div>
                     <button type="button" className="primary-action compact-action" onClick={saveServiceOrderSettings} disabled={settingsSaving}>
                       {settingsSaving ? "Salvando..." : "Salvar"}
@@ -1291,7 +1299,7 @@ export default function ServiceOrdersBoard({
                   <header>
                     <div>
                       <strong>Segmentos/Status da OS</strong>
-                      <span>Controle a ordem, cores e funcoes especiais do painel.</span>
+                      <span>Controle a ordem, cores e funções especiais do painel.</span>
                     </div>
                     <div className="service-order-status-header-actions">
                       <button type="button" className="secondary-action compact-action" onClick={addStatus}>
@@ -1332,7 +1340,7 @@ export default function ServiceOrdersBoard({
                             checked={status.isFinal}
                             onChange={(event) => event.target.checked && setStatusRole(status.id, "final")}
                           />
-                          Usar como finalizacao
+                          Usar como finalização
                         </label>
                         <div className="service-order-status-row-actions">
                           <button type="button" className="icon-button" onClick={() => moveStatus(status.id, -1)} disabled={index === 0} title="Subir">

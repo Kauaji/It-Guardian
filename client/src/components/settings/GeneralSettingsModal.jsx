@@ -3,12 +3,9 @@ import {
   BriefcaseBusiness,
   ChevronDown,
   ChevronRight,
-  KeyRound,
-  LogOut,
   MonitorCog,
   Palette,
   RotateCcw,
-  ShieldCheck,
   SlidersHorizontal,
   Trash2,
   UserCog,
@@ -459,7 +456,6 @@ export default function GeneralSettingsModal({
   const [adminTab, setAdminTab] = useState("users");
   const [userForm, setUserForm] = useState(emptyUserForm);
   const [sectorForm, setSectorForm] = useState(emptySectorForm);
-  const [accountSection, setAccountSection] = useState("");
   const [loadingAdmin, setLoadingAdmin] = useState(false);
   const [savingAdmin, setSavingAdmin] = useState(false);
   const [userPermissionsOpen, setUserPermissionsOpen] = useState(false);
@@ -469,8 +465,7 @@ export default function GeneralSettingsModal({
   const sections = useMemo(() => {
     const items = [
       { id: "usability", label: "Usabilidade", icon: SlidersHorizontal },
-      { id: "appearance", label: "Aparência", icon: Palette },
-      { id: "account", label: "Conta e segurança", icon: ShieldCheck }
+      { id: "appearance", label: "Aparência", icon: Palette }
     ];
 
     if (isAdmin) {
@@ -483,6 +478,9 @@ export default function GeneralSettingsModal({
 
   useEffect(() => {
     if (open && section === "admin" && !isAdmin) {
+      setSection("usability");
+    }
+    if (open && section === "account") {
       setSection("usability");
     }
   }, [open, section, isAdmin]);
@@ -759,20 +757,6 @@ export default function GeneralSettingsModal({
                     ))}
                   </div>
                 </div>
-                <label className="general-settings-toggle">
-                  <input type="checkbox" defaultChecked />
-                  <span>
-                    <strong>Manter microinterações suaves ativadas</strong>
-                    <small>Preserva transicoes curtas de hover, abertura de menus e foco visual.</small>
-                  </span>
-                </label>
-                <label className="general-settings-toggle">
-                  <input type="checkbox" defaultChecked />
-                  <span>
-                    <strong>Recolher menus contextuais ao trocar de tela</strong>
-                    <small>Fecha popovers, menus de acoes e seletores ao mudar de modulo.</small>
-                  </span>
-                </label>
               </div>
             )}
 
@@ -904,75 +888,6 @@ export default function GeneralSettingsModal({
                       <span style={{ background: preferences.customTheme.primaryButton }} />
                     </div>
                   </div>
-                </div>
-              </div>
-            )}
-
-            {section === "account" && (
-              <div className="general-settings-section">
-                <KeyRound size={22} />
-                <h3>Conta e segurança</h3>
-                <div className="general-settings-accordion-list">
-                  {[
-                    {
-                      id: "account",
-                      title: "Conta",
-                      description: "Dados básicos do usuário logado.",
-                      body: (
-                        <div className="general-settings-profile">
-                          <strong>{user?.name}</strong>
-                          <span>{user?.email}</span>
-                          <small>{roleLabels[user?.role] || user?.role}</small>
-                        </div>
-                      )
-                    },
-                    {
-                      id: "security",
-                      title: "Segurança",
-                      description: "Senha e sessão atual.",
-                      body: (
-                        <>
-                          <p>Alteração de senha fica preparada para uma rota segura dedicada.</p>
-                          <button type="button" className="danger-action compact-action" onClick={onLogout}>
-                            <LogOut size={16} />
-                            Sair da conta
-                          </button>
-                        </>
-                      )
-                    },
-                    {
-                      id: "preferences",
-                      title: "Preferências",
-                      description: "Tema, fonte e modo do sistema ficam nas abas laterais.",
-                      body: (
-                        <p>Use Usabilidade, Aparência e Modo do sistema para ajustar a experiência do painel.</p>
-                      )
-                    },
-                    {
-                      id: "permissions",
-                      title: "Permissões",
-                      description: "Resumo do acesso efetivo desta conta.",
-                      body: (
-                        <PermissionChecklist value={user?.effectivePermissions || []} groups={availablePermissionGroups} disabled />
-                      )
-                    }
-                  ].map((item) => {
-                    const openItem = accountSection === item.id;
-                    const Icon = openItem ? ChevronDown : ChevronRight;
-
-                    return (
-                      <section key={item.id} className={`general-settings-accordion ${openItem ? "open" : ""}`}>
-                        <button type="button" onClick={() => setAccountSection(openItem ? "" : item.id)} aria-expanded={openItem}>
-                          <span>
-                            <strong>{item.title}</strong>
-                            <small>{item.description}</small>
-                          </span>
-                          <Icon size={18} />
-                        </button>
-                        {openItem && <div className="general-settings-accordion-body">{item.body}</div>}
-                      </section>
-                    );
-                  })}
                 </div>
               </div>
             )}

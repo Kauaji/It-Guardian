@@ -40,8 +40,7 @@ export default function ServiceOrderFormModal({
     assignedTechnicianName: "",
     sectorId: "sector-geral",
     autoPriorityEnabled: Boolean(serviceOrderSettings?.autoPriority?.enabled),
-    category: "",
-    notes: ""
+    category: ""
   });
   const [thirdPartyRequester, setThirdPartyRequester] = useState(false);
   const [technicians, setTechnicians] = useState([]);
@@ -68,8 +67,7 @@ export default function ServiceOrderFormModal({
       assignedTechnicianName: "",
       sectorId: "sector-geral",
       autoPriorityEnabled: Boolean(serviceOrderSettings?.autoPriority?.enabled),
-      category: "",
-      notes: ""
+      category: ""
     }));
   }, [activeTab?.id, businessMode, open, serviceOrderSettings?.autoPriority?.enabled]);
 
@@ -160,7 +158,7 @@ export default function ServiceOrderFormModal({
       requesterName,
       assignedTechnicianName: "",
       category,
-      notes: form.notes.trim(),
+      notes: "",
       sectorId: selectedSector?.id || "sector-geral",
       sectorName: selectedSector?.name || "Geral",
       environmentName: businessMode
@@ -295,15 +293,6 @@ export default function ServiceOrderFormModal({
             />
             <span>É uma OS de terceiros?</span>
           </span>
-        </label>
-
-        <label className="service-order-wide">
-          Observações iniciais
-          <textarea
-            value={form.notes}
-            onChange={(event) => updateField("notes", event.target.value)}
-            placeholder="Contexto adicional, combinados ou restrições."
-          />
         </label>
 
         {formError && <div className="service-order-form-error service-order-wide">{formError}</div>}
