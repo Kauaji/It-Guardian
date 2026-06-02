@@ -110,6 +110,7 @@ export default function ServiceOrderDetailsModal({
   serviceOrder,
   devices = [],
   segments = [],
+  groups = [],
   tabs: inventoryTabs = [],
   token,
   notify,
@@ -311,24 +312,43 @@ export default function ServiceOrderDetailsModal({
     };
   }, [serviceOrder?.assetId, token]);
 
+  const groupByIdForLink = useMemo(
+    () => new Map(groups.map((group) => [String(group.id), group])),
+    [groups]
+  );
+  const segmentByIdForLink = useMemo(
+    () => new Map(segments.map((segment) => [segment.id, segment])),
+    [segments]
+  );
   const visibleGroupsForLink = useMemo(() => {
-    const groups = new Map();
+    const groupOptions = new Map();
+    let hasUngroupedSegments = false;
     segments
       .filter((segment) => !segment.isDefault && (!linkDraft.tabId || segment.tabId === linkDraft.tabId))
       .forEach((segment) => {
-        const groupId = segment.groupId || segment.group?.id || "ungrouped";
-        const groupName = segment.groupName || segment.group?.name || "Sem grupo";
-        groups.set(groupId, { id: groupId, name: groupName });
+        const groupId = segment.groupId || segment.group?.id || "";
+        if (!groupId) {
+          hasUngroupedSegments = true;
+          return;
+        }
+        const group = groupByIdForLink.get(String(groupId));
+        groupOptions.set(String(groupId), {
+          id: String(groupId),
+          name: group?.name || segment.groupName || segment.group?.name || "Grupo sem nome"
+        });
       });
-    return [...groups.values()].sort((left, right) => left.name.localeCompare(right.name, "pt-BR"));
-  }, [segments, linkDraft.tabId]);
+    if (hasUngroupedSegments) {
+      groupOptions.set("ungrouped", { id: "ungrouped", name: "Sem grupo" });
+    }
+    return [...groupOptions.values()].sort((left, right) => left.name.localeCompare(right.name, "pt-BR"));
+  }, [groupByIdForLink, segments, linkDraft.tabId]);
   const visibleSegmentsForLink = useMemo(
     () => segments.filter((segment) => {
       if (segment.isDefault) return false;
       if (linkDraft.tabId && segment.tabId !== linkDraft.tabId) return false;
       if (linkDraft.groupId) {
         const groupId = segment.groupId || segment.group?.id || "ungrouped";
-        if (groupId !== linkDraft.groupId) return false;
+        if (String(groupId) !== linkDraft.groupId) return false;
       }
       return true;
     }),
@@ -340,8 +360,9 @@ export default function ServiceOrderDetailsModal({
       if (linkDraft.tabId && device.tabId !== linkDraft.tabId && !device.isGlobalUnorganized) return false;
       if (linkDraft.segmentId && device.segmentId !== linkDraft.segmentId) return false;
       if (linkDraft.groupId) {
-        const deviceGroupId = device.groupId || device.segmentGroupId || device.group?.id || "";
-        if (deviceGroupId && deviceGroupId !== linkDraft.groupId) return false;
+        const deviceSegment = segmentByIdForLink.get(device.segmentId);
+        const deviceGroupId = device.groupId || device.segmentGroupId || device.group?.id || deviceSegment?.groupId || deviceSegment?.group?.id || "ungrouped";
+        if (String(deviceGroupId) !== linkDraft.groupId) return false;
       }
       if (!term) return true;
       return normalizeSearchText([device.name, device.ip, device.statusLabel, device.segmentName, device.groupName, device.segmentGroupName]
@@ -349,7 +370,7 @@ export default function ServiceOrderDetailsModal({
         .join(" "))
         .includes(term);
     });
-  }, [devices, linkDraft]);
+  }, [devices, linkDraft, segmentByIdForLink]);
 
   if (!serviceOrder) return null;
 

@@ -301,6 +301,7 @@ export default function ServiceOrdersBoard({
   serviceOrders = [],
   devices = [],
   segments = [],
+  groups = [],
   tabs = [],
   activeTab,
   token,
@@ -1455,6 +1456,7 @@ export default function ServiceOrdersBoard({
         serviceOrder={selectedOrderCurrent}
         devices={devices}
         segments={segments}
+        groups={groups}
         tabs={tabs}
         token={token}
         notify={notify}

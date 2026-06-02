@@ -34,6 +34,9 @@
   --shadow-sm: 0 8px 20px rgba(24, 33, 47, 0.07);
   --shadow-md: 0 18px 42px rgba(24, 33, 47, 0.11);
   --ease-premium: cubic-bezier(0.22, 1, 0.36, 1);
+  --sidebar-layer: 1100;
+  --dialog-backdrop-layer: 5000;
+  --dialog-dropdown-layer: 5200;
 }
 
 @keyframes soft-pop {
@@ -253,7 +256,8 @@ select {
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 90;
+  z-index: var(--sidebar-layer);
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   width: var(--sidebar-open-width);
@@ -279,6 +283,15 @@ body.machine-details-open {
 }
 
 body.machine-details-open .sidebar {
+  pointer-events: auto;
+}
+
+.app-shell:has(.modal-backdrop) .sidebar,
+.app-shell:has(.asset-modal-backdrop) .sidebar,
+.app-shell:has(.service-order-backdrop) .sidebar,
+.app-shell:has(.service-order-settings-backdrop) .sidebar,
+.app-shell:has(.general-settings-backdrop) .sidebar,
+.app-shell:has(.settings-modal-backdrop) .sidebar {
   pointer-events: none;
 }
 
@@ -1880,6 +1893,11 @@ tbody tr.selected {
   transform: translateY(-1px);
 }
 
+.segment-group-section:has(.machine-card.details-open),
+.segment-group-section:has(.machine-card.move-menu-open) {
+  z-index: 3000;
+}
+
 .segment-group-section.group-drop-over::after {
   content: "Solte o segmento aqui";
   position: absolute;
@@ -2025,6 +2043,7 @@ tbody tr.selected {
 
 .segment-card {
   --segment-color: #1f7a61;
+  position: relative;
   width: 100%;
   overflow: visible;
   border: 1px solid color-mix(in srgb, var(--segment-color) 46%, var(--border));
@@ -2695,11 +2714,11 @@ tbody tr.selected {
 }
 
 .machine-card.details-open {
-  z-index: 45;
+  z-index: 3200;
 }
 
 .machine-card.move-menu-open {
-  z-index: 80;
+  z-index: 3200;
 }
 
 .machine-card.selected {
@@ -3125,6 +3144,8 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
 }
 
 .machine-card-actions {
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -3166,6 +3187,7 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
 }
 
 .machine-card-actions > button,
+.machine-card-actions .details-menu > button,
 .machine-card-actions .move-menu > button {
   min-width: 26px;
   min-height: 26px;
@@ -3210,6 +3232,7 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
 }
 
 .machine-card-actions > button:hover,
+.machine-card-actions .details-menu > button:hover,
 .machine-card-actions .move-menu > button:hover,
 .peripheral-add-form button:hover {
   border-color: var(--border-strong);
@@ -3223,9 +3246,10 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
   opacity: 0.5;
 }
 
+.details-menu,
 .move-menu {
   position: relative;
-  z-index: 82;
+  z-index: 4;
 }
 
 .move-menu-popover {
@@ -3233,7 +3257,7 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
   left: 0;
   right: auto;
   top: calc(100% + 8px);
-  z-index: 120;
+  z-index: 3400;
   width: 190px;
   display: grid;
   gap: 4px;
@@ -3285,10 +3309,11 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
 .machine-details {
   display: none;
   position: absolute;
-  top: calc(100% + 6px);
-  left: 7px;
-  right: 7px;
-  z-index: 60;
+  left: 0;
+  right: auto;
+  top: calc(100% + 8px);
+  width: 220px;
+  z-index: 3400;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -3309,6 +3334,8 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
 }
 
 .machine-details > * {
+  position: relative;
+  z-index: 1;
   overflow: hidden;
 }
 
@@ -3437,7 +3464,7 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 40;
+  z-index: var(--dialog-backdrop-layer);
   display: grid;
   place-items: center;
   padding: 20px;
@@ -3472,7 +3499,7 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
 }
 
 .asset-modal-backdrop {
-  z-index: 160;
+  z-index: var(--dialog-backdrop-layer);
   place-items: center;
   padding: 22px;
   background: rgba(9, 15, 23, 0.64);
@@ -4654,7 +4681,7 @@ table strong,
     position: fixed;
     top: 0;
     left: 0;
-    z-index: 90;
+    z-index: var(--sidebar-layer);
     width: var(--sidebar-open-width);
     height: 100dvh;
     max-height: 100dvh;
@@ -5141,7 +5168,7 @@ table strong,
 
 .service-order-settings-backdrop,
 .general-settings-backdrop {
-  z-index: 1250;
+  z-index: var(--dialog-backdrop-layer);
   padding: 24px;
 }
 
@@ -5648,6 +5675,14 @@ table strong,
   min-width: 116px;
 }
 
+.segment-card:has(.machine-card.details-open) {
+  z-index: 3100;
+}
+
+.segment-card:has(.machine-card.move-menu-open) {
+  z-index: 3100;
+}
+
 .service-order-status-row-actions .icon-button:disabled {
   opacity: 0.38;
   cursor: default;
@@ -5834,12 +5869,21 @@ table strong,
 .public-support-choices label {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   border: 1px solid #d1deec;
   border-radius: 12px;
   background: #ffffff;
-  padding: 12px 13px;
+  min-height: 54px;
+  padding: 9px 12px;
   cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.public-support-choices input {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  padding: 0;
 }
 
 .public-support-choices label.selected {
@@ -6260,7 +6304,7 @@ table strong,
 }
 
 .service-order-backdrop {
-  z-index: 1200;
+  z-index: var(--dialog-backdrop-layer);
 }
 
 .service-order-form-modal {
@@ -6576,7 +6620,7 @@ table strong,
   top: calc(100% + 6px);
   left: 0;
   right: 0;
-  z-index: 1600;
+  z-index: var(--dialog-dropdown-layer);
   display: grid;
   gap: 4px;
   max-height: 220px;
@@ -6781,6 +6825,7 @@ table strong,
 }
 
 .service-order-link-empty {
+  order: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -6793,6 +6838,7 @@ table strong,
 }
 
 .service-order-backup-panel {
+  order: 3;
   display: grid;
   gap: 12px;
   border: 1px solid color-mix(in srgb, #f59e0b 28%, var(--border));
@@ -6870,6 +6916,7 @@ table strong,
 }
 
 .service-order-link-wizard {
+  order: 2;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
@@ -7150,7 +7197,7 @@ table strong,
 }
 
 .settings-modal-backdrop {
-  z-index: 1400;
+  z-index: var(--dialog-backdrop-layer);
 }
 
 .settings-form-modal {

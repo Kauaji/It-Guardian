@@ -131,10 +131,10 @@ export async function createPublicServiceOrder(req, res, next) {
     const systemSettings = await getSystemSettings();
     const businessMode = systemSettings.systemMode === "business";
     const contactInfo = businessMode ? trim(req.body.contactInfo) : "";
-    const extension = businessMode ? trim(req.body.extension) : "";
+    const extension = businessMode ? "" : trim(req.body.extension);
 
     if (title.length < 3) {
-      return res.status(400).json({ message: "Informe um titulo com pelo menos 3 caracteres." });
+      return res.status(400).json({ message: "Informe um título com pelo menos 3 caracteres." });
     }
 
     if (description.length < 5) {
@@ -157,22 +157,23 @@ export async function createPublicServiceOrder(req, res, next) {
       return res.status(400).json({ message: "Informe um contato para abrir o chamado." });
     }
 
-    if (businessMode && !extension) {
-      return res.status(400).json({ message: "Informe o ramal para abrir o chamado." });
-    }
-
-    const environmentName = trim(req.body.environmentName) || "Nao identificado";
+    const environmentName = trim(req.body.environmentName) || "Não identificado";
     const machineScope = trim(req.body.machineScope) || "mine";
     const relatedAssetText = trim(req.body.relatedAssetText);
+    const accessInfo = [
+      trim(req.body.machineName) ? `AnyDesk: ${trim(req.body.machineName)}` : "",
+      trim(req.body.assetTag) ? `VNC: ${trim(req.body.assetTag)}` : "",
+      trim(req.body.location) ? `TeamViewer: ${trim(req.body.location)}` : ""
+    ].filter(Boolean).join(" | ");
+    const relatedAssetInfo = relatedAssetText || accessInfo;
     const priority = await calculatePriority({ category, problemType, environmentName });
 
     const notes = [
-      "Origem: formulario publico/atalho do usuario",
+      "Origem: formulário público/atalho do usuário",
       trim(req.body.department) ? `Setor: ${trim(req.body.department)}` : "",
       extension ? `Ramal: ${extension}` : "",
-      trim(req.body.location) ? `Localizacao: ${trim(req.body.location)}` : "",
-      relatedAssetText ? `Maquina/equipamento informado: ${relatedAssetText}` : "",
-      trim(req.body.machineNotes) ? `Observacao do equipamento: ${trim(req.body.machineNotes)}` : ""
+      relatedAssetInfo ? `Acessos informados: ${relatedAssetInfo}` : "",
+      trim(req.body.machineNotes) ? `Observação do equipamento: ${trim(req.body.machineNotes)}` : ""
     ].filter(Boolean).join("\n");
 
     const serviceOrder = await createServiceOrder({
@@ -188,13 +189,13 @@ export async function createPublicServiceOrder(req, res, next) {
         contactInfo: contactInfo || null,
         requesterDepartment: trim(req.body.department) || null,
         requesterExtension: extension || null,
-        relatedAssetText: relatedAssetText || null,
+        relatedAssetText: relatedAssetInfo || null,
         machineScope,
         location: trim(req.body.location) || null,
         source: "public_support_form",
         notes
       },
-      user: { name: "Formulario publico" }
+      user: { name: "Formulário público" }
     });
 
     res.status(201).json({

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle, HelpCircle, Monitor, Send, ShieldCheck } from "lucide-react";
+import { CheckCircle, Monitor, Send, ShieldCheck } from "lucide-react";
 import {
   createPublicServiceOrder,
   fetchPublicSupportOptions
@@ -69,9 +69,9 @@ function readMachineContext() {
 
 function buildRelatedAssetText(form) {
   return [
-    form.machineName ? `Nome: ${form.machineName}` : "",
-    form.assetTag ? `Patrimônio: ${form.assetTag}` : "",
-    form.location ? `Local: ${form.location}` : ""
+    form.machineName ? `AnyDesk: ${form.machineName}` : "",
+    form.assetTag ? `VNC: ${form.assetTag}` : "",
+    form.location ? `TeamViewer: ${form.location}` : ""
   ].filter(Boolean).join(" | ");
 }
 
@@ -92,7 +92,7 @@ export default function PublicSupportRequest() {
     contactInfo: "",
     department: "",
     extension: "",
-    machineScope: "mine",
+    machineScope: "",
     assetId: machineContext.assetId,
     machineName: machineContext.machineName,
     assetTag: machineContext.assetTag,
@@ -136,10 +136,6 @@ export default function PublicSupportRequest() {
     };
   }, []);
 
-  const selectedProblemType = options.problemTypes.find(
-    (problemType) => problemType.name === form.problemType || problemType.id === form.problemType
-  );
-  const calculatedPriority = selectedProblemType?.defaultPriority || "medium";
   const visibleProblemTypes = options.problemTypes;
 
   function updateField(field, value) {
@@ -187,7 +183,7 @@ export default function PublicSupportRequest() {
       const response = await createPublicServiceOrder({
         ...form,
         contactInfo: businessMode ? form.contactInfo : "",
-        extension: businessMode ? form.extension : "",
+        extension: businessMode ? "" : form.extension,
         relatedAssetText: buildRelatedAssetText(form)
       });
       setSuccess(response.serviceOrder);
@@ -211,9 +207,9 @@ export default function PublicSupportRequest() {
           </div>
           <CheckCircle size={54} />
           <h1>Solicitação enviada com sucesso.</h1>
-          <p>A equipe tecnica recebeu o chamado e ira analisar as informacoes enviadas.</p>
+          <p>A equipe técnica recebeu o chamado e irá analisar as informações enviadas.</p>
           <div className="public-support-ticket">
-            <span>Numero da OS</span>
+            <span>Número da OS</span>
             <strong>{success.number}</strong>
           </div>
           <div className="public-support-meta">
@@ -251,7 +247,7 @@ export default function PublicSupportRequest() {
 
         <form className="public-support-form" onSubmit={submit}>
           <label className="public-support-wide">
-            Titulo
+            Título
             <input
               required
               minLength={3}
@@ -290,7 +286,7 @@ export default function PublicSupportRequest() {
           </label>
 
           <label className="public-support-wide">
-            Observações / descrição do problema
+            Descrição do problema
             <textarea
               required
               minLength={5}
@@ -312,12 +308,23 @@ export default function PublicSupportRequest() {
 
           {businessMode && (
             <label>
-              Contato
+              WhatsApp
               <input
                 required
                 value={form.contactInfo}
                 onChange={(event) => updateField("contactInfo", event.target.value)}
-                placeholder="Telefone, e-mail ou chat"
+                placeholder="Número do WhatsApp"
+              />
+            </label>
+          )}
+
+          {!businessMode && (
+            <label>
+              Ramal
+              <input
+                value={form.extension}
+                onChange={(event) => updateField("extension", event.target.value)}
+                placeholder="Ramal para contato"
               />
             </label>
           )}
@@ -333,12 +340,12 @@ export default function PublicSupportRequest() {
 
           {businessMode && (
             <label>
-              Ramal
+              Cliente
               <input
                 required
-                value={form.extension}
-                onChange={(event) => updateField("extension", event.target.value)}
-                placeholder="Ramal ou identificador do contato"
+                value={form.environmentName}
+                onChange={(event) => updateField("environmentName", event.target.value)}
+                placeholder="Cliente, filial ou ambiente"
               />
             </label>
           )}
@@ -348,7 +355,6 @@ export default function PublicSupportRequest() {
               <Monitor size={18} />
               <div>
                 <strong>Máquina relacionada</strong>
-                <span>O navegador não consegue identificar tudo sozinho. Um atalho/agente poderá preencher isso no futuro.</span>
               </div>
             </div>
             <div className="public-support-choices">
@@ -372,47 +378,35 @@ export default function PublicSupportRequest() {
               </label>
             </div>
 
-            <div className="public-support-machine-grid">
-              <label>
-                Nome da máquina/equipamento
-                <input
-                  value={form.machineName}
-                  onChange={(event) => updateField("machineName", event.target.value)}
-                  placeholder="Hostname, nome ou descrição"
-                />
-              </label>
-              <label>
-                Patrimônio
-                <input
-                  value={form.assetTag}
-                  onChange={(event) => updateField("assetTag", event.target.value)}
-                  placeholder="Opcional"
-                />
-              </label>
-              <label>
-                {businessMode ? "Cliente/Ambiente" : "Ambiente"}
-                <input
-                  value={form.environmentName}
-                  onChange={(event) => updateField("environmentName", event.target.value)}
-                  placeholder={businessMode ? "Cliente, filial ou ambiente" : "Não identificado"}
-                />
-              </label>
-              <label>
-                Localização
-                <input
-                  value={form.location}
-                  onChange={(event) => updateField("location", event.target.value)}
-                  placeholder="Sala, setor, mesa..."
-                />
-              </label>
-            </div>
+            {form.machineScope && (
+              <div className="public-support-machine-grid">
+                <label>
+                  Acesso do AnyDesk
+                  <input
+                    value={form.machineName}
+                    onChange={(event) => updateField("machineName", event.target.value)}
+                    placeholder="ID ou endereço AnyDesk"
+                  />
+                </label>
+                <label>
+                  Acesso do VNC
+                  <input
+                    value={form.assetTag}
+                    onChange={(event) => updateField("assetTag", event.target.value)}
+                    placeholder="IP, host ou identificador VNC"
+                  />
+                </label>
+                <label>
+                  Acesso do TeamViewer
+                  <input
+                    value={form.location}
+                    onChange={(event) => updateField("location", event.target.value)}
+                    placeholder="ID ou dados do TeamViewer"
+                  />
+                </label>
+              </div>
+            )}
           </section>
-
-          <div className="public-support-priority public-support-wide">
-            <HelpCircle size={18} />
-            <span>Prioridade calculada pelo sistema:</span>
-            <strong>{priorityLabels[calculatedPriority] || "Média"}</strong>
-          </div>
 
           {error && <div className="public-support-error public-support-wide">{error}</div>}
 

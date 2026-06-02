@@ -3343,6 +3343,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
             serviceOrders={serviceOrders}
             devices={decoratedAllDevices}
             segments={decoratedSegments}
+            groups={decoratedSegmentGroups}
             tabs={inventoryTabs}
             activeTab={activeInventoryTab}
             token={token}

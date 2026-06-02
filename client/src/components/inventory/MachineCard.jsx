@@ -182,19 +182,42 @@ function MachineCardContent({
       {showDetails && (
         <div className="machine-card-actions">
           {!isManualAsset && <DiskIndicator value={metrics.disk} />}
-          <button
-            type="button"
-            className={`details-toggle ${expanded ? "expanded" : ""}`}
-            onClick={(event) => {
-              event.stopPropagation();
-              setActivePopoverId(expanded ? null : detailsPopoverId);
-            }}
-            aria-label="Perifericos"
-            aria-expanded={expanded}
-            title={expanded ? "Ocultar perifericos" : "Perifericos"}
-          >
-            <ChevronDown size={15} />
-          </button>
+          <div className="details-menu">
+            <button
+              type="button"
+              className={`details-toggle ${expanded ? "expanded" : ""}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                setActivePopoverId(expanded ? null : detailsPopoverId);
+              }}
+              aria-label="Perifericos"
+              aria-expanded={expanded}
+              title={expanded ? "Ocultar perifericos" : "Perifericos"}
+            >
+              <ChevronDown size={15} />
+            </button>
+            {showDetails && (
+              <div
+                ref={detailsRef}
+                className={`machine-details ${expanded ? "expanded" : ""}`}
+                onClick={(event) => event.stopPropagation()}
+              >
+                {isManualAsset ? (
+                  <div className="manual-asset-mini">
+                    <span>{machine.manualAsset?.location || "Sem localizacao"}</span>
+                    <strong>{machine.manualAsset?.hostname || machine.manualAsset?.macAddress || "Sem hostname/MAC"}</strong>
+                  </div>
+                ) : (
+                  <PeripheralList
+                    peripherals={machine.hardware?.peripherals || []}
+                    segmentColor={segmentColor}
+                    canManage={canManage}
+                    onRemove={(peripheral) => onRemovePeripheral(machine.id, peripheral)}
+                  />
+                )}
+              </div>
+            )}
+          </div>
           <button
             type="button"
             onClick={(event) => {
@@ -243,27 +266,6 @@ function MachineCardContent({
         </div>
       )}
 
-      {showDetails && (
-        <div
-          ref={detailsRef}
-          className={`machine-details ${expanded ? "expanded" : ""}`}
-          onClick={(event) => event.stopPropagation()}
-        >
-          {isManualAsset ? (
-            <div className="manual-asset-mini">
-              <span>{machine.manualAsset?.location || "Sem localizacao"}</span>
-              <strong>{machine.manualAsset?.hostname || machine.manualAsset?.macAddress || "Sem hostname/MAC"}</strong>
-            </div>
-          ) : (
-            <PeripheralList
-              peripherals={machine.hardware?.peripherals || []}
-              segmentColor={segmentColor}
-              canManage={canManage}
-              onRemove={(peripheral) => onRemovePeripheral(machine.id, peripheral)}
-            />
-          )}
-        </div>
-      )}
     </article>
   );
 }
