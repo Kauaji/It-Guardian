@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
-import { arrayMove } from "@dnd-kit/sortable";
 
 export function useInventoryDragAndDrop({
   devices,
@@ -55,7 +54,6 @@ export function useInventoryDragAndDrop({
   const handleDragEnd = useCallback((event) => {
     const machineId = event.active?.data?.current?.machineId;
     const targetSegmentId = event.over?.data?.current?.segmentId;
-    const overMachineId = event.over?.data?.current?.machineId;
     const targetType = event.over?.data?.current?.type;
 
     if (!machineId || !targetSegmentId) return null;
@@ -66,14 +64,6 @@ export function useInventoryDragAndDrop({
     const movingMachines = selectedIds
       .map((id) => deviceById.get(id))
       .filter(Boolean);
-
-    if (overMachineId && machineId !== overMachineId && selectedIds.length === 1) {
-      setOrderedIds((current) => {
-        const oldIndex = current.indexOf(machineId);
-        const newIndex = current.indexOf(overMachineId);
-        return oldIndex >= 0 && newIndex >= 0 ? arrayMove(current, oldIndex, newIndex) : current;
-      });
-    }
 
     const alreadyInTarget = movingMachines.every((item) => item.segmentId === targetSegmentId);
     if (alreadyInTarget) {

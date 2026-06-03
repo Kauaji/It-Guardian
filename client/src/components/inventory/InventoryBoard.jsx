@@ -53,6 +53,7 @@ export default function InventoryBoard({
   onBulkMoveTargetChange,
   onBulkMove,
   onBulkPrint,
+  onBulkMarkBackup,
   onClearSelection,
   onSelectAsset,
   onToggleSelection,
@@ -79,6 +80,7 @@ export default function InventoryBoard({
   onRefreshPing,
   onChangeDeviceType,
   onPutMaintenance,
+  onToggleBackup,
   onRemoveMachine,
   onCloseMoveModal,
   onOpenMoveModal
@@ -284,6 +286,7 @@ export default function InventoryBoard({
         onTargetChange={onBulkMoveTargetChange}
         onMove={onBulkMove}
         onPrint={onBulkPrint}
+        onMarkBackup={onBulkMarkBackup}
         onClear={onClearSelection}
         isDragActive={isBulkSelectionDragging}
       />
@@ -386,8 +389,8 @@ export default function InventoryBoard({
                     event.stopPropagation();
                     setActivePopoverId(activePopoverId === `group-actions-${group.id}` ? null : `group-actions-${group.id}`);
                   }}
-                  title="Acoes do grupo"
-                  aria-label="Acoes do grupo"
+                  title="Ações do grupo"
+                  aria-label="Ações do grupo"
                   aria-expanded={activePopoverId === `group-actions-${group.id}`}
                 >
                   <MoreHorizontal size={16} />
@@ -517,7 +520,7 @@ export default function InventoryBoard({
 
       <MoveMachineModal
         machine={moveModal}
-        segments={segments}
+        segments={segments.filter((segment) => !segment.isBackupSegment)}
         targetSegmentId={moveTarget}
         onTargetChange={setMoveTarget}
         onClose={onCloseMoveModal}
@@ -536,6 +539,10 @@ export default function InventoryBoard({
         onPutMaintenance={async () => {
           const moved = await onPutMaintenance?.(selectedMachine);
           if (moved) setSelectedMachine(null);
+        }}
+        onToggleBackup={async (desiredState) => {
+          const updated = await onToggleBackup?.(selectedMachine, desiredState);
+          if (updated) setSelectedMachine(null);
         }}
         onRemoveMachine={async () => {
           const removed = await onRemoveMachine?.(selectedMachine);

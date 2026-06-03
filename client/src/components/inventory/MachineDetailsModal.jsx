@@ -1,4 +1,4 @@
-import { Clock3, Cpu, HardDrive, KeyRound, MemoryStick, Network, RefreshCw, Trash2, Wrench, X } from "lucide-react";
+import { Archive, Clock3, Cpu, HardDrive, KeyRound, MemoryStick, Network, RefreshCw, Trash2, Wrench, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import AssetTypeIcon from "./AssetTypeIcon.jsx";
 import { assetTypeLabel, assetTypeOptions } from "./assetTypes.js";
@@ -15,22 +15,22 @@ const tabs = [
   { id: "hardware", label: "Hardware" },
   { id: "software", label: "Softwares" },
   { id: "network", label: "Rede" },
-  { id: "peripherals", label: "Perifericos" },
-  { id: "notes", label: "Observacoes" },
-  { id: "history", label: "Historico" }
+  { id: "peripherals", label: "Periféricos" },
+  { id: "notes", label: "Observações" },
+  { id: "history", label: "Histórico" }
 ];
 
 function DetailItem({ label, value }) {
   return (
     <div className="detail-item">
       <span>{label}</span>
-      <strong>{value || "Nao disponivel"}</strong>
+      <strong>{value || "Não disponível"}</strong>
     </div>
   );
 }
 
 function formatDate(value) {
-  if (!value) return "Nao informado";
+  if (!value) return "Não informado";
   return new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
     month: "2-digit",
@@ -48,8 +48,8 @@ function buildMetricAlert({ metric, label, value, warningLimit = 70, criticalLim
     id: `metric-${metric}`,
     description: `${label} acima do limite: ${value}%`,
     detectedAt: new Date().toISOString(),
-    type: "Metrica",
-    severity: isCritical ? "Critico" : "Atencao",
+    type: "Métrica",
+    severity: isCritical ? "Crítico" : "Atenção",
     metric: label,
     value: `${value}%`,
     limit: `${isCritical ? criticalLimit : warningLimit}%`,
@@ -72,10 +72,10 @@ function buildActiveAlerts(machine) {
   if (machine.status === "offline") {
     alerts.push({
       id: "ping-offline",
-      description: "Maquina nao responde ping",
+      description: "Máquina não responde ping",
       detectedAt: machine.lastPingAt || new Date().toISOString(),
       type: "Conectividade",
-      severity: "Critico",
+      severity: "Crítico",
       metric: "Ping",
       value: "Sem resposta",
       limit: "Resposta esperada",
@@ -90,7 +90,7 @@ function buildActiveAlerts(machine) {
       description: alert.description || alert.title || "Alerta ativo no monitoramento",
       detectedAt: alert.startedAt,
       type: alert.title || "Alerta ativo",
-      severity: alert.severity === "critical" ? "Critico" : "Atencao",
+      severity: alert.severity === "critical" ? "Crítico" : "Atenção",
       metric: alert.metric || "Monitoramento",
       value: alert.value || "Ativo",
       limit: alert.limit || "Regra Zabbix",
@@ -104,10 +104,10 @@ function buildActiveAlerts(machine) {
       description: "Alerta ativo no monitoramento",
       detectedAt: new Date().toISOString(),
       type: "Monitoramento",
-      severity: "Atencao",
+      severity: "Atenção",
       metric: "Status",
       value: "Problema",
-      limit: "Operacao normal",
+      limit: "Operação normal",
       status: "Ativo"
     });
   }
@@ -122,7 +122,7 @@ function buildResolvedAlerts(machine, hardware) {
       id: item.id || `${item.detectedAt || item.createdAt}-${item.change || item.message}`,
       description: item.change || item.message || "Erro resolvido",
       detectedAt: item.detectedAt || item.createdAt,
-      type: "Historico",
+      type: "Histórico",
       severity: "Informativo",
       metric: item.field || "Ativo",
       value: item.newValue || "Normal",
@@ -158,7 +158,7 @@ function getDiskHealth(hardware = {}) {
 
   if (directHealth) {
     if (typeof directHealth === "object") {
-      return directHealth.status || directHealth.value || directHealth.health || "Nao disponivel";
+      return directHealth.status || directHealth.value || directHealth.health || "Não disponível";
     }
     return directHealth;
   }
@@ -167,9 +167,9 @@ function getDiskHealth(hardware = {}) {
     disk.health || disk.smartStatus || disk.healthPercent !== undefined || disk.status
   );
 
-  if (!diskWithHealth) return "Nao disponivel";
+  if (!diskWithHealth) return "Não disponível";
   if (diskWithHealth.healthPercent !== undefined) return `${diskWithHealth.healthPercent}%`;
-  return diskWithHealth.health || diskWithHealth.smartStatus || diskWithHealth.status || "Nao disponivel";
+  return diskWithHealth.health || diskWithHealth.smartStatus || diskWithHealth.status || "Não disponível";
 }
 
 function isMaintenanceSegmentName(name = "") {
@@ -190,7 +190,7 @@ function ErrorAlertList({ alerts, resolvedAlerts }) {
         </div>
         <div className="error-alert-list">
           {alerts.map((alert) => (
-            <article key={alert.id} className={`error-alert-card ${alert.severity === "Critico" ? "critical" : "warning"}`}>
+            <article key={alert.id} className={`error-alert-card ${alert.severity === "Crítico" ? "critical" : "warning"}`}>
               <header>
                 <strong>{alert.description}</strong>
                 <span>{alert.status}</span>
@@ -199,7 +199,7 @@ function ErrorAlertList({ alerts, resolvedAlerts }) {
                 <div><dt>Detectado</dt><dd>{formatDate(alert.detectedAt)}</dd></div>
                 <div><dt>Tipo</dt><dd>{alert.type}</dd></div>
                 <div><dt>Severidade</dt><dd>{alert.severity}</dd></div>
-                <div><dt>Metrica</dt><dd>{alert.metric}</dd></div>
+                <div><dt>Métrica</dt><dd>{alert.metric}</dd></div>
                 <div><dt>Valor atual</dt><dd>{alert.value}</dd></div>
                 <div><dt>Limite</dt><dd>{alert.limit}</dd></div>
               </dl>
@@ -211,7 +211,7 @@ function ErrorAlertList({ alerts, resolvedAlerts }) {
 
       <div className="error-alert-section resolved">
         <div>
-          <h3>Resolvidos no historico</h3>
+          <h3>Resolvidos no histórico</h3>
           <span>{resolvedAlerts.length} registros</span>
         </div>
         <div className="error-alert-list compact">
@@ -242,6 +242,7 @@ export default function MachineDetailsModal({
   onChangeDeviceType,
   onRefreshPing,
   onPutMaintenance,
+  onToggleBackup,
   onRemoveMachine,
   onRemovePeripheral,
   onClose
@@ -251,6 +252,7 @@ export default function MachineDetailsModal({
   const manualAsset = machine?.manualAsset;
   const isManualAsset = machine?.source === "manual";
   const inMaintenance = Boolean(machine?.maintenance) || isMaintenanceSegmentName(machine?.segmentName);
+  const backupInUse = machine?.backupStatus === "in_use";
   const latestChange = useMemo(
     () => [...(machine?.assetHistory || []), ...(hardware.changeHistory || [])][0],
     [hardware.changeHistory, machine?.assetHistory]
@@ -280,7 +282,7 @@ export default function MachineDetailsModal({
       <section className="asset-modal" role="dialog" aria-modal="true" aria-label="Detalhes do ativo">
         <header className="asset-modal-header">
           <div>
-            <span className="asset-eyebrow">{isManualAsset ? "Ativo de rede manual" : "Inventario OCS"}</span>
+            <span className="asset-eyebrow">{isManualAsset ? "Ativo de rede manual" : "Inventário OCS"}</span>
             <h2>{alias || machine.name}</h2>
             <p>{machine.name} - {machine.ip}</p>
           </div>
@@ -289,12 +291,22 @@ export default function MachineDetailsModal({
               type="button"
               className={`ghost-action maintenance-action ${inMaintenance ? "active" : ""}`}
               onClick={onPutMaintenance}
-              title={inMaintenance ? "Retirar da manutencao" : "Colocar em manutencao"}
+              title={inMaintenance ? "Retirar da manutenção" : "Colocar em manutenção"}
             >
               <Wrench size={15} />
-              {inMaintenance ? "Retirar da manutencao" : "Colocar em manutencao"}
+              {inMaintenance ? "Retirar da manutenção" : "Colocar em manutenção"}
             </button>
-            <button type="button" className="ghost-action danger-action" onClick={onRemoveMachine} title="Remover maquina do inventario">
+            <button
+              type="button"
+              className={`ghost-action backup-action ${machine?.isBackup ? "active" : ""}`}
+              onClick={() => onToggleBackup?.(!machine?.isBackup)}
+              disabled={backupInUse}
+              title={backupInUse ? "Backup em uso por uma OS" : machine?.isBackup ? "Remover da área de Backup" : "Marcar como Backup"}
+            >
+              <Archive size={15} />
+              {backupInUse ? "Backup em uso" : machine?.isBackup ? "Remover Backup" : "Marcar Backup"}
+            </button>
+            <button type="button" className="ghost-action danger-action" onClick={onRemoveMachine} title="Remover máquina do inventário">
               <Trash2 size={15} />
               Remover
             </button>
@@ -319,17 +331,17 @@ export default function MachineDetailsModal({
                   <>
                     <article>
                       <Clock3 size={18} />
-                      <span>Ultimo ping</span>
+                      <span>Último ping</span>
                       <strong>{formatDate(machine.lastPingAt)}</strong>
                     </article>
                     <article>
                       <Network size={18} />
-                      <span>Identificacao</span>
+                      <span>Identificação</span>
                       <strong>{manualAsset?.identificationMode === "fixed_ip" ? "IP fixo" : "MAC/hostname"}</strong>
                     </article>
                     <article>
                       <HardDrive size={18} />
-                      <span>Patrimonio</span>
+                      <span>Patrimônio</span>
                       <strong>{manualAsset?.assetTag}</strong>
                     </article>
                   </>
@@ -352,7 +364,7 @@ export default function MachineDetailsModal({
                     </article>
                     <article>
                       <HardDrive size={18} />
-                      <span>Saude do disco</span>
+                      <span>Saúde do disco</span>
                       <strong>{diskHealth}</strong>
                     </article>
                   </>
@@ -385,15 +397,15 @@ export default function MachineDetailsModal({
                 <DetailItem label="IP" value={machine.ip} />
                 <DetailItem label={isManualAsset ? "Hostname" : "Sistema operacional"} value={isManualAsset ? manualAsset?.hostname : hardware.os} />
                 <DetailItem label="Arquitetura" value={hardware.architecture} />
-                <DetailItem label="Patrimonio" value={hardware.assetTag} />
-                <DetailItem label={isManualAsset ? "Localizacao" : "Usuario logado"} value={isManualAsset ? manualAsset?.location : hardware.loggedUser} />
-                <DetailItem label={isManualAsset ? "Ultima verificacao" : "Ultimo inventario"} value={formatDate(isManualAsset ? machine.lastPingAt : hardware.lastInventoryAt)} />
+                <DetailItem label="Patrimônio" value={hardware.assetTag} />
+                <DetailItem label={isManualAsset ? "Localização" : "Usuário logado"} value={isManualAsset ? manualAsset?.location : hardware.loggedUser} />
+                <DetailItem label={isManualAsset ? "Última verificação" : "Último inventário"} value={formatDate(isManualAsset ? machine.lastPingAt : hardware.lastInventoryAt)} />
                 <DetailItem label={isManualAsset ? "MAC Address" : "Uptime"} value={isManualAsset ? hardware.macAddress : `${machine.uptimeHours} h`} />
               </div>
 
               {latestChange && (
                 <div className="latest-change">
-                  <strong>Ultima alteracao detectada</strong>
+                  <strong>Última alteração detectada</strong>
                   <span>{latestChange.change || latestChange.message} em {formatDate(latestChange.detectedAt || latestChange.createdAt)}</span>
                 </div>
               )}
@@ -407,18 +419,18 @@ export default function MachineDetailsModal({
               <div className="detail-grid">
                 <DetailItem label="Hostname" value={machine.name} />
                 <DetailItem label="Sistema operacional" value={hardware.os} />
-                <DetailItem label="Versao do SO" value={hardware.osVersion || hardware.os} />
+                <DetailItem label="Versão do SO" value={hardware.osVersion || hardware.os} />
                 <DetailItem label="Arquitetura" value={hardware.architecture} />
                 <DetailItem label="Fabricante" value={hardware.manufacturer} />
                 <DetailItem label="Modelo" value={hardware.model} />
                 <DetailItem label="Serial number" value={hardware.serialNumber} />
                 <DetailItem label="Processador" value={hardware.cpuModel} />
-                <DetailItem label="Nucleos" value={hardware.cpuCores} />
-                <DetailItem label="Memoria RAM" value={hardware.ramGb ? `${hardware.ramGb} GB` : null} />
-                <DetailItem label="Saude da memoria" value={hardware.memoryHealth?.status || hardware.memoryHealth} />
-                <DetailItem label="Licenca Windows" value={hardware.licenses?.windowsKey || hardware.windowsKey} />
+                <DetailItem label="Núcleos" value={hardware.cpuCores} />
+                <DetailItem label="Memória RAM" value={hardware.ramGb ? `${hardware.ramGb} GB` : null} />
+                <DetailItem label="Saúde da memória" value={hardware.memoryHealth?.status || hardware.memoryHealth} />
+                <DetailItem label="Licença Windows" value={hardware.licenses?.windowsKey || hardware.windowsKey} />
                 <DetailItem label="Office" value={hardware.licenses?.officeVersion || hardware.officeVersion} />
-                <DetailItem label="Licenca Office" value={hardware.licenses?.officeKey || hardware.officeKey} />
+                <DetailItem label="Licença Office" value={hardware.licenses?.officeKey || hardware.officeKey} />
               </div>
               <div className="disk-detail-list">
                 {(hardware.disks || []).map((disk) => (
@@ -426,18 +438,18 @@ export default function MachineDetailsModal({
                     <HardDrive size={16} />
                     <strong>{disk.label}</strong>
                     <span>{disk.sizeGb} GB - {disk.type}</span>
-                    <small>SMART: {disk.smartStatus || disk.health || "Nao disponivel"}</small>
-                    <small>Temperatura: {disk.temperatureC ? `${disk.temperatureC} C` : "Nao disponivel"}</small>
-                    <small>Horas ligadas: {disk.powerOnHours || "Nao disponivel"}</small>
-                    <small>Setores realocados: {disk.reallocatedSectors ?? "Nao disponivel"}</small>
-                    <small>TB escritos: {disk.tbWritten || "Nao disponivel"}</small>
+                    <small>SMART: {disk.smartStatus || disk.health || "Não disponível"}</small>
+                    <small>Temperatura: {disk.temperatureC ? `${disk.temperatureC} C` : "Não disponível"}</small>
+                    <small>Horas ligadas: {disk.powerOnHours || "Não disponível"}</small>
+                    <small>Setores realocados: {disk.reallocatedSectors ?? "Não disponível"}</small>
+                    <small>TB escritos: {disk.tbWritten || "Não disponível"}</small>
                   </article>
                 ))}
                 {isManualAsset && <p className="empty">Ativo de rede sem coleta OCS de discos ou CPU.</p>}
               </div>
               <div className="license-note">
                 <KeyRound size={16} />
-                <span>Licencas e saude fisica sao exibidas apenas quando OCS/Zabbix disponibilizam esses dados.</span>
+                <span>Licenças e saúde física são exibidas apenas quando OCS/Zabbix disponibilizam esses dados.</span>
               </div>
             </section>
           )}
@@ -452,14 +464,14 @@ export default function MachineDetailsModal({
                 {softwareRows.map((software) => (
                   <article key={`${software.name}-${software.version || "sem-versao"}`}>
                     <strong>{software.name}</strong>
-                    <span>Versao: {software.version || "Nao disponivel"}</span>
-                    <span>Fabricante: {software.manufacturer || "Nao disponivel"}</span>
-                    <span>Instalacao: {software.installedAt ? formatDate(software.installedAt) : "Nao disponivel"}</span>
+                    <span>Versão: {software.version || "Não disponível"}</span>
+                    <span>Fabricante: {software.manufacturer || "Não disponível"}</span>
+                    <span>Instalação: {software.installedAt ? formatDate(software.installedAt) : "Não disponível"}</span>
                   </article>
                 ))}
               </div>
               {!softwareRows.length && !isManualAsset && <p className="empty">Nenhum software retornado pelo OCS.</p>}
-              {isManualAsset && <p className="empty">Softwares nao se aplicam a este ativo manual.</p>}
+              {isManualAsset && <p className="empty">Softwares não se aplicam a este ativo manual.</p>}
             </section>
           )}
 
@@ -469,17 +481,17 @@ export default function MachineDetailsModal({
                 <DetailItem label="IP" value={machine.ip} />
                 <DetailItem label="MAC Address" value={hardware.macAddress} />
                 <DetailItem label="Hostname" value={manualAsset?.hostname} />
-                <DetailItem label="Modo de identificacao" value={manualAsset?.identificationMode} />
+                <DetailItem label="Modo de identificação" value={manualAsset?.identificationMode} />
                 {!isManualAsset && (
                   <>
                     <DetailItem label="Entrada" value={`${machine.metrics.networkInMbps} Mbps`} />
-                    <DetailItem label="Saida" value={`${machine.metrics.networkOutMbps} Mbps`} />
+                    <DetailItem label="Saída" value={`${machine.metrics.networkOutMbps} Mbps`} />
                   </>
                 )}
               </div>
               <div className="network-card">
                 <Network size={18} />
-                <span>{isManualAsset ? "Status preparado para ping real; o MVP usa simulacao separada no backend." : "Telemetria em tempo real via Zabbix"}</span>
+                <span>{isManualAsset ? "Status preparado para ping real; o MVP usa simulação separada no backend." : "Telemetria em tempo real via Zabbix"}</span>
               </div>
             </section>
           )}
@@ -489,7 +501,7 @@ export default function MachineDetailsModal({
               {isManualAsset ? (
                 <div className="network-card">
                   <AssetTypeIcon type={machine.assetType} size={18} />
-                  <span>Ativos de rede nao sao perifericos USB. Eles possuem IP proprio e aparecem como itens independentes.</span>
+                  <span>Ativos de rede não são periféricos USB. Eles possuem IP próprio e aparecem como itens independentes.</span>
                 </div>
               ) : (
                 <PeripheralList

@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { getJwtSecret } from "../config/environment.js";
 import { addLog } from "../repositories/logRepository.js";
-import { createUser, findUserByEmail, toPublicUser } from "../repositories/userRepository.js";
+import { countActiveAdminsExcluding, createUser, findUserByEmail, toPublicUser } from "../repositories/userRepository.js";
 
 function signToken(user) {
   return jwt.sign(
@@ -20,8 +20,13 @@ export async function register(req, res, next) {
       return res.status(400).json({ message: "Informe nome, e-mail e senha com pelo menos 6 caracteres." });
     }
 
-    const user = await createUser({ name, email, password });
-    await addLog({ type: "auth", message: "User registered", userId: user.id });
+    const activeAdmins = await countActiveAdminsExcluding("");
+    if (activeAdmins > 0) {
+      return res.status(403).json({ message: "Cadastro publico desativado. Solicite acesso a um administrador." });
+    }
+
+    const user = await createUser({ name, email, password, role: "admin", permissions: ["admin.full"] });
+    await addLog({ type: "auth", message: "First admin registered", userId: user.id });
 
     res.status(201).json({
       user: toPublicUser(user),
@@ -37,7 +42,7 @@ export async function login(req, res, next) {
     const { email, password } = req.body;
     const user = await findUserByEmail(email || "");
 
-    if (!user || !(await bcrypt.compare(password || "", user.passwordHash))) {
+    if (!user || user.active === false || !(await bcrypt.compare(password || "", user.passwordHash))) {
       return res.status(401).json({ message: "E-mail ou senha invalidos." });
     }
 

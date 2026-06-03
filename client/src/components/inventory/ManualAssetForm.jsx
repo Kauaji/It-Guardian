@@ -70,7 +70,7 @@ export default function ManualAssetForm({ open, saving, onClose, onSubmit }) {
             <input required value={form.model} onChange={(event) => update("model", event.target.value)} placeholder="MFC-L8900CDW" />
           </label>
           <label>
-            Patrimonio
+            Patrimônio
             <input required value={form.assetTag} onChange={(event) => update("assetTag", event.target.value)} placeholder="NET-IMP-0021" />
           </label>
           <label>
@@ -98,7 +98,7 @@ export default function ManualAssetForm({ open, saving, onClose, onSubmit }) {
             <input value={form.location} onChange={(event) => update("location", event.target.value)} placeholder="Financeiro" />
           </label>
           <label className="manual-asset-wide">
-            Observacoes
+            Observações
             <textarea value={form.notes} onChange={(event) => update("notes", event.target.value)} placeholder="Reserva DHCP recomendada, sala, responsavel..." />
           </label>
 

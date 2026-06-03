@@ -1,6 +1,5 @@
 import { ArrowDown, ArrowUp, ChevronDown, Edit3, MoreHorizontal, Trash2 } from "lucide-react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
-import { SortableContext, rectSortingStrategy } from "@dnd-kit/sortable";
 import { useState } from "react";
 import MachineCard from "./MachineCard.jsx";
 import ColorPickerSegment from "./ColorPickerSegment.jsx";
@@ -49,8 +48,8 @@ export default function SegmentCard({
   });
   const [collapsed, setCollapsed] = useState(false);
   const isDefaultSegment = Boolean(segment.isDefault);
-  const color = isDefaultSegment ? "#64748b" : segment.color || "#1f7a61";
-  const machineIds = machines.map((machine) => machine.id);
+  const isBackupSegment = Boolean(segment.isBackupSegment);
+  const color = isBackupSegment ? "#f97316" : isDefaultSegment ? "#111827" : segment.color || "#1f7a61";
   const actionsMenuId = `segment-actions-${segment.id}`;
   const actionsOpen = activePopoverId === actionsMenuId;
   const sectionStyle = {
@@ -75,7 +74,7 @@ export default function SegmentCard({
       ref={(node) => {
         setDropNodeRef(node);
       }}
-      className={`segment-card ${isDefaultSegment ? "default-segment-card" : ""} ${isOver ? "drop-over" : ""} ${isSegmentDragging ? "segment-dragging" : ""} ${selected ? "segment-selected" : ""}`}
+      className={`segment-card ${isDefaultSegment ? "default-segment-card" : ""} ${isBackupSegment ? "backup-segment-card" : ""} ${isOver ? "drop-over" : ""} ${isSegmentDragging ? "segment-dragging" : ""} ${selected ? "segment-selected" : ""}`}
       style={sectionStyle}
     >
       <header className="segment-card-header">
@@ -197,8 +196,8 @@ export default function SegmentCard({
               <button
                 type="button"
                 className="segment-options-trigger"
-                title="Acoes do segmento"
-                aria-label="Acoes do segmento"
+                title="Ações do segmento"
+                aria-label="Ações do segmento"
                 aria-expanded={actionsOpen}
                 onClick={(event) => {
                   event.stopPropagation();
@@ -213,35 +212,33 @@ export default function SegmentCard({
       </header>
 
       {!collapsed && (
-        <SortableContext items={machineIds} strategy={rectSortingStrategy}>
-          <div className="segment-machine-grid">
-            {machines.map((machine) => (
-              <MachineCard
-                key={machine.id}
-                machine={machine}
-                segments={segments}
-                canManage={canManage}
-                segmentColor={color}
-                alias={aliases[machine.id]}
-                selected={selectedAssetIds.has(machine.id)}
-                onMoveMachine={onMoveMachine}
-                onOpenDetails={onOpenDetails}
-                onOpenMoveModal={onOpenMoveModal}
-                onRefreshPing={onRefreshPing}
-                onSelect={onSelectAsset}
-                onToggleSelection={onToggleSelection}
-                onRemovePeripheral={onRemovePeripheral}
-                activePopoverId={activePopoverId}
-                setActivePopoverId={setActivePopoverId}
-              />
-            ))}
-            {!machines.length && (
-              <div className="empty-segment wide-empty">
-                <span>Solte maquinas aqui</span>
-              </div>
-            )}
-          </div>
-        </SortableContext>
+        <div className="segment-machine-grid">
+          {machines.map((machine) => (
+            <MachineCard
+              key={machine.id}
+              machine={machine}
+              segments={segments}
+              canManage={canManage}
+              segmentColor={color}
+              alias={aliases[machine.id]}
+              selected={selectedAssetIds.has(machine.id)}
+              onMoveMachine={onMoveMachine}
+              onOpenDetails={onOpenDetails}
+              onOpenMoveModal={onOpenMoveModal}
+              onRefreshPing={onRefreshPing}
+              onSelect={onSelectAsset}
+              onToggleSelection={onToggleSelection}
+              onRemovePeripheral={onRemovePeripheral}
+              activePopoverId={activePopoverId}
+              setActivePopoverId={setActivePopoverId}
+            />
+          ))}
+          {!machines.length && (
+            <div className="empty-segment wide-empty">
+              <span>Solte maquinas aqui</span>
+            </div>
+          )}
+        </div>
       )}
     </section>
   );

@@ -36,7 +36,7 @@ export async function apiFetch(path, { token, ...options } = {}) {
       }
     });
   } catch (error) {
-    throw new Error("Nao foi possivel conectar ao servidor.");
+    throw new Error("Não foi possível conectar ao servidor.");
   }
 
   const data = await response.json().catch(() => ({}));
@@ -127,6 +127,14 @@ export function updateDeviceType(token, id, assetType) {
   });
 }
 
+export function updateDeviceBackup(token, id, payload) {
+  return apiFetch(`/devices/${id}/backup`, {
+    token,
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+}
+
 export function refreshAssetPing(token, id) {
   return apiFetch(`/devices/${id}/ping`, {
     token,
@@ -208,6 +216,381 @@ export function acknowledgeAlert(token, id, note = "") {
 
 export function removeAlertAcknowledgement(token, id) {
   return apiFetch(`/alerts/${id}/acknowledge`, {
+    token,
+    method: "DELETE"
+  });
+}
+
+export function fetchServiceOrders(token) {
+  return apiFetch("/service-orders", { token });
+}
+
+export function fetchSystemSettings(token) {
+  return apiFetch("/system-settings", { token });
+}
+
+export function updateSystemSettings(token, payload) {
+  return apiFetch("/system-settings", {
+    token,
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function fetchServiceOrder(token, id) {
+  return apiFetch(`/service-orders/${id}`, { token });
+}
+
+export function createServiceOrder(token, payload) {
+  return apiFetch("/service-orders", {
+    token,
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function fetchServiceOrderSettings(token) {
+  return apiFetch("/service-order-settings", { token });
+}
+
+export function updateServiceOrderSettings(token, payload) {
+  return apiFetch("/service-order-settings", {
+    token,
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function fetchServiceOrderStatuses(token) {
+  return apiFetch("/service-order-statuses", { token });
+}
+
+export function createServiceOrderStatus(token, payload) {
+  return apiFetch("/service-order-statuses", {
+    token,
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function updateServiceOrderStatusDefinition(token, id, payload) {
+  return apiFetch(`/service-order-statuses/${id}`, {
+    token,
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function deleteServiceOrderStatus(token, id) {
+  return apiFetch(`/service-order-statuses/${id}`, {
+    token,
+    method: "DELETE"
+  });
+}
+
+export function updateServiceOrder(token, id, payload) {
+  return apiFetch(`/service-orders/${id}`, {
+    token,
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function updateServiceOrderStatus(token, id, status) {
+  return apiFetch(`/service-orders/${id}/status`, {
+    token,
+    method: "PATCH",
+    body: JSON.stringify({ status })
+  });
+}
+
+export function addServiceOrderHistory(token, id, payload) {
+  return apiFetch(`/service-orders/${id}/history`, {
+    token,
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function deleteServiceOrder(token, id) {
+  return apiFetch(`/service-orders/${id}`, {
+    token,
+    method: "DELETE"
+  });
+}
+
+export function fetchUsers(token) {
+  return apiFetch("/users", { token });
+}
+
+export function fetchPermissions(token) {
+  return apiFetch("/permissions", { token });
+}
+
+export function createUser(token, payload) {
+  return apiFetch("/users", {
+    token,
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function updateUserAccess(token, id, payload) {
+  return apiFetch(`/users/${id}`, {
+    token,
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function updateUserPermissions(token, id, permissions) {
+  return apiFetch(`/users/${id}/permissions`, {
+    token,
+    method: "PATCH",
+    body: JSON.stringify({ permissions })
+  });
+}
+
+export function deleteUser(token, id) {
+  return apiFetch(`/users/${id}`, {
+    token,
+    method: "DELETE"
+  });
+}
+
+export function updateUserRole(token, id, role) {
+  return apiFetch(`/users/${id}/role`, {
+    token,
+    method: "PATCH",
+    body: JSON.stringify({ role })
+  });
+}
+
+export function fetchSectors(token) {
+  return apiFetch("/sectors", { token });
+}
+
+export function createSector(token, payload) {
+  return apiFetch("/sectors", {
+    token,
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function updateSector(token, id, payload) {
+  return apiFetch(`/sectors/${id}`, {
+    token,
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function updateSectorPermissions(token, id, permissions) {
+  return apiFetch(`/sectors/${id}/permissions`, {
+    token,
+    method: "PATCH",
+    body: JSON.stringify({ permissions })
+  });
+}
+
+export function deleteSector(token, id) {
+  return apiFetch(`/sectors/${id}`, {
+    token,
+    method: "DELETE"
+  });
+}
+
+export function fetchPublicSupportOptions() {
+  return apiFetch("/public/support-options");
+}
+
+export function createPublicServiceOrder(payload) {
+  return apiFetch("/public/service-orders", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function fetchClients(token, params = {}) {
+  const search = new URLSearchParams(params).toString();
+  return apiFetch(`/clients${search ? `?${search}` : ""}`, { token });
+}
+
+export function createClient(token, payload) {
+  return apiFetch("/clients", {
+    token,
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function updateClient(token, id, payload) {
+  return apiFetch(`/clients/${id}`, {
+    token,
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function deleteClient(token, id) {
+  return apiFetch(`/clients/${id}`, {
+    token,
+    method: "DELETE"
+  });
+}
+
+export function importClients(token, csv) {
+  return apiFetch("/clients/import", {
+    token,
+    method: "POST",
+    body: JSON.stringify({ csv })
+  });
+}
+
+export function fetchProducts(token, params = {}) {
+  const search = new URLSearchParams(params).toString();
+  return apiFetch(`/products${search ? `?${search}` : ""}`, { token });
+}
+
+export function createProduct(token, payload) {
+  return apiFetch("/products", {
+    token,
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function updateProduct(token, id, payload) {
+  return apiFetch(`/products/${id}`, {
+    token,
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function deleteProduct(token, id) {
+  return apiFetch(`/products/${id}`, {
+    token,
+    method: "DELETE"
+  });
+}
+
+export function importProducts(token, csv) {
+  return apiFetch("/products/import", {
+    token,
+    method: "POST",
+    body: JSON.stringify({ csv })
+  });
+}
+
+export function fetchServices(token, params = {}) {
+  const search = new URLSearchParams(params).toString();
+  return apiFetch(`/services${search ? `?${search}` : ""}`, { token });
+}
+
+export function createService(token, payload) {
+  return apiFetch("/services", {
+    token,
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function updateService(token, id, payload) {
+  return apiFetch(`/services/${id}`, {
+    token,
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function deleteService(token, id) {
+  return apiFetch(`/services/${id}`, {
+    token,
+    method: "DELETE"
+  });
+}
+
+export function fetchTechnicians(token, params = {}) {
+  const search = new URLSearchParams(params).toString();
+  return apiFetch(`/technicians${search ? `?${search}` : ""}`, { token });
+}
+
+export function createTechnician(token, payload) {
+  return apiFetch("/technicians", {
+    token,
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function updateTechnician(token, id, payload) {
+  return apiFetch(`/technicians/${id}`, {
+    token,
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function deleteTechnician(token, id) {
+  return apiFetch(`/technicians/${id}`, {
+    token,
+    method: "DELETE"
+  });
+}
+
+export function fetchProblemTypes(token, params = {}) {
+  const search = new URLSearchParams(params).toString();
+  return apiFetch(`/problem-types${search ? `?${search}` : ""}`, { token });
+}
+
+export function createProblemType(token, payload) {
+  return apiFetch("/problem-types", {
+    token,
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function updateProblemType(token, id, payload) {
+  return apiFetch(`/problem-types/${id}`, {
+    token,
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function deleteProblemType(token, id) {
+  return apiFetch(`/problem-types/${id}`, {
+    token,
+    method: "DELETE"
+  });
+}
+
+export function fetchPriorityRules(token, params = {}) {
+  const search = new URLSearchParams(params).toString();
+  return apiFetch(`/priority-rules${search ? `?${search}` : ""}`, { token });
+}
+
+export function createPriorityRule(token, payload) {
+  return apiFetch("/priority-rules", {
+    token,
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function updatePriorityRule(token, id, payload) {
+  return apiFetch(`/priority-rules/${id}`, {
+    token,
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function deletePriorityRule(token, id) {
+  return apiFetch(`/priority-rules/${id}`, {
     token,
     method: "DELETE"
   });

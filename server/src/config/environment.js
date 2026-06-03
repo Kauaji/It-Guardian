@@ -1,10 +1,33 @@
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
 dotenv.config();
+dotenv.config({
+  path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../.env")
+});
 
 export const isVercel = process.env.VERCEL === "1";
+export const vercelEnv = process.env.VERCEL_ENV || "";
 export const isProduction = process.env.NODE_ENV === "production";
 export const isProductionLike = isProduction || isVercel;
+
+function isTruthyEnv(value) {
+  return ["1", "true", "yes", "sim"].includes(String(value || "").trim().toLowerCase());
+}
+
+function isFalsyEnv(value) {
+  return ["0", "false", "no", "nao", "não"].includes(String(value || "").trim().toLowerCase());
+}
+
+export function shouldSeedDemoData() {
+  const flag = process.env.ENABLE_DEMO_SEED ?? process.env.IT_GUARDIAN_ENABLE_DEMO_SEED;
+
+  if (isTruthyEnv(flag)) return true;
+  if (isFalsyEnv(flag)) return false;
+
+  return !isProductionLike || vercelEnv === "preview";
+}
 
 export function getFrontendUrl() {
   if (process.env.FRONTEND_URL) return process.env.FRONTEND_URL.replace(/\/$/, "");

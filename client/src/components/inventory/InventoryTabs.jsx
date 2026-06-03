@@ -77,8 +77,8 @@ export default function InventoryTabs({
                 event.stopPropagation();
                 setActivePopoverId(actionsOpen ? null : actionsMenuId);
               }}
-              title="Acoes da aba"
-              aria-label="Acoes da aba"
+              title="Ações da aba"
+              aria-label="Ações da aba"
               aria-expanded={actionsOpen}
             >
               <MoreHorizontal size={15} />
