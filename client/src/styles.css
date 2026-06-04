@@ -1480,36 +1480,39 @@ tbody tr.selected {
 }
 
 .suggestion-board {
-  grid-template-columns: repeat(auto-fill, minmax(220px, 240px));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 280px));
   align-items: start;
 }
 
 .suggestion-card {
-  width: min(100%, 240px);
-  min-height: 184px;
+  width: min(100%, 280px);
+  max-width: 280px;
+  min-height: 214px;
   min-width: 0;
   align-content: space-between;
-  border-radius: 8px;
-  padding: 12px;
-  background:
-    linear-gradient(135deg, rgba(246, 149, 71, 0.13), rgba(255, 255, 255, 0.92) 55%),
-    #ffffff;
+  cursor: default;
 }
 
-.suggestion-card > div:first-child,
+.suggestion-card > div:not(.suggestion-card-badges):not(.suggestion-actions),
+.suggestion-card h3,
 .suggestion-card p,
 .suggestion-card dl {
   display: none;
 }
 
-.suggestion-card h3 {
-  display: -webkit-box;
-  overflow: hidden;
-  color: var(--text-strong);
-  font-size: 0.95rem;
-  line-height: 1.2;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+.suggestion-card .suggestion-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.suggestion-card .suggestion-actions .compact-action {
+  min-height: 32px;
+  border-radius: 8px;
+  padding: 0 9px;
+  font-size: 0.72rem;
+  white-space: nowrap;
 }
 
 .compact-alert-board {
@@ -5121,7 +5124,7 @@ table strong,
   }
 
   .suggestion-board {
-    grid-template-columns: repeat(auto-fill, minmax(220px, 240px));
+    grid-template-columns: repeat(auto-fill, minmax(240px, 280px));
   }
 
   .detail-grid,

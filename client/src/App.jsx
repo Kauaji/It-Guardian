@@ -626,6 +626,8 @@ const suggestionStatusLabels = {
   rejected: "Recusada"
 };
 
+const suggestionCardAccent = "#d97706";
+
 function formatAlertValue(alert) {
   if (alert.value === null || alert.value === undefined) return "Não informado";
   if (["ram", "cpu", "disk", "disk_health", "network"].includes(alert.metric)) return `${alert.value}%`;
@@ -634,6 +636,20 @@ function formatAlertValue(alert) {
     return alert.value === 0 ? "Indisponível" : String(alert.value);
   }
   return String(alert.value);
+}
+
+function formatSuggestionCode(suggestion, index) {
+  const date = new Date(suggestion.createdAt);
+  const year = Number.isNaN(date.getTime()) ? new Date().getFullYear() : date.getFullYear();
+  return `AVISO-${year}-${String(index + 1).padStart(4, "0")}`;
+}
+
+function getSuggestionMachineLabel(suggestion) {
+  if (suggestion.hostName) return suggestion.hostName;
+  if (suggestion.assetName) return suggestion.assetName;
+  if (suggestion.assetId) return suggestion.assetId;
+  const match = String(suggestion.title || "").match(/\bem\s+([A-Z0-9._-]+)$/i);
+  return match?.[1] || "Máquina não vinculada";
 }
 
 function formatAlertThreshold(alert) {
@@ -1079,48 +1095,45 @@ function AlertCenterV2({
                 </select>
               </div>
               <div className="alert-board suggestion-board">
-                {visibleSuggestions.map((suggestion) => (
-                  <article key={suggestion.id} className={`alert-card suggestion-card ${suggestion.suggestedPriority === "critical" ? "critical" : "warning"}`}>
-                    <div>
-                      <span className={`pill ${suggestion.status === "accepted" ? "ok" : suggestion.status === "rejected" ? "danger" : "warning"}`}>
-                        {suggestionStatusLabels[suggestion.status] || suggestion.status}
-                      </span>
-                      <span className={`pill ${suggestion.suggestedPriority === "critical" ? "danger" : "warning"}`}>
-                        {priorityLabels[suggestion.suggestedPriority] || suggestion.suggestedPriority}
-                      </span>
-                    </div>
-                    <h3>{suggestion.title}</h3>
-                    <p>{suggestion.description}</p>
-                    <dl>
-                      <div>
-                        <dt>Máquina</dt>
-                        <dd>{suggestion.hostName || suggestion.assetId || "Não vinculada"}</dd>
+                {visibleSuggestions.map((suggestion, index) => {
+                  const machineLabel = getSuggestionMachineLabel(suggestion);
+                  const priorityLabel = priorityLabels[suggestion.suggestedPriority] || priorityLabels.medium;
+
+                  return (
+                    <article
+                      key={suggestion.id}
+                      className="service-order-card suggestion-card"
+                      style={{
+                        "--service-order-priority-color": suggestionCardAccent,
+                        "--service-order-priority-bg": `color-mix(in srgb, ${suggestionCardAccent} 32%, var(--surface))`
+                      }}
+                      title={suggestion.title}
+                    >
+                      <span>{formatSuggestionCode(suggestion, index)}</span>
+                      <strong title={suggestion.title}>{suggestion.title}</strong>
+                      <small title={machineLabel}>{machineLabel}</small>
+                      <div className="suggestion-card-badges">
+                        <em title={priorityLabel}>{priorityLabel}</em>
+                        <em title="Preventiva">Preventiva</em>
                       </div>
-                      <div>
-                        <dt>Motivo</dt>
-                        <dd>{alertTypeLabels[suggestion.alertType] || suggestion.alertType || "Aviso recorrente"}</dd>
-                      </div>
-                      <div>
-                        <dt>Ocorrências</dt>
-                        <dd>{suggestion.occurrencesCount}</dd>
-                      </div>
-                      <div>
-                        <dt>Criada em</dt>
-                        <dd>{formatDate(suggestion.createdAt)}</dd>
-                      </div>
-                    </dl>
-                    {canManageSuggestions && suggestion.status === "pending" && (
-                      <div className="suggestion-actions">
-                        <button type="button" className="primary-action compact-action" onClick={() => onAcceptSuggestion(suggestion.id)}>
-                          Aceitar e criar OS
-                        </button>
-                        <button type="button" className="danger-action compact-action" onClick={() => onRejectSuggestion(suggestion.id)}>
-                          Recusar
-                        </button>
-                      </div>
-                    )}
-                  </article>
-                ))}
+                      <footer>
+                        <ClipboardList size={14} />
+                        <span title="Sistema">Sistema</span>
+                        <time>{formatDate(suggestion.createdAt)}</time>
+                      </footer>
+                      {canManageSuggestions && suggestion.status === "pending" && (
+                        <div className="suggestion-actions">
+                          <button type="button" className="primary-action compact-action" onClick={() => onAcceptSuggestion(suggestion.id)}>
+                            Aceitar e criar OS
+                          </button>
+                          <button type="button" className="danger-action compact-action" onClick={() => onRejectSuggestion(suggestion.id)}>
+                            Recusar
+                          </button>
+                        </div>
+                      )}
+                    </article>
+                  );
+                })}
                 {!visibleSuggestions.length && <p className="empty">Nenhuma sugestão encontrada para os filtros atuais.</p>}
               </div>
             </section>
