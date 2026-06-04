@@ -206,6 +206,88 @@ export function fetchAlertHistory(token) {
   return apiFetch("/alerts/history", { token });
 }
 
+export function fetchAlertRules(token) {
+  return apiFetch("/alerts/rules", { token });
+}
+
+export function updateAlertRule(token, id, payload) {
+  return apiFetch(`/alerts/rules/${id}`, {
+    token,
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function evaluateAlerts(token) {
+  return apiFetch("/alerts/evaluate", {
+    token,
+    method: "POST"
+  });
+}
+
+export function fetchServiceOrderSuggestions(token) {
+  return apiFetch("/service-order-suggestions", { token });
+}
+
+export function acceptServiceOrderSuggestion(token, id) {
+  return apiFetch(`/service-order-suggestions/${id}/accept`, {
+    token,
+    method: "POST"
+  });
+}
+
+export function rejectServiceOrderSuggestion(token, id, reason = "") {
+  return apiFetch(`/service-order-suggestions/${id}/reject`, {
+    token,
+    method: "POST",
+    body: JSON.stringify({ reason })
+  });
+}
+
+export function fetchMaintenanceScripts(token, params = {}) {
+  const search = new URLSearchParams(params).toString();
+  return apiFetch(`/maintenance-scripts${search ? `?${search}` : ""}`, { token });
+}
+
+export function analyzeMaintenanceScript(token, payload) {
+  return apiFetch("/maintenance-scripts/analyze", {
+    token,
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function createMaintenanceScript(token, payload) {
+  return apiFetch("/maintenance-scripts", {
+    token,
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function updateMaintenanceScript(token, id, payload) {
+  return apiFetch(`/maintenance-scripts/${id}`, {
+    token,
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function deleteMaintenanceScript(token, id) {
+  return apiFetch(`/maintenance-scripts/${id}`, {
+    token,
+    method: "DELETE"
+  });
+}
+
+export function registerMaintenanceScriptSimulation(token, id, payload) {
+  return apiFetch(`/maintenance-scripts/${id}/register-simulation`, {
+    token,
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
 export function acknowledgeAlert(token, id, note = "") {
   return apiFetch(`/alerts/${id}/acknowledge`, {
     token,

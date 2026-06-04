@@ -38,6 +38,25 @@ export const permissionGroups = [
     ]
   },
   {
+    id: "alerts",
+    label: "Avisos",
+    permissions: [
+      { id: "alerts.view", label: "Visualizar avisos" },
+      { id: "alerts.configure", label: "Configurar regras de aviso" },
+      { id: "alerts.manage_suggestions", label: "Gerenciar sugestÃµes de OS" },
+      { id: "service_orders.create_from_alert", label: "Criar OS a partir de aviso" }
+    ]
+  },
+  {
+    id: "scripts",
+    label: "Scripts de manutenção",
+    permissions: [
+      { id: "scripts.view", label: "Visualizar scripts de manutenção" },
+      { id: "scripts.manage", label: "Cadastrar e editar scripts de manutenção" },
+      { id: "scripts.register_simulation", label: "Registrar simulação de script" }
+    ]
+  },
+  {
     id: "settings",
     label: "Configurações",
     permissions: [
@@ -91,6 +110,12 @@ export const roleDefaultPermissions = {
     "service_orders.parts",
     "service_orders.print",
     "service_orders.settings",
+    "alerts.view",
+    "alerts.configure",
+    "alerts.manage_suggestions",
+    "service_orders.create_from_alert",
+    "scripts.view",
+    "scripts.register_simulation",
     "settings.view",
     "settings.appearance"
   ],

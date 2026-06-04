@@ -1,12 +1,23 @@
 import { Router } from "express";
-import { acknowledge, active, history, removeAcknowledgement } from "../controllers/alertController.js";
-import { requireAuth, requireRole } from "../middleware/authMiddleware.js";
+import {
+  acknowledge,
+  active,
+  evaluate,
+  history,
+  removeAcknowledgement,
+  rules,
+  updateRule
+} from "../controllers/alertController.js";
+import { requireAuth, requirePermission, requireRole } from "../middleware/authMiddleware.js";
 
 const router = Router();
 
 router.use(requireAuth);
-router.get("/", active);
-router.get("/history", history);
+router.get("/", requirePermission("alerts.view"), active);
+router.get("/history", requirePermission("alerts.view"), history);
+router.get("/rules", requirePermission("alerts.view"), rules);
+router.patch("/rules/:id", requirePermission("alerts.configure"), updateRule);
+router.post("/evaluate", requirePermission("alerts.manage_suggestions"), evaluate);
 router.post("/:id/acknowledge", requireRole("admin", "operator"), acknowledge);
 router.delete("/:id/acknowledge", requireRole("admin", "operator"), removeAcknowledgement);
 

@@ -11,6 +11,7 @@ import permissionRoutes from "./routes/permissionRoutes.js";
 import sectorRoutes from "./routes/sectorRoutes.js";
 import segmentRoutes from "./routes/segmentRoutes.js";
 import serviceOrderRoutes from "./routes/serviceOrderRoutes.js";
+import serviceOrderSuggestionRoutes from "./routes/serviceOrderSuggestionRoutes.js";
 import serviceOrderSettingsRoutes from "./routes/serviceOrderSettingsRoutes.js";
 import serviceOrderStatusRoutes from "./routes/serviceOrderStatusRoutes.js";
 import clientRoutes from "./routes/clientRoutes.js";
@@ -20,6 +21,7 @@ import technicianRoutes from "./routes/technicianRoutes.js";
 import problemTypeRoutes from "./routes/problemTypeRoutes.js";
 import priorityRuleRoutes from "./routes/priorityRuleRoutes.js";
 import systemSettingsRoutes from "./routes/systemSettingsRoutes.js";
+import maintenanceScriptRoutes from "./routes/maintenanceScriptRoutes.js";
 import publicRoutes from "./routes/publicRoutes.js";
 import { initializeRuntime } from "./bootstrap.js";
 import { getCorsOrigins, isAllowedVercelOrigin } from "./config/environment.js";
@@ -79,6 +81,7 @@ export function createApp({ initializeOnRequest = false } = {}) {
   app.use("/api/sectors", sectorRoutes);
   app.use("/api/segments", segmentRoutes);
   app.use("/api/service-orders", serviceOrderRoutes);
+  app.use("/api/service-order-suggestions", serviceOrderSuggestionRoutes);
   app.use("/api/service-order-settings", serviceOrderSettingsRoutes);
   app.use("/api/service-order-statuses", serviceOrderStatusRoutes);
   app.use("/api/system-settings", systemSettingsRoutes);
@@ -88,6 +91,7 @@ export function createApp({ initializeOnRequest = false } = {}) {
   app.use("/api/technicians", technicianRoutes);
   app.use("/api/problem-types", problemTypeRoutes);
   app.use("/api/priority-rules", priorityRuleRoutes);
+  app.use("/api/maintenance-scripts", maintenanceScriptRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

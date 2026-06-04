@@ -37,27 +37,37 @@ import {
   YAxis
 } from "recharts";
 import {
+  acceptServiceOrderSuggestion,
   acknowledgeAlert,
+  analyzeMaintenanceScript,
+  createMaintenanceScript,
   createManualAsset,
   createSegment,
   createSegmentGroup as createSegmentGroupApi,
   createMonitoringSocket,
   deleteDevice,
+  deleteMaintenanceScript,
   deleteServiceOrder,
   deleteSegment,
   deleteSegmentGroup as deleteSegmentGroupApi,
+  evaluateAlerts,
   fetchAlertHistory,
+  fetchAlertRules,
   fetchAlerts,
   fetchDevice,
   fetchDevices,
+  fetchMaintenanceScripts,
   fetchServiceOrders,
+  fetchServiceOrderSuggestions,
   fetchSegmentGroups,
   fetchSegments,
   fetchSystemSettings,
   login,
   removeAlertAcknowledgement,
+  rejectServiceOrderSuggestion,
   renameSegment,
   register,
+  registerMaintenanceScriptSimulation,
   refreshAssetPing,
   createServiceOrder,
   addServiceOrderHistory,
@@ -67,11 +77,14 @@ import {
   updateSegmentGroup,
   updateDeviceType,
   updateDeviceSegment,
+  updateAlertRule,
+  updateMaintenanceScript,
   updateSystemSettings
 } from "./api.js";
 import AssetPublicView from "./components/inventory/AssetPublicView.jsx";
 import AssetDragCompactOverlay from "./components/inventory/AssetDragCompactOverlay.jsx";
 import BulkAssetLabelPrint from "./components/inventory/BulkAssetLabelPrint.jsx";
+import MaintenanceScriptsPanel from "./components/maintenance/MaintenanceScriptsPanel.jsx";
 import InventoryBoard from "./components/inventory/InventoryBoard.jsx";
 import InventoryTabFormModal from "./components/inventory/InventoryTabFormModal.jsx";
 import ManualAssetForm from "./components/inventory/ManualAssetForm.jsx";
@@ -588,11 +601,53 @@ function DeviceTable({ devices, selectedId, onSelect }) {
   );
 }
 
-function AlertList({ alerts, canAcknowledge, onAcknowledge }) {
+const alertTypeLabels = {
+  ram_high: "Memória RAM acima do limite",
+  cpu_high: "CPU acima do limite",
+  disk_high: "Disco acima do limite",
+  disk_health_low: "Saúde do disco abaixo do limite",
+  machine_offline: "Máquina offline",
+  network_high: "Alto uso de rede",
+  temperature_high: "Temperatura alta",
+  ping_failure: "Falha recorrente em ping",
+  service_unavailable: "Serviço crítico indisponível"
+};
+
+const priorityLabels = {
+  low: "Baixa",
+  medium: "Média",
+  high: "Alta",
+  critical: "Crítica"
+};
+
+const suggestionStatusLabels = {
+  pending: "Pendente",
+  accepted: "Aceita",
+  rejected: "Recusada"
+};
+
+function formatAlertValue(alert) {
+  if (alert.value === null || alert.value === undefined) return "Não informado";
+  if (["ram", "cpu", "disk", "disk_health", "network"].includes(alert.metric)) return `${alert.value}%`;
+  if (alert.metric === "temperature") return `${alert.value} °C`;
+  if (alert.metric === "availability" || alert.metric === "ping" || alert.metric === "service") {
+    return alert.value === 0 ? "Indisponível" : String(alert.value);
+  }
+  return String(alert.value);
+}
+
+function formatAlertThreshold(alert) {
+  if (alert.threshold === null || alert.threshold === undefined) return "Sem limite";
+  if (["ram", "cpu", "disk", "disk_health", "network"].includes(alert.metric)) return `${alert.threshold}%`;
+  if (alert.metric === "temperature") return `${alert.threshold} °C`;
+  return String(alert.threshold);
+}
+
+function AlertList({ alerts }) {
   return (
     <section className="panel alerts-panel">
       <div className="panel-heading">
-        <h2>Alertas ativos</h2>
+        <h2>Avisos ativos</h2>
         <Bell size={18} />
       </div>
       <div className="alert-stack">
@@ -609,16 +664,10 @@ function AlertList({ alerts, canAcknowledge, onAcknowledge }) {
                   Resolvido
                 </small>
               )}
-              {canAcknowledge && !alert.acknowledgement && (
-                <button className="ack-button" onClick={() => onAcknowledge(alert.id)}>
-                  <CheckCircle size={14} />
-                  Resolver
-                </button>
-              )}
             </div>
           </article>
         ))}
-        {!alerts.length && <p className="empty">Nenhum alerta ativo.</p>}
+        {!alerts.length && <p className="empty">Nenhum aviso ativo.</p>}
       </div>
     </section>
   );
@@ -627,104 +676,646 @@ function AlertList({ alerts, canAcknowledge, onAcknowledge }) {
 function AlertCenter({
   alerts,
   history,
+  suggestions,
+  rules,
+  scripts,
+  devices,
+  serviceOrders,
   severityFilter,
   setSeverityFilter,
   statusFilter,
   setStatusFilter,
-  canAcknowledge,
-  onAcknowledge,
-  onRemoveAcknowledgement
+  suggestionStatusFilter,
+  setSuggestionStatusFilter,
+  canViewAlerts,
+  canManageSuggestions,
+  canConfigureAlerts,
+  canViewScripts,
+  canManageScripts,
+  canRegisterScriptSimulation,
+  onEvaluateAlerts,
+  onAcceptSuggestion,
+  onRejectSuggestion,
+  onUpdateRule,
+  onAnalyzeMaintenanceScript,
+  onSaveMaintenanceScript,
+  onDeactivateMaintenanceScript,
+  onRegisterMaintenanceScriptSimulation
 }) {
   const visibleAlerts = history.filter((alert) => {
     const severityMatches = severityFilter === "all" || alert.severity === severityFilter;
     const statusMatches =
       statusFilter === "all" ||
-      (statusFilter === "active" && !isAlertResolved(alert)) ||
-      (statusFilter === "resolved" && isAlertResolved(alert));
+      (statusFilter === "active" && alert.status === "active") ||
+      (statusFilter === "resolved" && alert.status === "resolved");
 
     return severityMatches && statusMatches;
   });
-  const criticalAlerts = history.filter((alert) => alert.severity === "critical").length;
-  const resolvedAlerts = history.filter(isAlertResolved).length;
+  const visibleSuggestions = suggestions.filter((suggestion) =>
+    suggestionStatusFilter === "all" || suggestion.status === suggestionStatusFilter
+  );
+  const criticalAlerts = alerts.filter((alert) => alert.severity === "critical").length;
+  const pendingSuggestions = suggestions.filter((suggestion) => suggestion.status === "pending").length;
+  const acceptedSuggestions = suggestions.filter((suggestion) => suggestion.status === "accepted").length;
+  const recurringAlerts = alerts.filter((alert) => (alert.occurrencesCount || 0) >= 3).length;
 
   return (
     <section className="view-stack">
+      {canViewAlerts && (
+        <>
       <section className="summary-grid compact-summary alerts-summary">
-        <SummaryCard icon={Bell} label="Alertas ativos" value={alerts.length} tone="warning" />
-        <SummaryCard icon={AlertTriangle} label="Criticos" value={criticalAlerts} tone="danger" />
-        <SummaryCard icon={CheckCircle} label="Resolvidos" value={resolvedAlerts} tone="ok" />
+        <SummaryCard icon={Bell} label="Avisos ativos" value={alerts.length} tone="warning" />
+        <SummaryCard icon={AlertTriangle} label="Críticos" value={criticalAlerts} tone="danger" />
+        <SummaryCard icon={ClipboardList} label="Sugestões pendentes" value={pendingSuggestions} tone="warning" />
+        <SummaryCard icon={CheckCircle} label="OS criadas por aviso" value={acceptedSuggestions} tone="ok" />
+        <SummaryCard icon={RefreshCw} label="Avisos recorrentes" value={recurringAlerts} tone="info" />
       </section>
 
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <h2>Central de alertas</h2>
-            <p>Eventos ativos e historico retornados pelo Zabbix</p>
+            <h2>Central de avisos</h2>
+            <p>Avisos simulados e sugestões preventivas de Ordens de Serviço.</p>
           </div>
           <Bell size={18} />
         </div>
         <div className="toolbar inline-toolbar">
           <select value={severityFilter} onChange={(event) => setSeverityFilter(event.target.value)}>
             <option value="all">Todas as severidades</option>
-            <option value="critical">Critico</option>
-            <option value="warning">Atencao</option>
+            <option value="critical">Crítico</option>
+            <option value="warning">Atenção</option>
           </select>
           <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
             <option value="all">Todos os estados</option>
             <option value="active">Ativos</option>
             <option value="resolved">Resolvidos</option>
           </select>
+          {canManageSuggestions && (
+            <button type="button" className="primary-action compact-action" onClick={onEvaluateAlerts}>
+              Avaliar recorrência
+            </button>
+          )}
         </div>
 
         <div className="alert-board">
           {visibleAlerts.map((alert) => (
             <article key={alert.id} className={`alert-card ${alert.severity}`}>
               <div>
-                <span className={`pill ${isAlertResolved(alert) ? "ok" : "warning"}`}>
-                  {isAlertResolved(alert) ? "Resolvido" : "Ativo"}
+                <span className={`pill ${alert.status === "resolved" ? "ok" : "warning"}`}>
+                  {alert.status === "resolved" ? "Resolvido" : "Ativo"}
                 </span>
                 <span className={`pill ${alert.severity === "critical" ? "danger" : "warning"}`}>
-                  {alert.severity === "critical" ? "Critico" : "Atencao"}
+                  {alert.severity === "critical" ? "Crítico" : "Atenção"}
                 </span>
               </div>
               <h3>{alert.title}</h3>
               <p>{alert.description}</p>
               <dl>
                 <div>
-                  <dt>Host</dt>
+                  <dt>Máquina</dt>
                   <dd>{alert.hostName}</dd>
                 </div>
                 <div>
-                  <dt>Inicio</dt>
-                  <dd>{formatDate(alert.startedAt)}</dd>
+                  <dt>Métrica</dt>
+                  <dd>{alert.metric}</dd>
                 </div>
                 <div>
-                  <dt>Resolucao</dt>
-                  <dd>{formatDate(alert.resolvedAt)}</dd>
+                  <dt>Valor</dt>
+                  <dd>{formatAlertValue(alert)}</dd>
+                </div>
+                <div>
+                  <dt>Limite</dt>
+                  <dd>{formatAlertThreshold(alert)}</dd>
+                </div>
+                <div>
+                  <dt>Ocorrências</dt>
+                  <dd>{alert.occurrencesCount || 1}</dd>
+                </div>
+                <div>
+                  <dt>Última ocorrência</dt>
+                  <dd>{formatDate(alert.lastSeenAt || alert.startedAt)}</dd>
                 </div>
               </dl>
-              <div className="resolve-actions" aria-label="Estado de resolucao">
-                {isAlertResolved(alert) && (
-                  <span className="resolve-indicator" title="Resolvido">
-                    <CheckCircle size={17} />
-                  </span>
+            </article>
+          ))}
+          {!visibleAlerts.length && <p className="empty">Nenhum aviso encontrado para os filtros atuais.</p>}
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="panel-heading">
+          <div>
+            <h2>Sugestões de OS</h2>
+            <p>Aviso recorrente só vira Ordem de Serviço quando alguém aceita a sugestão.</p>
+          </div>
+          <ClipboardList size={18} />
+        </div>
+        <div className="toolbar inline-toolbar">
+          <select value={suggestionStatusFilter} onChange={(event) => setSuggestionStatusFilter(event.target.value)}>
+            <option value="all">Todas as sugestões</option>
+            <option value="pending">Pendentes</option>
+            <option value="accepted">Aceitas</option>
+            <option value="rejected">Recusadas</option>
+          </select>
+        </div>
+        <div className="alert-board">
+          {visibleSuggestions.map((suggestion) => (
+            <article key={suggestion.id} className={`alert-card ${suggestion.suggestedPriority === "critical" ? "critical" : "warning"}`}>
+              <div>
+                <span className={`pill ${suggestion.status === "accepted" ? "ok" : suggestion.status === "rejected" ? "danger" : "warning"}`}>
+                  {suggestionStatusLabels[suggestion.status] || suggestion.status}
+                </span>
+                <span className={`pill ${suggestion.suggestedPriority === "critical" ? "danger" : "warning"}`}>
+                  {priorityLabels[suggestion.suggestedPriority] || suggestion.suggestedPriority}
+                </span>
+              </div>
+              <h3>{suggestion.title}</h3>
+              <p>{suggestion.description}</p>
+              <dl>
+                <div>
+                  <dt>Máquina</dt>
+                  <dd>{suggestion.hostName || suggestion.assetId || "Não vinculada"}</dd>
+                </div>
+                <div>
+                  <dt>Motivo</dt>
+                  <dd>{alertTypeLabels[suggestion.alertType] || suggestion.alertType || "Aviso recorrente"}</dd>
+                </div>
+                <div>
+                  <dt>Ocorrências</dt>
+                  <dd>{suggestion.occurrencesCount}</dd>
+                </div>
+                <div>
+                  <dt>Criada em</dt>
+                  <dd>{formatDate(suggestion.createdAt)}</dd>
+                </div>
+                {suggestion.createdServiceOrderId && (
+                  <div>
+                    <dt>OS criada</dt>
+                    <dd>{suggestion.createdServiceOrderId}</dd>
+                  </div>
                 )}
-                {canAcknowledge && alert.status === "active" && !alert.acknowledgement && (
-                  <button className="resolve-icon-button" onClick={() => onAcknowledge(alert.id)} title="Marcar como resolvido">
-                    <CheckCircle size={17} />
+                {suggestion.rejectionReason && (
+                  <div>
+                    <dt>Motivo da recusa</dt>
+                    <dd>{suggestion.rejectionReason}</dd>
+                  </div>
+                )}
+              </dl>
+              {canManageSuggestions && suggestion.status === "pending" && (
+                <div className="suggestion-actions">
+                  <button type="button" className="primary-action compact-action" onClick={() => onAcceptSuggestion(suggestion.id)}>
+                    Aceitar e criar OS
                   </button>
-                )}
-                {canAcknowledge && alert.acknowledgement && (
-                  <button className="resolve-icon-button danger" onClick={() => onRemoveAcknowledgement(alert.id)} title="Remover resolvido">
-                    <XCircle size={17} />
+                  <button type="button" className="danger-action compact-action" onClick={() => onRejectSuggestion(suggestion.id)}>
+                    Recusar
+                  </button>
+                </div>
+              )}
+            </article>
+          ))}
+          {!visibleSuggestions.length && <p className="empty">Nenhuma sugestão encontrada para os filtros atuais.</p>}
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="panel-heading">
+          <div>
+            <h2>Configurações de aviso</h2>
+            <p>Limites e recorrência usados para sugerir Ordens de Serviço.</p>
+          </div>
+          <SettingsIcon size={18} />
+        </div>
+        <div className="settings-table alert-rules-table">
+          <div className="settings-table-head">
+            <span>Tipo</span>
+            <span>Limite</span>
+            <span>Tempo mínimo</span>
+            <span>Recorrência</span>
+            <span>Janela</span>
+            <span>Status</span>
+          </div>
+          {rules.map((rule) => (
+            <div key={rule.id} className="settings-table-row alert-rule-row">
+              <span>{alertTypeLabels[rule.type] || rule.type}</span>
+              <span>
+                <input
+                  type="number"
+                  min="0"
+                  value={rule.threshold ?? ""}
+                  disabled={!canConfigureAlerts}
+                  onChange={(event) => onUpdateRule(rule.id, { threshold: event.target.value })}
+                />
+              </span>
+              <span>
+                <input
+                  type="number"
+                  min="0"
+                  value={rule.durationMinutes}
+                  disabled={!canConfigureAlerts}
+                  onChange={(event) => onUpdateRule(rule.id, { durationMinutes: event.target.value })}
+                />
+              </span>
+              <span>
+                <input
+                  type="number"
+                  min="1"
+                  value={rule.recurrenceCount}
+                  disabled={!canConfigureAlerts}
+                  onChange={(event) => onUpdateRule(rule.id, { recurrenceCount: event.target.value })}
+                />
+              </span>
+              <span>
+                <select
+                  value={rule.recurrenceWindow}
+                  disabled={!canConfigureAlerts}
+                  onChange={(event) => onUpdateRule(rule.id, { recurrenceWindow: event.target.value })}
+                >
+                  <option value="same_day">Mesmo dia</option>
+                  <option value="last_24h">Últimas 24 horas</option>
+                  <option value="custom">Período configurável</option>
+                </select>
+              </span>
+              <span>
+                <label className="inline-check">
+                  <input
+                    type="checkbox"
+                    checked={rule.enabled}
+                    disabled={!canConfigureAlerts}
+                    onChange={(event) => onUpdateRule(rule.id, { enabled: event.target.checked })}
+                  />
+                  Ativa
+                </label>
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+        </>
+      )}
+
+      {canViewScripts && (
+        <MaintenanceScriptsPanel
+          scripts={scripts}
+          devices={devices}
+          serviceOrders={serviceOrders}
+          alerts={alerts}
+          canManage={canManageScripts}
+          canRegisterSimulation={canRegisterScriptSimulation}
+          onAnalyze={onAnalyzeMaintenanceScript}
+          onSave={onSaveMaintenanceScript}
+          onDeactivate={onDeactivateMaintenanceScript}
+          onRegisterSimulation={onRegisterMaintenanceScriptSimulation}
+        />
+      )}
+    </section>
+  );
+}
+
+function AlertCenterV2({
+  alerts,
+  history,
+  suggestions,
+  rules,
+  scripts,
+  devices,
+  serviceOrders,
+  severityFilter,
+  setSeverityFilter,
+  statusFilter,
+  setStatusFilter,
+  suggestionStatusFilter,
+  setSuggestionStatusFilter,
+  canViewAlerts,
+  canManageSuggestions,
+  canConfigureAlerts,
+  canViewScripts,
+  canManageScripts,
+  canRegisterScriptSimulation,
+  onEvaluateAlerts,
+  onAcceptSuggestion,
+  onRejectSuggestion,
+  onUpdateRule,
+  onAnalyzeMaintenanceScript,
+  onSaveMaintenanceScript,
+  onDeactivateMaintenanceScript,
+  onRegisterMaintenanceScriptSimulation
+}) {
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [scriptsOpen, setScriptsOpen] = useState(false);
+  const visibleAlerts = history.filter((alert) => {
+    const severityMatches = severityFilter === "all" || alert.severity === severityFilter;
+    const statusMatches =
+      statusFilter === "all" ||
+      (statusFilter === "active" && alert.status === "active") ||
+      (statusFilter === "resolved" && alert.status === "resolved");
+
+    return severityMatches && statusMatches;
+  });
+  const visibleSuggestions = suggestions.filter((suggestion) =>
+    suggestionStatusFilter === "all" || suggestion.status === suggestionStatusFilter
+  );
+  const criticalAlerts = alerts.filter((alert) => alert.severity === "critical").length;
+  const pendingSuggestions = suggestions.filter((suggestion) => suggestion.status === "pending").length;
+  const acceptedSuggestions = suggestions.filter((suggestion) => suggestion.status === "accepted").length;
+  const recurringAlerts = alerts.filter((alert) => (alert.occurrencesCount || 0) >= 3).length;
+  const activeScripts = scripts.filter((script) => script.active !== false);
+  const canOpenSettings = canConfigureAlerts || canManageScripts;
+
+  async function handleQuickScriptSimulation(script) {
+    const baseConfirmation =
+      "Esta ação apenas registrará uma simulação/intenção de execução. Nenhum comando será executado na máquina ou no servidor.";
+    const highRisk = script.riskLevel === "high" || script.riskLevel === "critical";
+
+    if (!window.confirm(baseConfirmation)) return;
+
+    if (highRisk) {
+      const riskConfirmation =
+        "Este script foi marcado como alto risco. A execução real não está disponível nesta versão. Deseja apenas registrar a simulação?";
+      if (!window.confirm(riskConfirmation)) return;
+    }
+
+    await onRegisterMaintenanceScriptSimulation(script.id, {
+      mode: "simulated",
+      confirmed: true,
+      riskAcknowledged: highRisk,
+      notes: "Simulação registrada pela tela de Avisos."
+    });
+  }
+
+  return (
+    <section className="view-stack alerts-view-v2">
+      {canViewAlerts && (
+        <>
+          <div className="alerts-view-header">
+            <section className="summary-grid compact-summary alerts-summary">
+              <SummaryCard icon={Bell} label="Avisos ativos" value={alerts.length} tone="warning" />
+              <SummaryCard icon={AlertTriangle} label="Críticos" value={criticalAlerts} tone="danger" />
+              <SummaryCard icon={ClipboardList} label="Sugestões pendentes" value={pendingSuggestions} tone="warning" />
+              <SummaryCard icon={CheckCircle} label="OS criadas por aviso" value={acceptedSuggestions} tone="ok" />
+              <SummaryCard icon={RefreshCw} label="Avisos recorrentes" value={recurringAlerts} tone="info" />
+            </section>
+            {canOpenSettings && (
+              <button type="button" className="icon-button alerts-settings-trigger" onClick={() => setSettingsOpen(true)} title="Configurações de aviso">
+                <SettingsIcon size={18} />
+              </button>
+            )}
+          </div>
+
+          <section className="alerts-workspace-grid">
+            <section className="panel suggestions-panel">
+              <div className="panel-heading">
+                <div>
+                  <h2>Sugestões de OS</h2>
+                  <p>Aviso recorrente só vira Ordem de Serviço quando alguém aceita a sugestão.</p>
+                </div>
+                <ClipboardList size={18} />
+              </div>
+              <div className="toolbar inline-toolbar">
+                <select value={suggestionStatusFilter} onChange={(event) => setSuggestionStatusFilter(event.target.value)}>
+                  <option value="all">Todas as sugestões</option>
+                  <option value="pending">Pendentes</option>
+                  <option value="accepted">Aceitas</option>
+                  <option value="rejected">Recusadas</option>
+                </select>
+              </div>
+              <div className="alert-board suggestion-board">
+                {visibleSuggestions.map((suggestion) => (
+                  <article key={suggestion.id} className={`alert-card suggestion-card ${suggestion.suggestedPriority === "critical" ? "critical" : "warning"}`}>
+                    <div>
+                      <span className={`pill ${suggestion.status === "accepted" ? "ok" : suggestion.status === "rejected" ? "danger" : "warning"}`}>
+                        {suggestionStatusLabels[suggestion.status] || suggestion.status}
+                      </span>
+                      <span className={`pill ${suggestion.suggestedPriority === "critical" ? "danger" : "warning"}`}>
+                        {priorityLabels[suggestion.suggestedPriority] || suggestion.suggestedPriority}
+                      </span>
+                    </div>
+                    <h3>{suggestion.title}</h3>
+                    <p>{suggestion.description}</p>
+                    <dl>
+                      <div>
+                        <dt>Máquina</dt>
+                        <dd>{suggestion.hostName || suggestion.assetId || "Não vinculada"}</dd>
+                      </div>
+                      <div>
+                        <dt>Motivo</dt>
+                        <dd>{alertTypeLabels[suggestion.alertType] || suggestion.alertType || "Aviso recorrente"}</dd>
+                      </div>
+                      <div>
+                        <dt>Ocorrências</dt>
+                        <dd>{suggestion.occurrencesCount}</dd>
+                      </div>
+                      <div>
+                        <dt>Criada em</dt>
+                        <dd>{formatDate(suggestion.createdAt)}</dd>
+                      </div>
+                    </dl>
+                    {canManageSuggestions && suggestion.status === "pending" && (
+                      <div className="suggestion-actions">
+                        <button type="button" className="primary-action compact-action" onClick={() => onAcceptSuggestion(suggestion.id)}>
+                          Aceitar e criar OS
+                        </button>
+                        <button type="button" className="danger-action compact-action" onClick={() => onRejectSuggestion(suggestion.id)}>
+                          Recusar
+                        </button>
+                      </div>
+                    )}
+                  </article>
+                ))}
+                {!visibleSuggestions.length && <p className="empty">Nenhuma sugestão encontrada para os filtros atuais.</p>}
+              </div>
+            </section>
+
+            <section className="panel alerts-compact-panel">
+              <div className="panel-heading">
+                <div>
+                  <h2>Central de avisos</h2>
+                  <p>Resumo dos avisos simulados.</p>
+                </div>
+                <Bell size={18} />
+              </div>
+              <div className="toolbar inline-toolbar">
+                <select value={severityFilter} onChange={(event) => setSeverityFilter(event.target.value)}>
+                  <option value="all">Todas</option>
+                  <option value="critical">Críticos</option>
+                  <option value="warning">Atenção</option>
+                </select>
+                <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                  <option value="all">Todos</option>
+                  <option value="active">Ativos</option>
+                  <option value="resolved">Resolvidos</option>
+                </select>
+                {canManageSuggestions && (
+                  <button type="button" className="primary-action compact-action" onClick={onEvaluateAlerts}>
+                    Avaliar
                   </button>
                 )}
               </div>
-            </article>
-          ))}
-          {!visibleAlerts.length && <p className="empty">Nenhum alerta encontrado para os filtros atuais.</p>}
+              <div className="alert-board compact-alert-board">
+                {visibleAlerts.map((alert) => (
+                  <article key={alert.id} className={`alert-card compact-alert-card ${alert.severity}`}>
+                    <div>
+                      <span className={`pill ${alert.status === "resolved" ? "ok" : "warning"}`}>
+                        {alert.status === "resolved" ? "Resolvido" : "Ativo"}
+                      </span>
+                      <span className={`pill ${alert.severity === "critical" ? "danger" : "warning"}`}>
+                        {alert.severity === "critical" ? "Crítico" : "Atenção"}
+                      </span>
+                    </div>
+                    <h3>{alert.title}</h3>
+                    <p>{alert.hostName} · {formatAlertValue(alert)}</p>
+                    <small>{alertTypeLabels[alert.type] || alert.type || alert.metric}</small>
+                  </article>
+                ))}
+                {!visibleAlerts.length && <p className="empty">Nenhum aviso encontrado para os filtros atuais.</p>}
+              </div>
+            </section>
+          </section>
+        </>
+      )}
+
+      {canViewScripts && (
+        <section className="panel script-quick-panel">
+          <div className="panel-heading">
+            <div>
+              <h2>Scripts disponíveis</h2>
+              <p>Registro manual de simulação. Nenhum comando será executado.</p>
+            </div>
+            <button type="button" className="secondary-action compact-action" onClick={() => setScriptsOpen((current) => !current)}>
+              {scriptsOpen ? "Ocultar scripts" : "Mostrar scripts"}
+            </button>
+          </div>
+          {scriptsOpen && (
+            <div className="script-quick-list">
+              {activeScripts.map((script) => (
+                <article key={script.id} className={`script-quick-card ${script.riskLevel}`}>
+                  <div>
+                    <strong>{script.name}</strong>
+                    <span>{script.estimatedSummary || "Resumo não informado."}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="primary-action compact-action"
+                    disabled={!canRegisterScriptSimulation}
+                    onClick={() => handleQuickScriptSimulation(script)}
+                  >
+                    Registrar simulação
+                  </button>
+                </article>
+              ))}
+              {!activeScripts.length && <p className="empty">Nenhum script ativo cadastrado.</p>}
+            </div>
+          )}
+        </section>
+      )}
+
+      {settingsOpen && (
+        <div className="modal-backdrop alert-settings-backdrop" onMouseDown={() => setSettingsOpen(false)}>
+          <section className="modal-panel alert-settings-modal" onMouseDown={(event) => event.stopPropagation()}>
+            <header className="alert-settings-modal-header">
+              <div>
+                <span>AVISOS</span>
+                <h2>Configurações de aviso</h2>
+                <p>Regras de recorrência, limites e cadastro seguro de scripts de manutenção.</p>
+              </div>
+              <button type="button" className="icon-button" onClick={() => setSettingsOpen(false)}>
+                <XCircle size={18} />
+              </button>
+            </header>
+
+            {canViewAlerts && (
+              <section className="panel alert-settings-section">
+                <div className="panel-heading">
+                  <div>
+                    <h2>Regras de aviso</h2>
+                    <p>Limites usados para sugerir Ordens de Serviço.</p>
+                  </div>
+                  <SettingsIcon size={18} />
+                </div>
+                <div className="settings-table alert-rules-table">
+                  <div className="settings-table-head">
+                    <span>Tipo</span>
+                    <span>Limite</span>
+                    <span>Tempo mínimo</span>
+                    <span>Recorrência</span>
+                    <span>Janela</span>
+                    <span>Status</span>
+                  </div>
+                  {rules.map((rule) => (
+                    <div key={rule.id} className="settings-table-row alert-rule-row">
+                      <span>{alertTypeLabels[rule.type] || rule.type}</span>
+                      <span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={rule.threshold ?? ""}
+                          disabled={!canConfigureAlerts}
+                          onChange={(event) => onUpdateRule(rule.id, { threshold: event.target.value })}
+                        />
+                      </span>
+                      <span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={rule.durationMinutes}
+                          disabled={!canConfigureAlerts}
+                          onChange={(event) => onUpdateRule(rule.id, { durationMinutes: event.target.value })}
+                        />
+                      </span>
+                      <span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={rule.recurrenceCount}
+                          disabled={!canConfigureAlerts}
+                          onChange={(event) => onUpdateRule(rule.id, { recurrenceCount: event.target.value })}
+                        />
+                      </span>
+                      <span>
+                        <select
+                          value={rule.recurrenceWindow}
+                          disabled={!canConfigureAlerts}
+                          onChange={(event) => onUpdateRule(rule.id, { recurrenceWindow: event.target.value })}
+                        >
+                          <option value="same_day">Mesmo dia</option>
+                          <option value="last_24h">Últimas 24 horas</option>
+                          <option value="custom">Período configurável</option>
+                        </select>
+                      </span>
+                      <span>
+                        <label className="inline-check">
+                          <input
+                            type="checkbox"
+                            checked={rule.enabled}
+                            disabled={!canConfigureAlerts}
+                            onChange={(event) => onUpdateRule(rule.id, { enabled: event.target.checked })}
+                          />
+                          Ativa
+                        </label>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {canViewScripts && (
+              <MaintenanceScriptsPanel
+                scripts={scripts}
+                devices={devices}
+                serviceOrders={serviceOrders}
+                alerts={alerts}
+                canManage={canManageScripts}
+                canRegisterSimulation={canRegisterScriptSimulation}
+                showSimulation={false}
+                onAnalyze={onAnalyzeMaintenanceScript}
+                onSave={onSaveMaintenanceScript}
+                onDeactivate={onDeactivateMaintenanceScript}
+                onRegisterSimulation={onRegisterMaintenanceScriptSimulation}
+              />
+            )}
+          </section>
         </div>
-      </section>
+      )}
     </section>
   );
 }
@@ -830,6 +1421,9 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   const [summary, setSummary] = useState(null);
   const [alerts, setAlerts] = useState([]);
   const [history, setHistory] = useState([]);
+  const [alertRules, setAlertRules] = useState([]);
+  const [serviceOrderSuggestions, setServiceOrderSuggestions] = useState([]);
+  const [maintenanceScripts, setMaintenanceScripts] = useState([]);
   const [serviceOrders, setServiceOrders] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [selectedDevice, setSelectedDevice] = useState(null);
@@ -838,6 +1432,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   const [status, setStatus] = useState("");
   const [severityFilter, setSeverityFilter] = useState("all");
   const [alertStatusFilter, setAlertStatusFilter] = useState("all");
+  const [suggestionStatusFilter, setSuggestionStatusFilter] = useState("all");
   const [inventorySearch, setInventorySearch] = useState("");
   const [selectedInventoryGroup, setSelectedInventoryGroup] = useState("all");
   const [selectedInventorySegment, setSelectedInventorySegment] = useState("all");
@@ -891,7 +1486,8 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
   const canViewDashboard = hasPermission(user, "dashboard.view");
-  const canViewAlerts = canViewDashboard;
+  const canViewAlerts = hasPermission(user, "alerts.view");
+  const canViewScripts = hasPermission(user, "scripts.view");
   const canViewInventory = hasPermission(user, "inventory.view");
   const canViewMachine = hasPermission(user, "inventory.view_machine");
   const canViewServiceOrders = hasPermission(user, "service_orders.view");
@@ -903,12 +1499,17 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   const permittedViewIds = useMemo(() => {
     const views = [];
     if (canViewDashboard) views.push("dashboard");
-    if (canViewAlerts) views.push("alerts");
+    if (canViewAlerts || canViewScripts) views.push("alerts");
     if (canViewServiceOrders) views.push("service-orders");
     if (canViewInventory) views.push("inventory");
     return views;
-  }, [canViewAlerts, canViewDashboard, canViewInventory, canViewServiceOrders]);
-  const canAcknowledge = canViewAlerts && ["admin", "operator"].includes(user.role);
+  }, [canViewAlerts, canViewDashboard, canViewInventory, canViewScripts, canViewServiceOrders]);
+  const canConfigureAlerts = hasPermission(user, "alerts.configure");
+  const canManageAlertSuggestions =
+    hasPermission(user, "alerts.manage_suggestions") &&
+    hasPermission(user, "service_orders.create_from_alert");
+  const canManageScripts = hasPermission(user, "scripts.manage");
+  const canRegisterScriptSimulation = hasPermission(user, "scripts.register_simulation");
   const canManageInventory =
     hasPermission(user, "inventory.create_asset") ||
     hasPermission(user, "inventory.edit_asset") ||
@@ -934,10 +1535,11 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     };
   }, []);
 
-  function saveInventoryTabs(nextTabs) {
+  function saveInventoryTabs(updater) {
+    const nextTabs = typeof updater === "function" ? updater(inventoryTabs) : updater;
     const normalized = normalizeInventoryTabs(nextTabs);
-    setInventoryTabs(normalized);
     localStorage.setItem(inventoryTabsKey, JSON.stringify(normalized));
+    setInventoryTabs(normalized);
   }
 
   function saveInventoryTabMeta(updater) {
@@ -1219,6 +1821,9 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
         groupData,
         activeAlertData,
         alertHistoryData,
+        alertRuleData,
+        suggestionData,
+        maintenanceScriptData,
         serviceOrderData,
         systemSettingsData
       ] = await Promise.all([
@@ -1228,6 +1833,9 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
         canViewInventory ? fetchSegmentGroups(token) : Promise.resolve({ groups: [] }),
         canViewAlerts ? fetchAlerts(token) : Promise.resolve({ alerts: [] }),
         canViewAlerts ? fetchAlertHistory(token) : Promise.resolve({ alerts: [] }),
+        canViewAlerts ? fetchAlertRules(token) : Promise.resolve({ rules: [] }),
+        canViewAlerts ? fetchServiceOrderSuggestions(token) : Promise.resolve({ suggestions: [] }),
+        canViewScripts ? fetchMaintenanceScripts(token) : Promise.resolve({ scripts: [] }),
         canViewServiceOrders ? fetchServiceOrders(token) : Promise.resolve({ serviceOrders: [] }),
         fetchSystemSettings(token).catch(() => ({ settings: { systemMode } }))
       ]);
@@ -1260,6 +1868,9 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
       setSummary(deviceData.summary);
       setAlerts(activeAlertData.alerts);
       setHistory(alertHistoryData.alerts);
+      setAlertRules(alertRuleData.rules || []);
+      setServiceOrderSuggestions(suggestionData.suggestions || []);
+      setMaintenanceScripts(maintenanceScriptData.scripts || []);
       setServiceOrders(serviceOrderData.serviceOrders || []);
       if (systemSettingsData.settings?.systemMode) {
         const nextMode = systemSettingsData.settings.systemMode === "business" ? "business" : "local";
@@ -1284,9 +1895,9 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
 
       if (
         !silent &&
-        activeAlertData.alerts.some((alert) => alert.severity === "critical" && !alert.acknowledgement)
+        activeAlertData.alerts.some((alert) => alert.severity === "critical")
       ) {
-        notify("Existem alertas criticos pendentes.", "danger");
+        notify("Existem avisos críticos pendentes.", "danger");
       }
     } catch (error) {
       notify(error.message, "danger");
@@ -1419,6 +2030,109 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
       await loadData(true);
     } catch (error) {
       notify(error.message, "danger");
+    }
+  }
+
+  async function handleEvaluateAlerts() {
+    try {
+      const result = await evaluateAlerts(token);
+      setAlerts(result.alerts || []);
+      setAlertRules(result.rules || []);
+      setServiceOrderSuggestions(result.suggestions || []);
+      const created = result.createdSuggestions?.length || 0;
+      notify(
+        created
+          ? `${created} sugestão(ões) de OS criada(s) a partir dos avisos.`
+          : "Avisos avaliados. Nenhuma nova sugestão foi necessária.",
+        "ok"
+      );
+    } catch (error) {
+      notify(error.message, "danger");
+    }
+  }
+
+  async function handleAcceptSuggestion(suggestionId) {
+    try {
+      const result = await acceptServiceOrderSuggestion(token, suggestionId);
+      notify(`OS criada a partir do aviso: ${result.serviceOrder?.number || "registrada"}.`, "ok");
+      await loadData(true);
+    } catch (error) {
+      notify(error.message, "danger");
+    }
+  }
+
+  async function handleRejectSuggestion(suggestionId) {
+    const reason = window.prompt("Motivo da recusa (opcional):") || "";
+    try {
+      await rejectServiceOrderSuggestion(token, suggestionId, reason);
+      notify("Sugestão de OS recusada.", "ok");
+      await loadData(true);
+    } catch (error) {
+      notify(error.message, "danger");
+    }
+  }
+
+  async function handleUpdateAlertRule(ruleId, payload) {
+    try {
+      const response = await updateAlertRule(token, ruleId, payload);
+      setAlertRules((current) =>
+        current.map((rule) => (rule.id === ruleId ? response.rule : rule))
+      );
+    } catch (error) {
+      notify(error.message, "danger");
+    }
+  }
+
+  async function handleAnalyzeMaintenanceScript(payload) {
+    try {
+      const response = await analyzeMaintenanceScript(token, payload);
+      notify("Resumo estimado gerado. Revise manualmente antes de salvar.", "ok");
+      return response.analysis;
+    } catch (error) {
+      notify(error.message, "danger");
+      throw error;
+    }
+  }
+
+  async function handleSaveMaintenanceScript(payload, scriptId = null) {
+    try {
+      const response = scriptId
+        ? await updateMaintenanceScript(token, scriptId, payload)
+        : await createMaintenanceScript(token, payload);
+      setMaintenanceScripts((current) => {
+        const exists = current.some((script) => script.id === response.script.id);
+        return exists
+          ? current.map((script) => (script.id === response.script.id ? response.script : script))
+          : [response.script, ...current];
+      });
+      notify(scriptId ? "Script de manutenção atualizado." : "Script de manutenção cadastrado.", "ok");
+    } catch (error) {
+      notify(error.message, "danger");
+      throw error;
+    }
+  }
+
+  async function handleDeactivateMaintenanceScript(scriptId) {
+    try {
+      const response = await deleteMaintenanceScript(token, scriptId);
+      setMaintenanceScripts((current) =>
+        current.map((script) => (script.id === response.script.id ? response.script : script))
+      );
+      notify("Script de manutenção desativado.", "ok");
+    } catch (error) {
+      notify(error.message, "danger");
+      throw error;
+    }
+  }
+
+  async function handleRegisterMaintenanceScriptSimulation(scriptId, payload) {
+    try {
+      await registerMaintenanceScriptSimulation(token, scriptId, payload);
+      notify("Simulação registrada. Nenhum comando foi executado.", "ok");
+      await loadData(true);
+    } catch (error) {
+      notify(error.message, "danger");
+      throw error;
     }
   }
 
@@ -2955,7 +3669,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
       order: inventoryTabs.length
     };
 
-    saveInventoryTabs([...inventoryTabs, nextTab]);
+    saveInventoryTabs((current) => [...current, nextTab]);
     setActiveInventoryTabId(nextTab.id);
     notify(`Ambiente ${nextTab.name} criado.`, "ok");
   }
@@ -2978,7 +3692,9 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
       return;
     }
 
-    saveInventoryTabs(inventoryTabs.map((item) => (item.id === tabId ? { ...item, name: cleanName } : item)));
+    saveInventoryTabs((current) =>
+      current.map((item) => (item.id === tabId ? { ...item, name: cleanName } : item))
+    );
     setInventoryTabForm(null);
     notify("Ambiente renomeado.", "ok");
   }
@@ -3019,7 +3735,9 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   }
 
   function changeInventoryTabColor(tabId, color) {
-    saveInventoryTabs(inventoryTabs.map((tab) => (tab.id === tabId ? { ...tab, color } : tab)));
+    saveInventoryTabs((current) =>
+      current.map((tab) => (tab.id === tabId ? { ...tab, color } : tab))
+    );
   }
 
   function moveGroupOrder(groupId, direction) {
@@ -3124,9 +3842,9 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
               <Activity size={18} /> <span className="nav-label">Dashboard</span>
             </button>
           )}
-          {canViewAlerts && (
+          {(canViewAlerts || canViewScripts) && (
             <button className={activeView === "alerts" ? "nav-active" : ""} onClick={() => setActiveView("alerts")}>
-              <AlertTriangle size={18} /> <span className="nav-label">Alertas</span>
+              <AlertTriangle size={18} /> <span className="nav-label">Avisos</span>
             </button>
           )}
           {canViewServiceOrders && (
@@ -3196,7 +3914,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
                 <SummaryCard icon={Server} label="Dispositivos" value={summary.totalDevices} />
                 <SummaryCard icon={ShieldCheck} label="Online" value={summary.online} tone="ok" />
                 <SummaryCard icon={WifiOff} label="Erro" value={summary.offline} tone="danger" />
-                <SummaryCard icon={AlertTriangle} label="Criticos" value={summary.criticalAlerts} tone="danger" />
+                <SummaryCard icon={AlertTriangle} label="Críticos" value={summary.criticalAlerts} tone="danger" />
               </section>
             )}
 
@@ -3221,14 +3939,14 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
                 </div>
                 <DeviceTable devices={devices} selectedId={selectedId} onSelect={selectDevice} />
               </section>
-              <AlertList alerts={alerts} canAcknowledge={canAcknowledge} onAcknowledge={handleAcknowledge} />
+              <AlertList alerts={alerts} />
             </section>
 
             <section className="bottom-grid">
               <DeviceDetails device={selectedDevice} />
               <section className="panel history-panel">
                 <div className="panel-heading">
-                  <h2>Histórico de alertas</h2>
+                  <h2>Histórico de avisos</h2>
                   <Network size={18} />
                 </div>
                 <div className="chart-box compact-chart">
@@ -3256,17 +3974,35 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
           </>
         )}
 
-        {activeView === "alerts" && canViewAlerts && (
-          <AlertCenter
+        {activeView === "alerts" && (canViewAlerts || canViewScripts) && (
+          <AlertCenterV2
             alerts={alerts}
             history={history}
+            suggestions={serviceOrderSuggestions}
+            rules={alertRules}
+            scripts={maintenanceScripts}
+            devices={allDevices}
+            serviceOrders={serviceOrders}
             severityFilter={severityFilter}
             setSeverityFilter={setSeverityFilter}
             statusFilter={alertStatusFilter}
             setStatusFilter={setAlertStatusFilter}
-            canAcknowledge={canAcknowledge}
-            onAcknowledge={handleAcknowledge}
-            onRemoveAcknowledgement={handleRemoveAcknowledgement}
+            suggestionStatusFilter={suggestionStatusFilter}
+            setSuggestionStatusFilter={setSuggestionStatusFilter}
+            canViewAlerts={canViewAlerts}
+            canManageSuggestions={canManageAlertSuggestions}
+            canConfigureAlerts={canConfigureAlerts}
+            canViewScripts={canViewScripts}
+            canManageScripts={canManageScripts}
+            canRegisterScriptSimulation={canRegisterScriptSimulation}
+            onEvaluateAlerts={handleEvaluateAlerts}
+            onAcceptSuggestion={handleAcceptSuggestion}
+            onRejectSuggestion={handleRejectSuggestion}
+            onUpdateRule={handleUpdateAlertRule}
+            onAnalyzeMaintenanceScript={handleAnalyzeMaintenanceScript}
+            onSaveMaintenanceScript={handleSaveMaintenanceScript}
+            onDeactivateMaintenanceScript={handleDeactivateMaintenanceScript}
+            onRegisterMaintenanceScriptSimulation={handleRegisterMaintenanceScriptSimulation}
           />
         )}
 

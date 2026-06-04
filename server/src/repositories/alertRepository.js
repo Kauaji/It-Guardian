@@ -1,0 +1,431 @@
+import { randomUUID } from "node:crypto";
+import { query } from "../database.js";
+
+export const defaultAlertRules = [
+  {
+    id: "rule-ram-high",
+    type: "ram_high",
+    metric: "ram",
+    threshold: 90,
+    durationMinutes: 5,
+    recurrenceCount: 3,
+    recurrenceWindow: "same_day",
+    createsSuggestion: true,
+    enabled: true
+  },
+  {
+    id: "rule-cpu-high",
+    type: "cpu_high",
+    metric: "cpu",
+    threshold: 90,
+    durationMinutes: 5,
+    recurrenceCount: 3,
+    recurrenceWindow: "same_day",
+    createsSuggestion: true,
+    enabled: true
+  },
+  {
+    id: "rule-disk-high",
+    type: "disk_high",
+    metric: "disk",
+    threshold: 90,
+    durationMinutes: 5,
+    recurrenceCount: 3,
+    recurrenceWindow: "same_day",
+    createsSuggestion: true,
+    enabled: true
+  },
+  {
+    id: "rule-disk-health-low",
+    type: "disk_health_low",
+    metric: "disk_health",
+    threshold: 80,
+    durationMinutes: 0,
+    recurrenceCount: 1,
+    recurrenceWindow: "last_24h",
+    createsSuggestion: true,
+    enabled: true
+  },
+  {
+    id: "rule-machine-offline",
+    type: "machine_offline",
+    metric: "availability",
+    threshold: 0,
+    durationMinutes: 5,
+    recurrenceCount: 2,
+    recurrenceWindow: "same_day",
+    createsSuggestion: true,
+    enabled: true
+  },
+  {
+    id: "rule-network-high",
+    type: "network_high",
+    metric: "network",
+    threshold: 85,
+    durationMinutes: 5,
+    recurrenceCount: 3,
+    recurrenceWindow: "same_day",
+    createsSuggestion: true,
+    enabled: true
+  },
+  {
+    id: "rule-temperature-high",
+    type: "temperature_high",
+    metric: "temperature",
+    threshold: 80,
+    durationMinutes: 5,
+    recurrenceCount: 2,
+    recurrenceWindow: "last_24h",
+    createsSuggestion: true,
+    enabled: true
+  },
+  {
+    id: "rule-ping-failure",
+    type: "ping_failure",
+    metric: "ping",
+    threshold: 0,
+    durationMinutes: 5,
+    recurrenceCount: 3,
+    recurrenceWindow: "same_day",
+    createsSuggestion: true,
+    enabled: true
+  },
+  {
+    id: "rule-service-unavailable",
+    type: "service_unavailable",
+    metric: "service",
+    threshold: 0,
+    durationMinutes: 5,
+    recurrenceCount: 2,
+    recurrenceWindow: "last_24h",
+    createsSuggestion: true,
+    enabled: true
+  }
+];
+
+function toNumber(value, fallback = null) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function normalizeBoolean(value, fallback = true) {
+  if (typeof value === "boolean") return value;
+  if (value === "false") return false;
+  if (value === "true") return true;
+  return fallback;
+}
+
+function fromRuleRow(row) {
+  return {
+    id: row.id,
+    type: row.type,
+    metric: row.metric,
+    threshold: toNumber(row.threshold),
+    durationMinutes: toNumber(row.duration_minutes, 0),
+    recurrenceCount: toNumber(row.recurrence_count, 1),
+    recurrenceWindow: row.recurrence_window,
+    createsSuggestion: row.creates_suggestion,
+    enabled: row.enabled,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
+function fromAlertRow(row) {
+  return {
+    id: row.id,
+    hostId: row.asset_id,
+    assetId: row.asset_id,
+    hostName: row.host_name,
+    type: row.type,
+    metric: row.metric,
+    title: row.title,
+    description: row.description,
+    severity: row.severity,
+    value: toNumber(row.value),
+    threshold: toNumber(row.threshold),
+    status: row.status,
+    firstSeenAt: row.first_seen_at,
+    lastSeenAt: row.last_seen_at,
+    startedAt: row.first_seen_at,
+    resolvedAt: row.status === "resolved" ? row.last_seen_at : null,
+    occurrencesCount: toNumber(row.occurrences_count, 1),
+    source: row.source,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
+function fromSuggestionRow(row) {
+  return {
+    id: row.id,
+    alertId: row.alert_id,
+    assetId: row.asset_id,
+    title: row.title,
+    description: row.description,
+    suggestedPriority: row.suggested_priority,
+    suggestedServiceId: row.suggested_service_id,
+    suggestedProblemTypeId: row.suggested_problem_type_id,
+    occurrencesCount: toNumber(row.occurrences_count, 1),
+    status: row.status,
+    acceptedBy: row.accepted_by,
+    acceptedAt: row.accepted_at,
+    rejectedBy: row.rejected_by,
+    rejectedAt: row.rejected_at,
+    rejectionReason: row.rejection_reason,
+    createdServiceOrderId: row.created_service_order_id,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
+export async function ensureDefaultAlertRules() {
+  for (const rule of defaultAlertRules) {
+    await query(
+      `
+        INSERT INTO alert_rules (
+          id, type, metric, threshold, duration_minutes, recurrence_count,
+          recurrence_window, creates_suggestion, enabled
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        ON CONFLICT (id) DO NOTHING
+      `,
+      [
+        rule.id,
+        rule.type,
+        rule.metric,
+        rule.threshold,
+        rule.durationMinutes,
+        rule.recurrenceCount,
+        rule.recurrenceWindow,
+        rule.createsSuggestion,
+        rule.enabled
+      ]
+    );
+  }
+}
+
+export async function listAlertRules() {
+  await ensureDefaultAlertRules();
+  const result = await query(`
+    SELECT *
+    FROM alert_rules
+    ORDER BY type ASC
+  `);
+  return result.rows.map(fromRuleRow);
+}
+
+export async function updateAlertRule(id, payload = {}) {
+  await ensureDefaultAlertRules();
+  const currentResult = await query("SELECT * FROM alert_rules WHERE id = $1", [id]);
+  const current = currentResult.rows[0];
+
+  if (!current) {
+    const error = new Error("Regra de aviso não encontrada.");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const threshold = Object.prototype.hasOwnProperty.call(payload, "threshold")
+    ? toNumber(payload.threshold, current.threshold)
+    : current.threshold;
+  const durationMinutes = Object.prototype.hasOwnProperty.call(payload, "durationMinutes")
+    ? Math.max(0, Math.round(toNumber(payload.durationMinutes, current.duration_minutes)))
+    : current.duration_minutes;
+  const recurrenceCount = Object.prototype.hasOwnProperty.call(payload, "recurrenceCount")
+    ? Math.max(1, Math.round(toNumber(payload.recurrenceCount, current.recurrence_count)))
+    : current.recurrence_count;
+  const recurrenceWindow = String(payload.recurrenceWindow || current.recurrence_window || "same_day").trim();
+  const createsSuggestion = normalizeBoolean(payload.createsSuggestion, current.creates_suggestion);
+  const enabled = normalizeBoolean(payload.enabled, current.enabled);
+
+  const result = await query(
+    `
+      UPDATE alert_rules
+      SET threshold = $2,
+          duration_minutes = $3,
+          recurrence_count = $4,
+          recurrence_window = $5,
+          creates_suggestion = $6,
+          enabled = $7,
+          updated_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    `,
+    [id, threshold, durationMinutes, recurrenceCount, recurrenceWindow, createsSuggestion, enabled]
+  );
+
+  return fromRuleRow(result.rows[0]);
+}
+
+export async function upsertAlert(alert) {
+  const result = await query(
+    `
+      INSERT INTO alerts (
+        id, asset_id, host_name, type, metric, title, description, severity,
+        value, threshold, status, first_seen_at, last_seen_at, occurrences_count, source
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      ON CONFLICT (id)
+      DO UPDATE SET
+        asset_id = EXCLUDED.asset_id,
+        host_name = EXCLUDED.host_name,
+        type = EXCLUDED.type,
+        metric = EXCLUDED.metric,
+        title = EXCLUDED.title,
+        description = EXCLUDED.description,
+        severity = EXCLUDED.severity,
+        value = EXCLUDED.value,
+        threshold = EXCLUDED.threshold,
+        status = EXCLUDED.status,
+        first_seen_at = EXCLUDED.first_seen_at,
+        last_seen_at = EXCLUDED.last_seen_at,
+        occurrences_count = EXCLUDED.occurrences_count,
+        source = EXCLUDED.source,
+        updated_at = NOW()
+      RETURNING *
+    `,
+    [
+      alert.id,
+      alert.assetId || alert.hostId || null,
+      alert.hostName || null,
+      alert.type,
+      alert.metric,
+      alert.title,
+      alert.description || "",
+      alert.severity || "warning",
+      alert.value ?? null,
+      alert.threshold ?? null,
+      alert.status || "active",
+      alert.firstSeenAt || alert.startedAt || new Date().toISOString(),
+      alert.lastSeenAt || alert.resolvedAt || alert.startedAt || new Date().toISOString(),
+      alert.occurrencesCount || 1,
+      alert.source || "mock"
+    ]
+  );
+
+  return fromAlertRow(result.rows[0]);
+}
+
+export async function listAlerts({ status } = {}) {
+  const params = [];
+  const where = [];
+
+  if (status) {
+    params.push(status);
+    where.push(`status = $${params.length}`);
+  }
+
+  const result = await query(
+    `
+      SELECT *
+      FROM alerts
+      ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+      ORDER BY last_seen_at DESC, created_at DESC
+    `,
+    params
+  );
+
+  return result.rows.map(fromAlertRow);
+}
+
+export async function findAlertById(id) {
+  const result = await query("SELECT * FROM alerts WHERE id = $1", [id]);
+  return result.rows[0] ? fromAlertRow(result.rows[0]) : null;
+}
+
+export async function listServiceOrderSuggestions() {
+  const result = await query(`
+    SELECT suggestions.*,
+           alerts.host_name,
+           alerts.type AS alert_type,
+           alerts.metric AS alert_metric,
+           alerts.value AS alert_value,
+           alerts.threshold AS alert_threshold,
+           alerts.source AS alert_source
+    FROM service_order_suggestions suggestions
+    LEFT JOIN alerts ON alerts.id = suggestions.alert_id
+    ORDER BY suggestions.created_at DESC
+  `);
+
+  return result.rows.map((row) => ({
+    ...fromSuggestionRow(row),
+    hostName: row.host_name,
+    alertType: row.alert_type,
+    alertMetric: row.alert_metric,
+    alertValue: toNumber(row.alert_value),
+    alertThreshold: toNumber(row.alert_threshold),
+    alertSource: row.alert_source
+  }));
+}
+
+export async function findServiceOrderSuggestionById(id) {
+  const result = await query("SELECT * FROM service_order_suggestions WHERE id = $1", [id]);
+  return result.rows[0] ? fromSuggestionRow(result.rows[0]) : null;
+}
+
+export async function createSuggestionForAlert(alert, suggestion) {
+  const result = await query(
+    `
+      INSERT INTO service_order_suggestions (
+        id, alert_id, asset_id, title, description, suggested_priority,
+        suggested_service_id, suggested_problem_type_id, occurrences_count, status
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending')
+      ON CONFLICT (alert_id) DO NOTHING
+      RETURNING *
+    `,
+    [
+      randomUUID(),
+      alert.id,
+      alert.assetId || null,
+      suggestion.title,
+      suggestion.description,
+      suggestion.suggestedPriority,
+      suggestion.suggestedServiceId || null,
+      suggestion.suggestedProblemTypeId || null,
+      suggestion.occurrencesCount || alert.occurrencesCount || 1
+    ]
+  );
+
+  return {
+    suggestion: result.rows[0] ? fromSuggestionRow(result.rows[0]) : null,
+    created: Boolean(result.rows[0])
+  };
+}
+
+export async function markSuggestionAccepted({ id, userId, serviceOrderId }) {
+  const result = await query(
+    `
+      UPDATE service_order_suggestions
+      SET status = 'accepted',
+          accepted_by = $2,
+          accepted_at = NOW(),
+          created_service_order_id = $3,
+          updated_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    `,
+    [id, userId || null, serviceOrderId || null]
+  );
+
+  return result.rows[0] ? fromSuggestionRow(result.rows[0]) : null;
+}
+
+export async function markSuggestionRejected({ id, userId, reason }) {
+  const result = await query(
+    `
+      UPDATE service_order_suggestions
+      SET status = 'rejected',
+          rejected_by = $2,
+          rejected_at = NOW(),
+          rejection_reason = $3,
+          updated_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    `,
+    [id, userId || null, reason?.trim() || null]
+  );
+
+  return result.rows[0] ? fromSuggestionRow(result.rows[0]) : null;
+}

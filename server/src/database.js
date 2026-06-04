@@ -127,6 +127,44 @@ export async function initializeDatabase() {
   `);
 
   await query(`
+    CREATE TABLE IF NOT EXISTS alert_rules (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL,
+      metric TEXT NOT NULL,
+      threshold NUMERIC(12, 2),
+      duration_minutes INTEGER NOT NULL DEFAULT 5,
+      recurrence_count INTEGER NOT NULL DEFAULT 3,
+      recurrence_window TEXT NOT NULL DEFAULT 'same_day',
+      creates_suggestion BOOLEAN NOT NULL DEFAULT TRUE,
+      enabled BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS alerts (
+      id TEXT PRIMARY KEY,
+      asset_id TEXT,
+      host_name TEXT,
+      type TEXT NOT NULL,
+      metric TEXT NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      severity TEXT NOT NULL DEFAULT 'warning',
+      value NUMERIC(12, 2),
+      threshold NUMERIC(12, 2),
+      status TEXT NOT NULL DEFAULT 'active',
+      first_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      occurrences_count INTEGER NOT NULL DEFAULT 1,
+      source TEXT NOT NULL DEFAULT 'mock',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await query(`
     CREATE TABLE IF NOT EXISTS inventory_segments (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -494,6 +532,86 @@ export async function initializeDatabase() {
   `);
 
   await query(`
+    CREATE TABLE IF NOT EXISTS service_order_suggestions (
+      id TEXT PRIMARY KEY,
+      alert_id TEXT NOT NULL UNIQUE REFERENCES alerts(id) ON DELETE CASCADE,
+      asset_id TEXT,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      suggested_priority TEXT NOT NULL DEFAULT 'medium',
+      suggested_service_id TEXT,
+      suggested_problem_type_id TEXT,
+      occurrences_count INTEGER NOT NULL DEFAULT 1,
+      status TEXT NOT NULL DEFAULT 'pending',
+      accepted_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+      accepted_at TIMESTAMPTZ,
+      rejected_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+      rejected_at TIMESTAMPTZ,
+      rejection_reason TEXT,
+      created_service_order_id TEXT REFERENCES service_orders(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS maintenance_scripts (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      type TEXT NOT NULL,
+      content TEXT NOT NULL,
+      estimated_summary TEXT,
+      category TEXT,
+      risk_level TEXT NOT NULL DEFAULT 'medium',
+      suggested_risk_level TEXT NOT NULL DEFAULT 'medium',
+      requires_confirmation BOOLEAN NOT NULL DEFAULT TRUE,
+      active BOOLEAN NOT NULL DEFAULT TRUE,
+      alert_type TEXT,
+      problem_type TEXT,
+      created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await query(`
+    ALTER TABLE maintenance_scripts
+    ADD COLUMN IF NOT EXISTS alert_type TEXT;
+  `);
+
+  await query(`
+    ALTER TABLE maintenance_scripts
+    ADD COLUMN IF NOT EXISTS problem_type TEXT;
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS script_execution_logs (
+      id TEXT PRIMARY KEY,
+      script_id TEXT NOT NULL REFERENCES maintenance_scripts(id) ON DELETE CASCADE,
+      asset_id TEXT,
+      service_order_id TEXT REFERENCES service_orders(id) ON DELETE SET NULL,
+      alert_id TEXT REFERENCES alerts(id) ON DELETE SET NULL,
+      mode TEXT NOT NULL DEFAULT 'simulated',
+      status TEXT NOT NULL DEFAULT 'registered',
+      executed_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+      executed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      notes TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_service_order_suggestions_alert
+    ON service_order_suggestions (alert_id);
+  `);
+
+  await queryIgnoringDuplicateConstraint(`
+    ALTER TABLE service_order_suggestions
+    ADD CONSTRAINT service_order_suggestions_alert_id_key UNIQUE (alert_id);
+  `);
+
+  await query(`
     CREATE TABLE IF NOT EXISTS clients (
       id TEXT PRIMARY KEY,
       trade_name TEXT NOT NULL,
@@ -646,6 +764,36 @@ export async function initializeDatabase() {
   await query(`
     CREATE INDEX IF NOT EXISTS idx_alert_acknowledgements_acknowledged_at
     ON alert_acknowledgements (acknowledged_at DESC);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_alerts_status
+    ON alerts (status, last_seen_at DESC);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_alert_rules_type
+    ON alert_rules (type, enabled);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_service_order_suggestions_status
+    ON service_order_suggestions (status, created_at DESC);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_maintenance_scripts_active
+    ON maintenance_scripts (active, updated_at DESC);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_script_execution_logs_script
+    ON script_execution_logs (script_id, created_at DESC);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_script_execution_logs_asset
+    ON script_execution_logs (asset_id, created_at DESC);
   `);
 
   await query(`
