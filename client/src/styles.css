@@ -1480,16 +1480,19 @@ tbody tr.selected {
 }
 
 .suggestion-board {
-  grid-template-columns: repeat(auto-fill, minmax(240px, 280px));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: start;
+  gap: 8px;
 }
 
 .suggestion-card {
-  width: min(100%, 280px);
-  max-width: 280px;
-  min-height: 214px;
+  width: 100%;
+  max-width: none;
+  min-height: 186px;
   min-width: 0;
   align-content: space-between;
+  gap: 6px;
+  padding: 10px;
   cursor: default;
 }
 
@@ -1503,7 +1506,7 @@ tbody tr.selected {
 .suggestion-card .suggestion-actions {
   display: flex;
   flex-wrap: nowrap;
-  gap: 8px;
+  gap: 6px;
   margin-top: 2px;
 }
 
@@ -5124,7 +5127,7 @@ table strong,
   }
 
   .suggestion-board {
-    grid-template-columns: repeat(auto-fill, minmax(240px, 280px));
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
   }
 
   .detail-grid,
