@@ -1480,28 +1480,34 @@ tbody tr.selected {
 }
 
 .suggestion-board {
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 240px));
+  align-items: start;
 }
 
 .suggestion-card {
+  width: min(100%, 240px);
+  min-height: 184px;
   min-width: 0;
+  align-content: space-between;
   border-radius: 8px;
+  padding: 12px;
   background:
     linear-gradient(135deg, rgba(246, 149, 71, 0.13), rgba(255, 255, 255, 0.92) 55%),
     #ffffff;
 }
 
-.suggestion-card h3 {
-  display: -webkit-box;
-  min-height: 42px;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+.suggestion-card > div:first-child,
+.suggestion-card p,
+.suggestion-card dl {
+  display: none;
 }
 
-.suggestion-card p {
+.suggestion-card h3 {
   display: -webkit-box;
   overflow: hidden;
+  color: var(--text-strong);
+  font-size: 0.95rem;
+  line-height: 1.2;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
 }
@@ -6697,12 +6703,15 @@ table strong,
 
 .service-order-card strong {
   min-width: 0;
-  display: block;
+  display: -webkit-box;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
   color: var(--text-strong);
-  line-height: 1.25;
+  font-size: 0.94rem;
+  line-height: 1.18;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .service-order-card small {
