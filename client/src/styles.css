@@ -1455,14 +1455,12 @@ tbody tr.selected {
 }
 
 .suggestions-panel,
-.alerts-compact-panel,
-.script-quick-panel {
+.alerts-compact-panel {
   border-radius: 8px;
 }
 
 .suggestions-panel .panel-heading,
-.alerts-compact-panel .panel-heading,
-.script-quick-panel .panel-heading {
+.alerts-compact-panel .panel-heading {
   align-items: center;
 }
 
@@ -1518,6 +1516,82 @@ tbody tr.selected {
   white-space: nowrap;
 }
 
+.suggestion-script-menu {
+  position: relative;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.suggestion-card .suggestion-script-trigger {
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  border-radius: 8px;
+  color: var(--accent-strong);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+}
+
+.service-order-card .suggestion-script-popover {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 35;
+  width: min(220px, 72vw);
+  display: grid;
+  align-items: stretch;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 16px 34px rgba(24, 33, 47, 0.18);
+}
+
+.service-order-card .suggestion-script-popover strong {
+  font-size: 0.78rem;
+  line-height: 1.1;
+}
+
+.service-order-card .suggestion-script-popover button {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: 7px;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 92%, var(--accent));
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.service-order-card .suggestion-script-popover button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.service-order-card .suggestion-script-popover span,
+.service-order-card .suggestion-script-popover small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.service-order-card .suggestion-script-popover span {
+  color: var(--text-strong);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.service-order-card .suggestion-script-popover small,
+.service-order-card .suggestion-script-popover p {
+  display: block;
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
 .compact-alert-board {
   grid-template-columns: 1fr;
   max-height: 520px;
@@ -1539,56 +1613,6 @@ tbody tr.selected {
 .compact-alert-card small {
   color: var(--text-soft);
   font-size: 12px;
-  font-weight: 700;
-}
-
-.script-quick-panel {
-  display: grid;
-  gap: 10px;
-}
-
-.script-quick-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 10px;
-}
-
-.script-quick-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  border: 1px solid var(--border-soft);
-  border-left: 4px solid var(--accent);
-  border-radius: 8px;
-  background: var(--surface);
-}
-
-.script-quick-card.high {
-  border-left-color: #d66b1f;
-}
-
-.script-quick-card.critical {
-  border-left-color: #d64545;
-}
-
-.script-quick-card div {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-}
-
-.script-quick-card strong,
-.script-quick-card span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.script-quick-card span {
-  color: var(--text-soft);
-  font-size: 13px;
   font-weight: 700;
 }
 

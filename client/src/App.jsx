@@ -8,6 +8,7 @@ import {
   Cpu,
   Database,
   HardDrive,
+  KeyRound,
   LogOut,
   MemoryStick,
   Monitor,
@@ -1017,7 +1018,7 @@ function AlertCenterV2({
   onRegisterMaintenanceScriptSimulation
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [scriptsOpen, setScriptsOpen] = useState(false);
+  const [openScriptMenuSuggestionId, setOpenScriptMenuSuggestionId] = useState(null);
   const visibleAlerts = history.filter((alert) => {
     const severityMatches = severityFilter === "all" || alert.severity === severityFilter;
     const statusMatches =
@@ -1056,6 +1057,7 @@ function AlertCenterV2({
       riskAcknowledged: highRisk,
       notes: "Simulação registrada pela tela de Avisos."
     });
+    setOpenScriptMenuSuggestionId(null);
   }
 
   return (
@@ -1129,6 +1131,40 @@ function AlertCenterV2({
                           <button type="button" className="danger-action compact-action" onClick={() => onRejectSuggestion(suggestion.id)}>
                             Recusar
                           </button>
+                          {canViewScripts && (
+                            <div className="suggestion-script-menu">
+                              <button
+                                type="button"
+                                className="icon-button suggestion-script-trigger"
+                                title="Scripts disponíveis"
+                                aria-label="Scripts disponíveis"
+                                onClick={() =>
+                                  setOpenScriptMenuSuggestionId((current) =>
+                                    current === suggestion.id ? null : suggestion.id
+                                  )
+                                }
+                              >
+                                <KeyRound size={15} />
+                              </button>
+                              {openScriptMenuSuggestionId === suggestion.id && (
+                                <div className="suggestion-script-popover">
+                                  <strong>Scripts disponíveis</strong>
+                                  {activeScripts.map((script) => (
+                                    <button
+                                      key={script.id}
+                                      type="button"
+                                      disabled={!canRegisterScriptSimulation}
+                                      onClick={() => handleQuickScriptSimulation(script)}
+                                    >
+                                      <span>{script.name}</span>
+                                      <small>{script.estimatedSummary || "Simulação manual"}</small>
+                                    </button>
+                                  ))}
+                                  {!activeScripts.length && <p>Nenhum script ativo cadastrado.</p>}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       )}
                     </article>
@@ -1184,41 +1220,6 @@ function AlertCenterV2({
             </section>
           </section>
         </>
-      )}
-
-      {canViewScripts && (
-        <section className="panel script-quick-panel">
-          <div className="panel-heading">
-            <div>
-              <h2>Scripts disponíveis</h2>
-              <p>Registro manual de simulação. Nenhum comando será executado.</p>
-            </div>
-            <button type="button" className="secondary-action compact-action" onClick={() => setScriptsOpen((current) => !current)}>
-              {scriptsOpen ? "Ocultar scripts" : "Mostrar scripts"}
-            </button>
-          </div>
-          {scriptsOpen && (
-            <div className="script-quick-list">
-              {activeScripts.map((script) => (
-                <article key={script.id} className={`script-quick-card ${script.riskLevel}`}>
-                  <div>
-                    <strong>{script.name}</strong>
-                    <span>{script.estimatedSummary || "Resumo não informado."}</span>
-                  </div>
-                  <button
-                    type="button"
-                    className="primary-action compact-action"
-                    disabled={!canRegisterScriptSimulation}
-                    onClick={() => handleQuickScriptSimulation(script)}
-                  >
-                    Registrar simulação
-                  </button>
-                </article>
-              ))}
-              {!activeScripts.length && <p className="empty">Nenhum script ativo cadastrado.</p>}
-            </div>
-          )}
-        </section>
       )}
 
       {settingsOpen && (
