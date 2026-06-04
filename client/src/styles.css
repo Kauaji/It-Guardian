@@ -6752,6 +6752,10 @@ table strong,
   font-weight: 800;
 }
 
+.service-order-card div > em:nth-of-type(3) {
+  display: none;
+}
+
 .service-order-card footer {
   color: var(--text-soft);
   font-size: 0.78rem;
