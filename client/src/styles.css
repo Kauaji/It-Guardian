@@ -5120,6 +5120,10 @@ table strong,
     grid-template-columns: 1fr;
   }
 
+  .suggestion-board {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 240px));
+  }
+
   .detail-grid,
   .asset-overview-grid,
   .asset-public-metrics {
