@@ -1409,6 +1409,19 @@ tbody tr.selected {
   overflow-x: auto;
 }
 
+.alert-rules-table .settings-table-head,
+.alert-rules-table .settings-table-row {
+  min-width: 1040px;
+  grid-template-columns:
+    minmax(150px, 1.45fr)
+    minmax(86px, 0.7fr)
+    minmax(94px, 0.8fr)
+    minmax(94px, 0.8fr)
+    minmax(130px, 1fr)
+    minmax(132px, 1fr)
+    minmax(92px, 0.75fr);
+}
+
 .alerts-view-v2 {
   gap: 14px;
 }
@@ -1481,17 +1494,38 @@ tbody tr.selected {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: start;
   gap: 8px;
+  overflow: visible;
 }
 
-.suggestion-card {
+.service-order-card.suggestion-card {
+  position: relative;
+  z-index: 1;
   width: 100%;
   max-width: none;
-  min-height: 186px;
+  min-height: 168px;
   min-width: 0;
   align-content: space-between;
-  gap: 6px;
-  padding: 10px;
+  gap: 5px;
+  padding: 8px;
   cursor: default;
+  overflow: visible;
+}
+
+.service-order-card.suggestion-card:has(.suggestion-script-popover) {
+  z-index: 120;
+}
+
+.suggestion-card strong {
+  font-size: 0.88rem;
+}
+
+.suggestion-card small {
+  font-size: 0.78rem;
+}
+
+.suggestion-card .suggestion-card-location {
+  color: var(--text-soft);
+  font-weight: 800;
 }
 
 .suggestion-card > div:not(.suggestion-card-badges):not(.suggestion-actions),
@@ -1504,28 +1538,46 @@ tbody tr.selected {
 .suggestion-card .suggestion-actions {
   display: flex;
   flex-wrap: nowrap;
-  gap: 6px;
+  gap: 5px;
   margin-top: 2px;
 }
 
 .suggestion-card .suggestion-actions .compact-action {
-  min-height: 32px;
+  min-height: 30px;
   border-radius: 8px;
-  padding: 0 9px;
-  font-size: 0.72rem;
+  padding: 0 8px;
+  font-size: 0.7rem;
   white-space: nowrap;
+}
+
+.suggestion-card .suggestion-actions .danger-action.compact-action {
+  border-color: color-mix(in srgb, #dc2626 34%, var(--border));
+  background: color-mix(in srgb, #dc2626 7%, var(--surface));
+  color: #b91c1c;
+  box-shadow: 0 8px 16px rgba(185, 28, 28, 0.08);
+}
+
+.suggestion-card .suggestion-actions .danger-action.compact-action:hover:not(:disabled) {
+  border-color: color-mix(in srgb, #dc2626 54%, var(--border-strong));
+  background: color-mix(in srgb, #dc2626 12%, var(--surface));
+  transform: translateY(-1px);
 }
 
 .suggestion-script-menu {
   position: relative;
+  z-index: 2;
   flex: 0 0 auto;
   min-width: 0;
 }
 
+.suggestion-script-menu:has(.suggestion-script-popover) {
+  z-index: 140;
+}
+
 .suggestion-card .suggestion-script-trigger {
-  width: 32px;
-  height: 32px;
-  min-height: 32px;
+  width: 30px;
+  height: 30px;
+  min-height: 30px;
   border-radius: 8px;
   color: var(--accent-strong);
   background: color-mix(in srgb, var(--accent) 10%, var(--surface));
@@ -1533,9 +1585,9 @@ tbody tr.selected {
 
 .service-order-card .suggestion-script-popover {
   position: absolute;
-  right: 0;
-  top: calc(100% + 6px);
-  z-index: 35;
+  left: calc(100% + 8px);
+  top: 0;
+  z-index: 180;
   width: min(220px, 72vw);
   display: grid;
   align-items: stretch;
@@ -1621,11 +1673,13 @@ tbody tr.selected {
   padding: 24px;
 }
 
-.alert-settings-modal {
+.modal-panel.alert-settings-modal {
   width: min(1100px, calc(100vw - 48px));
   max-height: calc(100vh - 48px);
   overflow: auto;
   border-radius: 12px;
+  align-content: start;
+  gap: 12px;
 }
 
 .alert-settings-modal-header {
@@ -1649,13 +1703,98 @@ tbody tr.selected {
 }
 
 .alert-settings-section {
-  margin-bottom: 14px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.alert-settings-accordion {
+  overflow: hidden;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 94%, var(--accent));
+}
+
+.alert-settings-accordion + .alert-settings-accordion {
+  margin-top: 10px;
+}
+
+.alert-settings-accordion-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.alert-settings-accordion-trigger div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.alert-settings-accordion-trigger h2,
+.alert-settings-accordion-trigger p {
+  margin: 0;
+}
+
+.alert-settings-accordion-trigger h2 {
+  color: var(--text-strong);
+  font-size: 1rem;
+}
+
+.alert-settings-accordion-trigger p {
+  color: var(--text-soft);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.alert-settings-accordion-trigger svg {
+  flex: 0 0 auto;
+  transition: transform 160ms var(--ease-premium);
+}
+
+.alert-settings-accordion.open .alert-settings-accordion-trigger svg {
+  transform: rotate(180deg);
+}
+
+.alert-settings-accordion-body,
+.alert-settings-accordion .alert-settings-section {
+  padding: 0 16px 16px;
+}
+
+.alert-settings-accordion-body .maintenance-scripts-panel {
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
 }
 
 .alert-rule-row input,
 .alert-rule-row select {
   width: 100%;
   min-width: 86px;
+}
+
+.alert-priority-settings {
+  grid-template-columns: repeat(3, minmax(150px, 1fr));
+}
+
+.alert-priority-settings .service-order-priority-enabled,
+.alert-priority-settings .service-order-priority-colors {
+  grid-column: 1 / -1;
+}
+
+.alert-priority-settings .alert-priority-save {
+  justify-self: end;
 }
 
 .inline-check {
@@ -5151,7 +5290,7 @@ table strong,
   }
 
   .suggestion-board {
-    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .detail-grid,
@@ -5179,6 +5318,10 @@ table strong,
     height: 100dvh;
     max-height: 100dvh;
     padding: 16px 14px;
+  }
+
+  .suggestion-board {
+    grid-template-columns: 1fr;
   }
 
   .sidebar-collapsed .sidebar {

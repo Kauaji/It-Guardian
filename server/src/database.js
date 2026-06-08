@@ -135,6 +135,7 @@ export async function initializeDatabase() {
       duration_minutes INTEGER NOT NULL DEFAULT 5,
       recurrence_count INTEGER NOT NULL DEFAULT 3,
       recurrence_window TEXT NOT NULL DEFAULT 'same_day',
+      suggested_priority TEXT,
       creates_suggestion BOOLEAN NOT NULL DEFAULT TRUE,
       enabled BOOLEAN NOT NULL DEFAULT TRUE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -609,6 +610,11 @@ export async function initializeDatabase() {
   await queryIgnoringDuplicateConstraint(`
     ALTER TABLE service_order_suggestions
     ADD CONSTRAINT service_order_suggestions_alert_id_key UNIQUE (alert_id);
+  `);
+
+  await query(`
+    ALTER TABLE alert_rules
+    ADD COLUMN IF NOT EXISTS suggested_priority TEXT;
   `);
 
   await query(`

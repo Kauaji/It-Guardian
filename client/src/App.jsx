@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   Bell,
   CheckCircle,
+  ChevronDown,
   Cpu,
   Database,
   HardDrive,
@@ -15,8 +16,10 @@ import {
   Moon,
   Network,
   PanelLeftClose,
+  Palette,
   ClipboardList,
   RefreshCw,
+  RotateCcw,
   Search,
   Server,
   Settings as SettingsIcon,
@@ -54,6 +57,7 @@ import {
   evaluateAlerts,
   fetchAlertHistory,
   fetchAlertRules,
+  fetchAlertSettings,
   fetchAlerts,
   fetchDevice,
   fetchDevices,
@@ -73,6 +77,7 @@ import {
   createServiceOrder,
   addServiceOrderHistory,
   updateServiceOrder,
+  updateAlertSettings,
   updateServiceOrderStatus,
   updateDeviceBackup,
   updateSegmentGroup,
@@ -621,13 +626,38 @@ const priorityLabels = {
   critical: "Crítica"
 };
 
+const defaultPriorityColors = {
+  low: "#16a34a",
+  medium: "#d97706",
+  high: "#ea580c",
+  critical: "#dc2626"
+};
+
+const defaultAutoPriority = {
+  enabled: false,
+  lowToMediumHours: 24,
+  mediumToHighHours: 48,
+  highToCriticalHours: 72
+};
+
+function normalizePrioritySettings(settings = {}) {
+  return {
+    autoPriority: {
+      ...defaultAutoPriority,
+      ...(settings.autoPriority || {})
+    },
+    priorityColors: {
+      ...defaultPriorityColors,
+      ...(settings.priorityColors || {})
+    }
+  };
+}
+
 const suggestionStatusLabels = {
   pending: "Pendente",
   accepted: "Aceita",
   rejected: "Recusada"
 };
-
-const suggestionCardAccent = "#d97706";
 
 function formatAlertValue(alert) {
   if (alert.value === null || alert.value === undefined) return "Não informado";
@@ -697,6 +727,10 @@ function AlertCenter({
   rules,
   scripts,
   devices,
+  segments = [],
+  segmentGroups = [],
+  serviceOrderPriorityColors = defaultPriorityColors,
+  serviceOrderPrioritySettings = normalizePrioritySettings(),
   serviceOrders,
   severityFilter,
   setSeverityFilter,
@@ -707,6 +741,7 @@ function AlertCenter({
   canViewAlerts,
   canManageSuggestions,
   canConfigureAlerts,
+  canConfigurePrioritySettings,
   canViewScripts,
   canManageScripts,
   canRegisterScriptSimulation,
@@ -714,6 +749,7 @@ function AlertCenter({
   onAcceptSuggestion,
   onRejectSuggestion,
   onUpdateRule,
+  onSavePrioritySettings,
   onAnalyzeMaintenanceScript,
   onSaveMaintenanceScript,
   onDeactivateMaintenanceScript,
@@ -728,9 +764,10 @@ function AlertCenter({
 
     return severityMatches && statusMatches;
   });
-  const visibleSuggestions = suggestions.filter((suggestion) =>
-    suggestionStatusFilter === "all" || suggestion.status === suggestionStatusFilter
-  );
+  const visibleSuggestions = suggestions.filter((suggestion) => {
+    if (suggestion.status === "accepted") return false;
+    return suggestionStatusFilter === "all" || suggestion.status === suggestionStatusFilter;
+  });
   const criticalAlerts = alerts.filter((alert) => alert.severity === "critical").length;
   const pendingSuggestions = suggestions.filter((suggestion) => suggestion.status === "pending").length;
   const acceptedSuggestions = suggestions.filter((suggestion) => suggestion.status === "accepted").length;
@@ -881,7 +918,7 @@ function AlertCenter({
               {canManageSuggestions && suggestion.status === "pending" && (
                 <div className="suggestion-actions">
                   <button type="button" className="primary-action compact-action" onClick={() => onAcceptSuggestion(suggestion.id)}>
-                    Aceitar e criar OS
+                    Criar OS
                   </button>
                   <button type="button" className="danger-action compact-action" onClick={() => onRejectSuggestion(suggestion.id)}>
                     Recusar
@@ -995,6 +1032,10 @@ function AlertCenterV2({
   rules,
   scripts,
   devices,
+  segments = [],
+  segmentGroups = [],
+  alertPriorityColors = defaultPriorityColors,
+  alertPrioritySettings = normalizePrioritySettings(),
   serviceOrders,
   severityFilter,
   setSeverityFilter,
@@ -1005,6 +1046,7 @@ function AlertCenterV2({
   canViewAlerts,
   canManageSuggestions,
   canConfigureAlerts,
+  canConfigureAlertPrioritySettings,
   canViewScripts,
   canManageScripts,
   canRegisterScriptSimulation,
@@ -1012,13 +1054,26 @@ function AlertCenterV2({
   onAcceptSuggestion,
   onRejectSuggestion,
   onUpdateRule,
+  onSaveAlertPrioritySettings,
   onAnalyzeMaintenanceScript,
   onSaveMaintenanceScript,
   onDeactivateMaintenanceScript,
   onRegisterMaintenanceScriptSimulation
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsSectionsOpen, setSettingsSectionsOpen] = useState({
+    rules: true,
+    priority: false,
+    scripts: false
+  });
   const [openScriptMenuSuggestionId, setOpenScriptMenuSuggestionId] = useState(null);
+  const [priorityDraft, setPriorityDraft] = useState(() => normalizePrioritySettings(alertPrioritySettings));
+  const [prioritySaving, setPrioritySaving] = useState(false);
+
+  useEffect(() => {
+    setPriorityDraft(normalizePrioritySettings(alertPrioritySettings));
+  }, [alertPrioritySettings]);
+
   const visibleAlerts = history.filter((alert) => {
     const severityMatches = severityFilter === "all" || alert.severity === severityFilter;
     const statusMatches =
@@ -1028,15 +1083,98 @@ function AlertCenterV2({
 
     return severityMatches && statusMatches;
   });
-  const visibleSuggestions = suggestions.filter((suggestion) =>
-    suggestionStatusFilter === "all" || suggestion.status === suggestionStatusFilter
-  );
+  const visibleSuggestions = suggestions.filter((suggestion) => {
+    if (suggestion.status === "accepted") return false;
+    return suggestionStatusFilter === "all" || suggestion.status === suggestionStatusFilter;
+  });
   const criticalAlerts = alerts.filter((alert) => alert.severity === "critical").length;
   const pendingSuggestions = suggestions.filter((suggestion) => suggestion.status === "pending").length;
   const acceptedSuggestions = suggestions.filter((suggestion) => suggestion.status === "accepted").length;
   const recurringAlerts = alerts.filter((alert) => (alert.occurrencesCount || 0) >= 3).length;
   const activeScripts = scripts.filter((script) => script.active !== false);
   const canOpenSettings = canConfigureAlerts || canManageScripts;
+  const priorityColorById = useMemo(
+    () => ({
+      ...defaultPriorityColors,
+      ...(alertPriorityColors || {})
+    }),
+    [alertPriorityColors]
+  );
+  const deviceById = useMemo(
+    () => new Map(devices.map((device) => [String(device.id), device])),
+    [devices]
+  );
+  const segmentById = useMemo(
+    () => new Map(segments.map((segment) => [String(segment.id), segment])),
+    [segments]
+  );
+  const groupById = useMemo(
+    () => new Map(segmentGroups.map((group) => [String(group.id), group])),
+    [segmentGroups]
+  );
+
+  function findSuggestionDevice(suggestion) {
+    if (suggestion.assetId && deviceById.has(String(suggestion.assetId))) {
+      return deviceById.get(String(suggestion.assetId));
+    }
+
+    const machineLabel = getSuggestionMachineLabel(suggestion).toLowerCase();
+    return devices.find((device) => {
+      const names = [device.name, device.id, device.manualAsset?.hostname].filter(Boolean).map((value) => String(value).toLowerCase());
+      return names.includes(machineLabel);
+    }) || null;
+  }
+
+  function getSuggestionLocation(suggestion) {
+    const device = findSuggestionDevice(suggestion);
+    const segment = device?.segmentId ? segmentById.get(String(device.segmentId)) : null;
+    const groupId = segment?.groupId || device?.segmentGroupId || "";
+    const group = groupId ? groupById.get(String(groupId)) : null;
+
+    return {
+      segmentName: segment?.name || device?.segmentName || "Não organizadas",
+      groupName: group?.name || "Sem grupo"
+    };
+  }
+
+  function toggleAlertSettingsSection(section) {
+    setSettingsSectionsOpen((current) => ({
+      ...current,
+      [section]: !current[section]
+    }));
+  }
+
+  function updatePriorityDraft(section, field, value) {
+    setPriorityDraft((current) => ({
+      ...current,
+      [section]: {
+        ...current[section],
+        [field]: value
+      }
+    }));
+  }
+
+  function changePriorityDraftColor(priority, color) {
+    setPriorityDraft((current) => ({
+      ...current,
+      priorityColors: {
+        ...current.priorityColors,
+        [priority]: color
+      }
+    }));
+  }
+
+  async function savePriorityDraft() {
+    if (!onSaveAlertPrioritySettings) return;
+    setPrioritySaving(true);
+    try {
+      const normalized = normalizePrioritySettings(priorityDraft);
+      const saved = await onSaveAlertPrioritySettings(normalized);
+      setPriorityDraft(normalizePrioritySettings(saved || normalized));
+    } finally {
+      setPrioritySaving(false);
+    }
+  }
 
   async function handleQuickScriptSimulation(script) {
     const baseConfirmation =
@@ -1099,21 +1237,26 @@ function AlertCenterV2({
               <div className="alert-board suggestion-board">
                 {visibleSuggestions.map((suggestion, index) => {
                   const machineLabel = getSuggestionMachineLabel(suggestion);
-                  const priorityLabel = priorityLabels[suggestion.suggestedPriority] || priorityLabels.medium;
+                  const location = getSuggestionLocation(suggestion);
+                  const priority = suggestion.suggestedPriority || "medium";
+                  const priorityLabel = priorityLabels[priority] || priorityLabels.medium;
+                  const priorityColor = priorityColorById[priority] || priorityColorById.medium;
+                  const locationLabel = `${location.groupName} • ${location.segmentName}`;
 
                   return (
                     <article
                       key={suggestion.id}
                       className="service-order-card suggestion-card"
                       style={{
-                        "--service-order-priority-color": suggestionCardAccent,
-                        "--service-order-priority-bg": `color-mix(in srgb, ${suggestionCardAccent} 32%, var(--surface))`
+                        "--service-order-priority-color": priorityColor,
+                        "--service-order-priority-bg": `color-mix(in srgb, ${priorityColor} 32%, var(--surface))`
                       }}
                       title={suggestion.title}
                     >
                       <span>{formatSuggestionCode(suggestion, index)}</span>
                       <strong title={suggestion.title}>{suggestion.title}</strong>
                       <small title={machineLabel}>{machineLabel}</small>
+                      <small className="suggestion-card-location" title={locationLabel}>{locationLabel}</small>
                       <div className="suggestion-card-badges">
                         <em title={priorityLabel}>{priorityLabel}</em>
                         <em title="Preventiva">Preventiva</em>
@@ -1126,7 +1269,7 @@ function AlertCenterV2({
                       {canManageSuggestions && suggestion.status === "pending" && (
                         <div className="suggestion-actions">
                           <button type="button" className="primary-action compact-action" onClick={() => onAcceptSuggestion(suggestion.id)}>
-                            Aceitar e criar OS
+                            Criar OS
                           </button>
                           <button type="button" className="danger-action compact-action" onClick={() => onRejectSuggestion(suggestion.id)}>
                             Recusar
@@ -1237,14 +1380,20 @@ function AlertCenterV2({
             </header>
 
             {canViewAlerts && (
-              <section className="panel alert-settings-section">
-                <div className="panel-heading">
+              <section className={`alert-settings-accordion ${settingsSectionsOpen.rules ? "open" : ""}`}>
+                <button
+                  type="button"
+                  className="alert-settings-accordion-trigger"
+                  onClick={() => toggleAlertSettingsSection("rules")}
+                >
                   <div>
                     <h2>Regras de aviso</h2>
                     <p>Limites usados para sugerir Ordens de Serviço.</p>
                   </div>
-                  <SettingsIcon size={18} />
-                </div>
+                  <ChevronDown size={18} />
+                </button>
+                {settingsSectionsOpen.rules && (
+                  <section className="panel alert-settings-section">
                 <div className="settings-table alert-rules-table">
                   <div className="settings-table-head">
                     <span>Tipo</span>
@@ -1252,6 +1401,7 @@ function AlertCenterV2({
                     <span>Tempo mínimo</span>
                     <span>Recorrência</span>
                     <span>Janela</span>
+                    <span>Prioridade da OS</span>
                     <span>Status</span>
                   </div>
                   {rules.map((rule) => (
@@ -1296,6 +1446,17 @@ function AlertCenterV2({
                         </select>
                       </span>
                       <span>
+                        <select
+                          value={rule.suggestedPriority || "medium"}
+                          disabled={!canConfigureAlerts}
+                          onChange={(event) => onUpdateRule(rule.id, { suggestedPriority: event.target.value })}
+                        >
+                          {Object.entries(priorityLabels).map(([value, label]) => (
+                            <option key={value} value={value}>{label}</option>
+                          ))}
+                        </select>
+                      </span>
+                      <span>
                         <label className="inline-check">
                           <input
                             type="checkbox"
@@ -1309,23 +1470,138 @@ function AlertCenterV2({
                     </div>
                   ))}
                 </div>
+                  </section>
+                )}
+              </section>
+            )}
+
+            {canViewAlerts && (
+              <section className={`alert-settings-accordion ${settingsSectionsOpen.priority ? "open" : ""}`}>
+                <button
+                  type="button"
+                  className="alert-settings-accordion-trigger"
+                  onClick={() => toggleAlertSettingsSection("priority")}
+                >
+                  <div>
+                    <h2>Prioridade</h2>
+                    <p>Cores e tempos usados pelas prioridades das Ordens de Serviço.</p>
+                  </div>
+                  <ChevronDown size={18} />
+                </button>
+                {settingsSectionsOpen.priority && (
+                  <section className="panel alert-settings-section">
+                    <div className="service-order-number-settings alert-priority-settings">
+                      <label>
+                        Baixa para Média (horas)
+                        <input
+                          type="number"
+                          min="1"
+                          value={priorityDraft.autoPriority.lowToMediumHours}
+                          disabled={!canConfigureAlertPrioritySettings}
+                          onChange={(event) => updatePriorityDraft("autoPriority", "lowToMediumHours", event.target.value)}
+                        />
+                      </label>
+                      <label>
+                        Média para Alta (horas)
+                        <input
+                          type="number"
+                          min="1"
+                          value={priorityDraft.autoPriority.mediumToHighHours}
+                          disabled={!canConfigureAlertPrioritySettings}
+                          onChange={(event) => updatePriorityDraft("autoPriority", "mediumToHighHours", event.target.value)}
+                        />
+                      </label>
+                      <label>
+                        Alta para Crítica (horas)
+                        <input
+                          type="number"
+                          min="1"
+                          value={priorityDraft.autoPriority.highToCriticalHours}
+                          disabled={!canConfigureAlertPrioritySettings}
+                          onChange={(event) => updatePriorityDraft("autoPriority", "highToCriticalHours", event.target.value)}
+                        />
+                      </label>
+                      <label className="settings-inline-check service-order-priority-enabled">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(priorityDraft.autoPriority.enabled)}
+                          disabled={!canConfigureAlertPrioritySettings}
+                          onChange={(event) => updatePriorityDraft("autoPriority", "enabled", event.target.checked)}
+                        />
+                        Ativar mudança automática de prioridade
+                      </label>
+                      <div className="service-order-priority-colors service-order-priority-colors-expanded">
+                        {Object.entries(priorityLabels).map(([priority, label]) => (
+                          <label key={priority}>
+                            <span className="service-order-color-swatch" style={{ background: priorityDraft.priorityColors[priority] }} />
+                            {label}
+                            <input
+                              type="color"
+                              value={priorityDraft.priorityColors[priority]}
+                              disabled={!canConfigureAlertPrioritySettings}
+                              onChange={(event) => changePriorityDraftColor(priority, event.target.value)}
+                              aria-label={`Cor da prioridade ${label}`}
+                            />
+                          </label>
+                        ))}
+                        <button
+                          type="button"
+                          className="ghost-action compact-action"
+                          disabled={!canConfigureAlertPrioritySettings}
+                          onClick={() => setPriorityDraft((current) => ({ ...current, priorityColors: defaultPriorityColors }))}
+                        >
+                          <RotateCcw size={15} />
+                          Padrão
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        className="primary-action compact-action alert-priority-save"
+                        disabled={!canConfigureAlertPrioritySettings || prioritySaving}
+                        onClick={savePriorityDraft}
+                      >
+                        <Palette size={15} />
+                        {prioritySaving ? "Salvando..." : "Salvar prioridade"}
+                      </button>
+                    </div>
+                  </section>
+                )}
               </section>
             )}
 
             {canViewScripts && (
-              <MaintenanceScriptsPanel
-                scripts={scripts}
-                devices={devices}
-                serviceOrders={serviceOrders}
-                alerts={alerts}
-                canManage={canManageScripts}
-                canRegisterSimulation={canRegisterScriptSimulation}
-                showSimulation={false}
-                onAnalyze={onAnalyzeMaintenanceScript}
-                onSave={onSaveMaintenanceScript}
-                onDeactivate={onDeactivateMaintenanceScript}
-                onRegisterSimulation={onRegisterMaintenanceScriptSimulation}
-              />
+              <section className={`alert-settings-accordion ${settingsSectionsOpen.scripts ? "open" : ""}`}>
+                <button
+                  type="button"
+                  className="alert-settings-accordion-trigger"
+                  onClick={() => toggleAlertSettingsSection("scripts")}
+                >
+                  <div>
+                    <h2>Scripts de manutenção</h2>
+                    <p>Cadastro seguro, análise textual e scripts disponíveis nos cards.</p>
+                  </div>
+                  <ChevronDown size={18} />
+                </button>
+                {settingsSectionsOpen.scripts && (
+                  <div className="alert-settings-accordion-body">
+                    <MaintenanceScriptsPanel
+                      scripts={scripts}
+                      devices={devices}
+                      serviceOrders={serviceOrders}
+                      alerts={alerts}
+                      canManage={canManageScripts}
+                      canRegisterSimulation={canRegisterScriptSimulation}
+                      showHeader={false}
+                      showSafetyBanner={false}
+                      showSimulation={false}
+                      onAnalyze={onAnalyzeMaintenanceScript}
+                      onSave={onSaveMaintenanceScript}
+                      onDeactivate={onDeactivateMaintenanceScript}
+                      onRegisterSimulation={onRegisterMaintenanceScriptSimulation}
+                    />
+                  </div>
+                )}
+              </section>
             )}
           </section>
         </div>
@@ -1497,6 +1773,8 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   const [serviceOrderSaving, setServiceOrderSaving] = useState(false);
   const [generalSettingsOpen, setGeneralSettingsOpen] = useState(false);
   const [systemMode, setSystemMode] = useState(readSystemMode);
+  const [alertPrioritySettings, setAlertPrioritySettings] = useState(() => normalizePrioritySettings());
+  const [alertPriorityColors, setAlertPriorityColors] = useState(defaultPriorityColors);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
   const canViewDashboard = hasPermission(user, "dashboard.view");
@@ -1519,6 +1797,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     return views;
   }, [canViewAlerts, canViewDashboard, canViewInventory, canViewScripts, canViewServiceOrders]);
   const canConfigureAlerts = hasPermission(user, "alerts.configure");
+  const canConfigureAlertPrioritySettings = hasPermission(user, "alerts.configure");
   const canManageAlertSuggestions =
     hasPermission(user, "alerts.manage_suggestions") &&
     hasPermission(user, "service_orders.create_from_alert");
@@ -1839,6 +2118,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
         suggestionData,
         maintenanceScriptData,
         serviceOrderData,
+        alertSettingsData,
         systemSettingsData
       ] = await Promise.all([
         canViewInventory ? fetchDevices(token, { search, status }) : Promise.resolve({ devices: [], summary: null }),
@@ -1851,6 +2131,9 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
         canViewAlerts ? fetchServiceOrderSuggestions(token) : Promise.resolve({ suggestions: [] }),
         canViewScripts ? fetchMaintenanceScripts(token) : Promise.resolve({ scripts: [] }),
         canViewServiceOrders ? fetchServiceOrders(token) : Promise.resolve({ serviceOrders: [] }),
+        canViewAlerts
+          ? fetchAlertSettings(token).catch(() => ({ settings: normalizePrioritySettings() }))
+          : Promise.resolve({ settings: normalizePrioritySettings() }),
         fetchSystemSettings(token).catch(() => ({ settings: { systemMode } }))
       ]);
 
@@ -1886,6 +2169,9 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
       setServiceOrderSuggestions(suggestionData.suggestions || []);
       setMaintenanceScripts(maintenanceScriptData.scripts || []);
       setServiceOrders(serviceOrderData.serviceOrders || []);
+      const nextPrioritySettings = normalizePrioritySettings(alertSettingsData.settings);
+      setAlertPrioritySettings(nextPrioritySettings);
+      setAlertPriorityColors(nextPrioritySettings.priorityColors);
       if (systemSettingsData.settings?.systemMode) {
         const nextMode = systemSettingsData.settings.systemMode === "business" ? "business" : "local";
         setSystemMode(nextMode);
@@ -2067,8 +2353,21 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
 
   async function handleAcceptSuggestion(suggestionId) {
     try {
+      const acceptedSuggestion = serviceOrderSuggestions.find((suggestion) => suggestion.id === suggestionId);
       const result = await acceptServiceOrderSuggestion(token, suggestionId);
-      notify(`OS criada a partir do aviso: ${result.serviceOrder?.number || "registrada"}.`, "ok");
+      const serviceOrder = result.serviceOrder;
+      const assetId = serviceOrder?.assetId || acceptedSuggestion?.assetId;
+      const linkedMachine = assetId
+        ? allDevices.find((device) => String(device.id) === String(assetId))
+        : null;
+
+      setServiceOrderSuggestions((current) => current.filter((suggestion) => suggestion.id !== suggestionId));
+
+      if (linkedMachine && serviceOrder?.id) {
+        await ensureMachineInMaintenanceForServiceOrder(linkedMachine, serviceOrder);
+      }
+
+      notify(`OS criada a partir do aviso: ${serviceOrder?.number || "registrada"}.`, "ok");
       await loadData(true);
     } catch (error) {
       notify(error.message, "danger");
@@ -2094,6 +2393,20 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
       );
     } catch (error) {
       notify(error.message, "danger");
+    }
+  }
+
+  async function handleSaveAlertPrioritySettings(settings) {
+    try {
+      const response = await updateAlertSettings(token, settings);
+      const nextPrioritySettings = normalizePrioritySettings(response.settings);
+      setAlertPrioritySettings(nextPrioritySettings);
+      setAlertPriorityColors(nextPrioritySettings.priorityColors);
+      notify("Configurações de prioridade dos avisos salvas.", "ok");
+      return nextPrioritySettings;
+    } catch (error) {
+      notify(error.message, "danger");
+      throw error;
     }
   }
 
@@ -3996,6 +4309,10 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
             rules={alertRules}
             scripts={maintenanceScripts}
             devices={allDevices}
+            segments={decoratedSegments}
+            segmentGroups={decoratedSegmentGroups}
+            alertPriorityColors={alertPriorityColors}
+            alertPrioritySettings={alertPrioritySettings}
             serviceOrders={serviceOrders}
             severityFilter={severityFilter}
             setSeverityFilter={setSeverityFilter}
@@ -4006,6 +4323,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
             canViewAlerts={canViewAlerts}
             canManageSuggestions={canManageAlertSuggestions}
             canConfigureAlerts={canConfigureAlerts}
+            canConfigureAlertPrioritySettings={canConfigureAlertPrioritySettings}
             canViewScripts={canViewScripts}
             canManageScripts={canManageScripts}
             canRegisterScriptSimulation={canRegisterScriptSimulation}
@@ -4013,6 +4331,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
             onAcceptSuggestion={handleAcceptSuggestion}
             onRejectSuggestion={handleRejectSuggestion}
             onUpdateRule={handleUpdateAlertRule}
+            onSaveAlertPrioritySettings={handleSaveAlertPrioritySettings}
             onAnalyzeMaintenanceScript={handleAnalyzeMaintenanceScript}
             onSaveMaintenanceScript={handleSaveMaintenanceScript}
             onDeactivateMaintenanceScript={handleDeactivateMaintenanceScript}

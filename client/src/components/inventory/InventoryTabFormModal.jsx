@@ -34,7 +34,7 @@ export default function InventoryTabFormModal({ tab, tabs = [], onClose, onSubmi
         <header>
           <div>
             <h2>Renomear ambiente</h2>
-            <p>Atualize o nome da aba do inventario.</p>
+            <p>Atualize o nome da aba do inventário.</p>
           </div>
           <button type="button" className="icon-button" onClick={onClose} title="Fechar">
             <X size={18} />
@@ -50,7 +50,7 @@ export default function InventoryTabFormModal({ tab, tabs = [], onClose, onSubmi
             placeholder="Ex: Cacau Center"
           />
         </label>
-        {duplicateName && <span className="form-error">Ja existe uma aba com esse nome.</span>}
+        {duplicateName && <span className="form-error">Já existe uma aba com esse nome.</span>}
 
         <div className="modal-actions">
           <button type="button" className="ghost-action" onClick={onClose}>Cancelar</button>

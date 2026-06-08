@@ -210,6 +210,18 @@ export function fetchAlertRules(token) {
   return apiFetch("/alerts/rules", { token });
 }
 
+export function fetchAlertSettings(token) {
+  return apiFetch("/alerts/settings", { token });
+}
+
+export function updateAlertSettings(token, payload) {
+  return apiFetch("/alerts/settings", {
+    token,
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+}
+
 export function updateAlertRule(token, id, payload) {
   return apiFetch(`/alerts/rules/${id}`, {
     token,

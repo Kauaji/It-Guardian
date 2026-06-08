@@ -10,6 +10,7 @@ export const defaultAlertRules = [
     durationMinutes: 5,
     recurrenceCount: 3,
     recurrenceWindow: "same_day",
+    suggestedPriority: "high",
     createsSuggestion: true,
     enabled: true
   },
@@ -21,6 +22,7 @@ export const defaultAlertRules = [
     durationMinutes: 5,
     recurrenceCount: 3,
     recurrenceWindow: "same_day",
+    suggestedPriority: "high",
     createsSuggestion: true,
     enabled: true
   },
@@ -32,6 +34,7 @@ export const defaultAlertRules = [
     durationMinutes: 5,
     recurrenceCount: 3,
     recurrenceWindow: "same_day",
+    suggestedPriority: "high",
     createsSuggestion: true,
     enabled: true
   },
@@ -43,6 +46,7 @@ export const defaultAlertRules = [
     durationMinutes: 0,
     recurrenceCount: 1,
     recurrenceWindow: "last_24h",
+    suggestedPriority: "critical",
     createsSuggestion: true,
     enabled: true
   },
@@ -54,6 +58,7 @@ export const defaultAlertRules = [
     durationMinutes: 5,
     recurrenceCount: 2,
     recurrenceWindow: "same_day",
+    suggestedPriority: "critical",
     createsSuggestion: true,
     enabled: true
   },
@@ -65,6 +70,7 @@ export const defaultAlertRules = [
     durationMinutes: 5,
     recurrenceCount: 3,
     recurrenceWindow: "same_day",
+    suggestedPriority: "medium",
     createsSuggestion: true,
     enabled: true
   },
@@ -76,6 +82,7 @@ export const defaultAlertRules = [
     durationMinutes: 5,
     recurrenceCount: 2,
     recurrenceWindow: "last_24h",
+    suggestedPriority: "high",
     createsSuggestion: true,
     enabled: true
   },
@@ -87,6 +94,7 @@ export const defaultAlertRules = [
     durationMinutes: 5,
     recurrenceCount: 3,
     recurrenceWindow: "same_day",
+    suggestedPriority: "high",
     createsSuggestion: true,
     enabled: true
   },
@@ -98,10 +106,29 @@ export const defaultAlertRules = [
     durationMinutes: 5,
     recurrenceCount: 2,
     recurrenceWindow: "last_24h",
+    suggestedPriority: "critical",
     createsSuggestion: true,
     enabled: true
   }
 ];
+
+const allowedPriorities = new Set(["low", "medium", "high", "critical"]);
+const defaultAlertPriorityColors = {
+  low: "#16a34a",
+  medium: "#d97706",
+  high: "#ea580c",
+  critical: "#dc2626"
+};
+
+const defaultAlertSettings = {
+  autoPriority: {
+    enabled: true,
+    lowToMediumHours: 24,
+    mediumToHighHours: 48,
+    highToCriticalHours: 72
+  },
+  priorityColors: defaultAlertPriorityColors
+};
 
 function toNumber(value, fallback = null) {
   const number = Number(value);
@@ -115,6 +142,36 @@ function normalizeBoolean(value, fallback = true) {
   return fallback;
 }
 
+function normalizePriority(value, fallback = "medium") {
+  const priority = String(value || "").trim().toLowerCase();
+  return allowedPriorities.has(priority) ? priority : fallback;
+}
+
+function sanitizeColor(value, fallback) {
+  const color = String(value || "").trim();
+  return /^#[0-9a-f]{6}$/i.test(color) ? color : fallback;
+}
+
+function normalizeAlertSettings(value = {}) {
+  const autoPriority = value.autoPriority || {};
+  const priorityColors = value.priorityColors || {};
+
+  return {
+    autoPriority: {
+      enabled: normalizeBoolean(autoPriority.enabled, defaultAlertSettings.autoPriority.enabled),
+      lowToMediumHours: Math.max(1, toNumber(autoPriority.lowToMediumHours, defaultAlertSettings.autoPriority.lowToMediumHours)),
+      mediumToHighHours: Math.max(1, toNumber(autoPriority.mediumToHighHours, defaultAlertSettings.autoPriority.mediumToHighHours)),
+      highToCriticalHours: Math.max(1, toNumber(autoPriority.highToCriticalHours, defaultAlertSettings.autoPriority.highToCriticalHours))
+    },
+    priorityColors: Object.fromEntries(
+      Object.entries(defaultAlertPriorityColors).map(([priority, fallback]) => [
+        priority,
+        sanitizeColor(priorityColors[priority], fallback)
+      ])
+    )
+  };
+}
+
 function fromRuleRow(row) {
   return {
     id: row.id,
@@ -124,6 +181,7 @@ function fromRuleRow(row) {
     durationMinutes: toNumber(row.duration_minutes, 0),
     recurrenceCount: toNumber(row.recurrence_count, 1),
     recurrenceWindow: row.recurrence_window,
+    suggestedPriority: normalizePriority(row.suggested_priority),
     createsSuggestion: row.creates_suggestion,
     enabled: row.enabled,
     createdAt: row.created_at,
@@ -185,10 +243,11 @@ export async function ensureDefaultAlertRules() {
       `
         INSERT INTO alert_rules (
           id, type, metric, threshold, duration_minutes, recurrence_count,
-          recurrence_window, creates_suggestion, enabled
+          recurrence_window, suggested_priority, creates_suggestion, enabled
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-        ON CONFLICT (id) DO NOTHING
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        ON CONFLICT (id) DO UPDATE
+        SET suggested_priority = COALESCE(alert_rules.suggested_priority, EXCLUDED.suggested_priority)
       `,
       [
         rule.id,
@@ -198,6 +257,7 @@ export async function ensureDefaultAlertRules() {
         rule.durationMinutes,
         rule.recurrenceCount,
         rule.recurrenceWindow,
+        normalizePriority(rule.suggestedPriority),
         rule.createsSuggestion,
         rule.enabled
       ]
@@ -236,6 +296,9 @@ export async function updateAlertRule(id, payload = {}) {
     ? Math.max(1, Math.round(toNumber(payload.recurrenceCount, current.recurrence_count)))
     : current.recurrence_count;
   const recurrenceWindow = String(payload.recurrenceWindow || current.recurrence_window || "same_day").trim();
+  const suggestedPriority = Object.prototype.hasOwnProperty.call(payload, "suggestedPriority")
+    ? normalizePriority(payload.suggestedPriority, current.suggested_priority)
+    : normalizePriority(current.suggested_priority);
   const createsSuggestion = normalizeBoolean(payload.createsSuggestion, current.creates_suggestion);
   const enabled = normalizeBoolean(payload.enabled, current.enabled);
 
@@ -246,16 +309,79 @@ export async function updateAlertRule(id, payload = {}) {
           duration_minutes = $3,
           recurrence_count = $4,
           recurrence_window = $5,
-          creates_suggestion = $6,
-          enabled = $7,
+          suggested_priority = $6,
+          creates_suggestion = $7,
+          enabled = $8,
           updated_at = NOW()
       WHERE id = $1
       RETURNING *
     `,
-    [id, threshold, durationMinutes, recurrenceCount, recurrenceWindow, createsSuggestion, enabled]
+    [id, threshold, durationMinutes, recurrenceCount, recurrenceWindow, suggestedPriority, createsSuggestion, enabled]
   );
 
   return fromRuleRow(result.rows[0]);
+}
+
+export async function getAlertSettings() {
+  const result = await query("SELECT value FROM app_settings WHERE key = 'alert_settings' LIMIT 1");
+  const current = result.rows[0]?.value || {};
+  const normalized = normalizeAlertSettings(current);
+
+  if (!result.rows.length) {
+    await query(
+      `
+        INSERT INTO app_settings (key, value, updated_at)
+        VALUES ('alert_settings', $1, NOW())
+      `,
+      [JSON.stringify(normalized)]
+    );
+  }
+
+  return normalized;
+}
+
+export async function updateAlertSettings(payload = {}) {
+  const current = await getAlertSettings();
+  const normalized = normalizeAlertSettings({
+    autoPriority: {
+      ...current.autoPriority,
+      ...(payload.autoPriority || {})
+    },
+    priorityColors: {
+      ...current.priorityColors,
+      ...(payload.priorityColors || {})
+    }
+  });
+
+  await query(
+    `
+      INSERT INTO app_settings (key, value, updated_at)
+      VALUES ('alert_settings', $1, NOW())
+      ON CONFLICT (key) DO UPDATE
+      SET value = EXCLUDED.value,
+          updated_at = NOW()
+    `,
+    [JSON.stringify(normalized)]
+  );
+
+  return normalized;
+}
+
+export async function updatePendingSuggestionPrioritiesForAlertType(type, suggestedPriority) {
+  const priority = normalizePriority(suggestedPriority);
+
+  await query(
+    `
+      UPDATE service_order_suggestions suggestions
+      SET suggested_priority = $2,
+          updated_at = NOW()
+      FROM alerts
+      WHERE alerts.id = suggestions.alert_id
+        AND alerts.type = $1
+        AND suggestions.status = 'pending'
+    `,
+    [type, priority]
+  );
 }
 
 export async function upsertAlert(alert) {

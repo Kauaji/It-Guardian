@@ -11,11 +11,14 @@ import {
   createSuggestionForAlert,
   findAlertById,
   findServiceOrderSuggestionById,
+  getAlertSettings,
   listAlertRules,
   listAlerts,
   listServiceOrderSuggestions as listSuggestions,
   markSuggestionAccepted,
   markSuggestionRejected,
+  updatePendingSuggestionPrioritiesForAlertType,
+  updateAlertSettings,
   updateAlertRule,
   upsertAlert
 } from "../repositories/alertRepository.js";
@@ -83,16 +86,17 @@ function simulatedOccurrences(alert = {}, type) {
   return 2;
 }
 
-function suggestedPriority(alert = {}) {
+function suggestedPriority(alert = {}, rule = null) {
+  if (rule?.suggestedPriority) return rule.suggestedPriority;
   if (alert.type === "disk_health_low" || alert.severity === "critical") return "critical";
   if (["ram_high", "cpu_high", "disk_high", "machine_offline", "ping_failure"].includes(alert.type)) return "high";
   return alert.severity === "warning" ? "medium" : "low";
 }
 
-function buildSuggestionPayload(alert = {}) {
+function buildSuggestionPayload(alert = {}, rule = null) {
   const label = alertTypeLabels[alert.type] || "Aviso recorrente";
   const hostName = alert.hostName || "ativo monitorado";
-  const priority = suggestedPriority(alert);
+  const priority = suggestedPriority(alert, rule);
 
   return {
     title: `Verificação preventiva: ${label.toLowerCase()} em ${hostName}`,
@@ -164,8 +168,26 @@ export async function getAlertRules() {
   return listAlertRules();
 }
 
+export async function getAlertSettingsData() {
+  return getAlertSettings();
+}
+
+export async function updateAlertSettingsData({ payload, user }) {
+  const settings = await updateAlertSettings(payload);
+  await addLog({
+    type: "alert_settings_update",
+    message: "Configurações de prioridade dos avisos atualizadas.",
+    userId: user?.id,
+    meta: { keys: Object.keys(payload || {}) }
+  });
+  return settings;
+}
+
 export async function updateAlertRuleById({ id, payload, user }) {
   const rule = await updateAlertRule(id, payload);
+  if (Object.prototype.hasOwnProperty.call(payload || {}, "suggestedPriority")) {
+    await updatePendingSuggestionPrioritiesForAlertType(rule.type, rule.suggestedPriority);
+  }
   await addLog({
     type: "alert_rule_update",
     message: `Regra de aviso atualizada: ${rule.type}`,
@@ -186,7 +208,7 @@ export async function evaluateAlertsForSuggestions(user = null) {
     if (!rule?.createsSuggestion) continue;
     if ((alert.occurrencesCount || 1) < (rule.recurrenceCount || 1)) continue;
 
-    const result = await createSuggestionForAlert(alert, buildSuggestionPayload(alert));
+    const result = await createSuggestionForAlert(alert, buildSuggestionPayload(alert, rule));
     if (result.created && result.suggestion) {
       createdSuggestions.push(result.suggestion);
       if (alert.assetId) {

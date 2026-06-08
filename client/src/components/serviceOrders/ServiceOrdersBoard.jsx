@@ -362,20 +362,12 @@ export default function ServiceOrdersBoard({
     () => normalizeStatuses(serviceOrderSettings.statuses),
     [serviceOrderSettings.statuses]
   );
-  const finalStatusIds = useMemo(
-    () => new Set(configuredStatuses.filter((status) => status.isFinal).map((status) => status.id)),
-    [configuredStatuses]
-  );
   const availableSectors = useMemo(() => normalizeSectorList(sectors), [sectors]);
   const monthFilteredServiceOrders = useMemo(
     () => monthFilter
-      ? serviceOrders.filter((order) => {
-          const createdMonth = getMonthValue(order.createdAt);
-          const isFinalized = Boolean(order.closedAt) || finalStatusIds.has(order.status);
-          return createdMonth === monthFilter || (!isFinalized && createdMonth && createdMonth <= monthFilter);
-        })
+      ? serviceOrders.filter((order) => getMonthValue(order.createdAt) === monthFilter)
       : serviceOrders,
-    [finalStatusIds, serviceOrders, monthFilter]
+    [serviceOrders, monthFilter]
   );
   const sectorFilteredServiceOrders = useMemo(() => {
     if (sectorFilter === "all" && canViewAllSectors) return monthFilteredServiceOrders;

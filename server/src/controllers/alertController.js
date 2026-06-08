@@ -3,10 +3,12 @@ import {
   acceptServiceOrderSuggestion,
   evaluateAlertsForSuggestions,
   getActiveAlertsWithAcknowledgements,
+  getAlertSettingsData,
   getAlertHistoryWithAcknowledgements,
   getAlertRules,
   listServiceOrderSuggestions,
   rejectServiceOrderSuggestion,
+  updateAlertSettingsData,
   updateAlertRuleById,
   unacknowledgeAlert
 } from "../services/alertService.js";
@@ -68,6 +70,26 @@ export async function removeAcknowledgement(req, res, next) {
 export async function rules(req, res, next) {
   try {
     res.json({ rules: await getAlertRules() });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function settings(req, res, next) {
+  try {
+    res.json({ settings: await getAlertSettingsData() });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateSettings(req, res, next) {
+  try {
+    const settings = await updateAlertSettingsData({
+      payload: req.body || {},
+      user: req.user
+    });
+    res.json({ settings });
   } catch (error) {
     next(error);
   }
