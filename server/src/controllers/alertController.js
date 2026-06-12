@@ -1,11 +1,15 @@
 import {
   acknowledgeAlert,
+  addCommentToAlert,
   acceptServiceOrderSuggestion,
   evaluateAlertsForSuggestions,
   getActiveAlertsWithAcknowledgements,
+  getAlertCorrelations,
+  getAlertInsights,
   getAlertSettingsData,
   getAlertHistoryWithAcknowledgements,
   getAlertRules,
+  listCommentsForAlert,
   listServiceOrderSuggestions,
   rejectServiceOrderSuggestion,
   updateAlertSettingsData,
@@ -78,6 +82,44 @@ export async function rules(req, res, next) {
 export async function settings(req, res, next) {
   try {
     res.json({ settings: await getAlertSettingsData() });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function correlations(req, res, next) {
+  try {
+    res.json({ correlations: await getAlertCorrelations() });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function insights(req, res, next) {
+  try {
+    res.json({ insights: await getAlertInsights() });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function comments(req, res, next) {
+  try {
+    res.json({ comments: await listCommentsForAlert(req.params.id) });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function addComment(req, res, next) {
+  try {
+    const comment = await addCommentToAlert({
+      alertId: req.params.id,
+      message: req.body?.message,
+      user: req.user
+    });
+
+    res.status(201).json({ comment });
   } catch (error) {
     next(error);
   }

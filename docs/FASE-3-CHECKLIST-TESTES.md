@@ -7,6 +7,40 @@
 - [x] Corrigir erros de import, sintaxe ou build. Nenhum erro restante no build final.
 - [ ] Avaliar code splitting futuro: Vite ainda alerta que o chunk principal passa de 500 kB.
 
+## Avisos - inteligencia operacional incremental - 08/06/2026
+
+- [x] Backend criado para comentarios internos em avisos (`alert_comments`).
+- [x] Endpoints de comentarios, correlacoes e insights adicionados em `/api/alerts`.
+- [x] Permissao `alerts.comment` adicionada para registrar comentarios.
+- [x] Avisos ativos enriquecidos com motivo de prioridade, impacto, causa provavel, checklist, tendencia e score de recorrencia.
+- [x] Sugestoes de OS recebem motivo de prioridade e dados operacionais vindos do backend.
+- [x] Frontend exibe avisos correlacionados e comentarios internos.
+- [ ] Teste visual manual completo dos comentarios ainda precisa ser feito com usuario autenticado.
+- [ ] Validacao de regra real de falso positivo e reincidencia depende de dados historicos suficientes.
+
+## Avisos - Preventivas - 08/06/2026
+
+- [x] Area "Preventivas" adicionada dentro do modulo de Avisos.
+- [x] Cards de sugestao mantidos compactos e ordenados por urgencia.
+- [x] Indicador de recorrencia adicionado aos cards de sugestao.
+- [x] Botao de scripts disponiveis recomenda scripts ativos conforme contexto do aviso.
+- [x] Configuracoes de Avisos aceitam periodo de silencio para sugestao recusada.
+- [x] Configuracoes de Avisos aceitam janela de reset do contador de recorrencia.
+- [x] Backend persiste planos preventivos em `preventive_plans`.
+- [x] Backend persiste scripts selecionados em `preventive_plan_scripts`.
+- [x] Backend persiste maquinas selecionadas em `preventive_plan_assets`.
+- [x] Endpoints `/api/preventive-plans` adicionados.
+- [x] Permissoes `preventive_plans.view`, `preventive_plans.create` e `preventive_plans.prepare` adicionadas.
+- [x] Criacao de plano preventivo bloqueia scripts inativos e exige ao menos uma maquina.
+- [x] Planos com script de risco alto/critico exigem reconhecimento de risco.
+- [x] Nenhum script real e executado; o backend registra somente preparacao/simulacao.
+- [x] Browser local validou abas "Sugestoes de OS" e "Preventivas" renderizando.
+- [x] Browser local validou agrupamento visual de maquinas e opcoes de scripts em Preventivas.
+- [x] `npm run build` executado com sucesso apos a implementacao.
+- [ ] Criacao de preventiva pela interface precisa de validacao manual completa com usuario autenticado.
+- [ ] Permissoes de Preventivas precisam ser testadas com usuario sem acesso.
+- [ ] Periodo de silencio apos recusar sugestao precisa ser validado em fluxo manual ou teste de API dedicado.
+
 ## Auditoria geral de código - 02/06/2026
 
 - [x] `npm run build` executado com sucesso.

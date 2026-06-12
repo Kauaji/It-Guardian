@@ -214,6 +214,26 @@ export function fetchAlertSettings(token) {
   return apiFetch("/alerts/settings", { token });
 }
 
+export function fetchAlertCorrelations(token) {
+  return apiFetch("/alerts/correlations", { token });
+}
+
+export function fetchAlertInsights(token) {
+  return apiFetch("/alerts/insights", { token });
+}
+
+export function fetchAlertComments(token, id) {
+  return apiFetch(`/alerts/${id}/comments`, { token });
+}
+
+export function createAlertComment(token, id, message) {
+  return apiFetch(`/alerts/${id}/comments`, {
+    token,
+    method: "POST",
+    body: JSON.stringify({ message })
+  });
+}
+
 export function updateAlertSettings(token, payload) {
   return apiFetch("/alerts/settings", {
     token,
@@ -297,6 +317,25 @@ export function registerMaintenanceScriptSimulation(token, id, payload) {
     token,
     method: "POST",
     body: JSON.stringify(payload)
+  });
+}
+
+export function fetchPreventivePlans(token) {
+  return apiFetch("/preventive-plans", { token });
+}
+
+export function createPreventivePlan(token, payload) {
+  return apiFetch("/preventive-plans", {
+    token,
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function preparePreventivePlan(token, id) {
+  return apiFetch(`/preventive-plans/${id}/prepare`, {
+    token,
+    method: "POST"
   });
 }
 

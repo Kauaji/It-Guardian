@@ -9,6 +9,7 @@ import {
   Cpu,
   Database,
   HardDrive,
+  Info,
   KeyRound,
   LogOut,
   MemoryStick,
@@ -44,8 +45,10 @@ import {
   acceptServiceOrderSuggestion,
   acknowledgeAlert,
   analyzeMaintenanceScript,
+  createAlertComment,
   createMaintenanceScript,
   createManualAsset,
+  createPreventivePlan,
   createSegment,
   createSegmentGroup as createSegmentGroupApi,
   createMonitoringSocket,
@@ -55,6 +58,7 @@ import {
   deleteSegment,
   deleteSegmentGroup as deleteSegmentGroupApi,
   evaluateAlerts,
+  fetchAlertCorrelations,
   fetchAlertHistory,
   fetchAlertRules,
   fetchAlertSettings,
@@ -62,6 +66,7 @@ import {
   fetchDevice,
   fetchDevices,
   fetchMaintenanceScripts,
+  fetchPreventivePlans,
   fetchServiceOrders,
   fetchServiceOrderSuggestions,
   fetchSegmentGroups,
@@ -640,8 +645,21 @@ const defaultAutoPriority = {
   highToCriticalHours: 72
 };
 
+const defaultAlertOperationalSettings = {
+  rejectedAlertSilenceHours: 24,
+  recurrenceCounterResetHours: 24
+};
+
 function normalizePrioritySettings(settings = {}) {
   return {
+    rejectedAlertSilenceHours: Math.max(
+      1,
+      Number(settings.rejectedAlertSilenceHours || defaultAlertOperationalSettings.rejectedAlertSilenceHours)
+    ),
+    recurrenceCounterResetHours: Math.max(
+      1,
+      Number(settings.recurrenceCounterResetHours || defaultAlertOperationalSettings.recurrenceCounterResetHours)
+    ),
     autoPriority: {
       ...defaultAutoPriority,
       ...(settings.autoPriority || {})
@@ -651,6 +669,13 @@ function normalizePrioritySettings(settings = {}) {
       ...(settings.priorityColors || {})
     }
   };
+}
+
+function normalizeText(value = "") {
+  return String(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
 }
 
 const suggestionStatusLabels = {
@@ -688,6 +713,85 @@ function formatAlertThreshold(alert) {
   if (["ram", "cpu", "disk", "disk_health", "network"].includes(alert.metric)) return `${alert.threshold}%`;
   if (alert.metric === "temperature") return `${alert.threshold} °C`;
   return String(alert.threshold);
+}
+
+const alertCategoryByType = {
+  ram_high: "Desempenho",
+  cpu_high: "Desempenho",
+  disk_high: "Armazenamento",
+  disk_health_low: "Armazenamento",
+  machine_offline: "Disponibilidade",
+  network_high: "Segurança",
+  temperature_high: "Ambiente físico",
+  ping_failure: "Disponibilidade",
+  service_unavailable: "Disponibilidade"
+};
+
+const alertImpactByType = {
+  ram_high: "Lentidão, travamentos e risco de parada do atendimento.",
+  cpu_high: "Processamento acima do esperado e degradação de desempenho.",
+  disk_high: "Risco de indisponibilidade por falta de espaço.",
+  disk_health_low: "Risco de perda de dados ou falha física do disco.",
+  machine_offline: "Usuário ou serviço pode estar sem acesso ao equipamento.",
+  network_high: "Possível instabilidade de comunicação ou saturação de rede.",
+  temperature_high: "Risco físico ao equipamento por superaquecimento.",
+  ping_failure: "Instabilidade de comunicação com o equipamento.",
+  service_unavailable: "Serviço crítico indisponível para o usuário final."
+};
+
+const alertRecommendedActions = {
+  ram_high: "Verificar processos em execução, reiniciar serviços pesados e avaliar expansão de memória.",
+  cpu_high: "Identificar processo com alto consumo e validar se há tarefa travada.",
+  disk_high: "Liberar espaço, mover arquivos temporários e avaliar limpeza preventiva.",
+  disk_health_low: "Priorizar backup dos dados e avaliar troca preventiva do disco.",
+  machine_offline: "Confirmar energia, rede e disponibilidade do equipamento antes de abrir atendimento.",
+  network_high: "Validar tráfego incomum, portas ativas e uso de banda no segmento.",
+  temperature_high: "Verificar ventilação, limpeza física e temperatura do ambiente.",
+  ping_failure: "Validar cabo, Wi-Fi, switch e estabilidade do endereço IP.",
+  service_unavailable: "Verificar serviço, dependências e logs antes de acionar manutenção."
+};
+
+const alertProbableCauses = {
+  ram_high: "Aplicação pesada, vazamento de memória ou carga acima do normal.",
+  cpu_high: "Processo travado, atualização em execução ou uso indevido de recursos.",
+  disk_high: "Arquivos temporários, logs acumulados ou armazenamento insuficiente.",
+  disk_health_low: "Desgaste do disco, setores instáveis ou falha iminente.",
+  machine_offline: "Equipamento desligado, cabo desconectado, queda de rede ou IP indisponível.",
+  network_high: "Backup, cópia de arquivos, atualização ou tráfego não esperado.",
+  temperature_high: "Poeira, ventilação obstruída ou ambiente quente.",
+  ping_failure: "Oscilação de rede, conflito de IP ou equipamento intermitente.",
+  service_unavailable: "Serviço parado, dependência indisponível ou erro de configuração."
+};
+
+function getAlertCategory(alert) {
+  return alertCategoryByType[alert.type] || alertCategoryByType[alert.metric] || "Inventário";
+}
+
+function getAlertImpact(alert) {
+  return alertImpactByType[alert.type] || alertImpactByType[alert.metric] || "Pode afetar a operação do equipamento ou do setor.";
+}
+
+function getAlertRecommendedAction(alert) {
+  return alertRecommendedActions[alert.type] || alertRecommendedActions[alert.metric] || "Validar o equipamento e registrar análise técnica.";
+}
+
+function getAlertProbableCause(alert) {
+  return alertProbableCauses[alert.type] || alertProbableCauses[alert.metric] || "Evidência simulada ainda sem causa específica definida.";
+}
+
+function getAlertConfidence(alert) {
+  const occurrences = Number(alert.occurrencesCount || 0);
+  if (occurrences >= 3 || alert.severity === "critical") return "Alta";
+  if (occurrences >= 2) return "Média";
+  return "Baixa";
+}
+
+function getAlertTrend(alert) {
+  const occurrences = Number(alert.occurrencesCount || 0);
+  if (alert.status === "resolved") return "Normalizou";
+  if (occurrences >= 3) return "Subindo";
+  if (occurrences === 2) return "Oscilando";
+  return "Estável";
 }
 
 function AlertList({ alerts }) {
@@ -765,8 +869,21 @@ function AlertCenter({
     return severityMatches && statusMatches;
   });
   const visibleSuggestions = suggestions.filter((suggestion) => {
-    if (suggestion.status === "accepted") return false;
+    if (suggestionStatusFilter === "all") return suggestion.status === "pending";
     return suggestionStatusFilter === "all" || suggestion.status === suggestionStatusFilter;
+  }).sort((left, right) => {
+    const priorityWeight = { critical: 4, high: 3, medium: 2, low: 1 };
+    const leftWeight =
+      (priorityWeight[left.suggestedPriority] || 0) * 100 +
+      (left.alertSeverity === "critical" ? 50 : 0) +
+      Number(left.occurrencesCount || 1) * 8;
+    const rightWeight =
+      (priorityWeight[right.suggestedPriority] || 0) * 100 +
+      (right.alertSeverity === "critical" ? 50 : 0) +
+      Number(right.occurrencesCount || 1) * 8;
+
+    if (rightWeight !== leftWeight) return rightWeight - leftWeight;
+    return new Date(right.updatedAt || right.createdAt).getTime() - new Date(left.updatedAt || left.createdAt).getTime();
   });
   const criticalAlerts = alerts.filter((alert) => alert.severity === "critical").length;
   const pendingSuggestions = suggestions.filter((suggestion) => suggestion.status === "pending").length;
@@ -1031,11 +1148,14 @@ function AlertCenterV2({
   suggestions,
   rules,
   scripts,
+  preventivePlans = [],
   devices,
   segments = [],
   segmentGroups = [],
+  inventoryTabs = [],
   alertPriorityColors = defaultPriorityColors,
   alertPrioritySettings = normalizePrioritySettings(),
+  alertCorrelations = [],
   serviceOrders,
   severityFilter,
   setSeverityFilter,
@@ -1047,13 +1167,18 @@ function AlertCenterV2({
   canManageSuggestions,
   canConfigureAlerts,
   canConfigureAlertPrioritySettings,
+  canCommentAlerts,
   canViewScripts,
   canManageScripts,
   canRegisterScriptSimulation,
+  canViewPreventivePlans,
+  canCreatePreventivePlans,
   onEvaluateAlerts,
   onAcceptSuggestion,
   onRejectSuggestion,
+  onCreatePreventivePlan,
   onUpdateRule,
+  onAddAlertComment,
   onSaveAlertPrioritySettings,
   onAnalyzeMaintenanceScript,
   onSaveMaintenanceScript,
@@ -1061,6 +1186,7 @@ function AlertCenterV2({
   onRegisterMaintenanceScriptSimulation
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [alertActiveTab, setAlertActiveTab] = useState("suggestions");
   const [settingsSectionsOpen, setSettingsSectionsOpen] = useState({
     rules: true,
     priority: false,
@@ -1069,10 +1195,31 @@ function AlertCenterV2({
   const [openScriptMenuSuggestionId, setOpenScriptMenuSuggestionId] = useState(null);
   const [priorityDraft, setPriorityDraft] = useState(() => normalizePrioritySettings(alertPrioritySettings));
   const [prioritySaving, setPrioritySaving] = useState(false);
+  const [commentDrafts, setCommentDrafts] = useState({});
+  const [selectedSuggestionInfoId, setSelectedSuggestionInfoId] = useState(null);
+  const [preventiveSearch, setPreventiveSearch] = useState("");
+  const [selectedPreventiveAssets, setSelectedPreventiveAssets] = useState(() => new Set());
+  const [selectedPreventiveScripts, setSelectedPreventiveScripts] = useState(() => new Set());
+  const [preventivePlanName, setPreventivePlanName] = useState("Preventiva preparada");
+  const [preventivePlanNotes, setPreventivePlanNotes] = useState("");
+  const [preventiveSaving, setPreventiveSaving] = useState(false);
 
   useEffect(() => {
     setPriorityDraft(normalizePrioritySettings(alertPrioritySettings));
   }, [alertPrioritySettings]);
+
+  useEffect(() => {
+    if (!selectedSuggestionInfoId) return undefined;
+
+    function handleSuggestionInfoKeydown(event) {
+      if (event.key === "Escape") {
+        setSelectedSuggestionInfoId(null);
+      }
+    }
+
+    window.addEventListener("keydown", handleSuggestionInfoKeydown);
+    return () => window.removeEventListener("keydown", handleSuggestionInfoKeydown);
+  }, [selectedSuggestionInfoId]);
 
   const visibleAlerts = history.filter((alert) => {
     const severityMatches = severityFilter === "all" || alert.severity === severityFilter;
@@ -1083,14 +1230,41 @@ function AlertCenterV2({
 
     return severityMatches && statusMatches;
   });
-  const visibleSuggestions = suggestions.filter((suggestion) => {
-    if (suggestion.status === "accepted") return false;
-    return suggestionStatusFilter === "all" || suggestion.status === suggestionStatusFilter;
-  });
+  const visibleSuggestions = suggestions
+    .filter((suggestion) => {
+      if (suggestionStatusFilter === "all") return suggestion.status === "pending";
+      return suggestion.status === suggestionStatusFilter;
+    })
+    .sort((left, right) => {
+      const priorityWeight = { critical: 60, high: 45, medium: 25, low: 10 };
+      const leftWeight =
+        (priorityWeight[left.suggestedPriority] || 0) +
+        (Number(left.occurrencesCount || 1) > 1 ? Math.min(Number(left.occurrencesCount || 1), 8) * 3 : 0);
+      const rightWeight =
+        (priorityWeight[right.suggestedPriority] || 0) +
+        (Number(right.occurrencesCount || 1) > 1 ? Math.min(Number(right.occurrencesCount || 1), 8) * 3 : 0);
+
+      if (rightWeight !== leftWeight) return rightWeight - leftWeight;
+      return new Date(right.updatedAt || right.createdAt || 0) - new Date(left.updatedAt || left.createdAt || 0);
+    });
+  const selectedSuggestionInfo = suggestions.find((suggestion) => suggestion.id === selectedSuggestionInfoId) || null;
+  const selectedSuggestionVisibleIndex = visibleSuggestions.findIndex((suggestion) => suggestion.id === selectedSuggestionInfoId);
+  const selectedSuggestionIndex = selectedSuggestionVisibleIndex >= 0
+    ? selectedSuggestionVisibleIndex
+    : Math.max(0, suggestions.findIndex((suggestion) => suggestion.id === selectedSuggestionInfoId));
   const criticalAlerts = alerts.filter((alert) => alert.severity === "critical").length;
   const pendingSuggestions = suggestions.filter((suggestion) => suggestion.status === "pending").length;
   const acceptedSuggestions = suggestions.filter((suggestion) => suggestion.status === "accepted").length;
   const recurringAlerts = alerts.filter((alert) => (alert.occurrencesCount || 0) >= 3).length;
+  const machinesAtRisk = new Set(
+    alerts
+      .filter((alert) => alert.status !== "resolved")
+      .map((alert) => alert.assetId || alert.hostId || alert.hostName)
+      .filter(Boolean)
+      .map(String)
+  ).size;
+  const resolvedAlerts = history.filter((alert) => alert.status === "resolved");
+  const handledSuggestions = suggestions.filter((suggestion) => suggestion.status === "accepted" || suggestion.status === "rejected");
   const activeScripts = scripts.filter((script) => script.active !== false);
   const canOpenSettings = canConfigureAlerts || canManageScripts;
   const priorityColorById = useMemo(
@@ -1112,6 +1286,10 @@ function AlertCenterV2({
     () => new Map(segmentGroups.map((group) => [String(group.id), group])),
     [segmentGroups]
   );
+  const tabById = useMemo(
+    () => new Map(inventoryTabs.map((tab) => [String(tab.id), tab])),
+    [inventoryTabs]
+  );
 
   function findSuggestionDevice(suggestion) {
     if (suggestion.assetId && deviceById.has(String(suggestion.assetId))) {
@@ -1125,6 +1303,36 @@ function AlertCenterV2({
     }) || null;
   }
 
+  function findAlertDevice(alert) {
+    const identifiers = [alert.assetId, alert.hostId, alert.hostName].filter(Boolean).map(String);
+
+    for (const id of identifiers) {
+      if (deviceById.has(id)) return deviceById.get(id);
+    }
+
+    const hostLabel = String(alert.hostName || "").toLowerCase();
+    return devices.find((device) => {
+      const names = [device.name, device.id, device.manualAsset?.hostname].filter(Boolean).map((value) => String(value).toLowerCase());
+      return names.includes(hostLabel);
+    }) || null;
+  }
+
+  function getAlertLocation(alert) {
+    const device = findAlertDevice(alert);
+    const segment = device?.segmentId ? segmentById.get(String(device.segmentId)) : null;
+    const groupId = segment?.groupId || device?.segmentGroupId || "";
+    const group = groupId ? groupById.get(String(groupId)) : null;
+
+    return {
+      segmentName: segment?.name || device?.segmentName || "Não organizadas",
+      groupName: group?.name || "Sem grupo"
+    };
+  }
+
+  function getAlertMachineLabel(alert) {
+    return alert.hostName || findAlertDevice(alert)?.name || alert.assetId || "Máquina não vinculada";
+  }
+
   function getSuggestionLocation(suggestion) {
     const device = findSuggestionDevice(suggestion);
     const segment = device?.segmentId ? segmentById.get(String(device.segmentId)) : null;
@@ -1135,6 +1343,254 @@ function AlertCenterV2({
       segmentName: segment?.name || device?.segmentName || "Não organizadas",
       groupName: group?.name || "Sem grupo"
     };
+  }
+
+  function getSuggestionAlertShape(suggestion) {
+    return {
+      id: suggestion.alertId,
+      type: suggestion.alertType || suggestion.suggestedProblemTypeId,
+      metric: suggestion.alertMetric,
+      value: suggestion.alertValue,
+      threshold: suggestion.alertThreshold,
+      severity: suggestion.alertSeverity || (suggestion.suggestedPriority === "critical" ? "critical" : "warning"),
+      status: suggestion.status,
+      title: suggestion.title,
+      description: suggestion.description,
+      hostName: getSuggestionMachineLabel(suggestion),
+      occurrencesCount: suggestion.occurrencesCount || 1,
+      firstSeenAt: suggestion.alertFirstSeenAt || suggestion.createdAt,
+      lastSeenAt: suggestion.alertLastSeenAt || suggestion.updatedAt || suggestion.createdAt,
+      createdAt: suggestion.createdAt,
+      updatedAt: suggestion.updatedAt
+    };
+  }
+
+  function getSuggestionCorrelations(suggestion) {
+    const machineLabel = getSuggestionMachineLabel(suggestion);
+    return alertCorrelations.filter((correlation) => {
+      const relatedAlerts = Array.isArray(correlation.relatedAlerts) ? correlation.relatedAlerts : [];
+      const relatedHosts = Array.isArray(correlation.relatedHosts) ? correlation.relatedHosts : [];
+
+      return (
+        relatedHosts.includes(machineLabel) ||
+        relatedAlerts.some((alert) => alert.id === suggestion.alertId || alert.hostName === machineLabel)
+      );
+    });
+  }
+
+  function getSuggestionInfoModel(suggestion) {
+    if (!suggestion) return null;
+
+    const alert = getSuggestionAlertShape(suggestion);
+    const device = findSuggestionDevice(suggestion);
+    const location = suggestion.location || getSuggestionLocation(suggestion);
+    const priority = suggestion.suggestedPriority || "medium";
+    const comments = Array.isArray(suggestion.comments) ? suggestion.comments : [];
+    const checklist = Array.isArray(suggestion.checklist) ? suggestion.checklist : [];
+    const correlations = getSuggestionCorrelations(suggestion);
+
+    return {
+      alert,
+      device,
+      location,
+      priority,
+      priorityLabel: priorityLabels[priority] || priorityLabels.medium,
+      machineLabel: getSuggestionMachineLabel(suggestion),
+      comments,
+      checklist,
+      correlations
+    };
+  }
+
+  function getDevicePreventiveLocation(device) {
+    const segment = device?.segmentId ? segmentById.get(String(device.segmentId)) : null;
+    const groupId = segment?.groupId || device?.segmentGroupId || "";
+    const group = groupId ? groupById.get(String(groupId)) : null;
+    const tabId = device?.tabId || segment?.tabId || group?.tabId || "";
+    const tab = tabId ? tabById.get(String(tabId)) : null;
+
+    return {
+      tabName: tab?.name || device?.tabName || device?.environment || "Ambiente atual",
+      groupName: group?.name || "Sem grupo",
+      segmentName: segment?.name || device?.segmentName || "Não organizadas",
+      segmentId: segment?.id || device?.segmentId || "unorganized"
+    };
+  }
+
+  function getScriptRecommendationReason(script, contextText) {
+    const normalizedContext = normalizeText(contextText);
+    const normalizedScript = normalizeText([
+      script.name,
+      script.description,
+      script.category,
+      script.alertType,
+      script.problemType,
+      script.estimatedSummary
+    ].filter(Boolean).join(" "));
+
+    if (!normalizedContext || !normalizedScript) return "";
+    if (normalizedContext.includes("disco") && normalizedScript.includes("disco")) {
+      return "Recomendado porque o contexto indica problema de disco.";
+    }
+    if ((normalizedContext.includes("ram") || normalizedContext.includes("memoria")) && normalizedScript.includes("sistema")) {
+      return "Recomendado para coletar dados de desempenho e memória.";
+    }
+    if ((normalizedContext.includes("offline") || normalizedContext.includes("rede") || normalizedContext.includes("ping")) && normalizedScript.includes("rede")) {
+      return "Recomendado porque o contexto indica instabilidade de rede.";
+    }
+    if (normalizedContext.includes("impressora") && normalizedScript.includes("impressora")) {
+      return "Recomendado porque o contexto envolve impressora.";
+    }
+    if (script.alertType && normalizedContext.includes(normalizeText(script.alertType))) {
+      return "Recomendado pelo tipo de aviso vinculado ao script.";
+    }
+    return "";
+  }
+
+  function getRecommendedScriptsForContext(contextText) {
+    return activeScripts
+      .map((script) => ({
+        ...script,
+        recommendationReason: getScriptRecommendationReason(script, contextText)
+      }))
+      .filter((script) => script.recommendationReason)
+      .slice(0, 4);
+  }
+
+  function togglePreventiveAsset(assetId) {
+    setSelectedPreventiveAssets((current) => {
+      const next = new Set(current);
+      if (next.has(assetId)) {
+        next.delete(assetId);
+      } else {
+        next.add(assetId);
+      }
+      return next;
+    });
+  }
+
+  function togglePreventiveScript(scriptId) {
+    setSelectedPreventiveScripts((current) => {
+      const next = new Set(current);
+      if (next.has(scriptId)) {
+        next.delete(scriptId);
+      } else {
+        next.add(scriptId);
+      }
+      return next;
+    });
+  }
+
+  function togglePreventiveSegment(segmentId, assetIds) {
+    setSelectedPreventiveAssets((current) => {
+      const next = new Set(current);
+      const allSelected = assetIds.every((assetId) => next.has(assetId));
+
+      for (const assetId of assetIds) {
+        if (allSelected) {
+          next.delete(assetId);
+        } else {
+          next.add(assetId);
+        }
+      }
+
+      return next;
+    });
+  }
+
+  async function submitPreventivePlan() {
+    if (!onCreatePreventivePlan || preventiveSaving) return;
+
+    const selectedScripts = activeScripts.filter((script) => selectedPreventiveScripts.has(script.id));
+    const hasHighRiskScript = selectedScripts.some((script) => script.riskLevel === "high" || script.riskLevel === "critical");
+    const riskAcknowledged = hasHighRiskScript
+      ? window.confirm("Há script de alto risco selecionado. Nenhum comando será executado. Deseja registrar apenas a preparação/simulação?")
+      : true;
+
+    if (!riskAcknowledged) return;
+
+    setPreventiveSaving(true);
+    try {
+      await onCreatePreventivePlan({
+        name: preventivePlanName,
+        description: "Plano preventivo preparado pela tela de Avisos.",
+        source: "manual",
+        notes: preventivePlanNotes,
+        riskAcknowledged,
+        assetIds: [...selectedPreventiveAssets],
+        scriptIds: [...selectedPreventiveScripts]
+      });
+      setSelectedPreventiveAssets(new Set());
+      setSelectedPreventiveScripts(new Set());
+      setPreventivePlanNotes("");
+    } finally {
+      setPreventiveSaving(false);
+    }
+  }
+
+  const preventiveDevices = devices.filter((device) => {
+    const term = normalizeText(preventiveSearch);
+    if (!term) return true;
+    const location = getDevicePreventiveLocation(device);
+    return [
+      device.name,
+      device.id,
+      device.ip,
+      device.statusLabel,
+      device.type,
+      device.assetType,
+      location.tabName,
+      location.groupName,
+      location.segmentName
+    ]
+      .filter(Boolean)
+      .some((value) => normalizeText(value).includes(term));
+  });
+
+  const preventiveGroups = preventiveDevices.reduce((groups, device) => {
+    const location = getDevicePreventiveLocation(device);
+    const key = `${location.tabName}::${location.groupName}::${location.segmentName}`;
+    const current = groups.get(key) || {
+      key,
+      ...location,
+      devices: []
+    };
+    current.devices.push(device);
+    groups.set(key, current);
+    return groups;
+  }, new Map());
+  const selectedPreventiveDevices = devices.filter((device) => selectedPreventiveAssets.has(device.id));
+  const preventiveContextText = [
+    ...selectedPreventiveDevices.flatMap((device) => {
+      const location = getDevicePreventiveLocation(device);
+      return [
+        device.name,
+        device.type,
+        device.assetType,
+        device.statusLabel,
+        location.groupName,
+        location.segmentName
+      ];
+    }),
+    ...alerts
+      .filter((alert) => {
+        const device = findAlertDevice(alert);
+        return device?.id && selectedPreventiveAssets.has(device.id);
+      })
+      .flatMap((alert) => [alert.type, alert.metric, alert.title, alert.category])
+  ].filter(Boolean).join(" ");
+  const recommendedPreventiveScripts = getRecommendedScriptsForContext(preventiveContextText);
+  const orderedPreventiveScripts = [
+    ...recommendedPreventiveScripts,
+    ...activeScripts.filter((script) => !recommendedPreventiveScripts.some((recommended) => recommended.id === script.id))
+  ];
+  const selectedPreventiveScriptList = activeScripts.filter((script) => selectedPreventiveScripts.has(script.id));
+  const preventivePlanCount = preventivePlans.length;
+
+  function getLastPreventiveForAsset(assetId) {
+    return preventivePlans.find((plan) =>
+      Array.isArray(plan.assets) && plan.assets.some((asset) => asset.assetId === assetId)
+    ) || null;
   }
 
   function toggleAlertSettingsSection(section) {
@@ -1151,6 +1607,13 @@ function AlertCenterV2({
         ...current[section],
         [field]: value
       }
+    }));
+  }
+
+  function updateAlertOperationalDraft(field, value) {
+    setPriorityDraft((current) => ({
+      ...current,
+      [field]: value
     }));
   }
 
@@ -1198,6 +1661,15 @@ function AlertCenterV2({
     setOpenScriptMenuSuggestionId(null);
   }
 
+  async function submitAlertComment(alertId) {
+    const message = String(commentDrafts[alertId] || "").trim();
+    if (!message || !onAddAlertComment) return;
+    await onAddAlertComment(alertId, message);
+    setCommentDrafts((current) => ({ ...current, [alertId]: "" }));
+  }
+
+  const selectedSuggestionInfoModel = getSuggestionInfoModel(selectedSuggestionInfo);
+
   return (
     <section className="view-stack alerts-view-v2">
       {canViewAlerts && (
@@ -1209,6 +1681,7 @@ function AlertCenterV2({
               <SummaryCard icon={ClipboardList} label="Sugestões pendentes" value={pendingSuggestions} tone="warning" />
               <SummaryCard icon={CheckCircle} label="OS criadas por aviso" value={acceptedSuggestions} tone="ok" />
               <SummaryCard icon={RefreshCw} label="Avisos recorrentes" value={recurringAlerts} tone="info" />
+              <SummaryCard icon={Monitor} label="Máquinas em risco" value={machinesAtRisk} tone="danger" />
             </section>
             {canOpenSettings && (
               <button type="button" className="icon-button alerts-settings-trigger" onClick={() => setSettingsOpen(true)} title="Configurações de aviso">
@@ -1217,6 +1690,160 @@ function AlertCenterV2({
             )}
           </div>
 
+          <nav className="alerts-internal-tabs" aria-label="Áreas da Central de Avisos">
+            <button
+              type="button"
+              className={alertActiveTab === "suggestions" ? "active" : ""}
+              onClick={() => setAlertActiveTab("suggestions")}
+            >
+              Sugestões de OS
+            </button>
+            {canViewPreventivePlans && (
+              <button
+                type="button"
+                className={alertActiveTab === "preventives" ? "active" : ""}
+                onClick={() => setAlertActiveTab("preventives")}
+              >
+                Preventivas
+              </button>
+            )}
+          </nav>
+
+          {alertActiveTab === "active" && (
+            <section className="panel alerts-diagnostics-panel">
+              <div className="panel-heading">
+                <div>
+                  <h2>Avisos ativos</h2>
+                  <p>Diagnóstico preventivo com impacto, evidência e ação recomendada.</p>
+                </div>
+                {canManageSuggestions && (
+                  <button type="button" className="primary-action compact-action" onClick={onEvaluateAlerts}>
+                    Avaliar recorrência
+                  </button>
+                )}
+              </div>
+              {alertCorrelations.length > 0 && (
+                <section className="alert-correlations-section" aria-label="Avisos correlacionados">
+                  <header>
+                    <div>
+                      <h3>Avisos correlacionados</h3>
+                      <p>Padrões agrupados por tipo, grupo e segmento para apoiar a triagem.</p>
+                    </div>
+                  </header>
+                  <div className="alert-correlations-grid">
+                    {alertCorrelations.slice(0, 4).map((correlation) => (
+                      <article key={correlation.correlationId || correlation.id} className={`alert-correlation-card ${correlation.impactLevel === "critical" ? "critical" : "warning"}`}>
+                        <span>{correlation.confidenceLevel || "Média"} confiança</span>
+                        <strong>{correlation.correlationSummary}</strong>
+                        <small>{(correlation.relatedHosts || []).join(", ")}</small>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              )}
+              <div className="alert-board alert-diagnostics-board">
+                {visibleAlerts
+                  .filter((alert) => alert.status !== "resolved")
+                  .map((alert) => {
+                    const location = alert.location || getAlertLocation(alert);
+                    const machineLabel = getAlertMachineLabel(alert);
+                    const comments = Array.isArray(alert.comments) ? alert.comments : [];
+                    const checklist = Array.isArray(alert.checklist) ? alert.checklist : [];
+
+                    return (
+                      <article key={alert.id} className={`alert-diagnostic-card ${alert.severity}`}>
+                        <header>
+                          <div>
+                            <span>{alert.category || getAlertCategory(alert)}</span>
+                            <h3>{alert.title}</h3>
+                            <small>{machineLabel} · {location.groupName} · {location.segmentName}</small>
+                          </div>
+                          <span className={`pill ${alert.severity === "critical" ? "danger" : "warning"}`}>
+                            {alert.severity === "critical" ? "Crítico" : "Atenção"}
+                          </span>
+                        </header>
+                        <dl>
+                          <div>
+                            <dt>Valor atual</dt>
+                            <dd>{formatAlertValue(alert)}</dd>
+                          </div>
+                          <div>
+                            <dt>Limite</dt>
+                            <dd>{formatAlertThreshold(alert)}</dd>
+                          </div>
+                          <div>
+                            <dt>Ocorrências</dt>
+                            <dd>{alert.occurrencesCount || 1}</dd>
+                          </div>
+                          <div>
+                            <dt>Confiança</dt>
+                            <dd>{alert.confidenceLevel || getAlertConfidence(alert)}</dd>
+                          </div>
+                          <div>
+                            <dt>Tendência</dt>
+                            <dd>{alert.trend || getAlertTrend(alert)}</dd>
+                          </div>
+                          <div>
+                            <dt>Score</dt>
+                            <dd>{Math.round(alert.recurrenceScore || 0) || "N/D"}</dd>
+                          </div>
+                        </dl>
+                        <p><strong>Motivo da prioridade:</strong> {alert.priorityReason || "Prioridade definida pela regra atual do aviso."}</p>
+                        <p><strong>Impacto:</strong> {alert.operationalImpact || getAlertImpact(alert)}</p>
+                        <p><strong>Causa provável:</strong> {alert.probableCause || getAlertProbableCause(alert)}</p>
+                        <p><strong>Ação recomendada:</strong> {alert.recommendedAction || getAlertRecommendedAction(alert)}</p>
+                        {alert.recurrenceInsight && (
+                          <p><strong>Reincidência:</strong> {alert.recurrenceInsight.summary}</p>
+                        )}
+                        {alert.falsePositiveInsight && (
+                          <p><strong>Possível falso positivo:</strong> {alert.falsePositiveInsight.summary}</p>
+                        )}
+                        {alert.capacityForecast?.summary && (
+                          <p><strong>Capacidade:</strong> {alert.capacityForecast.summary}</p>
+                        )}
+                        {!!checklist.length && (
+                          <div className="alert-checklist">
+                            <strong>Checklist sugerido</strong>
+                            <ul>
+                              {checklist.slice(0, 4).map((item) => (
+                                <li key={item}>{item}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        <div className="alert-comments">
+                          <strong>Comentários internos</strong>
+                          {comments.slice(-2).map((comment) => (
+                            <p key={comment.id}>
+                              <span>{comment.userName || "Usuário"} · {formatDate(comment.createdAt)}</span>
+                              {comment.message}
+                            </p>
+                          ))}
+                          {!comments.length && <small>Nenhum comentário registrado.</small>}
+                          {canCommentAlerts && (
+                            <div className="alert-comment-form">
+                              <input
+                                value={commentDrafts[alert.id] || ""}
+                                onChange={(event) => setCommentDrafts((current) => ({ ...current, [alert.id]: event.target.value }))}
+                                placeholder="Adicionar comentário interno"
+                              />
+                              <button type="button" className="secondary-action compact-action" onClick={() => submitAlertComment(alert.id)}>
+                                Comentar
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </article>
+                    );
+                  })}
+                {!visibleAlerts.filter((alert) => alert.status !== "resolved").length && (
+                  <p className="empty">Nenhum aviso ativo encontrado para os filtros atuais.</p>
+                )}
+              </div>
+            </section>
+          )}
+
+          {alertActiveTab === "suggestions" && (
           <section className="alerts-workspace-grid">
             <section className="panel suggestions-panel">
               <div className="panel-heading">
@@ -1237,11 +1864,26 @@ function AlertCenterV2({
               <div className="alert-board suggestion-board">
                 {visibleSuggestions.map((suggestion, index) => {
                   const machineLabel = getSuggestionMachineLabel(suggestion);
-                  const location = getSuggestionLocation(suggestion);
+                  const location = suggestion.location || getSuggestionLocation(suggestion);
                   const priority = suggestion.suggestedPriority || "medium";
                   const priorityLabel = priorityLabels[priority] || priorityLabels.medium;
                   const priorityColor = priorityColorById[priority] || priorityColorById.medium;
                   const locationLabel = `${location.groupName} • ${location.segmentName}`;
+                  const occurrenceCount = Number(suggestion.occurrencesCount || 1);
+                  const recommendedScripts = getRecommendedScriptsForContext([
+                    suggestion.title,
+                    suggestion.description,
+                    suggestion.alertType,
+                    suggestion.alertMetric,
+                    suggestion.category,
+                    suggestion.suggestedProblemTypeId,
+                    machineLabel,
+                    locationLabel
+                  ].filter(Boolean).join(" "));
+                  const scriptOptions = [
+                    ...recommendedScripts,
+                    ...activeScripts.filter((script) => !recommendedScripts.some((recommended) => recommended.id === script.id))
+                  ];
 
                   return (
                     <article
@@ -1251,8 +1893,17 @@ function AlertCenterV2({
                         "--service-order-priority-color": priorityColor,
                         "--service-order-priority-bg": `color-mix(in srgb, ${priorityColor} 32%, var(--surface))`
                       }}
-                      title={suggestion.title}
+                      title={suggestion.priorityReason || suggestion.title}
                     >
+                      {occurrenceCount > 1 && (
+                        <span
+                          className="suggestion-recurrence-indicator"
+                          title={`Este aviso ocorreu ${occurrenceCount} vezes no período configurado.`}
+                        >
+                          <RefreshCw size={12} />
+                          {occurrenceCount}x
+                        </span>
+                      )}
                       <span>{formatSuggestionCode(suggestion, index)}</span>
                       <strong title={suggestion.title}>{suggestion.title}</strong>
                       <small title={machineLabel}>{machineLabel}</small>
@@ -1266,15 +1917,36 @@ function AlertCenterV2({
                         <span title="Sistema">Sistema</span>
                         <time>{formatDate(suggestion.createdAt)}</time>
                       </footer>
-                      {canManageSuggestions && suggestion.status === "pending" && (
-                        <div className="suggestion-actions">
+                      <div className="suggestion-actions">
+                        {canManageSuggestions && suggestion.status === "pending" && (
+                          <>
                           <button type="button" className="primary-action compact-action" onClick={() => onAcceptSuggestion(suggestion.id)}>
                             Criar OS
                           </button>
-                          <button type="button" className="danger-action compact-action" onClick={() => onRejectSuggestion(suggestion.id)}>
-                            Recusar
+                          <button
+                            type="button"
+                            className="danger-action compact-action suggestion-reject-trigger"
+                            onClick={() => onRejectSuggestion(suggestion.id)}
+                            title="Recusar"
+                            aria-label="Recusar"
+                          >
+                            <XCircle size={15} />
                           </button>
-                          {canViewScripts && (
+                          </>
+                        )}
+                        <button
+                          type="button"
+                          className="icon-button suggestion-info-trigger"
+                          title="Ver detalhes do aviso"
+                          aria-label="Ver detalhes do aviso"
+                          onClick={() => {
+                            setOpenScriptMenuSuggestionId(null);
+                            setSelectedSuggestionInfoId(suggestion.id);
+                          }}
+                        >
+                          <Info size={15} />
+                        </button>
+                        {canManageSuggestions && suggestion.status === "pending" && canViewScripts && (
                             <div className="suggestion-script-menu">
                               <button
                                 type="button"
@@ -1292,7 +1964,7 @@ function AlertCenterV2({
                               {openScriptMenuSuggestionId === suggestion.id && (
                                 <div className="suggestion-script-popover">
                                   <strong>Scripts disponíveis</strong>
-                                  {activeScripts.map((script) => (
+                                  {scriptOptions.map((script) => (
                                     <button
                                       key={script.id}
                                       type="button"
@@ -1300,16 +1972,15 @@ function AlertCenterV2({
                                       onClick={() => handleQuickScriptSimulation(script)}
                                     >
                                       <span>{script.name}</span>
-                                      <small>{script.estimatedSummary || "Simulação manual"}</small>
+                                      <small>{script.recommendationReason || script.estimatedSummary || "Simulação manual"}</small>
                                     </button>
                                   ))}
                                   {!activeScripts.length && <p>Nenhum script ativo cadastrado.</p>}
                                 </div>
                               )}
                             </div>
-                          )}
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </article>
                   );
                 })}
@@ -1362,7 +2033,475 @@ function AlertCenterV2({
               </div>
             </section>
           </section>
+          )}
+
+          {alertActiveTab === "preventives" && canViewPreventivePlans && (
+            <section className="panel preventive-plans-panel">
+              <div className="panel-heading">
+                <div>
+                  <h2>Preventivas</h2>
+                  <p>Prepare planos preventivos por máquina ou segmento. Nenhum script real é executado nesta etapa.</p>
+                </div>
+                <ClipboardList size={18} />
+              </div>
+
+              <div className="preventive-workspace">
+                <section className="preventive-device-groups" aria-label="Máquinas para preventiva">
+                  <div className="preventive-toolbar">
+                    <label className="compact-search preventive-search">
+                      <Search size={16} />
+                      <input
+                        value={preventiveSearch}
+                        onChange={(event) => setPreventiveSearch(event.target.value)}
+                        placeholder="Buscar máquina, grupo, segmento ou ambiente"
+                      />
+                    </label>
+                    <div className="preventive-plan-summary">
+                      <strong>{selectedPreventiveAssets.size}</strong>
+                      <span>máquina(s) selecionada(s)</span>
+                    </div>
+                  </div>
+
+                  <div className="preventive-group-list">
+                    {Array.from(preventiveGroups.values()).map((group) => {
+                      const assetIds = group.devices.map((device) => device.id);
+                      const selectedCount = assetIds.filter((assetId) => selectedPreventiveAssets.has(assetId)).length;
+
+                      return (
+                        <section key={group.key} className="preventive-device-group">
+                          <header>
+                            <div>
+                              <span>{group.tabName}</span>
+                              <strong>{group.groupName} • {group.segmentName}</strong>
+                              <small>{group.devices.length} máquina(s) neste segmento</small>
+                            </div>
+                            <button
+                              type="button"
+                              className="secondary-action compact-action"
+                              disabled={!canCreatePreventivePlans}
+                              onClick={() => togglePreventiveSegment(group.segmentId, assetIds)}
+                            >
+                              {selectedCount === assetIds.length ? "Remover segmento" : "Selecionar segmento"}
+                            </button>
+                          </header>
+
+                          <div className="preventive-device-list">
+                            {group.devices.map((device) => {
+                              const lastPreventive = getLastPreventiveForAsset(device.id);
+                              const relatedAlerts = alerts.filter((alert) => {
+                                const alertDevice = findAlertDevice(alert);
+                                return alertDevice?.id === device.id && alert.status !== "resolved";
+                              });
+                              const isSelected = selectedPreventiveAssets.has(device.id);
+
+                              return (
+                                <button
+                                  key={device.id}
+                                  type="button"
+                                  className={`preventive-device-row ${isSelected ? "selected" : ""}`}
+                                  disabled={!canCreatePreventivePlans}
+                                  onClick={() => togglePreventiveAsset(device.id)}
+                                >
+                                  <span className="preventive-device-check" aria-hidden="true">
+                                    {isSelected ? "✓" : ""}
+                                  </span>
+                                  <span>
+                                    <strong>{device.name || device.id}</strong>
+                                    <small>{device.type || device.assetType || "Ativo"} • {device.statusLabel || device.status || "Sem status"}</small>
+                                  </span>
+                                  <em>
+                                    {lastPreventive ? `Última preventiva: ${formatDate(lastPreventive.preparedAt || lastPreventive.createdAt)}` : "Sem preventiva registrada"}
+                                  </em>
+                                  {!!relatedAlerts.length && <span className="pill warning">{relatedAlerts.length} aviso(s)</span>}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </section>
+                      );
+                    })}
+
+                    {!preventiveGroups.size && (
+                      <p className="empty">Nenhuma máquina encontrada para os filtros atuais.</p>
+                    )}
+                  </div>
+                </section>
+
+                <aside className="preventive-plan-builder" aria-label="Criar plano preventivo">
+                  <header>
+                    <h3>Plano preventivo</h3>
+                    <p>Selecione scripts cadastrados e registre a preparação no histórico das máquinas.</p>
+                  </header>
+
+                  <label>
+                    Nome do plano
+                    <input
+                      value={preventivePlanName}
+                      disabled={!canCreatePreventivePlans}
+                      onChange={(event) => setPreventivePlanName(event.target.value)}
+                    />
+                  </label>
+
+                  <label>
+                    Observações
+                    <textarea
+                      value={preventivePlanNotes}
+                      disabled={!canCreatePreventivePlans}
+                      onChange={(event) => setPreventivePlanNotes(event.target.value)}
+                      placeholder="Contexto da preventiva, motivo ou orientação para o técnico."
+                    />
+                  </label>
+
+                  <section className="preventive-script-list">
+                    <div>
+                      <h4>Scripts recomendados e disponíveis</h4>
+                      <p>{recommendedPreventiveScripts.length ? "Recomendações aparecem primeiro." : "Selecione máquinas para melhorar as recomendações."}</p>
+                    </div>
+                    {orderedPreventiveScripts.map((script) => {
+                      const selected = selectedPreventiveScripts.has(script.id);
+                      return (
+                        <button
+                          key={script.id}
+                          type="button"
+                          className={`preventive-script-option ${selected ? "selected" : ""}`}
+                          disabled={!canCreatePreventivePlans}
+                          onClick={() => togglePreventiveScript(script.id)}
+                        >
+                          <span className="preventive-device-check" aria-hidden="true">
+                            {selected ? "✓" : ""}
+                          </span>
+                          <span>
+                            <strong>{script.name}</strong>
+                            <small>{script.recommendationReason || script.estimatedSummary || script.category || "Script cadastrado"}</small>
+                          </span>
+                          <em>{script.riskLevel || "médio"}</em>
+                        </button>
+                      );
+                    })}
+                    {!orderedPreventiveScripts.length && (
+                      <p className="empty">Nenhum script ativo cadastrado.</p>
+                    )}
+                  </section>
+
+                  <div className="preventive-plan-summary-card">
+                    <span>{selectedPreventiveAssets.size} máquina(s)</span>
+                    <span>{selectedPreventiveScriptList.length} script(s)</span>
+                    <span>{preventivePlanCount} plano(s) registrado(s)</span>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="primary-action compact-action"
+                    disabled={
+                      !canCreatePreventivePlans ||
+                      preventiveSaving ||
+                      !selectedPreventiveAssets.size ||
+                      !selectedPreventiveScripts.size
+                    }
+                    onClick={submitPreventivePlan}
+                  >
+                    {preventiveSaving ? "Preparando..." : "Preparar preventiva"}
+                  </button>
+
+                  <section className="preventive-plan-history">
+                    <h4>Últimos planos</h4>
+                    {preventivePlans.slice(0, 5).map((plan) => (
+                      <article key={plan.id}>
+                        <strong>{plan.name}</strong>
+                        <span>{plan.status || "prepared"} • {formatDate(plan.preparedAt || plan.createdAt)}</span>
+                        <small>{plan.assets?.length || 0} máquina(s) • {plan.scripts?.length || 0} script(s)</small>
+                      </article>
+                    ))}
+                    {!preventivePlans.length && <p className="empty">Nenhum plano preventivo registrado ainda.</p>}
+                  </section>
+                </aside>
+              </div>
+            </section>
+          )}
+
+          {alertActiveTab === "history" && (
+            <section className="panel alerts-history-panel">
+              <div className="panel-heading">
+                <div>
+                  <h2>Histórico de avisos</h2>
+                  <p>Avisos resolvidos, sugestões aceitas e recusas registradas.</p>
+                </div>
+                <ClipboardList size={18} />
+              </div>
+              <div className="alert-board alert-history-board">
+                {resolvedAlerts.map((alert) => {
+                  const machineLabel = getAlertMachineLabel(alert);
+                  return (
+                    <article key={alert.id} className="alert-history-card">
+                      <span className="pill ok">Resolvido</span>
+                      <h3>{alert.title}</h3>
+                      <p>{machineLabel} · {formatAlertValue(alert)}</p>
+                      <small>{formatDate(alert.updatedAt || alert.resolvedAt || alert.startedAt)}</small>
+                    </article>
+                  );
+                })}
+                {handledSuggestions.map((suggestion, index) => (
+                  <article key={suggestion.id} className="alert-history-card">
+                    <span className={`pill ${suggestion.status === "accepted" ? "ok" : "danger"}`}>
+                      {suggestionStatusLabels[suggestion.status] || suggestion.status}
+                    </span>
+                    <h3>{formatSuggestionCode(suggestion, index)} · {suggestion.title}</h3>
+                    <p>{getSuggestionMachineLabel(suggestion)}</p>
+                    <small>{suggestion.createdServiceOrderId ? `OS criada: ${suggestion.createdServiceOrderId}` : suggestion.rejectionReason || "Sem observação"}</small>
+                  </article>
+                ))}
+                {!resolvedAlerts.length && !handledSuggestions.length && (
+                  <p className="empty">Nenhum histórico encontrado ainda.</p>
+                )}
+              </div>
+            </section>
+          )}
         </>
+      )}
+
+      {selectedSuggestionInfo && selectedSuggestionInfoModel && (
+        <div
+          className="modal-backdrop suggestion-info-backdrop"
+          onMouseDown={() => setSelectedSuggestionInfoId(null)}
+        >
+          <section
+            className="modal-panel suggestion-info-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="suggestion-info-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <header className="suggestion-info-header">
+              <div>
+                <span>{formatSuggestionCode(selectedSuggestionInfo, selectedSuggestionIndex)}</span>
+                <h2 id="suggestion-info-title">{selectedSuggestionInfo.title}</h2>
+                <p>
+                  {selectedSuggestionInfoModel.machineLabel} - {selectedSuggestionInfoModel.location.groupName} - {selectedSuggestionInfoModel.location.segmentName}
+                </p>
+                <div className="suggestion-info-badges">
+                  <span className={`pill ${selectedSuggestionInfo.status === "accepted" ? "ok" : selectedSuggestionInfo.status === "rejected" ? "danger" : "warning"}`}>
+                    {suggestionStatusLabels[selectedSuggestionInfo.status] || selectedSuggestionInfo.status}
+                  </span>
+                  <span className={`pill ${selectedSuggestionInfoModel.priority === "critical" ? "danger" : "warning"}`}>
+                    {selectedSuggestionInfoModel.priorityLabel}
+                  </span>
+                  <span className="pill">{selectedSuggestionInfo.category || getAlertCategory(selectedSuggestionInfoModel.alert)}</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="icon-button"
+                onClick={() => setSelectedSuggestionInfoId(null)}
+                aria-label="Fechar detalhes do aviso"
+                title="Fechar detalhes do aviso"
+              >
+                <XCircle size={18} />
+              </button>
+            </header>
+
+            <div className="suggestion-info-body">
+              <section className="suggestion-info-section">
+                <h3>Informações da máquina</h3>
+                <div className="suggestion-info-grid">
+                  <div className="suggestion-info-item">
+                    <span>Nome</span>
+                    <strong>{selectedSuggestionInfoModel.machineLabel}</strong>
+                  </div>
+                  <div className="suggestion-info-item">
+                    <span>Tipo do ativo</span>
+                    <strong>{selectedSuggestionInfoModel.device?.type || selectedSuggestionInfoModel.device?.manualAsset?.type || selectedSuggestionInfo.category || "Não informado"}</strong>
+                  </div>
+                  <div className="suggestion-info-item">
+                    <span>IP</span>
+                    <strong>{selectedSuggestionInfoModel.device?.ip || selectedSuggestionInfoModel.device?.manualAsset?.ip || "Não informado"}</strong>
+                  </div>
+                  <div className="suggestion-info-item">
+                    <span>Sistema operacional</span>
+                    <strong>{selectedSuggestionInfoModel.device?.os || selectedSuggestionInfoModel.device?.manualAsset?.os || "Não informado"}</strong>
+                  </div>
+                  <div className="suggestion-info-item">
+                    <span>Aba/Ambiente</span>
+                    <strong>{selectedSuggestionInfoModel.device?.tabName || selectedSuggestionInfoModel.device?.environment || "Não informado"}</strong>
+                  </div>
+                  <div className="suggestion-info-item">
+                    <span>Grupo</span>
+                    <strong>{selectedSuggestionInfoModel.location.groupName}</strong>
+                  </div>
+                  <div className="suggestion-info-item">
+                    <span>Segmento</span>
+                    <strong>{selectedSuggestionInfoModel.location.segmentName}</strong>
+                  </div>
+                  <div className="suggestion-info-item">
+                    <span>Backup</span>
+                    <strong>{selectedSuggestionInfoModel.device?.isBackup ? "Sim" : "Não"}</strong>
+                  </div>
+                  <div className="suggestion-info-item">
+                    <span>Em manutenção</span>
+                    <strong>{selectedSuggestionInfoModel.device?.maintenanceActive || selectedSuggestionInfoModel.device?.maintenanceStatus === "active" ? "Sim" : "Não"}</strong>
+                  </div>
+                </div>
+              </section>
+
+              <section className="suggestion-info-section">
+                <h3>Informações do aviso</h3>
+                <div className="suggestion-info-grid">
+                  <div className="suggestion-info-item">
+                    <span>Tipo</span>
+                    <strong>{alertTypeLabels[selectedSuggestionInfoModel.alert.type] || selectedSuggestionInfoModel.alert.type || "Aviso preventivo"}</strong>
+                  </div>
+                  <div className="suggestion-info-item">
+                    <span>Categoria</span>
+                    <strong>{selectedSuggestionInfo.category || getAlertCategory(selectedSuggestionInfoModel.alert)}</strong>
+                  </div>
+                  <div className="suggestion-info-item">
+                    <span>Métrica</span>
+                    <strong>{selectedSuggestionInfoModel.alert.metric || "Não informada"}</strong>
+                  </div>
+                  <div className="suggestion-info-item">
+                    <span>Valor atual</span>
+                    <strong>{formatAlertValue(selectedSuggestionInfoModel.alert)}</strong>
+                  </div>
+                  <div className="suggestion-info-item">
+                    <span>Limite</span>
+                    <strong>{formatAlertThreshold(selectedSuggestionInfoModel.alert)}</strong>
+                  </div>
+                  <div className="suggestion-info-item">
+                    <span>Ocorrências</span>
+                    <strong>{selectedSuggestionInfoModel.alert.occurrencesCount || 1}</strong>
+                  </div>
+                  <div className="suggestion-info-item">
+                    <span>Primeira ocorrência</span>
+                    <strong>{formatDate(selectedSuggestionInfoModel.alert.firstSeenAt)}</strong>
+                  </div>
+                  <div className="suggestion-info-item">
+                    <span>Última ocorrência</span>
+                    <strong>{formatDate(selectedSuggestionInfoModel.alert.lastSeenAt)}</strong>
+                  </div>
+                  <div className="suggestion-info-item">
+                    <span>Confiança</span>
+                    <strong>{selectedSuggestionInfo.confidenceLevel || getAlertConfidence(selectedSuggestionInfoModel.alert)}</strong>
+                  </div>
+                  <div className="suggestion-info-item">
+                    <span>Tendência</span>
+                    <strong>{selectedSuggestionInfo.trend || getAlertTrend(selectedSuggestionInfoModel.alert)}</strong>
+                  </div>
+                  <div className="suggestion-info-item">
+                    <span>Score/Risco</span>
+                    <strong>{Math.round(selectedSuggestionInfo.recurrenceScore || 0) || "N/D"}</strong>
+                  </div>
+                  <div className="suggestion-info-item">
+                    <span>Origem</span>
+                    <strong>Sistema</strong>
+                  </div>
+                </div>
+              </section>
+
+              <section className="suggestion-info-section">
+                <h3>Explicações técnicas</h3>
+                <div className="suggestion-info-text-list">
+                  <p><strong>Motivo da prioridade:</strong> {selectedSuggestionInfo.priorityReason || "Prioridade definida pela regra atual do aviso."}</p>
+                  <p><strong>Impacto operacional:</strong> {selectedSuggestionInfo.operationalImpact || getAlertImpact(selectedSuggestionInfoModel.alert)}</p>
+                  <p><strong>Causa provável:</strong> {selectedSuggestionInfo.probableCause || getAlertProbableCause(selectedSuggestionInfoModel.alert)}</p>
+                  <p><strong>Ação recomendada:</strong> {selectedSuggestionInfo.recommendedAction || getAlertRecommendedAction(selectedSuggestionInfoModel.alert)}</p>
+                  {selectedSuggestionInfo.recurrenceInsight?.summary && (
+                    <p><strong>Reincidência:</strong> {selectedSuggestionInfo.recurrenceInsight.summary}</p>
+                  )}
+                  {selectedSuggestionInfo.falsePositiveInsight?.summary && (
+                    <p><strong>Possível falso positivo:</strong> {selectedSuggestionInfo.falsePositiveInsight.summary}</p>
+                  )}
+                  {selectedSuggestionInfo.capacityForecast?.summary && (
+                    <p><strong>Capacidade/previsão:</strong> {selectedSuggestionInfo.capacityForecast.summary}</p>
+                  )}
+                </div>
+              </section>
+
+              <section className="suggestion-info-section">
+                <h3>Checklist sugerido</h3>
+                {!!selectedSuggestionInfoModel.checklist.length ? (
+                  <ul className="suggestion-info-checklist">
+                    {selectedSuggestionInfoModel.checklist.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="suggestion-info-empty">Nenhum item de checklist cadastrado para este aviso.</p>
+                )}
+              </section>
+
+              <section className="suggestion-info-section">
+                <h3>Correlação</h3>
+                {!!selectedSuggestionInfoModel.correlations.length ? (
+                  <div className="suggestion-info-correlations">
+                    {selectedSuggestionInfoModel.correlations.map((correlation) => (
+                      <article key={correlation.correlationId || correlation.id}>
+                        <span>{correlation.confidenceLevel || "Média"} confiança</span>
+                        <strong>{correlation.correlationSummary || "Aviso correlacionado"}</strong>
+                        <small>{(correlation.relatedHosts || []).join(", ") || "Sem máquinas relacionadas"}</small>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="suggestion-info-empty">Nenhuma correlação encontrada para esta sugestão.</p>
+                )}
+              </section>
+
+              <section className="suggestion-info-section">
+                <h3>Comentários internos</h3>
+                <div className="alert-comments suggestion-info-comments">
+                  {selectedSuggestionInfoModel.comments.map((comment) => (
+                    <p key={comment.id}>
+                      <span>{comment.userName || "Usuário"} - {formatDate(comment.createdAt)}</span>
+                      {comment.message}
+                    </p>
+                  ))}
+                  {!selectedSuggestionInfoModel.comments.length && <small>Nenhum comentário registrado.</small>}
+                  {canCommentAlerts && selectedSuggestionInfo.alertId && (
+                    <div className="alert-comment-form">
+                      <input
+                        value={commentDrafts[selectedSuggestionInfo.alertId] || ""}
+                        onChange={(event) => setCommentDrafts((current) => ({ ...current, [selectedSuggestionInfo.alertId]: event.target.value }))}
+                        placeholder="Adicionar comentário interno"
+                      />
+                      <button type="button" className="secondary-action compact-action" onClick={() => submitAlertComment(selectedSuggestionInfo.alertId)}>
+                        Comentar
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </section>
+            </div>
+
+            <footer className="suggestion-info-footer">
+              {canManageSuggestions && selectedSuggestionInfo.status === "pending" && (
+                <>
+                  <button
+                    type="button"
+                    className="primary-action compact-action"
+                    onClick={async () => {
+                      await onAcceptSuggestion(selectedSuggestionInfo.id);
+                      setSelectedSuggestionInfoId(null);
+                    }}
+                  >
+                    Criar OS
+                  </button>
+                  <button
+                    type="button"
+                    className="danger-action compact-action"
+                    onClick={async () => {
+                      await onRejectSuggestion(selectedSuggestionInfo.id);
+                      setSelectedSuggestionInfoId(null);
+                    }}
+                  >
+                    Recusar
+                  </button>
+                </>
+              )}
+              <button type="button" className="secondary-action compact-action" onClick={() => setSelectedSuggestionInfoId(null)}>
+                Fechar
+              </button>
+            </footer>
+          </section>
+        </div>
       )}
 
       {settingsOpen && (
@@ -1394,6 +2533,36 @@ function AlertCenterV2({
                 </button>
                 {settingsSectionsOpen.rules && (
                   <section className="panel alert-settings-section">
+                    <div className="alert-settings-control-grid">
+                      <label>
+                        Ignorar aviso recusado por (horas)
+                        <input
+                          type="number"
+                          min="1"
+                          value={priorityDraft.rejectedAlertSilenceHours}
+                          disabled={!canConfigureAlerts}
+                          onChange={(event) => updateAlertOperationalDraft("rejectedAlertSilenceHours", event.target.value)}
+                        />
+                      </label>
+                      <label>
+                        Resetar recorrência a cada (horas)
+                        <input
+                          type="number"
+                          min="1"
+                          value={priorityDraft.recurrenceCounterResetHours}
+                          disabled={!canConfigureAlerts}
+                          onChange={(event) => updateAlertOperationalDraft("recurrenceCounterResetHours", event.target.value)}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        className="secondary-action compact-action"
+                        disabled={!canConfigureAlerts || prioritySaving}
+                        onClick={savePriorityDraft}
+                      >
+                        {prioritySaving ? "Salvando..." : "Salvar janelas"}
+                      </button>
+                    </div>
                 <div className="settings-table alert-rules-table">
                   <div className="settings-table-head">
                     <span>Tipo</span>
@@ -1711,9 +2880,11 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   const [summary, setSummary] = useState(null);
   const [alerts, setAlerts] = useState([]);
   const [history, setHistory] = useState([]);
+  const [alertCorrelations, setAlertCorrelations] = useState([]);
   const [alertRules, setAlertRules] = useState([]);
   const [serviceOrderSuggestions, setServiceOrderSuggestions] = useState([]);
   const [maintenanceScripts, setMaintenanceScripts] = useState([]);
+  const [preventivePlans, setPreventivePlans] = useState([]);
   const [serviceOrders, setServiceOrders] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [selectedDevice, setSelectedDevice] = useState(null);
@@ -1780,6 +2951,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   const canViewDashboard = hasPermission(user, "dashboard.view");
   const canViewAlerts = hasPermission(user, "alerts.view");
   const canViewScripts = hasPermission(user, "scripts.view");
+  const canViewPreventivePlans = hasPermission(user, "preventive_plans.view");
   const canViewInventory = hasPermission(user, "inventory.view");
   const canViewMachine = hasPermission(user, "inventory.view_machine");
   const canViewServiceOrders = hasPermission(user, "service_orders.view");
@@ -1791,18 +2963,22 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   const permittedViewIds = useMemo(() => {
     const views = [];
     if (canViewDashboard) views.push("dashboard");
-    if (canViewAlerts || canViewScripts) views.push("alerts");
+    if (canViewAlerts || canViewScripts || canViewPreventivePlans) views.push("alerts");
     if (canViewServiceOrders) views.push("service-orders");
     if (canViewInventory) views.push("inventory");
     return views;
-  }, [canViewAlerts, canViewDashboard, canViewInventory, canViewScripts, canViewServiceOrders]);
+  }, [canViewAlerts, canViewDashboard, canViewInventory, canViewPreventivePlans, canViewScripts, canViewServiceOrders]);
   const canConfigureAlerts = hasPermission(user, "alerts.configure");
   const canConfigureAlertPrioritySettings = hasPermission(user, "alerts.configure");
+  const canCommentAlerts = hasPermission(user, "alerts.comment");
   const canManageAlertSuggestions =
     hasPermission(user, "alerts.manage_suggestions") &&
     hasPermission(user, "service_orders.create_from_alert");
   const canManageScripts = hasPermission(user, "scripts.manage");
   const canRegisterScriptSimulation = hasPermission(user, "scripts.register_simulation");
+  const canCreatePreventivePlans =
+    hasPermission(user, "preventive_plans.create") &&
+    hasPermission(user, "preventive_plans.prepare");
   const canManageInventory =
     hasPermission(user, "inventory.create_asset") ||
     hasPermission(user, "inventory.edit_asset") ||
@@ -2114,9 +3290,11 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
         groupData,
         activeAlertData,
         alertHistoryData,
+        alertCorrelationData,
         alertRuleData,
         suggestionData,
         maintenanceScriptData,
+        preventivePlanData,
         serviceOrderData,
         alertSettingsData,
         systemSettingsData
@@ -2127,9 +3305,11 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
         canViewInventory ? fetchSegmentGroups(token) : Promise.resolve({ groups: [] }),
         canViewAlerts ? fetchAlerts(token) : Promise.resolve({ alerts: [] }),
         canViewAlerts ? fetchAlertHistory(token) : Promise.resolve({ alerts: [] }),
+        canViewAlerts ? fetchAlertCorrelations(token).catch(() => ({ correlations: [] })) : Promise.resolve({ correlations: [] }),
         canViewAlerts ? fetchAlertRules(token) : Promise.resolve({ rules: [] }),
         canViewAlerts ? fetchServiceOrderSuggestions(token) : Promise.resolve({ suggestions: [] }),
         canViewScripts ? fetchMaintenanceScripts(token) : Promise.resolve({ scripts: [] }),
+        canViewPreventivePlans ? fetchPreventivePlans(token) : Promise.resolve({ preventivePlans: [] }),
         canViewServiceOrders ? fetchServiceOrders(token) : Promise.resolve({ serviceOrders: [] }),
         canViewAlerts
           ? fetchAlertSettings(token).catch(() => ({ settings: normalizePrioritySettings() }))
@@ -2165,9 +3345,11 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
       setSummary(deviceData.summary);
       setAlerts(activeAlertData.alerts);
       setHistory(alertHistoryData.alerts);
+      setAlertCorrelations(alertCorrelationData.correlations || []);
       setAlertRules(alertRuleData.rules || []);
       setServiceOrderSuggestions(suggestionData.suggestions || []);
       setMaintenanceScripts(maintenanceScriptData.scripts || []);
+      setPreventivePlans(preventivePlanData.preventivePlans || []);
       setServiceOrders(serviceOrderData.serviceOrders || []);
       const nextPrioritySettings = normalizePrioritySettings(alertSettingsData.settings);
       setAlertPrioritySettings(nextPrioritySettings);
@@ -2339,6 +3521,8 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
       setAlerts(result.alerts || []);
       setAlertRules(result.rules || []);
       setServiceOrderSuggestions(result.suggestions || []);
+      const correlationData = await fetchAlertCorrelations(token).catch(() => ({ correlations: [] }));
+      setAlertCorrelations(correlationData.correlations || []);
       const created = result.createdSuggestions?.length || 0;
       notify(
         created
@@ -2374,10 +3558,21 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     }
   }
 
+  async function handleAddAlertComment(alertId, message) {
+    try {
+      await createAlertComment(token, alertId, message);
+      notify("Comentário registrado no aviso.", "ok");
+      await loadData(true);
+    } catch (error) {
+      notify(error.message, "danger");
+    }
+  }
+
   async function handleRejectSuggestion(suggestionId) {
-    const reason = window.prompt("Motivo da recusa (opcional):") || "";
+    const reason = "Recusado pelo painel de avisos.";
     try {
       await rejectServiceOrderSuggestion(token, suggestionId, reason);
+      setServiceOrderSuggestions((current) => current.filter((suggestion) => suggestion.id !== suggestionId));
       notify("Sugestão de OS recusada.", "ok");
       await loadData(true);
     } catch (error) {
@@ -2457,6 +3652,22 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
       await registerMaintenanceScriptSimulation(token, scriptId, payload);
       notify("Simulação registrada. Nenhum comando foi executado.", "ok");
       await loadData(true);
+    } catch (error) {
+      notify(error.message, "danger");
+      throw error;
+    }
+  }
+
+  async function handleCreatePreventivePlan(payload) {
+    try {
+      const response = await createPreventivePlan(token, payload);
+      setPreventivePlans((current) => [
+        response.preventivePlan,
+        ...current.filter((plan) => plan.id !== response.preventivePlan.id)
+      ]);
+      notify("Plano preventivo preparado. Nenhum comando foi executado.", "ok");
+      await loadData(true);
+      return response.preventivePlan;
     } catch (error) {
       notify(error.message, "danger");
       throw error;
@@ -4301,18 +5512,21 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
           </>
         )}
 
-        {activeView === "alerts" && (canViewAlerts || canViewScripts) && (
+        {activeView === "alerts" && (canViewAlerts || canViewScripts || canViewPreventivePlans) && (
           <AlertCenterV2
             alerts={alerts}
             history={history}
             suggestions={serviceOrderSuggestions}
             rules={alertRules}
             scripts={maintenanceScripts}
+            preventivePlans={preventivePlans}
             devices={allDevices}
             segments={decoratedSegments}
             segmentGroups={decoratedSegmentGroups}
+            inventoryTabs={inventoryTabs}
             alertPriorityColors={alertPriorityColors}
             alertPrioritySettings={alertPrioritySettings}
+            alertCorrelations={alertCorrelations}
             serviceOrders={serviceOrders}
             severityFilter={severityFilter}
             setSeverityFilter={setSeverityFilter}
@@ -4324,13 +5538,18 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
             canManageSuggestions={canManageAlertSuggestions}
             canConfigureAlerts={canConfigureAlerts}
             canConfigureAlertPrioritySettings={canConfigureAlertPrioritySettings}
+            canCommentAlerts={canCommentAlerts}
             canViewScripts={canViewScripts}
             canManageScripts={canManageScripts}
             canRegisterScriptSimulation={canRegisterScriptSimulation}
+            canViewPreventivePlans={canViewPreventivePlans}
+            canCreatePreventivePlans={canCreatePreventivePlans}
             onEvaluateAlerts={handleEvaluateAlerts}
             onAcceptSuggestion={handleAcceptSuggestion}
             onRejectSuggestion={handleRejectSuggestion}
+            onCreatePreventivePlan={handleCreatePreventivePlan}
             onUpdateRule={handleUpdateAlertRule}
+            onAddAlertComment={handleAddAlertComment}
             onSaveAlertPrioritySettings={handleSaveAlertPrioritySettings}
             onAnalyzeMaintenanceScript={handleAnalyzeMaintenanceScript}
             onSaveMaintenanceScript={handleSaveMaintenanceScript}

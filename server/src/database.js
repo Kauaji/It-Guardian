@@ -166,6 +166,16 @@ export async function initializeDatabase() {
   `);
 
   await query(`
+    CREATE TABLE IF NOT EXISTS alert_comments (
+      id TEXT PRIMARY KEY,
+      alert_id TEXT NOT NULL REFERENCES alerts(id) ON DELETE CASCADE,
+      user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+      message TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await query(`
     CREATE TABLE IF NOT EXISTS inventory_segments (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -556,6 +566,21 @@ export async function initializeDatabase() {
   `);
 
   await query(`
+    ALTER TABLE service_order_suggestions
+    ADD COLUMN IF NOT EXISTS ignored_until TIMESTAMPTZ;
+  `);
+
+  await query(`
+    ALTER TABLE service_order_suggestions
+    ADD COLUMN IF NOT EXISTS rejection_silence_until TIMESTAMPTZ;
+  `);
+
+  await query(`
+    ALTER TABLE service_order_suggestions
+    ADD COLUMN IF NOT EXISTS last_rejected_at TIMESTAMPTZ;
+  `);
+
+  await query(`
     CREATE TABLE IF NOT EXISTS maintenance_scripts (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -599,6 +624,44 @@ export async function initializeDatabase() {
       executed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       notes TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS preventive_plans (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      status TEXT NOT NULL DEFAULT 'prepared',
+      source TEXT NOT NULL DEFAULT 'manual',
+      origin_alert_id TEXT REFERENCES alerts(id) ON DELETE SET NULL,
+      origin_suggestion_id TEXT REFERENCES service_order_suggestions(id) ON DELETE SET NULL,
+      notes TEXT,
+      created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+      prepared_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS preventive_plan_scripts (
+      id TEXT PRIMARY KEY,
+      preventive_plan_id TEXT NOT NULL REFERENCES preventive_plans(id) ON DELETE CASCADE,
+      script_id TEXT NOT NULL REFERENCES maintenance_scripts(id) ON DELETE RESTRICT,
+      order_index INTEGER NOT NULL DEFAULT 0
+    );
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS preventive_plan_assets (
+      id TEXT PRIMARY KEY,
+      preventive_plan_id TEXT NOT NULL REFERENCES preventive_plans(id) ON DELETE CASCADE,
+      asset_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'prepared',
+      log TEXT,
+      prepared_at TIMESTAMPTZ,
+      completed_at TIMESTAMPTZ
     );
   `);
 
@@ -783,6 +846,11 @@ export async function initializeDatabase() {
   `);
 
   await query(`
+    CREATE INDEX IF NOT EXISTS idx_alert_comments_alert
+    ON alert_comments (alert_id, created_at DESC);
+  `);
+
+  await query(`
     CREATE INDEX IF NOT EXISTS idx_service_order_suggestions_status
     ON service_order_suggestions (status, created_at DESC);
   `);
@@ -800,6 +868,21 @@ export async function initializeDatabase() {
   await query(`
     CREATE INDEX IF NOT EXISTS idx_script_execution_logs_asset
     ON script_execution_logs (asset_id, created_at DESC);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_service_order_suggestions_ignored_until
+    ON service_order_suggestions (ignored_until);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_preventive_plans_created_at
+    ON preventive_plans (created_at DESC);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_preventive_plan_assets_asset
+    ON preventive_plan_assets (asset_id);
   `);
 
   await query(`

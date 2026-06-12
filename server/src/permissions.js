@@ -43,7 +43,9 @@ export const permissionGroups = [
     permissions: [
       { id: "alerts.view", label: "Visualizar avisos" },
       { id: "alerts.configure", label: "Configurar regras de aviso" },
-      { id: "alerts.manage_suggestions", label: "Gerenciar sugestÃµes de OS" },
+      { id: "alerts.comment", label: "Comentar avisos" },
+      { id: "alerts.silence", label: "Silenciar avisos" },
+      { id: "alerts.manage_suggestions", label: "Gerenciar sugestões de OS" },
       { id: "service_orders.create_from_alert", label: "Criar OS a partir de aviso" }
     ]
   },
@@ -54,6 +56,15 @@ export const permissionGroups = [
       { id: "scripts.view", label: "Visualizar scripts de manutenção" },
       { id: "scripts.manage", label: "Cadastrar e editar scripts de manutenção" },
       { id: "scripts.register_simulation", label: "Registrar simulação de script" }
+    ]
+  },
+  {
+    id: "preventive_plans",
+    label: "Preventivas",
+    permissions: [
+      { id: "preventive_plans.view", label: "Visualizar planos preventivos" },
+      { id: "preventive_plans.create", label: "Criar planos preventivos" },
+      { id: "preventive_plans.prepare", label: "Preparar simulação preventiva" }
     ]
   },
   {
@@ -112,10 +123,15 @@ export const roleDefaultPermissions = {
     "service_orders.settings",
     "alerts.view",
     "alerts.configure",
+    "alerts.comment",
+    "alerts.silence",
     "alerts.manage_suggestions",
     "service_orders.create_from_alert",
     "scripts.view",
     "scripts.register_simulation",
+    "preventive_plans.view",
+    "preventive_plans.create",
+    "preventive_plans.prepare",
     "settings.view",
     "settings.appearance"
   ],

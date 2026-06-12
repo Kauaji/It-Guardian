@@ -121,6 +121,8 @@ const defaultAlertPriorityColors = {
 };
 
 const defaultAlertSettings = {
+  rejectedAlertSilenceHours: 24,
+  recurrenceCounterResetHours: 24,
   autoPriority: {
     enabled: true,
     lowToMediumHours: 24,
@@ -155,8 +157,18 @@ function sanitizeColor(value, fallback) {
 function normalizeAlertSettings(value = {}) {
   const autoPriority = value.autoPriority || {};
   const priorityColors = value.priorityColors || {};
+  const rejectedAlertSilenceHours = Math.max(
+    1,
+    toNumber(value.rejectedAlertSilenceHours ?? value.rejectionSilenceHours, defaultAlertSettings.rejectedAlertSilenceHours)
+  );
+  const recurrenceCounterResetHours = Math.max(
+    1,
+    toNumber(value.recurrenceCounterResetHours ?? value.recurrenceCounterWindow, defaultAlertSettings.recurrenceCounterResetHours)
+  );
 
   return {
+    rejectedAlertSilenceHours,
+    recurrenceCounterResetHours,
     autoPriority: {
       enabled: normalizeBoolean(autoPriority.enabled, defaultAlertSettings.autoPriority.enabled),
       lowToMediumHours: Math.max(1, toNumber(autoPriority.lowToMediumHours, defaultAlertSettings.autoPriority.lowToMediumHours)),
@@ -231,9 +243,23 @@ function fromSuggestionRow(row) {
     rejectedBy: row.rejected_by,
     rejectedAt: row.rejected_at,
     rejectionReason: row.rejection_reason,
+    ignoredUntil: row.ignored_until,
+    rejectionSilenceUntil: row.rejection_silence_until,
+    lastRejectedAt: row.last_rejected_at,
     createdServiceOrderId: row.created_service_order_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at
+  };
+}
+
+function fromAlertCommentRow(row) {
+  return {
+    id: row.id,
+    alertId: row.alert_id,
+    userId: row.user_id,
+    userName: row.user_name || "Usuário",
+    message: row.message,
+    createdAt: row.created_at
   };
 }
 
@@ -343,6 +369,10 @@ export async function getAlertSettings() {
 export async function updateAlertSettings(payload = {}) {
   const current = await getAlertSettings();
   const normalized = normalizeAlertSettings({
+    rejectedAlertSilenceHours:
+      payload.rejectedAlertSilenceHours ?? current.rejectedAlertSilenceHours,
+    recurrenceCounterResetHours:
+      payload.recurrenceCounterResetHours ?? current.recurrenceCounterResetHours,
     autoPriority: {
       ...current.autoPriority,
       ...(payload.autoPriority || {})
@@ -460,6 +490,43 @@ export async function findAlertById(id) {
   return result.rows[0] ? fromAlertRow(result.rows[0]) : null;
 }
 
+export async function listAlertComments(alertId) {
+  const result = await query(
+    `
+      SELECT comments.*,
+             users.name AS user_name
+      FROM alert_comments comments
+      LEFT JOIN users ON users.id = comments.user_id
+      WHERE comments.alert_id = $1
+      ORDER BY comments.created_at ASC
+    `,
+    [alertId]
+  );
+
+  return result.rows.map(fromAlertCommentRow);
+}
+
+export async function addAlertComment({ alertId, userId, message }) {
+  const cleanMessage = String(message || "").trim();
+
+  if (!cleanMessage) {
+    const error = new Error("Informe um comentário para registrar no aviso.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const result = await query(
+    `
+      INSERT INTO alert_comments (id, alert_id, user_id, message)
+      VALUES ($1, $2, $3, $4)
+      RETURNING *
+    `,
+    [randomUUID(), alertId, userId || null, cleanMessage.slice(0, 1000)]
+  );
+
+  return fromAlertCommentRow(result.rows[0]);
+}
+
 export async function listServiceOrderSuggestions() {
   const result = await query(`
     SELECT suggestions.*,
@@ -468,7 +535,10 @@ export async function listServiceOrderSuggestions() {
            alerts.metric AS alert_metric,
            alerts.value AS alert_value,
            alerts.threshold AS alert_threshold,
-           alerts.source AS alert_source
+           alerts.source AS alert_source,
+           alerts.severity AS alert_severity,
+           alerts.first_seen_at AS alert_first_seen_at,
+           alerts.last_seen_at AS alert_last_seen_at
     FROM service_order_suggestions suggestions
     LEFT JOIN alerts ON alerts.id = suggestions.alert_id
     ORDER BY suggestions.created_at DESC
@@ -481,7 +551,10 @@ export async function listServiceOrderSuggestions() {
     alertMetric: row.alert_metric,
     alertValue: toNumber(row.alert_value),
     alertThreshold: toNumber(row.alert_threshold),
-    alertSource: row.alert_source
+    alertSource: row.alert_source,
+    alertSeverity: row.alert_severity,
+    alertFirstSeenAt: row.alert_first_seen_at,
+    alertLastSeenAt: row.alert_last_seen_at
   }));
 }
 
@@ -491,6 +564,63 @@ export async function findServiceOrderSuggestionById(id) {
 }
 
 export async function createSuggestionForAlert(alert, suggestion) {
+  const existing = await query(
+    "SELECT * FROM service_order_suggestions WHERE alert_id = $1 LIMIT 1",
+    [alert.id]
+  );
+
+  if (existing.rows[0]) {
+    const current = existing.rows[0];
+    const isRejected = current.status === "rejected";
+    const silenceUntil = current.rejection_silence_until || current.ignored_until;
+    const isStillSilenced = silenceUntil && new Date(silenceUntil).getTime() > Date.now();
+
+    if (current.status === "accepted") {
+      return { suggestion: null, created: false };
+    }
+
+    if (isRejected && isStillSilenced) {
+      return { suggestion: null, created: false, ignored: true };
+    }
+
+    const updateResult = await query(
+      `
+        UPDATE service_order_suggestions
+        SET asset_id = $2,
+            title = $3,
+            description = $4,
+            suggested_priority = $5,
+            suggested_service_id = $6,
+            suggested_problem_type_id = $7,
+            occurrences_count = GREATEST(occurrences_count, $8),
+            status = 'pending',
+            rejected_by = NULL,
+            rejected_at = NULL,
+            rejection_reason = NULL,
+            ignored_until = NULL,
+            rejection_silence_until = NULL,
+            updated_at = NOW()
+        WHERE alert_id = $1
+        RETURNING *
+      `,
+      [
+        alert.id,
+        alert.assetId || null,
+        suggestion.title,
+        suggestion.description,
+        suggestion.suggestedPriority,
+        suggestion.suggestedServiceId || null,
+        suggestion.suggestedProblemTypeId || null,
+        suggestion.occurrencesCount || alert.occurrencesCount || 1
+      ]
+    );
+
+    return {
+      suggestion: updateResult.rows[0] ? fromSuggestionRow(updateResult.rows[0]) : null,
+      created: false
+    };
+  }
+
   const result = await query(
     `
       INSERT INTO service_order_suggestions (
@@ -513,6 +643,40 @@ export async function createSuggestionForAlert(alert, suggestion) {
       suggestion.occurrencesCount || alert.occurrencesCount || 1
     ]
   );
+
+  if (!result.rows[0]) {
+    const updateResult = await query(
+      `
+        UPDATE service_order_suggestions
+        SET asset_id = $2,
+            title = $3,
+            description = $4,
+            suggested_priority = $5,
+            suggested_service_id = $6,
+            suggested_problem_type_id = $7,
+            occurrences_count = GREATEST(occurrences_count, $8),
+            updated_at = NOW()
+        WHERE alert_id = $1
+          AND status = 'pending'
+        RETURNING *
+      `,
+      [
+        alert.id,
+        alert.assetId || null,
+        suggestion.title,
+        suggestion.description,
+        suggestion.suggestedPriority,
+        suggestion.suggestedServiceId || null,
+        suggestion.suggestedProblemTypeId || null,
+        suggestion.occurrencesCount || alert.occurrencesCount || 1
+      ]
+    );
+
+    return {
+      suggestion: updateResult.rows[0] ? fromSuggestionRow(updateResult.rows[0]) : null,
+      created: false
+    };
+  }
 
   return {
     suggestion: result.rows[0] ? fromSuggestionRow(result.rows[0]) : null,
@@ -538,19 +702,23 @@ export async function markSuggestionAccepted({ id, userId, serviceOrderId }) {
   return result.rows[0] ? fromSuggestionRow(result.rows[0]) : null;
 }
 
-export async function markSuggestionRejected({ id, userId, reason }) {
+export async function markSuggestionRejected({ id, userId, reason, silenceHours = 24 }) {
+  const hours = Math.max(1, toNumber(silenceHours, 24));
   const result = await query(
     `
       UPDATE service_order_suggestions
       SET status = 'rejected',
           rejected_by = $2,
           rejected_at = NOW(),
+          last_rejected_at = NOW(),
           rejection_reason = $3,
+          ignored_until = NOW() + ($4::int * INTERVAL '1 hour'),
+          rejection_silence_until = NOW() + ($4::int * INTERVAL '1 hour'),
           updated_at = NOW()
       WHERE id = $1
       RETURNING *
     `,
-    [id, userId || null, reason?.trim() || null]
+    [id, userId || null, reason?.trim() || null, hours]
   );
 
   return result.rows[0] ? fromSuggestionRow(result.rows[0]) : null;

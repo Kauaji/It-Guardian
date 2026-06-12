@@ -26,6 +26,71 @@ O IT Guardian ja tem base de backend para Fase 3:
 - Permissoes administrativas (`admin.*`) nao sao efetivas para usuarios comuns, mesmo se forem gravadas por engano.
 - Setores inativos nao emprestam permissoes herdadas aos usuarios.
 
+## Avisos - inteligencia operacional incremental - 08/06/2026
+
+Foi adicionada uma camada incremental de inteligencia operacional no modulo de Avisos, sem integrar OCS, Zabbix real, ping real, agente ou coletor.
+
+Implementado:
+
+- Backend enriquece avisos com categoria, impacto operacional, causa provavel, acao recomendada, checklist sugerido, tendencia, nivel de confianca, score de recorrencia e motivo da prioridade.
+- Backend calcula correlacoes simples entre avisos ativos por tipo, grupo e segmento do Inventario.
+- Backend expõe comentarios internos de avisos por API.
+- Tabela `alert_comments` criada no bootstrap do banco.
+- Novos endpoints:
+  - `GET /api/alerts/correlations`
+  - `GET /api/alerts/insights`
+  - `GET /api/alerts/:id/comments`
+  - `POST /api/alerts/:id/comments`
+- Permissoes adicionadas:
+  - `alerts.comment`
+  - `alerts.silence`
+- Frontend exibe avisos correlacionados, motivo da prioridade, checklist sugerido, reincidencia, possivel falso positivo, previsao simples de capacidade e comentarios internos.
+
+Limites atuais:
+
+- Correlacao ainda e calculada em memoria com base nos avisos ativos e na estrutura atual do Inventario.
+- Previsao de capacidade e apenas indicativa; quando nao ha historico suficiente, o sistema informa essa limitacao.
+- Regras criadas automaticamente a partir de aviso e perfis por cliente/setor ficaram preparados conceitualmente, mas nao foram implementados nesta rodada.
+
+## Avisos - planos preventivos - 08/06/2026
+
+Foi criada a base de Preventivas dentro do modulo de Avisos, mantendo a regra de que nenhum script real e executado nesta etapa.
+
+Implementado:
+
+- Nova area visual "Preventivas" dentro de Avisos.
+- Cards de sugestao continuam compactos e mostram contador de recorrencia quando o mesmo problema se repete.
+- Sugestoes sao ordenadas por urgencia, considerando prioridade, recorrencia e data.
+- Botao de scripts disponiveis nos cards recomenda scripts ativos por tipo de aviso, categoria, tags, tipo de problema, tipo de maquina, grupo e segmento.
+- Recusar sugestao remove o card da fila ativa e silencia a mesma sugestao por periodo configuravel.
+- Configuracoes de Avisos passam a persistir:
+  - `rejectedAlertSilenceHours`
+  - `recurrenceCounterResetHours`
+- Backend cria tabelas de planos preventivos:
+  - `preventive_plans`
+  - `preventive_plan_scripts`
+  - `preventive_plan_assets`
+- Novos endpoints:
+  - `GET /api/preventive-plans`
+  - `POST /api/preventive-plans`
+  - `GET /api/preventive-plans/:id`
+  - `POST /api/preventive-plans/:id/prepare`
+  - `GET /api/preventive-plans/:id/logs`
+- Permissoes adicionadas:
+  - `preventive_plans.view`
+  - `preventive_plans.create`
+  - `preventive_plans.prepare`
+- Criacao de preventiva valida maquinas selecionadas, scripts ativos e reconhecimento de risco alto/critico.
+- Ao criar plano preventivo, o backend registra logs simulados por maquina e eventos em `asset_history`.
+- A tela de Preventivas agrupa maquinas por aba/ambiente, grupo e segmento para facilitar selecao por escopo.
+
+Limites atuais:
+
+- Scripts continuam sendo somente cadastro, recomendacao e simulacao; nenhum comando e executado.
+- Execucao real de scripts deve ficar para uma fase futura com agente/coletor seguro.
+- Validacao manual de permissoes especificas de Preventivas ainda deve ser feita com usuarios reais.
+- O teste automatizado validou build e renderizacao basica; a criacao completa de preventiva pela interface ainda precisa de teste manual assistido.
+
 ## Auditoria geral de código - 02/06/2026
 
 Foi criada a documentação `docs/AUDITORIA-GERAL-CODIGO.md` com a rodada de estabilização pós-migração.
@@ -50,6 +115,7 @@ Pendências mantidas para próxima etapa:
 - Zabbix ainda usa mock.
 - Ping real ainda nao roda no Vercel.
 - Coletor por cliente ainda nao existe.
+- Preventivas ainda nao executam scripts reais; registram apenas preparacao/simulacao.
 - Abas/ambientes do inventario ainda dependem parcialmente de estado local.
 - Manutencao/backup ainda precisam ser consolidados totalmente no backend.
 - Preferencias visuais continuam no frontend por decisao de baixo risco.

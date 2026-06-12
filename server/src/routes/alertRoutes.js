@@ -1,9 +1,13 @@
 import { Router } from "express";
 import {
   acknowledge,
+  addComment,
   active,
+  comments,
+  correlations,
   evaluate,
   history,
+  insights,
   removeAcknowledgement,
   rules,
   settings,
@@ -19,9 +23,13 @@ router.get("/", requirePermission("alerts.view"), active);
 router.get("/history", requirePermission("alerts.view"), history);
 router.get("/rules", requirePermission("alerts.view"), rules);
 router.get("/settings", requirePermission("alerts.view"), settings);
+router.get("/correlations", requirePermission("alerts.view"), correlations);
+router.get("/insights", requirePermission("alerts.view"), insights);
 router.patch("/rules/:id", requirePermission("alerts.configure"), updateRule);
 router.patch("/settings", requirePermission("alerts.configure"), updateSettings);
 router.post("/evaluate", requirePermission("alerts.manage_suggestions"), evaluate);
+router.get("/:id/comments", requirePermission("alerts.view"), comments);
+router.post("/:id/comments", requirePermission("alerts.comment"), addComment);
 router.post("/:id/acknowledge", requireRole("admin", "operator"), acknowledge);
 router.delete("/:id/acknowledge", requireRole("admin", "operator"), removeAcknowledgement);
 
