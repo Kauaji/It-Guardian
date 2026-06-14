@@ -1,5 +1,6 @@
 import {
   createPreventivePlan,
+  createServiceOrderFromPreventivePlan,
   findPreventivePlanById,
   listPreventivePlanLogs,
   listPreventivePlans,
@@ -44,6 +45,19 @@ export async function prepare(req, res, next) {
       return;
     }
     res.json({ preventivePlan });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function createServiceOrder(req, res, next) {
+  try {
+    const result = await createServiceOrderFromPreventivePlan(req.params.id, req.user);
+    if (!result) {
+      res.status(404).json({ message: "Plano preventivo não encontrado." });
+      return;
+    }
+    res.status(201).json(result);
   } catch (error) {
     next(error);
   }

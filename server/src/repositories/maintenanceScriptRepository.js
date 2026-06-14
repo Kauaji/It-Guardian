@@ -1,12 +1,35 @@
 import { randomUUID } from "node:crypto";
 import { query } from "../database.js";
 import { addAssetHistory } from "./assetHistoryRepository.js";
+import {
+  findAlertById,
+  findServiceOrderSuggestionById,
+  getAlertSettings,
+  markSuggestionValidated
+} from "./alertRepository.js";
 import { addLog } from "./logRepository.js";
 import { addServiceOrderHistory } from "./serviceOrderRepository.js";
 
 export const scriptTypes = new Set(["bat", "cmd", "powershell", "shell", "other"]);
 export const riskLevels = new Set(["low", "medium", "high", "critical"]);
 export const simulationModes = new Set(["simulated", "prepared"]);
+export const validationStatuses = new Set([
+  "pending_validation",
+  "validation_success",
+  "validation_failed",
+  "validation_cancelled",
+  "waiting_agent"
+]);
+export const allowedScriptVariables = new Map([
+  ["CURRENT_USER", "Usuário logado na máquina atendida"],
+  ["USER_PROFILE", "Caminho do perfil do usuário logado"],
+  ["TEMP_DIR", "Pasta temporária do usuário"],
+  ["HOSTNAME", "Nome da máquina"],
+  ["ASSET_NAME", "Nome do ativo no IT Guardian"],
+  ["ASSET_IP", "IP do ativo no IT Guardian"],
+  ["OS_DRIVE", "Unidade do sistema operacional"],
+  ["PROGRAM_DATA", "Pasta ProgramData do Windows"]
+]);
 
 const maxLengths = {
   name: 120,
@@ -15,7 +38,8 @@ const maxLengths = {
   category: 80,
   alertType: 80,
   problemType: 120,
-  notes: 1000
+  notes: 1000,
+  listItem: 80
 };
 
 const riskRank = {
@@ -98,6 +122,79 @@ const analysisPatterns = [
   }
 ];
 
+const logErrorPatterns = [
+  {
+    type: "access_denied",
+    patterns: [/access\s+denied/i, /acesso\s+negado/i, /permission\s+denied/i],
+    summary: "O log indica acesso negado.",
+    cause: "O script tentou acessar um recurso sem permissao suficiente.",
+    solution: "Validar permissao administrativa, caminho acessado e credenciais do usuario."
+  },
+  {
+    type: "file_not_found",
+    patterns: [/file\s+not\s+found/i, /arquivo\s+n[aã]o\s+encontrado/i, /cannot\s+find/i],
+    summary: "O arquivo ou recurso informado nao foi encontrado.",
+    cause: "O caminho pode estar incorreto ou o arquivo nao existe no ativo.",
+    solution: "Conferir caminho, nome do arquivo e existencia do recurso antes de tentar novamente."
+  },
+  {
+    type: "invalid_path",
+    patterns: [/invalid\s+path/i, /caminho\s+inv[aá]lido/i, /path\s+not\s+valid/i],
+    summary: "O caminho informado parece invalido.",
+    cause: "Variavel, unidade ou pasta informada nao foi resolvida corretamente.",
+    solution: "Validar a unidade, remover caracteres invalidos e conferir variaveis do script."
+  },
+  {
+    type: "insufficient_permission",
+    patterns: [/insufficient\s+permission/i, /permiss[aã]o\s+insuficiente/i, /requires\s+elevation/i],
+    summary: "Permissao insuficiente para concluir a acao.",
+    cause: "A verificacao exigiria permissao elevada no ativo.",
+    solution: "Registrar acao corretiva para revisar permissao, perfil do usuario ou agente seguro."
+  },
+  {
+    type: "command_not_recognized",
+    patterns: [/not\s+recognized/i, /n[aã]o\s+reconhecido/i, /command\s+not\s+found/i],
+    summary: "Comando nao reconhecido no ambiente informado.",
+    cause: "O comando pode nao existir no sistema operacional ou no PATH do ativo.",
+    solution: "Validar tipo de script, shell alvo e comandos disponiveis no ativo."
+  },
+  {
+    type: "timeout",
+    patterns: [/timeout/i, /timed\s+out/i, /tempo\s+esgotado/i],
+    summary: "A operacao atingiu o tempo limite.",
+    cause: "O ativo pode estar indisponivel, lento ou sem resposta do agente.",
+    solution: "Revisar conectividade, disponibilidade do agente e janela de execucao."
+  },
+  {
+    type: "network_failure",
+    patterns: [/network\s+failure/i, /falha\s+de\s+rede/i, /unreachable/i, /host\s+inacess/i],
+    summary: "Falha de rede durante a verificacao.",
+    cause: "O ativo, rota ou servico de rede pode estar indisponivel.",
+    solution: "Validar conectividade, DNS, rota e disponibilidade do equipamento."
+  },
+  {
+    type: "agent_unavailable",
+    patterns: [/agent\s+unavailable/i, /agente\s+indispon/i, /agent\s+offline/i],
+    summary: "Agente seguro indisponivel.",
+    cause: "Nao ha agente conectado para executar ou coletar dados reais.",
+    solution: "Manter a validacao como preparada e instalar/ativar agente seguro futuramente."
+  },
+  {
+    type: "unresolved_variable",
+    patterns: [/\{\{[A-Z0-9_]+\}\}/i, /unresolved\s+variable/i, /vari[aá]vel\s+n[aã]o\s+resolvida/i],
+    summary: "Variavel do script nao foi resolvida.",
+    cause: "O contexto do ativo nao forneceu uma das variaveis esperadas.",
+    solution: "Conferir variaveis suportadas e dados cadastrados do ativo."
+  },
+  {
+    type: "logged_user_not_detected",
+    patterns: [/logged\s+user\s+not\s+detected/i, /usuario\s+logado\s+n[aã]o\s+detectado/i, /whoami.*failed/i],
+    summary: "Usuario logado nao detectado.",
+    cause: "A verificacao depende de sessao de usuario, mas o agente nao encontrou uma sessao ativa.",
+    solution: "Confirmar se ha usuario logado no ativo ou ajustar o roteiro para contexto de sistema."
+  }
+];
+
 const defaultMaintenanceScripts = [
   {
     id: "demo-script-network-diagnostics",
@@ -113,7 +210,11 @@ const defaultMaintenanceScripts = [
     category: "Rede",
     riskLevel: "low",
     alertType: "ping_failure",
-    problemType: "Internet lenta"
+    problemType: "Internet lenta",
+    tags: ["rede", "offline", "ping", "conectividade"],
+    relatedAlertTypes: ["ping_failure", "network"],
+    relatedProblemTypes: ["Internet lenta", "Maquina offline"],
+    recommendedForCategories: ["Rede"]
   },
   {
     id: "demo-script-system-info",
@@ -129,7 +230,11 @@ const defaultMaintenanceScripts = [
     category: "Sistema",
     riskLevel: "low",
     alertType: "resource_threshold",
-    problemType: "Sistema travando"
+    problemType: "Sistema travando",
+    tags: ["sistema", "cpu", "ram", "memoria", "desempenho"],
+    relatedAlertTypes: ["resource_threshold", "cpu", "memory", "ram"],
+    relatedProblemTypes: ["Sistema travando"],
+    recommendedForCategories: ["Sistema", "Hardware"]
   },
   {
     id: "demo-script-printer-check",
@@ -159,7 +264,11 @@ const defaultMaintenanceScripts = [
     category: "Hardware",
     riskLevel: "medium",
     alertType: "disk_usage",
-    problemType: "Disco acima do limite"
+    problemType: "Disco acima do limite",
+    tags: ["disco", "armazenamento", "hardware"],
+    relatedAlertTypes: ["disk_usage", "disk"],
+    relatedProblemTypes: ["Disco acima do limite"],
+    recommendedForCategories: ["Hardware"]
   }
 ];
 
@@ -167,6 +276,55 @@ function trimString(value, maxLength, fallback = "") {
   const text = String(value ?? "").trim();
   if (!text) return fallback;
   return text.slice(0, maxLength);
+}
+
+function parseArrayValue(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {
+        return trimmed.split(",");
+      }
+    }
+    return trimmed.split(",");
+  }
+  return [];
+}
+
+function normalizeTextList(value) {
+  return [...new Set(parseArrayValue(value)
+    .map((item) => trimString(item, maxLengths.listItem))
+    .filter(Boolean))];
+}
+
+function normalizeVariableList(value) {
+  return [...new Set(parseArrayValue(value)
+    .map((item) => trimString(item, maxLengths.listItem).replace(/[{}]/g, "").toUpperCase())
+    .filter((item) => allowedScriptVariables.has(item)))];
+}
+
+function detectScriptVariables(content = "") {
+  const matches = [...String(content || "").matchAll(/\{\{\s*([A-Z0-9_]+)\s*\}\}/gi)];
+  const variables = [...new Set(matches.map((match) => match[1].toUpperCase()))];
+  const allowed = variables.filter((variable) => allowedScriptVariables.has(variable));
+  const unknown = variables.filter((variable) => !allowedScriptVariables.has(variable));
+
+  return {
+    variables,
+    allowed,
+    unknown,
+    details: allowed.map((variable) => ({
+      name: `{{${variable}}}`,
+      key: variable,
+      description: allowedScriptVariables.get(variable)
+    })),
+    status: unknown.length ? "invalid" : "valid"
+  };
 }
 
 function normalizeScriptType(value) {
@@ -205,6 +363,15 @@ function fromScriptRow(row) {
     active: row.active,
     alertType: row.alert_type || "",
     problemType: row.problem_type || "",
+    tags: parseArrayValue(row.tags),
+    supportedVariables: parseArrayValue(row.supported_variables),
+    relatedAlertTypes: parseArrayValue(row.related_alert_types),
+    relatedProblemTypes: parseArrayValue(row.related_problem_types),
+    recommendedForCategories: parseArrayValue(row.recommended_for_categories),
+    requiresLoggedUser: row.requires_logged_user === true,
+    requiresAdmin: row.requires_admin === true,
+    safePreview: row.safe_preview || row.content || "",
+    variableValidationStatus: row.variable_validation_status || "valid",
     createdBy: row.created_by,
     createdAt: row.created_at,
     updatedAt: row.updated_at
@@ -218,17 +385,93 @@ function fromLogRow(row) {
     assetId: row.asset_id,
     serviceOrderId: row.service_order_id,
     alertId: row.alert_id,
+    suggestionId: row.suggestion_id,
+    preventivePlanId: row.preventive_plan_id,
     mode: row.mode,
     status: row.status,
     executedBy: row.executed_by,
     executedAt: row.executed_at,
     notes: row.notes || "",
+    rawLog: row.raw_log || "",
+    parsedSummary: row.parsed_summary || "",
+    errorDetected: row.error_detected === true,
+    errorType: row.error_type || "",
+    probableCause: row.probable_cause || "",
+    suggestedSolution: row.suggested_solution || "",
+    attentionRequired: row.attention_required === true,
+    acknowledgedAt: row.acknowledged_at,
+    acknowledgedBy: row.acknowledged_by,
+    correctiveActionStatus: row.corrective_action_status || "",
+    correctiveActionNotes: row.corrective_action_notes || "",
     createdAt: row.created_at
+  };
+}
+
+function fromValidationRow(row) {
+  return {
+    id: row.id,
+    suggestionId: row.suggestion_id,
+    alertId: row.alert_id,
+    assetId: row.asset_id,
+    scriptId: row.script_id,
+    scriptName: row.script_name || "",
+    status: row.status,
+    startedBy: row.started_by,
+    startedAt: row.started_at,
+    validationWindowMinutes: Number(row.validation_window_minutes || 30),
+    validationDueAt: row.validation_due_at,
+    finishedAt: row.finished_at,
+    resultSummary: row.result_summary || "",
+    logId: row.log_id,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
+function interpretScriptLog(rawLog = "", fallbackStatus = "registered") {
+  const text = String(rawLog || "").trim();
+
+  if (!text) {
+    return {
+      parsedSummary: "Uso registrado para validação. Nenhum comando foi executado nesta versão.",
+      errorDetected: false,
+      errorType: "",
+      probableCause: "",
+      suggestedSolution: "",
+      status: fallbackStatus
+    };
+  }
+
+  for (const rule of logErrorPatterns) {
+    if (!rule.patterns.some((pattern) => pattern.test(text))) continue;
+    return {
+      parsedSummary: rule.summary,
+      errorDetected: true,
+      errorType: rule.type,
+      probableCause: rule.cause,
+      suggestedSolution: rule.solution,
+      status: "error"
+    };
+  }
+
+  return {
+    parsedSummary: "Log registrado sem erro reconhecido.",
+    errorDetected: false,
+    errorType: "",
+    probableCause: "",
+    suggestedSolution: "",
+    status: fallbackStatus === "error" ? "registered" : fallbackStatus
   };
 }
 
 export function analyzeMaintenanceScriptContent(content = "") {
   const text = String(content ?? "").slice(0, maxLengths.content);
+  const variableInfo = detectScriptVariables(text);
+  const allowedVariables = Array.from(allowedScriptVariables.entries()).map(([key, description]) => ({
+    key,
+    name: `{{${key}}}`,
+    description
+  }));
   const detectedActions = [];
   const summaryParts = [];
   let suggestedRiskLevel = "low";
@@ -245,6 +488,12 @@ export function analyzeMaintenanceScriptContent(content = "") {
       estimatedSummary: "Nenhum conteúdo informado para análise estimada.",
       suggestedRiskLevel: "medium",
       detectedActions: [],
+      detectedVariables: [],
+      unknownVariables: [],
+      variableDetails: [],
+      variableValidationStatus: "valid",
+      allowedVariables,
+      safePreview: "",
       safetyWarnings: [
         "Nenhum comando foi executado.",
         "O conteúdo é tratado apenas como texto armazenado."
@@ -258,6 +507,12 @@ export function analyzeMaintenanceScriptContent(content = "") {
       : "Não foram identificados padrões conhecidos de alto risco. Ainda assim, revise manualmente antes de usar.",
     suggestedRiskLevel,
     detectedActions: [...new Set(detectedActions)],
+    detectedVariables: variableInfo.allowed.map((variable) => `{{${variable}}}`),
+    unknownVariables: variableInfo.unknown.map((variable) => `{{${variable}}}`),
+    variableDetails: variableInfo.details,
+    variableValidationStatus: variableInfo.status,
+    allowedVariables,
+    safePreview: text,
     safetyWarnings: [
       "Resumo estimado gerado a partir de padrões conhecidos. Revise manualmente antes de usar.",
       "Nenhum comando foi executado.",
@@ -283,10 +538,22 @@ function normalizeScriptPayload(payload = {}, current = {}) {
   }
 
   const analysis = analyzeMaintenanceScriptContent(content);
+  if (analysis.unknownVariables?.length) {
+    const error = new Error(`Variaveis nao permitidas no script: ${analysis.unknownVariables.join(", ")}.`);
+    error.statusCode = 400;
+    throw error;
+  }
   const suggestedRiskLevel = normalizeRiskLevel(
     payload.suggestedRiskLevel ?? current.suggestedRiskLevel,
     analysis.suggestedRiskLevel
   );
+  const tags = normalizeTextList(payload.tags ?? current.tags);
+  const relatedAlertTypes = normalizeTextList(payload.relatedAlertTypes ?? current.relatedAlertTypes);
+  const relatedProblemTypes = normalizeTextList(payload.relatedProblemTypes ?? current.relatedProblemTypes);
+  const recommendedForCategories = normalizeTextList(payload.recommendedForCategories ?? current.recommendedForCategories);
+  const supportedVariables = normalizeVariableList(payload.supportedVariables ?? current.supportedVariables);
+  const detectedVariables = normalizeVariableList(analysis.detectedVariables);
+  const finalSupportedVariables = [...new Set([...supportedVariables, ...detectedVariables])];
 
   return {
     name,
@@ -304,7 +571,16 @@ function normalizeScriptPayload(payload = {}, current = {}) {
     requiresConfirmation: toBoolean(payload.requiresConfirmation ?? current.requiresConfirmation, true),
     active: toBoolean(payload.active ?? current.active, true),
     alertType: trimString(payload.alertType ?? current.alertType, maxLengths.alertType),
-    problemType: trimString(payload.problemType ?? current.problemType, maxLengths.problemType)
+    problemType: trimString(payload.problemType ?? current.problemType, maxLengths.problemType),
+    tags,
+    supportedVariables: finalSupportedVariables,
+    relatedAlertTypes,
+    relatedProblemTypes,
+    recommendedForCategories,
+    requiresLoggedUser: toBoolean(payload.requiresLoggedUser ?? current.requiresLoggedUser, false),
+    requiresAdmin: toBoolean(payload.requiresAdmin ?? current.requiresAdmin, false),
+    safePreview: analysis.safePreview || content,
+    variableValidationStatus: analysis.variableValidationStatus || "valid"
   };
 }
 
@@ -336,6 +612,15 @@ export async function seedDefaultMaintenanceScripts() {
               active = TRUE,
               alert_type = $10,
               problem_type = $11,
+              tags = $12,
+              supported_variables = $13,
+              related_alert_types = $14,
+              related_problem_types = $15,
+              recommended_for_categories = $16,
+              requires_logged_user = $17,
+              requires_admin = $18,
+              safe_preview = $19,
+              variable_validation_status = $20,
               updated_at = NOW()
           WHERE id = $1
         `,
@@ -350,7 +635,16 @@ export async function seedDefaultMaintenanceScripts() {
           normalized.riskLevel,
           normalized.suggestedRiskLevel,
           normalized.alertType || null,
-          normalized.problemType || null
+          normalized.problemType || null,
+          JSON.stringify(normalized.tags),
+          JSON.stringify(normalized.supportedVariables),
+          JSON.stringify(normalized.relatedAlertTypes),
+          JSON.stringify(normalized.relatedProblemTypes),
+          JSON.stringify(normalized.recommendedForCategories),
+          normalized.requiresLoggedUser,
+          normalized.requiresAdmin,
+          normalized.safePreview,
+          normalized.variableValidationStatus
         ]
       );
       continue;
@@ -361,9 +655,14 @@ export async function seedDefaultMaintenanceScripts() {
         INSERT INTO maintenance_scripts (
           id, name, description, type, content, estimated_summary, category,
           risk_level, suggested_risk_level, requires_confirmation, active,
-          alert_type, problem_type, created_by
+          alert_type, problem_type, tags, supported_variables, related_alert_types,
+          related_problem_types, recommended_for_categories, requires_logged_user,
+          requires_admin, safe_preview, variable_validation_status, created_by
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE, TRUE, $10, $11, NULL)
+        VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE, TRUE, $10, $11,
+          $12, $13, $14, $15, $16, $17, $18, $19, $20, NULL
+        )
       `,
       [
         script.id,
@@ -376,7 +675,16 @@ export async function seedDefaultMaintenanceScripts() {
         normalized.riskLevel,
         normalized.suggestedRiskLevel,
         normalized.alertType || null,
-        normalized.problemType || null
+        normalized.problemType || null,
+        JSON.stringify(normalized.tags),
+        JSON.stringify(normalized.supportedVariables),
+        JSON.stringify(normalized.relatedAlertTypes),
+        JSON.stringify(normalized.relatedProblemTypes),
+        JSON.stringify(normalized.recommendedForCategories),
+        normalized.requiresLoggedUser,
+        normalized.requiresAdmin,
+        normalized.safePreview,
+        normalized.variableValidationStatus
       ]
     );
   }
@@ -407,9 +715,14 @@ export async function createMaintenanceScript(payload = {}, user = null) {
       INSERT INTO maintenance_scripts (
         id, name, description, type, content, estimated_summary, category,
         risk_level, suggested_risk_level, requires_confirmation, active,
-        alert_type, problem_type, created_by
+        alert_type, problem_type, tags, supported_variables, related_alert_types,
+        related_problem_types, recommended_for_categories, requires_logged_user,
+        requires_admin, safe_preview, variable_validation_status, created_by
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+        $14, $15, $16, $17, $18, $19, $20, $21, $22, $23
+      )
       RETURNING *
     `,
     [
@@ -426,6 +739,15 @@ export async function createMaintenanceScript(payload = {}, user = null) {
       normalized.active,
       normalized.alertType || null,
       normalized.problemType || null,
+      JSON.stringify(normalized.tags),
+      JSON.stringify(normalized.supportedVariables),
+      JSON.stringify(normalized.relatedAlertTypes),
+      JSON.stringify(normalized.relatedProblemTypes),
+      JSON.stringify(normalized.recommendedForCategories),
+      normalized.requiresLoggedUser,
+      normalized.requiresAdmin,
+      normalized.safePreview,
+      normalized.variableValidationStatus,
       user?.id || null
     ]
   );
@@ -453,6 +775,15 @@ export async function updateMaintenanceScript(id, payload = {}) {
           active = $11,
           alert_type = $12,
           problem_type = $13,
+          tags = $14,
+          supported_variables = $15,
+          related_alert_types = $16,
+          related_problem_types = $17,
+          recommended_for_categories = $18,
+          requires_logged_user = $19,
+          requires_admin = $20,
+          safe_preview = $21,
+          variable_validation_status = $22,
           updated_at = NOW()
       WHERE id = $1
       RETURNING *
@@ -470,7 +801,16 @@ export async function updateMaintenanceScript(id, payload = {}) {
       normalized.requiresConfirmation,
       normalized.active,
       normalized.alertType || null,
-      normalized.problemType || null
+      normalized.problemType || null,
+      JSON.stringify(normalized.tags),
+      JSON.stringify(normalized.supportedVariables),
+      JSON.stringify(normalized.relatedAlertTypes),
+      JSON.stringify(normalized.relatedProblemTypes),
+      JSON.stringify(normalized.recommendedForCategories),
+      normalized.requiresLoggedUser,
+      normalized.requiresAdmin,
+      normalized.safePreview,
+      normalized.variableValidationStatus
     ]
   );
 
@@ -497,18 +837,32 @@ export async function createScriptSimulationLog({
   assetId = null,
   serviceOrderId = null,
   alertId = null,
+  suggestionId = null,
+  preventivePlanId = null,
   mode = "simulated",
   status = "registered",
   executedBy = null,
-  notes = ""
+  notes = "",
+  rawLog = "",
+  parsedSummary = "",
+  errorDetected = null,
+  errorType = "",
+  probableCause = "",
+  suggestedSolution = "",
+  attentionRequired = null
 }) {
   const safeMode = simulationModes.has(mode) ? mode : "simulated";
+  const interpreted = interpretScriptLog(rawLog, status);
+  const hasError = errorDetected ?? interpreted.errorDetected;
   const result = await query(
     `
       INSERT INTO script_execution_logs (
-        id, script_id, asset_id, service_order_id, alert_id, mode, status, executed_by, notes
+        id, script_id, asset_id, service_order_id, alert_id, suggestion_id,
+        preventive_plan_id, mode, status, executed_by, notes, raw_log,
+        parsed_summary, error_detected, error_type, probable_cause,
+        suggested_solution, attention_required
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
       RETURNING *
     `,
     [
@@ -517,10 +871,19 @@ export async function createScriptSimulationLog({
       assetId || null,
       serviceOrderId || null,
       alertId || null,
+      suggestionId || null,
+      preventivePlanId || null,
       safeMode,
-      status,
+      hasError ? "error" : (interpreted.status || status),
       executedBy || null,
-      trimString(notes, maxLengths.notes)
+      trimString(notes, maxLengths.notes),
+      rawLog || "",
+      parsedSummary || interpreted.parsedSummary,
+      hasError,
+      errorType || interpreted.errorType || null,
+      probableCause || interpreted.probableCause || null,
+      suggestedSolution || interpreted.suggestedSolution || null,
+      attentionRequired ?? hasError
     ]
   );
 
@@ -616,4 +979,344 @@ export async function registerMaintenanceScriptSimulation({ scriptId, payload = 
   });
 
   return { log, script };
+}
+
+export async function listScriptValidationsForSuggestion(suggestionId) {
+  const result = await query(
+    `
+      SELECT validations.*,
+             scripts.name AS script_name
+      FROM script_validation_runs validations
+      LEFT JOIN maintenance_scripts scripts ON scripts.id = validations.script_id
+      WHERE validations.suggestion_id = $1
+      ORDER BY validations.created_at DESC
+    `,
+    [suggestionId]
+  );
+
+  return result.rows.map(fromValidationRow);
+}
+
+export async function useScriptFromSuggestion({ suggestionId, scriptId, payload = {}, user = null }) {
+  const [suggestion, script, settings] = await Promise.all([
+    findServiceOrderSuggestionById(suggestionId),
+    findMaintenanceScriptById(scriptId),
+    getAlertSettings()
+  ]);
+
+  if (!suggestion) {
+    const error = new Error("Sugestão de OS não encontrada.");
+    error.statusCode = 404;
+    throw error;
+  }
+  if (suggestion.status !== "pending") {
+    const error = new Error("Apenas sugestões pendentes podem receber validação de script.");
+    error.statusCode = 409;
+    throw error;
+  }
+  if (!script || script.active === false) {
+    const error = new Error("Script de manutenção não encontrado ou inativo.");
+    error.statusCode = 404;
+    throw error;
+  }
+  if (payload.confirmed !== true) {
+    const error = new Error("Confirme que esta ação apenas registra o uso do script. Nenhum comando será executado.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const riskLevel = normalizeRiskLevel(script.riskLevel || script.suggestedRiskLevel, "medium");
+  if ((riskLevel === "high" || riskLevel === "critical") && payload.riskAcknowledged !== true) {
+    const error = new Error("Scripts de alto risco exigem confirmação extra antes de registrar o uso.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const validationWindowMinutes = Math.min(
+    10080,
+    Math.max(5, Math.round(Number(payload.validationWindowMinutes || settings.scriptValidationWindowMinutes || 30)))
+  );
+  const alert = suggestion.alertId ? await findAlertById(suggestion.alertId) : null;
+  const assetId = suggestion.assetId || alert?.assetId || null;
+  const userName = user?.name || "Usuário";
+  const notes = trimString(payload.notes, maxLengths.notes);
+  const validationDue = new Date(Date.now() + validationWindowMinutes * 60000);
+  const rawLog = [
+    "Uso preparado a partir de sugestão de OS.",
+    "Nenhum comando foi executado pelo servidor ou navegador.",
+    "Aguardando agente seguro/coleta futura para validação real."
+  ].join("\n");
+
+  const log = await createScriptSimulationLog({
+    scriptId: script.id,
+    assetId,
+    alertId: suggestion.alertId,
+    suggestionId: suggestion.id,
+    mode: "prepared",
+    status: "waiting_agent",
+    executedBy: user?.id || null,
+    notes,
+    rawLog,
+    parsedSummary: "Validação preparada. O sistema aguardará a janela configurada antes de reavaliar o aviso.",
+    errorDetected: false,
+    attentionRequired: false
+  });
+
+  const validationResult = await query(
+    `
+      INSERT INTO script_validation_runs (
+        id, suggestion_id, alert_id, asset_id, script_id, status, started_by,
+        validation_window_minutes, validation_due_at, result_summary, log_id
+      )
+      VALUES ($1, $2, $3, $4, $5, 'waiting_agent', $6, $7, $8, $9, $10)
+      RETURNING *
+    `,
+    [
+      randomUUID(),
+      suggestion.id,
+      suggestion.alertId || null,
+      assetId,
+      script.id,
+      user?.id || null,
+      validationWindowMinutes,
+      validationDue.toISOString(),
+      "Validação preparada. Nenhum comando foi executado nesta versão.",
+      log.id
+    ]
+  );
+  const validation = fromValidationRow({ ...validationResult.rows[0], script_name: script.name });
+
+  if (assetId) {
+    await addAssetHistory({
+      assetId,
+      eventType: "script_validation_started",
+      message:
+        `Script '${script.name}' foi registrado na sugestão ${suggestion.id}. ` +
+        `Validação iniciada por ${userName}. Nenhum comando foi executado nesta versão.`,
+      oldValue: null,
+      newValue: `Janela: ${validationWindowMinutes} minuto(s). Validação prevista: ${validationDue.toISOString()}.`,
+      userId: user?.id || null,
+      userName
+    });
+  }
+
+  await addLog({
+    type: "script_validation_started",
+    message: `Validação de script preparada para sugestão de OS: ${script.name}.`,
+    userId: user?.id || null,
+    meta: {
+      suggestionId: suggestion.id,
+      alertId: suggestion.alertId,
+      assetId,
+      scriptId: script.id,
+      validationId: validation.id,
+      validationWindowMinutes
+    }
+  });
+
+  return { suggestion, script, log, validation };
+}
+
+export async function refreshDueScriptValidations() {
+  const result = await query(`
+    SELECT validations.*,
+           scripts.name AS script_name,
+           alerts.status AS alert_status,
+           alerts.title AS alert_title
+    FROM script_validation_runs validations
+    LEFT JOIN maintenance_scripts scripts ON scripts.id = validations.script_id
+    LEFT JOIN alerts ON alerts.id = validations.alert_id
+    WHERE validations.status IN ('waiting_agent', 'pending_validation')
+      AND validations.validation_due_at <= NOW()
+    ORDER BY validations.validation_due_at ASC
+  `);
+  const refreshed = [];
+
+  for (const row of result.rows) {
+    const success = !row.alert_id || row.alert_status === "resolved";
+    const status = success ? "validation_success" : "validation_failed";
+    const resultSummary = success
+      ? "Validação concluída: o aviso não voltou no período configurado."
+      : "Validação falhou: o aviso continuou ativo após o período configurado.";
+    const updated = await query(
+      `
+        UPDATE script_validation_runs
+        SET status = $2,
+            finished_at = NOW(),
+            result_summary = $3,
+            updated_at = NOW()
+        WHERE id = $1
+        RETURNING *
+      `,
+      [row.id, status, resultSummary]
+    );
+    const validation = fromValidationRow({ ...updated.rows[0], script_name: row.script_name });
+    refreshed.push(validation);
+
+    if (success && row.suggestion_id) {
+      await markSuggestionValidated({ id: row.suggestion_id });
+    }
+
+    if (row.asset_id) {
+      await addAssetHistory({
+        assetId: row.asset_id,
+        eventType: "script_validation_finished",
+        message: resultSummary,
+        oldValue: row.script_name || row.script_id,
+        newValue: status,
+        userId: row.started_by || null,
+        userName: "Sistema"
+      });
+    }
+  }
+
+  return refreshed;
+}
+
+export async function cancelScriptValidation(id, user = null) {
+  const result = await query(
+    `
+      UPDATE script_validation_runs
+      SET status = 'validation_cancelled',
+          finished_at = NOW(),
+          result_summary = 'Validação cancelada manualmente.',
+          updated_at = NOW()
+      WHERE id = $1
+        AND status IN ('waiting_agent', 'pending_validation')
+      RETURNING *
+    `,
+    [id]
+  );
+
+  if (!result.rows[0]) {
+    const error = new Error("Validação não encontrada ou já finalizada.");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const validation = fromValidationRow(result.rows[0]);
+  if (validation.assetId) {
+    await addAssetHistory({
+      assetId: validation.assetId,
+      eventType: "script_validation_cancelled",
+      message: `${user?.name || "Usuário"} cancelou a validação de script vinculada à sugestão ${validation.suggestionId}.`,
+      oldValue: validation.status,
+      newValue: "validation_cancelled",
+      userId: user?.id || null,
+      userName: user?.name || null
+    });
+  }
+
+  return validation;
+}
+
+export async function listPendingScriptLogs() {
+  const result = await query(
+    `
+      SELECT logs.*,
+             scripts.name AS script_name
+      FROM script_execution_logs logs
+      LEFT JOIN maintenance_scripts scripts ON scripts.id = logs.script_id
+      WHERE logs.attention_required = TRUE
+        AND logs.acknowledged_at IS NULL
+      ORDER BY logs.created_at DESC
+    `
+  );
+
+  return result.rows.map((row) => ({
+    ...fromLogRow(row),
+    scriptName: row.script_name || ""
+  }));
+}
+
+export async function findScriptLogById(id) {
+  const result = await query(
+    `
+      SELECT logs.*,
+             scripts.name AS script_name
+      FROM script_execution_logs logs
+      LEFT JOIN maintenance_scripts scripts ON scripts.id = logs.script_id
+      WHERE logs.id = $1
+      LIMIT 1
+    `,
+    [id]
+  );
+
+  return result.rows[0] ? {
+    ...fromLogRow(result.rows[0]),
+    scriptName: result.rows[0].script_name || ""
+  } : null;
+}
+
+export async function acknowledgeScriptLog(id, user = null) {
+  const result = await query(
+    `
+      UPDATE script_execution_logs
+      SET attention_required = FALSE,
+          acknowledged_at = NOW(),
+          acknowledged_by = $2
+      WHERE id = $1
+      RETURNING *
+    `,
+    [id, user?.id || null]
+  );
+
+  if (!result.rows[0]) {
+    const error = new Error("Log de script não encontrado.");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return fromLogRow(result.rows[0]);
+}
+
+export async function applyScriptLogSuggestedSolution(id, payload = {}, user = null) {
+  const log = await findScriptLogById(id);
+  if (!log) {
+    const error = new Error("Log de script não encontrado.");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const notes = trimString(
+    payload.notes ||
+      "Ação corretiva sugerida registrada para acompanhamento. Nenhum comando foi executado automaticamente.",
+    maxLengths.notes
+  );
+  const result = await query(
+    `
+      UPDATE script_execution_logs
+      SET corrective_action_status = 'suggested_solution_registered',
+          corrective_action_notes = $2,
+          attention_required = FALSE,
+          acknowledged_at = COALESCE(acknowledged_at, NOW()),
+          acknowledged_by = COALESCE(acknowledged_by, $3)
+      WHERE id = $1
+      RETURNING *
+    `,
+    [id, notes, user?.id || null]
+  );
+
+  if (log.assetId) {
+    await addAssetHistory({
+      assetId: log.assetId,
+      eventType: "script_log_solution_registered",
+      message:
+        `${user?.name || "Usuário"} registrou solução sugerida para o log do script '${log.scriptName || log.scriptId}'. ` +
+        "Nenhum comando foi executado automaticamente.",
+      oldValue: log.errorType || null,
+      newValue: notes,
+      userId: user?.id || null,
+      userName: user?.name || null
+    });
+  }
+
+  await addLog({
+    type: "script_log_solution_registered",
+    message: "Solução sugerida registrada para log de script. Nenhum comando foi executado.",
+    userId: user?.id || null,
+    meta: { logId: id, suggestionId: log.suggestionId, assetId: log.assetId }
+  });
+
+  return fromLogRow(result.rows[0]);
 }

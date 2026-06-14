@@ -23,6 +23,9 @@ import priorityRuleRoutes from "./routes/priorityRuleRoutes.js";
 import systemSettingsRoutes from "./routes/systemSettingsRoutes.js";
 import maintenanceScriptRoutes from "./routes/maintenanceScriptRoutes.js";
 import preventivePlanRoutes from "./routes/preventivePlanRoutes.js";
+import preventiveAutomationRoutes from "./routes/preventiveAutomationRoutes.js";
+import scriptLogRoutes from "./routes/scriptLogRoutes.js";
+import scriptValidationRoutes from "./routes/scriptValidationRoutes.js";
 import publicRoutes from "./routes/publicRoutes.js";
 import { initializeRuntime } from "./bootstrap.js";
 import { getCorsOrigins, isAllowedVercelOrigin } from "./config/environment.js";
@@ -94,6 +97,9 @@ export function createApp({ initializeOnRequest = false } = {}) {
   app.use("/api/priority-rules", priorityRuleRoutes);
   app.use("/api/maintenance-scripts", maintenanceScriptRoutes);
   app.use("/api/preventive-plans", preventivePlanRoutes);
+  app.use("/api/preventive-automation-plans", preventiveAutomationRoutes);
+  app.use("/api/script-validations", scriptValidationRoutes);
+  app.use("/api/script-logs", scriptLogRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

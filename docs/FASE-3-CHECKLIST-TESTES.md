@@ -36,10 +36,63 @@
 - [x] Nenhum script real e executado; o backend registra somente preparacao/simulacao.
 - [x] Browser local validou abas "Sugestoes de OS" e "Preventivas" renderizando.
 - [x] Browser local validou agrupamento visual de maquinas e opcoes de scripts em Preventivas.
+- [x] Interface de Preventivas reorganizada em etapas de maquinas, verificacoes/scripts e revisao.
+- [x] Botao final da Preventivas usa "Registrar preventiva".
+- [x] Modal de revisao criado antes de confirmar o registro.
+- [x] Modal informa que nenhum comando sera executado na maquina, no navegador ou no servidor.
+- [x] Labels de status de Preventivas foram ajustados para termos amigaveis na interface.
+- [x] Criar plano preventivo nao cria OS automaticamente.
+- [x] Backend persiste vinculo entre plano preventivo e OS preventiva.
+- [x] Endpoint `POST /api/preventive-plans/:id/service-order` criado para acao opcional.
+- [x] Backend bloqueia criacao duplicada de OS preventiva para o mesmo plano.
+- [x] Historico da OS registra origem no plano preventivo.
+- [x] Historico dos ativos registra a OS preventiva gerada pelo plano.
+- [x] Detalhe da OS mostra origem preventiva quando ha plano vinculado.
+- [x] Tela de Preventivas mostra ultima preventiva por maquina quando ha plano registrado.
+- [x] Tela de Preventivas diferencia maquinas sem preventiva, vencidas, em dia, com avisos, em manutencao e Backup.
+- [x] Cards de resumo de Preventivas adicionados para destacar maquinas pendentes.
+- [x] Filtro de status preventivo adicionado na lista de maquinas.
+- [x] Configuracao `preventiveDueDays` adicionada para controlar em quantos dias a preventiva vence.
+- [x] Historico de planos preventivos possui detalhe expansivel com maquinas, verificacoes/scripts e observacoes.
 - [x] `npm run build` executado com sucesso apos a implementacao.
 - [ ] Criacao de preventiva pela interface precisa de validacao manual completa com usuario autenticado.
+- [ ] Criacao opcional de OS preventiva pela interface precisa de validacao manual completa com usuario autenticado.
+- [ ] Botao "Abrir OS preventiva" precisa de validacao visual manual no painel de Ordens de Servico.
 - [ ] Permissoes de Preventivas precisam ser testadas com usuario sem acesso.
 - [ ] Periodo de silencio apos recusar sugestao precisa ser validado em fluxo manual ou teste de API dedicado.
+- [ ] Novos filtros e badges de Preventivas precisam de validacao visual completa com dados reais de planos antigos e recentes.
+
+## Avisos - scripts seguros e UX de Preventivas - 12/06/2026
+
+- [x] `maintenance_scripts` preparado com metadados de recomendacao contextual.
+- [x] Variaveis permitidas de scripts documentadas e validadas no backend.
+- [x] Variaveis desconhecidas passam a bloquear cadastro/edicao do script.
+- [x] Analise de script retorna variaveis permitidas, usadas e desconhecidas.
+- [x] Formulario de scripts mostra variaveis permitidas/usadas/desconhecidas.
+- [x] Cards de Sugestao de OS separam scripts recomendados e demais scripts.
+- [x] Configuracoes de Avisos abrem com secoes recolhidas.
+- [x] Etapa 2 de Preventivas fica recolhida ate selecionar maquina.
+- [x] Lista de maquinas preventivas foi compactada e removeu o checkbox visual.
+- [x] Cards de sugestao receberam altura fixa e titulo limitado a duas linhas.
+- [ ] Validar visualmente o menu de scripts em diferentes cards e resolucoes.
+- [ ] Validar cadastro de script com variavel permitida e bloqueio de variavel desconhecida via interface autenticada.
+
+## Avisos - Automacao Preventiva - 13/06/2026
+
+- [x] Consulta de sugestoes de OS ajustada para nao usar `LEFT JOIN LATERAL`, compatibilizando com `pg-mem`.
+- [x] Backend cria `preventive_automation_plans`, `preventive_automation_overrides` e `preventive_automation_runs`.
+- [x] Endpoints `/api/preventive-automation-plans` adicionados.
+- [x] Permissoes `preventive_automation.*` adicionadas no backend e frontend.
+- [x] Interface Avisos > Automacao Preventiva adicionada para listar, criar, editar, desativar e preparar planos.
+- [x] Plano aceita recorrencia diaria, semanal, quinzenal, mensal e personalizada em dias.
+- [x] Plano aceita escopo por todas as maquinas, maquina, segmento ou grupo.
+- [x] Recorrencia personalizada por maquina ou segmento adicionada.
+- [x] Preparacao registra `preventive_automation_runs`, `asset_history` e log geral sem executar comandos reais.
+- [x] `npm run build` executado com sucesso.
+- [x] Smoke test de backend em memoria validou inicializacao, sugestoes de OS e listagem de automacoes.
+- [ ] Validar visualmente criacao, edicao, desativacao e preparacao de plano com usuario autenticado.
+- [ ] Testar permissoes de automacao preventiva com usuario sem acesso.
+- [ ] Escopo por aba/ambiente fica pendente ate abas do Inventario estarem consolidadas no backend.
 
 ## Auditoria geral de código - 02/06/2026
 
@@ -236,6 +289,18 @@
 - [x] Usuario sem `settings.system_mode` nao altera modo do sistema.
 - [x] Admin lista usuarios.
 - [x] Permissoes individuais ficam recolhidas por padrao.
+
+## Avisos, scripts e validacao
+
+- [x] Build passa apos reforco dos logs de scripts.
+- [x] Frontend chama endpoint de uso seguro do script pela Sugestao de OS.
+- [x] Card de sugestao possui indicador visual para validacao de script.
+- [x] Configuracoes de Avisos incluem `scriptValidationWindowMinutes`.
+- [x] Backend registra uso em `script_execution_logs`.
+- [x] Backend registra ciclo em `script_validation_runs`.
+- [x] Acao corretiva sugerida apenas registra intencao, sem executar comando.
+- [ ] Testar manualmente o ciclo visual aguardando a janela configurada.
+- [ ] Testar log com erro real/simulado quando existir agente seguro ou massa de teste controlada.
 
 ## Pendencias manuais restantes
 

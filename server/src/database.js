@@ -612,6 +612,51 @@ export async function initializeDatabase() {
   `);
 
   await query(`
+    ALTER TABLE maintenance_scripts
+    ADD COLUMN IF NOT EXISTS tags JSONB NOT NULL DEFAULT '[]'::jsonb;
+  `);
+
+  await query(`
+    ALTER TABLE maintenance_scripts
+    ADD COLUMN IF NOT EXISTS supported_variables JSONB NOT NULL DEFAULT '[]'::jsonb;
+  `);
+
+  await query(`
+    ALTER TABLE maintenance_scripts
+    ADD COLUMN IF NOT EXISTS related_alert_types JSONB NOT NULL DEFAULT '[]'::jsonb;
+  `);
+
+  await query(`
+    ALTER TABLE maintenance_scripts
+    ADD COLUMN IF NOT EXISTS related_problem_types JSONB NOT NULL DEFAULT '[]'::jsonb;
+  `);
+
+  await query(`
+    ALTER TABLE maintenance_scripts
+    ADD COLUMN IF NOT EXISTS recommended_for_categories JSONB NOT NULL DEFAULT '[]'::jsonb;
+  `);
+
+  await query(`
+    ALTER TABLE maintenance_scripts
+    ADD COLUMN IF NOT EXISTS requires_logged_user BOOLEAN NOT NULL DEFAULT FALSE;
+  `);
+
+  await query(`
+    ALTER TABLE maintenance_scripts
+    ADD COLUMN IF NOT EXISTS requires_admin BOOLEAN NOT NULL DEFAULT FALSE;
+  `);
+
+  await query(`
+    ALTER TABLE maintenance_scripts
+    ADD COLUMN IF NOT EXISTS safe_preview TEXT;
+  `);
+
+  await query(`
+    ALTER TABLE maintenance_scripts
+    ADD COLUMN IF NOT EXISTS variable_validation_status TEXT NOT NULL DEFAULT 'valid';
+  `);
+
+  await query(`
     CREATE TABLE IF NOT EXISTS script_execution_logs (
       id TEXT PRIMARY KEY,
       script_id TEXT NOT NULL REFERENCES maintenance_scripts(id) ON DELETE CASCADE,
@@ -624,6 +669,91 @@ export async function initializeDatabase() {
       executed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       notes TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await query(`
+    ALTER TABLE script_execution_logs
+    ADD COLUMN IF NOT EXISTS suggestion_id TEXT REFERENCES service_order_suggestions(id) ON DELETE SET NULL;
+  `);
+
+  await query(`
+    ALTER TABLE script_execution_logs
+    ADD COLUMN IF NOT EXISTS preventive_plan_id TEXT;
+  `);
+
+  await query(`
+    ALTER TABLE script_execution_logs
+    ADD COLUMN IF NOT EXISTS raw_log TEXT;
+  `);
+
+  await query(`
+    ALTER TABLE script_execution_logs
+    ADD COLUMN IF NOT EXISTS parsed_summary TEXT;
+  `);
+
+  await query(`
+    ALTER TABLE script_execution_logs
+    ADD COLUMN IF NOT EXISTS error_detected BOOLEAN NOT NULL DEFAULT FALSE;
+  `);
+
+  await query(`
+    ALTER TABLE script_execution_logs
+    ADD COLUMN IF NOT EXISTS error_type TEXT;
+  `);
+
+  await query(`
+    ALTER TABLE script_execution_logs
+    ADD COLUMN IF NOT EXISTS probable_cause TEXT;
+  `);
+
+  await query(`
+    ALTER TABLE script_execution_logs
+    ADD COLUMN IF NOT EXISTS suggested_solution TEXT;
+  `);
+
+  await query(`
+    ALTER TABLE script_execution_logs
+    ADD COLUMN IF NOT EXISTS attention_required BOOLEAN NOT NULL DEFAULT FALSE;
+  `);
+
+  await query(`
+    ALTER TABLE script_execution_logs
+    ADD COLUMN IF NOT EXISTS acknowledged_at TIMESTAMPTZ;
+  `);
+
+  await query(`
+    ALTER TABLE script_execution_logs
+    ADD COLUMN IF NOT EXISTS acknowledged_by TEXT REFERENCES users(id) ON DELETE SET NULL;
+  `);
+
+  await query(`
+    ALTER TABLE script_execution_logs
+    ADD COLUMN IF NOT EXISTS corrective_action_status TEXT;
+  `);
+
+  await query(`
+    ALTER TABLE script_execution_logs
+    ADD COLUMN IF NOT EXISTS corrective_action_notes TEXT;
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS script_validation_runs (
+      id TEXT PRIMARY KEY,
+      suggestion_id TEXT REFERENCES service_order_suggestions(id) ON DELETE CASCADE,
+      alert_id TEXT REFERENCES alerts(id) ON DELETE SET NULL,
+      asset_id TEXT,
+      script_id TEXT REFERENCES maintenance_scripts(id) ON DELETE SET NULL,
+      status TEXT NOT NULL DEFAULT 'waiting_agent',
+      started_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+      started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      validation_window_minutes INTEGER NOT NULL DEFAULT 30,
+      validation_due_at TIMESTAMPTZ NOT NULL,
+      finished_at TIMESTAMPTZ,
+      result_summary TEXT,
+      log_id TEXT REFERENCES script_execution_logs(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
   `);
 
@@ -662,6 +792,67 @@ export async function initializeDatabase() {
       log TEXT,
       prepared_at TIMESTAMPTZ,
       completed_at TIMESTAMPTZ
+    );
+  `);
+
+  await query(`
+    ALTER TABLE preventive_plans
+    ADD COLUMN IF NOT EXISTS service_order_id TEXT;
+  `);
+
+  await query(`
+    ALTER TABLE service_orders
+    ADD COLUMN IF NOT EXISTS preventive_plan_id TEXT;
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS preventive_automation_plans (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      active BOOLEAN NOT NULL DEFAULT TRUE,
+      recurrence_type TEXT NOT NULL DEFAULT 'monthly',
+      recurrence_interval INTEGER NOT NULL DEFAULT 30,
+      preferred_time TEXT NOT NULL DEFAULT '08:00',
+      timezone TEXT NOT NULL DEFAULT 'America/Sao_Paulo',
+      scope_type TEXT NOT NULL DEFAULT 'all',
+      scope_id TEXT,
+      default_script_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+      notes TEXT,
+      created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS preventive_automation_overrides (
+      id TEXT PRIMARY KEY,
+      plan_id TEXT NOT NULL REFERENCES preventive_automation_plans(id) ON DELETE CASCADE,
+      asset_id TEXT,
+      segment_id TEXT,
+      recurrence_type TEXT NOT NULL DEFAULT 'monthly',
+      recurrence_interval INTEGER NOT NULL DEFAULT 30,
+      preferred_time TEXT,
+      active BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS preventive_automation_runs (
+      id TEXT PRIMARY KEY,
+      plan_id TEXT NOT NULL REFERENCES preventive_automation_plans(id) ON DELETE CASCADE,
+      asset_id TEXT,
+      status TEXT NOT NULL DEFAULT 'scheduled',
+      scheduled_for TIMESTAMPTZ NOT NULL,
+      started_at TIMESTAMPTZ,
+      finished_at TIMESTAMPTZ,
+      result TEXT,
+      log_summary TEXT,
+      error_detected BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
   `);
 
@@ -871,6 +1062,26 @@ export async function initializeDatabase() {
   `);
 
   await query(`
+    CREATE INDEX IF NOT EXISTS idx_script_execution_logs_suggestion
+    ON script_execution_logs (suggestion_id, created_at DESC);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_script_execution_logs_attention
+    ON script_execution_logs (attention_required, created_at DESC);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_script_validation_runs_suggestion
+    ON script_validation_runs (suggestion_id, created_at DESC);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_script_validation_runs_due
+    ON script_validation_runs (status, validation_due_at);
+  `);
+
+  await query(`
     CREATE INDEX IF NOT EXISTS idx_service_order_suggestions_ignored_until
     ON service_order_suggestions (ignored_until);
   `);
@@ -883,6 +1094,26 @@ export async function initializeDatabase() {
   await query(`
     CREATE INDEX IF NOT EXISTS idx_preventive_plan_assets_asset
     ON preventive_plan_assets (asset_id);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_preventive_automation_plans_active
+    ON preventive_automation_plans (active, created_at DESC);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_preventive_automation_overrides_plan
+    ON preventive_automation_overrides (plan_id);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_preventive_automation_runs_plan
+    ON preventive_automation_runs (plan_id, created_at DESC);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_preventive_automation_runs_asset
+    ON preventive_automation_runs (asset_id, scheduled_for DESC);
   `);
 
   await query(`

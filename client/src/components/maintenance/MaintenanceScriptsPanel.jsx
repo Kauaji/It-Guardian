@@ -10,7 +10,13 @@ const emptyForm = {
   riskLevel: "medium",
   requiresConfirmation: true,
   alertType: "",
-  problemType: ""
+  problemType: "",
+  tags: "",
+  relatedAlertTypes: "",
+  relatedProblemTypes: "",
+  recommendedForCategories: "",
+  requiresLoggedUser: false,
+  requiresAdmin: false
 };
 
 const scriptTypeLabels = {
@@ -32,6 +38,18 @@ function formatRisk(risk) {
   return riskLabels[risk] || risk || "Médio";
 }
 
+function toCommaList(value) {
+  if (Array.isArray(value)) return value.join(", ");
+  return value || "";
+}
+
+function fromCommaList(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 function buildScriptPayload(form, analysis) {
   return {
     name: form.name,
@@ -43,6 +61,15 @@ function buildScriptPayload(form, analysis) {
     requiresConfirmation: form.requiresConfirmation,
     alertType: form.alertType,
     problemType: form.problemType,
+    tags: fromCommaList(form.tags),
+    relatedAlertTypes: fromCommaList(form.relatedAlertTypes),
+    relatedProblemTypes: fromCommaList(form.relatedProblemTypes),
+    recommendedForCategories: fromCommaList(form.recommendedForCategories),
+    requiresLoggedUser: form.requiresLoggedUser,
+    requiresAdmin: form.requiresAdmin,
+    supportedVariables: analysis?.detectedVariables || [],
+    safePreview: analysis?.safePreview,
+    variableValidationStatus: analysis?.variableValidationStatus,
     estimatedSummary: analysis?.estimatedSummary,
     suggestedRiskLevel: analysis?.suggestedRiskLevel
   };
@@ -58,6 +85,24 @@ function ScriptAnalysis({ analysis }) {
       <span className={`script-risk-pill ${analysis.suggestedRiskLevel}`}>
         Risco sugerido: {formatRisk(analysis.suggestedRiskLevel)}
       </span>
+      {!!analysis.allowedVariables?.length && (
+        <div className="script-variable-list">
+          <strong>Variaveis permitidas</strong>
+          <p>{analysis.allowedVariables.map((variable) => variable.name).join(", ")}</p>
+        </div>
+      )}
+      {!!analysis.detectedVariables?.length && (
+        <div className="script-variable-list">
+          <strong>Variaveis usadas</strong>
+          <p>{analysis.detectedVariables.join(", ")}</p>
+        </div>
+      )}
+      {!!analysis.unknownVariables?.length && (
+        <div className="script-variable-list error">
+          <strong>Variaveis nao permitidas</strong>
+          <p>{analysis.unknownVariables.join(", ")}</p>
+        </div>
+      )}
       {!!analysis.detectedActions?.length && (
         <ul>
           {analysis.detectedActions.map((action) => (
@@ -231,7 +276,13 @@ export default function MaintenanceScriptsPanel({
       riskLevel: script.riskLevel || "medium",
       requiresConfirmation: script.requiresConfirmation !== false,
       alertType: script.alertType || "",
-      problemType: script.problemType || ""
+      problemType: script.problemType || "",
+      tags: toCommaList(script.tags),
+      relatedAlertTypes: toCommaList(script.relatedAlertTypes),
+      relatedProblemTypes: toCommaList(script.relatedProblemTypes),
+      recommendedForCategories: toCommaList(script.recommendedForCategories),
+      requiresLoggedUser: script.requiresLoggedUser === true,
+      requiresAdmin: script.requiresAdmin === true
     });
     setAnalysis({
       estimatedSummary: script.estimatedSummary,
@@ -314,6 +365,54 @@ export default function MaintenanceScriptsPanel({
             Tipo de problema
             <input value={form.problemType} onChange={(event) => updateForm("problemType", event.target.value)} maxLength={120} />
           </label>
+          <label>
+            Tags
+            <input
+              value={form.tags}
+              onChange={(event) => updateForm("tags", event.target.value)}
+              placeholder="rede, disco, impressora"
+            />
+          </label>
+          <label>
+            Tipos de aviso relacionados
+            <input
+              value={form.relatedAlertTypes}
+              onChange={(event) => updateForm("relatedAlertTypes", event.target.value)}
+              placeholder="disk_usage, ping_failure"
+            />
+          </label>
+          <label>
+            Tipos de problema relacionados
+            <input
+              value={form.relatedProblemTypes}
+              onChange={(event) => updateForm("relatedProblemTypes", event.target.value)}
+              placeholder="Disco acima do limite, Internet lenta"
+            />
+          </label>
+          <label>
+            Categorias recomendadas
+            <input
+              value={form.recommendedForCategories}
+              onChange={(event) => updateForm("recommendedForCategories", event.target.value)}
+              placeholder="Hardware, Rede, Impressora"
+            />
+          </label>
+          <label className="inline-check maintenance-script-checkbox">
+            <input
+              type="checkbox"
+              checked={form.requiresLoggedUser}
+              onChange={(event) => updateForm("requiresLoggedUser", event.target.checked)}
+            />
+            Requer usuario logado
+          </label>
+          <label className="inline-check maintenance-script-checkbox">
+            <input
+              type="checkbox"
+              checked={form.requiresAdmin}
+              onChange={(event) => updateForm("requiresAdmin", event.target.checked)}
+            />
+            Requer administrador
+          </label>
           <label className="inline-check maintenance-script-checkbox">
             <input
               type="checkbox"
@@ -368,6 +467,18 @@ export default function MaintenanceScriptsPanel({
               <div className="script-links">
                 {script.alertType && <span>Aviso: {script.alertType}</span>}
                 {script.problemType && <span>Problema: {script.problemType}</span>}
+              </div>
+            )}
+            {!!script.tags?.length && (
+              <div className="script-links">
+                {script.tags.slice(0, 6).map((tag) => (
+                  <span key={tag}>#{tag}</span>
+                ))}
+              </div>
+            )}
+            {!!script.supportedVariables?.length && (
+              <div className="script-links">
+                <span>Variaveis: {script.supportedVariables.map((variable) => `{{${String(variable).replace(/[{}]/g, "")}}}`).join(", ")}</span>
               </div>
             )}
             {canManage && (

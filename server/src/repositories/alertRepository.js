@@ -123,6 +123,8 @@ const defaultAlertPriorityColors = {
 const defaultAlertSettings = {
   rejectedAlertSilenceHours: 24,
   recurrenceCounterResetHours: 24,
+  preventiveDueDays: 180,
+  scriptValidationWindowMinutes: 30,
   autoPriority: {
     enabled: true,
     lowToMediumHours: 24,
@@ -165,10 +167,23 @@ function normalizeAlertSettings(value = {}) {
     1,
     toNumber(value.recurrenceCounterResetHours ?? value.recurrenceCounterWindow, defaultAlertSettings.recurrenceCounterResetHours)
   );
+  const preventiveDueDays = Math.max(
+    1,
+    toNumber(value.preventiveDueDays, defaultAlertSettings.preventiveDueDays)
+  );
+  const scriptValidationWindowMinutes = Math.min(
+    10080,
+    Math.max(
+      5,
+      toNumber(value.scriptValidationWindowMinutes, defaultAlertSettings.scriptValidationWindowMinutes)
+    )
+  );
 
   return {
     rejectedAlertSilenceHours,
     recurrenceCounterResetHours,
+    preventiveDueDays,
+    scriptValidationWindowMinutes,
     autoPriority: {
       enabled: normalizeBoolean(autoPriority.enabled, defaultAlertSettings.autoPriority.enabled),
       lowToMediumHours: Math.max(1, toNumber(autoPriority.lowToMediumHours, defaultAlertSettings.autoPriority.lowToMediumHours)),
@@ -249,6 +264,34 @@ function fromSuggestionRow(row) {
     createdServiceOrderId: row.created_service_order_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at
+  };
+}
+
+function fromLatestSuggestionValidationRow(row) {
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    status: row.status,
+    scriptId: row.script_id,
+    scriptName: row.script_name,
+    startedAt: row.started_at,
+    validationWindowMinutes: toNumber(row.validation_window_minutes, 30),
+    validationDueAt: row.validation_due_at,
+    finishedAt: row.finished_at,
+    resultSummary: row.result_summary || "",
+    logId: row.log_id,
+    log: row.log_id ? {
+      id: row.log_id,
+      status: row.log_status,
+      errorDetected: row.log_error_detected === true,
+      errorType: row.log_error_type,
+      parsedSummary: row.log_parsed_summary,
+      probableCause: row.log_probable_cause,
+      suggestedSolution: row.log_suggested_solution,
+      attentionRequired: row.log_attention_required === true,
+      acknowledgedAt: row.log_acknowledged_at
+    } : null
   };
 }
 
@@ -373,6 +416,10 @@ export async function updateAlertSettings(payload = {}) {
       payload.rejectedAlertSilenceHours ?? current.rejectedAlertSilenceHours,
     recurrenceCounterResetHours:
       payload.recurrenceCounterResetHours ?? current.recurrenceCounterResetHours,
+    preventiveDueDays:
+      payload.preventiveDueDays ?? current.preventiveDueDays,
+    scriptValidationWindowMinutes:
+      payload.scriptValidationWindowMinutes ?? current.scriptValidationWindowMinutes,
     autoPriority: {
       ...current.autoPriority,
       ...(payload.autoPriority || {})
@@ -544,6 +591,39 @@ export async function listServiceOrderSuggestions() {
     ORDER BY suggestions.created_at DESC
   `);
 
+  const suggestionIds = result.rows.map((row) => row.id).filter(Boolean);
+  const latestValidationBySuggestion = new Map();
+
+  if (suggestionIds.length) {
+    const placeholders = suggestionIds.map((_, index) => `$${index + 1}`).join(", ");
+    const validationResult = await query(
+      `
+        SELECT validations.*,
+               scripts.name AS script_name,
+               logs.status AS log_status,
+               logs.error_detected AS log_error_detected,
+               logs.error_type AS log_error_type,
+               logs.parsed_summary AS log_parsed_summary,
+               logs.probable_cause AS log_probable_cause,
+               logs.suggested_solution AS log_suggested_solution,
+               logs.attention_required AS log_attention_required,
+               logs.acknowledged_at AS log_acknowledged_at
+        FROM script_validation_runs validations
+        LEFT JOIN maintenance_scripts scripts ON scripts.id = validations.script_id
+        LEFT JOIN script_execution_logs logs ON logs.id = validations.log_id
+        WHERE validations.suggestion_id IN (${placeholders})
+        ORDER BY validations.suggestion_id ASC, validations.created_at DESC
+      `,
+      suggestionIds
+    );
+
+    for (const row of validationResult.rows) {
+      if (!latestValidationBySuggestion.has(row.suggestion_id)) {
+        latestValidationBySuggestion.set(row.suggestion_id, fromLatestSuggestionValidationRow(row));
+      }
+    }
+  }
+
   return result.rows.map((row) => ({
     ...fromSuggestionRow(row),
     hostName: row.host_name,
@@ -554,7 +634,8 @@ export async function listServiceOrderSuggestions() {
     alertSource: row.alert_source,
     alertSeverity: row.alert_severity,
     alertFirstSeenAt: row.alert_first_seen_at,
-    alertLastSeenAt: row.alert_last_seen_at
+    alertLastSeenAt: row.alert_last_seen_at,
+    latestValidation: latestValidationBySuggestion.get(row.id) || null
   }));
 }
 
@@ -719,6 +800,21 @@ export async function markSuggestionRejected({ id, userId, reason, silenceHours 
       RETURNING *
     `,
     [id, userId || null, reason?.trim() || null, hours]
+  );
+
+  return result.rows[0] ? fromSuggestionRow(result.rows[0]) : null;
+}
+
+export async function markSuggestionValidated({ id, status = "validated" }) {
+  const result = await query(
+    `
+      UPDATE service_order_suggestions
+      SET status = $2,
+          updated_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    `,
+    [id, status]
   );
 
   return result.rows[0] ? fromSuggestionRow(result.rows[0]) : null;

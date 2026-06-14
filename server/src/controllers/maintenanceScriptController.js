@@ -1,10 +1,17 @@
 import {
   analyzeMaintenanceScriptContent,
+  acknowledgeScriptLog,
+  applyScriptLogSuggestedSolution,
+  cancelScriptValidation,
   createMaintenanceScript,
   deactivateMaintenanceScript,
+  findScriptLogById,
   listMaintenanceScripts,
+  listPendingScriptLogs,
+  listScriptValidationsForSuggestion,
   registerMaintenanceScriptSimulation,
-  updateMaintenanceScript
+  updateMaintenanceScript,
+  useScriptFromSuggestion
 } from "../repositories/maintenanceScriptRepository.js";
 
 export async function list(req, res, next) {
@@ -70,6 +77,75 @@ export async function registerSimulation(req, res, next) {
     });
 
     res.status(201).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function useFromSuggestion(req, res, next) {
+  try {
+    const result = await useScriptFromSuggestion({
+      suggestionId: req.params.id,
+      scriptId: req.params.scriptId,
+      payload: req.body || {},
+      user: req.user
+    });
+
+    res.status(201).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function suggestionValidations(req, res, next) {
+  try {
+    res.json({ validations: await listScriptValidationsForSuggestion(req.params.id) });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function cancelValidation(req, res, next) {
+  try {
+    res.json({ validation: await cancelScriptValidation(req.params.id, req.user) });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function pendingLogs(_req, res, next) {
+  try {
+    res.json({ logs: await listPendingScriptLogs() });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getLog(req, res, next) {
+  try {
+    const log = await findScriptLogById(req.params.id);
+    if (!log) {
+      return res.status(404).json({ message: "Log de script não encontrado." });
+    }
+    return res.json({ log });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function acknowledgeLog(req, res, next) {
+  try {
+    res.json({ log: await acknowledgeScriptLog(req.params.id, req.user) });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function applySuggestedSolution(req, res, next) {
+  try {
+    res.json({
+      log: await applyScriptLogSuggestedSolution(req.params.id, req.body || {}, req.user)
+    });
   } catch (error) {
     next(error);
   }

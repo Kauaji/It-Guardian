@@ -547,6 +547,7 @@ function fromOrderRow(row, history = [], items = []) {
     serviceId: row.service_id,
     serviceCode: row.service_code,
     serviceName: row.service_name,
+    preventivePlanId: row.preventive_plan_id,
     requesterName: row.requester_name,
     contactInfo: row.contact_info,
     requesterDepartment: row.requester_department,
@@ -1006,12 +1007,12 @@ export async function createServiceOrder({ payload, user }) {
             source, assigned_technician_name, auto_priority_enabled, notes,
             service_performed, attendance_notes,
             service_value, total_parts_value, total_value, backup_asset_id, sector_id, sector_name,
-            service_id, service_code, service_name, created_by
+            service_id, service_code, service_name, preventive_plan_id, created_by
           )
           VALUES (
             $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
             $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
-            $31, $32, $33, $34
+            $31, $32, $33, $34, $35
           )
           RETURNING *
         `,
@@ -1049,6 +1050,7 @@ export async function createServiceOrder({ payload, user }) {
           service.serviceId,
           service.serviceCode,
           service.serviceName,
+          payload.preventivePlanId || null,
           user?.id || null
         ]
       );

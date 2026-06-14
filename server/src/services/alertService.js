@@ -30,6 +30,7 @@ import {
   findServiceOrderById,
   listServiceOrders
 } from "../repositories/serviceOrderRepository.js";
+import { refreshDueScriptValidations } from "../repositories/maintenanceScriptRepository.js";
 import { listDeviceSegmentMap } from "../repositories/segmentRepository.js";
 import { listSegmentGroups } from "../repositories/segmentGroupRepository.js";
 import { getActiveAlerts, getAlertHistory, getHostAlerts } from "./zabbixService.js";
@@ -628,6 +629,7 @@ async function enrichSuggestions(suggestions = []) {
 }
 
 export async function listServiceOrderSuggestions() {
+  await refreshDueScriptValidations();
   await evaluateAlertsForSuggestions();
   return enrichSuggestions(await listSuggestions());
 }

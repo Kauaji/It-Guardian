@@ -276,6 +276,48 @@ export function rejectServiceOrderSuggestion(token, id, reason = "") {
   });
 }
 
+export function useSuggestionScript(token, suggestionId, scriptId, payload = {}) {
+  return apiFetch(`/service-order-suggestions/${suggestionId}/scripts/${scriptId}/use`, {
+    token,
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function fetchSuggestionScriptValidations(token, suggestionId) {
+  return apiFetch(`/service-order-suggestions/${suggestionId}/script-validations`, { token });
+}
+
+export function cancelScriptValidation(token, id) {
+  return apiFetch(`/script-validations/${id}/cancel`, {
+    token,
+    method: "POST"
+  });
+}
+
+export function fetchPendingScriptLogs(token) {
+  return apiFetch("/script-logs/pending", { token });
+}
+
+export function fetchScriptLog(token, id) {
+  return apiFetch(`/script-logs/${id}`, { token });
+}
+
+export function acknowledgeScriptLog(token, id) {
+  return apiFetch(`/script-logs/${id}/acknowledge`, {
+    token,
+    method: "POST"
+  });
+}
+
+export function applyScriptLogSuggestedSolution(token, id, payload = {}) {
+  return apiFetch(`/script-logs/${id}/apply-suggested-solution`, {
+    token,
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
 export function fetchMaintenanceScripts(token, params = {}) {
   const search = new URLSearchParams(params).toString();
   return apiFetch(`/maintenance-scripts${search ? `?${search}` : ""}`, { token });
@@ -332,8 +374,49 @@ export function createPreventivePlan(token, payload) {
   });
 }
 
+export function createPreventivePlanServiceOrder(token, id) {
+  return apiFetch(`/preventive-plans/${id}/service-order`, {
+    token,
+    method: "POST"
+  });
+}
+
 export function preparePreventivePlan(token, id) {
   return apiFetch(`/preventive-plans/${id}/prepare`, {
+    token,
+    method: "POST"
+  });
+}
+
+export function fetchPreventiveAutomationPlans(token) {
+  return apiFetch("/preventive-automation-plans", { token });
+}
+
+export function createPreventiveAutomationPlan(token, payload) {
+  return apiFetch("/preventive-automation-plans", {
+    token,
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function updatePreventiveAutomationPlan(token, id, payload) {
+  return apiFetch(`/preventive-automation-plans/${id}`, {
+    token,
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function disablePreventiveAutomationPlan(token, id) {
+  return apiFetch(`/preventive-automation-plans/${id}`, {
+    token,
+    method: "DELETE"
+  });
+}
+
+export function preparePreventiveAutomationPlan(token, id) {
+  return apiFetch(`/preventive-automation-plans/${id}/prepare`, {
     token,
     method: "POST"
   });

@@ -691,6 +691,9 @@ export default function ServiceOrderDetailsModal({
                 <DetailItem label="Número" value={serviceOrder.number} />
                 <DetailItem label="Status" value={statusLabelMap[serviceOrder.status] || serviceOrder.status} />
                 <DetailItem label="Prioridade" value={priorityLabels[serviceOrder.priority]} />
+                {serviceOrder.preventivePlanId && (
+                  <DetailItem label="Origem preventiva" value="Plano Preventivo" />
+                )}
                 {canChangeSector ? (
                   <label className="service-order-detail-item service-order-sector-edit">
                     <span>Setor responsável</span>

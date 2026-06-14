@@ -1,4 +1,4 @@
-export const permissionGroups = [
+﻿export const permissionGroups = [
   {
     id: "dashboard",
     label: "Dashboard",
@@ -8,33 +8,33 @@ export const permissionGroups = [
   },
   {
     id: "inventory",
-    label: "Inventário",
+    label: "InventÃ¡rio",
     permissions: [
-      { id: "inventory.view", label: "Visualizar inventário" },
+      { id: "inventory.view", label: "Visualizar inventÃ¡rio" },
       { id: "inventory.create_asset", label: "Criar ativos de rede" },
       { id: "inventory.edit_asset", label: "Editar ativos" },
-      { id: "inventory.move_assets", label: "Mover máquinas entre segmentos" },
+      { id: "inventory.move_assets", label: "Mover mÃ¡quinas entre segmentos" },
       { id: "inventory.manage_segments", label: "Criar grupos e segmentos" },
-      { id: "inventory.view_machine", label: "Acessar ficha da máquina" },
+      { id: "inventory.view_machine", label: "Acessar ficha da mÃ¡quina" },
       { id: "inventory.print_qrcode", label: "Imprimir QR Code" }
     ]
   },
   {
     id: "service_orders",
-    label: "Ordens de Serviço",
+    label: "Ordens de ServiÃ§o",
     permissions: [
-      { id: "service_orders.view", label: "Visualizar Ordens de Serviço" },
+      { id: "service_orders.view", label: "Visualizar Ordens de ServiÃ§o" },
       { id: "service_orders.view_all", label: "Visualizar OS de todos os setores" },
-      { id: "service_orders.create", label: "Criar Ordem de Serviço" },
-      { id: "service_orders.edit", label: "Editar Ordem de Serviço" },
+      { id: "service_orders.create", label: "Criar Ordem de ServiÃ§o" },
+      { id: "service_orders.edit", label: "Editar Ordem de ServiÃ§o" },
       { id: "service_orders.change_sector", label: "Alterar setor da OS" },
-      { id: "service_orders.assign", label: "Assumir ou atribuir técnico" },
+      { id: "service_orders.assign", label: "Assumir ou atribuir tÃ©cnico" },
       { id: "service_orders.change_status", label: "Alterar status" },
-      { id: "service_orders.finish", label: "Finalizar Ordem de Serviço" },
+      { id: "service_orders.finish", label: "Finalizar Ordem de ServiÃ§o" },
       { id: "service_orders.attendance", label: "Registrar atendimento" },
-      { id: "service_orders.parts", label: "Registrar peças trocadas" },
-      { id: "service_orders.print", label: "Imprimir Ordem de Serviço" },
-      { id: "service_orders.settings", label: "Acessar configurações da OS" }
+      { id: "service_orders.parts", label: "Registrar peÃ§as trocadas" },
+      { id: "service_orders.print", label: "Imprimir Ordem de ServiÃ§o" },
+      { id: "service_orders.settings", label: "Acessar configuraÃ§Ãµes da OS" }
     ]
   },
   {
@@ -45,17 +45,21 @@ export const permissionGroups = [
       { id: "alerts.configure", label: "Configurar regras de aviso" },
       { id: "alerts.comment", label: "Comentar avisos" },
       { id: "alerts.silence", label: "Silenciar avisos" },
-      { id: "alerts.manage_suggestions", label: "Gerenciar sugestões de OS" },
+      { id: "alerts.manage_suggestions", label: "Gerenciar sugestÃµes de OS" },
       { id: "service_orders.create_from_alert", label: "Criar OS a partir de aviso" }
     ]
   },
   {
     id: "scripts",
-    label: "Scripts de manutenção",
+    label: "Scripts de manutenÃ§Ã£o",
     permissions: [
-      { id: "scripts.view", label: "Visualizar scripts de manutenção" },
-      { id: "scripts.manage", label: "Cadastrar e editar scripts de manutenção" },
-      { id: "scripts.register_simulation", label: "Registrar simulação de script" }
+      { id: "scripts.view", label: "Visualizar scripts de manutenÃ§Ã£o" },
+      { id: "scripts.manage", label: "Cadastrar e editar scripts de manutenÃ§Ã£o" },
+      { id: "scripts.register_simulation", label: "Registrar simulaÃ§Ã£o de script" },
+      { id: "scripts.use_from_alert", label: "Usar script em sugestão de OS" },
+      { id: "script_logs.view", label: "Visualizar logs de scripts" },
+      { id: "script_logs.resolve", label: "Resolver logs de scripts" },
+      { id: "script_validations.manage", label: "Gerenciar validações de scripts" }
     ]
   },
   {
@@ -64,15 +68,26 @@ export const permissionGroups = [
     permissions: [
       { id: "preventive_plans.view", label: "Visualizar planos preventivos" },
       { id: "preventive_plans.create", label: "Criar planos preventivos" },
-      { id: "preventive_plans.prepare", label: "Preparar simulação preventiva" }
+      { id: "preventive_plans.prepare", label: "Preparar simulaÃ§Ã£o preventiva" }
+    ]
+  },
+  {
+    id: "preventive_automation",
+    label: "AutomaÃ§Ã£o Preventiva",
+    permissions: [
+      { id: "preventive_automation.view", label: "Visualizar automaÃ§Ãµes preventivas" },
+      { id: "preventive_automation.create", label: "Criar automaÃ§Ãµes preventivas" },
+      { id: "preventive_automation.update", label: "Editar automaÃ§Ãµes preventivas" },
+      { id: "preventive_automation.disable", label: "Desativar automaÃ§Ãµes preventivas" },
+      { id: "preventive_automation.run_prepare", label: "Preparar rotina preventiva agendada" }
     ]
   },
   {
     id: "settings",
-    label: "Configurações",
+    label: "ConfiguraÃ§Ãµes",
     permissions: [
-      { id: "settings.view", label: "Acessar configurações gerais" },
-      { id: "settings.appearance", label: "Alterar aparência e usabilidade" },
+      { id: "settings.view", label: "Acessar configuraÃ§Ãµes gerais" },
+      { id: "settings.appearance", label: "Alterar aparÃªncia e usabilidade" },
       { id: "settings.system_mode", label: "Alterar modo do sistema" }
     ]
   },
@@ -81,9 +96,9 @@ export const permissionGroups = [
     label: "Admin",
     permissions: [
       { id: "admin.full", label: "Acesso total administrativo" },
-      { id: "admin.users", label: "Administrar usuários" },
+      { id: "admin.users", label: "Administrar usuÃ¡rios" },
       { id: "admin.sectors", label: "Administrar setores" },
-      { id: "admin.permissions", label: "Alterar permissões" }
+      { id: "admin.permissions", label: "Alterar permissÃµes" }
     ]
   }
 ];
@@ -129,9 +144,18 @@ export const roleDefaultPermissions = {
     "service_orders.create_from_alert",
     "scripts.view",
     "scripts.register_simulation",
+    "scripts.use_from_alert",
+    "script_logs.view",
+    "script_logs.resolve",
+    "script_validations.manage",
     "preventive_plans.view",
     "preventive_plans.create",
     "preventive_plans.prepare",
+    "preventive_automation.view",
+    "preventive_automation.create",
+    "preventive_automation.update",
+    "preventive_automation.disable",
+    "preventive_automation.run_prepare",
     "settings.view",
     "settings.appearance"
   ],

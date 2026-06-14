@@ -3,6 +3,7 @@ import { query } from "../database.js";
 import { addAssetHistory } from "./assetHistoryRepository.js";
 import { addLog } from "./logRepository.js";
 import { findMaintenanceScriptById } from "./maintenanceScriptRepository.js";
+import { addServiceOrderHistory, createServiceOrder } from "./serviceOrderRepository.js";
 
 const allowedStatuses = new Set(["prepared", "simulated", "completed", "failed", "cancelled"]);
 const highRiskLevels = new Set(["high", "critical"]);
@@ -26,6 +27,7 @@ function fromPlanRow(row) {
     source: row.source,
     originAlertId: row.origin_alert_id,
     originSuggestionId: row.origin_suggestion_id,
+    serviceOrderId: row.service_order_id,
     notes: row.notes || "",
     createdBy: row.created_by,
     preparedAt: row.prepared_at,
@@ -82,7 +84,7 @@ function normalizePlanPayload(payload = {}) {
   }
 
   if (!scriptIds.length) {
-    const error = new Error("Selecione pelo menos um script cadastrado para compor o plano.");
+    const error = new Error("Selecione pelo menos uma verificação/script cadastrado para compor o plano.");
     error.statusCode = 400;
     throw error;
   }
@@ -213,7 +215,7 @@ export async function createPreventivePlan(payload = {}, user = null) {
 
   await Promise.all(normalized.assetIds.map(async (assetId) => {
     const log =
-      `Preventiva preparada para ${assetId} com os scripts: ${scriptNames}. ` +
+      `Preventiva registrada para ${assetId} com as verificações: ${scriptNames}. ` +
       "Nenhum comando foi executado nesta versão.";
 
     await query(
@@ -229,7 +231,7 @@ export async function createPreventivePlan(payload = {}, user = null) {
     await addAssetHistory({
       assetId,
       eventType: "preventive_plan_prepared",
-      message: `Plano preventivo '${normalized.name}' preparado por ${userName}. Nenhum comando foi executado.`,
+      message: `Plano preventivo '${normalized.name}' registrado por ${userName}. Nenhum comando foi executado.`,
       newValue: log,
       userId: user?.id || null,
       userName
@@ -238,7 +240,7 @@ export async function createPreventivePlan(payload = {}, user = null) {
 
   await addLog({
     type: "preventive_plan_created",
-    message: `Plano preventivo preparado: ${normalized.name}. Nenhum comando foi executado.`,
+    message: `Plano preventivo registrado: ${normalized.name}. Nenhum comando foi executado.`,
     userId: user?.id || null,
     meta: {
       preventivePlanId: planId,
@@ -278,12 +280,107 @@ export async function preparePreventivePlan(id, user = null) {
 
   await addLog({
     type: "preventive_plan_prepared",
-    message: `Plano preventivo simulado: ${plan.name}. Nenhum comando foi executado.`,
+    message: `Registro preventivo confirmado: ${plan.name}. Nenhum comando foi executado.`,
     userId: user?.id || null,
     meta: { preventivePlanId: id }
   });
 
   return findPreventivePlanById(id);
+}
+
+export async function createServiceOrderFromPreventivePlan(id, user = null) {
+  const plan = await findPreventivePlanById(id);
+  if (!plan) return null;
+
+  if (plan.serviceOrderId) {
+    const error = new Error("Este plano já possui uma OS preventiva vinculada.");
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const assetIds = (plan.assets || []).map((asset) => asset.assetId).filter(Boolean);
+  const scriptNames = (plan.scripts || []).map((script) => script.scriptName || script.name).filter(Boolean);
+  const assetSummary = assetIds.length ? assetIds.join(", ") : "Nenhuma máquina vinculada";
+  const scriptSummary = scriptNames.length ? scriptNames.join(", ") : "Nenhuma verificação selecionada";
+  const titleScope = assetIds.length === 1 ? assetIds[0] : `${assetIds.length} máquina(s)`;
+  const title = `Manutenção preventiva — ${titleScope}`;
+  const description =
+    `OS preventiva criada a partir do plano preventivo '${plan.name}'. ` +
+    `Máquinas selecionadas: ${assetSummary}. ` +
+    `Verificações selecionadas: ${scriptSummary}. ` +
+    "Nenhum comando foi executado automaticamente.";
+
+  const serviceOrder = await createServiceOrder({
+    payload: {
+      title,
+      description,
+      priority: "low",
+      category: "Preventiva",
+      problemType: "Manutenção preventiva",
+      serviceName: "Manutenção preventiva",
+      source: "Plano Preventivo",
+      requesterName: user?.name || "Técnico",
+      assignedTechnicianName: user?.name || null,
+      assetId: assetIds.length === 1 ? assetIds[0] : null,
+      relatedAssetText: assetSummary,
+      notes: [
+        `Origem: Plano Preventivo`,
+        `Plano preventivo: ${plan.name}`,
+        `Verificações selecionadas: ${scriptSummary}`,
+        "Nenhum comando foi executado automaticamente."
+      ].join("\n"),
+      preventivePlanId: plan.id,
+      autoPriorityEnabled: false
+    },
+    user
+  });
+
+  await query(
+    `
+      UPDATE preventive_plans
+      SET service_order_id = $2,
+          updated_at = NOW()
+      WHERE id = $1
+    `,
+    [plan.id, serviceOrder.id]
+  );
+
+  await addServiceOrderHistory({
+    serviceOrderId: serviceOrder.id,
+    eventType: "preventive_plan_origin",
+    message: `OS criada a partir do plano preventivo ${plan.name}.`,
+    oldValue: null,
+    newValue: plan.id,
+    user
+  });
+
+  await Promise.all(assetIds.map((assetId) =>
+    addAssetHistory({
+      assetId,
+      eventType: "preventive_plan_service_order",
+      message: `Plano preventivo ${plan.name} gerou a OS preventiva ${serviceOrder.number}.`,
+      newValue: serviceOrder.number,
+      userId: user?.id || null,
+      userName: user?.name || user?.email || "Sistema"
+    })
+  ));
+
+  await addLog({
+    type: "preventive_plan_service_order_created",
+    message: `Plano preventivo ${plan.name} gerou a OS preventiva ${serviceOrder.number}.`,
+    userId: user?.id || null,
+    meta: {
+      preventivePlanId: plan.id,
+      serviceOrderId: serviceOrder.id,
+      serviceOrderNumber: serviceOrder.number,
+      assetCount: assetIds.length
+    }
+  });
+
+  return {
+    preventivePlan: await findPreventivePlanById(plan.id),
+    serviceOrder
+  };
 }
 
 export async function listPreventivePlanLogs(id) {

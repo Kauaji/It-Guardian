@@ -4,6 +4,10 @@ import {
   rejectSuggestion,
   suggestions
 } from "../controllers/alertController.js";
+import {
+  suggestionValidations,
+  useFromSuggestion
+} from "../controllers/maintenanceScriptController.js";
 import { requireAuth, requirePermission } from "../middleware/authMiddleware.js";
 
 const router = Router();
@@ -19,6 +23,16 @@ router.post(
   "/:id/reject",
   requirePermission("alerts.manage_suggestions"),
   rejectSuggestion
+);
+router.post(
+  "/:id/scripts/:scriptId/use",
+  requirePermission("scripts.use_from_alert"),
+  useFromSuggestion
+);
+router.get(
+  "/:id/script-validations",
+  requirePermission("scripts.view"),
+  suggestionValidations
 );
 
 export default router;
