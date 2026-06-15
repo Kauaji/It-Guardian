@@ -299,8 +299,39 @@
 - [x] Backend registra uso em `script_execution_logs`.
 - [x] Backend registra ciclo em `script_validation_runs`.
 - [x] Acao corretiva sugerida apenas registra intencao, sem executar comando.
+- [x] Sugestoes de OS buscam scripts recomendados pelo backend em `/api/service-order-suggestions/:id/recommended-scripts`.
+- [x] Filtro "Todas as sugestoes" mostra todos os status, nao apenas pendentes.
+- [x] Reavaliacao sem agente usa estados de observacao (`observed_resolved`, `observed_persistent`, `insufficient_data`) e nao marca execucao como sucesso/falha.
+- [x] Consulta de sugestoes nao possui `LEFT JOIN LATERAL`, evitando erro conhecido do `pg-mem`.
+- [x] Log sem conteudo real mostra mensagem de ausencia de log em vez de previa simulada.
+- [x] `npm test` passou com testes de recomendacao deterministica de scripts e automacao preventiva.
+- [x] `npm run build` passou apos os ajustes.
 - [ ] Testar manualmente o ciclo visual aguardando a janela configurada.
 - [ ] Testar log com erro real/simulado quando existir agente seguro ou massa de teste controlada.
+
+## Estabilizacao estrutural
+
+- [x] Backend usa transacao para criar OS preventiva a partir de plano preventivo.
+- [x] Plano preventivo nao permite criar OS duplicada quando ja possui OS vinculada.
+- [x] Banco possui vinculos e indices unicos entre plano preventivo e OS preventiva.
+- [x] Rota de criar OS preventiva exige `preventive_plans.create_service_order` e `service_orders.create`.
+- [x] Frontend e backend usam o mesmo catalogo de permissoes em `shared/permissions.js`.
+- [x] Endpoint `/api/permissions/catalog` aponta para o catalogo administrativo de permissoes.
+- [x] Teste de encoding cobre `client/src`, `server/src` e `shared`.
+- [x] `npm test` passou apos a estabilizacao estrutural.
+
+## Avisos - Automacao Preventiva
+
+- [x] Recorrencia tratada como dias, sem multiplicacao adicional.
+- [x] Calculo de proxima preparacao respeita `preferred_time` e `timezone`.
+- [x] `next_run_at` e ultimas preparacoes ficam persistidos no backend.
+- [x] Preparacao manual valida plano ativo, scripts ativos e escopo com maquinas.
+- [x] Preparacao duplicada na mesma janela e bloqueada por chave/indice idempotente.
+- [x] Excecoes seguem prioridade maquina > segmento > plano.
+- [x] Endpoint protegido `/api/preventive-automation-plans/process-due` criado para processar rotinas vencidas sem executar comandos.
+- [x] Testes automatizados cobrem recorrencia, fuso horario, prioridade de excecoes, idempotencia e ausencia de execucao de comandos.
+- [ ] Validar manualmente a tela de Automacao no navegador com usuario autenticado.
+- [ ] Validar manualmente permissoes de `preventive_automation.*` com usuario sem acesso.
 
 ## Pendencias manuais restantes
 

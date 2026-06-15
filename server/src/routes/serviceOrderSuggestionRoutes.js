@@ -5,6 +5,7 @@ import {
   suggestions
 } from "../controllers/alertController.js";
 import {
+  suggestionRecommendedScripts,
   suggestionValidations,
   useFromSuggestion
 } from "../controllers/maintenanceScriptController.js";
@@ -23,6 +24,11 @@ router.post(
   "/:id/reject",
   requirePermission("alerts.manage_suggestions"),
   rejectSuggestion
+);
+router.get(
+  "/:id/recommended-scripts",
+  requirePermission("scripts.view"),
+  suggestionRecommendedScripts
 );
 router.post(
   "/:id/scripts/:scriptId/use",

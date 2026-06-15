@@ -14,11 +14,20 @@ export const scriptTypes = new Set(["bat", "cmd", "powershell", "shell", "other"
 export const riskLevels = new Set(["low", "medium", "high", "critical"]);
 export const simulationModes = new Set(["simulated", "prepared"]);
 export const validationStatuses = new Set([
+  "waiting_agent",
+  "prepared",
+  "observation_pending",
+  "observed_resolved",
+  "observed_persistent",
+  "execution_confirmed",
+  "execution_success",
+  "execution_failed",
+  "validation_cancelled",
+  "insufficient_data",
+  // Compatibilidade com registros antigos.
   "pending_validation",
   "validation_success",
-  "validation_failed",
-  "validation_cancelled",
-  "waiting_agent"
+  "validation_failed"
 ]);
 export const allowedScriptVariables = new Map([
   ["CURRENT_USER", "Usuário logado na máquina atendida"],
@@ -195,6 +204,79 @@ const logErrorPatterns = [
   }
 ];
 
+const logErrorMetadata = {
+  access_denied: {
+    code: "ACCESS_DENIED",
+    category: "permissao",
+    severity: "high",
+    requiresAdmin: true,
+    requiresLoggedUser: false
+  },
+  file_not_found: {
+    code: "FILE_NOT_FOUND",
+    category: "arquivo",
+    severity: "medium",
+    requiresAdmin: false,
+    requiresLoggedUser: false
+  },
+  invalid_path: {
+    code: "INVALID_PATH",
+    category: "caminho",
+    severity: "medium",
+    requiresAdmin: false,
+    requiresLoggedUser: false
+  },
+  insufficient_permission: {
+    code: "INSUFFICIENT_PERMISSION",
+    category: "permissao",
+    severity: "high",
+    requiresAdmin: true,
+    requiresLoggedUser: false
+  },
+  command_not_recognized: {
+    code: "COMMAND_NOT_RECOGNIZED",
+    category: "ambiente",
+    severity: "medium",
+    requiresAdmin: false,
+    requiresLoggedUser: false
+  },
+  timeout: {
+    code: "TIMEOUT",
+    category: "tempo_limite",
+    severity: "medium",
+    requiresAdmin: false,
+    requiresLoggedUser: false
+  },
+  network_failure: {
+    code: "NETWORK_FAILURE",
+    category: "rede",
+    severity: "high",
+    requiresAdmin: false,
+    requiresLoggedUser: false
+  },
+  agent_unavailable: {
+    code: "AGENT_UNAVAILABLE",
+    category: "agente",
+    severity: "medium",
+    requiresAdmin: false,
+    requiresLoggedUser: false
+  },
+  unresolved_variable: {
+    code: "UNRESOLVED_VARIABLE",
+    category: "variavel",
+    severity: "medium",
+    requiresAdmin: false,
+    requiresLoggedUser: false
+  },
+  logged_user_not_detected: {
+    code: "LOGGED_USER_NOT_DETECTED",
+    category: "sessao_usuario",
+    severity: "medium",
+    requiresAdmin: false,
+    requiresLoggedUser: true
+  }
+};
+
 const defaultMaintenanceScripts = [
   {
     id: "demo-script-network-diagnostics",
@@ -302,6 +384,171 @@ function normalizeTextList(value) {
     .filter(Boolean))];
 }
 
+function normalizeComparableText(value = "") {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, " ")
+    .trim();
+}
+
+function normalizeTokenList(value) {
+  return parseArrayValue(value)
+    .map(normalizeComparableText)
+    .filter(Boolean);
+}
+
+function buildRecommendationContext(context = {}) {
+  const fields = [
+    context.alertType,
+    context.metric,
+    context.category,
+    context.title,
+    context.description,
+    context.probableCause,
+    context.recommendedAction,
+    context.problemType,
+    context.assetType,
+    context.operatingSystem
+  ];
+  const text = normalizeComparableText(fields.filter(Boolean).join(" "));
+
+  return {
+    ...context,
+    normalizedText: text,
+    alertType: normalizeComparableText(context.alertType),
+    metric: normalizeComparableText(context.metric),
+    category: normalizeComparableText(context.category),
+    problemType: normalizeComparableText(context.problemType),
+    assetType: normalizeComparableText(context.assetType),
+    operatingSystem: normalizeComparableText(context.operatingSystem)
+  };
+}
+
+function matchesContextValue(values, candidates) {
+  return values.some((value) =>
+    candidates.some((candidate) => candidate && (value === candidate || candidate.includes(value) || value.includes(candidate)))
+  );
+}
+
+export function scoreMaintenanceScriptForContext(script = {}, context = {}) {
+  if (!script || script.active === false) return null;
+
+  const normalized = buildRecommendationContext(context);
+  const relatedAlertTypes = normalizeTokenList(script.relatedAlertTypes);
+  const relatedProblemTypes = normalizeTokenList(script.relatedProblemTypes);
+  const recommendedForCategories = normalizeTokenList(script.recommendedForCategories);
+  const tags = normalizeTokenList(script.tags);
+  const scriptFields = normalizeComparableText([
+    script.name,
+    script.description,
+    script.category,
+    script.alertType,
+    script.problemType,
+    script.estimatedSummary,
+    ...tags,
+    ...relatedAlertTypes,
+    ...relatedProblemTypes,
+    ...recommendedForCategories
+  ].filter(Boolean).join(" "));
+  const compatibilityWarnings = [];
+  const reasons = [];
+  let score = 0;
+
+  const scriptAlertType = normalizeComparableText(script.alertType);
+  if (
+    normalized.alertType &&
+    (scriptAlertType === normalized.alertType || relatedAlertTypes.includes(normalized.alertType))
+  ) {
+    score += 40;
+    reasons.push("tipo de aviso compatível");
+  }
+
+  if (
+    normalized.problemType &&
+    (normalizeComparableText(script.problemType) === normalized.problemType || relatedProblemTypes.includes(normalized.problemType))
+  ) {
+    score += 35;
+    reasons.push("tipo de problema compatível");
+  }
+
+  const scriptCategory = normalizeComparableText(script.category);
+  if (
+    normalized.category &&
+    (scriptCategory === normalized.category || recommendedForCategories.includes(normalized.category))
+  ) {
+    score += 25;
+    reasons.push("categoria compatível");
+  }
+
+  const tagMatches = tags.filter((tag) => tag && normalized.normalizedText.includes(tag));
+  if (tagMatches.length) {
+    score += tagMatches.length * 10;
+    reasons.push(`tags relacionadas: ${tagMatches.slice(0, 3).join(", ")}`);
+  }
+
+  const keywordMatches = [
+    "disco",
+    "ram",
+    "memoria",
+    "cpu",
+    "rede",
+    "offline",
+    "ping",
+    "impressora",
+    "servico",
+    "temperatura"
+  ].filter((keyword) => normalized.normalizedText.includes(keyword) && scriptFields.includes(keyword));
+  if (keywordMatches.length) {
+    score += keywordMatches.length * 5;
+    reasons.push(`palavras-chave: ${keywordMatches.slice(0, 3).join(", ")}`);
+  }
+
+  const supportedSystems = normalizeTokenList(script.supportedOperatingSystems || script.operatingSystems);
+  if (normalized.operatingSystem && supportedSystems.length && !matchesContextValue(supportedSystems, [normalized.operatingSystem])) {
+    return null;
+  }
+
+  if (script.requiresAdmin) {
+    compatibilityWarnings.push("Pode exigir permissão administrativa em execução futura.");
+  }
+  if (script.requiresLoggedUser) {
+    compatibilityWarnings.push("Pode exigir usuário logado no ativo em execução futura.");
+  }
+  if (["high", "critical"].includes(normalizeRiskLevel(script.riskLevel, "medium"))) {
+    compatibilityWarnings.push("Script de risco elevado: revisar antes de usar.");
+    score = Math.max(0, score - 5);
+  }
+
+  return {
+    ...script,
+    recommendationScore: score,
+    recommendationReason: reasons.length
+      ? `Recomendado por ${reasons.join("; ")}.`
+      : "Sem correspondência forte com o contexto do aviso.",
+    compatibilityWarnings,
+    isRecommended: score > 0
+  };
+}
+
+export function recommendMaintenanceScripts(context = {}, scripts = []) {
+  const scored = scripts
+    .map((script) => scoreMaintenanceScriptForContext(script, context))
+    .filter(Boolean)
+    .sort((left, right) => {
+      if (right.recommendationScore !== left.recommendationScore) {
+        return right.recommendationScore - left.recommendationScore;
+      }
+      return String(left.name || "").localeCompare(String(right.name || ""));
+    });
+
+  return {
+    recommended: scored.filter((script) => script.isRecommended),
+    others: scored.filter((script) => !script.isRecommended)
+  };
+}
+
 function normalizeVariableList(value) {
   return [...new Set(parseArrayValue(value)
     .map((item) => trimString(item, maxLengths.listItem).replace(/[{}]/g, "").toUpperCase())
@@ -396,8 +643,13 @@ function fromLogRow(row) {
     parsedSummary: row.parsed_summary || "",
     errorDetected: row.error_detected === true,
     errorType: row.error_type || "",
+    errorCode: row.error_code || "",
+    errorCategory: row.error_category || "",
+    errorSeverity: row.error_severity || "",
     probableCause: row.probable_cause || "",
     suggestedSolution: row.suggested_solution || "",
+    requiresAdmin: row.requires_admin === true,
+    requiresLoggedUser: row.requires_logged_user === true,
     attentionRequired: row.attention_required === true,
     acknowledgedAt: row.acknowledged_at,
     acknowledgedBy: row.acknowledged_by,
@@ -460,6 +712,59 @@ function interpretScriptLog(rawLog = "", fallbackStatus = "registered") {
     errorType: "",
     probableCause: "",
     suggestedSolution: "",
+    status: fallbackStatus === "error" ? "registered" : fallbackStatus
+  };
+}
+
+function interpretScriptLogWithMetadata(rawLog = "", fallbackStatus = "registered") {
+  const text = String(rawLog || "").trim();
+
+  if (!text) {
+    return {
+      parsedSummary: "Nenhum log de script disponível.",
+      errorDetected: false,
+      errorType: "",
+      errorCode: "",
+      errorCategory: "",
+      errorSeverity: "",
+      probableCause: "",
+      suggestedSolution: "",
+      requiresAdmin: false,
+      requiresLoggedUser: false,
+      status: fallbackStatus
+    };
+  }
+
+  for (const rule of logErrorPatterns) {
+    if (!rule.patterns.some((pattern) => pattern.test(text))) continue;
+    const metadata = logErrorMetadata[rule.type] || {};
+
+    return {
+      parsedSummary: rule.summary,
+      errorDetected: true,
+      errorType: rule.type,
+      errorCode: metadata.code || "",
+      errorCategory: metadata.category || "",
+      errorSeverity: metadata.severity || "medium",
+      probableCause: rule.cause,
+      suggestedSolution: rule.solution,
+      requiresAdmin: metadata.requiresAdmin === true,
+      requiresLoggedUser: metadata.requiresLoggedUser === true,
+      status: "error"
+    };
+  }
+
+  return {
+    parsedSummary: "Log registrado sem erro reconhecido.",
+    errorDetected: false,
+    errorType: "",
+    errorCode: "",
+    errorCategory: "",
+    errorSeverity: "",
+    probableCause: "",
+    suggestedSolution: "",
+    requiresAdmin: false,
+    requiresLoggedUser: false,
     status: fallbackStatus === "error" ? "registered" : fallbackStatus
   };
 }
@@ -847,22 +1152,32 @@ export async function createScriptSimulationLog({
   parsedSummary = "",
   errorDetected = null,
   errorType = "",
+  errorCode = "",
+  errorCategory = "",
+  errorSeverity = "",
   probableCause = "",
   suggestedSolution = "",
+  requiresAdmin = null,
+  requiresLoggedUser = null,
   attentionRequired = null
 }) {
   const safeMode = simulationModes.has(mode) ? mode : "simulated";
-  const interpreted = interpretScriptLog(rawLog, status);
+  const interpreted = interpretScriptLogWithMetadata(rawLog, status);
   const hasError = errorDetected ?? interpreted.errorDetected;
   const result = await query(
     `
       INSERT INTO script_execution_logs (
         id, script_id, asset_id, service_order_id, alert_id, suggestion_id,
         preventive_plan_id, mode, status, executed_by, notes, raw_log,
-        parsed_summary, error_detected, error_type, probable_cause,
-        suggested_solution, attention_required
+        parsed_summary, error_detected, error_type, error_code, error_category,
+        error_severity, probable_cause, suggested_solution, requires_admin,
+        requires_logged_user, attention_required
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+      VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+        $11, $12, $13, $14, $15, $16, $17, $18,
+        $19, $20, $21, $22, $23
+      )
       RETURNING *
     `,
     [
@@ -881,8 +1196,13 @@ export async function createScriptSimulationLog({
       parsedSummary || interpreted.parsedSummary,
       hasError,
       errorType || interpreted.errorType || null,
+      errorCode || interpreted.errorCode || null,
+      errorCategory || interpreted.errorCategory || null,
+      errorSeverity || interpreted.errorSeverity || null,
       probableCause || interpreted.probableCause || null,
       suggestedSolution || interpreted.suggestedSolution || null,
+      requiresAdmin ?? interpreted.requiresAdmin,
+      requiresLoggedUser ?? interpreted.requiresLoggedUser,
       attentionRequired ?? hasError
     ]
   );
@@ -997,6 +1317,56 @@ export async function listScriptValidationsForSuggestion(suggestionId) {
   return result.rows.map(fromValidationRow);
 }
 
+function toRecommendedScriptResponse(script) {
+  return {
+    id: script.id,
+    name: script.name,
+    category: script.category,
+    riskLevel: script.riskLevel,
+    estimatedSummary: script.estimatedSummary,
+    recommendationScore: script.recommendationScore || 0,
+    recommendationReason: script.recommendationReason || "",
+    compatibilityWarnings: script.compatibilityWarnings || [],
+    requiresLoggedUser: script.requiresLoggedUser === true,
+    requiresAdmin: script.requiresAdmin === true,
+    supportedVariables: script.supportedVariables || [],
+    isRecommended: script.isRecommended === true
+  };
+}
+
+export async function listRecommendedScriptsForSuggestion(suggestionId) {
+  const suggestion = await findServiceOrderSuggestionById(suggestionId);
+
+  if (!suggestion) {
+    const error = new Error("Sugestão de OS não encontrada.");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const [alert, scripts] = await Promise.all([
+    suggestion.alertId ? findAlertById(suggestion.alertId) : null,
+    listMaintenanceScripts({ includeInactive: false })
+  ]);
+  const context = {
+    alertType: alert?.type || suggestion.suggestedProblemTypeId || "",
+    metric: alert?.metric || "",
+    category: alert?.severity || suggestion.suggestedPriority || "",
+    title: suggestion.title || alert?.title || "",
+    description: suggestion.description || alert?.description || "",
+    probableCause: suggestion.probableCause || "",
+    recommendedAction: suggestion.recommendedAction || "",
+    problemType: suggestion.suggestedProblemTypeId || "",
+    assetType: suggestion.assetType || "",
+    operatingSystem: suggestion.operatingSystem || ""
+  };
+  const recommendations = recommendMaintenanceScripts(context, scripts);
+
+  return {
+    recommended: recommendations.recommended.map(toRecommendedScriptResponse),
+    others: recommendations.others.map(toRecommendedScriptResponse)
+  };
+}
+
 export async function useScriptFromSuggestion({ suggestionId, scriptId, payload = {}, user = null }) {
   const [suggestion, script, settings] = await Promise.all([
     findServiceOrderSuggestionById(suggestionId),
@@ -1010,7 +1380,7 @@ export async function useScriptFromSuggestion({ suggestionId, scriptId, payload 
     throw error;
   }
   if (suggestion.status !== "pending") {
-    const error = new Error("Apenas sugestões pendentes podem receber validação de script.");
+    const error = new Error("Apenas sugestões pendentes podem receber observação de script.");
     error.statusCode = 409;
     throw error;
   }
@@ -1044,7 +1414,7 @@ export async function useScriptFromSuggestion({ suggestionId, scriptId, payload 
   const rawLog = [
     "Uso preparado a partir de sugestão de OS.",
     "Nenhum comando foi executado pelo servidor ou navegador.",
-    "Aguardando agente seguro/coleta futura para validação real."
+    "Aguardando agente seguro/coleta futura para observação real."
   ].join("\n");
 
   const log = await createScriptSimulationLog({
@@ -1053,11 +1423,11 @@ export async function useScriptFromSuggestion({ suggestionId, scriptId, payload 
     alertId: suggestion.alertId,
     suggestionId: suggestion.id,
     mode: "prepared",
-    status: "waiting_agent",
+    status: "observation_pending",
     executedBy: user?.id || null,
     notes,
     rawLog,
-    parsedSummary: "Validação preparada. O sistema aguardará a janela configurada antes de reavaliar o aviso.",
+    parsedSummary: "Observação preparada. O sistema aguardará a janela configurada antes de reavaliar o aviso.",
     errorDetected: false,
     attentionRequired: false
   });
@@ -1068,7 +1438,7 @@ export async function useScriptFromSuggestion({ suggestionId, scriptId, payload 
         id, suggestion_id, alert_id, asset_id, script_id, status, started_by,
         validation_window_minutes, validation_due_at, result_summary, log_id
       )
-      VALUES ($1, $2, $3, $4, $5, 'waiting_agent', $6, $7, $8, $9, $10)
+      VALUES ($1, $2, $3, $4, $5, 'observation_pending', $6, $7, $8, $9, $10)
       RETURNING *
     `,
     [
@@ -1126,18 +1496,26 @@ export async function refreshDueScriptValidations() {
     FROM script_validation_runs validations
     LEFT JOIN maintenance_scripts scripts ON scripts.id = validations.script_id
     LEFT JOIN alerts ON alerts.id = validations.alert_id
-    WHERE validations.status IN ('waiting_agent', 'pending_validation')
+    WHERE validations.status IN ('waiting_agent', 'prepared', 'observation_pending', 'pending_validation')
       AND validations.validation_due_at <= NOW()
     ORDER BY validations.validation_due_at ASC
   `);
   const refreshed = [];
 
   for (const row of result.rows) {
-    const success = !row.alert_id || row.alert_status === "resolved";
-    const status = success ? "validation_success" : "validation_failed";
-    const resultSummary = success
-      ? "Validação concluída: o aviso não voltou no período configurado."
-      : "Validação falhou: o aviso continuou ativo após o período configurado.";
+    let status = "insufficient_data";
+    let resultSummary = "Nao ha coleta suficiente para concluir a observacao. Nenhum comando foi executado.";
+
+    if (row.alert_id && row.alert_status) {
+      if (row.alert_status === "resolved") {
+        status = "observed_resolved";
+        resultSummary = "O aviso nao voltou durante o periodo de observacao. Nao existe confirmacao de execucao do script.";
+      } else {
+        status = "observed_persistent";
+        resultSummary = "O aviso continuou ativo durante o periodo de observacao. Nenhum comando foi executado nesta versao.";
+      }
+    }
+
     const updated = await query(
       `
         UPDATE script_validation_runs
@@ -1153,14 +1531,14 @@ export async function refreshDueScriptValidations() {
     const validation = fromValidationRow({ ...updated.rows[0], script_name: row.script_name });
     refreshed.push(validation);
 
-    if (success && row.suggestion_id) {
-      await markSuggestionValidated({ id: row.suggestion_id });
+    if (row.suggestion_id) {
+      await markSuggestionValidated({ id: row.suggestion_id, status });
     }
 
     if (row.asset_id) {
       await addAssetHistory({
         assetId: row.asset_id,
-        eventType: "script_validation_finished",
+        eventType: "script_observation_finished",
         message: resultSummary,
         oldValue: row.script_name || row.script_id,
         newValue: status,
@@ -1179,22 +1557,27 @@ export async function cancelScriptValidation(id, user = null) {
       UPDATE script_validation_runs
       SET status = 'validation_cancelled',
           finished_at = NOW(),
-          result_summary = 'Validação cancelada manualmente.',
+          result_summary = 'Observação cancelada manualmente.',
           updated_at = NOW()
       WHERE id = $1
-        AND status IN ('waiting_agent', 'pending_validation')
+        AND status IN ('waiting_agent', 'prepared', 'observation_pending', 'pending_validation')
       RETURNING *
     `,
     [id]
   );
 
   if (!result.rows[0]) {
-    const error = new Error("Validação não encontrada ou já finalizada.");
+    const error = new Error("Observação não encontrada ou já finalizada.");
     error.statusCode = 404;
     throw error;
   }
 
   const validation = fromValidationRow(result.rows[0]);
+
+  if (validation.suggestionId) {
+    await markSuggestionValidated({ id: validation.suggestionId, status: "validation_cancelled" });
+  }
+
   if (validation.assetId) {
     await addAssetHistory({
       assetId: validation.assetId,

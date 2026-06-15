@@ -15,6 +15,7 @@
     "build": "npm run build --workspace client && node scripts/prepare-vercel-output.mjs",
     "vercel-build": "npm run build",
     "start": "npm run start --workspace server",
+    "test": "npm run test --workspace server",
     "docker:up": "docker compose up --build",
     "docker:down": "docker compose down"
   }

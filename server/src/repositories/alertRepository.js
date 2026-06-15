@@ -286,9 +286,14 @@ function fromLatestSuggestionValidationRow(row) {
       status: row.log_status,
       errorDetected: row.log_error_detected === true,
       errorType: row.log_error_type,
+      errorCode: row.log_error_code,
+      errorCategory: row.log_error_category,
+      errorSeverity: row.log_error_severity,
       parsedSummary: row.log_parsed_summary,
       probableCause: row.log_probable_cause,
       suggestedSolution: row.log_suggested_solution,
+      requiresAdmin: row.log_requires_admin === true,
+      requiresLoggedUser: row.log_requires_logged_user === true,
       attentionRequired: row.log_attention_required === true,
       acknowledgedAt: row.log_acknowledged_at
     } : null
@@ -603,9 +608,14 @@ export async function listServiceOrderSuggestions() {
                logs.status AS log_status,
                logs.error_detected AS log_error_detected,
                logs.error_type AS log_error_type,
+               logs.error_code AS log_error_code,
+               logs.error_category AS log_error_category,
+               logs.error_severity AS log_error_severity,
                logs.parsed_summary AS log_parsed_summary,
                logs.probable_cause AS log_probable_cause,
                logs.suggested_solution AS log_suggested_solution,
+               logs.requires_admin AS log_requires_admin,
+               logs.requires_logged_user AS log_requires_logged_user,
                logs.attention_required AS log_attention_required,
                logs.acknowledged_at AS log_acknowledged_at
         FROM script_validation_runs validations

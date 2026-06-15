@@ -4,6 +4,7 @@ import {
   findPreventiveAutomationPlanById,
   listPreventiveAutomationPlans,
   preparePreventiveAutomationPlan,
+  processDuePreventiveAutomationPlans,
   updatePreventiveAutomationPlan
 } from "../repositories/preventiveAutomationRepository.js";
 
@@ -71,7 +72,7 @@ export async function disable(req, res, next) {
 
 export async function prepare(req, res, next) {
   try {
-    const result = await preparePreventiveAutomationPlan(req.params.id, req.user);
+    const result = await preparePreventiveAutomationPlan(req.params.id, req.user, { scheduledFor: new Date() });
 
     if (!result) {
       res.status(404).json({ message: "Plano de automacao preventiva nao encontrado." });
@@ -79,6 +80,14 @@ export async function prepare(req, res, next) {
     }
 
     res.json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function processDue(req, res, next) {
+  try {
+    res.json(await processDuePreventiveAutomationPlans(req.user));
   } catch (error) {
     next(error);
   }

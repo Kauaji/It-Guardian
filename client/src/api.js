@@ -284,6 +284,10 @@ export function useSuggestionScript(token, suggestionId, scriptId, payload = {})
   });
 }
 
+export function fetchSuggestionRecommendedScripts(token, suggestionId) {
+  return apiFetch(`/service-order-suggestions/${suggestionId}/recommended-scripts`, { token });
+}
+
 export function fetchSuggestionScriptValidations(token, suggestionId) {
   return apiFetch(`/service-order-suggestions/${suggestionId}/script-validations`, { token });
 }
@@ -417,6 +421,13 @@ export function disablePreventiveAutomationPlan(token, id) {
 
 export function preparePreventiveAutomationPlan(token, id) {
   return apiFetch(`/preventive-automation-plans/${id}/prepare`, {
+    token,
+    method: "POST"
+  });
+}
+
+export function processDuePreventiveAutomationPlans(token) {
+  return apiFetch("/preventive-automation-plans/process-due", {
     token,
     method: "POST"
   });

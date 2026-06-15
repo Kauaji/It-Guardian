@@ -6,5 +6,6 @@ const router = Router();
 
 router.use(requireAuth, requireAdmin);
 router.get("/", list);
+router.get("/catalog", list);
 
 export default router;

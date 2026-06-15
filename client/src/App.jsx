@@ -77,6 +77,7 @@ import {
   fetchPreventivePlans,
   fetchServiceOrders,
   fetchServiceOrderSuggestions,
+  fetchSuggestionRecommendedScripts,
   fetchSegmentGroups,
   fetchSegments,
   fetchSystemSettings,
@@ -704,32 +705,53 @@ function normalizeText(value = "") {
 
 const suggestionStatusLabels = {
   pending: "Pendente",
-  accepted: "Aceita",
+  accepted: "OS criada",
   rejected: "Recusada",
+  observed_resolved: "Observado como normalizado",
+  observed_persistent: "Observado como persistente",
+  validation_cancelled: "Observação cancelada",
+  converted_to_os: "Convertida em OS",
   validated: "Validada"
 };
 
 const scriptValidationLabels = {
-  pending_validation: "Aguardando validação",
+  pending_validation: "Aguardando observação",
   waiting_agent: "Aguardando agente seguro",
+  prepared: "Preparado",
+  observation_pending: "Observação em andamento",
+  observed_resolved: "Observado como normalizado",
+  observed_persistent: "Observado como persistente",
+  execution_confirmed: "Execução confirmada",
+  execution_success: "Execução confirmada com sucesso",
+  execution_failed: "Execução confirmada com erro",
+  insufficient_data: "Dados insuficientes",
   validation_success: "Resolvido após validação",
   validation_failed: "Problema persistente",
-  validation_cancelled: "Validação cancelada"
+  validation_cancelled: "Observação cancelada"
 };
 
 function getScriptValidationTooltip(validation = {}) {
   if (!validation?.status) return "";
   const dueText = validation.validationDueAt ? ` Previsão: ${formatDate(validation.validationDueAt)}.` : "";
-  if (validation.status === "validation_failed") {
-    return "Validação falhou. O problema continua após o período configurado.";
+  if (validation.status === "observed_persistent") {
+    return "O aviso continuou ativo durante o período de observação. Nenhum comando foi executado.";
   }
-  if (validation.status === "validation_success") {
-    return "Problema não voltou no período de validação.";
+  if (validation.status === "observed_resolved") {
+    return "O aviso não voltou durante o período de observação. Isso não confirma execução de script.";
+  }
+  if (validation.status === "insufficient_data") {
+    return "Não há dados suficientes para concluir a observação.";
   }
   if (validation.status === "validation_cancelled") {
-    return "Validação cancelada.";
+    return "Observação cancelada.";
   }
-  return `Validação em andamento. O sistema está aguardando para verificar se o problema será resolvido.${dueText}`;
+  if (validation.status === "execution_success") {
+    return "Execução confirmada por log de agente seguro.";
+  }
+  if (validation.status === "execution_failed") {
+    return "Execução confirmada com erro por log de agente seguro.";
+  }
+  return `Observação em andamento. O sistema aguardará novas coletas para verificar o aviso.${dueText}`;
 };
 
 const preventiveStatusLabels = {
@@ -925,7 +947,7 @@ function AlertCenter({
     return severityMatches && statusMatches;
   });
   const visibleSuggestions = suggestions.filter((suggestion) => {
-    if (suggestionStatusFilter === "all") return suggestion.status === "pending";
+    if (suggestionStatusFilter === "all") return true;
     return suggestionStatusFilter === "all" || suggestion.status === suggestionStatusFilter;
   }).sort((left, right) => {
     const priorityWeight = { critical: 4, high: 3, medium: 2, low: 1 };
@@ -1043,6 +1065,9 @@ function AlertCenter({
             <option value="pending">Pendentes</option>
             <option value="accepted">Aceitas</option>
             <option value="rejected">Recusadas</option>
+            <option value="observed_resolved">Observadas como normalizadas</option>
+            <option value="observed_persistent">Observadas como persistentes</option>
+            <option value="validation_cancelled">Observações canceladas</option>
           </select>
         </div>
         <div className="alert-board">
@@ -1220,6 +1245,10 @@ function getDefaultRecurrenceInterval(type) {
   return 30;
 }
 
+function getPlanRecurrenceIntervalDays(plan) {
+  return Number(plan?.recurrenceIntervalDays || plan?.recurrenceInterval || getDefaultRecurrenceInterval(plan?.recurrenceType));
+}
+
 function PreventiveAutomationPanel({
   plans = [],
   scripts = [],
@@ -1286,12 +1315,12 @@ function PreventiveAutomationPanel({
 
   function getRecurrenceLabel(plan) {
     const label = preventiveAutomationRecurrenceLabels[plan.recurrenceType] || plan.recurrenceType || "Mensal";
-    return `${label} - a cada ${plan.recurrenceInterval || 30} dia(s)`;
+    return `${label} - a cada ${getPlanRecurrenceIntervalDays(plan)} dia(s)`;
   }
 
   function getRecurrenceShortLabel(plan) {
     if (plan.recurrenceType === "custom_days") {
-      return `A cada ${plan.recurrenceInterval || 30} dia(s)`;
+      return `A cada ${getPlanRecurrenceIntervalDays(plan)} dia(s)`;
     }
     return preventiveAutomationRecurrenceLabels[plan.recurrenceType] || "Mensal";
   }
@@ -1325,7 +1354,7 @@ function PreventiveAutomationPanel({
       description: plan.description || "",
       active: plan.active !== false,
       recurrenceType: plan.recurrenceType || "monthly",
-      recurrenceInterval: plan.recurrenceInterval || 30,
+      recurrenceInterval: getPlanRecurrenceIntervalDays(plan),
       preferredTime: plan.preferredTime || "08:00",
       timezone: plan.timezone || "America/Sao_Paulo",
       scopeType: plan.scopeType || "all",
@@ -1368,6 +1397,7 @@ function PreventiveAutomationPanel({
           segmentId: overrideDraft.targetType === "segment" ? overrideDraft.targetId : null,
           recurrenceType: overrideDraft.recurrenceType,
           recurrenceInterval: getDefaultRecurrenceInterval(overrideDraft.recurrenceType),
+          recurrenceIntervalDays: getDefaultRecurrenceInterval(overrideDraft.recurrenceType),
           preferredTime: overrideDraft.preferredTime || "08:00",
           active: true
         }
@@ -1394,6 +1424,7 @@ function PreventiveAutomationPanel({
         active: form.active,
         recurrenceType: form.recurrenceType,
         recurrenceInterval: Number(form.recurrenceInterval || 30),
+        recurrenceIntervalDays: Number(form.recurrenceInterval || 30),
         preferredTime: form.preferredTime,
         timezone: form.timezone,
         scopeType: form.scopeType,
@@ -1405,6 +1436,7 @@ function PreventiveAutomationPanel({
           segmentId: item.segmentId || null,
           recurrenceType: item.recurrenceType,
           recurrenceInterval: Number(item.recurrenceInterval || 30),
+          recurrenceIntervalDays: Number(item.recurrenceIntervalDays || item.recurrenceInterval || getDefaultRecurrenceInterval(item.recurrenceType)),
           preferredTime: item.preferredTime || null,
           active: item.active !== false
         }))
@@ -1417,6 +1449,10 @@ function PreventiveAutomationPanel({
 
   async function preparePlan(plan) {
     if (!onPrepare || preparingId) return;
+    const confirmed = window.confirm(
+      "Esta ação preparará a rotina preventiva e criará registros para as máquinas do escopo. Nenhum comando será executado."
+    );
+    if (!confirmed) return;
     setPreparingId(plan.id);
     try {
       await onPrepare(plan.id);
@@ -1439,7 +1475,8 @@ function PreventiveAutomationPanel({
         description: plan.description || "",
         active: true,
         recurrenceType: plan.recurrenceType || "monthly",
-        recurrenceInterval: Number(plan.recurrenceInterval || 30),
+        recurrenceInterval: getPlanRecurrenceIntervalDays(plan),
+        recurrenceIntervalDays: getPlanRecurrenceIntervalDays(plan),
         preferredTime: plan.preferredTime || "08:00",
         timezone: plan.timezone || "America/Sao_Paulo",
         scopeType: plan.scopeType || "all",
@@ -1458,6 +1495,7 @@ function PreventiveAutomationPanel({
       <div className="panel-heading">
         <div>
           <h2>Automação Preventiva</h2>
+          <p>A automação agenda e prepara rotinas. A execução real dependerá de agente seguro.</p>
         </div>
         {canCreate && (
           <button type="button" className="primary-action compact-action" onClick={openCreateModal}>
@@ -1480,15 +1518,41 @@ function PreventiveAutomationPanel({
             </header>
             <dl>
               <div>
+                <dt>Recorrência</dt>
+                <dd>{getRecurrenceLabel(plan)}</dd>
+              </div>
+              <div>
+                <dt>Horário</dt>
+                <dd>{plan.preferredTime || "08:00"} - {plan.timezone || "America/Sao_Paulo"}</dd>
+              </div>
+              <div>
                 <dt>Escopo</dt>
                 <dd>{getScopeLabel(plan)}</dd>
               </div>
               <div>
-                <dt>Próxima previsão</dt>
-                <dd>{formatDate(plan.nextScheduledFor)}</dd>
+                <dt>Próxima preparação</dt>
+                <dd>{formatDate(plan.nextRunAt || plan.nextScheduledFor)}</dd>
+              </div>
+              <div>
+                <dt>Última preparação</dt>
+                <dd>{plan.lastPreparedAt ? formatDate(plan.lastPreparedAt) : "Ainda não preparada"}</dd>
+              </div>
+              <div>
+                <dt>Exceções</dt>
+                <dd>{Array.isArray(plan.overrides) && plan.overrides.length ? `${plan.overrides.length} personalizada(s)` : "Sem exceções"}</dd>
               </div>
             </dl>
             <footer>
+              {canPrepare && plan.active !== false && (
+                <button
+                  type="button"
+                  className="primary-action compact-action"
+                  disabled={preparingId === plan.id}
+                  onClick={() => preparePlan(plan)}
+                >
+                  {preparingId === plan.id ? "Preparando..." : "Preparar rotina agora"}
+                </button>
+              )}
               {(canDisable || canUpdate) && (
                 <label className="preventive-automation-switch" title={plan.active === false ? "Ativar automação" : "Desativar automação"}>
                   <input
@@ -1503,11 +1567,6 @@ function PreventiveAutomationPanel({
               {canUpdate && (
                 <button type="button" className="secondary-action compact-action" onClick={() => openEditModal(plan)}>
                   Editar
-                </button>
-              )}
-              {canDisable && plan.active !== false && (
-                <button type="button" className="danger-action compact-action" onClick={() => onDisable?.(plan.id)}>
-                  Desativar
                 </button>
               )}
             </footer>
@@ -1558,6 +1617,10 @@ function PreventiveAutomationPanel({
               <label>
                 Horário preferencial
                 <input type="time" value={form.preferredTime} onChange={(event) => updateForm("preferredTime", event.target.value)} />
+              </label>
+              <label>
+                Fuso horário
+                <input value={form.timezone} onChange={(event) => updateForm("timezone", event.target.value)} />
               </label>
               <label>
                 Escopo
@@ -1675,6 +1738,7 @@ function PreventiveAutomationPanel({
 }
 
 function AlertCenterV2({
+  token,
   alerts,
   history,
   suggestions,
@@ -1745,6 +1809,8 @@ function AlertCenterV2({
     scripts: false
   });
   const [openScriptMenuSuggestionId, setOpenScriptMenuSuggestionId] = useState(null);
+  const [scriptRecommendationsBySuggestion, setScriptRecommendationsBySuggestion] = useState({});
+  const [loadingScriptRecommendationId, setLoadingScriptRecommendationId] = useState(null);
   const [priorityDraft, setPriorityDraft] = useState(() => normalizePrioritySettings(alertPrioritySettings));
   const [prioritySaving, setPrioritySaving] = useState(false);
   const [priorityColorsOpen, setPriorityColorsOpen] = useState(false);
@@ -1834,7 +1900,7 @@ function AlertCenterV2({
   });
   const visibleSuggestions = suggestions
     .filter((suggestion) => {
-      if (suggestionStatusFilter === "all") return suggestion.status === "pending";
+      if (suggestionStatusFilter === "all") return true;
       return suggestion.status === suggestionStatusFilter;
     })
     .sort((left, right) => {
@@ -2484,36 +2550,61 @@ function AlertCenterV2({
       setSelectedScriptLog({
         ...latestValidationWithLog.log,
         scriptName: latestValidationWithLog.scriptName,
-        validationStatus: latestValidationWithLog.status
+        validationStatus: latestValidationWithLog.status,
+        validationId: latestValidationWithLog.id
       });
       return;
     }
 
-    setSelectedScriptLog({
-      id: "preview-log",
-      previewOnly: true,
-      scriptName: "Prévia de logs",
-      status: "Sem logs registrados",
-      parsedSummary: "Nenhum log de script disponível para esta sessão.",
-      errorDetected: false,
-      errorType: "Não informado",
-      acknowledgedAt: null,
-      probableCause: "Nenhum log pendente foi encontrado.",
-      suggestedSolution: "Use os botões de script nos cards de sugestão para gerar registros de validação.",
-      rawLog: "Nenhum log bruto disponível."
-    });
+    window.alert("Nenhum log de script disponível.");
+    return;
+  }
+
+  async function toggleSuggestionScriptMenu(suggestionId) {
+    setOpenScriptMenuSuggestionId((current) => (current === suggestionId ? null : suggestionId));
+
+    if (
+      openScriptMenuSuggestionId === suggestionId ||
+      scriptRecommendationsBySuggestion[suggestionId]?.recommended ||
+      loadingScriptRecommendationId === suggestionId
+    ) {
+      return;
+    }
+
+    setLoadingScriptRecommendationId(suggestionId);
+    try {
+      const result = await fetchSuggestionRecommendedScripts(token, suggestionId);
+      setScriptRecommendationsBySuggestion((current) => ({
+        ...current,
+        [suggestionId]: {
+          recommended: result?.recommended || [],
+          others: result?.others || []
+        }
+      }));
+    } catch (error) {
+      setScriptRecommendationsBySuggestion((current) => ({
+        ...current,
+        [suggestionId]: {
+          recommended: [],
+          others: [],
+          error: error.message || "Não foi possível carregar os scripts."
+        }
+      }));
+    } finally {
+      setLoadingScriptRecommendationId(null);
+    }
   }
 
   async function handleUseSuggestionScript(suggestion, script) {
     const baseConfirmation =
-      "Esta acao apenas registrara o uso do script na sugestao e iniciara a validacao visual. Nenhum comando sera executado na maquina ou no servidor.";
+      "Esta ação apenas registrará o uso do script na sugestão e iniciará a observação. Nenhum comando será executado na máquina ou no servidor.";
     const highRisk = script.riskLevel === "high" || script.riskLevel === "critical";
 
     if (!window.confirm(baseConfirmation)) return;
 
     if (highRisk) {
       const riskConfirmation =
-        "Este script foi marcado como alto risco. A execucao real nao esta disponivel nesta versao. Deseja apenas registrar a validacao preparada?";
+        "Este script foi marcado como alto risco. A execução real não está disponível nesta versão. Deseja apenas registrar a observação preparada?";
       if (!window.confirm(riskConfirmation)) return;
     }
 
@@ -2755,6 +2846,9 @@ function AlertCenterV2({
                   <option value="pending">Pendentes</option>
                   <option value="accepted">Aceitas</option>
                   <option value="rejected">Recusadas</option>
+                  <option value="observed_resolved">Observadas como normalizadas</option>
+                  <option value="observed_persistent">Observadas como persistentes</option>
+                  <option value="validation_cancelled">Observações canceladas</option>
                 </select>
               </div>
               <div className="alert-board suggestion-board">
@@ -2766,19 +2860,11 @@ function AlertCenterV2({
                   const priorityColor = priorityColorById[priority] || priorityColorById.medium;
                   const locationLabel = `${location.groupName} • ${location.segmentName}`;
                   const occurrenceCount = Number(suggestion.occurrencesCount || 1);
-                  const recommendedScripts = getRecommendedScriptsForContextV2([
-                    suggestion.title,
-                    suggestion.description,
-                    suggestion.alertType,
-                    suggestion.alertMetric,
-                    suggestion.category,
-                    suggestion.suggestedProblemTypeId,
-                    machineLabel,
-                    locationLabel
-                  ].filter(Boolean).join(" "));
-                  const otherScripts = activeScripts.filter((script) =>
-                    !recommendedScripts.some((recommended) => recommended.id === script.id)
-                  );
+                  const scriptRecommendationState = scriptRecommendationsBySuggestion[suggestion.id] || {};
+                  const recommendedScripts = scriptRecommendationState.recommended || [];
+                  const otherScripts = scriptRecommendationState.others || [];
+                  const recommendationError = scriptRecommendationState.error || "";
+                  const recommendationLoading = loadingScriptRecommendationId === suggestion.id;
 
                   const latestValidation = getSuggestionLatestValidation(suggestion);
                   const validationStatus = latestValidation?.status || "";
@@ -2810,7 +2896,11 @@ function AlertCenterV2({
                           className={`suggestion-validation-indicator ${validationStatus}`}
                           title={getScriptValidationTooltip(latestValidation)}
                         >
-                          {validationStatus === "validation_success" ? <CheckCircle size={13} /> : <SettingsIcon size={13} />}
+                          {["observed_resolved", "execution_success", "validation_success"].includes(validationStatus)
+                            ? <CheckCircle size={13} />
+                            : ["observed_persistent", "execution_failed", "insufficient_data", "validation_failed"].includes(validationStatus)
+                              ? <AlertTriangle size={13} />
+                              : <SettingsIcon size={13} />}
                         </span>
                       )}
                       <span>{formatSuggestionCode(suggestion, index)}</span>
@@ -2866,7 +2956,8 @@ function AlertCenterV2({
                               setSelectedScriptLog({
                                 ...latestValidation.log,
                                 scriptName: latestValidation.scriptName,
-                                validationStatus: latestValidation.status
+                                validationStatus: latestValidation.status,
+                                validationId: latestValidation.id
                               });
                             }}
                           >
@@ -2880,17 +2971,15 @@ function AlertCenterV2({
                                 className="icon-button suggestion-script-trigger"
                                 title="Scripts disponíveis"
                                 aria-label="Scripts disponíveis"
-                                onClick={() =>
-                                  setOpenScriptMenuSuggestionId((current) =>
-                                    current === suggestion.id ? null : suggestion.id
-                                  )
-                                }
+                                onClick={() => toggleSuggestionScriptMenu(suggestion.id)}
                               >
                                 <KeyRound size={15} />
                               </button>
                               {openScriptMenuSuggestionId === suggestion.id && (
                                 <div className="suggestion-script-popover">
                                   <strong>Scripts disponíveis</strong>
+                                  {recommendationLoading && <p>Carregando scripts...</p>}
+                                  {recommendationError && <p>{recommendationError}</p>}
                                   {!!recommendedScripts.length && (
                                     <section>
                                       <em>Recomendado</em>
@@ -2909,7 +2998,7 @@ function AlertCenterV2({
                                   )}
                                   {!!otherScripts.length && (
                                     <section>
-                                      <em>Outros scripts disponiveis</em>
+                                      <em>Outros scripts disponíveis</em>
                                       {otherScripts.map((script) => (
                                         <button
                                           key={script.id}
@@ -2923,7 +3012,9 @@ function AlertCenterV2({
                                       ))}
                                     </section>
                                   )}
-                                  {!activeScripts.length && <p>Nenhum script ativo cadastrado.</p>}
+                                  {!recommendationLoading && !recommendedScripts.length && !otherScripts.length && !recommendationError && (
+                                    <p>Nenhum script ativo cadastrado.</p>
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -3116,12 +3207,22 @@ function AlertCenterV2({
                               const nextPreventiveLabel = nextPreventiveDueAt
                                 ? `Próxima sugerida: ${formatDate(nextPreventiveDueAt)}`
                                 : `Vence após ${preventiveDueDays} dia(s) da primeira preventiva`;
+                              const normalizedDeviceStatus = normalizeText(`${device.statusLabel || ""} ${device.status || ""}`);
+                              const hasPreventiveError =
+                                item.criticalAlertsCount > 0 ||
+                                badges.some((badge) => badge.tone === "danger") ||
+                                normalizedDeviceStatus.includes("erro") ||
+                                normalizedDeviceStatus.includes("offline");
 
                               return (
                                 <button
                                   key={device.id}
                                   type="button"
-                                  className={`preventive-device-row ${isSelected ? "selected" : ""}`}
+                                  className={[
+                                    "preventive-device-row",
+                                    isSelected ? "selected" : "",
+                                    hasPreventiveError ? "has-error" : ""
+                                  ].filter(Boolean).join(" ")}
                                   disabled={!canCreatePreventivePlans}
                                   onClick={() => togglePreventiveAsset(device.id)}
                                 >
@@ -3671,7 +3772,7 @@ function AlertCenterV2({
               <div>
                 <span>LOG DE SCRIPT</span>
                 <h2>{selectedScriptLog.scriptName || "Registro de script"}</h2>
-                <p>{selectedScriptLog.parsedSummary || "Registro preparado para validacao segura."}</p>
+                <p>{selectedScriptLog.parsedSummary || "Registro preparado para observação segura."}</p>
               </div>
               <button type="button" className="icon-button" onClick={() => setSelectedScriptLog(null)} aria-label="Fechar log">
                 <XCircle size={18} />
@@ -3681,15 +3782,23 @@ function AlertCenterV2({
               <section className="script-log-summary">
                 <div>
                   <span>Status</span>
-                  <strong>{selectedScriptLog.status || "Registrado"}</strong>
+                  <strong>{scriptValidationLabels[selectedScriptLog.validationStatus] || selectedScriptLog.status || "Registrado"}</strong>
                 </div>
                 <div>
                   <span>Erro detectado</span>
-                  <strong>{selectedScriptLog.errorDetected ? "Sim" : "Nao"}</strong>
+                  <strong>{selectedScriptLog.errorDetected ? "Sim" : "Não"}</strong>
                 </div>
                 <div>
                   <span>Tipo de erro</span>
-                  <strong>{selectedScriptLog.errorType || "Nao informado"}</strong>
+                  <strong>{selectedScriptLog.errorType || "Não informado"}</strong>
+                </div>
+                <div>
+                  <span>Categoria</span>
+                  <strong>{selectedScriptLog.errorCategory || "Não informada"}</strong>
+                </div>
+                <div>
+                  <span>Severidade</span>
+                  <strong>{selectedScriptLog.errorSeverity || "Não informada"}</strong>
                 </div>
                 <div>
                   <span>Reconhecido</span>
@@ -3698,23 +3807,25 @@ function AlertCenterV2({
               </section>
               <section>
                 <h3>Causa provavel</h3>
-                <p>{selectedScriptLog.probableCause || "Nenhuma causa especifica foi identificada."}</p>
+                <p>{selectedScriptLog.probableCause || "Nenhuma causa específica foi identificada."}</p>
               </section>
               <section>
-                <h3>Solucao sugerida</h3>
-                <p>{selectedScriptLog.suggestedSolution || "Revise o script, o acesso ao ativo e as permissoes antes de qualquer execucao futura."}</p>
+                <h3>Solução sugerida</h3>
+                <p>{selectedScriptLog.suggestedSolution || "Revise o script, o acesso ao ativo e as permissões antes de qualquer execução futura."}</p>
               </section>
               <section>
-                <h3>Log tecnico</h3>
-                <pre className="script-log-raw">{selectedScriptLog.rawLog || selectedScriptLog.parsedSummary || "Nenhum log bruto informado."}</pre>
+                <details className="script-log-details">
+                  <summary>Log técnico</summary>
+                  <pre className="script-log-raw">{selectedScriptLog.rawLog || "Nenhum log de script disponível."}</pre>
+                </details>
               </section>
               {canResolveScriptLogs && !selectedScriptLog.previewOnly && (
                 <label className="script-log-custom-solution">
-                  Solucao propria
+                  Solução própria
                   <textarea
                     value={scriptLogCustomNotes}
                     onChange={(event) => setScriptLogCustomNotes(event.target.value)}
-                    placeholder="Descreva a correcao que sera registrada sem executar comandos."
+                    placeholder="Descreva a correção que será registrada sem executar comandos."
                   />
                 </label>
               )}
@@ -3737,7 +3848,7 @@ function AlertCenterV2({
                       setScriptLogCustomNotes("");
                     }}
                   >
-                    Aplicar solucao sugerida
+                    Registrar solução sugerida
                   </button>
                   <button
                     type="button"
@@ -3749,7 +3860,7 @@ function AlertCenterV2({
                       setScriptLogCustomNotes("");
                     }}
                   >
-                    Usar minha propria solucao
+                    Registrar solução própria
                   </button>
                   <button
                     type="button"
@@ -3760,7 +3871,22 @@ function AlertCenterV2({
                       setScriptLogCustomNotes("");
                     }}
                   >
-                    Cancelar
+                    Marcar como analisado
+                  </button>
+                  <button
+                    type="button"
+                    className="danger-action compact-action"
+                    onClick={async () => {
+                      if (selectedScriptLog.validationId && onCancelScriptValidation) {
+                        await onCancelScriptValidation(selectedScriptLog.validationId);
+                      } else {
+                        await onAcknowledgeScriptLog(selectedScriptLog.id);
+                      }
+                      setSelectedScriptLog(null);
+                      setScriptLogCustomNotes("");
+                    }}
+                  >
+                    Cancelar análise
                   </button>
                 </>
               )}
@@ -4286,7 +4412,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     hasPermission(user, "preventive_plans.create") &&
     hasPermission(user, "preventive_plans.prepare");
   const canCreatePreventiveServiceOrder =
-    hasPermission(user, "preventive_plans.prepare") &&
+    hasPermission(user, "preventive_plans.create_service_order") &&
     hasPermission(user, "service_orders.create");
   const canCreatePreventiveAutomation = hasPermission(user, "preventive_automation.create");
   const canUpdatePreventiveAutomation = hasPermission(user, "preventive_automation.update");
@@ -4977,7 +5103,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   async function handleUseSuggestionScript(suggestionId, scriptId, payload) {
     try {
       await useSuggestionScript(token, suggestionId, scriptId, payload);
-      notify("Validacao registrada. Nenhum comando foi executado.", "ok");
+      notify("Observação registrada. Nenhum comando foi executado.", "ok");
       await loadData(true);
     } catch (error) {
       notify(error.message, "danger");
@@ -5010,7 +5136,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   async function handleCancelScriptValidation(validationId) {
     try {
       await cancelScriptValidation(token, validationId);
-      notify("Validacao cancelada.", "ok");
+      notify("Observação cancelada.", "ok");
       await loadData(true);
     } catch (error) {
       notify(error.message, "danger");
@@ -5095,7 +5221,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
           plan.id === response.preventiveAutomationPlan.id ? response.preventiveAutomationPlan : plan
         )
       );
-      notify("Rotina preventiva preparada. Nenhum comando foi executado.", "ok");
+      notify("Preparação concluída. Rotina aguardando agente seguro.", "ok");
       await loadData(true);
       return response;
     } catch (error) {
@@ -6944,6 +7070,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
 
         {activeView === "alerts" && (canViewAlerts || canViewScripts || canViewPreventivePlans || canViewPreventiveAutomation) && (
           <AlertCenterV2
+            token={token}
             alerts={alerts}
             history={history}
             suggestions={serviceOrderSuggestions}

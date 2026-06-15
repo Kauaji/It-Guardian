@@ -18,7 +18,7 @@ router.get("/:id", requirePermission("preventive_plans.view"), detail);
 router.post("/:id/prepare", requirePermission("preventive_plans.prepare"), prepare);
 router.post(
   "/:id/service-order",
-  requirePermission("preventive_plans.prepare"),
+  requirePermission("preventive_plans.create_service_order"),
   requirePermission("service_orders.create"),
   createServiceOrder
 );

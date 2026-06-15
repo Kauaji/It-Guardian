@@ -1,4 +1,4 @@
-import dotenv from "dotenv";
+﻿import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -62,7 +62,7 @@ export function getJwtSecret() {
   const secret = process.env.JWT_SECRET;
 
   if (isProductionLike && (!secret || secret === "dev-secret" || secret === "change-me-in-production")) {
-    const error = new Error("JWT_SECRET precisa ser configurado com uma chave segura em producao.");
+    const error = new Error("JWT_SECRET precisa ser configurado com uma chave segura em produção.");
     error.statusCode = 500;
     throw error;
   }
@@ -75,13 +75,13 @@ export function resolveDatabaseConfig() {
   const wantsMemory = databaseUrl === "memory" || process.env.DB_MODE === "memory";
 
   if (isProductionLike && wantsMemory) {
-    const error = new Error("DATABASE_URL=memory nao pode ser usado em producao. Configure Supabase ou Neon.");
+    const error = new Error("DATABASE_URL=memory não pode ser usado em produção. Configure Supabase ou Neon.");
     error.statusCode = 500;
     throw error;
   }
 
   if (isProductionLike && !databaseUrl) {
-    const error = new Error("Erro ao conectar ao banco de dados. Configure DATABASE_URL no ambiente de producao.");
+    const error = new Error("Erro ao conectar ao banco de dados. Configure DATABASE_URL no ambiente de produção.");
     error.statusCode = 500;
     throw error;
   }
@@ -102,3 +102,4 @@ export function resolveDatabaseConfig() {
     ssl: shouldUseSsl ? { rejectUnauthorized: false } : false
   };
 }
+

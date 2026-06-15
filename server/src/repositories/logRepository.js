@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { query } from "../database.js";
 
-export async function addLog({ type, message, userId, meta = {} }) {
-  const result = await query(
+export async function addLog({ type, message, userId, meta = {}, db = query }) {
+  const result = await db(
     `
       INSERT INTO audit_logs (id, type, message, user_id, meta)
       VALUES ($1, $2, $3, $4, $5::jsonb)

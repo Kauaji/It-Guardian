@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+﻿import { randomUUID } from "node:crypto";
 import { query } from "../database.js";
 import { hasPermission } from "../permissions.js";
 import { addAssetHistory } from "./assetHistoryRepository.js";
@@ -909,11 +909,11 @@ async function listServiceOrderItemsByOrderIds(orderIds = []) {
   return itemsByOrder;
 }
 
-async function replaceServiceOrderItems(serviceOrderId, items = []) {
-  await query("DELETE FROM service_order_items WHERE service_order_id = $1", [serviceOrderId]);
+async function replaceServiceOrderItems(serviceOrderId, items = [], db = query) {
+  await db("DELETE FROM service_order_items WHERE service_order_id = $1", [serviceOrderId]);
 
   for (const item of normalizeServiceOrderItems(items)) {
-    await query(
+    await db(
       `
         INSERT INTO service_order_items (
           id, service_order_id, product_id, product_name, quantity, unit_price, subtotal, notes
@@ -948,8 +948,8 @@ export async function listServiceOrderHistory(serviceOrderId) {
   return result.rows.map(fromHistoryRow);
 }
 
-export async function addServiceOrderHistory({ serviceOrderId, eventType, message, oldValue, newValue, user }) {
-  const result = await query(
+export async function addServiceOrderHistory({ serviceOrderId, eventType, message, oldValue, newValue, user, db = query }) {
+  const result = await db(
     `
       INSERT INTO service_order_history (
         id, service_order_id, event_type, message, old_value, new_value, user_id, user_name
@@ -979,7 +979,7 @@ function isDuplicateServiceOrderNumberError(error) {
     );
 }
 
-export async function createServiceOrder({ payload, user }) {
+export async function createServiceOrder({ payload, user, db = query }) {
   const settings = await getServiceOrderSettings();
   const initialStatus = getInitialStatus(settings).id;
   const items = normalizeServiceOrderItems(payload.items || payload.serviceItems || []);
@@ -992,13 +992,14 @@ export async function createServiceOrder({ payload, user }) {
   const totalValue = Math.round((serviceValue + totalPartsValue) * 100) / 100;
   const priority = await calculateConfiguredPriority(payload, sector, service);
   let id = randomUUID();
+  let insertedRow = null;
 
   for (let attempt = 0; attempt < 5; attempt += 1) {
     id = randomUUID();
     const number = await nextServiceOrderNumber();
 
     try {
-      await query(
+      const result = await db(
         `
           INSERT INTO service_orders (
             id, number, title, description, status, priority, category, asset_id,
@@ -1054,6 +1055,7 @@ export async function createServiceOrder({ payload, user }) {
           user?.id || null
         ]
       );
+      insertedRow = result.rows[0];
       break;
     } catch (error) {
       if (attempt < 4 && isDuplicateServiceOrderNumberError(error)) continue;
@@ -1061,19 +1063,26 @@ export async function createServiceOrder({ payload, user }) {
     }
   }
 
-  if (items.length) {
-    await replaceServiceOrderItems(id, items);
+  if (!insertedRow) {
+    const error = new Error("Não foi possível criar a Ordem de Serviço.");
+    error.statusCode = 500;
+    throw error;
   }
 
-  await addServiceOrderHistory({
+  if (items.length) {
+    await replaceServiceOrderItems(id, items, db);
+  }
+
+  const createdHistory = await addServiceOrderHistory({
     serviceOrderId: id,
     eventType: "created",
     message: `OS criada no setor ${sector.sectorName}.`,
     newValue: payload.title,
-    user
+    user,
+    db
   });
 
-  return findServiceOrderById(id);
+  return fromOrderRow(insertedRow, [createdHistory], items);
 }
 
 export async function updateServiceOrder({ id, payload, user }) {
@@ -1298,3 +1307,5 @@ export async function deleteServiceOrder(id) {
   await query("DELETE FROM service_orders WHERE id = $1", [id]);
   return current;
 }
+
+

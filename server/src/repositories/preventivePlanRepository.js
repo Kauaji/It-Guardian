@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { query } from "../database.js";
+import { query, withTransaction } from "../database.js";
 import { addAssetHistory } from "./assetHistoryRepository.js";
 import { addLog } from "./logRepository.js";
 import { findMaintenanceScriptById } from "./maintenanceScriptRepository.js";
-import { addServiceOrderHistory, createServiceOrder } from "./serviceOrderRepository.js";
+import { addServiceOrderHistory, createServiceOrder, findServiceOrderById } from "./serviceOrderRepository.js";
 
 const allowedStatuses = new Set(["prepared", "simulated", "completed", "failed", "cancelled"]);
 const highRiskLevels = new Set(["high", "critical"]);
@@ -28,6 +28,14 @@ function fromPlanRow(row) {
     originAlertId: row.origin_alert_id,
     originSuggestionId: row.origin_suggestion_id,
     serviceOrderId: row.service_order_id,
+    serviceOrder: row.linked_service_order_id
+      ? {
+          id: row.linked_service_order_id,
+          number: row.linked_service_order_number,
+          title: row.linked_service_order_title,
+          status: row.linked_service_order_status
+        }
+      : null,
     notes: row.notes || "",
     createdBy: row.created_by,
     preparedAt: row.prepared_at,
@@ -103,11 +111,11 @@ function normalizePlanPayload(payload = {}) {
   };
 }
 
-async function hydratePlan(plan) {
+async function hydratePlan(plan, db = query) {
   if (!plan) return null;
 
   const [scriptResult, assetResult] = await Promise.all([
-    query(
+    db(
       `
         SELECT plan_scripts.*,
                scripts.name AS script_name,
@@ -122,7 +130,7 @@ async function hydratePlan(plan) {
       `,
       [plan.id]
     ),
-    query(
+    db(
       `
         SELECT *
         FROM preventive_plan_assets
@@ -142,9 +150,14 @@ async function hydratePlan(plan) {
 
 export async function listPreventivePlans() {
   const result = await query(`
-    SELECT *
-    FROM preventive_plans
-    ORDER BY created_at DESC
+    SELECT plans.*,
+           orders.id AS linked_service_order_id,
+           orders.number AS linked_service_order_number,
+           orders.title AS linked_service_order_title,
+           orders.status AS linked_service_order_status
+    FROM preventive_plans plans
+    LEFT JOIN service_orders orders ON orders.id = plans.service_order_id
+    ORDER BY plans.created_at DESC
   `);
 
   const plans = result.rows.map(fromPlanRow);
@@ -152,8 +165,31 @@ export async function listPreventivePlans() {
 }
 
 export async function findPreventivePlanById(id) {
-  const result = await query("SELECT * FROM preventive_plans WHERE id = $1", [id]);
+  const result = await query(
+    `
+      SELECT plans.*,
+             orders.id AS linked_service_order_id,
+             orders.number AS linked_service_order_number,
+             orders.title AS linked_service_order_title,
+             orders.status AS linked_service_order_status
+      FROM preventive_plans plans
+      LEFT JOIN service_orders orders ON orders.id = plans.service_order_id
+      WHERE plans.id = $1
+    `,
+    [id]
+  );
   return hydratePlan(result.rows[0] ? fromPlanRow(result.rows[0]) : null);
+}
+
+async function lockPreventivePlanById(id, db) {
+  try {
+    const result = await db("SELECT * FROM preventive_plans WHERE id = $1 FOR UPDATE", [id]);
+    return result.rows[0] ? fromPlanRow(result.rows[0]) : null;
+  } catch (error) {
+    if (!/FOR UPDATE|syntax|parse/i.test(error.message || "")) throw error;
+    const result = await db("SELECT * FROM preventive_plans WHERE id = $1", [id]);
+    return result.rows[0] ? fromPlanRow(result.rows[0]) : null;
+  }
 }
 
 export async function createPreventivePlan(payload = {}, user = null) {
@@ -178,208 +214,250 @@ export async function createPreventivePlan(payload = {}, user = null) {
   }
 
   const planId = randomUUID();
-  const planResult = await query(
-    `
-      INSERT INTO preventive_plans (
-        id, name, description, status, source, origin_alert_id,
-        origin_suggestion_id, notes, created_by, prepared_at
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
-      RETURNING *
-    `,
-    [
-      planId,
-      normalized.name,
-      normalized.description || null,
-      normalized.status,
-      normalized.source,
-      normalized.originAlertId,
-      normalized.originSuggestionId,
-      normalized.notes || null,
-      user?.id || null
-    ]
-  );
-
-  await Promise.all(scripts.map((script, index) =>
-    query(
+  const createdPlanId = await withTransaction(async (db) => {
+    const planResult = await db(
       `
-        INSERT INTO preventive_plan_scripts (id, preventive_plan_id, script_id, order_index)
-        VALUES ($1, $2, $3, $4)
-      `,
-      [randomUUID(), planId, script.id, index]
-    )
-  ));
-
-  const scriptNames = scripts.map((script) => script.name).join(", ");
-  const userName = user?.name || "Usuário";
-
-  await Promise.all(normalized.assetIds.map(async (assetId) => {
-    const log =
-      `Preventiva registrada para ${assetId} com as verificações: ${scriptNames}. ` +
-      "Nenhum comando foi executado nesta versão.";
-
-    await query(
-      `
-        INSERT INTO preventive_plan_assets (
-          id, preventive_plan_id, asset_id, status, log, prepared_at
+        INSERT INTO preventive_plans (
+          id, name, description, status, source, origin_alert_id,
+          origin_suggestion_id, notes, created_by, prepared_at
         )
-        VALUES ($1, $2, $3, 'prepared', $4, NOW())
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+        RETURNING *
       `,
-      [randomUUID(), planId, assetId, log]
+      [
+        planId,
+        normalized.name,
+        normalized.description || null,
+        normalized.status,
+        normalized.source,
+        normalized.originAlertId,
+        normalized.originSuggestionId,
+        normalized.notes || null,
+        user?.id || null
+      ]
     );
 
-    await addAssetHistory({
-      assetId,
-      eventType: "preventive_plan_prepared",
-      message: `Plano preventivo '${normalized.name}' registrado por ${userName}. Nenhum comando foi executado.`,
-      newValue: log,
-      userId: user?.id || null,
-      userName
-    });
-  }));
-
-  await addLog({
-    type: "preventive_plan_created",
-    message: `Plano preventivo registrado: ${normalized.name}. Nenhum comando foi executado.`,
-    userId: user?.id || null,
-    meta: {
-      preventivePlanId: planId,
-      assetCount: normalized.assetIds.length,
-      scriptCount: scripts.length,
-      source: normalized.source
+    for (const [index, script] of scripts.entries()) {
+      await db(
+        `
+          INSERT INTO preventive_plan_scripts (id, preventive_plan_id, script_id, order_index)
+          VALUES ($1, $2, $3, $4)
+        `,
+        [randomUUID(), planId, script.id, index]
+      );
     }
+
+    const scriptNames = scripts.map((script) => script.name).join(", ");
+    const userName = user?.name || "Usuário";
+
+    for (const assetId of normalized.assetIds) {
+      const log =
+        `Preventiva registrada para ${assetId} com as verificações: ${scriptNames}. ` +
+        "Nenhum comando foi executado nesta versão.";
+
+      await db(
+        `
+          INSERT INTO preventive_plan_assets (
+            id, preventive_plan_id, asset_id, status, log, prepared_at
+          )
+          VALUES ($1, $2, $3, 'prepared', $4, NOW())
+        `,
+        [randomUUID(), planId, assetId, log]
+      );
+
+      await addAssetHistory({
+        assetId,
+        eventType: "preventive_plan_prepared",
+        message: `Plano preventivo '${normalized.name}' registrado por ${userName}. Nenhum comando foi executado.`,
+        newValue: log,
+        userId: user?.id || null,
+        userName,
+        db
+      });
+    }
+
+    await addLog({
+      type: "preventive_plan_created",
+      message: `Plano preventivo registrado: ${normalized.name}. Nenhum comando foi executado.`,
+      userId: user?.id || null,
+      meta: {
+        preventivePlanId: planId,
+        assetCount: normalized.assetIds.length,
+        scriptCount: scripts.length,
+        source: normalized.source
+      },
+      db
+    });
+
+    return planResult.rows[0].id;
   });
 
-  return findPreventivePlanById(planResult.rows[0].id);
+  return findPreventivePlanById(createdPlanId);
 }
 
 export async function preparePreventivePlan(id, user = null) {
-  const plan = await findPreventivePlanById(id);
-  if (!plan) return null;
+  const preparedPlanId = await withTransaction(async (db) => {
+    const plan = await hydratePlan(await lockPreventivePlanById(id, db), db);
+    if (!plan) return null;
 
-  await query(
-    `
-      UPDATE preventive_plans
-      SET status = 'simulated',
-          prepared_at = COALESCE(prepared_at, NOW()),
-          updated_at = NOW()
-      WHERE id = $1
-    `,
-    [id]
-  );
+    await db(
+      `
+        UPDATE preventive_plans
+        SET status = 'simulated',
+            prepared_at = COALESCE(prepared_at, NOW()),
+            updated_at = NOW()
+        WHERE id = $1
+      `,
+      [id]
+    );
 
-  await query(
-    `
-      UPDATE preventive_plan_assets
-      SET status = 'prepared',
-          prepared_at = COALESCE(prepared_at, NOW())
-      WHERE preventive_plan_id = $1
-    `,
-    [id]
-  );
+    await db(
+      `
+        UPDATE preventive_plan_assets
+        SET status = 'prepared',
+            prepared_at = COALESCE(prepared_at, NOW())
+        WHERE preventive_plan_id = $1
+      `,
+      [id]
+    );
 
-  await addLog({
-    type: "preventive_plan_prepared",
-    message: `Registro preventivo confirmado: ${plan.name}. Nenhum comando foi executado.`,
-    userId: user?.id || null,
-    meta: { preventivePlanId: id }
+    await addLog({
+      type: "preventive_plan_prepared",
+      message: `Registro preventivo confirmado: ${plan.name}. Nenhum comando foi executado.`,
+      userId: user?.id || null,
+      meta: { preventivePlanId: id },
+      db
+    });
+
+    return id;
   });
 
-  return findPreventivePlanById(id);
+  return preparedPlanId ? findPreventivePlanById(preparedPlanId) : null;
 }
 
 export async function createServiceOrderFromPreventivePlan(id, user = null) {
-  const plan = await findPreventivePlanById(id);
-  if (!plan) return null;
+  const result = await withTransaction(async (db) => {
+    const plan = await hydratePlan(await lockPreventivePlanById(id, db), db);
+    if (!plan) return null;
 
-  if (plan.serviceOrderId) {
-    const error = new Error("Este plano já possui uma OS preventiva vinculada.");
-    error.statusCode = 409;
-    throw error;
-  }
-
-  const assetIds = (plan.assets || []).map((asset) => asset.assetId).filter(Boolean);
-  const scriptNames = (plan.scripts || []).map((script) => script.scriptName || script.name).filter(Boolean);
-  const assetSummary = assetIds.length ? assetIds.join(", ") : "Nenhuma máquina vinculada";
-  const scriptSummary = scriptNames.length ? scriptNames.join(", ") : "Nenhuma verificação selecionada";
-  const titleScope = assetIds.length === 1 ? assetIds[0] : `${assetIds.length} máquina(s)`;
-  const title = `Manutenção preventiva — ${titleScope}`;
-  const description =
-    `OS preventiva criada a partir do plano preventivo '${plan.name}'. ` +
-    `Máquinas selecionadas: ${assetSummary}. ` +
-    `Verificações selecionadas: ${scriptSummary}. ` +
-    "Nenhum comando foi executado automaticamente.";
-
-  const serviceOrder = await createServiceOrder({
-    payload: {
-      title,
-      description,
-      priority: "low",
-      category: "Preventiva",
-      problemType: "Manutenção preventiva",
-      serviceName: "Manutenção preventiva",
-      source: "Plano Preventivo",
-      requesterName: user?.name || "Técnico",
-      assignedTechnicianName: user?.name || null,
-      assetId: assetIds.length === 1 ? assetIds[0] : null,
-      relatedAssetText: assetSummary,
-      notes: [
-        `Origem: Plano Preventivo`,
-        `Plano preventivo: ${plan.name}`,
-        `Verificações selecionadas: ${scriptSummary}`,
-        "Nenhum comando foi executado automaticamente."
-      ].join("\n"),
-      preventivePlanId: plan.id,
-      autoPriorityEnabled: false
-    },
-    user
-  });
-
-  await query(
-    `
-      UPDATE preventive_plans
-      SET service_order_id = $2,
-          updated_at = NOW()
-      WHERE id = $1
-    `,
-    [plan.id, serviceOrder.id]
-  );
-
-  await addServiceOrderHistory({
-    serviceOrderId: serviceOrder.id,
-    eventType: "preventive_plan_origin",
-    message: `OS criada a partir do plano preventivo ${plan.name}.`,
-    oldValue: null,
-    newValue: plan.id,
-    user
-  });
-
-  await Promise.all(assetIds.map((assetId) =>
-    addAssetHistory({
-      assetId,
-      eventType: "preventive_plan_service_order",
-      message: `Plano preventivo ${plan.name} gerou a OS preventiva ${serviceOrder.number}.`,
-      newValue: serviceOrder.number,
-      userId: user?.id || null,
-      userName: user?.name || user?.email || "Sistema"
-    })
-  ));
-
-  await addLog({
-    type: "preventive_plan_service_order_created",
-    message: `Plano preventivo ${plan.name} gerou a OS preventiva ${serviceOrder.number}.`,
-    userId: user?.id || null,
-    meta: {
-      preventivePlanId: plan.id,
-      serviceOrderId: serviceOrder.id,
-      serviceOrderNumber: serviceOrder.number,
-      assetCount: assetIds.length
+    if (plan.serviceOrderId) {
+      const error = new Error("Este plano já possui uma OS preventiva vinculada.");
+      error.statusCode = 409;
+      throw error;
     }
+
+    const assetIds = (plan.assets || []).map((asset) => asset.assetId).filter(Boolean);
+    const scriptNames = (plan.scripts || []).map((script) => script.scriptName || script.name).filter(Boolean);
+    const assetSummary = assetIds.length ? assetIds.join(", ") : "Nenhuma máquina vinculada";
+    const scriptSummary = scriptNames.length ? scriptNames.join(", ") : "Nenhuma verificação selecionada";
+    const titleScope = assetIds.length === 1 ? assetIds[0] : `${assetIds.length} máquina(s)`;
+    const title = `Manutenção preventiva — ${titleScope}`;
+    const description =
+      `OS preventiva criada a partir do plano preventivo '${plan.name}'. ` +
+      `Máquinas selecionadas: ${assetSummary}. ` +
+      `Verificações selecionadas: ${scriptSummary}. ` +
+      "Nenhum comando foi executado automaticamente.";
+
+    let serviceOrder;
+    try {
+      serviceOrder = await createServiceOrder({
+        payload: {
+          title,
+          description,
+          priority: "low",
+          category: "Preventiva",
+          problemType: "Manutenção preventiva",
+          serviceName: "Manutenção preventiva",
+          source: "Plano Preventivo",
+          requesterName: user?.name || "Técnico",
+          assignedTechnicianName: user?.name || null,
+          assetId: assetIds.length === 1 ? assetIds[0] : null,
+          relatedAssetText: assetSummary,
+          notes: [
+            "Origem: Plano Preventivo",
+            `Plano preventivo: ${plan.name}`,
+            `Verificações selecionadas: ${scriptSummary}`,
+            "Nenhum comando foi executado automaticamente."
+          ].join("\n"),
+          preventivePlanId: plan.id,
+          autoPriorityEnabled: false
+        },
+        user,
+        db
+      });
+    } catch (error) {
+      if (error?.code === "23505") {
+        const conflict = new Error("Este plano já possui uma OS preventiva vinculada.");
+        conflict.statusCode = 409;
+        throw conflict;
+      }
+      throw error;
+    }
+
+    const updateResult = await db(
+      `
+        UPDATE preventive_plans
+        SET service_order_id = $2,
+            updated_at = NOW()
+        WHERE id = $1
+          AND service_order_id IS NULL
+        RETURNING id
+      `,
+      [plan.id, serviceOrder.id]
+    );
+
+    if (!updateResult.rowCount) {
+      const error = new Error("Este plano já possui uma OS preventiva vinculada.");
+      error.statusCode = 409;
+      throw error;
+    }
+
+    await addServiceOrderHistory({
+      serviceOrderId: serviceOrder.id,
+      eventType: "preventive_plan_origin",
+      message: `OS criada a partir do plano preventivo ${plan.name}.`,
+      oldValue: null,
+      newValue: plan.id,
+      user,
+      db
+    });
+
+    for (const assetId of assetIds) {
+      await addAssetHistory({
+        assetId,
+        eventType: "preventive_plan_service_order",
+        message: `Plano preventivo ${plan.name} gerou a OS preventiva ${serviceOrder.number}.`,
+        newValue: serviceOrder.number,
+        userId: user?.id || null,
+        userName: user?.name || user?.email || "Sistema",
+        db
+      });
+    }
+
+    await addLog({
+      type: "preventive_plan_service_order_created",
+      message: `Plano preventivo ${plan.name} gerou a OS preventiva ${serviceOrder.number}.`,
+      userId: user?.id || null,
+      meta: {
+        preventivePlanId: plan.id,
+        serviceOrderId: serviceOrder.id,
+        serviceOrderNumber: serviceOrder.number,
+        assetCount: assetIds.length
+      },
+      db
+    });
+
+    return {
+      preventivePlanId: plan.id,
+      serviceOrderId: serviceOrder.id
+    };
   });
+
+  if (!result) return null;
 
   return {
-    preventivePlan: await findPreventivePlanById(plan.id),
-    serviceOrder
+    preventivePlan: await findPreventivePlanById(result.preventivePlanId),
+    serviceOrder: await findServiceOrderById(result.serviceOrderId)
   };
 }
 

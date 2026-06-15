@@ -8,6 +8,22 @@ import { listDevices } from "../services/monitoringService.js";
 const recurrenceTypes = new Set(["daily", "weekly", "biweekly", "monthly", "custom_days"]);
 const scopeTypes = new Set(["asset", "segment", "group", "all"]);
 const runStatuses = new Set(["scheduled", "prepared", "waiting_agent", "success", "error", "cancelled", "skipped"]);
+const DEFAULT_TIMEZONE = "America/Sao_Paulo";
+const DEFAULT_PREFERRED_TIME = "08:00";
+
+export const recurrenceIntervalDefaults = {
+  daily: 1,
+  weekly: 7,
+  biweekly: 15,
+  monthly: 30,
+  custom_days: 30
+};
+
+function createHttpError(message, statusCode = 400) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+}
 
 function trimString(value, maxLength = 1000, fallback = "") {
   const text = String(value ?? "").trim();
@@ -32,6 +48,23 @@ function parseJsonArray(value) {
   }
 }
 
+function serializeTimestamp(value) {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function toValidDate(value = new Date()) {
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? new Date() : date;
+}
+
+function normalizeScheduleSlot(value = new Date()) {
+  const date = toValidDate(value);
+  date.setSeconds(0, 0);
+  return date.toISOString();
+}
+
 function normalizeScriptIds(value = []) {
   return [
     ...new Set(
@@ -42,32 +75,41 @@ function normalizeScriptIds(value = []) {
   ];
 }
 
-function normalizeRecurrenceType(value, fallback = "monthly") {
+export function normalizeRecurrenceType(value, fallback = "monthly") {
   const normalized = String(value || "").trim().toLowerCase();
   return recurrenceTypes.has(normalized) ? normalized : fallback;
 }
 
-function defaultIntervalForType(type) {
-  return {
-    daily: 1,
-    weekly: 7,
-    biweekly: 15,
-    monthly: 30,
-    custom_days: 30
-  }[type] || 30;
+export function defaultIntervalForType(type) {
+  return recurrenceIntervalDefaults[normalizeRecurrenceType(type)] || recurrenceIntervalDefaults.monthly;
 }
 
-function normalizeInterval(value, type = "monthly") {
+export function normalizeRecurrenceIntervalDays(value, type = "monthly") {
+  const recurrenceType = normalizeRecurrenceType(type);
+  if (recurrenceType !== "custom_days") {
+    return defaultIntervalForType(recurrenceType);
+  }
+
   const parsed = Number(value);
   if (Number.isFinite(parsed) && parsed > 0) {
     return Math.min(365, Math.round(parsed));
   }
-  return defaultIntervalForType(type);
+  return defaultIntervalForType(recurrenceType);
 }
 
-function normalizePreferredTime(value, fallback = "08:00") {
+function normalizePreferredTime(value, fallback = DEFAULT_PREFERRED_TIME) {
   const text = trimString(value, 5, fallback);
   return /^\d{2}:\d{2}$/.test(text) ? text : fallback;
+}
+
+function normalizeTimezone(value, fallback = DEFAULT_TIMEZONE) {
+  const timezone = trimString(value, 80, fallback);
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: timezone }).format(new Date());
+    return timezone;
+  } catch {
+    return fallback;
+  }
 }
 
 function normalizeScopeType(value, fallback = "all") {
@@ -80,68 +122,154 @@ function normalizeRunStatus(value, fallback = "scheduled") {
   return runStatuses.has(normalized) ? normalized : fallback;
 }
 
-function addDays(date, days) {
-  const next = new Date(date);
-  next.setDate(next.getDate() + days);
-  return next;
+function parsePreferredTime(value) {
+  const [hour, minute] = normalizePreferredTime(value).split(":").map(Number);
+  return { hour, minute };
 }
 
-function recurrenceToDays(type, interval) {
-  if (type === "daily") return interval || 1;
-  if (type === "weekly") return (interval || 1) * 7;
-  if (type === "biweekly") return (interval || 1) * 15;
-  if (type === "monthly") return (interval || 1) * 30;
-  return interval || 30;
+function getZonedDateParts(date, timeZone) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23"
+  }).formatToParts(date);
+
+  const values = Object.fromEntries(parts.filter((part) => part.type !== "literal").map((part) => [part.type, Number(part.value)]));
+  return {
+    year: values.year,
+    month: values.month,
+    day: values.day,
+    hour: values.hour,
+    minute: values.minute,
+    second: values.second
+  };
 }
 
-function computeNextScheduledFor(source, fromDate = new Date()) {
-  const preferredTime = normalizePreferredTime(source?.preferredTime || source?.preferred_time || "08:00");
-  const [hours, minutes] = preferredTime.split(":").map(Number);
-  const next = new Date(fromDate);
-  next.setHours(hours, minutes, 0, 0);
+function getTimeZoneOffsetMs(date, timeZone) {
+  const parts = getZonedDateParts(date, timeZone);
+  const asUtc = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second || 0);
+  return asUtc - date.getTime();
+}
 
-  if (next <= fromDate) {
-    const type = normalizeRecurrenceType(source?.recurrenceType || source?.recurrence_type);
-    const interval = normalizeInterval(source?.recurrenceInterval || source?.recurrence_interval, type);
-    return addDays(next, recurrenceToDays(type, interval)).toISOString();
+function zonedDateTimeToUtc({ year, month, day, hour, minute, second = 0 }, timeZone) {
+  const utcGuess = Date.UTC(year, month - 1, day, hour, minute, second, 0);
+  const firstOffset = getTimeZoneOffsetMs(new Date(utcGuess), timeZone);
+  const firstUtc = utcGuess - firstOffset;
+  const secondOffset = getTimeZoneOffsetMs(new Date(firstUtc), timeZone);
+  return new Date(utcGuess - secondOffset);
+}
+
+function addDaysToLocalDateParts(parts, days) {
+  const date = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + days));
+  return {
+    year: date.getUTCFullYear(),
+    month: date.getUTCMonth() + 1,
+    day: date.getUTCDate()
+  };
+}
+
+export function normalizePreventiveSchedule(source = {}) {
+  const recurrenceType = normalizeRecurrenceType(source.recurrenceType || source.recurrence_type);
+  const recurrenceIntervalDays = normalizeRecurrenceIntervalDays(
+    source.recurrenceIntervalDays ?? source.recurrenceInterval ?? source.recurrence_interval,
+    recurrenceType
+  );
+
+  return {
+    recurrenceType,
+    recurrenceIntervalDays,
+    preferredTime: normalizePreferredTime(source.preferredTime || source.preferred_time),
+    timezone: normalizeTimezone(source.timezone || source.time_zone)
+  };
+}
+
+export function recurrenceToDays(type, interval) {
+  return normalizeRecurrenceIntervalDays(interval, type);
+}
+
+export function computeNextScheduledFor(source, fromDate = new Date()) {
+  const schedule = normalizePreventiveSchedule(source);
+  const baseDate = toValidDate(fromDate);
+  const localParts = getZonedDateParts(baseDate, schedule.timezone);
+  const preferred = parsePreferredTime(schedule.preferredTime);
+
+  let candidate = zonedDateTimeToUtc(
+    {
+      year: localParts.year,
+      month: localParts.month,
+      day: localParts.day,
+      hour: preferred.hour,
+      minute: preferred.minute
+    },
+    schedule.timezone
+  );
+
+  if (candidate <= baseDate) {
+    const nextLocalDate = addDaysToLocalDateParts(localParts, schedule.recurrenceIntervalDays);
+    candidate = zonedDateTimeToUtc(
+      {
+        ...nextLocalDate,
+        hour: preferred.hour,
+        minute: preferred.minute
+      },
+      schedule.timezone
+    );
   }
 
-  return next.toISOString();
+  return candidate.toISOString();
+}
+
+function computeFollowingScheduledFor(source, scheduledFor) {
+  return computeNextScheduledFor(source, toValidDate(scheduledFor));
 }
 
 function fromPlanRow(row) {
   if (!row) return null;
-  const recurrenceType = normalizeRecurrenceType(row.recurrence_type);
-  const recurrenceInterval = normalizeInterval(row.recurrence_interval, recurrenceType);
+  const schedule = normalizePreventiveSchedule(row);
 
   return {
     id: row.id,
     name: row.name,
     description: row.description || "",
     active: row.active !== false,
-    recurrenceType,
-    recurrenceInterval,
-    preferredTime: row.preferred_time || "08:00",
-    timezone: row.timezone || "America/Sao_Paulo",
+    recurrenceType: schedule.recurrenceType,
+    recurrenceInterval: schedule.recurrenceIntervalDays,
+    recurrenceIntervalDays: schedule.recurrenceIntervalDays,
+    preferredTime: schedule.preferredTime,
+    timezone: schedule.timezone,
     scopeType: row.scope_type || "all",
     scopeId: row.scope_id,
     defaultScriptIds: parseJsonArray(row.default_script_ids),
     notes: row.notes || "",
+    lastScheduledAt: serializeTimestamp(row.last_scheduled_at),
+    lastPreparedAt: serializeTimestamp(row.last_prepared_at),
+    lastRunAt: serializeTimestamp(row.last_run_at),
+    nextRunAt: serializeTimestamp(row.next_run_at),
+    nextScheduledFor: serializeTimestamp(row.next_run_at),
+    scheduleAnchorAt: serializeTimestamp(row.schedule_anchor_at),
     createdBy: row.created_by,
     createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    nextScheduledFor: computeNextScheduledFor(row)
+    updatedAt: row.updated_at
   };
 }
 
 function fromOverrideRow(row) {
+  const recurrenceType = normalizeRecurrenceType(row.recurrence_type);
+  const recurrenceIntervalDays = normalizeRecurrenceIntervalDays(row.recurrence_interval, recurrenceType);
+
   return {
     id: row.id,
     planId: row.plan_id,
     assetId: row.asset_id,
     segmentId: row.segment_id,
-    recurrenceType: normalizeRecurrenceType(row.recurrence_type),
-    recurrenceInterval: normalizeInterval(row.recurrence_interval, row.recurrence_type),
+    recurrenceType,
+    recurrenceInterval: recurrenceIntervalDays,
+    recurrenceIntervalDays,
     preferredTime: row.preferred_time || null,
     active: row.active !== false,
     createdAt: row.created_at,
@@ -155,12 +283,19 @@ function fromRunRow(row) {
     planId: row.plan_id,
     assetId: row.asset_id,
     status: row.status,
-    scheduledFor: row.scheduled_for,
-    startedAt: row.started_at,
-    finishedAt: row.finished_at,
+    scheduledFor: serializeTimestamp(row.scheduled_for),
+    startedAt: serializeTimestamp(row.started_at),
+    finishedAt: serializeTimestamp(row.finished_at),
     result: row.result || "",
     logSummary: row.log_summary || "",
     errorDetected: row.error_detected === true,
+    idempotencyKey: row.idempotency_key || null,
+    scheduleSlot: serializeTimestamp(row.schedule_slot),
+    recurrenceSource: row.recurrence_source || "plan",
+    recurrenceInterval: Number(row.recurrence_interval || 0),
+    recurrenceIntervalDays: Number(row.recurrence_interval || 0),
+    preferredTime: row.preferred_time || null,
+    nextRunAt: serializeTimestamp(row.next_run_at),
     createdAt: row.created_at
   };
 }
@@ -176,7 +311,7 @@ function normalizeOverridePayload(item = {}) {
     assetId,
     segmentId,
     recurrenceType,
-    recurrenceInterval: normalizeInterval(item.recurrenceInterval, recurrenceType),
+    recurrenceInterval: normalizeRecurrenceIntervalDays(item.recurrenceIntervalDays ?? item.recurrenceInterval, recurrenceType),
     preferredTime: item.preferredTime ? normalizePreferredTime(item.preferredTime) : null,
     active: normalizeBoolean(item.active, true)
   };
@@ -190,15 +325,11 @@ function normalizePlanPayload(payload = {}, current = null) {
   const defaultScriptIds = normalizeScriptIds(payload.defaultScriptIds ?? current?.defaultScriptIds);
 
   if (name.length < 3) {
-    const error = new Error("Informe um nome para a automacao preventiva com pelo menos 3 caracteres.");
-    error.statusCode = 400;
-    throw error;
+    throw createHttpError("Informe um nome para a automacao preventiva com pelo menos 3 caracteres.", 400);
   }
 
   if (scopeType !== "all" && !scopeId) {
-    const error = new Error("Informe o escopo da automacao preventiva.");
-    error.statusCode = 400;
-    throw error;
+    throw createHttpError("Informe o escopo da automacao preventiva.", 400);
   }
 
   return {
@@ -206,9 +337,12 @@ function normalizePlanPayload(payload = {}, current = null) {
     description: trimString(payload.description ?? current?.description, 1000),
     active: normalizeBoolean(payload.active, current ? current.active : true),
     recurrenceType,
-    recurrenceInterval: normalizeInterval(payload.recurrenceInterval ?? current?.recurrenceInterval, recurrenceType),
+    recurrenceInterval: normalizeRecurrenceIntervalDays(
+      payload.recurrenceIntervalDays ?? payload.recurrenceInterval ?? current?.recurrenceIntervalDays ?? current?.recurrenceInterval,
+      recurrenceType
+    ),
     preferredTime: normalizePreferredTime(payload.preferredTime ?? current?.preferredTime),
-    timezone: trimString(payload.timezone ?? current?.timezone, 80, "America/Sao_Paulo"),
+    timezone: normalizeTimezone(payload.timezone ?? current?.timezone),
     scopeType,
     scopeId,
     defaultScriptIds,
@@ -219,15 +353,17 @@ function normalizePlanPayload(payload = {}, current = null) {
   };
 }
 
-async function validateScripts(scriptIds) {
-  const scripts = [];
+async function validateScripts(scriptIds, { requireAtLeastOne = true } = {}) {
+  const ids = normalizeScriptIds(scriptIds);
+  if (requireAtLeastOne && !ids.length) {
+    throw createHttpError("Selecione pelo menos um script ativo para a rotina preventiva.", 400);
+  }
 
-  for (const scriptId of scriptIds) {
+  const scripts = [];
+  for (const scriptId of ids) {
     const script = await findMaintenanceScriptById(scriptId);
     if (!script || script.active === false) {
-      const error = new Error("Um dos scripts selecionados nao existe ou esta inativo.");
-      error.statusCode = 400;
-      throw error;
+      throw createHttpError("Um dos scripts selecionados nao existe ou esta inativo.", 400);
     }
     scripts.push(script);
   }
@@ -261,6 +397,33 @@ async function replaceOverrides(planId, overrides = []) {
   }
 }
 
+async function ensurePlanRowSchedule(row) {
+  if (!row) return null;
+  if (row.next_run_at && row.schedule_anchor_at) return row;
+
+  const scheduleAnchorAt = serializeTimestamp(row.schedule_anchor_at || row.created_at || new Date());
+  const nextRunAt = serializeTimestamp(row.next_run_at) || computeNextScheduledFor(row, scheduleAnchorAt);
+  const lastScheduledAt = serializeTimestamp(row.last_scheduled_at) || nextRunAt;
+
+  await query(
+    `
+      UPDATE preventive_automation_plans
+      SET schedule_anchor_at = COALESCE(schedule_anchor_at, $2),
+          next_run_at = COALESCE(next_run_at, $3),
+          last_scheduled_at = COALESCE(last_scheduled_at, $4)
+      WHERE id = $1
+    `,
+    [row.id, scheduleAnchorAt, nextRunAt, lastScheduledAt]
+  );
+
+  return {
+    ...row,
+    schedule_anchor_at: row.schedule_anchor_at || scheduleAnchorAt,
+    next_run_at: row.next_run_at || nextRunAt,
+    last_scheduled_at: row.last_scheduled_at || lastScheduledAt
+  };
+}
+
 async function hydratePlan(plan) {
   if (!plan) return null;
 
@@ -286,10 +449,12 @@ async function hydratePlan(plan) {
   ]);
 
   const runs = runResult.rows.map(fromRunRow);
+  const overrides = overrideResult.rows.map(fromOverrideRow);
 
   return {
     ...plan,
-    overrides: overrideResult.rows.map(fromOverrideRow),
+    overrides,
+    overrideCount: overrides.filter((override) => override.active !== false).length,
     latestRun: runs[0] || null,
     recentRuns: runs.slice(0, 10)
   };
@@ -302,27 +467,37 @@ export async function listPreventiveAutomationPlans() {
     ORDER BY created_at DESC
   `);
 
-  return Promise.all(result.rows.map((row) => hydratePlan(fromPlanRow(row))));
+  const rows = [];
+  for (const row of result.rows) {
+    rows.push(await ensurePlanRowSchedule(row));
+  }
+
+  return Promise.all(rows.map((row) => hydratePlan(fromPlanRow(row))));
 }
 
 export async function findPreventiveAutomationPlanById(id) {
   const result = await query("SELECT * FROM preventive_automation_plans WHERE id = $1", [id]);
-  return hydratePlan(fromPlanRow(result.rows[0]));
+  const row = await ensurePlanRowSchedule(result.rows[0]);
+  return hydratePlan(fromPlanRow(row));
 }
 
 export async function createPreventiveAutomationPlan(payload = {}, user = null) {
   const normalized = normalizePlanPayload(payload);
   await validateScripts(normalized.defaultScriptIds);
+  await validateScopeSelection(normalized);
 
   const id = randomUUID();
+  const scheduleAnchorAt = new Date().toISOString();
+  const nextRunAt = computeNextScheduledFor(normalized, scheduleAnchorAt);
+
   await query(
     `
       INSERT INTO preventive_automation_plans (
         id, name, description, active, recurrence_type, recurrence_interval,
         preferred_time, timezone, scope_type, scope_id, default_script_ids,
-        notes, created_by
+        notes, last_scheduled_at, next_run_at, schedule_anchor_at, created_by
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
     `,
     [
       id,
@@ -337,6 +512,9 @@ export async function createPreventiveAutomationPlan(payload = {}, user = null) 
       normalized.scopeId,
       JSON.stringify(normalized.defaultScriptIds),
       normalized.notes,
+      nextRunAt,
+      nextRunAt,
+      scheduleAnchorAt,
       user?.id || null
     ]
   );
@@ -344,9 +522,14 @@ export async function createPreventiveAutomationPlan(payload = {}, user = null) 
   await replaceOverrides(id, normalized.overrides || []);
   await addLog({
     type: "preventive_automation_created",
-    message: `Automacao preventiva criada: ${normalized.name}. Nenhum comando foi executado.`,
+    message: `Automacao preventiva criada: ${normalized.name}. Rotina aguardando agente seguro.`,
     userId: user?.id || null,
-    meta: { preventiveAutomationPlanId: id, scopeType: normalized.scopeType, scopeId: normalized.scopeId }
+    meta: {
+      preventiveAutomationPlanId: id,
+      scopeType: normalized.scopeType,
+      scopeId: normalized.scopeId,
+      nextRunAt
+    }
   });
 
   return findPreventiveAutomationPlanById(id);
@@ -358,6 +541,10 @@ export async function updatePreventiveAutomationPlan(id, payload = {}, user = nu
 
   const normalized = normalizePlanPayload(payload, current);
   await validateScripts(normalized.defaultScriptIds);
+  await validateScopeSelection(normalized);
+
+  const scheduleAnchorAt = current.scheduleAnchorAt || new Date().toISOString();
+  const nextRunAt = computeNextScheduledFor(normalized, new Date());
 
   await query(
     `
@@ -373,6 +560,9 @@ export async function updatePreventiveAutomationPlan(id, payload = {}, user = nu
           scope_id = $10,
           default_script_ids = $11,
           notes = $12,
+          last_scheduled_at = $13,
+          next_run_at = $14,
+          schedule_anchor_at = COALESCE(schedule_anchor_at, $15),
           updated_at = NOW()
       WHERE id = $1
     `,
@@ -388,7 +578,10 @@ export async function updatePreventiveAutomationPlan(id, payload = {}, user = nu
       normalized.scopeType,
       normalized.scopeId,
       JSON.stringify(normalized.defaultScriptIds),
-      normalized.notes
+      normalized.notes,
+      nextRunAt,
+      nextRunAt,
+      scheduleAnchorAt
     ]
   );
 
@@ -400,7 +593,7 @@ export async function updatePreventiveAutomationPlan(id, payload = {}, user = nu
     type: "preventive_automation_updated",
     message: `Automacao preventiva atualizada: ${normalized.name}.`,
     userId: user?.id || null,
-    meta: { preventiveAutomationPlanId: id }
+    meta: { preventiveAutomationPlanId: id, nextRunAt }
   });
 
   return findPreventiveAutomationPlanById(id);
@@ -430,26 +623,55 @@ export async function disablePreventiveAutomationPlan(id, user = null) {
   return findPreventiveAutomationPlanById(id);
 }
 
-function resolveOverrideForAsset(plan, asset) {
+export function resolveEffectiveRecurrence(plan, asset) {
   const activeOverrides = (plan.overrides || []).filter((override) => override.active !== false);
   const assetOverride = activeOverrides.find((override) => override.assetId && String(override.assetId) === String(asset.id));
-  if (assetOverride) return { ...assetOverride, source: "machine" };
+  if (assetOverride) {
+    return {
+      ...normalizePreventiveSchedule({ ...plan, ...assetOverride }),
+      source: "machine"
+    };
+  }
 
   const segmentOverride = activeOverrides.find(
     (override) => override.segmentId && String(override.segmentId) === String(asset.segmentId)
   );
-  if (segmentOverride) return { ...segmentOverride, source: "segment" };
+  if (segmentOverride) {
+    return {
+      ...normalizePreventiveSchedule({ ...plan, ...segmentOverride }),
+      source: "segment"
+    };
+  }
 
   return {
-    recurrenceType: plan.recurrenceType,
-    recurrenceInterval: plan.recurrenceInterval,
-    preferredTime: plan.preferredTime,
+    ...normalizePreventiveSchedule(plan),
     source: "plan"
   };
 }
 
+async function assertScopeExists(plan, devices) {
+  if (plan.scopeType === "asset") {
+    if (devices.some((device) => String(device.id) === String(plan.scopeId))) return;
+    throw createHttpError("O escopo selecionado nao existe.", 400);
+  }
+
+  if (plan.scopeType === "segment") {
+    if (devices.some((device) => String(device.segmentId) === String(plan.scopeId))) return;
+    const result = await query("SELECT id FROM inventory_segments WHERE id = $1 LIMIT 1", [plan.scopeId]);
+    if (result.rows.length) return;
+    throw createHttpError("O escopo selecionado nao existe.", 400);
+  }
+
+  if (plan.scopeType === "group") {
+    const result = await query("SELECT id FROM segment_groups WHERE id = $1 LIMIT 1", [plan.scopeId]);
+    if (result.rows.length) return;
+    throw createHttpError("O escopo selecionado nao existe.", 400);
+  }
+}
+
 async function resolvePlanAssets(plan) {
   const devices = await listDevices({});
+  await assertScopeExists(plan, devices);
 
   if (plan.scopeType === "asset") {
     return devices.filter((device) => String(device.id) === String(plan.scopeId));
@@ -468,36 +690,74 @@ async function resolvePlanAssets(plan) {
   return devices;
 }
 
-export async function preparePreventiveAutomationPlan(id, user = null) {
-  const plan = await findPreventiveAutomationPlanById(id);
-  if (!plan) return null;
-
+async function validateScopeSelection(plan, { requireAssets = true } = {}) {
   const assets = await resolvePlanAssets(plan);
-  const runs = [];
+  if (requireAssets && !assets.length) {
+    throw createHttpError("O escopo selecionado nao possui maquinas disponiveis para a rotina preventiva.", 400);
+  }
+  return assets;
+}
 
-  for (const asset of assets) {
-    const recurrence = resolveOverrideForAsset(plan, asset);
-    const scheduledFor = computeNextScheduledFor({
+async function validatePlanForPreparation(plan) {
+  if (plan.active === false) {
+    throw createHttpError("Um plano inativo nao pode ser preparado.", 409);
+  }
+
+  const scripts = await validateScripts(plan.defaultScriptIds);
+  const assets = await validateScopeSelection(plan);
+
+  return { scripts, assets };
+}
+
+export function buildRunIdempotencyKey(planId, assetId, scheduledFor) {
+  return `${planId}:${assetId}:${serializeTimestamp(scheduledFor) || scheduledFor}`;
+}
+
+async function findExistingRun(planId, assetId, scheduledFor) {
+  const result = await query(
+    `
+      SELECT *
+      FROM preventive_automation_runs
+      WHERE plan_id = $1
+        AND asset_id = $2
+        AND scheduled_for = $3
+      LIMIT 1
+    `,
+    [planId, assetId, scheduledFor]
+  );
+  return result.rows[0] ? fromRunRow(result.rows[0]) : null;
+}
+
+async function insertPreparedRun({ plan, asset, recurrence, scheduledFor, scripts, user }) {
+  const existingRun = await findExistingRun(plan.id, asset.id, scheduledFor);
+  if (existingRun) return { run: existingRun, created: false };
+
+  const runId = randomUUID();
+  const nextRunAt = computeFollowingScheduledFor(
+    {
       recurrenceType: recurrence.recurrenceType,
-      recurrenceInterval: recurrence.recurrenceInterval,
-      preferredTime: recurrence.preferredTime || plan.preferredTime
-    });
-    const runId = randomUUID();
-    const scriptSummary = plan.defaultScriptIds.length
-      ? `${plan.defaultScriptIds.length} script(s) previsto(s)`
-      : "Nenhum script vinculado";
-    const logSummary =
-      `Rotina preparada para ${asset.name || asset.id}. ${scriptSummary}. ` +
-      `Recorrencia: ${recurrence.recurrenceType}/${recurrence.recurrenceInterval}. ` +
-      "Execucao real depende de agente seguro instalado na maquina.";
+      recurrenceInterval: recurrence.recurrenceIntervalDays,
+      preferredTime: recurrence.preferredTime || plan.preferredTime,
+      timezone: plan.timezone
+    },
+    scheduledFor
+  );
+  const scriptSummary = scripts.length ? `${scripts.length} script(s) previsto(s)` : "Nenhum script vinculado";
+  const logSummary =
+    `Rotina preparada para ${asset.name || asset.id}. ${scriptSummary}. ` +
+    `Recorrencia efetiva: ${recurrence.source}/${recurrence.recurrenceIntervalDays} dia(s). ` +
+    "Scripts reais dependem de agente seguro.";
+  const idempotencyKey = buildRunIdempotencyKey(plan.id, asset.id, scheduledFor);
 
+  try {
     const result = await query(
       `
         INSERT INTO preventive_automation_runs (
           id, plan_id, asset_id, status, scheduled_for, started_at,
-          finished_at, result, log_summary, error_detected
+          finished_at, result, log_summary, error_detected, idempotency_key,
+          schedule_slot, recurrence_source, recurrence_interval, preferred_time, next_run_at
         )
-        VALUES ($1, $2, $3, $4, $5, NOW(), NOW(), $6, $7, FALSE)
+        VALUES ($1, $2, $3, $4, $5, NOW(), NOW(), $6, $7, FALSE, $8, $9, $10, $11, $12, $13)
         RETURNING *
       `,
       [
@@ -507,35 +767,145 @@ export async function preparePreventiveAutomationPlan(id, user = null) {
         normalizeRunStatus("prepared"),
         scheduledFor,
         "prepared",
-        logSummary
+        logSummary,
+        idempotencyKey,
+        scheduledFor,
+        recurrence.source,
+        recurrence.recurrenceIntervalDays,
+        recurrence.preferredTime || plan.preferredTime,
+        nextRunAt
       ]
     );
-
-    runs.push(fromRunRow(result.rows[0]));
 
     await addAssetHistory({
       assetId: asset.id,
       eventType: "preventive_automation_prepared",
-      message: `Automacao preventiva '${plan.name}' preparada. Nenhum comando foi executado.`,
+      message: `Automacao preventiva '${plan.name}' preparada. Rotina aguardando agente seguro.`,
       newValue: logSummary,
       userId: user?.id || null,
       userName: user?.name || user?.email || "Sistema"
     });
+
+    return { run: fromRunRow(result.rows[0]), created: true };
+  } catch (error) {
+    if (error.code === "23505" || /unique/i.test(error.message || "")) {
+      const run = await findExistingRun(plan.id, asset.id, scheduledFor);
+      if (run) return { run, created: false };
+    }
+
+    throw error;
+  }
+}
+
+export async function preparePreventiveAutomationPlan(id, user = null, options = {}) {
+  const plan = await findPreventiveAutomationPlanById(id);
+  if (!plan) return null;
+
+  const { scripts, assets } = await validatePlanForPreparation(plan);
+  const scheduledFor = options.scheduledFor
+    ? normalizeScheduleSlot(options.scheduledFor)
+    : (plan.nextRunAt || computeNextScheduledFor(plan, new Date()));
+  const runs = [];
+  let createdRuns = 0;
+
+  for (const asset of assets) {
+    const recurrence = resolveEffectiveRecurrence(plan, asset);
+    const { run, created } = await insertPreparedRun({
+      plan,
+      asset,
+      recurrence,
+      scheduledFor,
+      scripts,
+      user
+    });
+    runs.push(run);
+    if (created) createdRuns += 1;
   }
 
-  await addLog({
-    type: "preventive_automation_prepared",
-    message: `Automacao preventiva preparada: ${plan.name}. Nenhum comando foi executado.`,
-    userId: user?.id || null,
-    meta: {
-      preventiveAutomationPlanId: plan.id,
-      assetCount: assets.length,
-      runCount: runs.length
-    }
-  });
+  if (createdRuns > 0) {
+    const preparedAt = new Date().toISOString();
+    const nextRunAt =
+      runs.reduce((earliest, run) => {
+        const candidate = serializeTimestamp(run?.nextRunAt);
+        if (!candidate) return earliest;
+        if (!earliest) return candidate;
+        return new Date(candidate) < new Date(earliest) ? candidate : earliest;
+      }, null) || computeFollowingScheduledFor(plan, scheduledFor);
+
+    await query(
+      `
+        UPDATE preventive_automation_plans
+        SET last_prepared_at = $2,
+            last_scheduled_at = $3,
+            next_run_at = $4,
+            updated_at = NOW()
+        WHERE id = $1
+      `,
+      [plan.id, preparedAt, scheduledFor, nextRunAt]
+    );
+
+    await addLog({
+      type: "preventive_automation_prepared",
+      message: `Automacao preventiva preparada: ${plan.name}. Rotina aguardando agente seguro.`,
+      userId: user?.id || null,
+      meta: {
+        preventiveAutomationPlanId: plan.id,
+        assetCount: assets.length,
+        runCount: createdRuns,
+        scheduleSlot: scheduledFor,
+        nextRunAt
+      }
+    });
+  }
 
   return {
     preventiveAutomationPlan: await findPreventiveAutomationPlanById(plan.id),
-    runs
+    runs,
+    preparedCount: createdRuns,
+    skippedExistingCount: runs.length - createdRuns
+  };
+}
+
+export async function listDuePreventiveAutomationPlans(now = new Date()) {
+  const result = await query(
+    `
+      SELECT *
+      FROM preventive_automation_plans
+      WHERE active = TRUE
+        AND next_run_at IS NOT NULL
+        AND next_run_at <= $1
+      ORDER BY next_run_at ASC
+    `,
+    [toValidDate(now).toISOString()]
+  );
+
+  const rows = [];
+  for (const row of result.rows) {
+    rows.push(await ensurePlanRowSchedule(row));
+  }
+
+  return Promise.all(rows.map((row) => hydratePlan(fromPlanRow(row))));
+}
+
+export async function processDuePreventiveAutomationPlans(user = null) {
+  const duePlans = await listDuePreventiveAutomationPlans();
+  const results = [];
+  let preparedPlans = 0;
+  let preparedRuns = 0;
+
+  for (const plan of duePlans) {
+    const result = await preparePreventiveAutomationPlan(plan.id, user, { scheduledFor: plan.nextRunAt });
+    if (result) {
+      results.push(result);
+      if (result.preparedCount > 0) preparedPlans += 1;
+      preparedRuns += Number(result.preparedCount || 0);
+    }
+  }
+
+  return {
+    duePlanCount: duePlans.length,
+    preparedPlanCount: preparedPlans,
+    preparedRunCount: preparedRuns,
+    results
   };
 }

@@ -198,6 +198,37 @@ Pendências mantidas para próxima etapa:
 - Preventivas ainda nao executam scripts reais; registram apenas preparacao/simulacao.
 - Abas/ambientes do inventario ainda dependem parcialmente de estado local.
 - Manutencao/backup ainda precisam ser consolidados totalmente no backend.
+
+## Avisos - estabilizacao da Automacao Preventiva - 14/06/2026
+
+Foi ajustada a Automacao Preventiva para tratar o backend como fonte da verdade do agendamento, sem executar comandos reais.
+
+Implementado:
+
+- `recurrence_interval` passa a representar dias diretamente:
+  - diaria: 1
+  - semanal: 7
+  - quinzenal: 15
+  - mensal: 30
+  - personalizada: valor informado pelo tecnico.
+- `preferred_time` e `timezone` passam a ser usados no calculo da proxima preparacao.
+- `next_run_at`, `last_scheduled_at`, `last_prepared_at`, `last_run_at` e `schedule_anchor_at` foram adicionados aos planos para persistir a agenda.
+- `preventive_automation_runs` recebeu `idempotency_key`, `schedule_slot`, `recurrence_source`, `recurrence_interval`, `preferred_time` e `next_run_at`.
+- Foi adicionada restricao unica por plano, ativo e janela (`plan_id`, `asset_id`, `scheduled_for`) para evitar preparacoes duplicadas.
+- A preparacao manual valida plano ativo, scripts ativos, escopo existente e escopo com maquinas antes de registrar runs.
+- Excecoes seguem a prioridade maquina > segmento > plano.
+- A proxima preparacao do plano usa a menor proxima data calculada entre os ativos preparados, respeitando excecoes.
+- Endpoint protegido adicionado:
+  - `POST /api/preventive-automation-plans/process-due`
+- A interface mostra proxima preparacao persistida, ultima preparacao, fuso horario, excecoes e botao "Preparar rotina agora".
+
+Testes automatizados adicionados:
+
+- Normalizacao de recorrencia em dias sem multiplicacao adicional.
+- Calculo de proxima preparacao respeitando `America/Sao_Paulo`.
+- Prioridade de excecoes maquina > segmento > plano.
+- Chave idempotente estavel para a mesma janela.
+- Ausencia de primitivas de execucao de comandos no repositorio de automacao.
 - Preferencias visuais continuam no frontend por decisao de baixo risco.
 
 ## Auditoria final - 29/05/2026
@@ -328,12 +359,27 @@ Evitar VPN geral entre clientes. O coletor reduz exposicao e limita acesso a red
 
 - Scripts selecionados a partir de Sugestoes de OS agora registram uso seguro no backend.
 - Nenhum BAT, CMD, PowerShell ou comando de navegador e executado nesta fase.
-- O backend cria registro em `script_execution_logs` e ciclo em `script_validation_runs`.
-- A Sugestao de OS recebe indicador visual de validacao por script.
-- Logs com erro podem ser marcados como revisados ou receber acao corretiva registrada.
-- A acao "Aplicar solucao sugerida" apenas registra a intencao corretiva; nao executa comando.
-- O tempo de validacao fica em `scriptValidationWindowMinutes` nas Configuracoes de Avisos.
-- A reavaliacao usa o estado do aviso: se o problema nao voltar, a sugestao pode ser validada; se persistir, a validacao falha.
+- Recomendacoes de scripts para Sugestoes de OS passam pelo backend em `GET /api/service-order-suggestions/:id/recommended-scripts`.
+- O backend cria registro em `script_execution_logs` e ciclo em `script_validation_runs` com status de observacao, sem marcar sucesso/falha de execucao quando nao existe agente.
+- Estados usados sem agente: `observation_pending`, `observed_resolved`, `observed_persistent`, `insufficient_data` e `validation_cancelled`.
+- Estados de execucao real (`execution_success` e `execution_failed`) ficam reservados para logs confirmados por agente seguro futuro.
+- A Sugestao de OS recebe indicador visual de observacao por script.
+- Logs com erro podem ser marcados como analisados ou receber solucao registrada.
+- As acoes "Registrar solucao sugerida" e "Registrar solucao propria" apenas registram acompanhamento; nao executam comando.
+- O tempo de observacao fica em `scriptValidationWindowMinutes` nas Configuracoes de Avisos.
+- A reavaliacao usa o estado do aviso: se o aviso nao voltar, a sugestao fica como `observed_resolved`; se persistir, fica como `observed_persistent`; se nao houver dados, fica como `insufficient_data`.
+- Logs vazios aparecem como "Nenhum log de script disponivel" em vez de gerar uma previa falsa.
+
+## Estabilizacao estrutural de preventivas e permissoes
+
+- A criacao de OS preventiva a partir de plano preventivo agora usa transacao no backend.
+- O plano preventivo e bloqueado durante a criacao da OS para reduzir risco de duplicidade.
+- O vinculo entre `preventive_plans.service_order_id` e `service_orders.preventive_plan_id` recebeu chaves estrangeiras e indices unicos.
+- Se um plano ja possuir OS vinculada, a API retorna a mensagem: "Este plano ja possui uma OS preventiva vinculada.".
+- Historico da OS, historico dos ativos e log geral sao gravados dentro do mesmo fluxo transacional.
+- Frontend e backend passaram a usar o mesmo catalogo compartilhado em `shared/permissions.js`.
+- A permissao `preventive_plans.create_service_order` separa a acao de criar plano da acao de gerar OS preventiva.
+- Foi criado teste automatizado para impedir retorno de mojibake em `client/src`, `server/src` e `shared`.
 
 ## Proximos passos tecnicos
 

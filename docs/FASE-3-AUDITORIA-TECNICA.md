@@ -27,7 +27,7 @@ base para decidir a ordem segura de migracao para backend.
 - O Inventario ainda e a area mais local: abas, metadados de aba, manutencao local, observacoes, apelidos e historico de perifericos dependem do navegador.
 - O fluxo de manutencao/backup vinculado a OS ainda tem muita orquestracao em `client/src/App.jsx`, embora parte do estado de backup ja esteja em `device_metadata`.
 - OCS, Zabbix e ping continuam mockados por desenho da fase atual.
-- O frontend ainda possui copias/fallbacks de permissoes, status da OS, categorias e presets para manter a tela funcionando, mas o backend deve continuar sendo a autoridade.
+- O frontend ainda possui fallbacks visuais de status da OS, categorias e presets para manter a tela funcionando, mas o catalogo de permissoes foi unificado com o backend em `shared/permissions.js`.
 
 ## localStorage
 
@@ -76,9 +76,9 @@ Chaves antigas nao encontradas no uso atual: `it_guardian_system_mode`,
 
 | Item | Local | Classe | Observacao |
 | --- | --- | --- | --- |
-| `permissionGroups` e permissoes padrao | `client/src/permissions.js` e `server/src/permissions.js` | 3 | Backend valida, mas ha duplicacao. Ideal: frontend consumir sempre `/api/permissions` ou usar pacote compartilhado. |
-| `roleDefaultPermissions` | `client/src/permissions.js` e `server/src/permissions.js` | 3 | Risco de divergencia entre menu visivel e permissao real. |
-| Aliases de permissoes legadas | `client/src/permissions.js` e `server/src/permissions.js` | 3 | `inventory.print_qr`, `service_orders.close` e `settings.general` sao aceitos como compatibilidade e normalizados para IDs canonicos. |
+| `permissionGroups` e permissoes padrao | `shared/permissions.js` | 1 | Catalogo compartilhado entre frontend e backend; backend segue validando. |
+| `roleDefaultPermissions` | `shared/permissions.js` | 1 | Menus e API usam a mesma base de permissoes. |
+| Aliases de permissoes legadas | `shared/permissions.js` | 1 | `inventory.print_qr`, `service_orders.close` e `settings.general` sao aceitos como compatibilidade e normalizados para IDs canonicos. |
 | `backupSegmentId = "system-backup"` e `backupSegmentName = "Backup"` | `client/src/App.jsx` | 2 | Segmento/area Backup deve ser entidade/regra do backend. |
 | Nomes reservados `manutencao` e `nao organizadas` | `client/src/App.jsx` e `segmentRepository.js` | 1 | Duplicacao aceitavel para UX, pois backend tambem bloqueia. |
 | `defaultInventoryTab` e `segmentPalette` | `client/src/App.jsx` | 2 para aba, 1 para paleta | Aba padrao e estrutura devem ir para backend; paleta pode ficar no frontend. |
@@ -228,7 +228,7 @@ Permissoes relevantes:
 1. **Inventario dividido por navegador**: abas e metadados de abas estao em `localStorage`.
 2. **Manutencao/Backup ainda orquestrados no React**: outro usuario ou chamada direta de API pode deixar estados inconsistentes.
 3. **Formulario publico com regra critica no frontend**: modo Business exige cliente no React, mas a API publica tambem precisa validar isso.
-4. **Permissoes duplicadas**: `client/src/permissions.js` e `server/src/permissions.js` podem divergir.
+4. **Permissoes agora compartilhadas**: `client/src/permissions.js` e `server/src/permissions.js` reexportam `shared/permissions.js`; manter testes para evitar divergencia futura.
 5. **Mocks parecem reais na interface**: OCS, Zabbix e ping devem continuar identificados como mock ate integracao real.
 6. **Numeracao da OS em ambiente distribuido**: o backend gera numero, usa indice unico e tenta novamente em colisao; em multiplas instancias, avaliar advisory lock/transacao dedicada.
 7. **Dados tecnicos locais podem se perder**: observacoes, perifericos removidos e historico local nao sao auditaveis no backend.
@@ -251,7 +251,6 @@ Permissoes relevantes:
 1. Apelidos de maquina.
 2. Preferencias visuais por usuario, se necessario.
 3. Categorias padrao como cadastro configuravel.
-4. Unificar definicao de permissoes entre frontend e backend.
 
 ### Manter no frontend - Classe 1
 
@@ -284,6 +283,12 @@ publicos de usuario nas rotas administrativas.
 Na rodada de consolidacao de configuracoes, regras de sistema e OS foram
 confirmadas como persistidas no backend. Preferencias visuais simples seguem
 no frontend por decisao de baixo risco.
+
+Na rodada de estabilizacao estrutural, a definicao de permissoes foi unificada
+em `shared/permissions.js`, a geracao de OS preventiva a partir de plano passou
+a usar transacao no backend e o banco recebeu vinculos unicos entre plano
+preventivo e OS preventiva. Tambem foi criado teste automatizado para impedir
+retorno de mojibake no codigo-fonte principal.
 
 Na auditoria final de 30/05/2026, foram revalidados build, smoke test de API
 em banco `memory`, bloqueios de permissao, OS com numero gerado no backend,

@@ -8,9 +8,10 @@ export async function addAssetHistory({
   oldValue = null,
   newValue = null,
   userId = null,
-  userName = null
+  userName = null,
+  db = query
 }) {
-  const result = await query(
+  const result = await db(
     `
       INSERT INTO asset_history (id, asset_id, event_type, message, old_value, new_value, user_id, user_name)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)

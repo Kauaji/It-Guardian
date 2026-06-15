@@ -33,6 +33,24 @@ export async function query(text, params = []) {
   return pool.query(text, params);
 }
 
+export async function withTransaction(operation) {
+  const pool = await getPool();
+  const client = await pool.connect();
+  const txQuery = (text, params = []) => client.query(text, params);
+
+  try {
+    await client.query("BEGIN");
+    const result = await operation(txQuery);
+    await client.query("COMMIT");
+    return result;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function queryIgnoringDuplicateConstraint(text, params = []) {
   try {
     return await query(text, params);
@@ -704,12 +722,37 @@ export async function initializeDatabase() {
 
   await query(`
     ALTER TABLE script_execution_logs
+    ADD COLUMN IF NOT EXISTS error_code TEXT;
+  `);
+
+  await query(`
+    ALTER TABLE script_execution_logs
+    ADD COLUMN IF NOT EXISTS error_category TEXT;
+  `);
+
+  await query(`
+    ALTER TABLE script_execution_logs
+    ADD COLUMN IF NOT EXISTS error_severity TEXT;
+  `);
+
+  await query(`
+    ALTER TABLE script_execution_logs
     ADD COLUMN IF NOT EXISTS probable_cause TEXT;
   `);
 
   await query(`
     ALTER TABLE script_execution_logs
     ADD COLUMN IF NOT EXISTS suggested_solution TEXT;
+  `);
+
+  await query(`
+    ALTER TABLE script_execution_logs
+    ADD COLUMN IF NOT EXISTS requires_admin BOOLEAN NOT NULL DEFAULT FALSE;
+  `);
+
+  await query(`
+    ALTER TABLE script_execution_logs
+    ADD COLUMN IF NOT EXISTS requires_logged_user BOOLEAN NOT NULL DEFAULT FALSE;
   `);
 
   await query(`
@@ -806,6 +849,32 @@ export async function initializeDatabase() {
   `);
 
   await query(`
+    UPDATE preventive_plans
+    SET service_order_id = NULL
+    WHERE service_order_id IS NOT NULL
+      AND service_order_id NOT IN (SELECT id FROM service_orders);
+  `);
+
+  await query(`
+    UPDATE service_orders
+    SET preventive_plan_id = NULL
+    WHERE preventive_plan_id IS NOT NULL
+      AND preventive_plan_id NOT IN (SELECT id FROM preventive_plans);
+  `);
+
+  await queryIgnoringDuplicateConstraint(`
+    ALTER TABLE preventive_plans
+    ADD CONSTRAINT preventive_plans_service_order_id_fkey
+    FOREIGN KEY (service_order_id) REFERENCES service_orders(id) ON DELETE SET NULL;
+  `);
+
+  await queryIgnoringDuplicateConstraint(`
+    ALTER TABLE service_orders
+    ADD CONSTRAINT service_orders_preventive_plan_id_fkey
+    FOREIGN KEY (preventive_plan_id) REFERENCES preventive_plans(id) ON DELETE SET NULL;
+  `);
+
+  await query(`
     CREATE TABLE IF NOT EXISTS preventive_automation_plans (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -819,10 +888,40 @@ export async function initializeDatabase() {
       scope_id TEXT,
       default_script_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
       notes TEXT,
+      last_scheduled_at TIMESTAMPTZ,
+      last_prepared_at TIMESTAMPTZ,
+      last_run_at TIMESTAMPTZ,
+      next_run_at TIMESTAMPTZ,
+      schedule_anchor_at TIMESTAMPTZ,
       created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+  `);
+
+  await query(`
+    ALTER TABLE preventive_automation_plans
+    ADD COLUMN IF NOT EXISTS last_scheduled_at TIMESTAMPTZ;
+  `);
+
+  await query(`
+    ALTER TABLE preventive_automation_plans
+    ADD COLUMN IF NOT EXISTS last_prepared_at TIMESTAMPTZ;
+  `);
+
+  await query(`
+    ALTER TABLE preventive_automation_plans
+    ADD COLUMN IF NOT EXISTS last_run_at TIMESTAMPTZ;
+  `);
+
+  await query(`
+    ALTER TABLE preventive_automation_plans
+    ADD COLUMN IF NOT EXISTS next_run_at TIMESTAMPTZ;
+  `);
+
+  await query(`
+    ALTER TABLE preventive_automation_plans
+    ADD COLUMN IF NOT EXISTS schedule_anchor_at TIMESTAMPTZ;
   `);
 
   await query(`
@@ -852,8 +951,44 @@ export async function initializeDatabase() {
       result TEXT,
       log_summary TEXT,
       error_detected BOOLEAN NOT NULL DEFAULT FALSE,
+      idempotency_key TEXT,
+      schedule_slot TIMESTAMPTZ,
+      recurrence_source TEXT,
+      recurrence_interval INTEGER,
+      preferred_time TEXT,
+      next_run_at TIMESTAMPTZ,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+  `);
+
+  await query(`
+    ALTER TABLE preventive_automation_runs
+    ADD COLUMN IF NOT EXISTS idempotency_key TEXT;
+  `);
+
+  await query(`
+    ALTER TABLE preventive_automation_runs
+    ADD COLUMN IF NOT EXISTS schedule_slot TIMESTAMPTZ;
+  `);
+
+  await query(`
+    ALTER TABLE preventive_automation_runs
+    ADD COLUMN IF NOT EXISTS recurrence_source TEXT;
+  `);
+
+  await query(`
+    ALTER TABLE preventive_automation_runs
+    ADD COLUMN IF NOT EXISTS recurrence_interval INTEGER;
+  `);
+
+  await query(`
+    ALTER TABLE preventive_automation_runs
+    ADD COLUMN IF NOT EXISTS preferred_time TEXT;
+  `);
+
+  await query(`
+    ALTER TABLE preventive_automation_runs
+    ADD COLUMN IF NOT EXISTS next_run_at TIMESTAMPTZ;
   `);
 
   await query(`
@@ -1097,8 +1232,23 @@ export async function initializeDatabase() {
   `);
 
   await query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_preventive_plans_service_order_unique
+    ON preventive_plans (service_order_id);
+  `);
+
+  await query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_service_orders_preventive_plan_unique
+    ON service_orders (preventive_plan_id);
+  `);
+
+  await query(`
     CREATE INDEX IF NOT EXISTS idx_preventive_automation_plans_active
     ON preventive_automation_plans (active, created_at DESC);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_preventive_automation_plans_due
+    ON preventive_automation_plans (active, next_run_at);
   `);
 
   await query(`
@@ -1114,6 +1264,11 @@ export async function initializeDatabase() {
   await query(`
     CREATE INDEX IF NOT EXISTS idx_preventive_automation_runs_asset
     ON preventive_automation_runs (asset_id, scheduled_for DESC);
+  `);
+
+  await query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_preventive_automation_run_unique
+    ON preventive_automation_runs (plan_id, asset_id, scheduled_for);
   `);
 
   await query(`
