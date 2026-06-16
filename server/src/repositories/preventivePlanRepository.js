@@ -161,7 +161,7 @@ export async function listPreventivePlans() {
   `);
 
   const plans = result.rows.map(fromPlanRow);
-  return Promise.all(plans.map(hydratePlan));
+  return Promise.all(plans.map((plan) => hydratePlan(plan)));
 }
 
 export async function findPreventivePlanById(id) {
