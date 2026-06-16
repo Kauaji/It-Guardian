@@ -63,6 +63,30 @@ async function queryIgnoringDuplicateConstraint(text, params = []) {
   }
 }
 
+async function removeDuplicatePreventiveAutomationOverrides() {
+  const result = await query(`
+    SELECT id, plan_id, target_key, created_at, updated_at
+    FROM preventive_automation_overrides
+    WHERE target_key IS NOT NULL
+    ORDER BY plan_id ASC, target_key ASC, updated_at DESC, created_at DESC, id DESC
+  `);
+  const seen = new Set();
+  const duplicateIds = [];
+
+  for (const row of result.rows) {
+    const key = `${row.plan_id}:${row.target_key}`;
+    if (seen.has(key)) {
+      duplicateIds.push(row.id);
+    } else {
+      seen.add(key);
+    }
+  }
+
+  for (const id of duplicateIds) {
+    await query("DELETE FROM preventive_automation_overrides WHERE id = $1", [id]);
+  }
+}
+
 export async function initializeDatabase() {
   await query(`
     CREATE TABLE IF NOT EXISTS users (
@@ -619,6 +643,33 @@ export async function initializeDatabase() {
   `);
 
   await query(`
+    UPDATE service_order_suggestions
+    SET status = 'pending',
+        observation_status = CASE
+          WHEN status = 'observed_persistent' THEN 'observed_persistent'
+          WHEN status = 'insufficient_data' THEN 'insufficient_data'
+          WHEN status = 'validation_cancelled' THEN 'validation_cancelled'
+          ELSE observation_status
+        END,
+        updated_at = NOW()
+    WHERE status IN ('observed_persistent', 'insufficient_data', 'validation_cancelled');
+  `);
+
+  await query(`
+    UPDATE service_order_suggestions
+    SET status = CASE
+          WHEN created_service_order_id IS NOT NULL THEN 'accepted'
+          ELSE 'resolved'
+        END,
+        observation_status = CASE
+          WHEN observation_status IS NULL OR observation_status = 'none' THEN 'observed_resolved'
+          ELSE observation_status
+        END,
+        updated_at = NOW()
+    WHERE status IN ('observed_resolved', 'validated');
+  `);
+
+  await query(`
     CREATE TABLE IF NOT EXISTS maintenance_scripts (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -970,6 +1021,7 @@ export async function initializeDatabase() {
       plan_id TEXT NOT NULL REFERENCES preventive_automation_plans(id) ON DELETE CASCADE,
       asset_id TEXT,
       segment_id TEXT,
+      target_key TEXT,
       recurrence_type TEXT NOT NULL DEFAULT 'monthly',
       recurrence_interval INTEGER NOT NULL DEFAULT 30,
       preferred_time TEXT,
@@ -978,6 +1030,23 @@ export async function initializeDatabase() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
   `);
+
+  await query(`
+    ALTER TABLE preventive_automation_overrides
+    ADD COLUMN IF NOT EXISTS target_key TEXT;
+  `);
+
+  await query(`
+    UPDATE preventive_automation_overrides
+    SET target_key = CASE
+      WHEN asset_id IS NOT NULL AND asset_id <> '' THEN 'asset:' || asset_id
+      WHEN segment_id IS NOT NULL AND segment_id <> '' THEN 'segment:' || segment_id
+      ELSE NULL
+    END
+    WHERE target_key IS NULL;
+  `);
+
+  await removeDuplicatePreventiveAutomationOverrides();
 
   await query(`
     CREATE TABLE IF NOT EXISTS preventive_automation_runs (
@@ -1329,6 +1398,11 @@ export async function initializeDatabase() {
   await query(`
     CREATE INDEX IF NOT EXISTS idx_preventive_automation_overrides_plan
     ON preventive_automation_overrides (plan_id);
+  `);
+
+  await query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_preventive_automation_overrides_target
+    ON preventive_automation_overrides (plan_id, target_key);
   `);
 
   await query(`

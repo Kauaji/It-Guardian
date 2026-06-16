@@ -3,6 +3,7 @@ import { initializeDatabase } from "./database.js";
 import { seedDemoOperationalData } from "./repositories/demoDataRepository.js";
 import { seedManualAssets } from "./repositories/manualAssetRepository.js";
 import { seedDefaultMaintenanceScripts } from "./repositories/maintenanceScriptRepository.js";
+import { backfillPreventiveAutomationAssetSchedules } from "./repositories/preventiveAutomationRepository.js";
 import { seedDefaultSegment } from "./repositories/segmentRepository.js";
 import { seedDefaultSectors } from "./repositories/sectorRepository.js";
 import { seedDefaultAdmin, seedDemoUsers } from "./repositories/userRepository.js";
@@ -24,6 +25,10 @@ export function initializeRuntime() {
         await seedDemoOperationalData();
         await seedDefaultMaintenanceScripts();
       }
+
+      await backfillPreventiveAutomationAssetSchedules({
+        user: { id: null, name: "Inicializacao do sistema" }
+      });
     })();
   }
 

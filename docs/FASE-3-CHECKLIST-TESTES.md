@@ -350,6 +350,27 @@
 - [ ] Testar manualmente Criar OS apos `observed_persistent` em uma sessao autenticada.
 - [ ] Testar manualmente scheduler em ambiente com `PREVENTIVE_CRON_SECRET` configurado.
 
+## Avisos - Agenda preventiva e scheduler seguro - 16/06/2026
+
+- [x] Backend compara configuracao de agenda individual antes de preservar ou recalcular `next_run_at`.
+- [x] Mudanca de recorrencia, origem, horario, timezone ou estado ativo recalcula a proxima execucao.
+- [x] Preparacao manual preserva a agenda automatica.
+- [x] Backfill idempotente cria calendarios individuais ausentes para planos antigos.
+- [x] Backfill registra contadores de planos analisados, calendarios criados, atualizados, ignorados, desativados e falhas isoladas.
+- [x] Overrides duplicados por maquina ou segmento sao bloqueados por validacao e indice unico.
+- [x] `custom_days` exige quantidade explicita de dias no frontend e no backend.
+- [x] Scheduler cron aceita `GET /api/preventive-automation-plans/process-due/cron`.
+- [x] Scheduler cron usa `CRON_SECRET` e aceita `PREVENTIVE_CRON_SECRET` por compatibilidade.
+- [x] Scheduler cron retorna `success`, horarios de inicio/fim, resultado de preventivas, resultado de validacoes, erros e duracao.
+- [x] `vercel.json` possui cron diario em `0 3 * * *`.
+- [x] Observacoes de script vencidas sao processadas junto com automacao preventiva.
+- [x] Corrida de observacao por sugestao/script retorna validacao existente sem criar log duplicado.
+- [x] Status legados de observacao sao normalizados no bootstrap.
+- [x] `npm run test --workspace server` passou com 15 testes.
+- [x] `npm run build` passou apos a estabilizacao de agenda e scheduler.
+- [ ] Validar manualmente o cron em deploy Vercel com `CRON_SECRET` configurado.
+- [ ] Validar manualmente uma agenda antiga real recebendo calendarios individuais pelo backfill.
+
 ## Pendencias manuais restantes
 
 - Validar tecnico com clientes permitidos em uma sessao Business com usuario tecnico real e clientes associados.

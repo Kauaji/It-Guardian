@@ -5,6 +5,8 @@ import test from "node:test";
 import {
   buildRunIdempotencyKey,
   computeNextScheduledFor,
+  hasPreventiveScheduleChanged,
+  normalizeRecurrenceIntervalDays,
   recurrenceToDays,
   resolveEffectiveRecurrence
 } from "./preventiveAutomationRepository.js";
@@ -79,13 +81,47 @@ test("gera chave idempotente estavel para o mesmo plano, ativo e janela", () => 
   assert.equal(first, second);
 });
 
+test("recorrencia personalizada exige quantidade explicita de dias", () => {
+  assert.equal(normalizeRecurrenceIntervalDays(45, "custom_days", { strict: true }), 45);
+  assert.throws(
+    () => normalizeRecurrenceIntervalDays(undefined, "custom_days", { strict: true }),
+    /quantidade de dias/
+  );
+  assert.throws(
+    () => normalizeRecurrenceIntervalDays(366, "custom_days", { strict: true }),
+    /quantidade de dias/
+  );
+});
+
+test("identifica quando agenda individual precisa recalcular proxima execucao", () => {
+  const previous = {
+    recurrenceSource: "plan",
+    recurrenceType: "monthly",
+    recurrenceIntervalDays: 30,
+    preferredTime: "08:00",
+    timezone: "America/Sao_Paulo",
+    active: true
+  };
+
+  assert.equal(hasPreventiveScheduleChanged(previous, { ...previous }), false);
+  assert.equal(hasPreventiveScheduleChanged(previous, { ...previous, preferredTime: "09:00" }), true);
+  assert.equal(hasPreventiveScheduleChanged(previous, { ...previous, recurrenceSource: "machine" }), true);
+  assert.equal(hasPreventiveScheduleChanged(previous, { ...previous, active: false }), true);
+});
+
 test("repositorio de automacao nao usa primitivas de execucao de comandos", () => {
   const repositoryPath = fileURLToPath(new URL("./preventiveAutomationRepository.js", import.meta.url));
-  const source = readFileSync(repositoryPath, "utf8");
+  const scriptRepositoryPath = fileURLToPath(new URL("./maintenanceScriptRepository.js", import.meta.url));
+  const source = [
+    readFileSync(repositoryPath, "utf8"),
+    readFileSync(scriptRepositoryPath, "utf8")
+  ].join("\n");
 
   assert.doesNotMatch(source, /child_process/);
   assert.doesNotMatch(source, /\bexec\s*\(/);
+  assert.doesNotMatch(source, /\bexecFile\s*\(/);
   assert.doesNotMatch(source, /\bspawn\s*\(/);
+  assert.doesNotMatch(source, /shell\s*:\s*true/);
   assert.doesNotMatch(source, /\beval\s*\(/);
   assert.doesNotMatch(source, /new\s+Function\b|\bFunction\s*\(/);
 });

@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import {
   createPreventiveAutomationPlan,
   disablePreventiveAutomationPlan,
@@ -5,8 +6,30 @@ import {
   listPreventiveAutomationPlans,
   preparePreventiveAutomationPlan,
   processDuePreventiveAutomationPlans,
+  processScheduledMaintenanceTasks,
   updatePreventiveAutomationPlan
 } from "../repositories/preventiveAutomationRepository.js";
+
+function safeEquals(left = "", right = "") {
+  const leftBuffer = Buffer.from(String(left));
+  const rightBuffer = Buffer.from(String(right));
+
+  if (leftBuffer.length !== rightBuffer.length) return false;
+  return timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function getCronSecret() {
+  return process.env.CRON_SECRET || process.env.PREVENTIVE_CRON_SECRET || "";
+}
+
+function readCronSecretFromRequest(req) {
+  const authorization = req.get("authorization") || "";
+  if (authorization.toLowerCase().startsWith("bearer ")) {
+    return authorization.slice(7).trim();
+  }
+
+  return req.get("x-preventive-cron-secret") || "";
+}
 
 export async function list(req, res, next) {
   try {
@@ -21,7 +44,7 @@ export async function detail(req, res, next) {
     const preventiveAutomationPlan = await findPreventiveAutomationPlanById(req.params.id);
 
     if (!preventiveAutomationPlan) {
-      res.status(404).json({ message: "Plano de automacao preventiva nao encontrado." });
+      res.status(404).json({ message: "Plano de automação preventiva não encontrado." });
       return;
     }
 
@@ -45,7 +68,7 @@ export async function update(req, res, next) {
     const preventiveAutomationPlan = await updatePreventiveAutomationPlan(req.params.id, req.body || {}, req.user);
 
     if (!preventiveAutomationPlan) {
-      res.status(404).json({ message: "Plano de automacao preventiva nao encontrado." });
+      res.status(404).json({ message: "Plano de automação preventiva não encontrado." });
       return;
     }
 
@@ -60,7 +83,7 @@ export async function disable(req, res, next) {
     const preventiveAutomationPlan = await disablePreventiveAutomationPlan(req.params.id, req.user);
 
     if (!preventiveAutomationPlan) {
-      res.status(404).json({ message: "Plano de automacao preventiva nao encontrado." });
+      res.status(404).json({ message: "Plano de automação preventiva não encontrado." });
       return;
     }
 
@@ -78,7 +101,7 @@ export async function prepare(req, res, next) {
     });
 
     if (!result) {
-      res.status(404).json({ message: "Plano de automacao preventiva nao encontrado." });
+      res.status(404).json({ message: "Plano de automação preventiva não encontrado." });
       return;
     }
 
@@ -98,21 +121,44 @@ export async function processDue(req, res, next) {
 
 export async function processDueCron(req, res, next) {
   try {
-    const expectedSecret = process.env.PREVENTIVE_CRON_SECRET;
+    const expectedSecret = getCronSecret();
     if (!expectedSecret) {
       res.status(503).json({ message: "Scheduler preventivo sem segredo configurado." });
       return;
     }
 
-    const authorization = req.get("authorization") || "";
-    const bearer = authorization.toLowerCase().startsWith("bearer ") ? authorization.slice(7).trim() : "";
-    const headerSecret = req.get("x-preventive-cron-secret") || "";
-    if (bearer !== expectedSecret && headerSecret !== expectedSecret) {
-      res.status(403).json({ message: "Scheduler preventivo nao autorizado." });
+    const receivedSecret = readCronSecretFromRequest(req);
+    if (!receivedSecret) {
+      res.status(401).json({ message: "Scheduler preventivo não autorizado." });
+      return;
+    }
+    if (!safeEquals(receivedSecret, expectedSecret)) {
+      res.status(403).json({ message: "Scheduler preventivo não autorizado." });
       return;
     }
 
-    res.json(await processDuePreventiveAutomationPlans({ id: null, name: "Scheduler preventivo" }));
+    const startedAt = new Date();
+    const result = await processScheduledMaintenanceTasks({ id: null, name: "Scheduler preventivo" });
+    const finishedAt = new Date();
+
+    res.json({
+      success: true,
+      startedAt: startedAt.toISOString(),
+      finishedAt: finishedAt.toISOString(),
+      preventivePlans: result.preventiveAutomation,
+      scriptValidations: result.scriptValidations,
+      errors: [
+        ...(result.backfill?.plans || [])
+          .filter((plan) => plan.status === "failed")
+          .map((plan) => ({ scope: "backfill", planId: plan.planId, message: plan.message })),
+        ...(result.preventiveAutomation?.plans || [])
+          .filter((plan) => plan.status === "failed")
+          .map((plan) => ({ scope: "preventiveAutomation", planId: plan.planId, message: plan.message })),
+        ...(result.scriptValidations?.failedValidations || [])
+          .map((validation) => ({ scope: "scriptValidations", validationId: validation.validationId, message: validation.message }))
+      ],
+      durationMs: finishedAt.getTime() - startedAt.getTime()
+    });
   } catch (error) {
     next(error);
   }

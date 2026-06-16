@@ -395,6 +395,24 @@ Evitar VPN geral entre clientes. O coletor reduz exposicao e limita acesso a red
 - Nenhum fluxo executa BAT, CMD, PowerShell ou shell script; o sistema apenas registra, prepara e observa.
 - Limitacao restante: a modularizacao completa do `App.jsx` deve ser feita em uma etapa propria para reduzir risco visual.
 
+## Estabilizacao tecnica de agenda e scheduler - 16/06/2026
+
+- A sincronizacao de `preventive_automation_asset_schedules` passou a comparar origem, tipo de recorrencia, intervalo, horario, timezone e estado ativo antes de decidir preservar ou recalcular `next_run_at`.
+- Quando a recorrencia ou horario muda, o backend recalcula `next_run_at` pela agenda individual; quando nada muda, preserva a data existente.
+- A preparacao manual continua sem alterar `last_scheduled_at` nem empurrar a agenda automatica.
+- Foi adicionado backfill idempotente para planos antigos, criando calendarios individuais ausentes e desativando calendarios de maquinas que sairam do escopo.
+- O bootstrap executa o backfill de forma segura apos a inicializacao do banco.
+- `preventive_automation_overrides` recebeu `target_key` e indice unico por `plan_id + target_key`, evitando recorrencias duplicadas para a mesma maquina ou segmento.
+- Overrides `custom_days` exigem quantidade explicita de dias no frontend e no backend.
+- O scheduler externo agora aceita `GET /api/preventive-automation-plans/process-due/cron` para compatibilidade com Vercel Cron.
+- O segredo oficial do cron e `CRON_SECRET`; `PREVENTIVE_CRON_SECRET` continua aceito como compatibilidade.
+- `vercel.json` agenda o cron diario em `0 3 * * *`; frequencias menores dependem do plano e das limitacoes de Cron da Vercel.
+- O processamento agendado foi centralizado para executar backfill, automacao preventiva vencida e observacoes de scripts no mesmo ciclo seguro.
+- Falhas de um plano ou validacao sao isoladas e retornadas no JSON do cron sem impedir os demais itens.
+- Corridas ao registrar observacao de script retornam a validacao existente com `reused: true`, sem criar log duplicado.
+- Status legados de sugestoes observadas sao normalizados no bootstrap para separar `status` operacional de `observation_status`.
+- Nenhum fluxo executa comando real; os testes continuam verificando ausencia de `child_process`, `exec`, `execFile`, `spawn`, `eval`, `new Function` e `shell: true`.
+
 ## Proximos passos tecnicos
 
 1. Reforcar numeracao de OS com lock transacional/advisory lock quando houver multiplas instancias da API.

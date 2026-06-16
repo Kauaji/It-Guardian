@@ -1407,6 +1407,17 @@ function PreventiveAutomationPanel({
 
   function addOverride() {
     if (!overrideDraft.targetId) return;
+    const targetKey = `${overrideDraft.targetType}:${overrideDraft.targetId}`;
+    const alreadyExists = (form.overrides || []).some((item) => {
+      const itemType = item.assetId ? "asset" : "segment";
+      const itemId = item.assetId || item.segmentId;
+      return `${itemType}:${itemId}` === targetKey;
+    });
+    if (alreadyExists) return;
+    const recurrenceInterval = Number(overrideDraft.recurrenceInterval || getDefaultRecurrenceInterval(overrideDraft.recurrenceType));
+    if (overrideDraft.recurrenceType === "custom_days" && (!Number.isInteger(recurrenceInterval) || recurrenceInterval < 1 || recurrenceInterval > 365)) {
+      return;
+    }
     setForm((current) => ({
       ...current,
       overrides: [
@@ -1416,8 +1427,8 @@ function PreventiveAutomationPanel({
           assetId: overrideDraft.targetType === "asset" ? overrideDraft.targetId : null,
           segmentId: overrideDraft.targetType === "segment" ? overrideDraft.targetId : null,
           recurrenceType: overrideDraft.recurrenceType,
-          recurrenceInterval: getDefaultRecurrenceInterval(overrideDraft.recurrenceType),
-          recurrenceIntervalDays: getDefaultRecurrenceInterval(overrideDraft.recurrenceType),
+          recurrenceInterval,
+          recurrenceIntervalDays: recurrenceInterval,
           preferredTime: overrideDraft.preferredTime || "08:00",
           active: true
         }
@@ -1436,6 +1447,12 @@ function PreventiveAutomationPanel({
   async function submitForm(event) {
     event.preventDefault();
     if (!onSave || saving) return;
+    const recurrenceInterval = form.recurrenceType === "custom_days"
+      ? Number(form.recurrenceInterval)
+      : getDefaultRecurrenceInterval(form.recurrenceType);
+    if (form.recurrenceType === "custom_days" && (!Number.isInteger(recurrenceInterval) || recurrenceInterval < 1 || recurrenceInterval > 365)) {
+      return;
+    }
     setSaving(true);
     try {
       await onSave(form.id, {
@@ -1443,8 +1460,8 @@ function PreventiveAutomationPanel({
         description: form.description,
         active: form.active,
         recurrenceType: form.recurrenceType,
-        recurrenceInterval: Number(form.recurrenceInterval || 30),
-        recurrenceIntervalDays: Number(form.recurrenceInterval || 30),
+        recurrenceInterval,
+        recurrenceIntervalDays: recurrenceInterval,
         preferredTime: form.preferredTime,
         timezone: form.timezone,
         scopeType: form.scopeType,
@@ -1631,6 +1648,7 @@ function PreventiveAutomationPanel({
                     max="365"
                     value={form.recurrenceInterval}
                     onChange={(event) => updateForm("recurrenceInterval", event.target.value)}
+                    required
                   />
                 </label>
               )}
@@ -1726,6 +1744,19 @@ function PreventiveAutomationPanel({
                         <option key={value} value={value}>{label}</option>
                       ))}
                     </select>
+                    {overrideDraft.recurrenceType === "custom_days" && (
+                      <input
+                        type="number"
+                        min="1"
+                        max="365"
+                        value={overrideDraft.recurrenceInterval}
+                        onChange={(event) => setOverrideDraft((current) => ({
+                          ...current,
+                          recurrenceInterval: event.target.value
+                        }))}
+                        aria-label="Dias da recorrência personalizada"
+                      />
+                    )}
                     <button type="button" className="secondary-action compact-action" onClick={addOverride}>
                       Adicionar
                     </button>

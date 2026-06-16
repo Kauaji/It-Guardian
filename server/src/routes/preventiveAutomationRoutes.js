@@ -13,6 +13,7 @@ import { requireAuth, requirePermission } from "../middleware/authMiddleware.js"
 
 const router = Router();
 
+router.get("/process-due/cron", processDueCron);
 router.post("/process-due/cron", processDueCron);
 
 router.use(requireAuth);

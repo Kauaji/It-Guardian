@@ -5,6 +5,7 @@ import {
   findAlertById,
   findServiceOrderSuggestionById,
   getAlertSettings,
+  listAlerts,
   markSuggestionValidated
 } from "./alertRepository.js";
 import { addLog } from "./logRepository.js";
@@ -1410,7 +1411,9 @@ function toRecommendedScriptResponse(script) {
     requiresLoggedUser: script.requiresLoggedUser === true,
     requiresAdmin: script.requiresAdmin === true,
     supportedVariables: script.supportedVariables || [],
-    isRecommended: script.isRecommended === true
+    isRecommended: script.isRecommended === true,
+    matchedAssetIds: script.matchedAssetIds || [],
+    matchedAlertIds: script.matchedAlertIds || []
   };
 }
 
@@ -1457,41 +1460,107 @@ export async function listRecommendedScriptsForSuggestion(suggestionId) {
 }
 
 export async function listRecommendedScriptsForContext(payload = {}) {
-  const [scripts, devices] = await Promise.all([
+  const [scripts, devices, activeAlerts] = await Promise.all([
     listMaintenanceScripts({ includeInactive: false }),
-    listDevices({})
+    listDevices({}),
+    listAlerts({ status: "active" })
   ]);
   const assetIds = new Set((Array.isArray(payload.assetIds) ? payload.assetIds : []).map(String));
-  const alerts = [];
+  const alertsById = new Map();
 
   for (const alertId of Array.isArray(payload.alertIds) ? payload.alertIds : []) {
     const alert = await findAlertById(alertId);
-    if (alert) alerts.push(alert);
+    if (alert) alertsById.set(String(alert.id), alert);
   }
 
   const assets = devices.filter((device) => assetIds.has(String(device.id)));
-  const primaryAsset = assets[0] || {};
-  const primaryAlert = alerts[0] || {};
-  const context = {
-    ...(payload.context || {}),
-    alertType: payload.context?.alertType || primaryAlert.type || "",
-    metric: payload.context?.metric || primaryAlert.metric || "",
-    technicalCategory: payload.context?.technicalCategory || inferTechnicalCategory(primaryAlert),
-    severity: payload.context?.severity || primaryAlert.severity || "",
-    title: payload.context?.title || primaryAlert.title || "",
-    description: payload.context?.description || primaryAlert.description || "",
-    assetType: payload.context?.assetType || primaryAsset.type || "",
-    operatingSystem: payload.context?.operatingSystem || primaryAsset.operatingSystem || "",
-    segmentName: payload.context?.segmentName || primaryAsset.segmentName || "",
-    groupName: payload.context?.groupName || primaryAsset.groupName || "",
-    tags: payload.context?.tags || []
+  for (const alert of activeAlerts) {
+    if (assetIds.has(String(alert.assetId))) {
+      alertsById.set(String(alert.id), alert);
+    }
+  }
+
+  const alerts = [...alertsById.values()];
+  const contexts = [];
+
+  for (const asset of assets) {
+    const assetAlerts = alerts.filter((alert) => String(alert.assetId || "") === String(asset.id));
+    const relatedAlerts = assetAlerts.length ? assetAlerts : [null];
+
+    for (const alert of relatedAlerts) {
+      contexts.push({
+        ...(payload.context || {}),
+        alertType: payload.context?.alertType || alert?.type || "",
+        metric: payload.context?.metric || alert?.metric || "",
+        technicalCategory: payload.context?.technicalCategory || inferTechnicalCategory(alert || payload.context || {}),
+        severity: payload.context?.severity || alert?.severity || "",
+        title: payload.context?.title || alert?.title || "",
+        description: payload.context?.description || alert?.description || "",
+        assetType: payload.context?.assetType || asset.type || "",
+        operatingSystem: payload.context?.operatingSystem || asset.operatingSystem || "",
+        segmentName: payload.context?.segmentName || asset.segmentName || "",
+        groupName: payload.context?.groupName || asset.groupName || "",
+        tags: payload.context?.tags || [],
+        assetId: asset.id,
+        alertId: alert?.id || null
+      });
+    }
+  }
+
+  for (const alert of alerts.filter((alert) => !assetIds.has(String(alert.assetId || "")))) {
+    contexts.push({
+      ...(payload.context || {}),
+      alertType: payload.context?.alertType || alert.type || "",
+      metric: payload.context?.metric || alert.metric || "",
+      technicalCategory: payload.context?.technicalCategory || inferTechnicalCategory(alert),
+      severity: payload.context?.severity || alert.severity || "",
+      title: payload.context?.title || alert.title || "",
+      description: payload.context?.description || alert.description || "",
+      tags: payload.context?.tags || [],
+      assetId: alert.assetId || null,
+      alertId: alert.id
+    });
+  }
+
+  if (!contexts.length) {
+    contexts.push({ ...(payload.context || {}), tags: payload.context?.tags || [] });
+  }
+
+  const scored = scripts
+    .map((script) => {
+      const matches = contexts
+        .map((context) => ({ context, result: scoreMaintenanceScriptForContext(script, context) }))
+        .filter((item) => item.result);
+
+      if (!matches.length) return null;
+
+      const best = matches.sort((left, right) => right.result.recommendationScore - left.result.recommendationScore)[0];
+      const matchedAssetIds = [...new Set(matches.map((item) => item.context.assetId).filter(Boolean).map(String))];
+      const matchedAlertIds = [...new Set(matches.map((item) => item.context.alertId).filter(Boolean).map(String))];
+
+      return {
+        ...best.result,
+        matchedAssetIds,
+        matchedAlertIds
+      };
+    })
+    .filter(Boolean)
+    .sort((left, right) => {
+      if (right.recommendationScore !== left.recommendationScore) {
+        return right.recommendationScore - left.recommendationScore;
+      }
+      return String(left.name || "").localeCompare(String(right.name || ""));
+    });
+  const recommendations = {
+    recommended: scored.filter((script) => script.isRecommended),
+    others: scored.filter((script) => !script.isRecommended)
   };
-  const recommendations = recommendMaintenanceScripts(context, scripts);
 
   return {
     recommended: recommendations.recommended.map(toRecommendedScriptResponse),
     others: recommendations.others.map(toRecommendedScriptResponse),
-    context
+    context: contexts[0],
+    contextCount: contexts.length
   };
 }
 
@@ -1559,85 +1628,101 @@ export async function useScriptFromSuggestion({ suggestionId, scriptId, payload 
       return { suggestion, script, log: duplicatedLog, validation: duplicatedValidation, reused: true };
     }
 
-  const log = await createScriptSimulationLog({
-    scriptId: script.id,
-    assetId,
-    alertId: suggestion.alertId,
-    suggestionId: suggestion.id,
-    mode: "prepared",
-    status: "observation_pending",
-    executedBy: user?.id || null,
-    notes,
-    rawLog,
-    parsedSummary: "Observação preparada. O sistema aguardará a janela configurada antes de reavaliar o aviso.",
-    errorDetected: false,
-    attentionRequired: false,
-    db
-  });
+    const validationInsert = await db(
+      `
+        INSERT INTO script_validation_runs (
+          id, suggestion_id, alert_id, asset_id, script_id, status, started_by,
+          validation_window_minutes, validation_due_at, result_summary,
+          idempotency_key, observation_slot, active_key
+        )
+        VALUES ($1, $2, $3, $4, $5, 'observation_pending', $6, $7, $8, $9, $10, $11, $12)
+        ON CONFLICT (active_key) DO NOTHING
+        RETURNING *
+      `,
+      [
+        randomUUID(),
+        suggestion.id,
+        suggestion.alertId || null,
+        assetId,
+        script.id,
+        user?.id || null,
+        validationWindowMinutes,
+        validationDue.toISOString(),
+        "Validação preparada. Nenhum comando foi executado nesta versão.",
+        activeKey,
+        observationSlot,
+        activeKey
+      ]
+    );
 
-  const validationResult = await db(
-    `
-      INSERT INTO script_validation_runs (
-        id, suggestion_id, alert_id, asset_id, script_id, status, started_by,
-        validation_window_minutes, validation_due_at, result_summary, log_id,
-        idempotency_key, observation_slot, active_key
-      )
-      VALUES ($1, $2, $3, $4, $5, 'observation_pending', $6, $7, $8, $9, $10, $11, $12, $13)
-      RETURNING *
-    `,
-    [
-      randomUUID(),
-      suggestion.id,
-      suggestion.alertId || null,
-      assetId,
-      script.id,
-      user?.id || null,
-      validationWindowMinutes,
-      validationDue.toISOString(),
-      "Validação preparada. Nenhum comando foi executado nesta versão.",
-      log.id,
-      activeKey,
-      observationSlot,
-      activeKey
-    ]
-  );
-  const validation = fromValidationRow({ ...validationResult.rows[0], script_name: script.name });
+    if (!validationInsert.rows[0]) {
+      const reusedValidation = await findActiveScriptValidationForSuggestion(suggestion.id, script.id, db);
+      const reusedLog = reusedValidation?.logId ? await findScriptLogById(reusedValidation.logId) : null;
+      return { suggestion, script, log: reusedLog, validation: reusedValidation, reused: true };
+    }
 
-  if (assetId) {
-    await addAssetHistory({
+    const log = await createScriptSimulationLog({
+      scriptId: script.id,
       assetId,
-      eventType: "script_validation_started",
-      message:
-        `Script '${script.name}' foi registrado na sugestão ${suggestion.id}. ` +
-        `Validação iniciada por ${userName}. Nenhum comando foi executado nesta versão.`,
-      oldValue: null,
-      newValue: `Janela: ${validationWindowMinutes} minuto(s). Validação prevista: ${validationDue.toISOString()}.`,
-      userId: user?.id || null,
-      userName,
+      alertId: suggestion.alertId,
+      suggestionId: suggestion.id,
+      mode: "prepared",
+      status: "observation_pending",
+      executedBy: user?.id || null,
+      notes,
+      rawLog,
+      parsedSummary: "Observação preparada. O sistema aguardará a janela configurada antes de reavaliar o aviso.",
+      errorDetected: false,
+      attentionRequired: false,
       db
     });
-  }
 
-  await addLog({
-    type: "script_validation_started",
-    message: `Validação de script preparada para sugestão de OS: ${script.name}.`,
-    userId: user?.id || null,
-    meta: {
-      suggestionId: suggestion.id,
-      alertId: suggestion.alertId,
-      assetId,
-      scriptId: script.id,
-      validationId: validation.id,
-      validationWindowMinutes
-    },
-    db
-  });
+    const validationResult = await db(
+      `
+        UPDATE script_validation_runs
+        SET log_id = $2,
+            updated_at = NOW()
+        WHERE id = $1
+        RETURNING *
+      `,
+      [validationInsert.rows[0].id, log.id]
+    );
+    const validation = fromValidationRow({ ...validationResult.rows[0], script_name: script.name });
 
-  return { suggestion, script, log, validation };
+    if (assetId) {
+      await addAssetHistory({
+        assetId,
+        eventType: "script_validation_started",
+        message:
+          `Script '${script.name}' foi registrado na sugestão ${suggestion.id}. ` +
+          `Validação iniciada por ${userName}. Nenhum comando foi executado nesta versão.`,
+        oldValue: null,
+        newValue: `Janela: ${validationWindowMinutes} minuto(s). Validação prevista: ${validationDue.toISOString()}.`,
+        userId: user?.id || null,
+        userName,
+        db
+      });
+    }
+
+    await addLog({
+      type: "script_validation_started",
+      message: `Validação de script preparada para sugestão de OS: ${script.name}.`,
+      userId: user?.id || null,
+      meta: {
+        suggestionId: suggestion.id,
+        alertId: suggestion.alertId,
+        assetId,
+        scriptId: script.id,
+        validationId: validation.id,
+        validationWindowMinutes
+      },
+      db
+    });
+
+    return { suggestion, script, log, validation };
   });
 }
-
-export async function refreshDueScriptValidations() {
+export async function refreshDueScriptValidations(options = {}) {
   const result = await query(`
     SELECT validations.*,
            scripts.name AS script_name,
@@ -1651,66 +1736,107 @@ export async function refreshDueScriptValidations() {
     ORDER BY validations.validation_due_at ASC
   `);
   const refreshed = [];
+  const summary = {
+    dueCount: result.rows.length,
+    updatedCount: 0,
+    resolvedCount: 0,
+    persistentCount: 0,
+    insufficientDataCount: 0,
+    failedValidationCount: 0,
+    failedValidations: [],
+    validations: refreshed
+  };
 
   for (const row of result.rows) {
-    let status = "insufficient_data";
-    let resultSummary = "Nao ha coleta suficiente para concluir a observacao. Nenhum comando foi executado.";
+    try {
+      let status = "insufficient_data";
+      let resultSummary = "Não há coleta suficiente para concluir a observação. Nenhum comando foi executado.";
 
-    if (row.alert_id && row.alert_status) {
-      if (row.alert_status === "resolved") {
-        status = "observed_resolved";
-        resultSummary = "O aviso nao voltou durante o periodo de observacao. Nao existe confirmacao de execucao do script.";
-      } else {
-        status = "observed_persistent";
-        resultSummary = "O aviso continuou ativo durante o periodo de observacao. Nenhum comando foi executado nesta versao.";
-      }
-    }
-
-    await withTransaction(async (db) => {
-      const updated = await db(
-        `
-          UPDATE script_validation_runs
-          SET status = $2,
-              finished_at = NOW(),
-              result_summary = $3,
-              active_key = NULL,
-              updated_at = NOW()
-          WHERE id = $1
-          RETURNING *
-        `,
-        [row.id, status, resultSummary]
-      );
-      const validation = fromValidationRow({ ...updated.rows[0], script_name: row.script_name });
-      refreshed.push(validation);
-
-      if (row.suggestion_id) {
-        await markSuggestionValidated({
-          id: row.suggestion_id,
-          status,
-          resultSummary,
-          validationId: row.id,
-          db
-        });
+      if (row.alert_id && row.alert_status) {
+        if (row.alert_status === "resolved") {
+          status = "observed_resolved";
+          resultSummary = "O aviso não voltou durante o período de observação. Não existe confirmação de execução do script.";
+        } else {
+          status = "observed_persistent";
+          resultSummary = "O aviso continuou ativo durante o período de observação. Nenhum comando foi executado nesta versão.";
+        }
       }
 
-      if (row.asset_id) {
-        await addAssetHistory({
-          assetId: row.asset_id,
-          eventType: "script_observation_finished",
+      await withTransaction(async (db) => {
+        const updated = await db(
+          `
+            UPDATE script_validation_runs
+            SET status = $2,
+                finished_at = NOW(),
+                result_summary = $3,
+                active_key = NULL,
+                updated_at = NOW()
+            WHERE id = $1
+              AND status IN ('waiting_agent', 'prepared', 'observation_pending', 'pending_validation')
+            RETURNING *
+          `,
+          [row.id, status, resultSummary]
+        );
+
+        if (!updated.rows[0]) return;
+
+        const validation = fromValidationRow({ ...updated.rows[0], script_name: row.script_name });
+        refreshed.push(validation);
+        summary.updatedCount += 1;
+        if (status === "observed_resolved") summary.resolvedCount += 1;
+        if (status === "observed_persistent") summary.persistentCount += 1;
+        if (status === "insufficient_data") summary.insufficientDataCount += 1;
+
+        if (row.suggestion_id) {
+          await markSuggestionValidated({
+            id: row.suggestion_id,
+            status,
+            resultSummary,
+            validationId: row.id,
+            db
+          });
+        }
+
+        if (row.asset_id) {
+          await addAssetHistory({
+            assetId: row.asset_id,
+            eventType: "script_observation_finished",
+            message: resultSummary,
+            oldValue: row.script_name || row.script_id,
+            newValue: status,
+            userId: row.started_by || null,
+            userName: "Sistema",
+            db
+          });
+        }
+
+        await addLog({
+          type: "script_observation_finished",
           message: resultSummary,
-          oldValue: row.script_name || row.script_id,
-          newValue: status,
           userId: row.started_by || null,
-          userName: "Sistema",
+          meta: {
+            validationId: row.id,
+            suggestionId: row.suggestion_id,
+            alertId: row.alert_id,
+            assetId: row.asset_id,
+            status
+          },
           db
         });
-      }
-    });
+      });
+    } catch (error) {
+      summary.failedValidationCount += 1;
+      summary.failedValidations.push({
+        validationId: row.id,
+        suggestionId: row.suggestion_id,
+        alertId: row.alert_id,
+        message: error.message
+      });
+    }
   }
 
-  return refreshed;
+  return options.summary ? summary : refreshed;
 }
-
 export async function cancelScriptValidation(id, user = null) {
   return await withTransaction(async (db) => {
   const result = await db(
