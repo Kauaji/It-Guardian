@@ -325,13 +325,30 @@
 - [x] Recorrencia tratada como dias, sem multiplicacao adicional.
 - [x] Calculo de proxima preparacao respeita `preferred_time` e `timezone`.
 - [x] `next_run_at` e ultimas preparacoes ficam persistidos no backend.
+- [x] Calendario individual por maquina criado em `preventive_automation_asset_schedules`.
+- [x] Preparacao agendada processa somente maquinas vencidas.
+- [x] Preparacao manual registra rotina sem alterar `next_run_at` das maquinas.
 - [x] Preparacao manual valida plano ativo, scripts ativos e escopo com maquinas.
 - [x] Preparacao duplicada na mesma janela e bloqueada por chave/indice idempotente.
 - [x] Excecoes seguem prioridade maquina > segmento > plano.
 - [x] Endpoint protegido `/api/preventive-automation-plans/process-due` criado para processar rotinas vencidas sem executar comandos.
+- [x] Endpoint cron protegido por `PREVENTIVE_CRON_SECRET` criado para processamento agendado.
 - [x] Testes automatizados cobrem recorrencia, fuso horario, prioridade de excecoes, idempotencia e ausencia de execucao de comandos.
 - [ ] Validar manualmente a tela de Automacao no navegador com usuario autenticado.
 - [ ] Validar manualmente permissoes de `preventive_automation.*` com usuario sem acesso.
+
+## Avisos - Estabilizacao final de sugestoes e scripts
+
+- [x] Sugestao persistente continua permitindo Criar OS, Recusar e selecionar novo script.
+- [x] `suggestion.status` foi separado dos campos de observacao do script.
+- [x] Observacao duplicada por sugestao/script e bloqueada no backend por chave ativa.
+- [x] Frontend desabilita o uso de script enquanto a observacao esta sendo registrada.
+- [x] Recomendacao preventiva usa backend em `/api/maintenance-scripts/recommendations`.
+- [x] Varredura de seguranca confirmou ausencia de `child_process`, `exec`, `spawn`, `eval` e `new Function` em `client/src` e `server/src`.
+- [x] `npm test` passou apos a estabilizacao final.
+- [x] `npm run build` passou apos a estabilizacao final.
+- [ ] Testar manualmente Criar OS apos `observed_persistent` em uma sessao autenticada.
+- [ ] Testar manualmente scheduler em ambiente com `PREVENTIVE_CRON_SECRET` configurado.
 
 ## Pendencias manuais restantes
 

@@ -261,6 +261,10 @@ function fromSuggestionRow(row) {
     ignoredUntil: row.ignored_until,
     rejectionSilenceUntil: row.rejection_silence_until,
     lastRejectedAt: row.last_rejected_at,
+    observationStatus: row.observation_status || "none",
+    observationResult: row.observation_result || "",
+    lastValidationId: row.last_validation_id || null,
+    lastObservationAt: row.last_observation_at || null,
     createdServiceOrderId: row.created_service_order_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at
@@ -815,16 +819,35 @@ export async function markSuggestionRejected({ id, userId, reason, silenceHours 
   return result.rows[0] ? fromSuggestionRow(result.rows[0]) : null;
 }
 
-export async function markSuggestionValidated({ id, status = "validated" }) {
-  const result = await query(
+function normalizeSuggestionStatusAfterObservation(currentStatus, observationStatus) {
+  if (currentStatus === "accepted" || currentStatus === "rejected") return currentStatus;
+  if (observationStatus === "observed_resolved") return "resolved";
+  return "pending";
+}
+
+export async function markSuggestionValidated({
+  id,
+  status = "validated",
+  resultSummary = "",
+  validationId = null,
+  db = query
+}) {
+  const current = await db("SELECT status FROM service_order_suggestions WHERE id = $1", [id]);
+  const currentStatus = current.rows[0]?.status || "pending";
+  const nextStatus = normalizeSuggestionStatusAfterObservation(currentStatus, status);
+  const result = await db(
     `
       UPDATE service_order_suggestions
       SET status = $2,
-          updated_at = NOW()
+          observation_status = $3,
+          observation_result = $4,
+          last_validation_id = COALESCE($5, last_validation_id),
+          last_observation_at = NOW(),
+           updated_at = NOW()
       WHERE id = $1
       RETURNING *
     `,
-    [id, status]
+    [id, nextStatus, status, resultSummary || null, validationId || null]
   );
 
   return result.rows[0] ? fromSuggestionRow(result.rows[0]) : null;

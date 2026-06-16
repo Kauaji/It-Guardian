@@ -381,6 +381,20 @@ Evitar VPN geral entre clientes. O coletor reduz exposicao e limita acesso a red
 - A permissao `preventive_plans.create_service_order` separa a acao de criar plano da acao de gerar OS preventiva.
 - Foi criado teste automatizado para impedir retorno de mojibake em `client/src`, `server/src` e `shared`.
 
+## Estabilizacao final de Avisos, Scripts e Automacao Preventiva
+
+- A automacao preventiva passou a manter calendario persistente por `plan_id + asset_id` em `preventive_automation_asset_schedules`.
+- A preparacao agendada atualiza apenas as maquinas vencidas; a preparacao manual gera registro extra e nao altera a agenda automatica.
+- O campo `trigger_type` diferencia preparacoes `scheduled`, `manual` e `administrative`.
+- Sugestoes de OS agora separam `status` operacional de `observation_status`, `observation_result`, `last_validation_id` e `last_observation_at`.
+- Problemas persistentes ou com dados insuficientes continuam acionaveis para Criar OS, Recusar ou selecionar outro script.
+- Observacoes de script usam chave ativa/idempotente para impedir duplicidade por sugestao e script.
+- Recomendacoes preventivas passaram a usar `POST /api/maintenance-scripts/recommendations` no backend.
+- O recomendador usa categoria tecnica, metricas, ativo, sistema operacional, tags e contexto da maquina sem misturar severidade com categoria.
+- O endpoint de scheduler protegido `POST /api/preventive-automation-plans/process-due/cron` exige `PREVENTIVE_CRON_SECRET`.
+- Nenhum fluxo executa BAT, CMD, PowerShell ou shell script; o sistema apenas registra, prepara e observa.
+- Limitacao restante: a modularizacao completa do `App.jsx` deve ser feita em uma etapa propria para reduzir risco visual.
+
 ## Proximos passos tecnicos
 
 1. Reforcar numeracao de OS com lock transacional/advisory lock quando houver multiplas instancias da API.

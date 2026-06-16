@@ -132,3 +132,12 @@ Essa etapa futura não foi implementada agora.
 - [x] Backend exige confirmação para simulação.
 - [x] Alto/crítico exige confirmação extra.
 - [x] Histórico e auditoria deixam claro que nenhum comando foi executado.
+
+## Estabilizacao final
+
+- Observacoes de script em Sugestoes de OS usam idempotencia por sugestao e script para evitar duplicidade.
+- O resultado da observacao fica separado do status principal da sugestao.
+- Problemas persistentes e dados insuficientes continuam acionaveis para criar OS ou testar nova observacao.
+- Recomendacoes de scripts preventivos passaram a ser calculadas no backend por `POST /api/maintenance-scripts/recommendations`.
+- A recomendacao considera categoria tecnica, metrica, tipo de ativo, sistema operacional, tags e contexto de grupo/segmento.
+- Nenhum script e executado pelo navegador ou servidor nesta fase.

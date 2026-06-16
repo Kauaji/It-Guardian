@@ -6,11 +6,14 @@ import {
   list,
   prepare,
   processDue,
+  processDueCron,
   update
 } from "../controllers/preventiveAutomationController.js";
 import { requireAuth, requirePermission } from "../middleware/authMiddleware.js";
 
 const router = Router();
+
+router.post("/process-due/cron", processDueCron);
 
 router.use(requireAuth);
 router.get("/", requirePermission("preventive_automation.view"), list);

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { query } from "../database.js";
+import { query, withTransaction } from "../database.js";
 import { addAssetHistory } from "./assetHistoryRepository.js";
 import {
   findAlertById,
@@ -9,6 +9,7 @@ import {
 } from "./alertRepository.js";
 import { addLog } from "./logRepository.js";
 import { addServiceOrderHistory } from "./serviceOrderRepository.js";
+import { listDevices } from "../services/monitoringService.js";
 
 export const scriptTypes = new Set(["bat", "cmd", "powershell", "shell", "other"]);
 export const riskLevels = new Set(["low", "medium", "high", "critical"]);
@@ -400,17 +401,25 @@ function normalizeTokenList(value) {
 }
 
 function buildRecommendationContext(context = {}) {
+  const tags = normalizeTokenList(context.tags);
+  const technicalCategory = context.technicalCategory || inferTechnicalCategory(context);
   const fields = [
     context.alertType,
     context.metric,
     context.category,
+    technicalCategory,
+    context.severity,
+    context.priority,
     context.title,
     context.description,
     context.probableCause,
     context.recommendedAction,
     context.problemType,
     context.assetType,
-    context.operatingSystem
+    context.operatingSystem,
+    context.segmentName,
+    context.groupName,
+    ...tags
   ];
   const text = normalizeComparableText(fields.filter(Boolean).join(" "));
 
@@ -420,10 +429,38 @@ function buildRecommendationContext(context = {}) {
     alertType: normalizeComparableText(context.alertType),
     metric: normalizeComparableText(context.metric),
     category: normalizeComparableText(context.category),
+    technicalCategory: normalizeComparableText(technicalCategory),
+    severity: normalizeComparableText(context.severity),
+    priority: normalizeComparableText(context.priority),
     problemType: normalizeComparableText(context.problemType),
     assetType: normalizeComparableText(context.assetType),
-    operatingSystem: normalizeComparableText(context.operatingSystem)
+    operatingSystem: normalizeComparableText(context.operatingSystem),
+    segmentName: normalizeComparableText(context.segmentName),
+    groupName: normalizeComparableText(context.groupName),
+    tags
   };
+}
+
+function inferTechnicalCategory(source = {}) {
+  const text = normalizeComparableText([
+    source.alertType,
+    source.metric,
+    source.title,
+    source.description,
+    source.problemType,
+    source.probableCause,
+    source.recommendedAction,
+    source.technicalCategory,
+    source.category
+  ].filter(Boolean).join(" "));
+
+  if (/(disco|disk|storage|hd|ssd)/.test(text)) return "Armazenamento";
+  if (/(ram|memoria|memory)/.test(text)) return "Memoria";
+  if (/(cpu|processador)/.test(text)) return "Processamento";
+  if (/(rede|network|ping|offline|indisponivel)/.test(text)) return "Rede";
+  if (/(impressora|printer)/.test(text)) return "Impressoras";
+  if (/(servico|service)/.test(text)) return "Servicos";
+  return source.technicalCategory || source.category || "";
 }
 
 function matchesContextValue(values, candidates) {
@@ -475,17 +512,29 @@ export function scoreMaintenanceScriptForContext(script = {}, context = {}) {
 
   const scriptCategory = normalizeComparableText(script.category);
   if (
-    normalized.category &&
-    (scriptCategory === normalized.category || recommendedForCategories.includes(normalized.category))
+    normalized.technicalCategory &&
+    (scriptCategory === normalized.technicalCategory || recommendedForCategories.includes(normalized.technicalCategory))
   ) {
     score += 25;
     reasons.push("categoria compatível");
   }
 
-  const tagMatches = tags.filter((tag) => tag && normalized.normalizedText.includes(tag));
+  const tagMatches = tags.filter((tag) =>
+    tag && (normalized.normalizedText.includes(tag) || normalized.tags.includes(tag))
+  );
   if (tagMatches.length) {
     score += tagMatches.length * 10;
     reasons.push(`tags relacionadas: ${tagMatches.slice(0, 3).join(", ")}`);
+  }
+
+  if (normalized.assetType && scriptFields.includes(normalized.assetType)) {
+    score += 20;
+    reasons.push("tipo de ativo compativel");
+  }
+
+  if (normalized.operatingSystem && scriptFields.includes(normalized.operatingSystem)) {
+    score += 20;
+    reasons.push("sistema operacional compativel");
   }
 
   const keywordMatches = [
@@ -675,6 +724,9 @@ function fromValidationRow(row) {
     finishedAt: row.finished_at,
     resultSummary: row.result_summary || "",
     logId: row.log_id,
+    idempotencyKey: row.idempotency_key || null,
+    observationSlot: row.observation_slot || null,
+    activeKey: row.active_key || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };
@@ -1089,6 +1141,7 @@ export async function updateMaintenanceScript(id, payload = {}) {
           requires_admin = $20,
           safe_preview = $21,
           variable_validation_status = $22,
+          active_key = NULL,
           updated_at = NOW()
       WHERE id = $1
       RETURNING *
@@ -1159,12 +1212,13 @@ export async function createScriptSimulationLog({
   suggestedSolution = "",
   requiresAdmin = null,
   requiresLoggedUser = null,
-  attentionRequired = null
+  attentionRequired = null,
+  db = query
 }) {
   const safeMode = simulationModes.has(mode) ? mode : "simulated";
   const interpreted = interpretScriptLogWithMetadata(rawLog, status);
   const hasError = errorDetected ?? interpreted.errorDetected;
-  const result = await query(
+  const result = await db(
     `
       INSERT INTO script_execution_logs (
         id, script_id, asset_id, service_order_id, alert_id, suggestion_id,
@@ -1240,7 +1294,8 @@ export async function registerMaintenanceScriptSimulation({ scriptId, payload = 
   const notes = trimString(payload.notes, maxLengths.notes);
   const mode = simulationModes.has(payload.mode) ? payload.mode : "simulated";
 
-  const log = await createScriptSimulationLog({
+  return await withTransaction(async (db) => {
+    const log = await createScriptSimulationLog({
     scriptId: script.id,
     assetId,
     serviceOrderId,
@@ -1248,7 +1303,8 @@ export async function registerMaintenanceScriptSimulation({ scriptId, payload = 
     mode,
     status: "registered",
     executedBy: user?.id || null,
-    notes
+    notes,
+    db
   });
 
   const userName = user?.name || "Usuário";
@@ -1269,7 +1325,8 @@ export async function registerMaintenanceScriptSimulation({ scriptId, payload = 
       oldValue: null,
       newValue: historySummary,
       userId: user?.id || null,
-      userName
+      userName,
+      db
     });
   }
 
@@ -1280,7 +1337,8 @@ export async function registerMaintenanceScriptSimulation({ scriptId, payload = 
       message: `Simulação de script registrada: ${script.name}. Nenhum comando foi executado.`,
       oldValue: null,
       newValue: historySummary,
-      user
+      user,
+      db
     });
   }
 
@@ -1295,10 +1353,12 @@ export async function registerMaintenanceScriptSimulation({ scriptId, payload = 
       alertId: alertId || null,
       mode,
       riskLevel
-    }
+    },
+    db
   });
 
-  return { log, script };
+    return { log, script };
+  });
 }
 
 export async function listScriptValidationsForSuggestion(suggestionId) {
@@ -1315,6 +1375,26 @@ export async function listScriptValidationsForSuggestion(suggestionId) {
   );
 
   return result.rows.map(fromValidationRow);
+}
+
+async function findActiveScriptValidationForSuggestion(suggestionId, scriptId, db = query) {
+  const result = await db(
+    `
+      SELECT validations.*,
+             scripts.name AS script_name
+      FROM script_validation_runs validations
+      LEFT JOIN maintenance_scripts scripts ON scripts.id = validations.script_id
+      WHERE validations.suggestion_id = $1
+        AND validations.script_id = $2
+        AND validations.active_key IS NOT NULL
+        AND validations.status IN ('waiting_agent', 'prepared', 'observation_pending', 'pending_validation')
+      ORDER BY validations.created_at DESC
+      LIMIT 1
+    `,
+    [suggestionId, scriptId]
+  );
+
+  return result.rows[0] ? fromValidationRow(result.rows[0]) : null;
 }
 
 function toRecommendedScriptResponse(script) {
@@ -1350,7 +1430,16 @@ export async function listRecommendedScriptsForSuggestion(suggestionId) {
   const context = {
     alertType: alert?.type || suggestion.suggestedProblemTypeId || "",
     metric: alert?.metric || "",
-    category: alert?.severity || suggestion.suggestedPriority || "",
+    category: "",
+    technicalCategory: inferTechnicalCategory({
+      alertType: alert?.type,
+      metric: alert?.metric,
+      title: suggestion.title || alert?.title,
+      description: suggestion.description || alert?.description,
+      problemType: suggestion.suggestedProblemTypeId
+    }),
+    severity: alert?.severity || "",
+    priority: suggestion.suggestedPriority || "",
     title: suggestion.title || alert?.title || "",
     description: suggestion.description || alert?.description || "",
     probableCause: suggestion.probableCause || "",
@@ -1367,6 +1456,45 @@ export async function listRecommendedScriptsForSuggestion(suggestionId) {
   };
 }
 
+export async function listRecommendedScriptsForContext(payload = {}) {
+  const [scripts, devices] = await Promise.all([
+    listMaintenanceScripts({ includeInactive: false }),
+    listDevices({})
+  ]);
+  const assetIds = new Set((Array.isArray(payload.assetIds) ? payload.assetIds : []).map(String));
+  const alerts = [];
+
+  for (const alertId of Array.isArray(payload.alertIds) ? payload.alertIds : []) {
+    const alert = await findAlertById(alertId);
+    if (alert) alerts.push(alert);
+  }
+
+  const assets = devices.filter((device) => assetIds.has(String(device.id)));
+  const primaryAsset = assets[0] || {};
+  const primaryAlert = alerts[0] || {};
+  const context = {
+    ...(payload.context || {}),
+    alertType: payload.context?.alertType || primaryAlert.type || "",
+    metric: payload.context?.metric || primaryAlert.metric || "",
+    technicalCategory: payload.context?.technicalCategory || inferTechnicalCategory(primaryAlert),
+    severity: payload.context?.severity || primaryAlert.severity || "",
+    title: payload.context?.title || primaryAlert.title || "",
+    description: payload.context?.description || primaryAlert.description || "",
+    assetType: payload.context?.assetType || primaryAsset.type || "",
+    operatingSystem: payload.context?.operatingSystem || primaryAsset.operatingSystem || "",
+    segmentName: payload.context?.segmentName || primaryAsset.segmentName || "",
+    groupName: payload.context?.groupName || primaryAsset.groupName || "",
+    tags: payload.context?.tags || []
+  };
+  const recommendations = recommendMaintenanceScripts(context, scripts);
+
+  return {
+    recommended: recommendations.recommended.map(toRecommendedScriptResponse),
+    others: recommendations.others.map(toRecommendedScriptResponse),
+    context
+  };
+}
+
 export async function useScriptFromSuggestion({ suggestionId, scriptId, payload = {}, user = null }) {
   const [suggestion, script, settings] = await Promise.all([
     findServiceOrderSuggestionById(suggestionId),
@@ -1379,7 +1507,7 @@ export async function useScriptFromSuggestion({ suggestionId, scriptId, payload 
     error.statusCode = 404;
     throw error;
   }
-  if (suggestion.status !== "pending") {
+  if (!["pending", "observed_persistent", "insufficient_data", "validation_cancelled"].includes(suggestion.status)) {
     const error = new Error("Apenas sugestões pendentes podem receber observação de script.");
     error.statusCode = 409;
     throw error;
@@ -1411,11 +1539,25 @@ export async function useScriptFromSuggestion({ suggestionId, scriptId, payload 
   const userName = user?.name || "Usuário";
   const notes = trimString(payload.notes, maxLengths.notes);
   const validationDue = new Date(Date.now() + validationWindowMinutes * 60000);
+  const activeKey = `${suggestion.id}:${script.id}`;
+  const observationSlot = `${suggestion.id}:${script.id}:active`;
+  const existingValidation = await findActiveScriptValidationForSuggestion(suggestion.id, script.id);
+  if (existingValidation) {
+    const existingLog = existingValidation.logId ? await findScriptLogById(existingValidation.logId) : null;
+    return { suggestion, script, log: existingLog, validation: existingValidation, reused: true };
+  }
   const rawLog = [
     "Uso preparado a partir de sugestão de OS.",
     "Nenhum comando foi executado pelo servidor ou navegador.",
     "Aguardando agente seguro/coleta futura para observação real."
   ].join("\n");
+
+  return await withTransaction(async (db) => {
+    const duplicatedValidation = await findActiveScriptValidationForSuggestion(suggestion.id, script.id, db);
+    if (duplicatedValidation) {
+      const duplicatedLog = duplicatedValidation.logId ? await findScriptLogById(duplicatedValidation.logId) : null;
+      return { suggestion, script, log: duplicatedLog, validation: duplicatedValidation, reused: true };
+    }
 
   const log = await createScriptSimulationLog({
     scriptId: script.id,
@@ -1429,16 +1571,18 @@ export async function useScriptFromSuggestion({ suggestionId, scriptId, payload 
     rawLog,
     parsedSummary: "Observação preparada. O sistema aguardará a janela configurada antes de reavaliar o aviso.",
     errorDetected: false,
-    attentionRequired: false
+    attentionRequired: false,
+    db
   });
 
-  const validationResult = await query(
+  const validationResult = await db(
     `
       INSERT INTO script_validation_runs (
         id, suggestion_id, alert_id, asset_id, script_id, status, started_by,
-        validation_window_minutes, validation_due_at, result_summary, log_id
+        validation_window_minutes, validation_due_at, result_summary, log_id,
+        idempotency_key, observation_slot, active_key
       )
-      VALUES ($1, $2, $3, $4, $5, 'observation_pending', $6, $7, $8, $9, $10)
+      VALUES ($1, $2, $3, $4, $5, 'observation_pending', $6, $7, $8, $9, $10, $11, $12, $13)
       RETURNING *
     `,
     [
@@ -1451,7 +1595,10 @@ export async function useScriptFromSuggestion({ suggestionId, scriptId, payload 
       validationWindowMinutes,
       validationDue.toISOString(),
       "Validação preparada. Nenhum comando foi executado nesta versão.",
-      log.id
+      log.id,
+      activeKey,
+      observationSlot,
+      activeKey
     ]
   );
   const validation = fromValidationRow({ ...validationResult.rows[0], script_name: script.name });
@@ -1466,7 +1613,8 @@ export async function useScriptFromSuggestion({ suggestionId, scriptId, payload 
       oldValue: null,
       newValue: `Janela: ${validationWindowMinutes} minuto(s). Validação prevista: ${validationDue.toISOString()}.`,
       userId: user?.id || null,
-      userName
+      userName,
+      db
     });
   }
 
@@ -1481,10 +1629,12 @@ export async function useScriptFromSuggestion({ suggestionId, scriptId, payload 
       scriptId: script.id,
       validationId: validation.id,
       validationWindowMinutes
-    }
+    },
+    db
   });
 
   return { suggestion, script, log, validation };
+  });
 }
 
 export async function refreshDueScriptValidations() {
@@ -1516,47 +1666,59 @@ export async function refreshDueScriptValidations() {
       }
     }
 
-    const updated = await query(
-      `
-        UPDATE script_validation_runs
-        SET status = $2,
-            finished_at = NOW(),
-            result_summary = $3,
-            updated_at = NOW()
-        WHERE id = $1
-        RETURNING *
-      `,
-      [row.id, status, resultSummary]
-    );
-    const validation = fromValidationRow({ ...updated.rows[0], script_name: row.script_name });
-    refreshed.push(validation);
+    await withTransaction(async (db) => {
+      const updated = await db(
+        `
+          UPDATE script_validation_runs
+          SET status = $2,
+              finished_at = NOW(),
+              result_summary = $3,
+              active_key = NULL,
+              updated_at = NOW()
+          WHERE id = $1
+          RETURNING *
+        `,
+        [row.id, status, resultSummary]
+      );
+      const validation = fromValidationRow({ ...updated.rows[0], script_name: row.script_name });
+      refreshed.push(validation);
 
-    if (row.suggestion_id) {
-      await markSuggestionValidated({ id: row.suggestion_id, status });
-    }
+      if (row.suggestion_id) {
+        await markSuggestionValidated({
+          id: row.suggestion_id,
+          status,
+          resultSummary,
+          validationId: row.id,
+          db
+        });
+      }
 
-    if (row.asset_id) {
-      await addAssetHistory({
-        assetId: row.asset_id,
-        eventType: "script_observation_finished",
-        message: resultSummary,
-        oldValue: row.script_name || row.script_id,
-        newValue: status,
-        userId: row.started_by || null,
-        userName: "Sistema"
-      });
-    }
+      if (row.asset_id) {
+        await addAssetHistory({
+          assetId: row.asset_id,
+          eventType: "script_observation_finished",
+          message: resultSummary,
+          oldValue: row.script_name || row.script_id,
+          newValue: status,
+          userId: row.started_by || null,
+          userName: "Sistema",
+          db
+        });
+      }
+    });
   }
 
   return refreshed;
 }
 
 export async function cancelScriptValidation(id, user = null) {
-  const result = await query(
+  return await withTransaction(async (db) => {
+  const result = await db(
     `
       UPDATE script_validation_runs
       SET status = 'validation_cancelled',
           finished_at = NOW(),
+          active_key = NULL,
           result_summary = 'Observação cancelada manualmente.',
           updated_at = NOW()
       WHERE id = $1
@@ -1575,7 +1737,13 @@ export async function cancelScriptValidation(id, user = null) {
   const validation = fromValidationRow(result.rows[0]);
 
   if (validation.suggestionId) {
-    await markSuggestionValidated({ id: validation.suggestionId, status: "validation_cancelled" });
+    await markSuggestionValidated({
+      id: validation.suggestionId,
+      status: "validation_cancelled",
+      resultSummary: "Observação cancelada manualmente.",
+      validationId: validation.id,
+      db
+    });
   }
 
   if (validation.assetId) {
@@ -1586,11 +1754,13 @@ export async function cancelScriptValidation(id, user = null) {
       oldValue: validation.status,
       newValue: "validation_cancelled",
       userId: user?.id || null,
-      userName: user?.name || null
+      userName: user?.name || null,
+      db
     });
   }
 
   return validation;
+  });
 }
 
 export async function listPendingScriptLogs() {
@@ -1666,7 +1836,8 @@ export async function applyScriptLogSuggestedSolution(id, payload = {}, user = n
       "Ação corretiva sugerida registrada para acompanhamento. Nenhum comando foi executado automaticamente.",
     maxLengths.notes
   );
-  const result = await query(
+  return await withTransaction(async (db) => {
+  const result = await db(
     `
       UPDATE script_execution_logs
       SET corrective_action_status = 'suggested_solution_registered',
@@ -1690,7 +1861,8 @@ export async function applyScriptLogSuggestedSolution(id, payload = {}, user = n
       oldValue: log.errorType || null,
       newValue: notes,
       userId: user?.id || null,
-      userName: user?.name || null
+      userName: user?.name || null,
+      db
     });
   }
 
@@ -1698,8 +1870,10 @@ export async function applyScriptLogSuggestedSolution(id, payload = {}, user = n
     type: "script_log_solution_registered",
     message: "Solução sugerida registrada para log de script. Nenhum comando foi executado.",
     userId: user?.id || null,
-    meta: { logId: id, suggestionId: log.suggestionId, assetId: log.assetId }
+    meta: { logId: id, suggestionId: log.suggestionId, assetId: log.assetId },
+    db
   });
 
   return fromLogRow(result.rows[0]);
+  });
 }

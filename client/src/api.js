@@ -327,6 +327,14 @@ export function fetchMaintenanceScripts(token, params = {}) {
   return apiFetch(`/maintenance-scripts${search ? `?${search}` : ""}`, { token });
 }
 
+export function fetchMaintenanceScriptRecommendations(token, payload = {}) {
+  return apiFetch("/maintenance-scripts/recommendations", {
+    token,
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
 export function analyzeMaintenanceScript(token, payload) {
   return apiFetch("/maintenance-scripts/analyze", {
     token,

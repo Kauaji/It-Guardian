@@ -3,6 +3,7 @@ import {
   analyze,
   create,
   list,
+  recommendedScriptsForContext,
   registerSimulation,
   remove,
   update
@@ -13,6 +14,7 @@ const router = Router();
 
 router.use(requireAuth);
 router.get("/", requirePermission("scripts.view"), list);
+router.post("/recommendations", requirePermission("scripts.view"), recommendedScriptsForContext);
 router.post("/analyze", requirePermission("scripts.manage"), analyze);
 router.post("/", requirePermission("scripts.manage"), create);
 router.patch("/:id", requirePermission("scripts.manage"), update);

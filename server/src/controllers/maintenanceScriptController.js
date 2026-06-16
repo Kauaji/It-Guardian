@@ -8,6 +8,7 @@ import {
   findScriptLogById,
   listMaintenanceScripts,
   listPendingScriptLogs,
+  listRecommendedScriptsForContext,
   listRecommendedScriptsForSuggestion,
   listScriptValidationsForSuggestion,
   registerMaintenanceScriptSimulation,
@@ -109,6 +110,14 @@ export async function suggestionValidations(req, res, next) {
 export async function suggestionRecommendedScripts(req, res, next) {
   try {
     res.json(await listRecommendedScriptsForSuggestion(req.params.id));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function recommendedScriptsForContext(req, res, next) {
+  try {
+    res.json(await listRecommendedScriptsForContext(req.body || {}));
   } catch (error) {
     next(error);
   }

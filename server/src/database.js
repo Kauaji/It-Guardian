@@ -599,6 +599,26 @@ export async function initializeDatabase() {
   `);
 
   await query(`
+    ALTER TABLE service_order_suggestions
+    ADD COLUMN IF NOT EXISTS observation_status TEXT NOT NULL DEFAULT 'none';
+  `);
+
+  await query(`
+    ALTER TABLE service_order_suggestions
+    ADD COLUMN IF NOT EXISTS observation_result TEXT;
+  `);
+
+  await query(`
+    ALTER TABLE service_order_suggestions
+    ADD COLUMN IF NOT EXISTS last_validation_id TEXT;
+  `);
+
+  await query(`
+    ALTER TABLE service_order_suggestions
+    ADD COLUMN IF NOT EXISTS last_observation_at TIMESTAMPTZ;
+  `);
+
+  await query(`
     CREATE TABLE IF NOT EXISTS maintenance_scripts (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -801,6 +821,26 @@ export async function initializeDatabase() {
   `);
 
   await query(`
+    ALTER TABLE script_validation_runs
+    ADD COLUMN IF NOT EXISTS idempotency_key TEXT;
+  `);
+
+  await query(`
+    ALTER TABLE script_validation_runs
+    ADD COLUMN IF NOT EXISTS observation_slot TEXT;
+  `);
+
+  await query(`
+    ALTER TABLE script_validation_runs
+    ADD COLUMN IF NOT EXISTS active_key TEXT;
+  `);
+
+  await query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_script_validation_active_key
+    ON script_validation_runs (active_key);
+  `);
+
+  await query(`
     CREATE TABLE IF NOT EXISTS preventive_plans (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -989,6 +1029,41 @@ export async function initializeDatabase() {
   await query(`
     ALTER TABLE preventive_automation_runs
     ADD COLUMN IF NOT EXISTS next_run_at TIMESTAMPTZ;
+  `);
+
+  await query(`
+    ALTER TABLE preventive_automation_runs
+    ADD COLUMN IF NOT EXISTS trigger_type TEXT NOT NULL DEFAULT 'scheduled';
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS preventive_automation_asset_schedules (
+      id TEXT PRIMARY KEY,
+      plan_id TEXT NOT NULL REFERENCES preventive_automation_plans(id) ON DELETE CASCADE,
+      asset_id TEXT NOT NULL,
+      recurrence_source TEXT NOT NULL DEFAULT 'plan',
+      recurrence_type TEXT NOT NULL DEFAULT 'monthly',
+      recurrence_interval INTEGER NOT NULL DEFAULT 30,
+      preferred_time TEXT NOT NULL DEFAULT '08:00',
+      timezone TEXT NOT NULL DEFAULT 'America/Sao_Paulo',
+      last_scheduled_at TIMESTAMPTZ,
+      last_prepared_at TIMESTAMPTZ,
+      next_run_at TIMESTAMPTZ,
+      active BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (plan_id, asset_id)
+    );
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_preventive_automation_asset_schedules_due
+    ON preventive_automation_asset_schedules (active, next_run_at);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_preventive_automation_asset_schedules_plan
+    ON preventive_automation_asset_schedules (plan_id);
   `);
 
   await query(`

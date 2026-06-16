@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { query } from "../database.js";
+import { query, withTransaction } from "../database.js";
 import { addAssetHistory } from "./assetHistoryRepository.js";
 import { addLog } from "./logRepository.js";
 import { findMaintenanceScriptById } from "./maintenanceScriptRepository.js";
@@ -84,16 +84,21 @@ export function defaultIntervalForType(type) {
   return recurrenceIntervalDefaults[normalizeRecurrenceType(type)] || recurrenceIntervalDefaults.monthly;
 }
 
-export function normalizeRecurrenceIntervalDays(value, type = "monthly") {
+export function normalizeRecurrenceIntervalDays(value, type = "monthly", options = {}) {
   const recurrenceType = normalizeRecurrenceType(type);
   if (recurrenceType !== "custom_days") {
     return defaultIntervalForType(recurrenceType);
   }
 
   const parsed = Number(value);
-  if (Number.isFinite(parsed) && parsed > 0) {
-    return Math.min(365, Math.round(parsed));
+  if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 365) {
+    return parsed;
   }
+
+  if (options.strict) {
+    throw createHttpError("Informe a quantidade de dias da recorrencia personalizada.", 400);
+  }
+
   return defaultIntervalForType(recurrenceType);
 }
 
@@ -283,6 +288,7 @@ function fromRunRow(row) {
     planId: row.plan_id,
     assetId: row.asset_id,
     status: row.status,
+    triggerType: row.trigger_type || "scheduled",
     scheduledFor: serializeTimestamp(row.scheduled_for),
     startedAt: serializeTimestamp(row.started_at),
     finishedAt: serializeTimestamp(row.finished_at),
@@ -300,6 +306,30 @@ function fromRunRow(row) {
   };
 }
 
+function fromAssetScheduleRow(row) {
+  if (!row) return null;
+  const recurrenceType = normalizeRecurrenceType(row.recurrence_type);
+  const recurrenceIntervalDays = normalizeRecurrenceIntervalDays(row.recurrence_interval, recurrenceType);
+
+  return {
+    id: row.id,
+    planId: row.plan_id,
+    assetId: row.asset_id,
+    recurrenceSource: row.recurrence_source || "plan",
+    recurrenceType,
+    recurrenceInterval: recurrenceIntervalDays,
+    recurrenceIntervalDays,
+    preferredTime: row.preferred_time || DEFAULT_PREFERRED_TIME,
+    timezone: row.timezone || DEFAULT_TIMEZONE,
+    lastScheduledAt: serializeTimestamp(row.last_scheduled_at),
+    lastPreparedAt: serializeTimestamp(row.last_prepared_at),
+    nextRunAt: serializeTimestamp(row.next_run_at),
+    active: row.active !== false,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
 function normalizeOverridePayload(item = {}) {
   const assetId = trimString(item.assetId, 120) || null;
   const segmentId = trimString(item.segmentId, 120) || null;
@@ -311,7 +341,11 @@ function normalizeOverridePayload(item = {}) {
     assetId,
     segmentId,
     recurrenceType,
-    recurrenceInterval: normalizeRecurrenceIntervalDays(item.recurrenceIntervalDays ?? item.recurrenceInterval, recurrenceType),
+    recurrenceInterval: normalizeRecurrenceIntervalDays(
+      item.recurrenceIntervalDays ?? item.recurrenceInterval,
+      recurrenceType,
+      { strict: recurrenceType === "custom_days" }
+    ),
     preferredTime: item.preferredTime ? normalizePreferredTime(item.preferredTime) : null,
     active: normalizeBoolean(item.active, true)
   };
@@ -339,7 +373,8 @@ function normalizePlanPayload(payload = {}, current = null) {
     recurrenceType,
     recurrenceInterval: normalizeRecurrenceIntervalDays(
       payload.recurrenceIntervalDays ?? payload.recurrenceInterval ?? current?.recurrenceIntervalDays ?? current?.recurrenceInterval,
-      recurrenceType
+      recurrenceType,
+      { strict: recurrenceType === "custom_days" }
     ),
     preferredTime: normalizePreferredTime(payload.preferredTime ?? current?.preferredTime),
     timezone: normalizeTimezone(payload.timezone ?? current?.timezone),
@@ -371,11 +406,11 @@ async function validateScripts(scriptIds, { requireAtLeastOne = true } = {}) {
   return scripts;
 }
 
-async function replaceOverrides(planId, overrides = []) {
-  await query("DELETE FROM preventive_automation_overrides WHERE plan_id = $1", [planId]);
+async function replaceOverrides(planId, overrides = [], db = query) {
+  await db("DELETE FROM preventive_automation_overrides WHERE plan_id = $1", [planId]);
 
   for (const override of overrides) {
-    await query(
+    await db(
       `
         INSERT INTO preventive_automation_overrides (
           id, plan_id, asset_id, segment_id, recurrence_type,
@@ -395,6 +430,113 @@ async function replaceOverrides(planId, overrides = []) {
       ]
     );
   }
+}
+
+async function listAssetSchedulesForPlan(planId, db = query) {
+  const result = await db(
+    `
+      SELECT *
+      FROM preventive_automation_asset_schedules
+      WHERE plan_id = $1
+      ORDER BY next_run_at ASC NULLS LAST, created_at ASC
+    `,
+    [planId]
+  );
+
+  return result.rows.map(fromAssetScheduleRow);
+}
+
+async function updatePlanNextRunFromAssetSchedules(planId, db = query) {
+  const result = await db(
+    `
+      SELECT MIN(next_run_at) AS next_run_at
+      FROM preventive_automation_asset_schedules
+      WHERE plan_id = $1
+        AND active = TRUE
+        AND next_run_at IS NOT NULL
+    `,
+    [planId]
+  );
+  const nextRunAt = serializeTimestamp(result.rows[0]?.next_run_at);
+
+  await db(
+    `
+      UPDATE preventive_automation_plans
+      SET next_run_at = $2,
+          updated_at = NOW()
+      WHERE id = $1
+    `,
+    [planId, nextRunAt]
+  );
+
+  return nextRunAt;
+}
+
+async function syncAssetSchedulesForPlan(plan, assets, db = query) {
+  const existingSchedules = await listAssetSchedulesForPlan(plan.id, db);
+  const existingByAsset = new Map(existingSchedules.map((schedule) => [String(schedule.assetId), schedule]));
+  const activeAssetIds = new Set(assets.map((asset) => String(asset.id)));
+  const scheduleAnchorAt = plan.scheduleAnchorAt || plan.createdAt || new Date().toISOString();
+
+  for (const asset of assets) {
+    const recurrence = resolveEffectiveRecurrence(plan, asset);
+    const existing = existingByAsset.get(String(asset.id));
+    const nextRunAt = existing?.nextRunAt || computeNextScheduledFor(
+      {
+        recurrenceType: recurrence.recurrenceType,
+        recurrenceInterval: recurrence.recurrenceIntervalDays,
+        preferredTime: recurrence.preferredTime || plan.preferredTime,
+        timezone: recurrence.timezone || plan.timezone
+      },
+      scheduleAnchorAt
+    );
+
+    await db(
+      `
+        INSERT INTO preventive_automation_asset_schedules (
+          id, plan_id, asset_id, recurrence_source, recurrence_type,
+          recurrence_interval, preferred_time, timezone, next_run_at, active
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE)
+        ON CONFLICT (plan_id, asset_id)
+        DO UPDATE SET recurrence_source = EXCLUDED.recurrence_source,
+                      recurrence_type = EXCLUDED.recurrence_type,
+                      recurrence_interval = EXCLUDED.recurrence_interval,
+                      preferred_time = EXCLUDED.preferred_time,
+                      timezone = EXCLUDED.timezone,
+                      active = TRUE,
+                      next_run_at = COALESCE(preventive_automation_asset_schedules.next_run_at, EXCLUDED.next_run_at),
+                      updated_at = NOW()
+      `,
+      [
+        existing?.id || randomUUID(),
+        plan.id,
+        asset.id,
+        recurrence.source,
+        recurrence.recurrenceType,
+        recurrence.recurrenceIntervalDays,
+        recurrence.preferredTime || plan.preferredTime,
+        recurrence.timezone || plan.timezone,
+        nextRunAt
+      ]
+    );
+  }
+
+  for (const schedule of existingSchedules) {
+    if (!activeAssetIds.has(String(schedule.assetId))) {
+      await db(
+        `
+          UPDATE preventive_automation_asset_schedules
+          SET active = FALSE,
+              updated_at = NOW()
+          WHERE id = $1
+        `,
+        [schedule.id]
+      );
+    }
+  }
+
+  return updatePlanNextRunFromAssetSchedules(plan.id, db);
 }
 
 async function ensurePlanRowSchedule(row) {
@@ -427,7 +569,7 @@ async function ensurePlanRowSchedule(row) {
 async function hydratePlan(plan) {
   if (!plan) return null;
 
-  const [overrideResult, runResult] = await Promise.all([
+  const [overrideResult, runResult, scheduleResult] = await Promise.all([
     query(
       `
         SELECT *
@@ -445,15 +587,26 @@ async function hydratePlan(plan) {
         ORDER BY created_at DESC
       `,
       [plan.id]
+    ),
+    query(
+      `
+        SELECT *
+        FROM preventive_automation_asset_schedules
+        WHERE plan_id = $1
+        ORDER BY next_run_at ASC NULLS LAST, created_at ASC
+      `,
+      [plan.id]
     )
   ]);
 
   const runs = runResult.rows.map(fromRunRow);
   const overrides = overrideResult.rows.map(fromOverrideRow);
+  const assetSchedules = scheduleResult.rows.map(fromAssetScheduleRow);
 
   return {
     ...plan,
     overrides,
+    assetSchedules,
     overrideCount: overrides.filter((override) => override.active !== false).length,
     latestRun: runs[0] || null,
     recentRuns: runs.slice(0, 10)
@@ -484,52 +637,57 @@ export async function findPreventiveAutomationPlanById(id) {
 export async function createPreventiveAutomationPlan(payload = {}, user = null) {
   const normalized = normalizePlanPayload(payload);
   await validateScripts(normalized.defaultScriptIds);
-  await validateScopeSelection(normalized);
+  const assets = await validateScopeSelection(normalized);
 
   const id = randomUUID();
   const scheduleAnchorAt = new Date().toISOString();
   const nextRunAt = computeNextScheduledFor(normalized, scheduleAnchorAt);
 
-  await query(
-    `
-      INSERT INTO preventive_automation_plans (
-        id, name, description, active, recurrence_type, recurrence_interval,
-        preferred_time, timezone, scope_type, scope_id, default_script_ids,
-        notes, last_scheduled_at, next_run_at, schedule_anchor_at, created_by
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-    `,
-    [
-      id,
-      normalized.name,
-      normalized.description,
-      normalized.active,
-      normalized.recurrenceType,
-      normalized.recurrenceInterval,
-      normalized.preferredTime,
-      normalized.timezone,
-      normalized.scopeType,
-      normalized.scopeId,
-      JSON.stringify(normalized.defaultScriptIds),
-      normalized.notes,
-      nextRunAt,
-      nextRunAt,
-      scheduleAnchorAt,
-      user?.id || null
-    ]
-  );
+  await withTransaction(async (db) => {
+    await db(
+      `
+        INSERT INTO preventive_automation_plans (
+          id, name, description, active, recurrence_type, recurrence_interval,
+          preferred_time, timezone, scope_type, scope_id, default_script_ids,
+          notes, last_scheduled_at, next_run_at, schedule_anchor_at, created_by
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+      `,
+      [
+        id,
+        normalized.name,
+        normalized.description,
+        normalized.active,
+        normalized.recurrenceType,
+        normalized.recurrenceInterval,
+        normalized.preferredTime,
+        normalized.timezone,
+        normalized.scopeType,
+        normalized.scopeId,
+        JSON.stringify(normalized.defaultScriptIds),
+        normalized.notes,
+        nextRunAt,
+        nextRunAt,
+        scheduleAnchorAt,
+        user?.id || null
+      ]
+    );
 
-  await replaceOverrides(id, normalized.overrides || []);
-  await addLog({
-    type: "preventive_automation_created",
-    message: `Automacao preventiva criada: ${normalized.name}. Rotina aguardando agente seguro.`,
-    userId: user?.id || null,
-    meta: {
-      preventiveAutomationPlanId: id,
-      scopeType: normalized.scopeType,
-      scopeId: normalized.scopeId,
-      nextRunAt
-    }
+    const overrides = normalized.overrides || [];
+    await replaceOverrides(id, overrides, db);
+    await syncAssetSchedulesForPlan({ ...normalized, id, overrides, scheduleAnchorAt, createdAt: scheduleAnchorAt }, assets, db);
+    await addLog({
+      type: "preventive_automation_created",
+      message: `Automacao preventiva criada: ${normalized.name}. Rotina aguardando agente seguro.`,
+      userId: user?.id || null,
+      meta: {
+        preventiveAutomationPlanId: id,
+        scopeType: normalized.scopeType,
+        scopeId: normalized.scopeId,
+        nextRunAt
+      },
+      db
+    });
   });
 
   return findPreventiveAutomationPlanById(id);
@@ -541,59 +699,63 @@ export async function updatePreventiveAutomationPlan(id, payload = {}, user = nu
 
   const normalized = normalizePlanPayload(payload, current);
   await validateScripts(normalized.defaultScriptIds);
-  await validateScopeSelection(normalized);
+  const assets = await validateScopeSelection(normalized);
 
   const scheduleAnchorAt = current.scheduleAnchorAt || new Date().toISOString();
   const nextRunAt = computeNextScheduledFor(normalized, new Date());
 
-  await query(
-    `
-      UPDATE preventive_automation_plans
-      SET name = $2,
-          description = $3,
-          active = $4,
-          recurrence_type = $5,
-          recurrence_interval = $6,
-          preferred_time = $7,
-          timezone = $8,
-          scope_type = $9,
-          scope_id = $10,
-          default_script_ids = $11,
-          notes = $12,
-          last_scheduled_at = $13,
-          next_run_at = $14,
-          schedule_anchor_at = COALESCE(schedule_anchor_at, $15),
-          updated_at = NOW()
-      WHERE id = $1
-    `,
-    [
-      id,
-      normalized.name,
-      normalized.description,
-      normalized.active,
-      normalized.recurrenceType,
-      normalized.recurrenceInterval,
-      normalized.preferredTime,
-      normalized.timezone,
-      normalized.scopeType,
-      normalized.scopeId,
-      JSON.stringify(normalized.defaultScriptIds),
-      normalized.notes,
-      nextRunAt,
-      nextRunAt,
-      scheduleAnchorAt
-    ]
-  );
+  await withTransaction(async (db) => {
+    await db(
+      `
+        UPDATE preventive_automation_plans
+        SET name = $2,
+            description = $3,
+            active = $4,
+            recurrence_type = $5,
+            recurrence_interval = $6,
+            preferred_time = $7,
+            timezone = $8,
+            scope_type = $9,
+            scope_id = $10,
+            default_script_ids = $11,
+            notes = $12,
+            last_scheduled_at = COALESCE(last_scheduled_at, $13),
+            next_run_at = COALESCE(next_run_at, $14),
+            schedule_anchor_at = COALESCE(schedule_anchor_at, $15),
+            updated_at = NOW()
+        WHERE id = $1
+      `,
+      [
+        id,
+        normalized.name,
+        normalized.description,
+        normalized.active,
+        normalized.recurrenceType,
+        normalized.recurrenceInterval,
+        normalized.preferredTime,
+        normalized.timezone,
+        normalized.scopeType,
+        normalized.scopeId,
+        JSON.stringify(normalized.defaultScriptIds),
+        normalized.notes,
+        nextRunAt,
+        nextRunAt,
+        scheduleAnchorAt
+      ]
+    );
 
-  if (normalized.overrides) {
-    await replaceOverrides(id, normalized.overrides);
-  }
-
-  await addLog({
-    type: "preventive_automation_updated",
-    message: `Automacao preventiva atualizada: ${normalized.name}.`,
-    userId: user?.id || null,
-    meta: { preventiveAutomationPlanId: id, nextRunAt }
+    const overrides = normalized.overrides || current.overrides || [];
+    if (normalized.overrides) {
+      await replaceOverrides(id, overrides, db);
+    }
+    await syncAssetSchedulesForPlan({ ...normalized, id, overrides, scheduleAnchorAt }, assets, db);
+    await addLog({
+      type: "preventive_automation_updated",
+      message: `Automacao preventiva atualizada: ${normalized.name}.`,
+      userId: user?.id || null,
+      meta: { preventiveAutomationPlanId: id, nextRunAt },
+      db
+    });
   });
 
   return findPreventiveAutomationPlanById(id);
@@ -603,21 +765,33 @@ export async function disablePreventiveAutomationPlan(id, user = null) {
   const current = await findPreventiveAutomationPlanById(id);
   if (!current) return null;
 
-  await query(
-    `
-      UPDATE preventive_automation_plans
-      SET active = FALSE,
-          updated_at = NOW()
-      WHERE id = $1
-    `,
-    [id]
-  );
+  await withTransaction(async (db) => {
+    await db(
+      `
+        UPDATE preventive_automation_plans
+        SET active = FALSE,
+            updated_at = NOW()
+        WHERE id = $1
+      `,
+      [id]
+    );
+    await db(
+      `
+        UPDATE preventive_automation_asset_schedules
+        SET active = FALSE,
+            updated_at = NOW()
+        WHERE plan_id = $1
+      `,
+      [id]
+    );
 
-  await addLog({
-    type: "preventive_automation_disabled",
-    message: `Automacao preventiva desativada: ${current.name}.`,
-    userId: user?.id || null,
-    meta: { preventiveAutomationPlanId: id }
+    await addLog({
+      type: "preventive_automation_disabled",
+      message: `Automacao preventiva desativada: ${current.name}.`,
+      userId: user?.id || null,
+      meta: { preventiveAutomationPlanId: id },
+      db
+    });
   });
 
   return findPreventiveAutomationPlanById(id);
@@ -713,8 +887,8 @@ export function buildRunIdempotencyKey(planId, assetId, scheduledFor) {
   return `${planId}:${assetId}:${serializeTimestamp(scheduledFor) || scheduledFor}`;
 }
 
-async function findExistingRun(planId, assetId, scheduledFor) {
-  const result = await query(
+async function findExistingRun(planId, assetId, scheduledFor, db = query) {
+  const result = await db(
     `
       SELECT *
       FROM preventive_automation_runs
@@ -728,8 +902,8 @@ async function findExistingRun(planId, assetId, scheduledFor) {
   return result.rows[0] ? fromRunRow(result.rows[0]) : null;
 }
 
-async function insertPreparedRun({ plan, asset, recurrence, scheduledFor, scripts, user }) {
-  const existingRun = await findExistingRun(plan.id, asset.id, scheduledFor);
+async function insertPreparedRun({ plan, asset, recurrence, scheduledFor, scripts, user, triggerType = "scheduled", db = query }) {
+  const existingRun = await findExistingRun(plan.id, asset.id, scheduledFor, db);
   if (existingRun) return { run: existingRun, created: false };
 
   const runId = randomUUID();
@@ -750,14 +924,15 @@ async function insertPreparedRun({ plan, asset, recurrence, scheduledFor, script
   const idempotencyKey = buildRunIdempotencyKey(plan.id, asset.id, scheduledFor);
 
   try {
-    const result = await query(
+    const result = await db(
       `
         INSERT INTO preventive_automation_runs (
           id, plan_id, asset_id, status, scheduled_for, started_at,
           finished_at, result, log_summary, error_detected, idempotency_key,
-          schedule_slot, recurrence_source, recurrence_interval, preferred_time, next_run_at
+          schedule_slot, recurrence_source, recurrence_interval, preferred_time, next_run_at,
+          trigger_type
         )
-        VALUES ($1, $2, $3, $4, $5, NOW(), NOW(), $6, $7, FALSE, $8, $9, $10, $11, $12, $13)
+        VALUES ($1, $2, $3, $4, $5, NOW(), NOW(), $6, $7, FALSE, $8, $9, $10, $11, $12, $13, $14)
         RETURNING *
       `,
       [
@@ -773,7 +948,8 @@ async function insertPreparedRun({ plan, asset, recurrence, scheduledFor, script
         recurrence.source,
         recurrence.recurrenceIntervalDays,
         recurrence.preferredTime || plan.preferredTime,
-        nextRunAt
+        nextRunAt,
+        triggerType
       ]
     );
 
@@ -783,13 +959,14 @@ async function insertPreparedRun({ plan, asset, recurrence, scheduledFor, script
       message: `Automacao preventiva '${plan.name}' preparada. Rotina aguardando agente seguro.`,
       newValue: logSummary,
       userId: user?.id || null,
-      userName: user?.name || user?.email || "Sistema"
+      userName: user?.name || user?.email || "Sistema",
+      db
     });
 
     return { run: fromRunRow(result.rows[0]), created: true };
   } catch (error) {
     if (error.code === "23505" || /unique/i.test(error.message || "")) {
-      const run = await findExistingRun(plan.id, asset.id, scheduledFor);
+      const run = await findExistingRun(plan.id, asset.id, scheduledFor, db);
       if (run) return { run, created: false };
     }
 
@@ -797,66 +974,149 @@ async function insertPreparedRun({ plan, asset, recurrence, scheduledFor, script
   }
 }
 
+async function listDueAssetSchedulesForPlan(planId, options = {}, db = query) {
+  const now = toValidDate(options.now || new Date()).toISOString();
+  const scheduleIds = Array.isArray(options.scheduleIds)
+    ? options.scheduleIds.map((item) => trimString(item, 120)).filter(Boolean)
+    : [];
+
+  if (scheduleIds.length) {
+    const placeholders = scheduleIds.map((_, index) => `$${index + 2}`).join(", ");
+    const result = await db(
+      `
+        SELECT *
+        FROM preventive_automation_asset_schedules
+        WHERE plan_id = $1
+          AND id IN (${placeholders})
+          AND active = TRUE
+        ORDER BY next_run_at ASC NULLS LAST, created_at ASC
+      `,
+      [planId, ...scheduleIds]
+    );
+    return result.rows.map(fromAssetScheduleRow);
+  }
+
+  const result = await db(
+    `
+      SELECT *
+      FROM preventive_automation_asset_schedules
+      WHERE plan_id = $1
+        AND active = TRUE
+        AND next_run_at IS NOT NULL
+        AND next_run_at <= $2
+      ORDER BY next_run_at ASC, created_at ASC
+    `,
+    [planId, now]
+  );
+
+  return result.rows.map(fromAssetScheduleRow);
+}
+
 export async function preparePreventiveAutomationPlan(id, user = null, options = {}) {
   const plan = await findPreventiveAutomationPlanById(id);
   if (!plan) return null;
 
   const { scripts, assets } = await validatePlanForPreparation(plan);
-  const scheduledFor = options.scheduledFor
-    ? normalizeScheduleSlot(options.scheduledFor)
-    : (plan.nextRunAt || computeNextScheduledFor(plan, new Date()));
+  const triggerType = options.triggerType || (options.scheduleIds ? "scheduled" : "manual");
+  const manualScheduledFor = normalizeScheduleSlot(options.scheduledFor || new Date());
+  const assetById = new Map(assets.map((asset) => [String(asset.id), asset]));
+  const dueSchedules = triggerType === "scheduled"
+    ? await listDueAssetSchedulesForPlan(plan.id, options)
+    : [];
+  const scheduledTargets = triggerType === "scheduled"
+    ? dueSchedules
+        .map((schedule) => ({ schedule, asset: assetById.get(String(schedule.assetId)) }))
+        .filter((item) => item.asset)
+    : assets.map((asset) => ({ asset, schedule: null }));
   const runs = [];
   let createdRuns = 0;
 
-  for (const asset of assets) {
-    const recurrence = resolveEffectiveRecurrence(plan, asset);
-    const { run, created } = await insertPreparedRun({
-      plan,
-      asset,
-      recurrence,
-      scheduledFor,
-      scripts,
-      user
-    });
-    runs.push(run);
-    if (created) createdRuns += 1;
+  if (triggerType === "scheduled" && !scheduledTargets.length) {
+    return {
+      preventiveAutomationPlan: plan,
+      runs,
+      preparedCount: 0,
+      skippedExistingCount: 0
+    };
   }
 
-  if (createdRuns > 0) {
-    const preparedAt = new Date().toISOString();
-    const nextRunAt =
-      runs.reduce((earliest, run) => {
-        const candidate = serializeTimestamp(run?.nextRunAt);
-        if (!candidate) return earliest;
-        if (!earliest) return candidate;
-        return new Date(candidate) < new Date(earliest) ? candidate : earliest;
-      }, null) || computeFollowingScheduledFor(plan, scheduledFor);
+  await withTransaction(async (db) => {
+    for (const target of scheduledTargets) {
+      const asset = target.asset;
+      const recurrence = target.schedule
+        ? {
+            recurrenceType: target.schedule.recurrenceType,
+            recurrenceIntervalDays: target.schedule.recurrenceIntervalDays,
+            preferredTime: target.schedule.preferredTime,
+            timezone: target.schedule.timezone,
+            source: target.schedule.recurrenceSource
+          }
+        : resolveEffectiveRecurrence(plan, asset);
+      const scheduledFor = triggerType === "scheduled"
+        ? normalizeScheduleSlot(target.schedule.nextRunAt)
+        : manualScheduledFor;
+      const { run, created } = await insertPreparedRun({
+        plan,
+        asset,
+        recurrence,
+        scheduledFor,
+        scripts,
+        user,
+        triggerType,
+        db
+      });
 
-    await query(
-      `
-        UPDATE preventive_automation_plans
-        SET last_prepared_at = $2,
-            last_scheduled_at = $3,
-            next_run_at = $4,
-            updated_at = NOW()
-        WHERE id = $1
-      `,
-      [plan.id, preparedAt, scheduledFor, nextRunAt]
-    );
+      runs.push(run);
+      if (created) createdRuns += 1;
 
-    await addLog({
-      type: "preventive_automation_prepared",
-      message: `Automacao preventiva preparada: ${plan.name}. Rotina aguardando agente seguro.`,
-      userId: user?.id || null,
-      meta: {
-        preventiveAutomationPlanId: plan.id,
-        assetCount: assets.length,
-        runCount: createdRuns,
-        scheduleSlot: scheduledFor,
-        nextRunAt
+      if (triggerType === "scheduled" && target.schedule) {
+        await db(
+          `
+            UPDATE preventive_automation_asset_schedules
+            SET last_scheduled_at = $2,
+                last_prepared_at = NOW(),
+                next_run_at = $3,
+                updated_at = NOW()
+            WHERE id = $1
+          `,
+          [target.schedule.id, scheduledFor, run.nextRunAt]
+        );
       }
-    });
-  }
+    }
+
+    if (createdRuns > 0) {
+      const preparedAt = new Date().toISOString();
+      const nextRunAt = triggerType === "scheduled"
+        ? await updatePlanNextRunFromAssetSchedules(plan.id, db)
+        : plan.nextRunAt;
+
+      await db(
+        `
+          UPDATE preventive_automation_plans
+          SET last_prepared_at = $2,
+              last_scheduled_at = CASE WHEN $5 = 'scheduled' THEN $3 ELSE last_scheduled_at END,
+              next_run_at = COALESCE($4, next_run_at),
+              updated_at = NOW()
+          WHERE id = $1
+        `,
+        [plan.id, preparedAt, triggerType === "scheduled" ? runs[0]?.scheduledFor : null, nextRunAt, triggerType]
+      );
+
+      await addLog({
+        type: triggerType === "scheduled" ? "preventive_automation_scheduled_prepared" : "preventive_automation_manual_prepared",
+        message: `Automacao preventiva preparada: ${plan.name}. Rotina aguardando agente seguro.`,
+        userId: user?.id || null,
+        meta: {
+          preventiveAutomationPlanId: plan.id,
+          assetCount: scheduledTargets.length,
+          runCount: createdRuns,
+          triggerType,
+          nextRunAt
+        },
+        db
+      });
+    }
+  });
 
   return {
     preventiveAutomationPlan: await findPreventiveAutomationPlanById(plan.id),
@@ -869,12 +1129,14 @@ export async function preparePreventiveAutomationPlan(id, user = null, options =
 export async function listDuePreventiveAutomationPlans(now = new Date()) {
   const result = await query(
     `
-      SELECT *
-      FROM preventive_automation_plans
-      WHERE active = TRUE
-        AND next_run_at IS NOT NULL
-        AND next_run_at <= $1
-      ORDER BY next_run_at ASC
+      SELECT DISTINCT plans.*
+      FROM preventive_automation_asset_schedules schedules
+      INNER JOIN preventive_automation_plans plans ON plans.id = schedules.plan_id
+      WHERE plans.active = TRUE
+        AND schedules.active = TRUE
+        AND schedules.next_run_at IS NOT NULL
+        AND schedules.next_run_at <= $1
+      ORDER BY plans.next_run_at ASC NULLS LAST, plans.created_at ASC
     `,
     [toValidDate(now).toISOString()]
   );
@@ -894,7 +1156,11 @@ export async function processDuePreventiveAutomationPlans(user = null) {
   let preparedRuns = 0;
 
   for (const plan of duePlans) {
-    const result = await preparePreventiveAutomationPlan(plan.id, user, { scheduledFor: plan.nextRunAt });
+    const dueSchedules = await listDueAssetSchedulesForPlan(plan.id);
+    const result = await preparePreventiveAutomationPlan(plan.id, user, {
+      triggerType: "scheduled",
+      scheduleIds: dueSchedules.map((schedule) => schedule.id)
+    });
     if (result) {
       results.push(result);
       if (result.preparedCount > 0) preparedPlans += 1;

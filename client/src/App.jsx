@@ -72,6 +72,7 @@ import {
   fetchAlerts,
   fetchDevice,
   fetchDevices,
+  fetchMaintenanceScriptRecommendations,
   fetchMaintenanceScripts,
   fetchPreventiveAutomationPlans,
   fetchPreventivePlans,
@@ -714,6 +715,25 @@ const suggestionStatusLabels = {
   validated: "Validada"
 };
 
+const actionableSuggestionStatuses = new Set([
+  "pending",
+  "observed_persistent",
+  "insufficient_data",
+  "validation_cancelled"
+]);
+
+function canCreateServiceOrderFromSuggestion(suggestion = {}) {
+  return actionableSuggestionStatuses.has(suggestion.status) && !suggestion.createdServiceOrderId;
+}
+
+function canRejectSuggestion(suggestion = {}) {
+  return actionableSuggestionStatuses.has(suggestion.status);
+}
+
+function canUseScriptOnSuggestion(suggestion = {}) {
+  return actionableSuggestionStatuses.has(suggestion.status);
+}
+
 const scriptValidationLabels = {
   pending_validation: "Aguardando observação",
   waiting_agent: "Aguardando agente seguro",
@@ -964,7 +984,7 @@ function AlertCenter({
     return new Date(right.updatedAt || right.createdAt).getTime() - new Date(left.updatedAt || left.createdAt).getTime();
   });
   const criticalAlerts = alerts.filter((alert) => alert.severity === "critical").length;
-  const pendingSuggestions = suggestions.filter((suggestion) => suggestion.status === "pending").length;
+  const pendingSuggestions = suggestions.filter(canCreateServiceOrderFromSuggestion).length;
   const acceptedSuggestions = suggestions.filter((suggestion) => suggestion.status === "accepted").length;
   const recurringAlerts = alerts.filter((alert) => (alert.occurrencesCount || 0) >= 3).length;
 
@@ -1811,6 +1831,7 @@ function AlertCenterV2({
   const [openScriptMenuSuggestionId, setOpenScriptMenuSuggestionId] = useState(null);
   const [scriptRecommendationsBySuggestion, setScriptRecommendationsBySuggestion] = useState({});
   const [loadingScriptRecommendationId, setLoadingScriptRecommendationId] = useState(null);
+  const [usingSuggestionScriptKey, setUsingSuggestionScriptKey] = useState("");
   const [priorityDraft, setPriorityDraft] = useState(() => normalizePrioritySettings(alertPrioritySettings));
   const [prioritySaving, setPrioritySaving] = useState(false);
   const [priorityColorsOpen, setPriorityColorsOpen] = useState(false);
@@ -1823,6 +1844,12 @@ function AlertCenterV2({
   const [selectedPreventiveAssets, setSelectedPreventiveAssets] = useState(() => new Set());
   const [selectedPreventiveScripts, setSelectedPreventiveScripts] = useState(() => new Set());
   const [expandedPreventiveScripts, setExpandedPreventiveScripts] = useState(() => new Set());
+  const [preventiveScriptRecommendations, setPreventiveScriptRecommendations] = useState({
+    recommended: [],
+    others: [],
+    loading: false,
+    error: ""
+  });
   const [preventivePlanName, setPreventivePlanName] = useState("Plano preventivo");
   const [preventiveSaving, setPreventiveSaving] = useState(false);
   const [preventiveServiceOrderSavingId, setPreventiveServiceOrderSavingId] = useState(null);
@@ -1921,7 +1948,7 @@ function AlertCenterV2({
     ? selectedSuggestionVisibleIndex
     : Math.max(0, suggestions.findIndex((suggestion) => suggestion.id === selectedSuggestionInfoId));
   const criticalAlerts = alerts.filter((alert) => alert.severity === "critical").length;
-  const pendingSuggestions = suggestions.filter((suggestion) => suggestion.status === "pending").length;
+  const pendingSuggestions = suggestions.filter(canCreateServiceOrderFromSuggestion).length;
   const acceptedSuggestions = suggestions.filter((suggestion) => suggestion.status === "accepted").length;
   const recurringAlerts = alerts.filter((alert) => (alert.occurrencesCount || 0) >= 3).length;
   const machinesAtRisk = new Set(
@@ -1934,6 +1961,11 @@ function AlertCenterV2({
   const resolvedAlerts = history.filter((alert) => alert.status === "resolved");
   const handledSuggestions = suggestions.filter((suggestion) => suggestion.status === "accepted" || suggestion.status === "rejected");
   const activeScripts = scripts.filter((script) => script.active !== false);
+  const selectedPreventiveAssetIds = useMemo(
+    () => Array.from(selectedPreventiveAssets).map(String).sort(),
+    [selectedPreventiveAssets]
+  );
+  const selectedPreventiveAssetKey = selectedPreventiveAssetIds.join("|");
   const canOpenSettings = canConfigureAlerts || canManageScripts;
   const priorityColorById = useMemo(
     () => ({
@@ -1958,6 +1990,47 @@ function AlertCenterV2({
     () => new Map(inventoryTabs.map((tab) => [String(tab.id), tab])),
     [inventoryTabs]
   );
+
+  useEffect(() => {
+    if (!token || !selectedPreventiveAssetIds.length) {
+      setPreventiveScriptRecommendations({ recommended: [], others: [], loading: false, error: "" });
+      return undefined;
+    }
+
+    let ignore = false;
+    setPreventiveScriptRecommendations((current) => ({
+      ...current,
+      loading: true,
+      error: ""
+    }));
+
+    fetchMaintenanceScriptRecommendations(token, {
+      assetIds: selectedPreventiveAssetIds,
+      context: { source: "preventive_plan" }
+    })
+      .then((result) => {
+        if (ignore) return;
+        setPreventiveScriptRecommendations({
+          recommended: result?.recommended || [],
+          others: result?.others || [],
+          loading: false,
+          error: ""
+        });
+      })
+      .catch((error) => {
+        if (ignore) return;
+        setPreventiveScriptRecommendations({
+          recommended: [],
+          others: scripts.filter((script) => script.active !== false),
+          loading: false,
+          error: error.message || "Não foi possível carregar recomendações."
+        });
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [token, selectedPreventiveAssetKey, scripts]);
 
   function findSuggestionDevice(suggestion) {
     if (suggestion.assetId && deviceById.has(String(suggestion.assetId))) {
@@ -2461,29 +2534,15 @@ function AlertCenterV2({
     return groups;
   }, new Map());
   const selectedPreventiveDevices = devices.filter((device) => selectedPreventiveAssets.has(device.id));
-  const preventiveContextText = [
-    ...selectedPreventiveDevices.flatMap((device) => {
-      const location = getDevicePreventiveLocation(device);
-      return [
-        device.name,
-        device.type,
-        device.assetType,
-        device.statusLabel,
-        location.groupName,
-        location.segmentName
-      ];
-    }),
-    ...alerts
-      .filter((alert) => {
-        const device = findAlertDevice(alert);
-        return device?.id && selectedPreventiveAssets.has(device.id);
-      })
-      .flatMap((alert) => [alert.type, alert.metric, alert.title, alert.category])
-  ].filter(Boolean).join(" ");
-  const recommendedPreventiveScripts = getRecommendedScriptsForContextV2(preventiveContextText);
+  const recommendedPreventiveScripts = preventiveScriptRecommendations.recommended || [];
+  const preventiveScriptBaseList = preventiveScriptRecommendations.others?.length
+    ? preventiveScriptRecommendations.others
+    : activeScripts;
   const orderedPreventiveScripts = [
     ...recommendedPreventiveScripts,
-    ...activeScripts.filter((script) => !recommendedPreventiveScripts.some((recommended) => recommended.id === script.id))
+    ...preventiveScriptBaseList.filter((script) =>
+      !recommendedPreventiveScripts.some((recommended) => recommended.id === script.id)
+    )
   ];
   const selectedPreventiveScriptList = activeScripts.filter((script) => selectedPreventiveScripts.has(script.id));
   const selectedPreventiveRiskList = selectedPreventiveScriptList.filter((script) =>
@@ -2596,6 +2655,8 @@ function AlertCenterV2({
   }
 
   async function handleUseSuggestionScript(suggestion, script) {
+    const scriptUseKey = `${suggestion.id}:${script.id}`;
+    if (usingSuggestionScriptKey === scriptUseKey) return;
     const baseConfirmation =
       "Esta ação apenas registrará o uso do script na sugestão e iniciará a observação. Nenhum comando será executado na máquina ou no servidor.";
     const highRisk = script.riskLevel === "high" || script.riskLevel === "critical";
@@ -2608,14 +2669,19 @@ function AlertCenterV2({
       if (!window.confirm(riskConfirmation)) return;
     }
 
-    await onUseSuggestionScript(suggestion.id, script.id, {
-      mode: "prepared",
-      confirmed: true,
-      riskAcknowledged: highRisk,
-      validationWindowMinutes: priorityDraft.scriptValidationWindowMinutes,
-      notes: `Script selecionado no card ${formatSuggestionCode(suggestion)}. Nenhum comando foi executado.`
-    });
-    setOpenScriptMenuSuggestionId(null);
+    setUsingSuggestionScriptKey(scriptUseKey);
+    try {
+      await onUseSuggestionScript(suggestion.id, script.id, {
+        mode: "prepared",
+        confirmed: true,
+        riskAcknowledged: highRisk,
+        validationWindowMinutes: priorityDraft.scriptValidationWindowMinutes,
+        notes: `Script selecionado no card ${formatSuggestionCode(suggestion)}. Nenhum comando foi executado.`
+      });
+      setOpenScriptMenuSuggestionId(null);
+    } finally {
+      setUsingSuggestionScriptKey("");
+    }
   }
 
   async function submitAlertComment(alertId) {
@@ -2917,20 +2983,24 @@ function AlertCenterV2({
                         <time>{formatDate(suggestion.createdAt)}</time>
                       </footer>
                       <div className="suggestion-actions">
-                        {canManageSuggestions && suggestion.status === "pending" && (
+                        {canManageSuggestions && (canCreateServiceOrderFromSuggestion(suggestion) || canRejectSuggestion(suggestion)) && (
                           <>
-                          <button type="button" className="primary-action compact-action" onClick={() => onAcceptSuggestion(suggestion.id)}>
-                            Criar OS
-                          </button>
-                          <button
-                            type="button"
-                            className="danger-action compact-action suggestion-reject-trigger"
-                            onClick={() => onRejectSuggestion(suggestion.id)}
-                            title="Recusar"
-                            aria-label="Recusar"
-                          >
-                            <XCircle size={15} />
-                          </button>
+                            {canCreateServiceOrderFromSuggestion(suggestion) && (
+                              <button type="button" className="primary-action compact-action" onClick={() => onAcceptSuggestion(suggestion.id)}>
+                                Criar OS
+                              </button>
+                            )}
+                            {canRejectSuggestion(suggestion) && (
+                              <button
+                                type="button"
+                                className="danger-action compact-action suggestion-reject-trigger"
+                                onClick={() => onRejectSuggestion(suggestion.id)}
+                                title="Recusar"
+                                aria-label="Recusar"
+                              >
+                                <XCircle size={15} />
+                              </button>
+                            )}
                           </>
                         )}
                         <button
@@ -2964,7 +3034,7 @@ function AlertCenterV2({
                             <AlertTriangle size={15} />
                           </button>
                         )}
-                        {canManageSuggestions && suggestion.status === "pending" && canViewScripts && (
+                        {canManageSuggestions && canUseScriptOnSuggestion(suggestion) && canViewScripts && (
                             <div className="suggestion-script-menu">
                               <button
                                 type="button"
@@ -2987,7 +3057,7 @@ function AlertCenterV2({
                                         <button
                                           key={script.id}
                                           type="button"
-                                          disabled={!canUseScriptsFromAlerts}
+                                          disabled={!canUseScriptsFromAlerts || usingSuggestionScriptKey === `${suggestion.id}:${script.id}`}
                                           onClick={() => handleUseSuggestionScript(suggestion, script)}
                                         >
                                           <span>{script.name}</span>
@@ -3003,7 +3073,7 @@ function AlertCenterV2({
                                         <button
                                           key={script.id}
                                           type="button"
-                                          disabled={!canUseScriptsFromAlerts}
+                                          disabled={!canUseScriptsFromAlerts || usingSuggestionScriptKey === `${suggestion.id}:${script.id}`}
                                           onClick={() => handleUseSuggestionScript(suggestion, script)}
                                         >
                                           <span>{script.name}</span>
@@ -3281,6 +3351,12 @@ function AlertCenterV2({
                       <h4>Verificações selecionáveis</h4>
                       <p>{recommendedPreventiveScripts.length ? "Recomendações aparecem primeiro." : "Selecione máquinas para melhorar as recomendações."}</p>
                     </div>
+                    {preventiveScriptRecommendations.loading && (
+                      <p className="empty">Carregando recomendações...</p>
+                    )}
+                    {preventiveScriptRecommendations.error && (
+                      <p className="empty">{preventiveScriptRecommendations.error}</p>
+                    )}
                     {orderedPreventiveScripts.map((script) => {
                       const selected = selectedPreventiveScripts.has(script.id);
                       const expanded = expandedPreventiveScripts.has(script.id);
@@ -3350,7 +3426,7 @@ function AlertCenterV2({
                     }
                     onClick={openPreventiveReview}
                   >
-                    {preventiveSaving ? "Executando..." : "Executar"}
+                    {preventiveSaving ? "Registrando..." : "Revisar preventiva"}
                   </button>
                 </aside>
                 )}
@@ -3455,7 +3531,7 @@ function AlertCenterV2({
                     onClick={confirmPreventivePlanRegistration}
                     disabled={preventiveSaving}
                   >
-                    {preventiveSaving ? "Executando..." : "Executar"}
+                    {preventiveSaving ? "Registrando..." : "Registrar preventiva"}
                   </button>
                 </footer>
               </section>
