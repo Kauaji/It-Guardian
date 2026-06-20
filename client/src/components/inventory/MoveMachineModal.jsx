@@ -1,6 +1,20 @@
 import { X } from "lucide-react";
+import { useEffect } from "react";
 
 export default function MoveMachineModal({ machine, segments, targetSegmentId, onTargetChange, onClose, onConfirm }) {
+  useEffect(() => {
+    if (!machine) return undefined;
+
+    function handleKeydown(event) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeydown);
+    return () => window.removeEventListener("keydown", handleKeydown);
+  }, [machine, onClose]);
+
   if (!machine) {
     return null;
   }

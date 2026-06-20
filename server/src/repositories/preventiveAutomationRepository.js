@@ -10,6 +10,7 @@ const scopeTypes = new Set(["asset", "segment", "group", "all"]);
 const runStatuses = new Set(["scheduled", "prepared", "waiting_agent", "success", "error", "cancelled", "skipped"]);
 const DEFAULT_TIMEZONE = "America/Sao_Paulo";
 const DEFAULT_PREFERRED_TIME = "08:00";
+const DEFAULT_INDICATOR_COLOR = "#1f7a61";
 
 export const recurrenceIntervalDefaults = {
   daily: 1,
@@ -28,6 +29,11 @@ function createHttpError(message, statusCode = 400) {
 function trimString(value, maxLength = 1000, fallback = "") {
   const text = String(value ?? "").trim();
   return text ? text.slice(0, maxLength) : fallback;
+}
+
+function normalizeIndicatorColor(value, fallback = DEFAULT_INDICATOR_COLOR) {
+  const color = String(value || "").trim();
+  return /^#[0-9a-f]{6}$/i.test(color) ? color.toLowerCase() : fallback;
 }
 
 function normalizeBoolean(value, fallback = true) {
@@ -251,6 +257,7 @@ function fromPlanRow(row) {
     scopeId: row.scope_id,
     defaultScriptIds: parseJsonArray(row.default_script_ids),
     notes: row.notes || "",
+    indicatorColor: normalizeIndicatorColor(row.indicator_color),
     lastScheduledAt: serializeTimestamp(row.last_scheduled_at),
     lastPreparedAt: serializeTimestamp(row.last_prepared_at),
     lastRunAt: serializeTimestamp(row.last_run_at),
@@ -387,6 +394,7 @@ function normalizePlanPayload(payload = {}, current = null) {
     scopeId,
     defaultScriptIds,
     notes: trimString(payload.notes ?? current?.notes, 1000),
+    indicatorColor: normalizeIndicatorColor(payload.indicatorColor ?? current?.indicatorColor),
     overrides: Array.isArray(payload.overrides)
       ? payload.overrides.map(normalizeOverridePayload).filter(Boolean)
       : undefined
@@ -754,9 +762,9 @@ export async function createPreventiveAutomationPlan(payload = {}, user = null) 
         INSERT INTO preventive_automation_plans (
           id, name, description, active, recurrence_type, recurrence_interval,
           preferred_time, timezone, scope_type, scope_id, default_script_ids,
-          notes, last_scheduled_at, next_run_at, schedule_anchor_at, created_by
+          notes, indicator_color, last_scheduled_at, next_run_at, schedule_anchor_at, created_by
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
       `,
       [
         id,
@@ -771,6 +779,7 @@ export async function createPreventiveAutomationPlan(payload = {}, user = null) 
         normalized.scopeId,
         JSON.stringify(normalized.defaultScriptIds),
         normalized.notes,
+        normalized.indicatorColor,
         nextRunAt,
         nextRunAt,
         scheduleAnchorAt,
@@ -824,9 +833,10 @@ export async function updatePreventiveAutomationPlan(id, payload = {}, user = nu
             scope_id = $10,
             default_script_ids = $11,
             notes = $12,
-            last_scheduled_at = COALESCE(last_scheduled_at, $13),
-            next_run_at = COALESCE(next_run_at, $14),
-            schedule_anchor_at = COALESCE(schedule_anchor_at, $15),
+            indicator_color = $13,
+            last_scheduled_at = COALESCE(last_scheduled_at, $14),
+            next_run_at = COALESCE(next_run_at, $15),
+            schedule_anchor_at = COALESCE(schedule_anchor_at, $16),
             updated_at = NOW()
         WHERE id = $1
       `,
@@ -843,6 +853,7 @@ export async function updatePreventiveAutomationPlan(id, payload = {}, user = nu
         normalized.scopeId,
         JSON.stringify(normalized.defaultScriptIds),
         normalized.notes,
+        normalized.indicatorColor,
         nextRunAt,
         nextRunAt,
         scheduleAnchorAt

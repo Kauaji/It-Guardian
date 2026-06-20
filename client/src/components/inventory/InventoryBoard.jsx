@@ -59,6 +59,7 @@ export default function InventoryBoard({
   onToggleSelection,
   groups = [],
   onSelectGroup,
+  onSelectSegment,
   onCreateGroup,
   onRenameGroup,
   onDeleteGroup,
@@ -88,7 +89,10 @@ export default function InventoryBoard({
   const [selectedMachine, setSelectedMachine] = useState(null);
   const [activePopoverId, setActivePopoverId] = useState(null);
   const [searchFocused, setSearchFocused] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [selectedSegmentIds, setSelectedSegmentIds] = useState(new Set());
+  const maintenanceSegment = segments.find((segment) => /manuten/i.test(segment.name || ""));
+  const backupSegment = segments.find((segment) => segment.isBackupSegment || /backup/i.test(segment.name || ""));
   const segmentGroupIdMap = useMemo(() => {
     const next = new Map();
 
@@ -245,8 +249,35 @@ export default function InventoryBoard({
               placeholder="Buscar maquina, IP, sistema ou segmento"
             />
           </div>
+          <button
+            type="button"
+            className={`inventory-filter-toggle ${filtersOpen ? "active" : ""}`}
+            onClick={() => setFiltersOpen((current) => !current)}
+            aria-expanded={filtersOpen}
+            aria-label="Filtros do inventário"
+            title="Filtros do inventário"
+          >
+            <ListFilter size={18} />
+            <span>Filtros</span>
+            <ChevronDown size={16} />
+          </button>
+          {filtersOpen && (
+          <div className="inventory-filter-panel open" aria-label="Filtros do inventário">
+          <div className="group-filter-control expanded-filter" title="Filtrar por aba">
+            <span>Aba</span>
+            <select
+              className="group-filter-select"
+              value={activeTabId}
+              onChange={(event) => onSelectTab?.(event.target.value)}
+              aria-label="Filtrar por aba"
+            >
+              {tabs.map((tab) => (
+                <option key={tab.id} value={tab.id}>{tab.name}</option>
+              ))}
+            </select>
+          </div>
           <div className="group-filter-control" title="Filtrar por grupo">
-            <ListFilter size={17} aria-hidden="true" />
+            <span>Grupo</span>
             <select
               className="group-filter-select"
               value={selectedGroupId}
@@ -260,6 +291,40 @@ export default function InventoryBoard({
               ))}
             </select>
           </div>
+          <div className="group-filter-control" title="Filtrar por segmento">
+            <span>Segmento</span>
+            <select
+              className="group-filter-select"
+              value={selectedSegmentId}
+              onChange={(event) => onSelectSegment?.(event.target.value)}
+              aria-label="Filtrar por segmento"
+            >
+              <option value="all">Todos os segmentos</option>
+              {segments.map((segment) => (
+                <option key={segment.id} value={segment.id}>{segment.name}</option>
+              ))}
+            </select>
+          </div>
+          {backupSegment && (
+            <button
+              type="button"
+              className={`group-filter-control inventory-filter-chip ${selectedSegmentId === backupSegment.id ? "active" : ""}`}
+              onClick={() => onSelectSegment?.(selectedSegmentId === backupSegment.id ? "all" : backupSegment.id)}
+            >
+              Backup
+            </button>
+          )}
+          {maintenanceSegment && (
+            <button
+              type="button"
+              className={`group-filter-control inventory-filter-chip ${selectedSegmentId === maintenanceSegment.id ? "active" : ""}`}
+              onClick={() => onSelectSegment?.(selectedSegmentId === maintenanceSegment.id ? "all" : maintenanceSegment.id)}
+            >
+              Manutenção
+            </button>
+          )}
+          </div>
+          )}
           {canManage && (
             <div className="inventory-create-actions">
               <button className="primary-action compact-action" onClick={onCreateManualAsset}>

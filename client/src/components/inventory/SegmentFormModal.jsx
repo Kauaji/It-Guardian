@@ -20,6 +20,19 @@ export default function SegmentFormModal({
     setGroupId(selectedGroupId || segment?.groupId || "");
   }, [segment, selectedGroupId]);
 
+  useEffect(() => {
+    if (!mode) return undefined;
+
+    function handleKeydown(event) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeydown);
+    return () => window.removeEventListener("keydown", handleKeydown);
+  }, [mode, onClose]);
+
   const normalizedName = name.trim().toLowerCase();
   const selectedGroupForValidation = groupId || "";
   const duplicateName = useMemo(

@@ -8,6 +8,19 @@ export default function InventoryTabFormModal({ tab, tabs = [], onClose, onSubmi
     setName(tab?.name || "");
   }, [tab]);
 
+  useEffect(() => {
+    if (!tab) return undefined;
+
+    function handleKeydown(event) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeydown);
+    return () => window.removeEventListener("keydown", handleKeydown);
+  }, [tab, onClose]);
+
   const cleanName = name.trim();
   const duplicateName = useMemo(
     () =>

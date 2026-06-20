@@ -275,6 +275,19 @@ export default function MachineDetailsModal({
     }
   }, [activeTab, visibleTabs]);
 
+  useEffect(() => {
+    if (!machine) return undefined;
+
+    function handleKeydown(event) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeydown);
+    return () => window.removeEventListener("keydown", handleKeydown);
+  }, [machine, onClose]);
+
   if (!machine) return null;
 
   return (

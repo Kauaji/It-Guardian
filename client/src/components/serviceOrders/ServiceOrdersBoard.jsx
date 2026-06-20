@@ -506,6 +506,26 @@ export default function ServiceOrdersBoard({
   }, [settingsOpen]);
 
   useEffect(() => {
+    const dialogOpen = formOpen || settingsOpen || Boolean(selectedOrderCurrent);
+    if (!dialogOpen) return undefined;
+
+    function handleDialogKeydown(event) {
+      if (event.key !== "Escape") return;
+
+      if (selectedOrderCurrent) {
+        setSelectedOrder(null);
+      } else if (formOpen) {
+        setFormOpen(false);
+      } else if (settingsOpen) {
+        setSettingsOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", handleDialogKeydown);
+    return () => window.removeEventListener("keydown", handleDialogKeydown);
+  }, [formOpen, selectedOrderCurrent, settingsOpen]);
+
+  useEffect(() => {
     if (monthFilter) {
       setMonthPickerYear(Number(monthFilter.slice(0, 4)));
     } else if (availableYears.length) {

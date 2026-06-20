@@ -23,6 +23,19 @@ export default function ManualAssetForm({ open, saving, onClose, onSubmit }) {
     if (open) setForm(initialForm);
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return undefined;
+
+    function handleKeydown(event) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeydown);
+    return () => window.removeEventListener("keydown", handleKeydown);
+  }, [open, onClose]);
+
   if (!open) return null;
 
   function update(field, value) {

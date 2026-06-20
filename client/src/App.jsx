@@ -813,6 +813,22 @@ function formatAlertThreshold(alert) {
   return String(alert.threshold);
 }
 
+const percentThresholdAlertTypes = new Set(["cpu_high", "ram_high", "disk_high", "disk_health_low", "network_high"]);
+const thresholdlessAlertTypes = new Set(["machine_offline", "ping_failure", "service_unavailable"]);
+const durationlessAlertTypes = new Set(["disk_health_low", "machine_offline", "ping_failure", "service_unavailable"]);
+
+function isPercentThresholdRule(rule) {
+  return percentThresholdAlertTypes.has(rule?.type);
+}
+
+function isThresholdDisabled(rule) {
+  return thresholdlessAlertTypes.has(rule?.type);
+}
+
+function isDurationDisabled(rule) {
+  return durationlessAlertTypes.has(rule?.type);
+}
+
 const alertCategoryByType = {
   ram_high: "Desempenho",
   cpu_high: "Desempenho",
@@ -1258,6 +1274,24 @@ const preventiveAutomationScopeLabels = {
   group: "Grupo"
 };
 
+const preventiveAutomationColorOptions = ["#1f7a61", "#2563eb", "#7c3aed", "#d97706", "#dc2626", "#0f766e"];
+
+const preventiveAutomationTimezoneOptions = [
+  "America/Sao_Paulo",
+  "America/Manaus",
+  "America/Belem",
+  "America/Fortaleza",
+  "America/Recife",
+  "America/Cuiaba",
+  "America/Campo_Grande",
+  "America/Rio_Branco",
+  "UTC"
+];
+
+function normalizeAutomationColor(color, fallback = "#1f7a61") {
+  return /^#[0-9a-f]{6}$/i.test(String(color || "").trim()) ? String(color).trim().toLowerCase() : fallback;
+}
+
 function getDefaultRecurrenceInterval(type) {
   if (type === "daily") return 1;
   if (type === "weekly") return 7;
@@ -1270,6 +1304,7 @@ function getPlanRecurrenceIntervalDays(plan) {
 }
 
 function PreventiveAutomationPanel({
+  variant = "standalone",
   plans = [],
   scripts = [],
   devices = [],
@@ -1280,9 +1315,11 @@ function PreventiveAutomationPanel({
   canUpdate,
   canDisable,
   canPrepare,
+  createRequest = null,
   onSave,
   onDisable,
-  onPrepare
+  onPrepare,
+  onCreateRequestHandled
 }) {
   const emptyForm = {
     id: null,
@@ -1297,10 +1334,14 @@ function PreventiveAutomationPanel({
     scopeId: "",
     defaultScriptIds: [],
     notes: "",
+    indicatorColor: "#1f7a61",
     overrides: []
   };
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const [wizardMode, setWizardMode] = useState(false);
+  const [reviewMode, setReviewMode] = useState(false);
+  const [wizardContext, setWizardContext] = useState(null);
   const [overrideDraft, setOverrideDraft] = useState({
     targetType: "segment",
     targetId: "",
@@ -1312,7 +1353,28 @@ function PreventiveAutomationPanel({
   const [preparingId, setPreparingId] = useState(null);
   const [togglingId, setTogglingId] = useState(null);
   const [overridesOpen, setOverridesOpen] = useState(false);
+  const lastCreateRequestId = useRef(null);
   const activeScripts = scripts.filter((script) => script.active !== false);
+
+  useEffect(() => {
+    if (!modalOpen) return undefined;
+
+    function handleKeydown(event) {
+      if (event.key === "Escape") {
+        setModalOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeydown);
+    return () => window.removeEventListener("keydown", handleKeydown);
+  }, [modalOpen]);
+
+  useEffect(() => {
+    if (!createRequest?.id || lastCreateRequestId.current === createRequest.id) return;
+    lastCreateRequestId.current = createRequest.id;
+    openCreateModal(createRequest.defaults || {}, { wizard: true });
+    onCreateRequestHandled?.(createRequest.id);
+  }, [createRequest, onCreateRequestHandled]);
 
   function getScopeOptions(type) {
     if (type === "asset") {
@@ -1354,8 +1416,63 @@ function PreventiveAutomationPanel({
     return `${targetName}: ${targetLabel} • ${getRecurrenceShortLabel(item)}`;
   }
 
-  function openCreateModal() {
-    setForm(emptyForm);
+  function buildAutomationPayload() {
+    const recurrenceInterval = form.recurrenceType === "custom_days"
+      ? Number(form.recurrenceInterval)
+      : getDefaultRecurrenceInterval(form.recurrenceType);
+
+    return {
+      name: form.name,
+      description: form.description,
+      active: form.active,
+      recurrenceType: form.recurrenceType,
+      recurrenceInterval,
+      recurrenceIntervalDays: recurrenceInterval,
+      preferredTime: form.preferredTime,
+      timezone: form.timezone,
+      scopeType: form.scopeType,
+      scopeId: form.scopeType === "all" ? null : form.scopeId,
+      defaultScriptIds: form.defaultScriptIds,
+      notes: form.notes,
+      indicatorColor: normalizeAutomationColor(form.indicatorColor),
+      overrides: (form.overrides || []).map((item) => ({
+        assetId: item.assetId || null,
+        segmentId: item.segmentId || null,
+        recurrenceType: item.recurrenceType,
+        recurrenceInterval: Number(item.recurrenceInterval || 30),
+        recurrenceIntervalDays: Number(item.recurrenceIntervalDays || item.recurrenceInterval || getDefaultRecurrenceInterval(item.recurrenceType)),
+        preferredTime: item.preferredTime || null,
+        active: item.active !== false
+      }))
+    };
+  }
+
+  function openCreateModal(defaults = {}, options = {}) {
+    const { context = null, ...formDefaults } = defaults;
+    const nextWizardMode = options.wizard || defaults.wizardMode === true;
+    setWizardMode(nextWizardMode);
+    setReviewMode(false);
+    setWizardContext(context);
+    setForm((current) => {
+      const shouldPreserveWizardDraft =
+        nextWizardMode &&
+        wizardMode &&
+        wizardContext?.selectionKey &&
+        context?.selectionKey &&
+        wizardContext.selectionKey === context.selectionKey;
+
+      const base = shouldPreserveWizardDraft ? current : emptyForm;
+
+      return {
+        ...base,
+        ...formDefaults,
+        id: null,
+        active: formDefaults.active ?? base.active ?? true,
+        defaultScriptIds: Array.isArray(formDefaults.defaultScriptIds) ? formDefaults.defaultScriptIds : base.defaultScriptIds || [],
+        overrides: Array.isArray(formDefaults.overrides) ? formDefaults.overrides : base.overrides || [],
+        indicatorColor: normalizeAutomationColor(formDefaults.indicatorColor || base.indicatorColor)
+      };
+    });
     setOverridesOpen(false);
     setOverrideDraft({
       targetType: "segment",
@@ -1368,6 +1485,9 @@ function PreventiveAutomationPanel({
   }
 
   function openEditModal(plan) {
+    setWizardMode(false);
+    setReviewMode(false);
+    setWizardContext(null);
     setForm({
       id: plan.id,
       name: plan.name || "",
@@ -1381,6 +1501,7 @@ function PreventiveAutomationPanel({
       scopeId: plan.scopeId || "",
       defaultScriptIds: Array.isArray(plan.defaultScriptIds) ? plan.defaultScriptIds : [],
       notes: plan.notes || "",
+      indicatorColor: normalizeAutomationColor(plan.indicatorColor),
       overrides: Array.isArray(plan.overrides) ? plan.overrides : []
     });
     setOverridesOpen(false);
@@ -1453,32 +1574,15 @@ function PreventiveAutomationPanel({
     if (form.recurrenceType === "custom_days" && (!Number.isInteger(recurrenceInterval) || recurrenceInterval < 1 || recurrenceInterval > 365)) {
       return;
     }
+    if (wizardMode && !reviewMode) {
+      setReviewMode(true);
+      return;
+    }
     setSaving(true);
     try {
-      await onSave(form.id, {
-        name: form.name,
-        description: form.description,
-        active: form.active,
-        recurrenceType: form.recurrenceType,
-        recurrenceInterval,
-        recurrenceIntervalDays: recurrenceInterval,
-        preferredTime: form.preferredTime,
-        timezone: form.timezone,
-        scopeType: form.scopeType,
-        scopeId: form.scopeType === "all" ? null : form.scopeId,
-        defaultScriptIds: form.defaultScriptIds,
-        notes: form.notes,
-        overrides: (form.overrides || []).map((item) => ({
-          assetId: item.assetId || null,
-          segmentId: item.segmentId || null,
-          recurrenceType: item.recurrenceType,
-          recurrenceInterval: Number(item.recurrenceInterval || 30),
-          recurrenceIntervalDays: Number(item.recurrenceIntervalDays || item.recurrenceInterval || getDefaultRecurrenceInterval(item.recurrenceType)),
-          preferredTime: item.preferredTime || null,
-          active: item.active !== false
-        }))
-      });
+      await onSave(form.id, buildAutomationPayload());
       setModalOpen(false);
+      setReviewMode(false);
     } finally {
       setSaving(false);
     }
@@ -1528,104 +1632,162 @@ function PreventiveAutomationPanel({
   }
 
   return (
-    <section className="panel preventive-automation-panel">
-      <div className="panel-heading">
-        <div>
-          <h2>Automação Preventiva</h2>
-          <p>A automação agenda e prepara rotinas. A execução real dependerá de agente seguro.</p>
-        </div>
-        {canCreate && (
-          <button type="button" className="primary-action compact-action" onClick={openCreateModal}>
-            Novo plano
-          </button>
-        )}
-      </div>
+    <section className={`panel preventive-automation-panel ${variant === "embedded" ? "embedded" : ""}`}>
+      {variant !== "embedded" && (
+        <>
+          <div className="panel-heading">
+            <div>
+              <h2>Automação Preventiva</h2>
+              <p>A automação agenda e prepara rotinas. A execução real dependerá de agente seguro.</p>
+            </div>
+            {canCreate && (
+              <button type="button" className="primary-action compact-action" onClick={() => openCreateModal()}>
+                Novo plano
+              </button>
+            )}
+          </div>
 
-      <div className="preventive-automation-grid">
-        {plans.map((plan) => (
-          <article key={plan.id} className={`preventive-automation-card ${plan.active === false ? "inactive" : ""}`}>
-            <header>
-              <div className="preventive-automation-title-row">
-                <strong>{plan.name}</strong>
-                <span className={`pill ${plan.active === false ? "danger" : "ok"}`}>
-                  {plan.active === false ? "Inativo" : "Ativo"}
-                </span>
-              </div>
-              <small>{plan.description || "Sem descrição informada"}</small>
-            </header>
-            <dl>
-              <div>
-                <dt>Recorrência</dt>
-                <dd>{getRecurrenceLabel(plan)}</dd>
-              </div>
-              <div>
-                <dt>Horário</dt>
-                <dd>{plan.preferredTime || "08:00"} - {plan.timezone || "America/Sao_Paulo"}</dd>
-              </div>
-              <div>
-                <dt>Escopo</dt>
-                <dd>{getScopeLabel(plan)}</dd>
-              </div>
-              <div>
-                <dt>Próxima preparação</dt>
-                <dd>{formatDate(plan.nextRunAt || plan.nextScheduledFor)}</dd>
-              </div>
-              <div>
-                <dt>Última preparação</dt>
-                <dd>{plan.lastPreparedAt ? formatDate(plan.lastPreparedAt) : "Ainda não preparada"}</dd>
-              </div>
-              <div>
-                <dt>Exceções</dt>
-                <dd>{Array.isArray(plan.overrides) && plan.overrides.length ? `${plan.overrides.length} personalizada(s)` : "Sem exceções"}</dd>
-              </div>
-            </dl>
-            <footer>
-              {canPrepare && plan.active !== false && (
-                <button
-                  type="button"
-                  className="primary-action compact-action"
-                  disabled={preparingId === plan.id}
-                  onClick={() => preparePlan(plan)}
-                >
-                  {preparingId === plan.id ? "Preparando..." : "Preparar rotina agora"}
-                </button>
-              )}
-              {(canDisable || canUpdate) && (
-                <label className="preventive-automation-switch" title={plan.active === false ? "Ativar automação" : "Desativar automação"}>
-                  <input
-                    type="checkbox"
-                    checked={plan.active !== false}
-                    disabled={togglingId === plan.id || (!canDisable && plan.active !== false) || (!canUpdate && plan.active === false)}
-                    onChange={() => toggleAutomationPlan(plan)}
-                  />
-                  <span />
-                </label>
-              )}
-              {canUpdate && (
-                <button type="button" className="secondary-action compact-action" onClick={() => openEditModal(plan)}>
-                  Editar
-                </button>
-              )}
-            </footer>
-          </article>
-        ))}
+          <div className="preventive-automation-grid">
+            {plans.map((plan) => (
+              <article key={plan.id} className={`preventive-automation-card ${plan.active === false ? "inactive" : ""}`}>
+                <header>
+                  <div className="preventive-automation-title-row">
+                    <strong>{plan.name}</strong>
+                    <span className={`pill ${plan.active === false ? "danger" : "ok"}`}>
+                      {plan.active === false ? "Inativo" : "Ativo"}
+                    </span>
+                  </div>
+                  <small>{plan.description || "Sem descrição informada"}</small>
+                </header>
+                <dl>
+                  <div>
+                    <dt>Horário</dt>
+                    <dd>{plan.preferredTime || "08:00"} - {plan.timezone || "America/Sao_Paulo"}</dd>
+                  </div>
+                  <div>
+                    <dt>Escopo</dt>
+                    <dd>{getScopeLabel(plan)}</dd>
+                  </div>
+                  <div>
+                    <dt>Próxima preparação</dt>
+                    <dd>{formatDate(plan.nextRunAt || plan.nextScheduledFor)}</dd>
+                  </div>
+                  <div>
+                    <dt>Exceções</dt>
+                    <dd>{Array.isArray(plan.overrides) && plan.overrides.length ? `${plan.overrides.length} personalizada(s)` : "Sem exceções"}</dd>
+                  </div>
+                </dl>
+                <footer>
+                  {(canDisable || canUpdate) && (
+                    <label className="preventive-automation-switch" title={plan.active === false ? "Ativar automação" : "Desativar automação"}>
+                      <input
+                        type="checkbox"
+                        checked={plan.active !== false}
+                        disabled={togglingId === plan.id || (!canDisable && plan.active !== false) || (!canUpdate && plan.active === false)}
+                        onChange={() => toggleAutomationPlan(plan)}
+                      />
+                      <span />
+                    </label>
+                  )}
+                  {canUpdate && (
+                    <button type="button" className="secondary-action compact-action" onClick={() => openEditModal(plan)}>
+                      Editar
+                    </button>
+                  )}
+                </footer>
+              </article>
+            ))}
 
-        {!plans.length && <p className="empty">Nenhum plano de automação preventiva cadastrado ainda.</p>}
-      </div>
+            {!plans.length && <p className="empty">Nenhum plano de automação preventiva cadastrado ainda.</p>}
+          </div>
+        </>
+      )}
 
       {modalOpen && (
         <div className="modal-backdrop preventive-automation-backdrop" role="presentation">
-          <form className="modal-panel preventive-automation-modal" onSubmit={submitForm}>
+          <form className={`modal-panel preventive-automation-modal ${wizardMode ? "wizard-mode" : ""}`} onSubmit={submitForm}>
             <header>
               <div>
-                <span>Automação Preventiva</span>
-                <h2>{form.id ? "Editar plano" : "Novo plano"}</h2>
+                <span>{wizardMode ? "Etapa 3" : "Automação Preventiva"}</span>
+                <h2>
+                  {reviewMode
+                    ? "Revisar plano automatizado"
+                    : wizardMode
+                      ? "Configurar automatização"
+                      : form.id ? "Editar plano" : "Novo plano"}
+                </h2>
               </div>
               <button type="button" className="icon-button" onClick={() => setModalOpen(false)} aria-label="Fechar">
                 <XCircle size={18} />
               </button>
             </header>
 
+            {wizardMode && wizardContext && (
+              <section className="preventive-automation-context">
+                <div>
+                  <span>Plano atual</span>
+                  <strong>{form.name || "Plano preventivo automatizado"}</strong>
+                </div>
+                <div>
+                  <span>Máquinas herdadas</span>
+                  <strong>{wizardContext.assetCount || 0}</strong>
+                  <small>{wizardContext.assetNames?.slice(0, 4).join(", ") || "Nenhuma máquina selecionada"}</small>
+                </div>
+                <div>
+                  <span>Verificações herdadas</span>
+                  <strong>{form.defaultScriptIds.length}</strong>
+                  <small>{wizardContext.scriptNames?.slice(0, 4).join(", ") || "Nenhum script selecionado"}</small>
+                </div>
+              </section>
+            )}
+
+            {reviewMode ? (
+              <section className="preventive-automation-review">
+                <header>
+                  <div>
+                    <span>Revisão final</span>
+                    <h3>{form.name}</h3>
+                    <p>Nenhum comando será executado nesta etapa. O sistema apenas registra e prepara a agenda preventiva.</p>
+                  </div>
+                  <span className="automation-color-dot" style={{ background: normalizeAutomationColor(form.indicatorColor) }} />
+                </header>
+                <dl>
+                  <div>
+                    <dt>Máquinas</dt>
+                    <dd>{wizardContext?.assetNames?.join(", ") || getScopeLabel(form)}</dd>
+                  </div>
+                  <div>
+                    <dt>Scripts</dt>
+                    <dd>{activeScripts.filter((script) => form.defaultScriptIds.includes(script.id)).map((script) => script.name).join(", ") || "Nenhum script selecionado"}</dd>
+                  </div>
+                  <div>
+                    <dt>Recorrência</dt>
+                    <dd>{getRecurrenceLabel(form)}</dd>
+                  </div>
+                  <div>
+                    <dt>Horário e fuso</dt>
+                    <dd>{form.preferredTime || "08:00"} - {form.timezone || "America/Sao_Paulo"}</dd>
+                  </div>
+                  <div>
+                    <dt>Escopo</dt>
+                    <dd>{getScopeLabel(form)}</dd>
+                  </div>
+                  <div>
+                    <dt>Cor</dt>
+                    <dd>{normalizeAutomationColor(form.indicatorColor)}</dd>
+                  </div>
+                  <div>
+                    <dt>Exceções</dt>
+                    <dd>{form.overrides.length ? `${form.overrides.length} recorrência(s) personalizada(s)` : "Sem exceções"}</dd>
+                  </div>
+                  <div>
+                    <dt>Observações</dt>
+                    <dd>{form.notes || form.description || "Sem observações"}</dd>
+                  </div>
+                </dl>
+              </section>
+            ) : (
+              <>
             <div className="preventive-automation-form-grid">
               <label>
                 Nome
@@ -1658,7 +1820,43 @@ function PreventiveAutomationPanel({
               </label>
               <label>
                 Fuso horário
-                <input value={form.timezone} onChange={(event) => updateForm("timezone", event.target.value)} />
+                <select value={form.timezone} onChange={(event) => updateForm("timezone", event.target.value)}>
+                  {preventiveAutomationTimezoneOptions.map((timezone) => (
+                    <option key={timezone} value={timezone}>
+                      {timezone}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="automation-color-field">
+                Cor de identificação do plano
+                <div>
+                  <span className="automation-color-dot" style={{ background: normalizeAutomationColor(form.indicatorColor) }} />
+                  <input
+                    type="color"
+                    value={normalizeAutomationColor(form.indicatorColor)}
+                    onChange={(event) => updateForm("indicatorColor", event.target.value)}
+                    aria-label="Escolher cor do plano"
+                  />
+                  <input
+                    value={form.indicatorColor}
+                    onChange={(event) => updateForm("indicatorColor", event.target.value)}
+                    onBlur={(event) => updateForm("indicatorColor", normalizeAutomationColor(event.target.value))}
+                    aria-label="Valor hexadecimal da cor"
+                  />
+                </div>
+                <div className="automation-color-palette" aria-label="Cores sugeridas">
+                  {preventiveAutomationColorOptions.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      className={normalizeAutomationColor(form.indicatorColor) === color ? "active" : ""}
+                      style={{ background: color }}
+                      onClick={() => updateForm("indicatorColor", color)}
+                      aria-label={`Usar cor ${color}`}
+                    />
+                  ))}
+                </div>
               </label>
               <label>
                 Escopo
@@ -1772,13 +1970,29 @@ function PreventiveAutomationPanel({
                 </div>
               )}
             </section>
+              </>
+            )}
 
             <footer>
-              <button type="button" className="secondary-action compact-action" onClick={() => setModalOpen(false)} disabled={saving}>
-                Cancelar
-              </button>
+              {wizardMode && !reviewMode ? (
+                <button type="button" className="secondary-action compact-action" onClick={() => setModalOpen(false)} disabled={saving}>
+                  Voltar às verificações
+                </button>
+              ) : reviewMode ? (
+                <button type="button" className="secondary-action compact-action" onClick={() => setReviewMode(false)} disabled={saving}>
+                  Voltar à automatização
+                </button>
+              ) : (
+                <button type="button" className="secondary-action compact-action" onClick={() => setModalOpen(false)} disabled={saving}>
+                  Cancelar
+                </button>
+              )}
               <button type="submit" className="primary-action compact-action" disabled={saving}>
-                {saving ? "Salvando..." : "Salvar plano"}
+                {saving
+                  ? "Salvando..."
+                  : wizardMode
+                    ? reviewMode ? "Salvar plano automatizado" : "Revisar plano automatizado"
+                    : "Salvar plano"}
               </button>
             </footer>
           </form>
@@ -1884,18 +2098,35 @@ function AlertCenterV2({
   const [preventivePlanName, setPreventivePlanName] = useState("Plano preventivo");
   const [preventiveSaving, setPreventiveSaving] = useState(false);
   const [preventiveServiceOrderSavingId, setPreventiveServiceOrderSavingId] = useState(null);
+  const [preventiveAutomationCreateRequest, setPreventiveAutomationCreateRequest] = useState(null);
   const [lastCreatedPreventivePlan, setLastCreatedPreventivePlan] = useState(null);
   const [preventiveReviewOpen, setPreventiveReviewOpen] = useState(false);
+  const canUsePreventiveArea = canViewPreventivePlans || canViewPreventiveAutomation;
 
   useEffect(() => {
-    if (alertActiveTab === "suggestions" && !canViewAlerts) {
-      if (canViewPreventivePlans) {
+    if (alertActiveTab === "automation") {
+      if (canUsePreventiveArea) {
         setAlertActiveTab("preventives");
-      } else if (canViewPreventiveAutomation) {
-        setAlertActiveTab("automation");
+      } else if (canViewAlerts) {
+        setAlertActiveTab("suggestions");
+      }
+      return;
+    }
+    if (alertActiveTab === "suggestions" && !canViewAlerts) {
+      if (canUsePreventiveArea) {
+        setAlertActiveTab("preventives");
       }
     }
-  }, [alertActiveTab, canViewAlerts, canViewPreventiveAutomation, canViewPreventivePlans]);
+    if (alertActiveTab === "preventives" && !canUsePreventiveArea && canViewAlerts) {
+      setAlertActiveTab("suggestions");
+    }
+  }, [alertActiveTab, canUsePreventiveArea, canViewAlerts]);
+
+  useEffect(() => {
+    if (alertActiveTab !== "preventives" && preventiveAutomationCreateRequest) {
+      setPreventiveAutomationCreateRequest(null);
+    }
+  }, [alertActiveTab, preventiveAutomationCreateRequest]);
 
   useEffect(() => {
     setPriorityDraft(normalizePrioritySettings(alertPrioritySettings));
@@ -1922,30 +2153,26 @@ function AlertCenterV2({
   }, [settingsOpen, preventiveReviewOpen, selectedSuggestionInfoId, selectedScriptLog]);
 
   useEffect(() => {
-    if (!selectedSuggestionInfoId) return undefined;
+    const dialogOpen = settingsOpen || preventiveReviewOpen || Boolean(selectedSuggestionInfoId) || Boolean(selectedScriptLog);
+    if (!dialogOpen) return undefined;
 
-    function handleSuggestionInfoKeydown(event) {
-      if (event.key === "Escape") {
-        setSelectedSuggestionInfoId(null);
-      }
-    }
+    function handleAlertDialogKeydown(event) {
+      if (event.key !== "Escape") return;
 
-    window.addEventListener("keydown", handleSuggestionInfoKeydown);
-    return () => window.removeEventListener("keydown", handleSuggestionInfoKeydown);
-  }, [selectedSuggestionInfoId]);
-
-  useEffect(() => {
-    if (!selectedScriptLog) return undefined;
-
-    function handleScriptLogKeydown(event) {
-      if (event.key === "Escape") {
+      if (selectedScriptLog) {
         setSelectedScriptLog(null);
+      } else if (selectedSuggestionInfoId) {
+        setSelectedSuggestionInfoId(null);
+      } else if (preventiveReviewOpen) {
+        setPreventiveReviewOpen(false);
+      } else if (settingsOpen) {
+        setSettingsOpen(false);
       }
     }
 
-    window.addEventListener("keydown", handleScriptLogKeydown);
-    return () => window.removeEventListener("keydown", handleScriptLogKeydown);
-  }, [selectedScriptLog]);
+    window.addEventListener("keydown", handleAlertDialogKeydown);
+    return () => window.removeEventListener("keydown", handleAlertDialogKeydown);
+  }, [settingsOpen, preventiveReviewOpen, selectedSuggestionInfoId, selectedScriptLog]);
 
   const visibleAlerts = history.filter((alert) => {
     const severityMatches = severityFilter === "all" || alert.severity === severityFilter;
@@ -2580,6 +2807,53 @@ function AlertCenterV2({
     script.riskLevel === "high" || script.riskLevel === "critical"
   );
   const preventivePlanCount = preventivePlans.length;
+  const automatedPreventivePlanCount = preventiveAutomationPlans.filter((plan) => plan.active !== false).length;
+
+  function openPreventiveAutomationFromSelection() {
+    const selectedDeviceNames = selectedPreventiveDevices
+      .map((device) => device.name || device.hostname || device.id)
+      .filter(Boolean);
+    const selectedScriptNames = selectedPreventiveScriptList
+      .map((script) => script.name || script.id)
+      .filter(Boolean);
+    const selectionKey = [
+      ...selectedPreventiveDevices.map((device) => device.id).sort(),
+      "|",
+      ...selectedPreventiveScriptList.map((script) => script.id).sort()
+    ].join(":");
+    const firstDevice = selectedPreventiveDevices[0];
+    const firstSegmentId = firstDevice?.segmentId || firstDevice?.segment?.id || firstDevice?.location?.segmentId || "";
+    const hasSingleSegment =
+      firstSegmentId &&
+      selectedPreventiveDevices.length > 1 &&
+      selectedPreventiveDevices.every((device) =>
+        String(device.segmentId || device.segment?.id || device.location?.segmentId || "") === String(firstSegmentId)
+      );
+    const scopeDefaults = selectedPreventiveDevices.length === 1
+      ? { scopeType: "asset", scopeId: firstDevice.id }
+      : hasSingleSegment
+        ? { scopeType: "segment", scopeId: firstSegmentId }
+        : { scopeType: "all", scopeId: "" };
+
+    setPreventiveAutomationCreateRequest({
+      id: Date.now(),
+      defaults: {
+        name: preventivePlanName || "Plano preventivo automatizado",
+        description: selectedDeviceNames.length
+          ? `Automação criada a partir da seleção preventiva: ${selectedDeviceNames.slice(0, 6).join(", ")}${selectedDeviceNames.length > 6 ? "..." : ""}.`
+          : "Automação criada a partir do fluxo de preventivas.",
+        defaultScriptIds: selectedPreventiveScriptList.map((script) => script.id),
+        context: {
+          selectionKey,
+          assetCount: selectedPreventiveDevices.length,
+          assetNames: selectedDeviceNames,
+          scriptNames: selectedScriptNames,
+          riskCount: selectedPreventiveRiskList.length
+        },
+        ...scopeDefaults
+      }
+    });
+  }
 
   function toggleAlertSettingsSection(section) {
     setSettingsSectionsOpen((current) => ({
@@ -2741,6 +3015,19 @@ function AlertCenterV2({
             </div>
           )}
 
+          {canUsePreventiveArea && alertActiveTab === "preventives" && (
+            <div className="alerts-view-header preventive-summary-header">
+              <section className="summary-grid compact-summary alerts-summary preventive-summary-grid" aria-label="Resumo preventivo">
+                <SummaryCard icon={ClipboardList} label="Sem preventiva" value={preventiveSummary.withoutPreventive} tone="info" />
+                <SummaryCard icon={AlertTriangle} label="Preventivas vencidas" value={preventiveSummary.overdue} tone="danger" />
+                <SummaryCard icon={CheckCircle} label="Preventivas em dia" value={preventiveSummary.upToDate} tone="ok" />
+                <SummaryCard icon={Bell} label="Com avisos ativos" value={preventiveSummary.withAlerts} tone="warning" />
+                <SummaryCard icon={ClipboardList} label="Planos registrados" value={preventivePlanCount} tone="info" />
+                <SummaryCard icon={RefreshCw} label="Planos automatizados" value={automatedPreventivePlanCount} tone="info" />
+              </section>
+            </div>
+          )}
+
           <nav className="alerts-internal-tabs" aria-label="Áreas da Central de Avisos">
             {canViewAlerts && (
               <button
@@ -2751,22 +3038,13 @@ function AlertCenterV2({
                 Sugestões de OS
               </button>
             )}
-            {canViewPreventivePlans && (
+            {canUsePreventiveArea && (
               <button
                 type="button"
                 className={alertActiveTab === "preventives" ? "active" : ""}
                 onClick={() => setAlertActiveTab("preventives")}
               >
                 Preventivas
-              </button>
-            )}
-            {canViewPreventiveAutomation && (
-              <button
-                type="button"
-                className={alertActiveTab === "automation" ? "active" : ""}
-                onClick={() => setAlertActiveTab("automation")}
-              >
-                Automação
               </button>
             )}
             {canViewScriptLogs && (
@@ -3175,7 +3453,7 @@ function AlertCenterV2({
           </section>
           )}
 
-          {alertActiveTab === "preventives" && canViewPreventivePlans && (
+          {alertActiveTab === "preventives" && canUsePreventiveArea && (
             <section className="panel preventive-plans-panel">
               <div className="panel-heading">
                 <div>
@@ -3211,29 +3489,6 @@ function AlertCenterV2({
                   )}
                 </section>
               )}
-
-              <section className="preventive-summary-grid" aria-label="Resumo preventivo">
-                <article>
-                  <span>Sem preventiva</span>
-                  <strong>{preventiveSummary.withoutPreventive}</strong>
-                </article>
-                <article>
-                  <span>Preventivas vencidas</span>
-                  <strong>{preventiveSummary.overdue}</strong>
-                </article>
-                <article>
-                  <span>Preventivas em dia</span>
-                  <strong>{preventiveSummary.upToDate}</strong>
-                </article>
-                <article>
-                  <span>Com avisos ativos</span>
-                  <strong>{preventiveSummary.withAlerts}</strong>
-                </article>
-                <article>
-                  <span>Planos registrados</span>
-                  <strong>{preventivePlanCount}</strong>
-                </article>
-              </section>
 
               <div className={`preventive-workspace ${selectedPreventiveAssets.size ? "has-selection" : "single-step"}`}>
                 <section className="preventive-device-groups" aria-label="Máquinas para preventiva">
@@ -3446,22 +3701,59 @@ function AlertCenterV2({
                     <span>{selectedPreventiveScriptList.length} verificação(ões)</span>
                   </div>
 
-                  <button
-                    type="button"
-                    className="primary-action compact-action"
-                    disabled={
-                      !canCreatePreventivePlans ||
-                      preventiveSaving ||
-                      !selectedPreventiveAssets.size ||
-                      !selectedPreventiveScripts.size
-                    }
-                    onClick={openPreventiveReview}
-                  >
-                    {preventiveSaving ? "Registrando..." : "Revisar preventiva"}
-                  </button>
+                  <div className="preventive-plan-actions">
+                    {canViewPreventiveAutomation && (
+                      <button
+                        type="button"
+                        className="secondary-action compact-action"
+                        disabled={
+                          !canCreatePreventiveAutomation ||
+                          !selectedPreventiveAssets.size ||
+                          !selectedPreventiveScripts.size
+                        }
+                        onClick={openPreventiveAutomationFromSelection}
+                      >
+                        Automatizar
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="primary-action compact-action"
+                      disabled={
+                        !canCreatePreventivePlans ||
+                        preventiveSaving ||
+                        !selectedPreventiveAssets.size ||
+                        !selectedPreventiveScripts.size
+                      }
+                      onClick={openPreventiveReview}
+                    >
+                      {preventiveSaving ? "Registrando..." : "Revisar preventiva"}
+                    </button>
+                  </div>
                 </aside>
                 )}
               </div>
+
+              {canViewPreventiveAutomation && (
+                <PreventiveAutomationPanel
+                  variant="embedded"
+                  plans={preventiveAutomationPlans}
+                  scripts={activeScripts}
+                  devices={devices}
+                  segments={segments}
+                  segmentGroups={segmentGroups}
+                  inventoryTabs={inventoryTabs}
+                  canCreate={canCreatePreventiveAutomation}
+                  canUpdate={canUpdatePreventiveAutomation}
+                  canDisable={canDisablePreventiveAutomation}
+                  canPrepare={canPreparePreventiveAutomation}
+                  createRequest={preventiveAutomationCreateRequest}
+                  onSave={onSavePreventiveAutomationPlan}
+                  onDisable={onDisablePreventiveAutomationPlan}
+                  onPrepare={onPreparePreventiveAutomationPlan}
+                  onCreateRequestHandled={() => setPreventiveAutomationCreateRequest(null)}
+                />
+              )}
             </section>
           )}
 
@@ -3567,24 +3859,6 @@ function AlertCenterV2({
                 </footer>
               </section>
             </div>
-          )}
-
-          {alertActiveTab === "automation" && canViewPreventiveAutomation && (
-            <PreventiveAutomationPanel
-              plans={preventiveAutomationPlans}
-              scripts={activeScripts}
-              devices={devices}
-              segments={segments}
-              segmentGroups={segmentGroups}
-              inventoryTabs={inventoryTabs}
-              canCreate={canCreatePreventiveAutomation}
-              canUpdate={canUpdatePreventiveAutomation}
-              canDisable={canDisablePreventiveAutomation}
-              canPrepare={canPreparePreventiveAutomation}
-              onSave={onSavePreventiveAutomationPlan}
-              onDisable={onDisablePreventiveAutomationPlan}
-              onPrepare={onPreparePreventiveAutomationPlan}
-            />
           )}
 
           {alertActiveTab === "history" && (
@@ -4037,44 +4311,56 @@ function AlertCenterV2({
                     <div className="alert-settings-control-grid">
                       <label>
                         Ignorar aviso recusado por (horas)
-                        <input
-                          type="number"
-                          min="1"
-                          value={priorityDraft.rejectedAlertSilenceHours}
-                          disabled={!canConfigureAlerts}
-                          onChange={(event) => updateAlertOperationalDraft("rejectedAlertSilenceHours", event.target.value)}
-                        />
+                        <span className="input-with-unit">
+                          <input
+                            type="number"
+                            min="1"
+                            value={priorityDraft.rejectedAlertSilenceHours}
+                            disabled={!canConfigureAlerts}
+                            onChange={(event) => updateAlertOperationalDraft("rejectedAlertSilenceHours", event.target.value)}
+                          />
+                          <em>H</em>
+                        </span>
                       </label>
                       <label>
                         Resetar recorrência a cada (horas)
-                        <input
-                          type="number"
-                          min="1"
-                          value={priorityDraft.recurrenceCounterResetHours}
-                          disabled={!canConfigureAlerts}
-                          onChange={(event) => updateAlertOperationalDraft("recurrenceCounterResetHours", event.target.value)}
-                        />
+                        <span className="input-with-unit">
+                          <input
+                            type="number"
+                            min="1"
+                            value={priorityDraft.recurrenceCounterResetHours}
+                            disabled={!canConfigureAlerts}
+                            onChange={(event) => updateAlertOperationalDraft("recurrenceCounterResetHours", event.target.value)}
+                          />
+                          <em>H</em>
+                        </span>
                       </label>
                       <label>
                         Preventiva vence em (dias)
-                        <input
-                          type="number"
-                          min="1"
-                          value={priorityDraft.preventiveDueDays}
-                          disabled={!canConfigureAlerts}
-                          onChange={(event) => updateAlertOperationalDraft("preventiveDueDays", event.target.value)}
-                        />
+                        <span className="input-with-unit">
+                          <input
+                            type="number"
+                            min="1"
+                            value={priorityDraft.preventiveDueDays}
+                            disabled={!canConfigureAlerts}
+                            onChange={(event) => updateAlertOperationalDraft("preventiveDueDays", event.target.value)}
+                          />
+                          <em>D</em>
+                        </span>
                       </label>
                       <label>
                         Validacao de script (minutos)
-                        <input
-                          type="number"
-                          min="5"
-                          max="10080"
-                          value={priorityDraft.scriptValidationWindowMinutes}
-                          disabled={!canConfigureAlerts}
-                          onChange={(event) => updateAlertOperationalDraft("scriptValidationWindowMinutes", event.target.value)}
-                        />
+                        <span className="input-with-unit">
+                          <input
+                            type="number"
+                            min="5"
+                            max="10080"
+                            value={priorityDraft.scriptValidationWindowMinutes}
+                            disabled={!canConfigureAlerts}
+                            onChange={(event) => updateAlertOperationalDraft("scriptValidationWindowMinutes", event.target.value)}
+                          />
+                          <em>M</em>
+                        </span>
                       </label>
                       <button
                         type="button"
@@ -4099,31 +4385,40 @@ function AlertCenterV2({
                     <div key={rule.id} className="settings-table-row alert-rule-row">
                       <span>{alertTypeLabels[rule.type] || rule.type}</span>
                       <span>
-                        <input
-                          type="number"
-                          min="0"
-                          value={rule.threshold ?? ""}
-                          disabled={!canConfigureAlerts}
-                          onChange={(event) => onUpdateRule(rule.id, { threshold: event.target.value })}
-                        />
+                        <label className={`input-with-unit ${isThresholdDisabled(rule) ? "disabled" : ""}`}>
+                          <input
+                            type="number"
+                            min="0"
+                            value={isThresholdDisabled(rule) ? "" : rule.threshold ?? ""}
+                            disabled={!canConfigureAlerts || isThresholdDisabled(rule)}
+                            onChange={(event) => onUpdateRule(rule.id, { threshold: event.target.value })}
+                          />
+                          {isPercentThresholdRule(rule) && !isThresholdDisabled(rule) && <em>%</em>}
+                        </label>
                       </span>
                       <span>
-                        <input
-                          type="number"
-                          min="0"
-                          value={rule.durationMinutes}
-                          disabled={!canConfigureAlerts}
-                          onChange={(event) => onUpdateRule(rule.id, { durationMinutes: event.target.value })}
-                        />
+                        <label className={`input-with-unit ${isDurationDisabled(rule) ? "disabled" : ""}`}>
+                          <input
+                            type="number"
+                            min="0"
+                            value={isDurationDisabled(rule) ? "" : rule.durationMinutes}
+                            disabled={!canConfigureAlerts || isDurationDisabled(rule)}
+                            onChange={(event) => onUpdateRule(rule.id, { durationMinutes: event.target.value })}
+                          />
+                          {!isDurationDisabled(rule) && <em>M</em>}
+                        </label>
                       </span>
                       <span>
-                        <input
-                          type="number"
-                          min="1"
-                          value={rule.recurrenceCount}
-                          disabled={!canConfigureAlerts}
-                          onChange={(event) => onUpdateRule(rule.id, { recurrenceCount: event.target.value })}
-                        />
+                        <label className="input-with-unit">
+                          <input
+                            type="number"
+                            min="1"
+                            value={rule.recurrenceCount}
+                            disabled={!canConfigureAlerts}
+                            onChange={(event) => onUpdateRule(rule.id, { recurrenceCount: event.target.value })}
+                          />
+                          <em>x</em>
+                        </label>
                       </span>
                       <span>
                         <select
@@ -7282,6 +7577,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
             onToggleSelection={toggleAssetSelection}
             groups={activeSegmentGroups}
             onSelectGroup={selectInventoryGroup}
+            onSelectSegment={selectInventorySegment}
             onCreateGroup={openSegmentGroupForm}
             onRenameGroup={renameSegmentGroup}
             onDeleteGroup={deleteSegmentGroup}

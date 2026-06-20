@@ -979,6 +979,7 @@ export async function initializeDatabase() {
       scope_id TEXT,
       default_script_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
       notes TEXT,
+      indicator_color TEXT NOT NULL DEFAULT '#1f7a61',
       last_scheduled_at TIMESTAMPTZ,
       last_prepared_at TIMESTAMPTZ,
       last_run_at TIMESTAMPTZ,
@@ -1013,6 +1014,10 @@ export async function initializeDatabase() {
   await query(`
     ALTER TABLE preventive_automation_plans
     ADD COLUMN IF NOT EXISTS schedule_anchor_at TIMESTAMPTZ;
+  `);
+  await query(`
+    ALTER TABLE preventive_automation_plans
+    ADD COLUMN IF NOT EXISTS indicator_color TEXT NOT NULL DEFAULT '#1f7a61';
   `);
 
   await query(`

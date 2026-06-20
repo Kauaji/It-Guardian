@@ -291,6 +291,17 @@ function SettingsFormModal({ sectionId, record, records = [], businessMode, clie
     setCategoryOptions(buildProblemCategories(records));
   }, [records]);
 
+  useEffect(() => {
+    function handleKeydown(event) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeydown);
+    return () => window.removeEventListener("keydown", handleKeydown);
+  }, [onClose]);
+
   function updateField(name, value) {
     setForm((current) => ({ ...current, [name]: value }));
   }

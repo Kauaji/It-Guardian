@@ -486,6 +486,19 @@ export default function GeneralSettingsModal({
   }, [open, section, isAdmin]);
 
   useEffect(() => {
+    if (!open) return undefined;
+
+    function handleKeydown(event) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeydown);
+    return () => window.removeEventListener("keydown", handleKeydown);
+  }, [open, onClose]);
+
+  useEffect(() => {
     if (!open || section !== "admin" || !token || !isAdmin) return;
     loadAdminData();
   }, [open, section, token, isAdmin]);

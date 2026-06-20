@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { AlertTriangle, ClipboardCheck, FileCode2, ShieldCheck } from "lucide-react";
 
 const emptyForm = {
@@ -20,11 +20,8 @@ const emptyForm = {
 };
 
 const scriptTypeLabels = {
-  bat: "BAT",
   cmd: "CMD",
-  powershell: "PowerShell",
-  shell: "Shell",
-  other: "Outro"
+  powershell: "PowerShell"
 };
 
 const riskLabels = {
@@ -73,6 +70,36 @@ function buildScriptPayload(form, analysis) {
     estimatedSummary: analysis?.estimatedSummary,
     suggestedRiskLevel: analysis?.suggestedRiskLevel
   };
+}
+
+function inferScriptType(content = "") {
+  const text = String(content).toLowerCase();
+  if (/\b(get|set|new|remove|start|stop|write|test)-[a-z]/i.test(content) || text.includes("$env:") || text.includes("powershell")) {
+    return "powershell";
+  }
+
+  return "cmd";
+}
+
+function inferScriptName(analysis, content = "") {
+  const firstAction = analysis?.detectedActions?.[0];
+  if (firstAction) return firstAction;
+
+  const firstLine = String(content)
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^rem\s+/i, "").replace(/^::\s*/, "").trim())
+    .find(Boolean);
+
+  return firstLine ? firstLine.slice(0, 80) : "Script de manutenção";
+}
+
+function inferScriptCategory(analysis, content = "") {
+  const text = `${content} ${(analysis?.detectedActions || []).join(" ")}`.toLowerCase();
+  if (text.includes("disco") || text.includes("disk") || text.includes("chkdsk")) return "Disco";
+  if (text.includes("rede") || text.includes("ping") || text.includes("ipconfig") || text.includes("netsh")) return "Rede";
+  if (text.includes("impress") || text.includes("printer")) return "Impressora";
+  if (text.includes("mem") || text.includes("ram")) return "Memória";
+  return "Manutenção";
 }
 
 function ScriptAnalysis({ analysis }) {
@@ -232,6 +259,7 @@ export default function MaintenanceScriptsPanel({
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   const [analysis, setAnalysis] = useState(null);
+  const formRef = useRef(null);
   const activeScripts = useMemo(() => scripts.filter((script) => script.active !== false), [scripts]);
 
   function updateForm(field, value) {
@@ -247,9 +275,19 @@ export default function MaintenanceScriptsPanel({
   async function handleAnalyze() {
     const result = await onAnalyze({ content: form.content, type: form.type });
     setAnalysis(result);
-    if (result?.suggestedRiskLevel) {
-      setForm((current) => ({ ...current, riskLevel: result.suggestedRiskLevel }));
-    }
+    setForm((current) => {
+      const inferredCategory = inferScriptCategory(result, current.content);
+      return {
+        ...current,
+        name: current.name.trim() || inferScriptName(result, current.content),
+        description: current.description.trim() || result?.estimatedSummary || "",
+        type: inferScriptType(current.content),
+        category: current.category.trim() || inferredCategory,
+        riskLevel: result?.suggestedRiskLevel || current.riskLevel,
+        alertType: current.alertType.trim() || inferredCategory.toLowerCase(),
+        problemType: current.problemType.trim() || inferScriptName(result, current.content)
+      };
+    });
     return result;
   }
 
@@ -290,6 +328,9 @@ export default function MaintenanceScriptsPanel({
       detectedActions: [],
       safetyWarnings: ["Resumo salvo anteriormente. Revise manualmente antes de usar."]
     });
+    window.requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   }
 
   async function deactivateScript(script) {
@@ -323,7 +364,7 @@ export default function MaintenanceScriptsPanel({
       )}
 
       {canManage && showForm && (
-        <form className="maintenance-script-form" onSubmit={handleSubmit}>
+        <form ref={formRef} className={`maintenance-script-form ${analysis ? "has-analysis" : "needs-analysis"}`} onSubmit={handleSubmit}>
           <label>
             Nome
             <input value={form.name} onChange={(event) => updateForm("name", event.target.value)} maxLength={120} required />
@@ -422,22 +463,28 @@ export default function MaintenanceScriptsPanel({
             Exige confirmação
           </label>
           <label className="maintenance-script-wide">
-            Conteúdo do script tratado apenas como texto
+            Prompt do script
             <textarea
               value={form.content}
-              onChange={(event) => updateForm("content", event.target.value)}
+              onChange={(event) => {
+                updateForm("content", event.target.value);
+                setAnalysis(null);
+              }}
               maxLength={10000}
               rows={9}
               required
+              placeholder="Cole aqui o conteúdo ou a descrição do BAT/CMD/PowerShell para o sistema analisar e preencher o cadastro."
             />
           </label>
           <ScriptAnalysis analysis={analysis} />
           <div className="script-form-actions">
+            {analysis && (
+              <button type="submit" className="primary-action compact-action">
+                {editingId ? "Salvar alterações" : "Cadastrar script"}
+              </button>
+            )}
             <button type="button" className="secondary-action compact-action" onClick={() => handleAnalyze().catch(() => null)}>
               Analisar texto
-            </button>
-            <button type="submit" className="primary-action compact-action">
-              {editingId ? "Salvar alterações" : "Cadastrar script"}
             </button>
             <button type="button" className="secondary-action compact-action" onClick={resetForm}>
               Limpar

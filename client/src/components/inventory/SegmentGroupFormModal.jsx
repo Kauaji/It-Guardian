@@ -21,6 +21,19 @@ export default function SegmentGroupFormModal({
     setColor(group?.color || "");
   }, [group]);
 
+  useEffect(() => {
+    if (!mode) return undefined;
+
+    function handleKeydown(event) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeydown);
+    return () => window.removeEventListener("keydown", handleKeydown);
+  }, [mode, onClose]);
+
   const normalizedName = name.trim().toLowerCase();
   const duplicateName = useMemo(
     () =>
