@@ -968,6 +968,7 @@ export async function initializeDatabase() {
   await query(`
     CREATE TABLE IF NOT EXISTS preventive_automation_plans (
       id TEXT PRIMARY KEY,
+      preventive_plan_id TEXT,
       name TEXT NOT NULL,
       description TEXT,
       active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -990,6 +991,11 @@ export async function initializeDatabase() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+  `);
+
+  await query(`
+    ALTER TABLE preventive_automation_plans
+    ADD COLUMN IF NOT EXISTS preventive_plan_id TEXT;
   `);
 
   await query(`
@@ -1025,6 +1031,19 @@ export async function initializeDatabase() {
   await query(`
     ALTER TABLE preventive_automation_plans
     ADD COLUMN IF NOT EXISTS indicator_color TEXT NOT NULL DEFAULT '#1f7a61';
+  `);
+
+  await query(`
+    UPDATE preventive_automation_plans
+    SET preventive_plan_id = NULL
+    WHERE preventive_plan_id IS NOT NULL
+      AND preventive_plan_id NOT IN (SELECT id FROM preventive_plans);
+  `);
+
+  await queryIgnoringDuplicateConstraint(`
+    ALTER TABLE preventive_automation_plans
+    ADD CONSTRAINT preventive_automation_plans_preventive_plan_id_fkey
+    FOREIGN KEY (preventive_plan_id) REFERENCES preventive_plans(id) ON DELETE CASCADE;
   `);
 
   await query(`
@@ -1405,6 +1424,17 @@ export async function initializeDatabase() {
   await query(`
     CREATE INDEX IF NOT EXISTS idx_preventive_automation_plans_due
     ON preventive_automation_plans (active, next_run_at);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_preventive_automation_plans_preventive_plan
+    ON preventive_automation_plans (preventive_plan_id);
+  `);
+
+  await query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_preventive_automation_plans_preventive_plan_unique
+    ON preventive_automation_plans (preventive_plan_id)
+    WHERE preventive_plan_id IS NOT NULL;
   `);
 
   await query(`

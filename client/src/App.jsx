@@ -1320,6 +1320,7 @@ function PreventiveAutomationPanel({
   onSave,
   onDisable,
   onPrepare,
+  onCreateAutomatedPreventivePlan,
   onCreateRequestHandled
 }) {
   const emptyForm = {
@@ -1574,7 +1575,7 @@ function PreventiveAutomationPanel({
 
   async function submitForm(event) {
     event.preventDefault();
-    if (!onSave || saving) return;
+    if ((!onSave && !onCreateAutomatedPreventivePlan) || saving) return;
     const recurrenceInterval = form.recurrenceType === "custom_days"
       ? Number(form.recurrenceInterval)
       : getDefaultRecurrenceInterval(form.recurrenceType);
@@ -1587,7 +1588,12 @@ function PreventiveAutomationPanel({
     }
     setSaving(true);
     try {
-      await onSave(form.id, buildAutomationPayload());
+      const automationPayload = buildAutomationPayload();
+      if (wizardMode && !form.id && onCreateAutomatedPreventivePlan) {
+        await onCreateAutomatedPreventivePlan(automationPayload, wizardContext);
+      } else {
+        await onSave(form.id, automationPayload);
+      }
       setModalOpen(false);
       setReviewMode(false);
     } finally {
@@ -2872,6 +2878,38 @@ function AlertCenterV2({
     });
   }
 
+  async function createAutomatedPreventivePlanFromSelection(automationPayload) {
+    const assetIds = selectedPreventiveDevices.map((device) => device.id).filter(Boolean);
+    const scriptIds = selectedPreventiveScriptList.map((script) => script.id).filter(Boolean);
+    const planName = automationPayload.name || preventivePlanName || "Plano preventivo automatizado";
+
+    const createdPlan = await onCreatePreventivePlan({
+      name: planName,
+      description: automationPayload.description || "",
+      source: "automated",
+      notes: automationPayload.notes || automationPayload.description || "",
+      status: "prepared",
+      riskAcknowledged: true,
+      assetIds,
+      scriptIds,
+      automation: {
+        ...automationPayload,
+        enabled: true,
+        name: planName,
+        scopeType: "asset_list",
+        scopeId: null,
+        assetIds,
+        defaultScriptIds: scriptIds
+      }
+    });
+
+    setSelectedPreventiveAssets(new Set());
+    setSelectedPreventiveScripts(new Set());
+    setPreventiveScriptRecommendations({ recommended: [], others: [] });
+    setPreventiveAutomationCreateRequest(null);
+    return createdPlan;
+  }
+
   function toggleAlertSettingsSection(section) {
     setSettingsSectionsOpen((current) => ({
       ...current,
@@ -3768,6 +3806,7 @@ function AlertCenterV2({
                   onSave={onSavePreventiveAutomationPlan}
                   onDisable={onDisablePreventiveAutomationPlan}
                   onPrepare={onPreparePreventiveAutomationPlan}
+                  onCreateAutomatedPreventivePlan={createAutomatedPreventivePlanFromSelection}
                   onCreateRequestHandled={() => setPreventiveAutomationCreateRequest(null)}
                 />
               )}
@@ -5570,7 +5609,12 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
         response.preventivePlan,
         ...current.filter((plan) => plan.id !== response.preventivePlan.id)
       ]);
-      notify("Preventiva registrada. Nenhum comando foi executado.", "ok");
+      notify(
+        payload.automation?.enabled
+          ? "Plano preventivo automatizado registrado. Nenhum comando foi executado."
+          : "Preventiva registrada. Nenhum comando foi executado.",
+        "ok"
+      );
       await loadData(true);
       return response.preventivePlan;
     } catch (error) {

@@ -255,6 +255,8 @@ function fromPlanRow(row) {
 
   return {
     id: row.id,
+    preventivePlanId: row.preventive_plan_id || null,
+    preventivePlanName: row.preventive_plan_name || null,
     name: row.name,
     description: row.description || "",
     active: row.active !== false,
@@ -424,6 +426,7 @@ function normalizePlanPayload(payload = {}, current = null) {
   }
 
   return {
+    preventivePlanId: trimString(payload.preventivePlanId ?? payload.preventive_plan_id ?? current?.preventivePlanId, 120) || null,
     name,
     description: trimString(payload.description ?? current?.description, 1000),
     active: normalizeBoolean(payload.active, current ? current.active : true),
@@ -772,9 +775,11 @@ async function hydratePlan(plan) {
 
 export async function listPreventiveAutomationPlans() {
   const result = await query(`
-    SELECT *
-    FROM preventive_automation_plans
-    ORDER BY created_at DESC
+    SELECT automation.*,
+           plans.name AS preventive_plan_name
+    FROM preventive_automation_plans automation
+    LEFT JOIN preventive_plans plans ON plans.id = automation.preventive_plan_id
+    ORDER BY automation.created_at DESC
   `);
 
   const rows = [];
@@ -786,9 +791,97 @@ export async function listPreventiveAutomationPlans() {
 }
 
 export async function findPreventiveAutomationPlanById(id) {
-  const result = await query("SELECT * FROM preventive_automation_plans WHERE id = $1", [id]);
+  const result = await query(
+    `
+      SELECT automation.*,
+             plans.name AS preventive_plan_name
+      FROM preventive_automation_plans automation
+      LEFT JOIN preventive_plans plans ON plans.id = automation.preventive_plan_id
+      WHERE automation.id = $1
+    `,
+    [id]
+  );
   const row = await ensurePlanRowSchedule(result.rows[0]);
   return hydratePlan(fromPlanRow(row));
+}
+
+export async function findPreventiveAutomationPlanByPreventivePlanId(preventivePlanId) {
+  const result = await query(
+    `
+      SELECT automation.*,
+             plans.name AS preventive_plan_name
+      FROM preventive_automation_plans automation
+      LEFT JOIN preventive_plans plans ON plans.id = automation.preventive_plan_id
+      WHERE automation.preventive_plan_id = $1
+      ORDER BY automation.created_at DESC
+      LIMIT 1
+    `,
+    [preventivePlanId]
+  );
+  const row = await ensurePlanRowSchedule(result.rows[0]);
+  return hydratePlan(fromPlanRow(row));
+}
+
+export async function createPreventiveAutomationPlanRecord(payload = {}, user = null, db = query) {
+  const normalized = normalizePlanPayload(payload);
+  await validateScripts(normalized.defaultScriptIds);
+  const assets = await validateScopeSelection(normalized);
+
+  const id = payload.id || randomUUID();
+  const scheduleAnchorAt = new Date().toISOString();
+  const nextRunAt = computeNextScheduledFor(normalized, scheduleAnchorAt);
+
+  await db(
+    `
+      INSERT INTO preventive_automation_plans (
+        id, preventive_plan_id, name, description, active, recurrence_type, recurrence_interval,
+        preferred_time, timezone, scope_type, scope_id, default_script_ids,
+        asset_ids, notes, indicator_color, last_scheduled_at, next_run_at, schedule_anchor_at, created_by
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+    `,
+    [
+      id,
+      normalized.preventivePlanId,
+      normalized.name,
+      normalized.description,
+      normalized.active,
+      normalized.recurrenceType,
+      normalized.recurrenceInterval,
+      normalized.preferredTime,
+      normalized.timezone,
+      normalized.scopeType,
+      normalized.scopeId,
+      JSON.stringify(normalized.defaultScriptIds),
+      JSON.stringify(normalized.assetIds),
+      normalized.notes,
+      normalized.indicatorColor,
+      nextRunAt,
+      nextRunAt,
+      scheduleAnchorAt,
+      user?.id || null
+    ]
+  );
+
+  const overrides = normalized.overrides || [];
+  await replaceOverrides(id, overrides, db);
+  await syncAssetSchedulesForPlan({ ...normalized, id, overrides, scheduleAnchorAt, createdAt: scheduleAnchorAt }, assets, db);
+  await addLog({
+    type: "preventive_automation_created",
+    message: `Automacao preventiva criada: ${normalized.name}. Rotina aguardando agente seguro.`,
+    userId: user?.id || null,
+    meta: {
+      preventivePlanId: normalized.preventivePlanId,
+      preventiveAutomationPlanId: id,
+      scopeType: normalized.scopeType,
+      scopeId: normalized.scopeId,
+      assetIds: normalized.assetIds,
+      nextRunAt
+    },
+    db
+  });
+
+  return id;
 }
 
 export async function createPreventiveAutomationPlan(payload = {}, user = null) {

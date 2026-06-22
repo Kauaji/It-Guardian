@@ -4,6 +4,10 @@ import { addAssetHistory } from "./assetHistoryRepository.js";
 import { addLog } from "./logRepository.js";
 import { findMaintenanceScriptById } from "./maintenanceScriptRepository.js";
 import { addServiceOrderHistory, createServiceOrder, findServiceOrderById } from "./serviceOrderRepository.js";
+import {
+  createPreventiveAutomationPlanRecord,
+  findPreventiveAutomationPlanByPreventivePlanId
+} from "./preventiveAutomationRepository.js";
 
 const allowedStatuses = new Set(["prepared", "simulated", "completed", "failed", "cancelled"]);
 const highRiskLevels = new Set(["high", "critical"]);
@@ -40,7 +44,8 @@ function fromPlanRow(row) {
     createdBy: row.created_by,
     preparedAt: row.prepared_at,
     createdAt: row.created_at,
-    updatedAt: row.updated_at
+    updatedAt: row.updated_at,
+    automation: { enabled: false }
   };
 }
 
@@ -148,6 +153,46 @@ async function hydratePlan(plan, db = query) {
   };
 }
 
+function summarizeAutomation(automation) {
+  if (!automation) return { enabled: false };
+  return {
+    enabled: true,
+    id: automation.id,
+    preventivePlanId: automation.preventivePlanId,
+    name: automation.name,
+    active: automation.active !== false,
+    recurrenceType: automation.recurrenceType,
+    recurrenceInterval: automation.recurrenceInterval,
+    recurrenceIntervalDays: automation.recurrenceIntervalDays,
+    preferredTime: automation.preferredTime,
+    timezone: automation.timezone,
+    scopeType: automation.scopeType,
+    scopeId: automation.scopeId,
+    assetIds: automation.assetIds || [],
+    defaultScriptIds: automation.defaultScriptIds || [],
+    notes: automation.notes || "",
+    indicatorColor: automation.indicatorColor,
+    nextRunAt: automation.nextRunAt,
+    nextScheduledFor: automation.nextScheduledFor,
+    overrideCount: automation.overrideCount || 0,
+    overrides: automation.overrides || [],
+    assetSchedules: automation.assetSchedules || []
+  };
+}
+
+async function attachAutomation(plan) {
+  if (!plan) return null;
+  const automation = await findPreventiveAutomationPlanByPreventivePlanId(plan.id);
+  return {
+    ...plan,
+    automation: summarizeAutomation(automation)
+  };
+}
+
+async function attachAutomations(plans) {
+  return Promise.all(plans.map((plan) => attachAutomation(plan)));
+}
+
 export async function listPreventivePlans() {
   const result = await query(`
     SELECT plans.*,
@@ -160,8 +205,8 @@ export async function listPreventivePlans() {
     ORDER BY plans.created_at DESC
   `);
 
-  const plans = result.rows.map(fromPlanRow);
-  return Promise.all(plans.map((plan) => hydratePlan(plan)));
+  const plans = await Promise.all(result.rows.map((row) => hydratePlan(fromPlanRow(row))));
+  return attachAutomations(plans);
 }
 
 export async function findPreventivePlanById(id) {
@@ -178,7 +223,7 @@ export async function findPreventivePlanById(id) {
     `,
     [id]
   );
-  return hydratePlan(result.rows[0] ? fromPlanRow(result.rows[0]) : null);
+  return attachAutomation(await hydratePlan(result.rows[0] ? fromPlanRow(result.rows[0]) : null));
 }
 
 async function lockPreventivePlanById(id, db) {
@@ -213,6 +258,7 @@ export async function createPreventivePlan(payload = {}, user = null) {
     throw error;
   }
 
+  const automationEnabled = payload.automation?.enabled === true;
   const planId = randomUUID();
   const createdPlanId = await withTransaction(async (db) => {
     const planResult = await db(
@@ -288,6 +334,51 @@ export async function createPreventivePlan(payload = {}, user = null) {
       },
       db
     });
+
+    if (automationEnabled) {
+      const automationPayload = payload.automation || {};
+      const automationId = await createPreventiveAutomationPlanRecord(
+        {
+          ...automationPayload,
+          preventivePlanId: planId,
+          name: trimString(automationPayload.name, 120, normalized.name),
+          description: trimString(automationPayload.description, 1000, normalized.description),
+          notes: trimString(automationPayload.notes, 1000, normalized.notes),
+          scopeType: "asset_list",
+          scopeId: null,
+          assetIds: normalized.assetIds,
+          defaultScriptIds: normalized.scriptIds,
+          active: automationPayload.active !== false
+        },
+        user,
+        db
+      );
+
+      for (const assetId of normalized.assetIds) {
+        await addAssetHistory({
+          assetId,
+          eventType: "preventive_automation_enabled",
+          message: `Plano preventivo '${normalized.name}' recebeu automacao vinculada.`,
+          newValue: automationId,
+          userId: user?.id || null,
+          userName,
+          db
+        });
+      }
+
+      await addLog({
+        type: "preventive_plan_automation_linked",
+        message: `Automacao vinculada ao plano preventivo: ${normalized.name}.`,
+        userId: user?.id || null,
+        meta: {
+          preventivePlanId: planId,
+          preventiveAutomationPlanId: automationId,
+          assetCount: normalized.assetIds.length,
+          scriptCount: normalized.scriptIds.length
+        },
+        db
+      });
+    }
 
     return planResult.rows[0].id;
   });
