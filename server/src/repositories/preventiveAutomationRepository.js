@@ -6,7 +6,7 @@ import { findMaintenanceScriptById, refreshDueScriptValidations } from "./mainte
 import { listDevices } from "../services/monitoringService.js";
 
 const recurrenceTypes = new Set(["daily", "weekly", "biweekly", "monthly", "custom_days"]);
-const scopeTypes = new Set(["asset", "segment", "group", "all"]);
+const scopeTypes = new Set(["asset", "asset_list", "segment", "group", "all"]);
 const runStatuses = new Set(["scheduled", "prepared", "waiting_agent", "success", "error", "cancelled", "skipped"]);
 const DEFAULT_TIMEZONE = "America/Sao_Paulo";
 const DEFAULT_PREFERRED_TIME = "08:00";
@@ -72,6 +72,16 @@ function normalizeScheduleSlot(value = new Date()) {
 }
 
 function normalizeScriptIds(value = []) {
+  return [
+    ...new Set(
+      (Array.isArray(value) ? value : [])
+        .map((item) => trimString(item, 120))
+        .filter(Boolean)
+    )
+  ];
+}
+
+export function normalizeAssetIds(value = []) {
   return [
     ...new Set(
       (Array.isArray(value) ? value : [])
@@ -255,6 +265,7 @@ function fromPlanRow(row) {
     timezone: schedule.timezone,
     scopeType: row.scope_type || "all",
     scopeId: row.scope_id,
+    assetIds: normalizeAssetIds(parseJsonArray(row.asset_ids)),
     defaultScriptIds: parseJsonArray(row.default_script_ids),
     notes: row.notes || "",
     indicatorColor: normalizeIndicatorColor(row.indicator_color),
@@ -363,18 +374,52 @@ function normalizeOverridePayload(item = {}) {
   };
 }
 
+function normalizeAssetListPayload(value) {
+  if (!Array.isArray(value)) {
+    throw createHttpError("assetIds deve ser uma lista de maquinas para o escopo asset_list.", 400);
+  }
+
+  const ids = normalizeAssetIds(value);
+  if (!ids.length) {
+    throw createHttpError("Selecione pelo menos uma maquina para automatizar a preventiva.", 400);
+  }
+
+  return ids;
+}
+
+function normalizeNonAssetListPayload(value, hasIncomingValue) {
+  if (!hasIncomingValue || value == null) return [];
+  if (!Array.isArray(value)) {
+    throw createHttpError("assetIds so pode ser usado com o escopo asset_list.", 400);
+  }
+
+  const ids = normalizeAssetIds(value);
+  if (ids.length) {
+    throw createHttpError("assetIds so pode ser usado com o escopo asset_list.", 400);
+  }
+
+  return [];
+}
+
 function normalizePlanPayload(payload = {}, current = null) {
   const name = trimString(payload.name ?? current?.name, 120);
   const recurrenceType = normalizeRecurrenceType(payload.recurrenceType ?? current?.recurrenceType);
   const scopeType = normalizeScopeType(payload.scopeType ?? current?.scopeType);
-  const scopeId = scopeType === "all" ? null : trimString(payload.scopeId ?? current?.scopeId, 120) || null;
+  const rawAssetIds = payload.assetIds ?? payload.asset_ids;
+  const hasIncomingAssetIds = rawAssetIds !== undefined;
+  const assetIds = scopeType === "asset_list"
+    ? normalizeAssetListPayload(hasIncomingAssetIds ? rawAssetIds : current?.assetIds)
+    : normalizeNonAssetListPayload(rawAssetIds, hasIncomingAssetIds);
+  const scopeId = scopeType === "all" || scopeType === "asset_list"
+    ? null
+    : trimString(payload.scopeId ?? current?.scopeId, 120) || null;
   const defaultScriptIds = normalizeScriptIds(payload.defaultScriptIds ?? current?.defaultScriptIds);
 
   if (name.length < 3) {
     throw createHttpError("Informe um nome para a automação preventiva com pelo menos 3 caracteres.", 400);
   }
 
-  if (scopeType !== "all" && !scopeId) {
+  if (scopeType !== "all" && scopeType !== "asset_list" && !scopeId) {
     throw createHttpError("Informe o escopo da automação preventiva.", 400);
   }
 
@@ -392,6 +437,7 @@ function normalizePlanPayload(payload = {}, current = null) {
     timezone: normalizeTimezone(payload.timezone ?? current?.timezone),
     scopeType,
     scopeId,
+    assetIds,
     defaultScriptIds,
     notes: trimString(payload.notes ?? current?.notes, 1000),
     indicatorColor: normalizeIndicatorColor(payload.indicatorColor ?? current?.indicatorColor),
@@ -583,7 +629,7 @@ function computeScheduleNextRunAt({ existing, plan, recurrence, nextSchedule }) 
 async function syncAssetSchedulesForPlan(plan, assets, db = query) {
   const existingSchedules = await listAssetSchedulesForPlan(plan.id, db);
   const existingByAsset = new Map(existingSchedules.map((schedule) => [String(schedule.assetId), schedule]));
-  const activeAssetIds = new Set(assets.map((asset) => String(asset.id)));
+  const syncActions = getAssetScheduleSyncActions(existingSchedules, assets.map((asset) => asset.id));
   const scheduleAnchorAt = plan.scheduleAnchorAt || plan.createdAt || new Date().toISOString();
 
   for (const asset of assets) {
@@ -635,18 +681,16 @@ async function syncAssetSchedulesForPlan(plan, assets, db = query) {
     );
   }
 
-  for (const schedule of existingSchedules) {
-    if (!activeAssetIds.has(String(schedule.assetId))) {
-      await db(
-        `
-          UPDATE preventive_automation_asset_schedules
-          SET active = FALSE,
-              updated_at = NOW()
-          WHERE id = $1
-        `,
-        [schedule.id]
-      );
-    }
+  for (const scheduleId of syncActions.disable) {
+    await db(
+      `
+        UPDATE preventive_automation_asset_schedules
+        SET active = FALSE,
+            updated_at = NOW()
+        WHERE id = $1
+      `,
+      [scheduleId]
+    );
   }
 
   return updatePlanNextRunFromAssetSchedules(plan.id, db);
@@ -762,9 +806,9 @@ export async function createPreventiveAutomationPlan(payload = {}, user = null) 
         INSERT INTO preventive_automation_plans (
           id, name, description, active, recurrence_type, recurrence_interval,
           preferred_time, timezone, scope_type, scope_id, default_script_ids,
-          notes, indicator_color, last_scheduled_at, next_run_at, schedule_anchor_at, created_by
+          asset_ids, notes, indicator_color, last_scheduled_at, next_run_at, schedule_anchor_at, created_by
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
       `,
       [
         id,
@@ -778,6 +822,7 @@ export async function createPreventiveAutomationPlan(payload = {}, user = null) 
         normalized.scopeType,
         normalized.scopeId,
         JSON.stringify(normalized.defaultScriptIds),
+        JSON.stringify(normalized.assetIds),
         normalized.notes,
         normalized.indicatorColor,
         nextRunAt,
@@ -798,6 +843,7 @@ export async function createPreventiveAutomationPlan(payload = {}, user = null) 
         preventiveAutomationPlanId: id,
         scopeType: normalized.scopeType,
         scopeId: normalized.scopeId,
+        assetIds: normalized.assetIds,
         nextRunAt
       },
       db
@@ -832,11 +878,12 @@ export async function updatePreventiveAutomationPlan(id, payload = {}, user = nu
             scope_type = $9,
             scope_id = $10,
             default_script_ids = $11,
-            notes = $12,
-            indicator_color = $13,
-            last_scheduled_at = COALESCE(last_scheduled_at, $14),
-            next_run_at = COALESCE(next_run_at, $15),
-            schedule_anchor_at = COALESCE(schedule_anchor_at, $16),
+            asset_ids = $12,
+            notes = $13,
+            indicator_color = $14,
+            last_scheduled_at = COALESCE(last_scheduled_at, $15),
+            next_run_at = COALESCE(next_run_at, $16),
+            schedule_anchor_at = COALESCE(schedule_anchor_at, $17),
             updated_at = NOW()
         WHERE id = $1
       `,
@@ -852,6 +899,7 @@ export async function updatePreventiveAutomationPlan(id, payload = {}, user = nu
         normalized.scopeType,
         normalized.scopeId,
         JSON.stringify(normalized.defaultScriptIds),
+        JSON.stringify(normalized.assetIds),
         normalized.notes,
         normalized.indicatorColor,
         nextRunAt,
@@ -869,7 +917,7 @@ export async function updatePreventiveAutomationPlan(id, payload = {}, user = nu
       type: "preventive_automation_updated",
       message: `Automação preventiva atualizada: ${normalized.name}.`,
       userId: user?.id || null,
-      meta: { preventiveAutomationPlanId: id, nextRunAt },
+      meta: { preventiveAutomationPlanId: id, scopeType: normalized.scopeType, scopeId: normalized.scopeId, assetIds: normalized.assetIds, nextRunAt },
       db
     });
   });
@@ -939,10 +987,48 @@ export function resolveEffectiveRecurrence(plan, asset) {
   };
 }
 
+export function resolveAssetListDevices(assetIds = [], devices = []) {
+  const ids = normalizeAssetIds(assetIds);
+  if (!ids.length) {
+    throw createHttpError("Selecione pelo menos uma maquina para automatizar a preventiva.", 400);
+  }
+
+  const devicesById = new Map(devices.map((device) => [String(device.id), device]));
+  const missingIds = ids.filter((id) => !devicesById.has(String(id)));
+  if (missingIds.length) {
+    throw createHttpError("Uma ou mais maquinas selecionadas nao existem.", 400);
+  }
+
+  return ids.map((id) => devicesById.get(String(id)));
+}
+
+export function getAssetScheduleSyncActions(existingSchedules = [], nextAssetIds = []) {
+  const nextIds = normalizeAssetIds(nextAssetIds);
+  const existingActiveIds = new Set(
+    existingSchedules
+      .filter((schedule) => schedule.active !== false)
+      .map((schedule) => String(schedule.assetId))
+  );
+  const nextIdSet = new Set(nextIds.map(String));
+
+  return {
+    add: nextIds.filter((id) => !existingActiveIds.has(String(id))),
+    keep: nextIds.filter((id) => existingActiveIds.has(String(id))),
+    disable: existingSchedules
+      .filter((schedule) => schedule.active !== false && !nextIdSet.has(String(schedule.assetId)))
+      .map((schedule) => schedule.id)
+  };
+}
+
 async function assertScopeExists(plan, devices) {
   if (plan.scopeType === "asset") {
     if (devices.some((device) => String(device.id) === String(plan.scopeId))) return;
     throw createHttpError("O escopo selecionado não existe.", 400);
+  }
+
+  if (plan.scopeType === "asset_list") {
+    resolveAssetListDevices(plan.assetIds, devices);
+    return;
   }
 
   if (plan.scopeType === "segment") {
@@ -965,6 +1051,10 @@ async function resolvePlanAssets(plan) {
 
   if (plan.scopeType === "asset") {
     return devices.filter((device) => String(device.id) === String(plan.scopeId));
+  }
+
+  if (plan.scopeType === "asset_list") {
+    return resolveAssetListDevices(plan.assetIds, devices);
   }
 
   if (plan.scopeType === "segment") {

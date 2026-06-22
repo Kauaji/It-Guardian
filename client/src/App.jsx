@@ -1270,6 +1270,7 @@ const preventiveAutomationRecurrenceLabels = {
 const preventiveAutomationScopeLabels = {
   all: "Todas as máquinas",
   asset: "Máquina",
+  asset_list: "Maquinas selecionadas",
   segment: "Segmento",
   group: "Grupo"
 };
@@ -1332,6 +1333,7 @@ function PreventiveAutomationPanel({
     timezone: "America/Sao_Paulo",
     scopeType: "all",
     scopeId: "",
+    assetIds: [],
     defaultScriptIds: [],
     notes: "",
     indicatorColor: "#1f7a61",
@@ -1391,6 +1393,10 @@ function PreventiveAutomationPanel({
 
   function getScopeLabel(plan) {
     if (plan.scopeType === "all") return preventiveAutomationScopeLabels.all;
+    if (plan.scopeType === "asset_list") {
+      const count = Array.isArray(plan.assetIds) ? plan.assetIds.length : 0;
+      return `${preventiveAutomationScopeLabels.asset_list}: ${count} maquina(s)`;
+    }
     const option = getScopeOptions(plan.scopeType).find((item) => String(item.id) === String(plan.scopeId));
     return `${preventiveAutomationScopeLabels[plan.scopeType] || "Escopo"}: ${option?.label || plan.scopeId || "não informado"}`;
   }
@@ -1431,7 +1437,8 @@ function PreventiveAutomationPanel({
       preferredTime: form.preferredTime,
       timezone: form.timezone,
       scopeType: form.scopeType,
-      scopeId: form.scopeType === "all" ? null : form.scopeId,
+      scopeId: form.scopeType === "all" || form.scopeType === "asset_list" ? null : form.scopeId,
+      assetIds: form.scopeType === "asset_list" ? form.assetIds || [] : [],
       defaultScriptIds: form.defaultScriptIds,
       notes: form.notes,
       indicatorColor: normalizeAutomationColor(form.indicatorColor),
@@ -1457,9 +1464,7 @@ function PreventiveAutomationPanel({
       const shouldPreserveWizardDraft =
         nextWizardMode &&
         wizardMode &&
-        wizardContext?.selectionKey &&
-        context?.selectionKey &&
-        wizardContext.selectionKey === context.selectionKey;
+        current.id == null;
 
       const base = shouldPreserveWizardDraft ? current : emptyForm;
 
@@ -1468,6 +1473,7 @@ function PreventiveAutomationPanel({
         ...formDefaults,
         id: null,
         active: formDefaults.active ?? base.active ?? true,
+        assetIds: Array.isArray(formDefaults.assetIds) ? formDefaults.assetIds : base.assetIds || [],
         defaultScriptIds: Array.isArray(formDefaults.defaultScriptIds) ? formDefaults.defaultScriptIds : base.defaultScriptIds || [],
         overrides: Array.isArray(formDefaults.overrides) ? formDefaults.overrides : base.overrides || [],
         indicatorColor: normalizeAutomationColor(formDefaults.indicatorColor || base.indicatorColor)
@@ -1499,6 +1505,7 @@ function PreventiveAutomationPanel({
       timezone: plan.timezone || "America/Sao_Paulo",
       scopeType: plan.scopeType || "all",
       scopeId: plan.scopeId || "",
+      assetIds: Array.isArray(plan.assetIds) ? plan.assetIds : [],
       defaultScriptIds: Array.isArray(plan.defaultScriptIds) ? plan.defaultScriptIds : [],
       notes: plan.notes || "",
       indicatorColor: normalizeAutomationColor(plan.indicatorColor),
@@ -1512,7 +1519,7 @@ function PreventiveAutomationPanel({
     setForm((current) => ({
       ...current,
       [field]: value,
-      ...(field === "scopeType" ? { scopeId: "" } : {}),
+      ...(field === "scopeType" ? { scopeId: "", assetIds: value === "asset_list" ? current.assetIds || [] : [] } : {}),
       ...(field === "recurrenceType" ? { recurrenceInterval: getDefaultRecurrenceInterval(value) } : {})
     }));
   }
@@ -1861,12 +1868,31 @@ function PreventiveAutomationPanel({
               <label>
                 Escopo
                 <select value={form.scopeType} onChange={(event) => updateForm("scopeType", event.target.value)}>
-                  {Object.entries(preventiveAutomationScopeLabels).map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
-                  ))}
+                  {Object.entries(preventiveAutomationScopeLabels)
+                    .filter(([value]) => value !== "asset_list" || form.scopeType === "asset_list")
+                    .map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
                 </select>
               </label>
-              {form.scopeType !== "all" && (
+              {form.scopeType === "asset_list" && (
+                <div className="preventive-automation-wide automation-asset-list-scope">
+                  <strong>Maquinas selecionadas</strong>
+                  <span>{(form.assetIds || []).length} maquina(s) herdada(s) da preventiva.</span>
+                  <div>
+                    {(form.assetIds || []).map((assetId) => {
+                      const device = devices.find((item) => String(item.id) === String(assetId));
+                      const label = device?.name || device?.hostname || assetId;
+                      return (
+                        <em key={assetId}>
+                          {label} <small>{assetId}</small>
+                        </em>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              {form.scopeType !== "all" && form.scopeType !== "asset_list" && (
                 <label>
                   Alvo
                   <select value={form.scopeId} onChange={(event) => updateForm("scopeId", event.target.value)} required>
@@ -2821,19 +2847,7 @@ function AlertCenterV2({
       "|",
       ...selectedPreventiveScriptList.map((script) => script.id).sort()
     ].join(":");
-    const firstDevice = selectedPreventiveDevices[0];
-    const firstSegmentId = firstDevice?.segmentId || firstDevice?.segment?.id || firstDevice?.location?.segmentId || "";
-    const hasSingleSegment =
-      firstSegmentId &&
-      selectedPreventiveDevices.length > 1 &&
-      selectedPreventiveDevices.every((device) =>
-        String(device.segmentId || device.segment?.id || device.location?.segmentId || "") === String(firstSegmentId)
-      );
-    const scopeDefaults = selectedPreventiveDevices.length === 1
-      ? { scopeType: "asset", scopeId: firstDevice.id }
-      : hasSingleSegment
-        ? { scopeType: "segment", scopeId: firstSegmentId }
-        : { scopeType: "all", scopeId: "" };
+    const assetIds = selectedPreventiveDevices.map((device) => device.id).filter(Boolean);
 
     setPreventiveAutomationCreateRequest({
       id: Date.now(),
@@ -2847,10 +2861,13 @@ function AlertCenterV2({
           selectionKey,
           assetCount: selectedPreventiveDevices.length,
           assetNames: selectedDeviceNames,
+          assetIds,
           scriptNames: selectedScriptNames,
           riskCount: selectedPreventiveRiskList.length
         },
-        ...scopeDefaults
+        scopeType: "asset_list",
+        scopeId: "",
+        assetIds
       }
     });
   }

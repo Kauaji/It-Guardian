@@ -11041,6 +11041,46 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
   grid-column: 1 / -1;
 }
 
+.automation-asset-list-scope {
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+  border-radius: 10px;
+  color: var(--text-soft);
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.automation-asset-list-scope strong {
+  color: var(--text);
+  font-weight: 900;
+}
+
+.automation-asset-list-scope > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.automation-asset-list-scope em {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  display: inline-flex;
+  font-style: normal;
+  font-weight: 800;
+  gap: 6px;
+  min-height: 28px;
+  padding: 5px 9px;
+}
+
+.automation-asset-list-scope small {
+  color: var(--text-muted);
+  font-weight: 800;
+}
+
 .automation-color-field > div:first-of-type {
   align-items: center;
   display: grid;

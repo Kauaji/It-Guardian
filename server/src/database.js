@@ -977,6 +977,7 @@ export async function initializeDatabase() {
       timezone TEXT NOT NULL DEFAULT 'America/Sao_Paulo',
       scope_type TEXT NOT NULL DEFAULT 'all',
       scope_id TEXT,
+      asset_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
       default_script_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
       notes TEXT,
       indicator_color TEXT NOT NULL DEFAULT '#1f7a61',
@@ -1015,6 +1016,12 @@ export async function initializeDatabase() {
     ALTER TABLE preventive_automation_plans
     ADD COLUMN IF NOT EXISTS schedule_anchor_at TIMESTAMPTZ;
   `);
+
+  await query(`
+    ALTER TABLE preventive_automation_plans
+    ADD COLUMN IF NOT EXISTS asset_ids JSONB NOT NULL DEFAULT '[]'::jsonb;
+  `);
+
   await query(`
     ALTER TABLE preventive_automation_plans
     ADD COLUMN IF NOT EXISTS indicator_color TEXT NOT NULL DEFAULT '#1f7a61';
