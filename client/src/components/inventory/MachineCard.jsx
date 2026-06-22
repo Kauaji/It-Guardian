@@ -5,6 +5,7 @@ import AssetTypeIcon from "./AssetTypeIcon.jsx";
 import { assetTypeLabel } from "./assetTypes.js";
 import PeripheralList from "./PeripheralList.jsx";
 import SelectionCheckbox from "./SelectionCheckbox.jsx";
+import AutomationIndicatorDots from "../AutomationIndicatorDots.jsx";
 
 const pingTimeFormatter = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
@@ -148,6 +149,7 @@ function MachineCardContent({
             {backupInUse ? "Backup em uso" : "Backup disponivel"}
           </span>
         )}
+        <AutomationIndicatorDots indicators={machine.automationIndicators} compact maxVisible={4} />
       </div>
       <span className="machine-ip">{machine.ip}</span>
 

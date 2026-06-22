@@ -11245,6 +11245,149 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
   line-height: 1;
 }
 
+.automation-indicator-dots {
+  position: relative;
+  z-index: 4;
+  display: inline-flex;
+  min-width: 0;
+}
+
+.automation-indicator-dot-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.automation-indicator-dot-button,
+.automation-indicator-more {
+  appearance: none;
+  border: 2px solid color-mix(in srgb, #ffffff 82%, var(--border));
+  border-radius: 999px;
+  background: var(--automation-indicator-color, var(--accent));
+  box-shadow: 0 0 0 1px var(--border), var(--shadow-sm);
+  cursor: pointer;
+  flex: 0 0 auto;
+  height: 17px;
+  padding: 0;
+  width: 17px;
+}
+
+.automation-indicator-more {
+  min-width: 26px;
+  width: auto;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1;
+  padding: 0 6px;
+}
+
+.automation-indicator-dots.compact .automation-indicator-dot-button {
+  height: 13px;
+  width: 13px;
+}
+
+.automation-indicator-dots.compact .automation-indicator-more {
+  min-width: 22px;
+  height: 17px;
+  font-size: 0.62rem;
+  padding: 0 5px;
+}
+
+.automation-indicator-dot-button:hover,
+.automation-indicator-more:hover,
+.automation-indicator-dot-button:focus-visible,
+.automation-indicator-more:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 2px;
+  transform: translateY(-1px);
+}
+
+.automation-indicator-popover {
+  position: absolute;
+  top: calc(100% + 7px);
+  right: 0;
+  z-index: 4600;
+  display: grid;
+  gap: 6px;
+  width: min(280px, 82vw);
+  max-height: 280px;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 18px 44px rgba(10, 20, 30, 0.22);
+}
+
+.automation-indicator-popover button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 8px;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.automation-indicator-popover button:hover,
+.automation-indicator-popover button:focus-visible {
+  border-color: var(--border-strong);
+  outline: 2px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  outline-offset: 1px;
+}
+
+.automation-indicator-popover span {
+  grid-row: 1 / span 2;
+  align-self: center;
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+.automation-indicator-popover strong,
+.automation-indicator-popover small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.automation-indicator-popover strong {
+  color: var(--text-strong);
+  font-size: 0.84rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.automation-indicator-popover small {
+  color: var(--text-soft);
+  font-size: 0.72rem;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.machine-badge-row .automation-indicator-dots {
+  margin-left: auto;
+}
+
+.asset-modal-header .automation-indicator-dots {
+  margin-top: 8px;
+}
+
+.preventive-device-row > .automation-indicator-dots {
+  grid-column: 3;
+  justify-self: end;
+}
+
 @media (max-width: 1100px) {
   .preventive-workspace {
     grid-template-columns: 1fr;

@@ -173,6 +173,41 @@ test("diff de agendas permite multiplos planos para a mesma maquina", () => {
   });
 });
 
+test("indicadores de automacao usam agendas ativas por ativo como fonte", () => {
+  const repositoryPath = fileURLToPath(new URL("./automationIndicatorRepository.js", import.meta.url));
+  const source = readFileSync(repositoryPath, "utf8");
+  const functionBody = source.slice(source.indexOf("export async function listAutomationIndicatorsByAssetIds"));
+
+  assert.match(functionBody, /FROM\s+preventive_automation_asset_schedules\s+schedules/i);
+  assert.match(functionBody, /INNER\s+JOIN\s+preventive_automation_plans\s+plans\s+ON\s+plans\.id\s*=\s*schedules\.plan_id/i);
+  assert.match(functionBody, /schedules\.asset_id\s*=\s*ANY\(\$1\)/i);
+  assert.match(functionBody, /schedules\.active\s*=\s*TRUE/i);
+  assert.match(functionBody, /plans\.active\s*=\s*TRUE/i);
+  assert.doesNotMatch(functionBody, /scope_id\s*=\s*ANY/i);
+});
+
+test("monitoramento anexa indicadores de automacao sem busca por card", () => {
+  const servicePath = fileURLToPath(new URL("../services/monitoringService.js", import.meta.url));
+  const source = readFileSync(servicePath, "utf8");
+
+  assert.match(source, /automationIndicatorRepository\.js/);
+  assert.match(source, /listAutomationIndicatorsByAssetIds/);
+  assert.match(source, /devices\.map\(\(device\)\s*=>\s*device\.id\)/);
+  assert.match(source, /automationIndicators:\s*automationIndicatorsByAsset\.get\(String\(device\.id\)\)\s*\|\|\s*\[\]/);
+});
+
+test("componente de indicadores limita pontos visiveis e oferece acessibilidade", () => {
+  const componentPath = fileURLToPath(new URL("../../../client/src/components/AutomationIndicatorDots.jsx", import.meta.url));
+  const source = readFileSync(componentPath, "utf8");
+
+  assert.match(source, /maxVisible\s*=\s*4/);
+  assert.match(source, /aria-label=\{formatAutomationIndicatorLabel\(indicator\)\}/);
+  assert.match(source, /title=\{formatAutomationIndicatorLabel\(indicator\)\}/);
+  assert.match(source, /aria-expanded=\{open\}/);
+  assert.match(source, /\+{hiddenCount}/);
+  assert.match(source, /onSelectPlan\?\.\(indicator\)/);
+});
+
 test("repositorio de automacao nao usa primitivas de execucao de comandos", () => {
   const repositoryPath = fileURLToPath(new URL("./preventiveAutomationRepository.js", import.meta.url));
   const scriptRepositoryPath = fileURLToPath(new URL("./maintenanceScriptRepository.js", import.meta.url));

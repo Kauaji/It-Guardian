@@ -8,6 +8,7 @@ import MachineTabs from "./MachineTabs.jsx";
 import ObservationTimeline from "./ObservationTimeline.jsx";
 import PeripheralList from "./PeripheralList.jsx";
 import QRCodePrint from "./QRCodePrint.jsx";
+import AutomationIndicatorDots from "../AutomationIndicatorDots.jsx";
 
 const tabs = [
   { id: "general", label: "Geral" },
@@ -298,6 +299,7 @@ export default function MachineDetailsModal({
             <span className="asset-eyebrow">{isManualAsset ? "Ativo de rede manual" : "Inventário OCS"}</span>
             <h2>{alias || machine.name}</h2>
             <p>{machine.name} - {machine.ip}</p>
+            <AutomationIndicatorDots indicators={machine.automationIndicators} maxVisible={4} />
           </div>
           <div className="asset-modal-header-actions">
             <button

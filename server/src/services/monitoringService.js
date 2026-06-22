@@ -9,6 +9,7 @@ import {
   DEFAULT_SEGMENT_NAME,
   listDeviceSegmentMap
 } from "../repositories/segmentRepository.js";
+import { listAutomationIndicatorsByAssetIds } from "../repositories/automationIndicatorRepository.js";
 
 function normalizeStatus(status) {
   return {
@@ -123,7 +124,7 @@ export async function listDevices({ search = "", status = "" }) {
   ]);
   const term = search.trim().toLowerCase();
 
-  return [
+  const devices = [
     ...hosts
       .filter((host) => !metadataMap.get(host.id)?.removedAt)
       .map((host) =>
@@ -135,7 +136,14 @@ export async function listDevices({ search = "", status = "" }) {
         )
       ),
     ...manualAssets.map((asset) => buildManualDevice(asset, deviceSegments.get(asset.id), metadataMap.get(asset.id)))
-  ]
+  ];
+  const automationIndicatorsByAsset = await listAutomationIndicatorsByAssetIds(devices.map((device) => device.id));
+
+  return devices
+    .map((device) => ({
+      ...device,
+      automationIndicators: automationIndicatorsByAsset.get(String(device.id)) || []
+    }))
     .filter((device) => {
       const searchable = [
         device.name,
@@ -163,19 +171,22 @@ export async function listDevices({ search = "", status = "" }) {
 }
 
 export async function getDeviceDetails(id) {
-  const [host, inventory, alerts, deviceSegments, metadata] = await Promise.all([
+  const [host, inventory, alerts, deviceSegments, metadata, automationIndicatorsByAsset] = await Promise.all([
     getHostById(id),
     getInventoryByHostId(id),
     getHostAlertsWithAcknowledgements(id),
     listDeviceSegmentMap(),
-    findDeviceMetadata(id)
+    findDeviceMetadata(id),
+    listAutomationIndicatorsByAssetIds([id])
   ]);
+  const automationIndicators = automationIndicatorsByAsset.get(String(id)) || [];
 
   if (host) {
     if (metadata?.removedAt) return null;
 
     return {
       ...enrichDevice(host, inventory, deviceSegments.get(host.id), metadata),
+      automationIndicators,
       assetHistory: await listAssetHistory(id),
       alerts
     };
@@ -189,6 +200,7 @@ export async function getDeviceDetails(id) {
 
   return {
     ...buildManualDevice(manualAsset, deviceSegments.get(manualAsset.id), metadata),
+    automationIndicators,
     assetHistory: manualAsset.manualHistory || [],
     alerts: []
   };

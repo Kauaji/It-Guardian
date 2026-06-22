@@ -105,6 +105,7 @@ import {
   updateSystemSettings,
   useSuggestionScript
 } from "./api.js";
+import AutomationIndicatorDots from "./components/AutomationIndicatorDots.jsx";
 import AssetPublicView from "./components/inventory/AssetPublicView.jsx";
 import AssetDragCompactOverlay from "./components/inventory/AssetDragCompactOverlay.jsx";
 import BulkAssetLabelPrint from "./components/inventory/BulkAssetLabelPrint.jsx";
@@ -3652,6 +3653,7 @@ function AlertCenterV2({
                                     {daysSinceLastPreventive !== null ? `${daysSinceLastPreventive} dia(s) desde a última • ` : ""}
                                     {nextPreventiveLabel}
                                   </small>
+                                  <AutomationIndicatorDots indicators={device.automationIndicators} compact maxVisible={4} />
                                   <span className="preventive-device-badges">
                                     {badges.map((badge) => (
                                       <span key={`${device.id}-${badge.label}`} className={`pill ${badge.tone}`}>{badge.label}</span>
