@@ -5,9 +5,12 @@ import test from "node:test";
 import {
   buildRunIdempotencyKey,
   computeNextScheduledFor,
+  getAssetScheduleSyncActions,
   hasPreventiveScheduleChanged,
+  normalizeAssetIds,
   normalizeRecurrenceIntervalDays,
   recurrenceToDays,
+  resolveAssetListDevices,
   resolveEffectiveRecurrence
 } from "./preventiveAutomationRepository.js";
 
@@ -107,6 +110,67 @@ test("identifica quando agenda individual precisa recalcular proxima execucao", 
   assert.equal(hasPreventiveScheduleChanged(previous, { ...previous, preferredTime: "09:00" }), true);
   assert.equal(hasPreventiveScheduleChanged(previous, { ...previous, recurrenceSource: "machine" }), true);
   assert.equal(hasPreventiveScheduleChanged(previous, { ...previous, active: false }), true);
+});
+
+test("normaliza ids explicitos removendo duplicados e vazios", () => {
+  assert.deepEqual(normalizeAssetIds([" asset-1 ", "", "asset-2", "asset-1", null]), ["asset-1", "asset-2"]);
+});
+
+test("resolve escopo asset_list sem expandir para segmento inteiro", () => {
+  const devices = Array.from({ length: 10 }, (_, index) => ({
+    id: `asset-${index + 1}`,
+    segmentId: "seg-1"
+  }));
+
+  assert.deepEqual(
+    resolveAssetListDevices(["asset-2", "asset-7"], devices).map((device) => device.id),
+    ["asset-2", "asset-7"]
+  );
+});
+
+test("resolve escopo asset_list com maquinas de segmentos diferentes", () => {
+  const devices = [
+    { id: "asset-fin", segmentId: "seg-fin" },
+    { id: "asset-ti", segmentId: "seg-ti" },
+    { id: "asset-extra", segmentId: "seg-ti" }
+  ];
+
+  assert.deepEqual(
+    resolveAssetListDevices(["asset-fin", "asset-ti"], devices).map((device) => device.id),
+    ["asset-fin", "asset-ti"]
+  );
+});
+
+test("escopo asset_list vazio ou inexistente falha com status 400", () => {
+  assert.throws(() => resolveAssetListDevices([], []), { statusCode: 400 });
+  assert.throws(() => resolveAssetListDevices(["asset-missing"], [{ id: "asset-1" }]), { statusCode: 400 });
+});
+
+test("diff de agendas preserva mantidas, adiciona novas e desativa removidas", () => {
+  const existing = [
+    { id: "schedule-1", assetId: "asset-1", active: true },
+    { id: "schedule-2", assetId: "asset-2", active: true },
+    { id: "schedule-3", assetId: "asset-3", active: true }
+  ];
+
+  assert.deepEqual(getAssetScheduleSyncActions(existing, ["asset-2", "asset-4"]), {
+    add: ["asset-4"],
+    keep: ["asset-2"],
+    disable: ["schedule-1", "schedule-3"]
+  });
+});
+
+test("diff de agendas permite multiplos planos para a mesma maquina", () => {
+  assert.deepEqual(getAssetScheduleSyncActions([], ["asset-1"]), {
+    add: ["asset-1"],
+    keep: [],
+    disable: []
+  });
+  assert.deepEqual(getAssetScheduleSyncActions([], ["asset-1"]), {
+    add: ["asset-1"],
+    keep: [],
+    disable: []
+  });
 });
 
 test("repositorio de automacao nao usa primitivas de execucao de comandos", () => {
