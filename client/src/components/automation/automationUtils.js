@@ -1,3 +1,8 @@
+import {
+  getAutomationMachineStatusSummary,
+  machineMatchesAutomationStatus
+} from "./automationStatusUtils.js";
+
 export const recurrenceLabels = {
   daily: "Diária",
   weekly: "Semanal",
@@ -46,10 +51,10 @@ export function resolveMachineLocation(machine, devices = [], segments = [], gro
 }
 
 export function automationMachineStatus(machine) {
-  const plans = machine.plans || [];
-  if (plans.some((plan) => plan.latestRun?.status === "error" || plan.latestRun?.errorDetected)) return "error";
-  if (plans.some((plan) => plan.active && !plan.nextRunAt)) return "without_schedule";
-  if (plans.some((plan) => plan.active)) return "active";
+  const summary = getAutomationMachineStatusSummary(machine);
+  if (summary.errorCount) return "error";
+  if (summary.withoutScheduleCount) return "without_schedule";
+  if (summary.activeCount) return "active";
   return "inactive";
 }
 
@@ -71,8 +76,7 @@ export function buildAutomationManagementGroups({
 
   for (const machine of machines) {
     const location = resolveMachineLocation(machine, devices, segments, groups, tabs);
-    const machineStatus = automationMachineStatus(machine);
-    const matchesStatus = status === "all" || machineStatus === status;
+    const matchesStatus = machineMatchesAutomationStatus(machine, status);
     const searchable = [
       machine.assetName,
       machine.assetType,
@@ -98,3 +102,9 @@ export function buildAutomationManagementGroups({
     )
   );
 }
+
+export {
+  formatAutomationMachineStatusSummary,
+  getAutomationMachineStatusSummary,
+  machineMatchesAutomationStatus
+} from "./automationStatusUtils.js";

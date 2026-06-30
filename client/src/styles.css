@@ -11541,6 +11541,12 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
   padding: 0 8px;
 }
 
+.automation-machine-status .pill {
+  max-width: 270px;
+  text-align: right;
+  white-space: normal;
+}
+
 .automation-machine-status small {
   color: var(--text-soft);
   font-size: 0.68rem;
@@ -11845,6 +11851,17 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
   gap: 10px;
 }
 
+.automation-machine-plan-heading .automation-recurrence-origin {
+  margin-left: auto;
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  color: var(--accent-strong);
+}
+
+.automation-machine-plan-heading .automation-recurrence-origin.personalized {
+  background: color-mix(in srgb, #2563eb 12%, var(--surface));
+  color: #1d4ed8;
+}
+
 .automation-machine-plan-heading > div {
   display: grid;
 }
@@ -11888,13 +11905,65 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 }
 
 .automation-delete-confirmation,
-.automation-remove-confirmation {
+.automation-remove-confirmation,
+.automation-status-confirmation {
   justify-items: start;
 }
 
 .automation-delete-confirmation .modal-actions,
-.automation-remove-confirmation .modal-actions {
+.automation-remove-confirmation .modal-actions,
+.automation-status-confirmation .modal-actions {
   justify-self: stretch;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.automation-status-confirmation {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+}
+
+.automation-field-error {
+  color: #b91c1c;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.automation-unsaved-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  border-radius: inherit;
+  background: rgba(9, 15, 23, 0.56);
+  backdrop-filter: blur(2px);
+}
+
+.automation-unsaved-layer > section {
+  display: grid;
+  width: min(460px, 100%);
+  gap: 18px;
+  padding: 20px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+}
+
+.automation-unsaved-layer h3 {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 1rem;
+}
+
+.automation-unsaved-layer section > div {
   display: flex;
   justify-content: flex-end;
   gap: 8px;

@@ -609,6 +609,10 @@ export function hasPreventiveScheduleChanged(previousSchedule, nextSchedule) {
 }
 
 function chooseScheduleRecalculationBase({ existing, plan }) {
+  if (existing?.active === false && plan.active !== false) {
+    return new Date().toISOString();
+  }
+
   return (
     existing?.lastScheduledAt ||
     plan.scheduleAnchorAt ||
@@ -649,7 +653,7 @@ async function syncAssetSchedulesForPlan(plan, assets, db = query) {
       recurrenceIntervalDays: recurrence.recurrenceIntervalDays,
       preferredTime: recurrence.preferredTime || plan.preferredTime,
       timezone: recurrence.timezone || plan.timezone,
-      active: true
+      active: plan.active !== false
     };
     const nextRunAt = computeScheduleNextRunAt({
       existing,
@@ -664,14 +668,14 @@ async function syncAssetSchedulesForPlan(plan, assets, db = query) {
           id, plan_id, asset_id, recurrence_source, recurrence_type,
           recurrence_interval, preferred_time, timezone, next_run_at, active
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         ON CONFLICT (plan_id, asset_id)
         DO UPDATE SET recurrence_source = EXCLUDED.recurrence_source,
                       recurrence_type = EXCLUDED.recurrence_type,
                       recurrence_interval = EXCLUDED.recurrence_interval,
                       preferred_time = EXCLUDED.preferred_time,
                       timezone = EXCLUDED.timezone,
-                      active = TRUE,
+                      active = EXCLUDED.active,
                       next_run_at = EXCLUDED.next_run_at,
                       updated_at = NOW()
       `,
@@ -684,7 +688,8 @@ async function syncAssetSchedulesForPlan(plan, assets, db = query) {
         recurrence.recurrenceIntervalDays,
         recurrence.preferredTime || plan.preferredTime,
         recurrence.timezone || plan.timezone,
-        nextRunAt
+        nextRunAt,
+        plan.active !== false
       ]
     );
   }
@@ -972,6 +977,16 @@ export async function updatePreventiveAutomationPlan(id, payload = {}, user = nu
 
   const scheduleAnchorAt = current.scheduleAnchorAt || new Date().toISOString();
   const nextRunAt = computeNextScheduledFor(normalized, new Date());
+  const statusChanged = current.active !== normalized.active;
+  const statusEvent = normalized.active
+    ? {
+        type: "preventive_automation_reactivated",
+        message: `Automação preventiva reativada: ${normalized.name}.`
+      }
+    : {
+        type: "preventive_automation_paused",
+        message: `Automação preventiva pausada: ${normalized.name}.`
+      };
 
   await withTransaction(async (db) => {
     await db(
@@ -1024,11 +1039,30 @@ export async function updatePreventiveAutomationPlan(id, payload = {}, user = nu
       await replaceOverrides(id, overrides, db);
     }
     await syncAssetSchedulesForPlan({ ...normalized, id, overrides, scheduleAnchorAt }, assets, db);
+    if (statusChanged) {
+      for (const asset of assets) {
+        await addAssetHistory({
+          assetId: asset.id,
+          eventType: statusEvent.type,
+          message: `${statusEvent.message} Agenda desta máquina ${normalized.active ? "reativada" : "pausada"}.`,
+          userId: user?.id || null,
+          userName: user?.name || user?.email || "Sistema",
+          db
+        });
+      }
+    }
     await addLog({
-      type: "preventive_automation_updated",
-      message: `Automação preventiva atualizada: ${normalized.name}.`,
+      type: statusChanged ? statusEvent.type : "preventive_automation_updated",
+      message: statusChanged ? statusEvent.message : `Automação preventiva atualizada: ${normalized.name}.`,
       userId: user?.id || null,
-      meta: { preventiveAutomationPlanId: id, scopeType: normalized.scopeType, scopeId: normalized.scopeId, assetIds: normalized.assetIds, nextRunAt },
+      meta: {
+        preventiveAutomationPlanId: id,
+        scopeType: normalized.scopeType,
+        scopeId: normalized.scopeId,
+        assetIds: normalized.assetIds,
+        nextRunAt,
+        active: normalized.active
+      },
       db
     });
   });

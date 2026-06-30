@@ -1,24 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pencil, Power, Save, Trash2, X } from "lucide-react";
+import { Pause, Pencil, Play, Save, Trash2, X } from "lucide-react";
+import {
+  automationDraftsEqual,
+  automationTimezoneOptions,
+  buildAutomationPlanDraft,
+  validateAutomationPlanDraft
+} from "./automationFormUtils.js";
 import { formatAutomationDate, formatRecurrence, recurrenceLabels } from "./automationUtils.js";
+import UnsavedChangesPrompt from "./UnsavedChangesPrompt.jsx";
+import useUnsavedChanges from "./useUnsavedChanges.js";
 
 const colorOptions = ["#1f7a61", "#2563eb", "#7c3aed", "#d97706", "#dc2626", "#0f766e"];
-const timezoneOptions = ["America/Sao_Paulo", "America/Manaus", "America/Recife", "UTC"];
-
-function buildDraft(plan) {
-  return {
-    name: plan?.name || "",
-    description: plan?.description || "",
-    notes: plan?.notes || "",
-    active: plan?.active !== false,
-    recurrenceType: plan?.recurrenceType || "monthly",
-    recurrenceIntervalDays: plan?.recurrenceIntervalDays || plan?.recurrenceInterval || 30,
-    preferredTime: plan?.preferredTime || "08:00",
-    timezone: plan?.timezone || "America/Sao_Paulo",
-    indicatorColor: plan?.indicatorColor || "#1f7a61",
-    defaultScriptIds: plan?.defaultScriptIds || []
-  };
-}
 
 export default function AutomationPlanDetails({
   plan,
@@ -34,30 +26,50 @@ export default function AutomationPlanDetails({
 }) {
   const [editing, setEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [confirmingStatus, setConfirmingStatus] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
-  const [draft, setDraft] = useState(() => buildDraft(plan));
+  const [draft, setDraft] = useState(() => buildAutomationPlanDraft(plan));
+  const [baseline, setBaseline] = useState(() => buildAutomationPlanDraft(plan));
+  const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
   const linkedScripts = useMemo(
     () => scripts.filter((script) => draft.defaultScriptIds.includes(script.id)),
     [draft.defaultScriptIds, scripts]
   );
+  const isDirty = editing && !automationDraftsEqual(draft, baseline);
+  const unsavedChanges = useUnsavedChanges(isDirty);
 
   useEffect(() => {
-    setDraft(buildDraft(plan));
+    const nextDraft = buildAutomationPlanDraft(plan);
+    setDraft(nextDraft);
+    setBaseline(nextDraft);
     setEditing(false);
     setConfirmingDelete(false);
+    setConfirmingStatus(false);
     setDeleteConfirmation("");
-  }, [plan]);
+    setErrors({});
+  }, [plan?.id]);
+
+  function requestClose() {
+    unsavedChanges.requestAction(onClose);
+  }
 
   useEffect(() => {
     if (!open) return undefined;
     function handleKeydown(event) {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") requestClose();
     }
     document.addEventListener("keydown", handleKeydown);
     return () => document.removeEventListener("keydown", handleKeydown);
-  }, [onClose, open]);
+  }, [open, isDirty]);
 
   if (!open || !plan) return null;
+  const busy = saving || submitting;
+
+  function updateDraft(field, value) {
+    setDraft((current) => ({ ...current, [field]: value }));
+    setErrors((current) => ({ ...current, [field]: undefined }));
+  }
 
   function toggleScript(scriptId) {
     setDraft((current) => ({
@@ -66,24 +78,58 @@ export default function AutomationPlanDetails({
         ? current.defaultScriptIds.filter((id) => id !== scriptId)
         : [...current.defaultScriptIds, scriptId]
     }));
+    setErrors((current) => ({ ...current, defaultScriptIds: undefined }));
   }
 
   async function submit(event) {
     event.preventDefault();
-    await onSave(plan.id, draft);
-    setEditing(false);
+    if (busy) return;
+    const nextErrors = validateAutomationPlanDraft(draft);
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length) return;
+
+    setSubmitting(true);
+    try {
+      const savedPlan = await onSave(plan.id, draft);
+      const nextBaseline = buildAutomationPlanDraft(savedPlan || draft);
+      setDraft(nextBaseline);
+      setBaseline(nextBaseline);
+      setEditing(false);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function changeStatus() {
+    if (busy) return;
+    setSubmitting(true);
+    try {
+      const savedPlan = await onSave(plan.id, { active: plan.active === false });
+      const nextBaseline = buildAutomationPlanDraft(savedPlan || { ...plan, active: plan.active === false });
+      setDraft(nextBaseline);
+      setBaseline(nextBaseline);
+      setConfirmingStatus(false);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
-    <div className="modal-backdrop automation-management-backdrop" role="presentation">
+    <div
+      className="modal-backdrop automation-management-backdrop"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) requestClose();
+      }}
+    >
       <section className="modal-panel automation-plan-details" role="dialog" aria-modal="true" aria-labelledby="automation-plan-title">
         <header>
           <div>
-            <span>Plano de automação</span>
+            <span>Configuração geral do plano</span>
             <h2 id="automation-plan-title">{plan.name}</h2>
-            <p>Informações gerais compartilhadas por todas as máquinas vinculadas.</p>
+            <p>Estas configurações afetam todas as máquinas, exceto aquelas que possuem recorrência personalizada.</p>
           </div>
-          <button type="button" className="icon-button" onClick={onClose} aria-label="Fechar detalhes do plano">
+          <button type="button" className="icon-button" onClick={requestClose} aria-label="Fechar detalhes do plano">
             <X size={18} />
           </button>
         </header>
@@ -93,8 +139,8 @@ export default function AutomationPlanDetails({
             <Trash2 size={24} />
             <h3>Excluir plano</h3>
             <p>
-              Você está prestes a excluir o plano <strong>{plan.name}</strong>. Ele será removido de
-              {" "}{plan.assetCount || plan.assetSchedules?.filter((item) => item.active !== false).length || 0} máquina(s).
+              Você está prestes a excluir o plano <strong>{plan.name}</strong>. Ele será removido de{" "}
+              {plan.assetCount || plan.assetSchedules?.filter((item) => item.active !== false).length || 0} máquina(s).
               Agendas futuras serão desativadas e o histórico será preservado.
             </p>
             <label>
@@ -108,35 +154,67 @@ export default function AutomationPlanDetails({
               <button
                 type="button"
                 className="danger-action compact-action"
-                disabled={saving || deleteConfirmation !== plan.name}
+                disabled={busy || deleteConfirmation !== plan.name}
                 onClick={() => onDelete(plan)}
               >
                 Excluir plano
               </button>
             </div>
           </section>
+        ) : confirmingStatus ? (
+          <section className="automation-status-confirmation">
+            {plan.active === false ? <Play size={24} /> : <Pause size={24} />}
+            <h3>{plan.active === false ? "Reativar automação" : "Pausar automação"}</h3>
+            <p>
+              {plan.active === false
+                ? "As agendas vinculadas voltarão a ficar ativas e serão sincronizadas."
+                : "As agendas vinculadas serão pausadas sem apagar o plano ou seu histórico."}
+            </p>
+            <div className="modal-actions">
+              <button type="button" className="secondary-action compact-action" onClick={() => setConfirmingStatus(false)}>
+                Cancelar
+              </button>
+              <button type="button" className="primary-action compact-action" disabled={busy} onClick={changeStatus}>
+                {plan.active === false ? "Reativar automação" : "Pausar automação"}
+              </button>
+            </div>
+          </section>
         ) : editing ? (
-          <form className="automation-plan-edit-form" onSubmit={submit}>
+          <form className="automation-plan-edit-form" onSubmit={submit} noValidate>
             <div className="automation-plan-edit-grid">
-              <label>Nome<input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label>
+              <label>
+                Nome
+                <input value={draft.name} onChange={(event) => updateDraft("name", event.target.value)} />
+                {errors.name && <small className="automation-field-error">{errors.name}</small>}
+              </label>
               <label>
                 Recorrência
-                <select value={draft.recurrenceType} onChange={(event) => setDraft({ ...draft, recurrenceType: event.target.value })}>
+                <select value={draft.recurrenceType} onChange={(event) => updateDraft("recurrenceType", event.target.value)}>
                   {Object.entries(recurrenceLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                 </select>
+                {errors.recurrenceType && <small className="automation-field-error">{errors.recurrenceType}</small>}
               </label>
               {draft.recurrenceType === "custom_days" && (
-                <label>Dias<input type="number" min="1" max="365" value={draft.recurrenceIntervalDays} onChange={(event) => setDraft({ ...draft, recurrenceIntervalDays: Number(event.target.value) })} /></label>
+                <label>
+                  Dias
+                  <input type="number" min="1" max="365" value={draft.recurrenceIntervalDays} onChange={(event) => updateDraft("recurrenceIntervalDays", Number(event.target.value))} />
+                  {errors.recurrenceIntervalDays && <small className="automation-field-error">{errors.recurrenceIntervalDays}</small>}
+                </label>
               )}
-              <label>Horário<input type="time" value={draft.preferredTime} onChange={(event) => setDraft({ ...draft, preferredTime: event.target.value })} /></label>
+              <label>
+                Horário
+                <input type="time" value={draft.preferredTime} onChange={(event) => updateDraft("preferredTime", event.target.value)} />
+                {errors.preferredTime && <small className="automation-field-error">{errors.preferredTime}</small>}
+              </label>
               <label>
                 Fuso horário
-                <select value={draft.timezone} onChange={(event) => setDraft({ ...draft, timezone: event.target.value })}>
-                  {timezoneOptions.map((timezone) => <option key={timezone} value={timezone}>{timezone}</option>)}
+                <select value={draft.timezone} onChange={(event) => updateDraft("timezone", event.target.value)}>
+                  {automationTimezoneOptions.map((timezone) => <option key={timezone} value={timezone}>{timezone}</option>)}
                 </select>
+                {errors.timezone && <small className="automation-field-error">{errors.timezone}</small>}
               </label>
-              <label className="automation-plan-wide">Descrição<textarea value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
-              <label className="automation-plan-wide">Observações<textarea value={draft.notes} onChange={(event) => setDraft({ ...draft, notes: event.target.value })} /></label>
+              <label className="automation-plan-wide">Descrição<textarea value={draft.description} onChange={(event) => updateDraft("description", event.target.value)} /></label>
+              <label className="automation-plan-wide">Observações<textarea value={draft.notes} onChange={(event) => updateDraft("notes", event.target.value)} /></label>
               <fieldset className="automation-plan-wide automation-color-field">
                 <legend>Cor de identificação</legend>
                 <div>
@@ -146,12 +224,13 @@ export default function AutomationPlanDetails({
                       type="button"
                       className={draft.indicatorColor === color ? "selected" : ""}
                       style={{ backgroundColor: color }}
-                      onClick={() => setDraft({ ...draft, indicatorColor: color })}
+                      onClick={() => updateDraft("indicatorColor", color)}
                       aria-label={`Usar cor ${color}`}
                     />
                   ))}
-                  <input value={draft.indicatorColor} onChange={(event) => setDraft({ ...draft, indicatorColor: event.target.value })} />
+                  <input value={draft.indicatorColor} onChange={(event) => updateDraft("indicatorColor", event.target.value)} />
                 </div>
+                {errors.indicatorColor && <small className="automation-field-error">{errors.indicatorColor}</small>}
               </fieldset>
             </div>
             <section className="automation-plan-script-picker">
@@ -164,14 +243,21 @@ export default function AutomationPlanDetails({
                   </label>
                 ))}
               </div>
+              {errors.defaultScriptIds && <small className="automation-field-error">{errors.defaultScriptIds}</small>}
             </section>
-            <label className="automation-active-toggle">
-              <input type="checkbox" checked={draft.active} onChange={(event) => setDraft({ ...draft, active: event.target.checked })} />
-              Plano ativo
-            </label>
             <footer>
-              <button type="button" className="secondary-action compact-action" onClick={() => setEditing(false)}>Cancelar</button>
-              <button type="submit" className="primary-action compact-action" disabled={saving || !draft.name.trim() || !draft.defaultScriptIds.length}>
+              <button
+                type="button"
+                className="secondary-action compact-action"
+                onClick={() => unsavedChanges.requestAction(() => {
+                  setDraft(baseline);
+                  setErrors({});
+                  setEditing(false);
+                })}
+              >
+                Cancelar
+              </button>
+              <button type="submit" className="primary-action compact-action" disabled={busy}>
                 <Save size={15} /> Salvar alterações
               </button>
             </footer>
@@ -204,16 +290,23 @@ export default function AutomationPlanDetails({
             </section>
             <footer>
               {canEdit && <button type="button" className="secondary-action compact-action" onClick={() => setEditing(true)}><Pencil size={15} /> Editar</button>}
-              {canDisable && plan.active !== false && (
-                <button type="button" className="secondary-action compact-action" onClick={() => onSave(plan.id, { active: false })}>
-                  <Power size={15} /> Desativar
+              {(canDisable || canEdit) && (
+                <button type="button" className="secondary-action compact-action" onClick={() => setConfirmingStatus(true)}>
+                  {plan.active === false ? <Play size={15} /> : <Pause size={15} />}
+                  {plan.active === false ? "Reativar automação" : "Pausar automação"}
                 </button>
               )}
               {canDelete && <button type="button" className="danger-action compact-action" onClick={() => setConfirmingDelete(true)}><Trash2 size={15} /> Excluir plano</button>}
-              <button type="button" className="primary-action compact-action" onClick={onClose}>Fechar</button>
+              <button type="button" className="primary-action compact-action" onClick={requestClose}>Fechar</button>
             </footer>
           </>
         )}
+
+        <UnsavedChangesPrompt
+          open={unsavedChanges.confirmationOpen}
+          onContinueEditing={unsavedChanges.continueEditing}
+          onDiscard={unsavedChanges.discardChanges}
+        />
       </section>
     </div>
   );

@@ -1,6 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import { CalendarClock, ExternalLink, Trash2, X } from "lucide-react";
+import {
+  automationDraftsEqual,
+  buildAutomationOverrideDraft,
+  validateAutomationOverrideDraft
+} from "./automationFormUtils.js";
 import { formatAutomationDate, formatRecurrence, recurrenceLabels } from "./automationUtils.js";
+import UnsavedChangesPrompt from "./UnsavedChangesPrompt.jsx";
+import useUnsavedChanges from "./useUnsavedChanges.js";
+
+const emptyOverrideDraft = buildAutomationOverrideDraft();
+
+function recurrenceOriginLabel(source) {
+  if (source === "machine") return "Personalizada para esta máquina";
+  if (source === "segment") return "Herdada do segmento";
+  return "Herdada do plano";
+}
 
 export default function AutomationMachineDetails({
   machine,
@@ -23,91 +38,172 @@ export default function AutomationMachineDetails({
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState("");
-  const [overrideDraft, setOverrideDraft] = useState({
-    recurrenceType: "monthly",
-    recurrenceIntervalDays: 30,
-    preferredTime: "08:00",
-    active: true
-  });
+  const [overrideDraft, setOverrideDraft] = useState(emptyOverrideDraft);
+  const [overrideBaseline, setOverrideBaseline] = useState(emptyOverrideDraft);
+  const [overrideErrors, setOverrideErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     setSelectedPlanId(machine?.plans?.[0]?.id || "");
     setEditingOverride(false);
     setConfirmingRemoval(false);
-  }, [machine]);
+    setDetail(null);
+  }, [machine?.assetId]);
 
   const selectedPlan = useMemo(
     () => machine?.plans?.find((plan) => String(plan.id) === String(selectedPlanId)) || machine?.plans?.[0],
     [machine, selectedPlanId]
   );
+  const isOverrideDirty = editingOverride && !automationDraftsEqual(overrideDraft, overrideBaseline);
+  const unsavedChanges = useUnsavedChanges(isOverrideDirty);
 
   useEffect(() => {
-    if (!selectedPlan) return;
-    setOverrideDraft({
-      recurrenceType: selectedPlan.recurrenceType || "monthly",
-      recurrenceIntervalDays: selectedPlan.recurrenceIntervalDays || 30,
-      preferredTime: selectedPlan.preferredTime || "08:00",
-      active: true
-    });
-  }, [selectedPlan]);
-
-  useEffect(() => {
-    if (!open || !selectedPlan || !machine || !onLoadDetails) return undefined;
+    if (!open || !selectedPlan || !machine) return undefined;
     let cancelled = false;
-    setDetailLoading(true);
+    const fallbackDraft = buildAutomationOverrideDraft({ plan: selectedPlan });
+
+    setDetail(null);
+    setDetailLoading(Boolean(onLoadDetails));
     setDetailError("");
+    setEditingOverride(false);
+    setConfirmingRemoval(false);
+    setOverrideErrors({});
+    setOverrideDraft(fallbackDraft);
+    setOverrideBaseline(fallbackDraft);
+
+    if (!onLoadDetails) return undefined;
+
     onLoadDetails(selectedPlan.id, machine.assetId)
       .then((response) => {
-        if (!cancelled) setDetail(response);
+        if (cancelled) return;
+        const loadedDraft = buildAutomationOverrideDraft({
+          override: response?.override,
+          schedule: response?.schedule,
+          plan: response?.plan || selectedPlan
+        });
+        setDetail(response);
+        setOverrideDraft(loadedDraft);
+        setOverrideBaseline(loadedDraft);
       })
       .catch((error) => {
-        if (!cancelled) setDetailError(error.message || "Não foi possível carregar os detalhes desta máquina.");
+        if (!cancelled) {
+          setDetailError(error.message || "Não foi possível carregar os detalhes desta máquina.");
+        }
       })
       .finally(() => {
         if (!cancelled) setDetailLoading(false);
       });
+
     return () => {
       cancelled = true;
     };
-  }, [machine, onLoadDetails, open, selectedPlan]);
+  }, [machine?.assetId, onLoadDetails, open, selectedPlan?.id]);
+
+  function requestClose() {
+    unsavedChanges.requestAction(onClose);
+  }
 
   useEffect(() => {
     if (!open) return undefined;
     function handleKeydown(event) {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") requestClose();
     }
     document.addEventListener("keydown", handleKeydown);
     return () => document.removeEventListener("keydown", handleKeydown);
-  }, [onClose, open]);
+  }, [open, isOverrideDirty]);
 
   if (!open || !machine || !selectedPlan) return null;
+
   const displayedSchedule = detail?.schedule || selectedPlan;
-  const hasCustomOverride = Boolean(detail ? detail.override : selectedPlan.hasCustomOverride);
+  const hasCustomOverride = detail
+    ? Boolean(detail.override && detail.override.active !== false)
+    : Boolean(selectedPlan.hasCustomOverride);
   const isLastPlanAsset = Number(selectedPlan.assetCount || detail?.plan?.assetCount || 0) <= 1;
+  const busy = saving || submitting;
+  const effectiveOrigin = displayedSchedule.recurrenceSource || (hasCustomOverride ? "machine" : "plan");
+
+  function updateOverride(field, value) {
+    setOverrideDraft((current) => ({ ...current, [field]: value }));
+    setOverrideErrors((current) => ({ ...current, [field]: undefined }));
+  }
 
   async function submitOverride(event) {
     event.preventDefault();
-    const response = await onSaveOverride(selectedPlan.id, machine.assetId, overrideDraft);
-    if (response) setDetail(response);
-    setEditingOverride(false);
+    if (busy) return;
+    const errors = validateAutomationOverrideDraft(overrideDraft);
+    setOverrideErrors(errors);
+    if (Object.keys(errors).length) return;
+
+    setSubmitting(true);
+    try {
+      const response = await onSaveOverride(selectedPlan.id, machine.assetId, overrideDraft);
+      if (response) {
+        const nextDraft = buildAutomationOverrideDraft({
+          override: response.override,
+          schedule: response.schedule,
+          plan: response.plan || selectedPlan
+        });
+        setDetail(response);
+        setOverrideDraft(nextDraft);
+        setOverrideBaseline(nextDraft);
+      }
+      setEditingOverride(false);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function removeOverride() {
+    if (busy) return;
+    setSubmitting(true);
+    try {
+      const response = await onRemoveOverride(selectedPlan.id, machine.assetId);
+      if (response) {
+        const nextDraft = buildAutomationOverrideDraft({
+          override: response.override,
+          schedule: response.schedule,
+          plan: response.plan || selectedPlan
+        });
+        setDetail(response);
+        setOverrideDraft(nextDraft);
+        setOverrideBaseline(nextDraft);
+      }
+      setEditingOverride(false);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function switchPlan(planId) {
+    unsavedChanges.requestAction(() => {
+      setSelectedPlanId(planId);
+      setDetail(null);
+      setEditingOverride(false);
+    });
   }
 
   return (
-    <div className="modal-backdrop automation-management-backdrop" role="presentation">
+    <div
+      className="modal-backdrop automation-management-backdrop"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) requestClose();
+      }}
+    >
       <section className="modal-panel automation-machine-details" role="dialog" aria-modal="true" aria-labelledby="automation-machine-title">
         <header>
           <div>
-            <span>Automação da máquina</span>
+            <span>Configuração desta máquina</span>
             <h2 id="automation-machine-title">{machine.assetName}</h2>
-            <p>{machine.assetType} • {machine.segmentName}</p>
+            <p>Alterações nesta tela afetam somente esta máquina.</p>
           </div>
-          <button type="button" className="icon-button" onClick={onClose} aria-label="Fechar ações da máquina"><X size={18} /></button>
+          <button type="button" className="icon-button" onClick={requestClose} aria-label="Fechar ações da máquina"><X size={18} /></button>
         </header>
 
         {machine.plans.length > 1 && (
           <label className="automation-machine-plan-select">
             Plano que deseja gerenciar
-            <select value={selectedPlan.id} onChange={(event) => setSelectedPlanId(event.target.value)}>
+            <select value={selectedPlan.id} onChange={(event) => switchPlan(event.target.value)}>
               {machine.plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.planName || plan.name}</option>)}
             </select>
           </label>
@@ -134,51 +230,61 @@ export default function AutomationMachineDetails({
             <div className="modal-actions">
               <button type="button" className="secondary-action compact-action" onClick={() => setConfirmingRemoval(false)}>Cancelar</button>
               {isLastPlanAsset && canDeletePlan && (
-                <button
-                  type="button"
-                  className="danger-action compact-action"
-                  disabled={saving}
-                  onClick={() => onDeletePlan(selectedPlan)}
-                >
+                <button type="button" className="danger-action compact-action" disabled={busy} onClick={() => onDeletePlan(selectedPlan)}>
                   Excluir plano
                 </button>
               )}
-              <button type="button" className="danger-action compact-action" disabled={saving} onClick={() => onRemoveAsset(selectedPlan.id, machine.assetId)}>
+              <button type="button" className="danger-action compact-action" disabled={busy} onClick={() => onRemoveAsset(selectedPlan.id, machine.assetId)}>
                 {isLastPlanAsset ? "Manter plano inativo" : "Remover plano da máquina"}
               </button>
             </div>
           </section>
         ) : editingOverride ? (
-          <form className="automation-override-form" onSubmit={submitOverride}>
-            <h3>Recorrência personalizada</h3>
-            <p>Esta configuração afeta somente {machine.assetName}.</p>
+          <form className="automation-override-form" onSubmit={submitOverride} noValidate>
+            <h3>Configuração desta máquina</h3>
+            <p>Esta recorrência substitui a configuração herdada apenas para {machine.assetName}.</p>
             <label>
               Recorrência
-              <select value={overrideDraft.recurrenceType} onChange={(event) => setOverrideDraft({ ...overrideDraft, recurrenceType: event.target.value })}>
+              <select value={overrideDraft.recurrenceType} onChange={(event) => updateOverride("recurrenceType", event.target.value)}>
                 {Object.entries(recurrenceLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               </select>
+              {overrideErrors.recurrenceType && <small className="automation-field-error">{overrideErrors.recurrenceType}</small>}
             </label>
             {overrideDraft.recurrenceType === "custom_days" && (
-              <label>Dias<input type="number" min="1" max="365" value={overrideDraft.recurrenceIntervalDays} onChange={(event) => setOverrideDraft({ ...overrideDraft, recurrenceIntervalDays: Number(event.target.value) })} /></label>
+              <label>
+                Dias
+                <input type="number" min="1" max="365" value={overrideDraft.recurrenceIntervalDays} onChange={(event) => updateOverride("recurrenceIntervalDays", Number(event.target.value))} />
+                {overrideErrors.recurrenceIntervalDays && <small className="automation-field-error">{overrideErrors.recurrenceIntervalDays}</small>}
+              </label>
             )}
-            <label>Horário<input type="time" value={overrideDraft.preferredTime} onChange={(event) => setOverrideDraft({ ...overrideDraft, preferredTime: event.target.value })} /></label>
+            <label>
+              Horário
+              <input type="time" value={overrideDraft.preferredTime} onChange={(event) => updateOverride("preferredTime", event.target.value)} />
+              {overrideErrors.preferredTime && <small className="automation-field-error">{overrideErrors.preferredTime}</small>}
+            </label>
             <footer>
               {hasCustomOverride && (
                 <button
                   type="button"
                   className="secondary-action compact-action"
-                  disabled={saving}
-                  onClick={async () => {
-                    const response = await onRemoveOverride(selectedPlan.id, machine.assetId);
-                    if (response) setDetail(response);
-                    setEditingOverride(false);
-                  }}
+                  disabled={busy}
+                  onClick={() => unsavedChanges.requestAction(removeOverride)}
                 >
-                  Usar recorrência padrão do plano
+                  Usar recorrência herdada
                 </button>
               )}
-              <button type="button" className="secondary-action compact-action" onClick={() => setEditingOverride(false)}>Cancelar</button>
-              <button type="submit" className="primary-action compact-action" disabled={saving}>Salvar recorrência</button>
+              <button
+                type="button"
+                className="secondary-action compact-action"
+                onClick={() => unsavedChanges.requestAction(() => {
+                  setOverrideDraft(overrideBaseline);
+                  setOverrideErrors({});
+                  setEditingOverride(false);
+                })}
+              >
+                Cancelar
+              </button>
+              <button type="submit" className="primary-action compact-action" disabled={busy}>Salvar recorrência</button>
             </footer>
           </form>
         ) : (
@@ -189,11 +295,14 @@ export default function AutomationMachineDetails({
                 <strong>{selectedPlan.planName || selectedPlan.name}</strong>
                 <small>{selectedPlan.active ? "Agenda ativa" : "Agenda inativa"}</small>
               </div>
+              <span className={`pill automation-recurrence-origin ${effectiveOrigin === "machine" ? "personalized" : ""}`}>
+                {recurrenceOriginLabel(effectiveOrigin)}
+              </span>
             </section>
             <section className="automation-machine-overview">
               <div><span>Recorrência geral</span><strong>{formatRecurrence(selectedPlan)}</strong></div>
               <div><span>Recorrência efetiva</span><strong>{formatRecurrence(displayedSchedule)}</strong></div>
-              <div><span>Origem</span><strong>{displayedSchedule.recurrenceSource === "machine" ? "Máquina" : displayedSchedule.recurrenceSource === "segment" ? "Segmento" : "Plano"}</strong></div>
+              <div><span>Origem</span><strong>{recurrenceOriginLabel(effectiveOrigin)}</strong></div>
               <div><span>Próxima preparação</span><strong>{formatAutomationDate(displayedSchedule.nextRunAt)}</strong></div>
               <div><span>Última preparação</span><strong>{formatAutomationDate(displayedSchedule.lastPreparedAt, "Ainda não preparada")}</strong></div>
               <div><span>Último resultado</span><strong>{displayedSchedule.latestRun?.status || "Sem execução registrada"}</strong></div>
@@ -218,11 +327,15 @@ export default function AutomationMachineDetails({
               {!selectedPlan.scripts?.length && <p>Nenhum script identificado.</p>}
             </section>
             <footer>
-              <button type="button" className="secondary-action compact-action" onClick={() => onOpenPlan(selectedPlan, machine)}>
+              <button
+                type="button"
+                className="secondary-action compact-action"
+                onClick={() => unsavedChanges.requestAction(() => onOpenPlan(selectedPlan, machine))}
+              >
                 <ExternalLink size={15} /> Ver detalhes do plano
               </button>
               {canManageOverride && (
-                <button type="button" className="secondary-action compact-action" onClick={() => setEditingOverride(true)}>
+                <button type="button" className="secondary-action compact-action" disabled={detailLoading} onClick={() => setEditingOverride(true)}>
                   <CalendarClock size={15} /> Definir recorrência personalizada
                 </button>
               )}
@@ -231,10 +344,16 @@ export default function AutomationMachineDetails({
                   Remover plano da máquina
                 </button>
               )}
-              <button type="button" className="primary-action compact-action" onClick={onClose}>Fechar</button>
+              <button type="button" className="primary-action compact-action" onClick={requestClose}>Fechar</button>
             </footer>
           </>
         )}
+
+        <UnsavedChangesPrompt
+          open={unsavedChanges.confirmationOpen}
+          onContinueEditing={unsavedChanges.continueEditing}
+          onDiscard={unsavedChanges.discardChanges}
+        />
       </section>
     </div>
   );

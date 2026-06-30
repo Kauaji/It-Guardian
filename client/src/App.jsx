@@ -5729,6 +5729,9 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
 
   async function handleSavePreventiveAutomationPlan(planId, payload) {
     try {
+      const previousPlan = planId
+        ? preventiveAutomationPlans.find((plan) => String(plan.id) === String(planId))
+        : null;
       const response = planId
         ? await updatePreventiveAutomationPlan(token, planId, payload)
         : await createPreventiveAutomationPlan(token, payload);
@@ -5738,7 +5741,13 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
           ? current.map((plan) => (plan.id === response.preventiveAutomationPlan.id ? response.preventiveAutomationPlan : plan))
           : [response.preventiveAutomationPlan, ...current];
       });
-      notify(planId ? "Automação preventiva atualizada." : "Automação preventiva criada.", "ok");
+      const statusChanged = previousPlan && typeof payload?.active === "boolean" && previousPlan.active !== payload.active;
+      const statusMessage = statusChanged && payload.active === false
+        ? "Automação pausada. As agendas futuras foram desativadas."
+        : statusChanged && payload.active === true
+          ? "Automação reativada. As agendas foram recalculadas."
+          : null;
+      notify(statusMessage || (planId ? "Automação preventiva atualizada." : "Automação preventiva criada."), "ok");
       await loadData(true);
       return response.preventiveAutomationPlan;
     } catch (error) {

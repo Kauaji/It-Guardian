@@ -1,7 +1,13 @@
 import { MoreHorizontal } from "lucide-react";
 import AutomationIndicatorDots from "../AutomationIndicatorDots.jsx";
+import {
+  formatAutomationMachineStatusSummary,
+  getAutomationMachineStatusSummary
+} from "./automationStatusUtils.js";
 
 function AutomationMachineRow({ machine, location, onSelectPlan, onOpenMachine }) {
+  const statusSummary = getAutomationMachineStatusSummary(machine);
+
   return (
     <article className="automation-machine-row">
       <button
@@ -27,10 +33,10 @@ function AutomationMachineRow({ machine, location, onSelectPlan, onOpenMachine }
         <span>{location.groupName} • {location.segmentName}</span>
       </button>
       <div className="automation-machine-status">
-        <span className={`pill ${machine.plans.some((plan) => plan.active) ? "ok" : "muted"}`}>
-          {machine.plans.some((plan) => plan.active) ? "Ativa" : "Inativa"}
+        <span className={`pill ${statusSummary.errorCount ? "danger" : statusSummary.activeCount ? "ok" : "muted"}`}>
+          {formatAutomationMachineStatusSummary(machine)}
         </span>
-        <small>{machine.plans.length} plano(s)</small>
+        <small>{statusSummary.totalCount} plano(s) no total</small>
       </div>
       <button
         type="button"
