@@ -8,6 +8,16 @@ import {
   buildAutomationManagementGroups,
   shouldShowAutomationManagement
 } from "../../../client/src/components/automation/automationUtils.js";
+import {
+  formatAutomationMachineStatusSummary,
+  getAutomationMachineStatusSummary,
+  machineMatchesAutomationStatus
+} from "../../../client/src/components/automation/automationStatusUtils.js";
+import {
+  buildAutomationOverrideDraft,
+  validateAutomationOverrideDraft,
+  validateAutomationPlanDraft
+} from "../../../client/src/components/automation/automationFormUtils.js";
 
 function source(relativePath) {
   return readFileSync(fileURLToPath(new URL(relativePath, import.meta.url)), "utf8");
@@ -100,11 +110,11 @@ test("máquina com vários planos aparece uma vez e preserva os indicadores", ()
   assert.equal(listed.find((machine) => machine.assetId === "asset-1").plans.length, 2);
 });
 
-test("filtro ativo mostra somente máquinas com automação ativa e agendada", () => {
+test("filtro ativo usa semântica de qualquer plano ativo", () => {
   const result = buildAutomationManagementGroups({ machines, ...locations, status: "active" });
   assert.deepEqual(
     result.flatMap((group) => group.machines.map(({ machine }) => machine.assetId)),
-    ["asset-1"]
+    ["asset-1", "asset-3", "asset-4"]
   );
 });
 
@@ -113,7 +123,7 @@ test("filtros de inativo, erro e sem agenda são independentes", () => {
     .flatMap((group) => group.machines.map(({ machine }) => machine.assetId));
   assert.deepEqual(idsFor("inactive"), ["asset-2"]);
   assert.deepEqual(idsFor("error"), ["asset-3"]);
-  assert.deepEqual(idsFor("without_schedule"), ["asset-4"]);
+  assert.deepEqual(idsFor("without_schedule"), ["asset-3", "asset-4"]);
 });
 
 test("busca encontra máquina pelo nome do plano", () => {
@@ -145,6 +155,89 @@ test("classificação de status prioriza erro e ausência de agenda", () => {
   assert.equal(automationMachineStatus(machines[2]), "error");
   assert.equal(automationMachineStatus(machines[3]), "without_schedule");
   assert.equal(automationMachineStatus(machines[1]), "inactive");
+});
+
+test("filtros de status podem se sobrepor sem remover outros planos da máquina", () => {
+  const mixedMachine = {
+    assetId: "asset-mixed",
+    plans: [
+      { id: "active", active: true, nextRunAt: "2026-07-01T11:00:00.000Z" },
+      { id: "inactive", active: false },
+      { id: "error", active: true, nextRunAt: null, latestRun: { status: "error" } }
+    ]
+  };
+
+  assert.equal(machineMatchesAutomationStatus(mixedMachine, "active"), true);
+  assert.equal(machineMatchesAutomationStatus(mixedMachine, "inactive"), true);
+  assert.equal(machineMatchesAutomationStatus(mixedMachine, "error"), true);
+  assert.equal(machineMatchesAutomationStatus(mixedMachine, "without_schedule"), true);
+  assert.equal(machineMatchesAutomationStatus(mixedMachine, "all"), true);
+  assert.equal(mixedMachine.plans.length, 3);
+});
+
+test("resumo por máquina contabiliza planos ativos, inativos, com erro e sem agenda", () => {
+  const mixedMachine = {
+    plans: [
+      { active: true, nextRunAt: "2026-07-01T11:00:00.000Z" },
+      { active: true, nextRunAt: null, latestRun: { errorDetected: true } },
+      { active: false }
+    ]
+  };
+
+  assert.deepEqual(getAutomationMachineStatusSummary(mixedMachine), {
+    totalCount: 3,
+    activeCount: 2,
+    inactiveCount: 1,
+    errorCount: 1,
+    withoutScheduleCount: 1
+  });
+  assert.equal(
+    formatAutomationMachineStatusSummary(mixedMachine),
+    "2 ativos • 1 inativo • 1 com erro • 1 sem agenda"
+  );
+});
+
+test("formulário de override respeita prioridade override, agenda e plano", () => {
+  const plan = { recurrenceType: "monthly", recurrenceIntervalDays: 30, preferredTime: "08:00" };
+  const schedule = { recurrenceType: "weekly", recurrenceIntervalDays: 7, preferredTime: "09:00" };
+  const override = { active: true, recurrenceType: "custom_days", recurrenceIntervalDays: 3, preferredTime: "10:00" };
+
+  assert.deepEqual(buildAutomationOverrideDraft({ override, schedule, plan }), {
+    recurrenceType: "custom_days",
+    recurrenceIntervalDays: 3,
+    preferredTime: "10:00",
+    active: true
+  });
+  assert.equal(buildAutomationOverrideDraft({ schedule, plan }).recurrenceType, "weekly");
+  assert.equal(buildAutomationOverrideDraft({ plan }).recurrenceType, "monthly");
+});
+
+test("validações de plano e override rejeitam dados inválidos", () => {
+  const planErrors = validateAutomationPlanDraft({
+    name: "x",
+    defaultScriptIds: [],
+    recurrenceType: "custom_days",
+    recurrenceIntervalDays: 366,
+    preferredTime: "29:90",
+    timezone: "Invalid/Zone",
+    indicatorColor: "verde"
+  });
+  assert.deepEqual(Object.keys(planErrors).sort(), [
+    "defaultScriptIds",
+    "indicatorColor",
+    "name",
+    "preferredTime",
+    "recurrenceIntervalDays",
+    "timezone"
+  ]);
+
+  const overrideErrors = validateAutomationOverrideDraft({
+    recurrenceType: "custom_days",
+    recurrenceIntervalDays: 0,
+    preferredTime: "08:99"
+  });
+  assert.ok(overrideErrors.recurrenceIntervalDays);
+  assert.ok(overrideErrors.preferredTime);
 });
 
 test("listagem de gerenciamento busca dados relacionados em lote", () => {
@@ -231,10 +324,45 @@ test("modais de plano e máquina fecham com Escape", () => {
   assert.match(machine, /event\.key === "Escape"/);
 });
 
+test("edição protege alterações não salvas antes de fechar ou trocar de plano", () => {
+  const hook = source("../../../client/src/components/automation/useUnsavedChanges.js");
+  const prompt = source("../../../client/src/components/automation/UnsavedChangesPrompt.jsx");
+  const machine = source("../../../client/src/components/automation/AutomationMachineDetails.jsx");
+  assert.match(hook, /requestAction/);
+  assert.match(prompt, /Existem alterações não salvas\. Deseja descartá-las\?/);
+  assert.match(prompt, /Continuar editando/);
+  assert.match(machine, /switchPlan/);
+  assert.match(machine, /unsavedChanges\.requestAction/);
+});
+
+test("pausa e reativação usam a mesma atualização e sincronizam agendas", () => {
+  const component = source("../../../client/src/components/automation/AutomationPlanDetails.jsx");
+  const repository = source("./preventiveAutomationRepository.js");
+  assert.match(component, /Pausar automação/);
+  assert.match(component, /Reativar automação/);
+  assert.match(repository, /active = EXCLUDED\.active/);
+  assert.match(repository, /existing\?\.active === false && plan\.active !== false/);
+  assert.match(repository, /preventive_automation_paused/);
+  assert.match(repository, /preventive_automation_reactivated/);
+});
+
+test("plano excluído logicamente não pode ser reativado", () => {
+  const repository = source("./preventiveAutomationRepository.js");
+  const finderStart = repository.indexOf("export async function findPreventiveAutomationPlanById");
+  const finderEnd = repository.indexOf("export async function createPreventiveAutomationPlan", finderStart);
+  const finder = repository.slice(finderStart, finderEnd);
+  const updateStart = repository.indexOf("export async function updatePreventiveAutomationPlan");
+  const updateEnd = repository.indexOf("export async function disablePreventiveAutomationPlan", updateStart);
+  const update = repository.slice(updateStart, updateEnd);
+  assert.match(finder, /deleted_at IS NULL/);
+  assert.match(update, /findPreventiveAutomationPlanById\(id\)/);
+  assert.match(update, /if \(!current\) return null/);
+});
+
 test("detalhes da máquina incluem override, remoção e histórico recente", () => {
   const component = source("../../../client/src/components/automation/AutomationMachineDetails.jsx");
   assert.match(component, /Definir recorrência personalizada/);
-  assert.match(component, /Usar recorrência padrão do plano/);
+  assert.match(component, /Usar recorrência herdada/);
   assert.match(component, /Remover plano da máquina/);
   assert.match(component, /Histórico recente/);
 });
