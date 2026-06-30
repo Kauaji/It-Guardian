@@ -80,6 +80,9 @@ export const permissionGroups = [
       { id: "preventive_automation.create", label: "Criar automações preventivas" },
       { id: "preventive_automation.update", label: "Editar automações preventivas" },
       { id: "preventive_automation.disable", label: "Desativar automações preventivas" },
+      { id: "preventive_automation.delete", label: "Excluir planos de automação" },
+      { id: "preventive_automation.remove_asset", label: "Remover máquinas de uma automação" },
+      { id: "preventive_automation.manage_asset_override", label: "Gerenciar recorrência por máquina" },
       { id: "preventive_automation.run_prepare", label: "Preparar rotina preventiva agendada" }
     ]
   },
@@ -159,6 +162,9 @@ export const roleDefaultPermissions = {
     "preventive_automation.create",
     "preventive_automation.update",
     "preventive_automation.disable",
+    "preventive_automation.delete",
+    "preventive_automation.remove_asset",
+    "preventive_automation.manage_asset_override",
     "preventive_automation.run_prepare",
     "settings.view",
     "settings.appearance"

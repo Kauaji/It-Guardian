@@ -268,6 +268,7 @@ function fromPlanRow(row) {
     scopeType: row.scope_type || "all",
     scopeId: row.scope_id,
     assetIds: normalizeAssetIds(parseJsonArray(row.asset_ids)),
+    excludedAssetIds: normalizeAssetIds(parseJsonArray(row.excluded_asset_ids)),
     defaultScriptIds: parseJsonArray(row.default_script_ids),
     notes: row.notes || "",
     indicatorColor: normalizeIndicatorColor(row.indicator_color),
@@ -278,6 +279,8 @@ function fromPlanRow(row) {
     nextScheduledFor: serializeTimestamp(row.next_run_at),
     scheduleAnchorAt: serializeTimestamp(row.schedule_anchor_at),
     createdBy: row.created_by,
+    createdByName: row.created_by_name || null,
+    deletedAt: serializeTimestamp(row.deleted_at),
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };
@@ -416,6 +419,7 @@ function normalizePlanPayload(payload = {}, current = null) {
     ? null
     : trimString(payload.scopeId ?? current?.scopeId, 120) || null;
   const defaultScriptIds = normalizeScriptIds(payload.defaultScriptIds ?? current?.defaultScriptIds);
+  const excludedAssetIds = normalizeAssetIds(payload.excludedAssetIds ?? current?.excludedAssetIds);
 
   if (name.length < 3) {
     throw createHttpError("Informe um nome para a automação preventiva com pelo menos 3 caracteres.", 400);
@@ -441,6 +445,7 @@ function normalizePlanPayload(payload = {}, current = null) {
     scopeType,
     scopeId,
     assetIds,
+    excludedAssetIds,
     defaultScriptIds,
     notes: trimString(payload.notes ?? current?.notes, 1000),
     indicatorColor: normalizeIndicatorColor(payload.indicatorColor ?? current?.indicatorColor),
@@ -776,9 +781,12 @@ async function hydratePlan(plan) {
 export async function listPreventiveAutomationPlans() {
   const result = await query(`
     SELECT automation.*,
-           plans.name AS preventive_plan_name
+           plans.name AS preventive_plan_name,
+           users.name AS created_by_name
     FROM preventive_automation_plans automation
     LEFT JOIN preventive_plans plans ON plans.id = automation.preventive_plan_id
+    LEFT JOIN users ON users.id = automation.created_by
+    WHERE automation.deleted_at IS NULL
     ORDER BY automation.created_at DESC
   `);
 
@@ -794,10 +802,13 @@ export async function findPreventiveAutomationPlanById(id) {
   const result = await query(
     `
       SELECT automation.*,
-             plans.name AS preventive_plan_name
+             plans.name AS preventive_plan_name,
+             users.name AS created_by_name
       FROM preventive_automation_plans automation
       LEFT JOIN preventive_plans plans ON plans.id = automation.preventive_plan_id
+      LEFT JOIN users ON users.id = automation.created_by
       WHERE automation.id = $1
+        AND automation.deleted_at IS NULL
     `,
     [id]
   );
@@ -809,10 +820,13 @@ export async function findPreventiveAutomationPlanByPreventivePlanId(preventiveP
   const result = await query(
     `
       SELECT automation.*,
-             plans.name AS preventive_plan_name
+             plans.name AS preventive_plan_name,
+             users.name AS created_by_name
       FROM preventive_automation_plans automation
       LEFT JOIN preventive_plans plans ON plans.id = automation.preventive_plan_id
+      LEFT JOIN users ON users.id = automation.created_by
       WHERE automation.preventive_plan_id = $1
+        AND automation.deleted_at IS NULL
       ORDER BY automation.created_at DESC
       LIMIT 1
     `,
@@ -836,9 +850,9 @@ export async function createPreventiveAutomationPlanRecord(payload = {}, user = 
       INSERT INTO preventive_automation_plans (
         id, preventive_plan_id, name, description, active, recurrence_type, recurrence_interval,
         preferred_time, timezone, scope_type, scope_id, default_script_ids,
-        asset_ids, notes, indicator_color, last_scheduled_at, next_run_at, schedule_anchor_at, created_by
+        asset_ids, excluded_asset_ids, notes, indicator_color, last_scheduled_at, next_run_at, schedule_anchor_at, created_by
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
     `,
     [
       id,
@@ -854,6 +868,7 @@ export async function createPreventiveAutomationPlanRecord(payload = {}, user = 
       normalized.scopeId,
       JSON.stringify(normalized.defaultScriptIds),
       JSON.stringify(normalized.assetIds),
+      JSON.stringify(normalized.excludedAssetIds),
       normalized.notes,
       normalized.indicatorColor,
       nextRunAt,
@@ -899,9 +914,9 @@ export async function createPreventiveAutomationPlan(payload = {}, user = null) 
         INSERT INTO preventive_automation_plans (
           id, name, description, active, recurrence_type, recurrence_interval,
           preferred_time, timezone, scope_type, scope_id, default_script_ids,
-          asset_ids, notes, indicator_color, last_scheduled_at, next_run_at, schedule_anchor_at, created_by
+          asset_ids, excluded_asset_ids, notes, indicator_color, last_scheduled_at, next_run_at, schedule_anchor_at, created_by
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
       `,
       [
         id,
@@ -916,6 +931,7 @@ export async function createPreventiveAutomationPlan(payload = {}, user = null) 
         normalized.scopeId,
         JSON.stringify(normalized.defaultScriptIds),
         JSON.stringify(normalized.assetIds),
+        JSON.stringify(normalized.excludedAssetIds),
         normalized.notes,
         normalized.indicatorColor,
         nextRunAt,
@@ -972,11 +988,12 @@ export async function updatePreventiveAutomationPlan(id, payload = {}, user = nu
             scope_id = $10,
             default_script_ids = $11,
             asset_ids = $12,
-            notes = $13,
-            indicator_color = $14,
-            last_scheduled_at = COALESCE(last_scheduled_at, $15),
-            next_run_at = COALESCE(next_run_at, $16),
-            schedule_anchor_at = COALESCE(schedule_anchor_at, $17),
+            excluded_asset_ids = $13,
+            notes = $14,
+            indicator_color = $15,
+            last_scheduled_at = COALESCE(last_scheduled_at, $16),
+            next_run_at = COALESCE(next_run_at, $17),
+            schedule_anchor_at = COALESCE(schedule_anchor_at, $18),
             updated_at = NOW()
         WHERE id = $1
       `,
@@ -993,6 +1010,7 @@ export async function updatePreventiveAutomationPlan(id, payload = {}, user = nu
         normalized.scopeId,
         JSON.stringify(normalized.defaultScriptIds),
         JSON.stringify(normalized.assetIds),
+        JSON.stringify(normalized.excludedAssetIds),
         normalized.notes,
         normalized.indicatorColor,
         nextRunAt,
@@ -1052,6 +1070,415 @@ export async function disablePreventiveAutomationPlan(id, user = null) {
   });
 
   return findPreventiveAutomationPlanById(id);
+}
+
+export async function deletePreventiveAutomationPlan(id, user = null) {
+  const current = await findPreventiveAutomationPlanById(id);
+  if (!current) return null;
+  const affectedAssetCount = current.assetSchedules.filter((schedule) => schedule.active !== false).length;
+
+  await withTransaction(async (db) => {
+    await db(
+      `
+        UPDATE preventive_automation_plans
+        SET active = FALSE,
+            deleted_at = NOW(),
+            updated_at = NOW()
+        WHERE id = $1
+          AND deleted_at IS NULL
+      `,
+      [id]
+    );
+    await db(
+      `
+        UPDATE preventive_automation_asset_schedules
+        SET active = FALSE,
+            updated_at = NOW()
+        WHERE plan_id = $1
+      `,
+      [id]
+    );
+    await addLog({
+      type: "preventive_automation_deleted",
+      message: `Plano de automacao preventiva excluido: ${current.name}. Historico preservado.`,
+      userId: user?.id || null,
+      meta: {
+        planId: id,
+        preventivePlanId: current.preventivePlanId,
+        name: current.name,
+        affectedAssetCount,
+        userId: user?.id || null,
+        timestamp: new Date().toISOString()
+      },
+      db
+    });
+  });
+
+  return { ...current, active: false, deletedAt: new Date().toISOString(), affectedAssetCount };
+}
+
+function latestRunKey(planId, assetId) {
+  return `${String(planId)}:${String(assetId)}`;
+}
+
+function sqlPlaceholders(values = []) {
+  return values.map((_, index) => `$${index + 1}`).join(", ");
+}
+
+export function isScheduleLinkedToPlan(plan, schedule) {
+  if (!plan || !schedule) return false;
+  const assetId = String(schedule.assetId || "");
+  if (!assetId || plan.excludedAssetIds.some((id) => String(id) === assetId)) return false;
+  if (plan.scopeType === "asset_list") {
+    return plan.assetIds.some((id) => String(id) === assetId);
+  }
+  return true;
+}
+
+export async function listPreventiveAutomationManagement() {
+  const planResult = await query(`
+    SELECT automation.*,
+           preventive_plans.name AS preventive_plan_name,
+           users.name AS created_by_name
+    FROM preventive_automation_plans automation
+    LEFT JOIN preventive_plans ON preventive_plans.id = automation.preventive_plan_id
+    LEFT JOIN users ON users.id = automation.created_by
+    WHERE automation.deleted_at IS NULL
+    ORDER BY automation.created_at DESC
+  `);
+
+  if (!planResult.rows.length) {
+    return { plans: [], machines: [], metadata: { planCount: 0, machineCount: 0 } };
+  }
+
+  const planIds = planResult.rows.map((row) => row.id);
+  const planIdPlaceholders = sqlPlaceholders(planIds);
+  const scriptIds = [
+    ...new Set(planResult.rows.flatMap((row) => parseJsonArray(row.default_script_ids)).map(String))
+  ];
+  const [overrideResult, scheduleResult, runResult, scriptResult, groupResult, devices] = await Promise.all([
+    query(
+      `SELECT * FROM preventive_automation_overrides WHERE plan_id IN (${planIdPlaceholders}) ORDER BY created_at ASC`,
+      planIds
+    ),
+    query(
+      `
+        SELECT *
+        FROM preventive_automation_asset_schedules
+        WHERE plan_id IN (${planIdPlaceholders})
+        ORDER BY next_run_at ASC NULLS LAST, created_at ASC
+      `,
+      planIds
+    ),
+    query(
+      `
+        SELECT *
+        FROM preventive_automation_runs
+        WHERE plan_id IN (${planIdPlaceholders})
+        ORDER BY created_at DESC
+        LIMIT 500
+      `,
+      planIds
+    ),
+    scriptIds.length
+      ? query(
+          `SELECT id, name, category, risk_level FROM maintenance_scripts WHERE id IN (${sqlPlaceholders(scriptIds)})`,
+          scriptIds
+        )
+      : Promise.resolve({ rows: [] }),
+    query(`SELECT id, name FROM segment_groups`),
+    listDevices({})
+  ]);
+
+  const overridesByPlan = new Map();
+  for (const row of overrideResult.rows) {
+    const items = overridesByPlan.get(String(row.plan_id)) || [];
+    items.push(fromOverrideRow(row));
+    overridesByPlan.set(String(row.plan_id), items);
+  }
+
+  const runsByAsset = new Map();
+  for (const row of runResult.rows) {
+    const key = latestRunKey(row.plan_id, row.asset_id);
+    if (!runsByAsset.has(key)) runsByAsset.set(key, fromRunRow(row));
+  }
+
+  const scriptsById = new Map(
+    scriptResult.rows.map((row) => [
+      String(row.id),
+      { id: row.id, name: row.name, category: row.category || "", riskLevel: row.risk_level || "medium" }
+    ])
+  );
+  const groupsById = new Map(groupResult.rows.map((row) => [String(row.id), row.name]));
+  const devicesById = new Map(devices.map((device) => [String(device.id), device]));
+  const schedulesByPlan = new Map();
+
+  for (const row of scheduleResult.rows) {
+    const schedule = fromAssetScheduleRow(row);
+    const items = schedulesByPlan.get(String(schedule.planId)) || [];
+    items.push(schedule);
+    schedulesByPlan.set(String(schedule.planId), items);
+  }
+
+  const plans = planResult.rows.map((row) => {
+    const plan = fromPlanRow(row);
+    const overrides = overridesByPlan.get(String(plan.id)) || [];
+    const assetSchedules = (schedulesByPlan.get(String(plan.id)) || [])
+      .filter((schedule) => isScheduleLinkedToPlan(plan, schedule));
+    return {
+      ...plan,
+      overrides,
+      assetSchedules,
+      scripts: plan.defaultScriptIds.map((id) => scriptsById.get(String(id))).filter(Boolean),
+      assetCount: assetSchedules.filter((schedule) => schedule.active !== false).length,
+      scriptCount: plan.defaultScriptIds.length,
+      overrideCount: overrides.filter((override) => override.active !== false).length
+    };
+  });
+  const plansById = new Map(plans.map((plan) => [String(plan.id), plan]));
+  const machinesById = new Map();
+
+  for (const row of scheduleResult.rows) {
+    const plan = plansById.get(String(row.plan_id));
+    const device = devicesById.get(String(row.asset_id));
+    if (!plan || !device) continue;
+
+    const schedule = fromAssetScheduleRow(row);
+    if (!isScheduleLinkedToPlan(plan, schedule)) continue;
+    const latestRun = runsByAsset.get(latestRunKey(plan.id, device.id)) || null;
+    const groupId = device.segmentGroupId || "";
+    const machine = machinesById.get(String(device.id)) || {
+      assetId: device.id,
+      assetName: device.name || device.id,
+      assetType: device.assetType || device.type || "Ativo",
+      ip: device.ip || "",
+      operatingSystem: device.hardware?.os || "",
+      loggedUser: device.hardware?.loggedUser || "",
+      status: device.status || "",
+      statusLabel: device.statusLabel || device.status || "",
+      segmentId: device.segmentId || "",
+      segmentName: device.segmentName || "Nao organizadas",
+      groupId,
+      groupName: groupsById.get(String(groupId)) || "Sem grupo",
+      tabId: "",
+      tabName: "Ambiente",
+      plans: []
+    };
+
+    machine.plans.push({
+      id: plan.id,
+      automationPlanId: plan.id,
+      preventivePlanId: plan.preventivePlanId,
+      preventivePlanName: plan.preventivePlanName,
+      planName: plan.name,
+      name: plan.name,
+      description: plan.description,
+      notes: plan.notes,
+      indicatorColor: plan.indicatorColor,
+      active: plan.active !== false && schedule.active !== false,
+      planActive: plan.active !== false,
+      scheduleActive: schedule.active !== false,
+      recurrenceSource: schedule.recurrenceSource,
+      recurrenceType: schedule.recurrenceType,
+      recurrenceIntervalDays: schedule.recurrenceIntervalDays,
+      preferredTime: schedule.preferredTime,
+      timezone: schedule.timezone,
+      nextRunAt: schedule.nextRunAt,
+      nextScheduledFor: schedule.nextRunAt,
+      lastPreparedAt: schedule.lastPreparedAt,
+      latestRun,
+      assetCount: plan.assetCount,
+      scriptCount: plan.scriptCount,
+      scripts: plan.scripts,
+      hasCustomOverride: plan.overrides.some(
+        (override) => override.active !== false && String(override.assetId || "") === String(device.id)
+      )
+    });
+    machinesById.set(String(device.id), machine);
+  }
+
+  return {
+    plans,
+    machines: [...machinesById.values()],
+    metadata: {
+      planCount: plans.length,
+      activePlanCount: plans.filter((plan) => plan.active !== false).length,
+      machineCount: machinesById.size
+    }
+  };
+}
+
+export async function findPreventiveAutomationAssetDetails(planId, assetId) {
+  const management = await listPreventiveAutomationManagement();
+  const plan = management.plans.find((item) => String(item.id) === String(planId));
+  const machine = management.machines.find((item) => String(item.assetId) === String(assetId));
+  const machinePlan = machine?.plans.find((item) => String(item.id) === String(planId));
+  if (!plan || !machine || !machinePlan) return null;
+
+  const historyResult = await query(
+    `
+      SELECT id, event_type, message, old_value, new_value, user_name, created_at
+      FROM asset_history
+      WHERE asset_id = $1
+        AND event_type LIKE 'preventive_automation%'
+      ORDER BY created_at DESC
+      LIMIT 10
+    `,
+    [assetId]
+  );
+
+  return {
+    plan,
+    machine,
+    schedule: machinePlan,
+    override: plan.overrides.find((item) => String(item.assetId || "") === String(assetId)) || null,
+    history: historyResult.rows.map((row) => ({
+      id: row.id,
+      eventType: row.event_type,
+      message: row.message,
+      oldValue: row.old_value,
+      newValue: row.new_value,
+      userName: row.user_name,
+      createdAt: row.created_at
+    }))
+  };
+}
+
+export async function upsertPreventiveAutomationAssetOverride(planId, assetId, payload = {}, user = null) {
+  const current = await findPreventiveAutomationPlanById(planId);
+  if (!current) return null;
+  const schedule = current.assetSchedules.find((item) => String(item.assetId) === String(assetId));
+  if (!schedule) throw createHttpError("A maquina nao pertence a este plano de automacao.", 404);
+  const normalized = normalizeOverridePayload({ ...payload, assetId, segmentId: null });
+
+  await withTransaction(async (db) => {
+    await db(
+      `DELETE FROM preventive_automation_overrides WHERE plan_id = $1 AND target_key = $2`,
+      [planId, `asset:${assetId}`]
+    );
+    await db(
+      `
+        INSERT INTO preventive_automation_overrides (
+          id, plan_id, asset_id, segment_id, target_key, recurrence_type,
+          recurrence_interval, preferred_time, active
+        )
+        VALUES ($1, $2, $3, NULL, $4, $5, $6, $7, $8)
+      `,
+      [
+        randomUUID(),
+        planId,
+        assetId,
+        `asset:${assetId}`,
+        normalized.recurrenceType,
+        normalized.recurrenceInterval,
+        normalized.preferredTime,
+        normalized.active
+      ]
+    );
+    const assets = await validateScopeSelection(current);
+    const overrides = [
+      ...current.overrides.filter((item) => String(item.assetId || "") !== String(assetId)),
+      normalized
+    ];
+    await syncAssetSchedulesForPlan({ ...current, overrides }, assets, db);
+    await addLog({
+      type: "preventive_automation_asset_override_updated",
+      message: `Recorrencia personalizada atualizada para a maquina ${assetId}.`,
+      userId: user?.id || null,
+      meta: { planId, assetId, targetKey: `asset:${assetId}` },
+      db
+    });
+  });
+
+  return findPreventiveAutomationAssetDetails(planId, assetId);
+}
+
+export async function removePreventiveAutomationAssetOverride(planId, assetId, user = null) {
+  const current = await findPreventiveAutomationPlanById(planId);
+  if (!current) return null;
+
+  await withTransaction(async (db) => {
+    await db(
+      `DELETE FROM preventive_automation_overrides WHERE plan_id = $1 AND target_key = $2`,
+      [planId, `asset:${assetId}`]
+    );
+    const assets = await validateScopeSelection(current);
+    const overrides = current.overrides.filter((item) => String(item.assetId || "") !== String(assetId));
+    await syncAssetSchedulesForPlan({ ...current, overrides }, assets, db);
+    await addLog({
+      type: "preventive_automation_asset_override_removed",
+      message: `Maquina ${assetId} voltou a usar a recorrencia padrao do plano ${current.name}.`,
+      userId: user?.id || null,
+      meta: { planId, assetId },
+      db
+    });
+  });
+
+  return findPreventiveAutomationAssetDetails(planId, assetId);
+}
+
+export async function removeAssetFromPreventiveAutomationPlan(planId, assetId, user = null) {
+  const current = await findPreventiveAutomationPlanById(planId);
+  if (!current) return null;
+  const schedule = current.assetSchedules.find(
+    (item) => String(item.assetId) === String(assetId) && item.active !== false
+  );
+  if (!schedule) throw createHttpError("A maquina nao pertence a este plano de automacao.", 404);
+
+  const nextAssetIds = current.scopeType === "asset_list"
+    ? current.assetIds.filter((id) => String(id) !== String(assetId))
+    : current.assetIds;
+  const nextExcludedAssetIds = current.scopeType === "asset_list"
+    ? current.excludedAssetIds
+    : [...new Set([...current.excludedAssetIds, String(assetId)])];
+  const remainingAssetCount = current.assetSchedules.filter(
+    (item) => item.active !== false && String(item.assetId) !== String(assetId)
+  ).length;
+
+  await withTransaction(async (db) => {
+    await db(
+      `
+        UPDATE preventive_automation_plans
+        SET asset_ids = $2,
+            excluded_asset_ids = $3,
+            active = CASE WHEN $4::int = 0 THEN FALSE ELSE active END,
+            updated_at = NOW()
+        WHERE id = $1
+      `,
+      [planId, JSON.stringify(nextAssetIds), JSON.stringify(nextExcludedAssetIds), remainingAssetCount]
+    );
+    await db(
+      `
+        UPDATE preventive_automation_asset_schedules
+        SET active = FALSE,
+            updated_at = NOW()
+        WHERE plan_id = $1
+          AND asset_id = $2
+      `,
+      [planId, assetId]
+    );
+    await db(
+      `DELETE FROM preventive_automation_overrides WHERE plan_id = $1 AND target_key = $2`,
+      [planId, `asset:${assetId}`]
+    );
+    await addAssetHistory({
+      assetId,
+      eventType: "preventive_automation_removed_from_asset",
+      message: `Maquina removida do plano de automatizacao '${current.name}'. Agendas futuras desativadas. Historico preservado.`,
+      userId: user?.id || null,
+      userName: user?.name || "Sistema",
+      db
+    });
+    await addLog({
+      type: "preventive_automation_removed_from_asset",
+      message: `Maquina ${assetId} removida do plano de automacao ${current.name}.`,
+      userId: user?.id || null,
+      meta: { planId, assetId, remainingAssetCount },
+      db
+    });
+  });
+
+  return { planId, assetId, remainingAssetCount, planActive: remainingAssetCount > 0 && current.active !== false };
 }
 
 export function resolveEffectiveRecurrence(plan, asset) {
@@ -1141,26 +1568,28 @@ async function assertScopeExists(plan, devices) {
 async function resolvePlanAssets(plan) {
   const devices = await listDevices({});
   await assertScopeExists(plan, devices);
+  const excludedAssetIds = new Set(normalizeAssetIds(plan.excludedAssetIds));
+  let resolvedAssets = devices;
 
   if (plan.scopeType === "asset") {
-    return devices.filter((device) => String(device.id) === String(plan.scopeId));
+    resolvedAssets = devices.filter((device) => String(device.id) === String(plan.scopeId));
   }
 
   if (plan.scopeType === "asset_list") {
-    return resolveAssetListDevices(plan.assetIds, devices);
+    resolvedAssets = resolveAssetListDevices(plan.assetIds, devices);
   }
 
   if (plan.scopeType === "segment") {
-    return devices.filter((device) => String(device.segmentId) === String(plan.scopeId));
+    resolvedAssets = devices.filter((device) => String(device.segmentId) === String(plan.scopeId));
   }
 
   if (plan.scopeType === "group") {
     const segmentResult = await query("SELECT id FROM inventory_segments WHERE group_id = $1", [plan.scopeId]);
     const segmentIds = new Set(segmentResult.rows.map((row) => String(row.id)));
-    return devices.filter((device) => segmentIds.has(String(device.segmentId)));
+    resolvedAssets = devices.filter((device) => segmentIds.has(String(device.segmentId)));
   }
 
-  return devices;
+  return resolvedAssets.filter((device) => !excludedAssetIds.has(String(device.id)));
 }
 
 async function validateScopeSelection(plan, { requireAssets = true } = {}) {

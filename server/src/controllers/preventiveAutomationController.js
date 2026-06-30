@@ -1,12 +1,18 @@
 import { timingSafeEqual } from "node:crypto";
 import {
   createPreventiveAutomationPlan,
+  deletePreventiveAutomationPlan,
   disablePreventiveAutomationPlan,
+  findPreventiveAutomationAssetDetails,
   findPreventiveAutomationPlanById,
+  listPreventiveAutomationManagement,
   listPreventiveAutomationPlans,
   preparePreventiveAutomationPlan,
   processDuePreventiveAutomationPlans,
   processScheduledMaintenanceTasks,
+  removeAssetFromPreventiveAutomationPlan,
+  removePreventiveAutomationAssetOverride,
+  upsertPreventiveAutomationAssetOverride,
   updatePreventiveAutomationPlan
 } from "../repositories/preventiveAutomationRepository.js";
 
@@ -34,6 +40,14 @@ function readCronSecretFromRequest(req) {
 export async function list(req, res, next) {
   try {
     res.json({ preventiveAutomationPlans: await listPreventiveAutomationPlans() });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function management(req, res, next) {
+  try {
+    res.json(await listPreventiveAutomationManagement());
   } catch (error) {
     next(error);
   }
@@ -88,6 +102,84 @@ export async function disable(req, res, next) {
     }
 
     res.json({ preventiveAutomationPlan });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function remove(req, res, next) {
+  try {
+    const preventiveAutomationPlan = await deletePreventiveAutomationPlan(req.params.id, req.user);
+    if (!preventiveAutomationPlan) {
+      res.status(404).json({ message: "Plano de automacao preventiva nao encontrado." });
+      return;
+    }
+    res.json({ preventiveAutomationPlan });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function assetDetail(req, res, next) {
+  try {
+    const automationAsset = await findPreventiveAutomationAssetDetails(req.params.id, req.params.assetId);
+    if (!automationAsset) {
+      res.status(404).json({ message: "Vinculo de automacao da maquina nao encontrado." });
+      return;
+    }
+    res.json({ automationAsset });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function saveAssetOverride(req, res, next) {
+  try {
+    const automationAsset = await upsertPreventiveAutomationAssetOverride(
+      req.params.id,
+      req.params.assetId,
+      req.body || {},
+      req.user
+    );
+    if (!automationAsset) {
+      res.status(404).json({ message: "Plano de automacao preventiva nao encontrado." });
+      return;
+    }
+    res.json({ automationAsset });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function removeAssetOverride(req, res, next) {
+  try {
+    const automationAsset = await removePreventiveAutomationAssetOverride(
+      req.params.id,
+      req.params.assetId,
+      req.user
+    );
+    if (!automationAsset) {
+      res.status(404).json({ message: "Plano de automacao preventiva nao encontrado." });
+      return;
+    }
+    res.json({ automationAsset });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function removeAsset(req, res, next) {
+  try {
+    const result = await removeAssetFromPreventiveAutomationPlan(
+      req.params.id,
+      req.params.assetId,
+      req.user
+    );
+    if (!result) {
+      res.status(404).json({ message: "Plano de automacao preventiva nao encontrado." });
+      return;
+    }
+    res.json(result);
   } catch (error) {
     next(error);
   }

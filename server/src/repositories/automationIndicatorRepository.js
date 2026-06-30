@@ -130,6 +130,7 @@ export async function listAutomationIndicatorsByAssetIds(assetIds = []) {
       WHERE schedules.asset_id = ANY($1)
         AND schedules.active = TRUE
         AND plans.active = TRUE
+        AND plans.deleted_at IS NULL
       ORDER BY schedules.asset_id ASC, schedules.next_run_at ASC NULLS LAST, plans.created_at ASC
     `,
     [normalizedAssetIds]

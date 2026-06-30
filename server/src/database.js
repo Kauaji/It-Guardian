@@ -979,6 +979,7 @@ export async function initializeDatabase() {
       scope_type TEXT NOT NULL DEFAULT 'all',
       scope_id TEXT,
       asset_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+      excluded_asset_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
       default_script_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
       notes TEXT,
       indicator_color TEXT NOT NULL DEFAULT '#1f7a61',
@@ -988,6 +989,7 @@ export async function initializeDatabase() {
       next_run_at TIMESTAMPTZ,
       schedule_anchor_at TIMESTAMPTZ,
       created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+      deleted_at TIMESTAMPTZ,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
@@ -1026,6 +1028,16 @@ export async function initializeDatabase() {
   await query(`
     ALTER TABLE preventive_automation_plans
     ADD COLUMN IF NOT EXISTS asset_ids JSONB NOT NULL DEFAULT '[]'::jsonb;
+  `);
+
+  await query(`
+    ALTER TABLE preventive_automation_plans
+    ADD COLUMN IF NOT EXISTS excluded_asset_ids JSONB NOT NULL DEFAULT '[]'::jsonb;
+  `);
+
+  await query(`
+    ALTER TABLE preventive_automation_plans
+    ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
   `);
 
   await query(`
@@ -1164,6 +1176,11 @@ export async function initializeDatabase() {
   await query(`
     CREATE INDEX IF NOT EXISTS idx_preventive_automation_asset_schedules_plan
     ON preventive_automation_asset_schedules (plan_id);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_preventive_automation_asset_schedules_asset
+    ON preventive_automation_asset_schedules (asset_id);
   `);
 
   await query(`
@@ -1419,6 +1436,11 @@ export async function initializeDatabase() {
   await query(`
     CREATE INDEX IF NOT EXISTS idx_preventive_automation_plans_active
     ON preventive_automation_plans (active, created_at DESC);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_preventive_automation_plans_deleted_at
+    ON preventive_automation_plans (deleted_at);
   `);
 
   await query(`
