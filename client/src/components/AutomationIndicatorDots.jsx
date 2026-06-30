@@ -58,6 +58,7 @@ export default function AutomationIndicatorDots({
   const [open, setOpen] = useState(false);
   const popoverId = useId();
   const containerRef = useRef(null);
+  const triggerRef = useRef(null);
   const safeIndicators = normalizeAutomationIndicators(indicators);
   const { visibleIndicators, hiddenIndicators, hiddenCount } = getVisibleAutomationIndicators(safeIndicators, maxVisible);
 
@@ -73,6 +74,7 @@ export default function AutomationIndicatorDots({
     function handleKeydown(event) {
       if (event.key === "Escape") {
         setOpen(false);
+        triggerRef.current?.focus();
       }
     }
 
@@ -88,7 +90,7 @@ export default function AutomationIndicatorDots({
 
   function handleSelect(indicator) {
     onSelectPlan?.(indicator);
-    setOpen(true);
+    setOpen(false);
   }
 
   return (
@@ -108,6 +110,7 @@ export default function AutomationIndicatorDots({
             aria-label={formatAutomationIndicatorLabel(indicator)}
             onClick={(event) => {
               event.stopPropagation();
+              triggerRef.current = event.currentTarget;
               handleSelect(indicator);
             }}
           />
@@ -122,6 +125,7 @@ export default function AutomationIndicatorDots({
             title={`+${hiddenCount} plano(s)`}
             onClick={(event) => {
               event.stopPropagation();
+              triggerRef.current = event.currentTarget;
               setOpen((current) => !current);
             }}
           >
@@ -138,6 +142,7 @@ export default function AutomationIndicatorDots({
               type="button"
               onClick={(event) => {
                 event.stopPropagation();
+                setOpen(false);
                 onSelectPlan?.(indicator);
               }}
             >

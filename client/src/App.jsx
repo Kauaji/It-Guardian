@@ -60,6 +60,7 @@ import {
   createMonitoringSocket,
   deleteDevice,
   deleteMaintenanceScript,
+  deletePreventiveAutomationPlan,
   disablePreventiveAutomationPlan,
   deleteServiceOrder,
   deleteSegment,
@@ -74,6 +75,8 @@ import {
   fetchDevices,
   fetchMaintenanceScriptRecommendations,
   fetchMaintenanceScripts,
+  fetchPreventiveAutomationAsset,
+  fetchPreventiveAutomationManagement,
   fetchPreventiveAutomationPlans,
   fetchPreventivePlans,
   fetchServiceOrders,
@@ -83,7 +86,9 @@ import {
   fetchSegments,
   fetchSystemSettings,
   login,
+  removeAssetFromPreventiveAutomationPlan,
   removeAlertAcknowledgement,
+  removePreventiveAutomationAssetOverride,
   rejectServiceOrderSuggestion,
   renameSegment,
   register,
@@ -102,10 +107,13 @@ import {
   updateAlertRule,
   updateMaintenanceScript,
   updatePreventiveAutomationPlan,
+  savePreventiveAutomationAssetOverride,
   updateSystemSettings,
   useSuggestionScript
 } from "./api.js";
 import AutomationIndicatorDots from "./components/AutomationIndicatorDots.jsx";
+import AutomationManagementView from "./components/automation/AutomationManagementView.jsx";
+import { shouldShowAutomationManagement } from "./components/automation/automationUtils.js";
 import AssetPublicView from "./components/inventory/AssetPublicView.jsx";
 import AssetDragCompactOverlay from "./components/inventory/AssetDragCompactOverlay.jsx";
 import BulkAssetLabelPrint from "./components/inventory/BulkAssetLabelPrint.jsx";
@@ -2044,6 +2052,9 @@ function AlertCenterV2({
   scripts,
   preventivePlans = [],
   preventiveAutomationPlans = [],
+  preventiveAutomationManagement = { plans: [], machines: [], metadata: { planCount: 0, machineCount: 0 } },
+  preventiveAutomationManagementError = "",
+  preventiveAutomationManagementLoading = false,
   devices,
   segments = [],
   segmentGroups = [],
@@ -2078,6 +2089,9 @@ function AlertCenterV2({
   canUpdatePreventiveAutomation,
   canDisablePreventiveAutomation,
   canPreparePreventiveAutomation,
+  canDeletePreventiveAutomation,
+  canRemovePreventiveAutomationAsset,
+  canManagePreventiveAutomationOverride,
   onEvaluateAlerts,
   onAcceptSuggestion,
   onRejectSuggestion,
@@ -2086,6 +2100,12 @@ function AlertCenterV2({
   onSavePreventiveAutomationPlan,
   onDisablePreventiveAutomationPlan,
   onPreparePreventiveAutomationPlan,
+  onDeletePreventiveAutomationPlan,
+  onSavePreventiveAutomationAssetOverride,
+  onRemovePreventiveAutomationAssetOverride,
+  onRemoveAssetFromPreventiveAutomationPlan,
+  onRefreshPreventiveAutomationManagement,
+  onFetchPreventiveAutomationAsset,
   onOpenServiceOrders,
   onUpdateRule,
   onAddAlertComment,
@@ -2135,14 +2155,17 @@ function AlertCenterV2({
   const [lastCreatedPreventivePlan, setLastCreatedPreventivePlan] = useState(null);
   const [preventiveReviewOpen, setPreventiveReviewOpen] = useState(false);
   const canUsePreventiveArea = canViewPreventivePlans || canViewPreventiveAutomation;
+  const automationManagementPlanCount = Number(preventiveAutomationManagement?.metadata?.planCount || 0);
+  const canShowAutomationManagement = shouldShowAutomationManagement(
+    canViewPreventiveAutomation,
+    automationManagementPlanCount
+  );
 
   useEffect(() => {
     if (alertActiveTab === "automation") {
-      if (canUsePreventiveArea) {
-        setAlertActiveTab("preventives");
-      } else if (canViewAlerts) {
-        setAlertActiveTab("suggestions");
-      }
+      if (canShowAutomationManagement) return;
+      if (canUsePreventiveArea) setAlertActiveTab("preventives");
+      else if (canViewAlerts) setAlertActiveTab("suggestions");
       return;
     }
     if (alertActiveTab === "suggestions" && !canViewAlerts) {
@@ -2153,7 +2176,7 @@ function AlertCenterV2({
     if (alertActiveTab === "preventives" && !canUsePreventiveArea && canViewAlerts) {
       setAlertActiveTab("suggestions");
     }
-  }, [alertActiveTab, canUsePreventiveArea, canViewAlerts]);
+  }, [alertActiveTab, canShowAutomationManagement, canUsePreventiveArea, canViewAlerts]);
 
   useEffect(() => {
     if (alertActiveTab !== "preventives" && preventiveAutomationCreateRequest) {
@@ -3103,6 +3126,15 @@ function AlertCenterV2({
                 Preventivas
               </button>
             )}
+            {canShowAutomationManagement && (
+              <button
+                type="button"
+                className={alertActiveTab === "automation" ? "active" : ""}
+                onClick={() => setAlertActiveTab("automation")}
+              >
+                Automatizações
+              </button>
+            )}
             {canViewScriptLogs && (
               <button
                 type="button"
@@ -3813,6 +3845,33 @@ function AlertCenterV2({
                 />
               )}
             </section>
+          )}
+
+          {alertActiveTab === "automation" && canShowAutomationManagement && (
+            <AutomationManagementView
+              management={preventiveAutomationManagement}
+              devices={devices}
+              segments={segments}
+              segmentGroups={segmentGroups}
+              inventoryTabs={inventoryTabs}
+              scripts={scripts}
+              loading={preventiveAutomationManagementLoading}
+              error={preventiveAutomationManagementError}
+              permissions={{
+                update: canUpdatePreventiveAutomation,
+                disable: canDisablePreventiveAutomation,
+                delete: canDeletePreventiveAutomation,
+                removeAsset: canRemovePreventiveAutomationAsset,
+                manageOverride: canManagePreventiveAutomationOverride
+              }}
+              onRetry={onRefreshPreventiveAutomationManagement}
+              onSavePlan={onSavePreventiveAutomationPlan}
+              onDeletePlan={onDeletePreventiveAutomationPlan}
+              onSaveOverride={onSavePreventiveAutomationAssetOverride}
+              onRemoveOverride={onRemovePreventiveAutomationAssetOverride}
+              onRemoveAsset={onRemoveAssetFromPreventiveAutomationPlan}
+              onFetchAssetDetails={onFetchPreventiveAutomationAsset}
+            />
           )}
 
           {preventiveReviewOpen && (
@@ -4772,6 +4831,12 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   const [maintenanceScripts, setMaintenanceScripts] = useState([]);
   const [preventivePlans, setPreventivePlans] = useState([]);
   const [preventiveAutomationPlans, setPreventiveAutomationPlans] = useState([]);
+  const [preventiveAutomationManagement, setPreventiveAutomationManagement] = useState({
+    plans: [],
+    machines: [],
+    metadata: { planCount: 0, machineCount: 0 }
+  });
+  const [preventiveAutomationManagementError, setPreventiveAutomationManagementError] = useState("");
   const [serviceOrders, setServiceOrders] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [selectedDevice, setSelectedDevice] = useState(null);
@@ -4878,6 +4943,9 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   const canUpdatePreventiveAutomation = hasPermission(user, "preventive_automation.update");
   const canDisablePreventiveAutomation = hasPermission(user, "preventive_automation.disable");
   const canPreparePreventiveAutomation = hasPermission(user, "preventive_automation.run_prepare");
+  const canDeletePreventiveAutomation = hasPermission(user, "preventive_automation.delete");
+  const canRemovePreventiveAutomationAsset = hasPermission(user, "preventive_automation.remove_asset");
+  const canManagePreventiveAutomationOverride = hasPermission(user, "preventive_automation.manage_asset_override");
   const canManageInventory =
     hasPermission(user, "inventory.create_asset") ||
     hasPermission(user, "inventory.edit_asset") ||
@@ -5195,6 +5263,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
         maintenanceScriptData,
         preventivePlanData,
         preventiveAutomationData,
+        preventiveAutomationManagementData,
         serviceOrderData,
         alertSettingsData,
         systemSettingsData
@@ -5211,6 +5280,14 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
         canViewScripts ? fetchMaintenanceScripts(token) : Promise.resolve({ scripts: [] }),
         canViewPreventivePlans ? fetchPreventivePlans(token) : Promise.resolve({ preventivePlans: [] }),
         canViewPreventiveAutomation ? fetchPreventiveAutomationPlans(token) : Promise.resolve({ preventiveAutomationPlans: [] }),
+        canViewPreventiveAutomation
+          ? fetchPreventiveAutomationManagement(token).catch((error) => ({
+              plans: [],
+              machines: [],
+              metadata: { planCount: 0, machineCount: 0 },
+              error: error.message
+            }))
+          : Promise.resolve({ plans: [], machines: [], metadata: { planCount: 0, machineCount: 0 } }),
         canViewServiceOrders ? fetchServiceOrders(token) : Promise.resolve({ serviceOrders: [] }),
         canViewAlerts
           ? fetchAlertSettings(token).catch(() => ({ settings: normalizePrioritySettings() }))
@@ -5252,6 +5329,12 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
       setMaintenanceScripts(maintenanceScriptData.scripts || []);
       setPreventivePlans(preventivePlanData.preventivePlans || []);
       setPreventiveAutomationPlans(preventiveAutomationData.preventiveAutomationPlans || []);
+      setPreventiveAutomationManagement({
+        plans: preventiveAutomationManagementData.plans || [],
+        machines: preventiveAutomationManagementData.machines || [],
+        metadata: preventiveAutomationManagementData.metadata || { planCount: 0, machineCount: 0 }
+      });
+      setPreventiveAutomationManagementError(preventiveAutomationManagementData.error || "");
       setServiceOrders(serviceOrderData.serviceOrders || []);
       const nextPrioritySettings = normalizePrioritySettings(alertSettingsData.settings);
       setAlertPrioritySettings(nextPrioritySettings);
@@ -5693,6 +5776,58 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
       notify(error.message, "danger");
       throw error;
     }
+  }
+
+  async function handleDeletePreventiveAutomationPlan(planId) {
+    try {
+      await deletePreventiveAutomationPlan(token, planId);
+      notify("Plano de automação excluído. Histórico e auditoria foram preservados.", "ok");
+      await loadData(true);
+    } catch (error) {
+      notify(error.message, "danger");
+      throw error;
+    }
+  }
+
+  async function handleSavePreventiveAutomationAssetOverride(planId, assetId, payload) {
+    try {
+      const response = await savePreventiveAutomationAssetOverride(token, planId, assetId, payload);
+      notify("Recorrência personalizada atualizada para esta máquina.", "ok");
+      await loadData(true);
+      return response.automationAsset;
+    } catch (error) {
+      notify(error.message, "danger");
+      throw error;
+    }
+  }
+
+  async function handleRemovePreventiveAutomationAssetOverride(planId, assetId) {
+    try {
+      const response = await removePreventiveAutomationAssetOverride(token, planId, assetId);
+      notify("A máquina voltou a usar a recorrência padrão do plano.", "ok");
+      await loadData(true);
+      return response.automationAsset;
+    } catch (error) {
+      notify(error.message, "danger");
+      throw error;
+    }
+  }
+
+  async function handleRemoveAssetFromPreventiveAutomationPlan(planId, assetId) {
+    try {
+      const response = await removeAssetFromPreventiveAutomationPlan(token, planId, assetId);
+      notify("Máquina removida do plano. Agendas futuras foram desativadas.", "ok");
+      await loadData(true);
+      return response;
+    } catch (error) {
+      notify(error.message, "danger");
+      throw error;
+    }
+  }
+
+  async function handleFetchPreventiveAutomationAsset(planId, assetId) {
+    const response = await fetchPreventiveAutomationAsset(token, planId, assetId);
+    return response.automationAsset;
   }
 
   function getServiceOrderModeError(payload) {
@@ -7543,6 +7678,9 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
             scripts={maintenanceScripts}
             preventivePlans={preventivePlans}
             preventiveAutomationPlans={preventiveAutomationPlans}
+            preventiveAutomationManagement={preventiveAutomationManagement}
+            preventiveAutomationManagementError={preventiveAutomationManagementError}
+            preventiveAutomationManagementLoading={loading}
             devices={allDevices}
             segments={decoratedSegments}
             segmentGroups={decoratedSegmentGroups}
@@ -7577,6 +7715,9 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
             canUpdatePreventiveAutomation={canUpdatePreventiveAutomation}
             canDisablePreventiveAutomation={canDisablePreventiveAutomation}
             canPreparePreventiveAutomation={canPreparePreventiveAutomation}
+            canDeletePreventiveAutomation={canDeletePreventiveAutomation}
+            canRemovePreventiveAutomationAsset={canRemovePreventiveAutomationAsset}
+            canManagePreventiveAutomationOverride={canManagePreventiveAutomationOverride}
             onEvaluateAlerts={handleEvaluateAlerts}
             onAcceptSuggestion={handleAcceptSuggestion}
             onRejectSuggestion={handleRejectSuggestion}
@@ -7585,6 +7726,12 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
             onSavePreventiveAutomationPlan={handleSavePreventiveAutomationPlan}
             onDisablePreventiveAutomationPlan={handleDisablePreventiveAutomationPlan}
             onPreparePreventiveAutomationPlan={handlePreparePreventiveAutomationPlan}
+            onDeletePreventiveAutomationPlan={handleDeletePreventiveAutomationPlan}
+            onSavePreventiveAutomationAssetOverride={handleSavePreventiveAutomationAssetOverride}
+            onRemovePreventiveAutomationAssetOverride={handleRemovePreventiveAutomationAssetOverride}
+            onRemoveAssetFromPreventiveAutomationPlan={handleRemoveAssetFromPreventiveAutomationPlan}
+            onRefreshPreventiveAutomationManagement={() => loadData(true)}
+            onFetchPreventiveAutomationAsset={handleFetchPreventiveAutomationAsset}
             onOpenServiceOrders={() => setActiveView("service-orders")}
             onUpdateRule={handleUpdateAlertRule}
             onAddAlertComment={handleAddAlertComment}

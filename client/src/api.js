@@ -404,6 +404,14 @@ export function fetchPreventiveAutomationPlans(token) {
   return apiFetch("/preventive-automation-plans", { token });
 }
 
+export function fetchPreventiveAutomationManagement(token) {
+  return apiFetch("/preventive-automation-plans/management", { token });
+}
+
+export function fetchPreventiveAutomationAsset(token, planId, assetId) {
+  return apiFetch(`/preventive-automation-plans/${planId}/assets/${assetId}`, { token });
+}
+
 export function createPreventiveAutomationPlan(token, payload) {
   return apiFetch("/preventive-automation-plans", {
     token,
@@ -421,7 +429,36 @@ export function updatePreventiveAutomationPlan(token, id, payload) {
 }
 
 export function disablePreventiveAutomationPlan(token, id) {
+  return apiFetch(`/preventive-automation-plans/${id}/disable`, {
+    token,
+    method: "POST"
+  });
+}
+
+export function deletePreventiveAutomationPlan(token, id) {
   return apiFetch(`/preventive-automation-plans/${id}`, {
+    token,
+    method: "DELETE"
+  });
+}
+
+export function savePreventiveAutomationAssetOverride(token, planId, assetId, payload) {
+  return apiFetch(`/preventive-automation-plans/${planId}/assets/${assetId}/override`, {
+    token,
+    method: "PUT",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function removePreventiveAutomationAssetOverride(token, planId, assetId) {
+  return apiFetch(`/preventive-automation-plans/${planId}/assets/${assetId}/override`, {
+    token,
+    method: "DELETE"
+  });
+}
+
+export function removeAssetFromPreventiveAutomationPlan(token, planId, assetId) {
+  return apiFetch(`/preventive-automation-plans/${planId}/assets/${assetId}`, {
     token,
     method: "DELETE"
   });
