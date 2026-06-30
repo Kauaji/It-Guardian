@@ -21,8 +21,12 @@ O endpoint `GET /api/preventive-automation-plans/management` retorna planos, má
 - reúne uma máquina com vários planos em uma única linha;
 - permite busca por máquina, plano, ambiente, grupo ou segmento;
 - oferece filtros para ativos, inativos, com erro e sem próxima agenda;
+- considera qualquer plano da máquina em cada filtro, permitindo que a mesma máquina pertença a mais de um estado;
 - agrupa por ambiente, grupo e segmento;
 - não faz uma consulta por card.
+
+O resumo da linha mantém contagens independentes, por exemplo:
+`2 ativos • 1 inativo • 1 com erro`. Um erro não oculta a existência de outro plano ativo ou inativo.
 
 ## Indicadores
 
@@ -51,6 +55,22 @@ Com `preventive_automation.update`, o usuário pode editar:
 
 A atualização reaproveita `PATCH /api/preventive-automation-plans/:id` e sincroniza as agendas do plano.
 
+### Pausa e reativação
+
+Planos ativos oferecem **Pausar automação** e planos inativos oferecem **Reativar automação**. As duas ações:
+
+- pedem confirmação;
+- preservam o plano, os vínculos e o histórico;
+- sincronizam o estado das agendas individuais na mesma transação;
+- registram eventos distintos de pausa ou reativação no log geral e no histórico das máquinas;
+- não permitem reativar um plano excluído logicamente.
+
+Pausa não é exclusão. A exclusão continua sendo uma ação destrutiva separada.
+
+### Validação e alterações não salvas
+
+A edição geral valida nome, scripts, recorrência, intervalo personalizado, horário, fuso e cor junto aos respectivos campos. Fechar, pressionar `Escape`, clicar no backdrop ou cancelar com alterações pendentes exige confirmação explícita.
+
 ## Exclusão lógica
 
 Com `preventive_automation.delete`, o usuário pode excluir um plano após digitar seu nome para confirmação.
@@ -76,6 +96,15 @@ O menu da máquina exige a seleção explícita do plano quando houver mais de u
 - override;
 - histórico recente do ativo.
 
+Ao trocar de plano, o detalhe anterior é limpo antes da nova consulta. O formulário respeita esta prioridade:
+
+1. override ativo da máquina;
+2. agenda efetiva;
+3. configuração geral do plano;
+4. valores padrão.
+
+Assim, uma recorrência personalizada existente não é substituída silenciosamente pelos valores gerais.
+
 ### Recorrência personalizada
 
 Com `preventive_automation.manage_asset_override`:
@@ -84,6 +113,10 @@ Com `preventive_automation.manage_asset_override`:
 - `DELETE /api/preventive-automation-plans/:planId/assets/:assetId/override` restaura o padrão.
 
 A chave única continua sendo `plan_id + target_key`, evitando duplicidade. As agendas são recalculadas sem alterar outras máquinas.
+
+Depois de salvar ou remover um override, a resposta atualiza formulário, recorrência efetiva, origem e próxima preparação. A interface identifica a origem como **Herdada do plano**, **Herdada do segmento** ou **Personalizada para esta máquina**.
+
+O formulário individual também protege alterações não salvas ao fechar, cancelar, pressionar `Escape`, clicar fora ou selecionar outro plano.
 
 ### Remoção da máquina
 
