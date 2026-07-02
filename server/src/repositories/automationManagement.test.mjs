@@ -421,3 +421,36 @@ test("detalhe do plano centraliza as cinco areas operacionais", () => {
   }
   assert.match(component, /onLoadHistory/);
 });
+
+test("escopo de automacao diferencia administrador e proprietario do plano", async () => {
+  const { buildAutomationAccessScope, canAccessAutomationPlan } = await import("./automationAccessScope.js");
+  assert.equal(buildAutomationAccessScope({ id: "admin", isAdmin: true }).unrestricted, true);
+  assert.equal(canAccessAutomationPlan({ createdBy: "user-1" }, { id: "user-1" }), true);
+  assert.equal(canAccessAutomationPlan({ createdBy: "user-1" }, { id: "user-2" }), false);
+});
+
+test("controllers repassam usuario para leituras de automacao", () => {
+  const controller = source("../controllers/preventiveAutomationController.js");
+  assert.match(controller, /listPreventiveAutomationManagement\(req\.user/);
+  assert.match(controller, /listPreventiveAutomationAgenda\(req\.query \|\| \{\}, req\.user\)/);
+  assert.match(controller, /findPreventiveAutomationAssetDetails\(req\.params\.id, req\.params\.assetId, req\.user\)/);
+});
+
+test("detalhe de ativo usa consultas direcionadas e nao carrega o gerenciamento completo", () => {
+  const repository = source("./preventiveAutomationRepository.js");
+  const start = repository.indexOf("export async function findPreventiveAutomationAssetDetails");
+  const end = repository.indexOf("export async function upsertPreventiveAutomationAssetOverride", start);
+  const body = repository.slice(start, end);
+  assert.match(body, /Promise\.all/);
+  assert.match(body, /plan_id = \$1 AND asset_id = \$2/);
+  assert.doesNotMatch(body, /listPreventiveAutomationManagement/);
+});
+
+test("ultima execucao e selecionada por plano e maquina sem limite global", () => {
+  const repository = source("./preventiveAutomationRepository.js");
+  const start = repository.indexOf("export async function listPreventiveAutomationManagement");
+  const end = repository.indexOf("function normalizePagination", start);
+  const body = repository.slice(start, end);
+  assert.match(body, /PARTITION BY runs\.plan_id, runs\.asset_id/);
+  assert.doesNotMatch(body, /LIMIT 500/);
+});

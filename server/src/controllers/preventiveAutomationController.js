@@ -41,7 +41,7 @@ function readCronSecretFromRequest(req) {
 
 export async function list(req, res, next) {
   try {
-    res.json({ preventiveAutomationPlans: await listPreventiveAutomationPlans() });
+    res.json({ preventiveAutomationPlans: await listPreventiveAutomationPlans(req.user, req.query || {}) });
   } catch (error) {
     next(error);
   }
@@ -49,7 +49,7 @@ export async function list(req, res, next) {
 
 export async function management(req, res, next) {
   try {
-    res.json(await listPreventiveAutomationManagement());
+    res.json(await listPreventiveAutomationManagement(req.user, req.query || {}));
   } catch (error) {
     next(error);
   }
@@ -57,7 +57,7 @@ export async function management(req, res, next) {
 
 export async function agenda(req, res, next) {
   try {
-    res.json(await listPreventiveAutomationAgenda(req.query || {}));
+    res.json(await listPreventiveAutomationAgenda(req.query || {}, req.user));
   } catch (error) {
     next(error);
   }
@@ -67,7 +67,7 @@ export async function history(req, res, next) {
   try {
     const result = await listPreventiveAutomationPlanHistory(req.params.id, {
       limit: req.query.limit
-    });
+    }, req.user);
     if (!result) {
       res.status(404).json({ message: "Plano de automação preventiva não encontrado." });
       return;
@@ -80,7 +80,7 @@ export async function history(req, res, next) {
 
 export async function detail(req, res, next) {
   try {
-    const preventiveAutomationPlan = await findPreventiveAutomationPlanById(req.params.id);
+    const preventiveAutomationPlan = await findPreventiveAutomationPlanById(req.params.id, req.user);
 
     if (!preventiveAutomationPlan) {
       res.status(404).json({ message: "Plano de automação preventiva não encontrado." });
@@ -147,7 +147,7 @@ export async function remove(req, res, next) {
 
 export async function assetDetail(req, res, next) {
   try {
-    const automationAsset = await findPreventiveAutomationAssetDetails(req.params.id, req.params.assetId);
+    const automationAsset = await findPreventiveAutomationAssetDetails(req.params.id, req.params.assetId, req.user);
     if (!automationAsset) {
       res.status(404).json({ message: "Vinculo de automacao da maquina nao encontrado." });
       return;

@@ -15,6 +15,19 @@ Rotas de consulta:
 Essas telas não executam scripts; apenas administram cadastro, recorrência e
 preparação.
 
+## Escopo e desempenho
+
+O backend recebe o usuário autenticado em todas as consultas e mutações do
+gerenciamento. Administradores possuem visão global; usuários comuns acessam
+somente planos próprios. Listas opcionais de clientes, ambientes, grupos e
+segmentos são normalizadas no `automationAccessScope` para evolução da
+localização dos ativos.
+
+As listagens aceitam `limit` e `offset`. O gerenciamento também aceita
+`search`, `status`, `groupId` e `segmentId`. A execução mais recente é
+selecionada por par plano/máquina, sem limite global. O detalhe de uma máquina
+usa consultas direcionadas e não carrega toda a tela de gerenciamento.
+
 ## Objetivo
 
 A área **Automatizações**, dentro da Central de Avisos, centraliza a consulta e o gerenciamento dos planos de automação preventiva já cadastrados. Ela não executa comandos e não substitui o fluxo de criação disponível em **Preventivas**.

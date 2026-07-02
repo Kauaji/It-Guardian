@@ -52,7 +52,10 @@ export async function requireAuth(req, res, next) {
       permissions: user.permissions,
       sectorPermissions: user.sectorPermissions,
       effectivePermissions: user.effectivePermissions,
-      allowedClientIds: normalizeClientIds(technicianAccess?.allowed_client_ids)
+      allowedClientIds: normalizeClientIds(technicianAccess?.allowed_client_ids),
+      allowedEnvironmentIds: normalizeClientIds(user.allowedEnvironmentIds),
+      allowedGroupIds: normalizeClientIds(user.allowedGroupIds),
+      allowedSegmentIds: normalizeClientIds(user.allowedSegmentIds)
     };
     return next();
   } catch (_error) {
