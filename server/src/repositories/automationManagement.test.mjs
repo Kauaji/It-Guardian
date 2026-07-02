@@ -395,3 +395,29 @@ test("nenhuma primitiva de execução real foi introduzida na área de gerenciam
   ].join("\n");
   assert.doesNotMatch(combined, /child_process|\bexecFile\s*\(|\bspawn\s*\(|shell\s*:\s*true|\beval\s*\(/);
 });
+
+test("gerenciamento oferece visoes de maquinas, planos e agenda", () => {
+  const tabs = source("../../../client/src/components/automation/AutomationManagementTabs.jsx");
+  const management = source("../../../client/src/components/automation/AutomationManagementView.jsx");
+  assert.match(tabs, /Máquinas/);
+  assert.match(tabs, /Planos/);
+  assert.match(tabs, /Agenda/);
+  assert.match(management, /AutomationPlansView/);
+  assert.match(management, /AutomationAgendaView/);
+});
+
+test("agenda usa rota protegida e consulta parametrizada", () => {
+  const routes = source("../routes/preventiveAutomationRoutes.js");
+  const repository = source("./preventiveAutomationRepository.js");
+  assert.match(routes, /"\/agenda", requirePermission\("preventive_automation\.view"\)/);
+  assert.match(repository, /export async function listPreventiveAutomationAgenda/);
+  assert.match(repository, /LEFT JOIN LATERAL/);
+});
+
+test("detalhe do plano centraliza as cinco areas operacionais", () => {
+  const component = source("../../../client/src/components/automation/AutomationPlanDetails.jsx");
+  for (const label of ["Resumo", "Agenda", "Máquinas", "Scripts", "Histórico"]) {
+    assert.match(component, new RegExp(label));
+  }
+  assert.match(component, /onLoadHistory/);
+});

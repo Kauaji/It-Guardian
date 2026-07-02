@@ -3,6 +3,9 @@ import { RefreshCw, Search } from "lucide-react";
 import AutomationMachineList from "./AutomationMachineList.jsx";
 import AutomationMachineDetails from "./AutomationMachineDetails.jsx";
 import AutomationPlanDetails from "./AutomationPlanDetails.jsx";
+import AutomationManagementTabs from "./AutomationManagementTabs.jsx";
+import AutomationPlansView from "./AutomationPlansView.jsx";
+import AutomationAgendaView from "./AutomationAgendaView.jsx";
 import { buildAutomationManagementGroups } from "./automationUtils.js";
 
 const statusOptions = [
@@ -29,8 +32,11 @@ export default function AutomationManagementView({
   onSaveOverride,
   onRemoveOverride,
   onRemoveAsset,
-  onFetchAssetDetails
+  onFetchAssetDetails,
+  onFetchAgenda,
+  onFetchPlanHistory
 }) {
+  const [activeView, setActiveView] = useState("machines");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("active");
   const [selectedPlan, setSelectedPlan] = useState(null);
@@ -91,8 +97,9 @@ export default function AutomationManagementView({
           <RefreshCw size={18} />
         </button>
       </div>
+      <AutomationManagementTabs value={activeView} onChange={setActiveView} />
 
-      <div className="automation-management-toolbar">
+      {activeView === "machines" && <div className="automation-management-toolbar">
         <label className="compact-search">
           <Search size={18} />
           <input
@@ -105,7 +112,7 @@ export default function AutomationManagementView({
           {statusOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
         </select>
         <strong>{visibleMachineCount} máquina(s) com plano de automatização</strong>
-      </div>
+      </div>}
 
       {loading && (
         <div className="automation-management-skeleton" aria-label="Carregando automatizações">
@@ -118,11 +125,24 @@ export default function AutomationManagementView({
           <button type="button" className="secondary-action compact-action" onClick={onRetry}>Tentar novamente</button>
         </div>
       )}
-      {!loading && !error && groups.length > 0 && (
+      {!loading && !error && activeView === "machines" && groups.length > 0 && (
         <AutomationMachineList groups={groups} onSelectPlan={openPlan} onOpenMachine={setSelectedMachine} />
       )}
-      {!loading && !error && !groups.length && (
+      {!loading && !error && activeView === "machines" && !groups.length && (
         <p className="empty">Nenhuma máquina com automatização encontrada para os filtros atuais.</p>
+      )}
+      {!loading && !error && activeView === "plans" && (
+        <AutomationPlansView
+          plans={management?.plans || []}
+          search={search}
+          status={status}
+          onSearch={setSearch}
+          onStatus={setStatus}
+          onOpenPlan={setSelectedPlan}
+        />
+      )}
+      {!loading && !error && activeView === "agenda" && (
+        <AutomationAgendaView plans={management?.plans || []} onLoad={onFetchAgenda} onOpenPlan={setSelectedPlan} />
       )}
 
       <AutomationPlanDetails
@@ -139,6 +159,7 @@ export default function AutomationManagementView({
           await onDeletePlan(plan.id);
           setSelectedPlan(null);
         })}
+        onLoadHistory={onFetchPlanHistory}
       />
       <AutomationMachineDetails
         machine={selectedMachine}

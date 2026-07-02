@@ -76,7 +76,9 @@ import {
   fetchMaintenanceScriptRecommendations,
   fetchMaintenanceScripts,
   fetchPreventiveAutomationAsset,
+  fetchPreventiveAutomationAgenda,
   fetchPreventiveAutomationManagement,
+  fetchPreventiveAutomationPlanHistory,
   fetchPreventiveAutomationPlans,
   fetchPreventivePlans,
   fetchServiceOrders,
@@ -3871,6 +3873,8 @@ function AlertCenterV2({
               onRemoveOverride={onRemovePreventiveAutomationAssetOverride}
               onRemoveAsset={onRemoveAssetFromPreventiveAutomationPlan}
               onFetchAssetDetails={onFetchPreventiveAutomationAsset}
+              onFetchAgenda={(filters) => fetchPreventiveAutomationAgenda(token, filters)}
+              onFetchPlanHistory={(planId) => fetchPreventiveAutomationPlanHistory(token, planId)}
             />
           )}
 

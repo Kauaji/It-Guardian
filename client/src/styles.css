@@ -11541,6 +11541,141 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
   padding: 0 8px;
 }
 
+.automation-management-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  width: max-content;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--soft);
+}
+
+.automation-management-tabs button,
+.automation-plan-detail-tabs button {
+  border: 0;
+  border-radius: 6px;
+  padding: 9px 16px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.automation-management-tabs button.active,
+.automation-plan-detail-tabs button.active {
+  background: var(--surface);
+  color: var(--accent);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.1);
+}
+
+.automation-plan-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.automation-plan-card {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--plan-color, var(--accent));
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.automation-plan-card header,
+.automation-plan-card footer,
+.automation-plan-card header > div,
+.automation-plan-card footer > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.automation-plan-card header,
+.automation-plan-card footer { justify-content: space-between; }
+.automation-plan-card header i { width: 10px; height: 10px; border-radius: 50%; background: var(--plan-color); }
+.automation-plan-card > p { min-height: 40px; color: var(--muted); }
+.automation-plan-card dl { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.automation-plan-card dt { color: var(--muted); font-size: 12px; }
+.automation-plan-card dd { margin: 2px 0 0; font-weight: 700; }
+.automation-plan-card footer { margin-top: 14px; }
+.automation-plan-card footer > span { color: var(--muted); font-size: 12px; }
+
+.automation-agenda-summary {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.automation-agenda-summary span {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--muted);
+}
+
+.automation-agenda-summary strong { display: block; margin-top: 4px; color: var(--text); font-size: 20px; }
+.automation-agenda-toolbar { display: flex; justify-content: flex-end; gap: 8px; margin: 12px 0; }
+.automation-agenda-group { border-left: 2px solid var(--line); padding-left: 14px; margin: 16px 0; }
+.automation-agenda-group > header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.automation-agenda-group > header span { color: var(--muted); }
+.automation-agenda-group > div { display: grid; gap: 6px; }
+.automation-agenda-group button {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+}
+.automation-agenda-group button > i { width: 8px; height: 32px; border-radius: 4px; }
+.automation-agenda-group button span { display: grid; }
+.automation-agenda-group button small, .automation-agenda-group time { color: var(--muted); }
+.agenda-status { display: inline-flex; align-items: center; gap: 3px; font-style: normal; font-size: 12px; }
+.agenda-status.error, .agenda-status.overdue { color: var(--danger); }
+
+.automation-plan-detail-tabs {
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line);
+}
+
+.automation-plan-tab-panel { padding: 18px; overflow: auto; }
+.automation-plan-list { display: grid; gap: 8px; }
+.automation-plan-list article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.automation-plan-list span, .automation-plan-list time { color: var(--muted); }
+
+@media (max-width: 900px) {
+  .automation-plan-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .automation-agenda-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 620px) {
+  .automation-management-tabs { width: 100%; }
+  .automation-management-tabs button { flex: 1; padding-inline: 8px; }
+  .automation-plan-grid { grid-template-columns: 1fr; }
+  .automation-agenda-group button { grid-template-columns: 8px minmax(0, 1fr); }
+  .automation-agenda-group time, .agenda-status { grid-column: 2; }
+  .automation-plan-list article { grid-template-columns: 1fr; gap: 4px; }
+}
+
 .automation-machine-status .pill {
   max-width: 270px;
   text-align: right;

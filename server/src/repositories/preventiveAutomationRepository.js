@@ -1207,10 +1207,16 @@ export async function listPreventiveAutomationManagement() {
     query(
       `
         SELECT *
-        FROM preventive_automation_runs
-        WHERE plan_id IN (${planIdPlaceholders})
-        ORDER BY created_at DESC
-        LIMIT 500
+        FROM (
+          SELECT runs.*,
+                 ROW_NUMBER() OVER (
+                   PARTITION BY runs.plan_id, runs.asset_id
+                   ORDER BY runs.created_at DESC
+                 ) AS latest_position
+          FROM preventive_automation_runs runs
+          WHERE runs.plan_id IN (${planIdPlaceholders})
+        ) latest_runs
+        WHERE latest_position = 1
       `,
       planIds
     ),
@@ -1259,14 +1265,26 @@ export async function listPreventiveAutomationManagement() {
     const overrides = overridesByPlan.get(String(plan.id)) || [];
     const assetSchedules = (schedulesByPlan.get(String(plan.id)) || [])
       .filter((schedule) => isScheduleLinkedToPlan(plan, schedule));
+    const activeSchedules = assetSchedules.filter((schedule) => schedule.active !== false);
+    const latestRuns = activeSchedules
+      .map((schedule) => runsByAsset.get(latestRunKey(plan.id, schedule.assetId)))
+      .filter(Boolean);
     return {
       ...plan,
       overrides,
       assetSchedules,
       scripts: plan.defaultScriptIds.map((id) => scriptsById.get(String(id))).filter(Boolean),
-      assetCount: assetSchedules.filter((schedule) => schedule.active !== false).length,
+      assetCount: activeSchedules.length,
       scriptCount: plan.defaultScriptIds.length,
-      overrideCount: overrides.filter((override) => override.active !== false).length
+      overrideCount: overrides.filter((override) => override.active !== false).length,
+      activeScheduleCount: activeSchedules.filter(() => plan.active !== false).length,
+      errorAssetCount: latestRuns.filter(
+        (run) => run.errorDetected || String(run.status).toLowerCase() === "error"
+      ).length,
+      withoutScheduleCount: activeSchedules.filter((schedule) => !schedule.nextRunAt).length,
+      latestRun: latestRuns
+        .slice()
+        .sort((left, right) => new Date(right.createdAt || 0) - new Date(left.createdAt || 0))[0] || null
     };
   });
   const plansById = new Map(plans.map((plan) => [String(plan.id), plan]));
@@ -1337,8 +1355,201 @@ export async function listPreventiveAutomationManagement() {
     metadata: {
       planCount: plans.length,
       activePlanCount: plans.filter((plan) => plan.active !== false).length,
-      machineCount: machinesById.size
+      inactivePlanCount: plans.filter((plan) => plan.active === false).length,
+      machineCount: machinesById.size,
+      activeScheduleCount: plans.reduce((total, plan) => total + plan.activeScheduleCount, 0),
+      errorCount: plans.reduce((total, plan) => total + plan.errorAssetCount, 0),
+      withoutScheduleCount: plans.reduce((total, plan) => total + plan.withoutScheduleCount, 0)
     }
+  };
+}
+
+function normalizePagination(value, fallback, maximum) {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0) return fallback;
+  return Math.min(parsed, maximum);
+}
+
+function normalizeAgendaFilters(filters = {}) {
+  const startDate = serializeTimestamp(filters.startDate);
+  const endDate = serializeTimestamp(filters.endDate);
+  const status = trimString(filters.status, 40, "all").toLowerCase();
+
+  return {
+    startDate,
+    endDate,
+    status: new Set(["all", "active", "overdue", "error", "without_schedule"]).has(status)
+      ? status
+      : "all",
+    planId: trimString(filters.planId, 120) || null,
+    assetId: trimString(filters.assetId, 120) || null,
+    segmentId: trimString(filters.segmentId, 120) || null,
+    limit: normalizePagination(filters.limit, 200, 500),
+    offset: normalizePagination(filters.offset, 0, 100000)
+  };
+}
+
+function agendaItemStatus({ planActive, scheduleActive, nextRunAt, latestRun }) {
+  if (!planActive || !scheduleActive) return "paused";
+  if (latestRun?.errorDetected || String(latestRun?.status || "").toLowerCase() === "error") return "error";
+  if (!nextRunAt) return "without_schedule";
+  if (new Date(nextRunAt) < new Date()) return "overdue";
+  return "scheduled";
+}
+
+export async function listPreventiveAutomationAgenda(filters = {}) {
+  const normalized = normalizeAgendaFilters(filters);
+  const conditions = ["plans.deleted_at IS NULL"];
+  const values = [];
+  const pushCondition = (sql, value) => {
+    values.push(value);
+    conditions.push(sql.replace("?", `$${values.length}`));
+  };
+
+  if (normalized.startDate) pushCondition("schedules.next_run_at >= ?", normalized.startDate);
+  if (normalized.endDate) pushCondition("schedules.next_run_at <= ?", normalized.endDate);
+  if (normalized.planId) pushCondition("plans.id = ?", normalized.planId);
+  if (normalized.assetId) pushCondition("schedules.asset_id = ?", normalized.assetId);
+  if (normalized.status === "active") conditions.push("plans.active = TRUE AND schedules.active = TRUE");
+  if (normalized.status === "overdue") {
+    conditions.push("plans.active = TRUE AND schedules.active = TRUE AND schedules.next_run_at < NOW()");
+  }
+  if (normalized.status === "without_schedule") conditions.push("schedules.next_run_at IS NULL");
+  if (normalized.status === "error") {
+    conditions.push("(latest_run.error_detected = TRUE OR LOWER(latest_run.status) = 'error')");
+  }
+
+  values.push(normalized.limit, normalized.offset);
+  const limitPlaceholder = `$${values.length - 1}`;
+  const offsetPlaceholder = `$${values.length}`;
+  const result = await query(
+    `
+      SELECT schedules.*,
+             plans.name AS plan_name,
+             plans.indicator_color,
+             plans.active AS plan_active,
+             plans.recurrence_type AS plan_recurrence_type,
+             plans.recurrence_interval AS plan_recurrence_interval,
+             latest_run.status AS latest_run_status,
+             latest_run.error_detected AS latest_run_error_detected,
+             latest_run.created_at AS latest_run_created_at,
+             COUNT(*) OVER()::int AS total_count
+      FROM preventive_automation_asset_schedules schedules
+      INNER JOIN preventive_automation_plans plans ON plans.id = schedules.plan_id
+      LEFT JOIN LATERAL (
+        SELECT runs.status, runs.error_detected, runs.created_at
+        FROM preventive_automation_runs runs
+        WHERE runs.plan_id = schedules.plan_id
+          AND runs.asset_id = schedules.asset_id
+        ORDER BY runs.created_at DESC
+        LIMIT 1
+      ) latest_run ON TRUE
+      WHERE ${conditions.join(" AND ")}
+      ORDER BY schedules.next_run_at ASC NULLS LAST, plans.name ASC, schedules.asset_id ASC
+      LIMIT ${limitPlaceholder}
+      OFFSET ${offsetPlaceholder}
+    `,
+    values
+  );
+
+  const devices = await listDevices({});
+  const devicesById = new Map(devices.map((device) => [String(device.id), device]));
+  let items = result.rows.map((row) => {
+    const device = devicesById.get(String(row.asset_id));
+    const latestRun = row.latest_run_status
+      ? {
+          status: row.latest_run_status,
+          errorDetected: row.latest_run_error_detected === true,
+          createdAt: row.latest_run_created_at
+        }
+      : null;
+    return {
+      planId: row.plan_id,
+      planName: row.plan_name,
+      assetId: row.asset_id,
+      assetName: device?.name || row.asset_id,
+      assetType: device?.assetType || device?.type || "Ativo",
+      segmentId: device?.segmentId || "",
+      segmentName: device?.segmentName || "Não organizadas",
+      groupId: device?.segmentGroupId || "",
+      indicatorColor: normalizeIndicatorColor(row.indicator_color),
+      scheduledFor: serializeTimestamp(row.next_run_at),
+      nextRunAt: serializeTimestamp(row.next_run_at),
+      recurrenceType: row.recurrence_type,
+      recurrenceIntervalDays: Number(row.recurrence_interval || 0),
+      recurrenceSource: row.recurrence_source || "plan",
+      status: agendaItemStatus({
+        planActive: row.plan_active !== false,
+        scheduleActive: row.active !== false,
+        nextRunAt: row.next_run_at,
+        latestRun
+      }),
+      lastPreparedAt: serializeTimestamp(row.last_prepared_at),
+      latestRun
+    };
+  });
+
+  if (normalized.segmentId) {
+    items = items.filter((item) => String(item.segmentId) === normalized.segmentId);
+  }
+
+  const now = new Date();
+  const todayEnd = new Date(now);
+  todayEnd.setHours(23, 59, 59, 999);
+  const sevenDaysEnd = new Date(now);
+  sevenDaysEnd.setDate(sevenDaysEnd.getDate() + 7);
+
+  return {
+    items,
+    summary: {
+      today: items.filter((item) => item.nextRunAt && new Date(item.nextRunAt) <= todayEnd && new Date(item.nextRunAt) >= now).length,
+      nextSevenDays: items.filter((item) => item.nextRunAt && new Date(item.nextRunAt) <= sevenDaysEnd && new Date(item.nextRunAt) >= now).length,
+      overdue: items.filter((item) => item.status === "overdue").length,
+      withoutSchedule: items.filter((item) => item.status === "without_schedule").length,
+      errors: items.filter((item) => item.status === "error").length
+    },
+    pagination: {
+      limit: normalized.limit,
+      offset: normalized.offset,
+      total: Number(result.rows[0]?.total_count || items.length),
+      hasMore: normalized.offset + items.length < Number(result.rows[0]?.total_count || items.length)
+    }
+  };
+}
+
+export async function listPreventiveAutomationPlanHistory(planId, options = {}) {
+  const limit = normalizePagination(options.limit, 50, 100);
+  const plan = await findPreventiveAutomationPlanById(planId);
+  if (!plan) return null;
+
+  const result = await query(
+    `
+      SELECT logs.id,
+             logs.type,
+             logs.message,
+             logs.meta,
+             logs.created_at,
+             users.name AS user_name
+      FROM audit_logs logs
+      LEFT JOIN users ON users.id = logs.user_id
+      WHERE logs.meta->>'preventiveAutomationPlanId' = $1
+         OR logs.meta->>'planId' = $1
+      ORDER BY logs.created_at DESC
+      LIMIT $2
+    `,
+    [planId, limit]
+  );
+
+  return {
+    items: result.rows.map((row) => ({
+      id: row.id,
+      type: row.type,
+      message: row.message,
+      meta: row.meta || {},
+      userName: row.user_name || "Sistema",
+      createdAt: row.created_at
+    })),
+    limit
   };
 }
 

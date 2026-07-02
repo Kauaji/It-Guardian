@@ -5,7 +5,9 @@ import {
   disablePreventiveAutomationPlan,
   findPreventiveAutomationAssetDetails,
   findPreventiveAutomationPlanById,
+  listPreventiveAutomationAgenda,
   listPreventiveAutomationManagement,
+  listPreventiveAutomationPlanHistory,
   listPreventiveAutomationPlans,
   preparePreventiveAutomationPlan,
   processDuePreventiveAutomationPlans,
@@ -48,6 +50,29 @@ export async function list(req, res, next) {
 export async function management(req, res, next) {
   try {
     res.json(await listPreventiveAutomationManagement());
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function agenda(req, res, next) {
+  try {
+    res.json(await listPreventiveAutomationAgenda(req.query || {}));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function history(req, res, next) {
+  try {
+    const result = await listPreventiveAutomationPlanHistory(req.params.id, {
+      limit: req.query.limit
+    });
+    if (!result) {
+      res.status(404).json({ message: "Plano de automação preventiva não encontrado." });
+      return;
+    }
+    res.json(result);
   } catch (error) {
     next(error);
   }

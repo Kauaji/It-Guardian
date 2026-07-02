@@ -408,6 +408,19 @@ export function fetchPreventiveAutomationManagement(token) {
   return apiFetch("/preventive-automation-plans/management", { token });
 }
 
+export function fetchPreventiveAutomationAgenda(token, filters = {}) {
+  const search = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== "" && value != null) search.set(key, value);
+  });
+  const suffix = search.toString() ? `?${search}` : "";
+  return apiFetch(`/preventive-automation-plans/agenda${suffix}`, { token });
+}
+
+export function fetchPreventiveAutomationPlanHistory(token, planId, limit = 50) {
+  return apiFetch(`/preventive-automation-plans/${planId}/history?limit=${limit}`, { token });
+}
+
 export function fetchPreventiveAutomationAsset(token, planId, assetId) {
   return apiFetch(`/preventive-automation-plans/${planId}/assets/${assetId}`, { token });
 }

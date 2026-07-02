@@ -22,8 +22,12 @@ export default function AutomationPlanDetails({
   saving,
   onClose,
   onSave,
-  onDelete
+  onDelete,
+  onLoadHistory
 }) {
+  const [activeTab, setActiveTab] = useState("summary");
+  const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [confirmingStatus, setConfirmingStatus] = useState(false);
@@ -48,7 +52,17 @@ export default function AutomationPlanDetails({
     setConfirmingStatus(false);
     setDeleteConfirmation("");
     setErrors({});
+    setActiveTab("summary");
+    setHistory([]);
   }, [plan?.id]);
+
+  useEffect(() => {
+    if (!open || activeTab !== "history" || history.length || !onLoadHistory) return;
+    setHistoryLoading(true);
+    onLoadHistory(plan.id)
+      .then((result) => setHistory(result?.items || []))
+      .finally(() => setHistoryLoading(false));
+  }, [activeTab, history.length, onLoadHistory, open, plan?.id]);
 
   function requestClose() {
     unsavedChanges.requestAction(onClose);
@@ -133,6 +147,21 @@ export default function AutomationPlanDetails({
             <X size={18} />
           </button>
         </header>
+        {!editing && !confirmingDelete && !confirmingStatus && (
+          <nav className="automation-plan-detail-tabs" role="tablist" aria-label="Detalhes do plano">
+            {[
+              ["summary", "Resumo"],
+              ["agenda", "Agenda"],
+              ["machines", "Máquinas"],
+              ["scripts", "Scripts"],
+              ["history", "Histórico"]
+            ].map(([id, label]) => (
+              <button key={id} type="button" role="tab" aria-selected={activeTab === id} className={activeTab === id ? "active" : ""} onClick={() => setActiveTab(id)}>
+                {label}
+              </button>
+            ))}
+          </nav>
+        )}
 
         {confirmingDelete ? (
           <section className="automation-delete-confirmation">
@@ -262,6 +291,50 @@ export default function AutomationPlanDetails({
               </button>
             </footer>
           </form>
+        ) : activeTab === "agenda" ? (
+          <section className="automation-plan-tab-panel">
+            <h3>Agenda por máquina</h3>
+            <div className="automation-plan-list">
+              {(plan.assetSchedules || []).map((schedule) => (
+                <article key={schedule.assetId}>
+                  <strong>{schedule.assetName || schedule.assetId}</strong>
+                  <span>{formatRecurrence(schedule)}</span>
+                  <time>{formatAutomationDate(schedule.nextRunAt, "Sem próxima agenda")}</time>
+                </article>
+              ))}
+            </div>
+            {!plan.assetSchedules?.length && <p className="empty">Nenhuma agenda vinculada.</p>}
+          </section>
+        ) : activeTab === "machines" ? (
+          <section className="automation-plan-tab-panel">
+            <h3>Máquinas vinculadas</h3>
+            <div className="automation-plan-list">
+              {(plan.assetSchedules || []).map((schedule) => (
+                <article key={schedule.assetId}>
+                  <strong>{schedule.assetName || schedule.assetId}</strong>
+                  <span>{schedule.active === false ? "Pausada" : "Ativa"}</span>
+                  <span>{schedule.recurrenceSource === "override" ? "Recorrência personalizada" : "Recorrência herdada"}</span>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : activeTab === "scripts" ? (
+          <section className="automation-plan-tab-panel">
+            <h3>Scripts vinculados</h3>
+            <div className="automation-plan-list">
+              {linkedScripts.map((script) => <article key={script.id}><strong>{script.name}</strong><span>{script.category || "Sem categoria"}</span><span>{script.risk || "Risco não informado"}</span></article>)}
+            </div>
+            {!linkedScripts.length && <p className="empty">Nenhum script vinculado.</p>}
+          </section>
+        ) : activeTab === "history" ? (
+          <section className="automation-plan-tab-panel">
+            <h3>Histórico do plano</h3>
+            {historyLoading && <p>Carregando histórico...</p>}
+            <div className="automation-plan-list">
+              {history.map((item) => <article key={item.id}><strong>{item.message}</strong><span>{item.userName}</span><time>{formatAutomationDate(item.createdAt)}</time></article>)}
+            </div>
+            {!historyLoading && !history.length && <p className="empty">Nenhum evento registrado.</p>}
+          </section>
         ) : (
           <>
             <section className="automation-plan-overview">

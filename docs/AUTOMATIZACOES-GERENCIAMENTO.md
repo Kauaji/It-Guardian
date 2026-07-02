@@ -1,5 +1,20 @@
 # Gerenciamento de automatizações
 
+## Visões de gerenciamento
+
+O módulo possui três visões internas: Máquinas, Planos e Agenda. A agenda
+agrupa compromissos por data e permite filtrar atrasos, erros e itens sem
+agendamento. O detalhe do plano concentra Resumo, Agenda, Máquinas, Scripts
+e Histórico.
+
+Rotas de consulta:
+
+- `GET /api/preventive-automation-plans/agenda`
+- `GET /api/preventive-automation-plans/:id/history`
+
+Essas telas não executam scripts; apenas administram cadastro, recorrência e
+preparação.
+
 ## Objetivo
 
 A área **Automatizações**, dentro da Central de Avisos, centraliza a consulta e o gerenciamento dos planos de automação preventiva já cadastrados. Ela não executa comandos e não substitui o fluxo de criação disponível em **Preventivas**.

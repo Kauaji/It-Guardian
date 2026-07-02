@@ -1,11 +1,13 @@
 import { Router } from "express";
 import {
   assetDetail,
+  agenda,
   create,
   detail,
   disable,
   list,
   management,
+  history,
   prepare,
   processDue,
   processDueCron,
@@ -25,9 +27,11 @@ router.post("/process-due/cron", processDueCron);
 router.use(requireAuth);
 router.get("/", requirePermission("preventive_automation.view"), list);
 router.get("/management", requirePermission("preventive_automation.view"), management);
+router.get("/agenda", requirePermission("preventive_automation.view"), agenda);
 router.post("/", requirePermission("preventive_automation.create"), create);
 router.post("/process-due", requirePermission("preventive_automation.run_prepare"), processDue);
 router.get("/:id", requirePermission("preventive_automation.view"), detail);
+router.get("/:id/history", requirePermission("preventive_automation.view"), history);
 router.get("/:id/assets/:assetId", requirePermission("preventive_automation.view"), assetDetail);
 router.put(
   "/:id/assets/:assetId/override",
