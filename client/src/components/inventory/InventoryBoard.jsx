@@ -110,13 +110,14 @@ export default function InventoryBoard({
   }, [groups, segments]);
   const getGroupId = (segment) => segmentGroupIdMap.get(segment.id) || "";
   const visibleSegments = useMemo(() => segments.filter((segment) => {
+    if (search.trim()) return (machinesBySegment.get(segment.id) || []).length > 0;
     if (selectedSegmentId !== "all") return segment.id === selectedSegmentId;
 
     const groupId = segmentGroupIdMap.get(segment.id) || "";
     if (selectedGroupId === "ungrouped") return !groupId;
     if (selectedGroupId !== "all") return groupId === selectedGroupId;
     return true;
-  }), [segmentGroupIdMap, segments, selectedGroupId, selectedSegmentId]);
+  }), [machinesBySegment, search, segmentGroupIdMap, segments, selectedGroupId, selectedSegmentId]);
   const groupedSections = useMemo(
     () =>
       groups
@@ -126,9 +127,10 @@ export default function InventoryBoard({
         }))
         .filter((group) => {
           if (selectedGroupId !== "all" && selectedGroupId !== group.id) return false;
+          if (search.trim() && !group.segments.length) return false;
           return selectedSegmentId === "all" || group.segments.length;
         }),
-    [groups, segmentGroupIdMap, selectedGroupId, selectedSegmentId, visibleSegments]
+    [groups, search, segmentGroupIdMap, selectedGroupId, selectedSegmentId, visibleSegments]
   );
   const ungroupedSegments = useMemo(
     () => visibleSegments.filter((segment) => !(segmentGroupIdMap.get(segment.id) || "")),
@@ -138,10 +140,11 @@ export default function InventoryBoard({
     () =>
       segments.filter((segment) => {
         if (!segment.isDefault) return false;
+        if (search.trim() && !(machinesBySegment.get(segment.id) || []).length) return false;
         if (selectedSegmentId !== "all") return selectedSegmentId === segment.id;
         return selectedGroupId === "all" || selectedGroupId === "ungrouped";
       }),
-    [segments, selectedGroupId, selectedSegmentId]
+    [machinesBySegment, search, segments, selectedGroupId, selectedSegmentId]
   );
   const regularUngroupedSegments = useMemo(
     () => ungroupedSegments.filter((segment) => !segment.isDefault),

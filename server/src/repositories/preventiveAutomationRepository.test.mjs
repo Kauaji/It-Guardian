@@ -201,11 +201,39 @@ test("componente de indicadores limita pontos visiveis e oferece acessibilidade"
   const source = readFileSync(componentPath, "utf8");
 
   assert.match(source, /maxVisible\s*=\s*4/);
-  assert.match(source, /aria-label=\{formatAutomationIndicatorLabel\(indicator\)\}/);
-  assert.match(source, /title=\{formatAutomationIndicatorLabel\(indicator\)\}/);
+  assert.match(source, /const label = formatAutomationIndicatorLabel\(indicator\)/);
+  assert.match(source, /aria-label=\{label\}/);
+  assert.match(source, /title=\{label\}/);
   assert.match(source, /aria-expanded=\{open\}/);
   assert.match(source, /\+{hiddenCount}/);
   assert.match(source, /onSelectPlan\?\.\(indicator\)/);
+  assert.match(source, /interactive\s*=\s*true/);
+  assert.match(source, /className="automation-indicator-dot-button is-visual"/);
+});
+
+test("lista de preventivas usa indicadores apenas visuais", () => {
+  const appPath = fileURLToPath(new URL("../../../client/src/App.jsx", import.meta.url));
+  const source = readFileSync(appPath, "utf8");
+
+  assert.match(source, /preventiveAutomationManagement\?\.machines/);
+  assert.match(source, /managementMachine\?\.plans/);
+  assert.match(source, /automationIndicators:\s*\[\.\.\.indicatorsByPlanId\.values\(\)\]/);
+  assert.match(
+    source,
+    /<AutomationIndicatorDots[\s\S]*?indicators=\{device\.automationIndicators\}[\s\S]*?interactive=\{false\}/
+  );
+});
+
+test("criacao e edicao de automacao validam nome e cor unicos", () => {
+  const repositoryPath = fileURLToPath(new URL("./preventiveAutomationRepository.js", import.meta.url));
+  const source = readFileSync(repositoryPath, "utf8");
+
+  assert.match(source, /async function assertUniquePlanIdentity/);
+  assert.match(source, /LOWER\(name\)\s*=\s*LOWER\(\$1\)/);
+  assert.match(source, /LOWER\(indicator_color\)\s*=\s*LOWER\(\$2\)/);
+  assert.match(source, /assertUniquePlanIdentity\(normalized,\s*null,\s*db\)/);
+  assert.match(source, /assertUniquePlanIdentity\(normalized,\s*id,\s*db\)/);
+  assert.match(source, /statusCode\s*=\s*409|createHttpError\([^)]*,\s*409\)/);
 });
 
 test("repositorio de automacao nao usa primitivas de execucao de comandos", () => {

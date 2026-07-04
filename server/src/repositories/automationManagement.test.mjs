@@ -15,6 +15,7 @@ import {
 } from "../../../client/src/components/automation/automationStatusUtils.js";
 import {
   buildAutomationOverrideDraft,
+  buildAutomationPlanDraft,
   validateAutomationOverrideDraft,
   validateAutomationPlanDraft
 } from "../../../client/src/components/automation/automationFormUtils.js";
@@ -311,8 +312,9 @@ test("frontend oferece loading, erro, vazio e tentativa novamente", () => {
 
 test("bolinhas têm tooltip, aria-label, Escape e devolução de foco", () => {
   const component = source("../../../client/src/components/AutomationIndicatorDots.jsx");
-  assert.match(component, /title=\{formatAutomationIndicatorLabel\(indicator\)\}/);
-  assert.match(component, /aria-label=\{formatAutomationIndicatorLabel\(indicator\)\}/);
+  assert.match(component, /const label = formatAutomationIndicatorLabel\(indicator\)/);
+  assert.match(component, /title=\{label\}/);
+  assert.match(component, /aria-label=\{label\}/);
   assert.match(component, /event\.key === "Escape"/);
   assert.match(component, /triggerRef\.current\?\.focus\(\)/);
 });
@@ -411,7 +413,8 @@ test("agenda usa rota protegida e consulta parametrizada", () => {
   const repository = source("./preventiveAutomationRepository.js");
   assert.match(routes, /"\/agenda", requirePermission\("preventive_automation\.view"\)/);
   assert.match(repository, /export async function listPreventiveAutomationAgenda/);
-  assert.match(repository, /LEFT JOIN LATERAL/);
+  assert.match(repository, /SELECT COUNT\(\*\)::int AS total_count/);
+  assert.match(repository, /LEFT JOIN preventive_automation_runs newer/);
 });
 
 test("detalhe do plano centraliza as cinco areas operacionais", () => {
@@ -451,6 +454,38 @@ test("ultima execucao e selecionada por plano e maquina sem limite global", () =
   const start = repository.indexOf("export async function listPreventiveAutomationManagement");
   const end = repository.indexOf("function normalizePagination", start);
   const body = repository.slice(start, end);
-  assert.match(body, /PARTITION BY runs\.plan_id, runs\.asset_id/);
+  assert.match(body, /LEFT JOIN preventive_automation_runs newer/);
+  assert.match(body, /newer\.id IS NULL/);
   assert.doesNotMatch(body, /LIMIT 500/);
+  assert.doesNotMatch(body, /\bOVER\s*\(/);
+});
+
+test("consultas de gerenciamento nao usam recursos ausentes no pg-mem", () => {
+  const repository = source("./preventiveAutomationRepository.js");
+  assert.doesNotMatch(repository, /\bROW_NUMBER\s*\(/);
+  assert.doesNotMatch(repository, /\bCOUNT\s*\(\*\)\s+OVER\s*\(/);
+  assert.doesNotMatch(repository, /\bJOIN\s+LATERAL\b/);
+});
+
+test("aba de automatizacoes considera a lista principal enquanto o gerenciamento carrega", () => {
+  const app = source("../../../client/src/App.jsx");
+  assert.match(app, /Array\.isArray\(preventiveAutomationPlans\)/);
+  assert.match(app, /preventiveAutomationPlans\.length/);
+  assert.match(app, /Math\.max/);
+});
+
+test("detalhe de plano aceita estado inicial sem plano selecionado", () => {
+  assert.doesNotThrow(() => buildAutomationPlanDraft(null));
+  assert.deepEqual(buildAutomationPlanDraft(null), {
+    name: "",
+    description: "",
+    notes: "",
+    active: true,
+    recurrenceType: "monthly",
+    recurrenceIntervalDays: 30,
+    preferredTime: "08:00",
+    timezone: "America/Sao_Paulo",
+    indicatorColor: "#1f7a61",
+    defaultScriptIds: []
+  });
 });

@@ -1650,7 +1650,11 @@ tbody tr.selected {
 
 .alerts-internal-tabs .alerts-log-tab-button {
   width: 34px;
+  height: 34px;
   min-width: 34px;
+  min-height: 34px;
+  flex: 0 0 34px;
+  aspect-ratio: 1;
   padding: 0;
   display: inline-grid;
   place-items: center;
@@ -3252,6 +3256,7 @@ tbody tr.selected {
   color: var(--text-muted);
   font-weight: 850;
   overflow: hidden;
+  box-sizing: border-box;
   cursor: text;
   transition:
     flex-basis 190ms var(--ease-premium),
@@ -3270,7 +3275,9 @@ tbody tr.selected {
 .inventory-board-actions .compact-search input {
   width: 100%;
   min-width: 0;
-  min-height: 42px;
+  height: 44px;
+  min-height: 44px;
+  box-sizing: border-box;
   color: var(--text-strong);
   font: inherit;
   font-size: 0.95rem;
@@ -10248,7 +10255,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 }
 
 .preventive-device-row {
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   min-height: 58px;
   padding: 7px 9px;
 }
@@ -11384,8 +11391,20 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 }
 
 .preventive-device-row > .automation-indicator-dots {
-  grid-column: 3;
+  grid-column: auto;
   justify-self: end;
+}
+
+.automation-indicator-dot-button.is-visual,
+.automation-indicator-more.is-visual {
+  cursor: default;
+  pointer-events: none;
+}
+
+.automation-color-palette button:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.75);
+  opacity: 0.28;
 }
 
 .automation-management-view {
@@ -11409,6 +11428,20 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
   grid-template-columns: minmax(280px, 1fr) minmax(170px, 220px) auto;
   align-items: center;
   gap: 12px;
+}
+
+.automation-management-toolbar.machines-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.automation-management-toolbar.machines-toolbar .compact-search {
+  flex: 1 1 auto;
+}
+
+.automation-management-toolbar.machines-toolbar select {
+  flex: 0 0 250px;
 }
 
 .automation-management-toolbar .compact-search {
@@ -11565,9 +11598,19 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 
 .automation-management-tabs button.active,
 .automation-plan-detail-tabs button.active {
-  background: var(--surface);
-  color: var(--accent);
+  background: color-mix(in srgb, var(--text-muted) 14%, var(--surface));
+  color: var(--text-strong);
   box-shadow: 0 1px 4px rgba(15, 23, 42, 0.1);
+}
+
+.machine-search-tab {
+  display: block;
+  overflow: hidden;
+  color: var(--accent-strong);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .automation-plan-grid {
@@ -12145,6 +12188,14 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 
   .automation-management-toolbar > strong {
     white-space: normal;
+  }
+
+  .automation-management-toolbar.machines-toolbar {
+    display: grid;
+  }
+
+  .automation-management-toolbar.machines-toolbar select {
+    width: 100%;
   }
 
   .automation-machine-row {

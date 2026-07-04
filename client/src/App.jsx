@@ -1369,6 +1369,21 @@ function PreventiveAutomationPanel({
   const [overridesOpen, setOverridesOpen] = useState(false);
   const lastCreateRequestId = useRef(null);
   const activeScripts = scripts.filter((script) => script.active !== false);
+  const normalizedFormName = form.name.trim().toLocaleLowerCase("pt-BR");
+  const normalizedFormColor = normalizeAutomationColor(form.indicatorColor).toLowerCase();
+  const duplicateNamePlan = plans.find(
+    (plan) =>
+      String(plan.id) !== String(form.id || "") &&
+      String(plan.name || "").trim().toLocaleLowerCase("pt-BR") === normalizedFormName
+  );
+  const duplicateColorPlan = plans.find(
+    (plan) =>
+      String(plan.id) !== String(form.id || "") &&
+      normalizeAutomationColor(plan.indicatorColor).toLowerCase() === normalizedFormColor
+  );
+  const hasDuplicateAutomationIdentity = Boolean(
+    (normalizedFormName && duplicateNamePlan) || duplicateColorPlan
+  );
 
   useEffect(() => {
     if (!modalOpen) return undefined;
@@ -1586,7 +1601,7 @@ function PreventiveAutomationPanel({
 
   async function submitForm(event) {
     event.preventDefault();
-    if ((!onSave && !onCreateAutomatedPreventivePlan) || saving) return;
+    if ((!onSave && !onCreateAutomatedPreventivePlan) || saving || hasDuplicateAutomationIdentity) return;
     const recurrenceInterval = form.recurrenceType === "custom_days"
       ? Number(form.recurrenceInterval)
       : getDefaultRecurrenceInterval(form.recurrenceType);
@@ -1816,6 +1831,9 @@ function PreventiveAutomationPanel({
               <label>
                 Nome
                 <input value={form.name} onChange={(event) => updateForm("name", event.target.value)} required />
+                {duplicateNamePlan && (
+                  <span className="form-error">Já existe uma automatização com esse nome.</span>
+                )}
               </label>
               <label>
                 Recorrência
@@ -1869,6 +1887,9 @@ function PreventiveAutomationPanel({
                     aria-label="Valor hexadecimal da cor"
                   />
                 </div>
+                {duplicateColorPlan && (
+                  <span className="form-error">Essa cor já identifica a automatização "{duplicateColorPlan.name}".</span>
+                )}
                 <div className="automation-color-palette" aria-label="Cores sugeridas">
                   {preventiveAutomationColorOptions.map((color) => (
                     <button
@@ -1877,6 +1898,11 @@ function PreventiveAutomationPanel({
                       className={normalizeAutomationColor(form.indicatorColor) === color ? "active" : ""}
                       style={{ background: color }}
                       onClick={() => updateForm("indicatorColor", color)}
+                      disabled={plans.some(
+                        (plan) =>
+                          String(plan.id) !== String(form.id || "") &&
+                          normalizeAutomationColor(plan.indicatorColor) === color
+                      )}
                       aria-label={`Usar cor ${color}`}
                     />
                   ))}
@@ -2030,7 +2056,11 @@ function PreventiveAutomationPanel({
                   Cancelar
                 </button>
               )}
-              <button type="submit" className="primary-action compact-action" disabled={saving}>
+              <button
+                type="submit"
+                className="primary-action compact-action"
+                disabled={saving || hasDuplicateAutomationIdentity}
+              >
                 {saving
                   ? "Salvando..."
                   : wizardMode
@@ -2157,7 +2187,10 @@ function AlertCenterV2({
   const [lastCreatedPreventivePlan, setLastCreatedPreventivePlan] = useState(null);
   const [preventiveReviewOpen, setPreventiveReviewOpen] = useState(false);
   const canUsePreventiveArea = canViewPreventivePlans || canViewPreventiveAutomation;
-  const automationManagementPlanCount = Number(preventiveAutomationManagement?.metadata?.planCount || 0);
+  const automationManagementPlanCount = Math.max(
+    Number(preventiveAutomationManagement?.metadata?.planCount || 0),
+    Array.isArray(preventiveAutomationPlans) ? preventiveAutomationPlans.length : 0
+  );
   const canShowAutomationManagement = shouldShowAutomationManagement(
     canViewPreventiveAutomation,
     automationManagementPlanCount
@@ -2790,7 +2823,30 @@ function AlertCenterV2({
     };
   }
 
-  const preventiveOverview = devices.map(getDevicePreventiveInfo);
+  const automationMachinesById = new Map(
+    (preventiveAutomationManagement?.machines || []).map((machine) => [
+      String(machine.assetId),
+      machine
+    ])
+  );
+  const preventiveDevicesWithAutomation = devices.map((device) => {
+    const managementMachine = automationMachinesById.get(String(device.id));
+    const indicatorsByPlanId = new Map();
+
+    for (const indicator of [
+      ...(device.automationIndicators || []),
+      ...(managementMachine?.plans || [])
+    ]) {
+      const planId = indicator.automationPlanId || indicator.id;
+      if (planId) indicatorsByPlanId.set(String(planId), indicator);
+    }
+
+    return {
+      ...device,
+      automationIndicators: [...indicatorsByPlanId.values()]
+    };
+  });
+  const preventiveOverview = preventiveDevicesWithAutomation.map(getDevicePreventiveInfo);
   const preventiveSummary = preventiveOverview.reduce(
     (summary, item) => {
       if (item.preventiveStatus === "no_preventive") summary.withoutPreventive += 1;
@@ -2849,7 +2905,9 @@ function AlertCenterV2({
     groups.set(key, current);
     return groups;
   }, new Map());
-  const selectedPreventiveDevices = devices.filter((device) => selectedPreventiveAssets.has(device.id));
+  const selectedPreventiveDevices = preventiveDevicesWithAutomation.filter((device) =>
+    selectedPreventiveAssets.has(device.id)
+  );
   const recommendedPreventiveScripts = preventiveScriptRecommendations.recommended || [];
   const preventiveScriptBaseList = preventiveScriptRecommendations.others?.length
     ? preventiveScriptRecommendations.others
@@ -3613,7 +3671,11 @@ function AlertCenterV2({
                     </select>
                     <div className="preventive-plan-summary">
                       <strong>{selectedPreventiveAssets.size}</strong>
-                      <span>máquina(s) selecionada(s)</span>
+                      <span>
+                        {selectedPreventiveAssets.size === 1
+                          ? "máquina selecionada"
+                          : "máquinas selecionadas"}
+                      </span>
                     </div>
                   </div>
 
@@ -3627,7 +3689,9 @@ function AlertCenterV2({
                           <header>
                             <div>
                               <strong>{group.groupName} • {group.segmentName}</strong>
-                              <small>{group.devices.length} máquina(s) neste segmento</small>
+                              <small>
+                                {group.devices.length} {group.devices.length === 1 ? "máquina" : "máquinas"} neste segmento
+                              </small>
                             </div>
                             <button
                               type="button"
@@ -3687,7 +3751,12 @@ function AlertCenterV2({
                                     {daysSinceLastPreventive !== null ? `${daysSinceLastPreventive} dia(s) desde a última • ` : ""}
                                     {nextPreventiveLabel}
                                   </small>
-                                  <AutomationIndicatorDots indicators={device.automationIndicators} compact maxVisible={4} />
+                                  <AutomationIndicatorDots
+                                    indicators={device.automationIndicators}
+                                    compact
+                                    maxVisible={4}
+                                    interactive={false}
+                                  />
                                   <span className="preventive-device-badges">
                                     {badges.map((badge) => (
                                       <span key={`${device.id}-${badge.label}`} className={`pill ${badge.tone}`}>{badge.label}</span>
@@ -5180,21 +5249,48 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
 
     return [...backupSegment, ...sharedDefaultSegments, ...activeNonDefaultSegments];
   }, [activeInventoryTab.id, activeMaintenanceSegmentIds, decoratedAllDevices, decoratedSegments]);
-  const activeSegmentById = useMemo(
-    () => new Map(activeSegments.map((segment) => [segment.id, segment])),
-    [activeSegments]
-  );
-  const activeGroupById = useMemo(
-    () => new Map(activeSegmentGroups.map((group) => [group.id, group])),
-    [activeSegmentGroups]
-  );
-  const filteredInventoryDevices = useMemo(() => activeAllDevices.filter((device) => {
-    const term = inventorySearch.trim().toLowerCase();
-    if (!term) return true;
-    const segment = activeSegmentById.get(device.segmentId);
-    const group = segment?.groupId ? activeGroupById.get(segment.groupId) : null;
+  const inventorySearchActive = Boolean(inventorySearch.trim());
+  const inventorySearchSegments = useMemo(() => {
+    const backupSegment = decoratedAllDevices.some((device) => device.isBackup)
+      ? [{
+          id: backupSegmentId,
+          name: backupSegmentName,
+          color: "#f59e0b",
+          isDefault: true,
+          isBackupSegment: true,
+          tabId: "shared",
+          order: -1
+        }]
+      : [];
 
-    return [
+    return [...backupSegment, ...decoratedSegments];
+  }, [decoratedAllDevices, decoratedSegments]);
+  const inventoryViewDevices = inventorySearchActive ? decoratedAllDevices : activeAllDevices;
+  const inventoryViewSegments = inventorySearchActive ? inventorySearchSegments : activeSegments;
+  const inventoryViewGroups = inventorySearchActive ? decoratedSegmentGroups : activeSegmentGroups;
+  const inventorySegmentById = useMemo(
+    () => new Map(inventoryViewSegments.map((segment) => [segment.id, segment])),
+    [inventoryViewSegments]
+  );
+  const inventoryGroupById = useMemo(
+    () => new Map(inventoryViewGroups.map((group) => [group.id, group])),
+    [inventoryViewGroups]
+  );
+  const inventoryTabById = useMemo(
+    () => new Map(inventoryTabs.map((tab) => [tab.id, tab])),
+    [inventoryTabs]
+  );
+  const filteredInventoryDevices = useMemo(() => inventoryViewDevices.flatMap((device) => {
+    const term = inventorySearch.trim().toLowerCase();
+    if (!term) return [device];
+    const segment = inventorySegmentById.get(device.segmentId);
+    const groupId = segment?.groupId || decoratedSegmentGroups.find(
+      (item) => (item.segmentIds || []).includes(device.segmentId)
+    )?.id;
+    const group = groupId ? inventoryGroupById.get(groupId) : null;
+    const tab = inventoryTabById.get(device.tabId);
+
+    const matches = [
       device.name,
       machineAliases[device.id],
       device.ip,
@@ -5202,6 +5298,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
       device.segmentName,
       segment?.name,
       group?.name,
+      tab?.name,
       device.assetType,
       device.type,
       device.source,
@@ -5221,7 +5318,22 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     ]
       .filter(Boolean)
       .some((value) => String(value).toLowerCase().includes(term));
-  }), [activeAllDevices, activeGroupById, activeSegmentById, inventorySearch, machineAliases]);
+
+    return matches
+      ? [{
+          ...device,
+          inventorySearchTabName: tab?.name || (device.isGlobalBackup ? "Backup" : "Não organizadas")
+        }]
+      : [];
+  }), [
+    decoratedSegmentGroups,
+    inventoryGroupById,
+    inventorySearch,
+    inventorySegmentById,
+    inventoryTabById,
+    inventoryViewDevices,
+    machineAliases
+  ]);
   const selectedAssets = useMemo(
     () => activeAllDevices.filter((device) => selectedAssetIds.has(device.id)),
     [activeAllDevices, selectedAssetIds]
@@ -5231,9 +5343,9 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     machinesBySegment,
     sensors
   } = useInventoryDragAndDrop({
-    devices: activeAllDevices,
+    devices: inventoryViewDevices,
     filteredDevices: filteredInventoryDevices,
-    segments: activeSegments,
+    segments: inventoryViewSegments,
     selectedAssetIds,
     onMoveMachine: handleMoveMachine,
     onMoveMachines: handleMoveMachines
@@ -7762,8 +7874,8 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
 
         {activeView === "inventory" && canViewInventory && (
           <InventoryBoard
-            devices={activeAllDevices}
-            segments={activeSegments}
+            devices={inventoryViewDevices}
+            segments={inventoryViewSegments}
             machinesBySegment={machinesBySegment}
             search={inventorySearch}
             setSearch={setInventorySearch}
@@ -7798,7 +7910,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
             onClearSelection={clearAssetSelection}
             onSelectAsset={handleSelectAsset}
             onToggleSelection={toggleAssetSelection}
-            groups={activeSegmentGroups}
+            groups={inventoryViewGroups}
             onSelectGroup={selectInventoryGroup}
             onSelectSegment={selectInventorySegment}
             onCreateGroup={openSegmentGroupForm}

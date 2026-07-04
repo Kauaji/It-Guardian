@@ -53,7 +53,8 @@ export default function AutomationIndicatorDots({
   indicators = [],
   maxVisible = 4,
   onSelectPlan,
-  compact = false
+  compact = false,
+  interactive = true
 }) {
   const [open, setOpen] = useState(false);
   const popoverId = useId();
@@ -100,41 +101,61 @@ export default function AutomationIndicatorDots({
       aria-label="Planos preventivos automatizados"
     >
       <div className="automation-indicator-dot-row">
-        {visibleIndicators.map((indicator) => (
-          <button
-            key={`${indicator.automationPlanId || indicator.id}-${indicator.assetId || ""}`}
-            type="button"
-            className="automation-indicator-dot-button"
-            style={{ "--automation-indicator-color": indicator.indicatorColor || "#1f7a61" }}
-            title={formatAutomationIndicatorLabel(indicator)}
-            aria-label={formatAutomationIndicatorLabel(indicator)}
-            onClick={(event) => {
-              event.stopPropagation();
-              triggerRef.current = event.currentTarget;
-              handleSelect(indicator);
-            }}
-          />
-        ))}
+        {visibleIndicators.map((indicator) => {
+          const label = formatAutomationIndicatorLabel(indicator);
+          const key = `${indicator.automationPlanId || indicator.id}-${indicator.assetId || ""}`;
+
+          return interactive ? (
+            <button
+              key={key}
+              type="button"
+              className="automation-indicator-dot-button"
+              style={{ "--automation-indicator-color": indicator.indicatorColor || "#1f7a61" }}
+              title={label}
+              aria-label={label}
+              onClick={(event) => {
+                event.stopPropagation();
+                triggerRef.current = event.currentTarget;
+                handleSelect(indicator);
+              }}
+            />
+          ) : (
+            <span
+              key={key}
+              className="automation-indicator-dot-button is-visual"
+              style={{ "--automation-indicator-color": indicator.indicatorColor || "#1f7a61" }}
+              title={label}
+              aria-label={label}
+              role="img"
+            />
+          );
+        })}
         {hiddenCount > 0 && (
-          <button
-            type="button"
-            className="automation-indicator-more"
-            aria-label={`Ver mais ${hiddenCount} plano(s) preventivo(s) automatizado(s)`}
-            aria-expanded={open}
-            aria-controls={popoverId}
-            title={`+${hiddenCount} plano(s)`}
-            onClick={(event) => {
-              event.stopPropagation();
-              triggerRef.current = event.currentTarget;
-              setOpen((current) => !current);
-            }}
-          >
-            +{hiddenCount}
-          </button>
+          interactive ? (
+            <button
+              type="button"
+              className="automation-indicator-more"
+              aria-label={`Ver mais ${hiddenCount} plano(s) preventivo(s) automatizado(s)`}
+              aria-expanded={open}
+              aria-controls={popoverId}
+              title={`+${hiddenCount} plano(s)`}
+              onClick={(event) => {
+                event.stopPropagation();
+                triggerRef.current = event.currentTarget;
+                setOpen((current) => !current);
+              }}
+            >
+              +{hiddenCount}
+            </button>
+          ) : (
+            <span className="automation-indicator-more is-visual" title={`Mais ${hiddenCount} plano(s)`}>
+              +{hiddenCount}
+            </span>
+          )
         )}
       </div>
 
-      {open && (
+      {interactive && open && (
         <div id={popoverId} className="automation-indicator-popover" role="dialog" aria-label="Planos automatizados">
           {(hiddenCount > 0 ? hiddenIndicators : visibleIndicators).map((indicator) => (
             <button

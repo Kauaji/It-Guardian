@@ -6,17 +6,18 @@ function normalizedInterval(source = {}) {
 }
 
 export function buildAutomationPlanDraft(plan = {}) {
+  const source = plan || {};
   return {
-    name: plan.name || "",
-    description: plan.description || "",
-    notes: plan.notes || "",
-    active: plan.active !== false,
-    recurrenceType: plan.recurrenceType || "monthly",
-    recurrenceIntervalDays: normalizedInterval(plan),
-    preferredTime: plan.preferredTime || "08:00",
-    timezone: plan.timezone || "America/Sao_Paulo",
-    indicatorColor: plan.indicatorColor || "#1f7a61",
-    defaultScriptIds: Array.isArray(plan.defaultScriptIds) ? [...plan.defaultScriptIds] : []
+    name: source.name || "",
+    description: source.description || "",
+    notes: source.notes || "",
+    active: source.active !== false,
+    recurrenceType: source.recurrenceType || "monthly",
+    recurrenceIntervalDays: normalizedInterval(source),
+    preferredTime: source.preferredTime || "08:00",
+    timezone: source.timezone || "America/Sao_Paulo",
+    indicatorColor: source.indicatorColor || "#1f7a61",
+    defaultScriptIds: Array.isArray(source.defaultScriptIds) ? [...source.defaultScriptIds] : []
   };
 }
 
@@ -90,4 +91,3 @@ export function automationDraftsEqual(left = {}, right = {}) {
     JSON.stringify(normalizeComparable(left[key])) === JSON.stringify(normalizeComparable(right[key]))
   ));
 }
-

@@ -152,6 +152,11 @@ function MachineCardContent({
         <AutomationIndicatorDots indicators={machine.automationIndicators} compact maxVisible={4} />
       </div>
       <span className="machine-ip">{machine.ip}</span>
+      {machine.inventorySearchTabName && (
+        <span className="machine-search-tab" title={`Aba: ${machine.inventorySearchTabName}`}>
+          Aba: {machine.inventorySearchTabName}
+        </span>
+      )}
 
       {isManualAsset ? (
         <div className="network-asset-facts">

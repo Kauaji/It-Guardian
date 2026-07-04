@@ -68,8 +68,6 @@ export default function AutomationManagementView({
     });
   }, [devices, inventoryTabs, management, search, segmentGroups, segments, status]);
 
-  const visibleMachineCount = groups.reduce((total, group) => total + group.machines.length, 0);
-
   function openPlan(plan, machine) {
     const fullPlan = management?.plans?.find((item) => String(item.id) === String(plan.id || plan.automationPlanId));
     setSelectedPlan(fullPlan || plan);
@@ -99,7 +97,7 @@ export default function AutomationManagementView({
       </div>
       <AutomationManagementTabs value={activeView} onChange={setActiveView} />
 
-      {activeView === "machines" && <div className="automation-management-toolbar">
+      {activeView === "machines" && <div className="automation-management-toolbar machines-toolbar">
         <label className="compact-search">
           <Search size={18} />
           <input
@@ -111,7 +109,6 @@ export default function AutomationManagementView({
         <select value={status} onChange={(event) => setStatus(event.target.value)} aria-label="Filtrar automatizações por status">
           {statusOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
         </select>
-        <strong>{visibleMachineCount} máquina(s) com plano de automatização</strong>
       </div>}
 
       {loading && (

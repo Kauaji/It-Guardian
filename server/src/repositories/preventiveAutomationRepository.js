@@ -474,6 +474,32 @@ async function validateScripts(scriptIds, { requireAtLeastOne = true } = {}) {
   return scripts;
 }
 
+async function assertUniquePlanIdentity({ name, indicatorColor }, excludeId = null, db = query) {
+  const values = [name, indicatorColor];
+  const excludeCurrent = excludeId ? "AND id <> $3" : "";
+  if (excludeId) values.push(excludeId);
+
+  const result = await db(
+    `
+      SELECT id, name, indicator_color
+      FROM preventive_automation_plans
+      WHERE deleted_at IS NULL
+        AND (LOWER(name) = LOWER($1) OR LOWER(indicator_color) = LOWER($2))
+        ${excludeCurrent}
+      LIMIT 1
+    `,
+    values
+  );
+  const conflict = result.rows[0];
+  if (!conflict) return;
+
+  if (String(conflict.name || "").trim().toLowerCase() === name.trim().toLowerCase()) {
+    throw createHttpError("Já existe uma automatização com esse nome.", 409);
+  }
+
+  throw createHttpError(`A cor ${indicatorColor} já está sendo usada por outra automatização.`, 409);
+}
+
 function buildOverrideTargetKey({ assetId = null, segmentId = null } = {}) {
   if (assetId) return `asset:${assetId}`;
   if (segmentId) return `segment:${segmentId}`;
@@ -919,6 +945,7 @@ export async function createPreventiveAutomationPlan(payload = {}, user = null) 
   const nextRunAt = computeNextScheduledFor(normalized, scheduleAnchorAt);
 
   await withTransaction(async (db) => {
+    await assertUniquePlanIdentity(normalized, null, db);
     await db(
       `
         INSERT INTO preventive_automation_plans (
@@ -994,6 +1021,7 @@ export async function updatePreventiveAutomationPlan(id, payload = {}, user = nu
       };
 
   await withTransaction(async (db) => {
+    await assertUniquePlanIdentity(normalized, id, db);
     await db(
       `
         UPDATE preventive_automation_plans
@@ -1215,17 +1243,17 @@ export async function listPreventiveAutomationManagement(user = null, options = 
     ),
     query(
       `
-        SELECT *
-        FROM (
-          SELECT runs.*,
-                 ROW_NUMBER() OVER (
-                   PARTITION BY runs.plan_id, runs.asset_id
-                   ORDER BY runs.created_at DESC
-                 ) AS latest_position
-          FROM preventive_automation_runs runs
-          WHERE runs.plan_id IN (${planIdPlaceholders})
-        ) latest_runs
-        WHERE latest_position = 1
+        SELECT runs.*
+        FROM preventive_automation_runs runs
+        LEFT JOIN preventive_automation_runs newer
+          ON newer.plan_id = runs.plan_id
+         AND newer.asset_id = runs.asset_id
+         AND (
+           newer.created_at > runs.created_at
+           OR (newer.created_at = runs.created_at AND newer.id > runs.id)
+         )
+        WHERE runs.plan_id IN (${planIdPlaceholders})
+          AND newer.id IS NULL
       `,
       planIds
     ),
@@ -1445,57 +1473,65 @@ export async function listPreventiveAutomationAgenda(filters = {}, user = null) 
     conditions.push("plans.active = TRUE AND schedules.active = TRUE AND schedules.next_run_at < NOW()");
   }
   if (normalized.status === "without_schedule") conditions.push("schedules.next_run_at IS NULL");
-  if (normalized.status === "error") {
-    conditions.push("(latest_run.error_detected = TRUE OR LOWER(latest_run.status) = 'error')");
-  }
-
   values.push(normalized.limit, normalized.offset);
   const limitPlaceholder = `$${values.length - 1}`;
   const offsetPlaceholder = `$${values.length}`;
-  const result = await query(
-    `
+  const baseFrom = `
+      FROM preventive_automation_asset_schedules schedules
+      INNER JOIN preventive_automation_plans plans ON plans.id = schedules.plan_id
+      WHERE ${conditions.join(" AND ")}
+  `;
+  const countValues = values.slice(0, -2);
+  const [result, countResult] = await Promise.all([
+    query(
+      `
       SELECT schedules.*,
              plans.name AS plan_name,
              plans.indicator_color,
              plans.active AS plan_active,
              plans.recurrence_type AS plan_recurrence_type,
-             plans.recurrence_interval AS plan_recurrence_interval,
-             latest_run.status AS latest_run_status,
-             latest_run.error_detected AS latest_run_error_detected,
-             latest_run.created_at AS latest_run_created_at,
-             COUNT(*) OVER()::int AS total_count
-      FROM preventive_automation_asset_schedules schedules
-      INNER JOIN preventive_automation_plans plans ON plans.id = schedules.plan_id
-      LEFT JOIN LATERAL (
-        SELECT runs.status, runs.error_detected, runs.created_at
-        FROM preventive_automation_runs runs
-        WHERE runs.plan_id = schedules.plan_id
-          AND runs.asset_id = schedules.asset_id
-        ORDER BY runs.created_at DESC
-        LIMIT 1
-      ) latest_run ON TRUE
-      WHERE ${conditions.join(" AND ")}
+             plans.recurrence_interval AS plan_recurrence_interval
+      ${baseFrom}
       ORDER BY schedules.next_run_at ASC NULLS LAST, plans.name ASC, schedules.asset_id ASC
       LIMIT ${limitPlaceholder}
       OFFSET ${offsetPlaceholder}
-    `,
-    values
-  );
+      `,
+      values
+    ),
+    query(`SELECT COUNT(*)::int AS total_count ${baseFrom}`, countValues)
+  ]);
 
   const devices = await listDevices({});
   const devicesById = new Map(devices.map((device) => [String(device.id), device]));
-  const allowedPlanIds = new Set(
-    (await listPreventiveAutomationPlans(user, { limit: 500 })).map((plan) => String(plan.id))
-  );
+  const allowedPlans = await listPreventiveAutomationPlans(user, { limit: 500 });
+  const allowedPlanIds = new Set(allowedPlans.map((plan) => String(plan.id)));
+  const agendaPlanIds = [...new Set(result.rows.map((row) => String(row.plan_id)))]
+    .filter((planId) => allowedPlanIds.has(planId));
+  const latestRunsByAsset = new Map();
+  if (agendaPlanIds.length) {
+    const latestRunResult = await query(
+      `
+        SELECT runs.*
+        FROM preventive_automation_runs runs
+        LEFT JOIN preventive_automation_runs newer
+          ON newer.plan_id = runs.plan_id
+         AND newer.asset_id = runs.asset_id
+         AND (
+           newer.created_at > runs.created_at
+           OR (newer.created_at = runs.created_at AND newer.id > runs.id)
+         )
+        WHERE runs.plan_id IN (${sqlPlaceholders(agendaPlanIds)})
+          AND newer.id IS NULL
+      `,
+      agendaPlanIds
+    );
+    for (const row of latestRunResult.rows) {
+      latestRunsByAsset.set(latestRunKey(row.plan_id, row.asset_id), fromRunRow(row));
+    }
+  }
   let items = result.rows.filter((row) => allowedPlanIds.has(String(row.plan_id))).map((row) => {
     const device = devicesById.get(String(row.asset_id));
-    const latestRun = row.latest_run_status
-      ? {
-          status: row.latest_run_status,
-          errorDetected: row.latest_run_error_detected === true,
-          createdAt: row.latest_run_created_at
-        }
-      : null;
+    const latestRun = latestRunsByAsset.get(latestRunKey(row.plan_id, row.asset_id)) || null;
     return {
       planId: row.plan_id,
       planName: row.plan_name,
@@ -1525,6 +1561,9 @@ export async function listPreventiveAutomationAgenda(filters = {}, user = null) 
   if (normalized.segmentId) {
     items = items.filter((item) => String(item.segmentId) === normalized.segmentId);
   }
+  if (normalized.status === "error") {
+    items = items.filter((item) => item.status === "error");
+  }
 
   const now = new Date();
   const todayEnd = new Date(now);
@@ -1544,8 +1583,10 @@ export async function listPreventiveAutomationAgenda(filters = {}, user = null) 
     pagination: {
       limit: normalized.limit,
       offset: normalized.offset,
-      total: Number(result.rows[0]?.total_count || items.length),
-      hasMore: normalized.offset + items.length < Number(result.rows[0]?.total_count || items.length)
+      total: normalized.status === "error" ? items.length : Number(countResult.rows[0]?.total_count || 0),
+      hasMore: normalized.status === "error"
+        ? false
+        : normalized.offset + result.rows.length < Number(countResult.rows[0]?.total_count || 0)
     }
   };
 }

@@ -96,7 +96,7 @@ export default function SegmentCard({
             <span className="segment-color-mark" aria-hidden="true" />
             <span className="segment-title-copy">
               <h3>{segment.name}</h3>
-              <span>{machines.length} maquinas</span>
+              <span>{machines.length} {machines.length === 1 ? "máquina" : "máquinas"}</span>
             </span>
           </button>
         </div>
