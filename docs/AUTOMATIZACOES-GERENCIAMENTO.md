@@ -181,4 +181,24 @@ Esta área cadastra, agenda, edita e audita. Ela não executa BAT, CMD, PowerShe
 
 Não foram adicionadas APIs como `child_process`, `exec`, `execFile`, `spawn`, `eval` ou `shell: true`. Preparações reais continuam dependentes de um agente seguro externo.
 
-O projeto ainda não possui script de lint nem suíte de navegador dedicada. Os contratos de interface são validados pela suíte Node e o fluxo visual deve ser conferido nos viewports definidos na especificação.
+O projeto possui lint, verificação de arquitetura, testes Node, testes de
+integração HTTP e uma suíte de navegador com Playwright. O PostgreSQL real é
+validado quando `TEST_DATABASE_URL` está disponível; sem essa variável, esse
+teste é ignorado explicitamente.
+
+## Rastreabilidade por máquina
+
+Criação, edição, pausa, reativação, preparação, alteração de recorrência
+individual, remoção de override e remoção da máquina registram eventos no
+histórico do ativo. A exclusão lógica preserva esses registros, os runs e os
+logs de auditoria.
+
+## Limite atual de escopo
+
+O backend aplica as listas `allowedSegmentIds` e `allowedGroupIds` quando elas
+estão presentes no usuário autenticado. Administradores e usuários sem
+restrições configuradas preservam o comportamento atual. A configuração
+administrativa ainda não persiste essas duas listas em todos os fluxos de
+usuários; portanto, o mapeamento completo de cliente/ambiente para os ativos
+continua como evolução pendente. Nenhuma associação artificial foi criada para
+simular esse escopo.
