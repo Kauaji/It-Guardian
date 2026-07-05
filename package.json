@@ -16,7 +16,22 @@
     "vercel-build": "npm run build",
     "start": "npm run start --workspace server",
     "test": "npm run test --workspace server",
+    "test:coverage": "npm run test:coverage --workspace server",
+    "test:integration": "npm run test:integration --workspace server",
+    "test:e2e": "playwright test",
+    "lint": "eslint . --max-warnings=0",
+    "check:architecture": "node scripts/check-architecture.mjs",
+    "check": "npm run lint && npm run check:architecture && npm run test:coverage && npm run build",
     "docker:up": "docker compose up --build",
     "docker:down": "docker compose down"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.29.7",
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.61.1",
+    "eslint": "^10.6.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.3",
+    "globals": "^17.7.0"
   }
 }

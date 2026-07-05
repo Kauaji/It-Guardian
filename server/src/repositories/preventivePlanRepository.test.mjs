@@ -14,7 +14,7 @@ test("criação de OS preventiva usa transação e trava duplicidade do vínculo
 });
 
 test("migração cria vínculos únicos entre plano preventivo e OS", () => {
-  const databasePath = fileURLToPath(new URL("../database.js", import.meta.url));
+  const databasePath = fileURLToPath(new URL("../schema/legacyBootstrap.js", import.meta.url));
   const source = readFileSync(databasePath, "utf8");
 
   assert.match(source, /preventive_plans_service_order_id_fkey/);
@@ -24,7 +24,7 @@ test("migração cria vínculos únicos entre plano preventivo e OS", () => {
 });
 
 test("preventive automation schema links optionally to one preventive plan", () => {
-  const databasePath = fileURLToPath(new URL("../database.js", import.meta.url));
+  const databasePath = fileURLToPath(new URL("../schema/legacyBootstrap.js", import.meta.url));
   const source = readFileSync(databasePath, "utf8");
 
   assert.match(source, /preventive_plan_id TEXT/);

@@ -275,7 +275,7 @@ test("remoção de máquina desativa agenda e registra histórico e auditoria", 
 });
 
 test("override individual usa a chave única plan_id mais target_key", () => {
-  const database = source("../database.js");
+  const database = source("../schema/legacyBootstrap.js");
   const repository = source("./preventiveAutomationRepository.js");
   assert.match(database, /UNIQUE INDEX IF NOT EXISTS idx_preventive_automation_overrides_target[\s\S]*plan_id,\s*target_key/);
   assert.match(repository, /`asset:\$\{assetId\}`/);
@@ -289,7 +289,7 @@ test("rotas protegem exclusão, override e remoção de ativo no backend", () =>
 });
 
 test("migração cria exclusão lógica e índices de gerenciamento", () => {
-  const database = source("../database.js");
+  const database = source("../schema/legacyBootstrap.js");
   assert.match(database, /deleted_at TIMESTAMPTZ/);
   assert.match(database, /idx_preventive_automation_plans_deleted_at/);
   assert.match(database, /idx_preventive_automation_plans_active/);
@@ -383,7 +383,7 @@ test("tela de gerenciamento reutiliza AutomationIndicatorDots", () => {
 });
 
 test("App mantém gerenciamento fora da composição visual principal", () => {
-  const app = source("../../../client/src/App.jsx");
+  const app = source("../../../client/src/components/alerts/AlertCenterV2.jsx");
   assert.match(app, /<AutomationManagementView/);
   assert.match(app, /canShowAutomationManagement/);
   assert.match(app, /alertActiveTab === "automation"/);
@@ -426,10 +426,61 @@ test("detalhe do plano centraliza as cinco areas operacionais", () => {
 });
 
 test("escopo de automacao diferencia administrador e proprietario do plano", async () => {
-  const { buildAutomationAccessScope, canAccessAutomationPlan } = await import("./automationAccessScope.js");
+  const {
+    buildAutomationAccessScope,
+    canAccessAutomationAsset,
+    canAccessAutomationPlan,
+    filterAutomationAssetsByScope
+  } = await import("./automationAccessScope.js");
   assert.equal(buildAutomationAccessScope({ id: "admin", isAdmin: true }).unrestricted, true);
   assert.equal(canAccessAutomationPlan({ createdBy: "user-1" }, { id: "user-1" }), true);
   assert.equal(canAccessAutomationPlan({ createdBy: "user-1" }, { id: "user-2" }), false);
+  assert.equal(
+    canAccessAutomationAsset(
+      { id: "asset-1", segmentId: "segment-1", segmentGroupId: "group-1" },
+      { id: "user-1", allowedSegmentIds: ["segment-1"] }
+    ),
+    true
+  );
+  assert.equal(
+    canAccessAutomationAsset(
+      { id: "asset-2", segmentId: "segment-2", segmentGroupId: "group-2" },
+      { id: "user-1", allowedSegmentIds: ["segment-1"], allowedGroupIds: ["group-1"] }
+    ),
+    false
+  );
+  assert.deepEqual(
+    filterAutomationAssetsByScope(
+      [
+        { id: "asset-1", segmentId: "segment-1" },
+        { id: "asset-2", segmentId: "segment-2" }
+      ],
+      { id: "user-1", allowedSegmentIds: ["segment-1"] }
+    ).map((asset) => asset.id),
+    ["asset-1"]
+  );
+});
+
+test("criação, edição e recorrência individual preservam histórico da máquina", () => {
+  const repository = source("./preventiveAutomationRepository.js");
+  for (const eventType of [
+    "preventive_automation_created",
+    "preventive_automation_updated",
+    "preventive_automation_asset_override_updated",
+    "preventive_automation_asset_override_removed"
+  ]) {
+    assert.match(repository, new RegExp(`"${eventType}"`));
+  }
+  assert.match(repository, /addAssetHistory/);
+  assert.match(repository, /userName: user\\?\\.name \\|\\| user\\?\\.email \\|\\| "Sistema"/);
+});
+
+test("criação, edição e override aplicam escopo de máquina no backend", () => {
+  const repository = source("./preventiveAutomationRepository.js");
+  assert.match(repository, /validateScopeSelection\(normalized, \{ user \}\)/);
+  assert.match(repository, /validateScopeSelection\(current, \{ user \}\)/);
+  assert.match(repository, /canAccessAutomationAsset\(device, user\)/);
+  assert.match(repository, /não possui máquinas autorizadas para este usuário/);
 });
 
 test("controllers repassam usuario para leituras de automacao", () => {
@@ -468,7 +519,7 @@ test("consultas de gerenciamento nao usam recursos ausentes no pg-mem", () => {
 });
 
 test("aba de automatizacoes considera a lista principal enquanto o gerenciamento carrega", () => {
-  const app = source("../../../client/src/App.jsx");
+  const app = source("../../../client/src/components/alerts/AlertCenterV2.jsx");
   assert.match(app, /Array\.isArray\(preventiveAutomationPlans\)/);
   assert.match(app, /preventiveAutomationPlans\.length/);
   assert.match(app, /Math\.max/);

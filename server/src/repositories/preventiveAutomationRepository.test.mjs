@@ -212,7 +212,7 @@ test("componente de indicadores limita pontos visiveis e oferece acessibilidade"
 });
 
 test("lista de preventivas usa indicadores apenas visuais", () => {
-  const appPath = fileURLToPath(new URL("../../../client/src/App.jsx", import.meta.url));
+  const appPath = fileURLToPath(new URL("../../../client/src/components/alerts/AlertCenterV2.jsx", import.meta.url));
   const source = readFileSync(appPath, "utf8");
 
   assert.match(source, /preventiveAutomationManagement\?\.machines/);
