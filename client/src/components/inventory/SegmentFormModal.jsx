@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { hasDuplicateSegmentName } from "./inventoryUtils.js";
+import { useModalLifecycle } from "../../hooks/useModalLifecycle.js";
 
 export default function SegmentFormModal({
   mode,
@@ -14,24 +15,12 @@ export default function SegmentFormModal({
 }) {
   const [name, setName] = useState("");
   const [groupId, setGroupId] = useState("");
+  const dialogRef = useModalLifecycle(Boolean(mode), onClose);
 
   useEffect(() => {
     setName(segment?.name || "");
     setGroupId(selectedGroupId || segment?.groupId || "");
   }, [segment, selectedGroupId]);
-
-  useEffect(() => {
-    if (!mode) return undefined;
-
-    function handleKeydown(event) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
-    window.addEventListener("keydown", handleKeydown);
-    return () => window.removeEventListener("keydown", handleKeydown);
-  }, [mode, onClose]);
 
   const normalizedName = name.trim().toLowerCase();
   const selectedGroupForValidation = groupId || "";
@@ -56,7 +45,7 @@ export default function SegmentFormModal({
 
   return (
     <div className="modal-backdrop" role="presentation">
-      <form className="modal-panel segment-form-modal" role="dialog" aria-modal="true" onSubmit={submit}>
+      <form ref={dialogRef} className="modal-panel segment-form-modal" role="dialog" aria-modal="true" onSubmit={submit}>
         <header>
           <div>
             <h2>{isCreate ? "Novo segmento" : "Renomear segmento"}</h2>

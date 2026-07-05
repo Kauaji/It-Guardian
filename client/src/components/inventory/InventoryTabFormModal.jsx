@@ -1,25 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
+import { useModalLifecycle } from "../../hooks/useModalLifecycle.js";
 
 export default function InventoryTabFormModal({ tab, tabs = [], onClose, onSubmit }) {
   const [name, setName] = useState("");
+  const dialogRef = useModalLifecycle(Boolean(tab), onClose);
 
   useEffect(() => {
     setName(tab?.name || "");
   }, [tab]);
-
-  useEffect(() => {
-    if (!tab) return undefined;
-
-    function handleKeydown(event) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
-    window.addEventListener("keydown", handleKeydown);
-    return () => window.removeEventListener("keydown", handleKeydown);
-  }, [tab, onClose]);
 
   const cleanName = name.trim();
   const duplicateName = useMemo(
@@ -43,7 +32,7 @@ export default function InventoryTabFormModal({ tab, tabs = [], onClose, onSubmi
 
   return (
     <div className="modal-backdrop" role="presentation">
-      <form className="modal-panel segment-form-modal" role="dialog" aria-modal="true" onSubmit={submit}>
+      <form ref={dialogRef} className="modal-panel segment-form-modal" role="dialog" aria-modal="true" onSubmit={submit}>
         <header>
           <div>
             <h2>Renomear ambiente</h2>

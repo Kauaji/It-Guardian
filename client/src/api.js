@@ -28,6 +28,7 @@ export async function apiFetch(path, { token, ...options } = {}) {
 
   try {
     response = await fetch(buildApiUrl(path), {
+      credentials: "include",
       ...options,
       headers: {
         "Content-Type": "application/json",
@@ -36,7 +37,7 @@ export async function apiFetch(path, { token, ...options } = {}) {
       }
     });
   } catch (error) {
-    throw new Error("Não foi possível conectar ao servidor.");
+    throw new Error("Não foi possível conectar ao servidor.", { cause: error });
   }
 
   const data = await response.json().catch(() => ({}));
@@ -72,6 +73,26 @@ export function register(payload) {
   return apiFetch("/auth/register", {
     method: "POST",
     body: JSON.stringify(payload)
+  });
+}
+
+export function fetchAuthSession() {
+  return apiFetch("/auth/me");
+}
+
+export function logoutSession(token) {
+  return apiFetch("/auth/logout", { method: "POST", token });
+}
+
+export function fetchUserPreference(token, key) {
+  return apiFetch(`/preferences/${encodeURIComponent(key)}`, { token });
+}
+
+export function saveUserPreference(token, key, value) {
+  return apiFetch(`/preferences/${encodeURIComponent(key)}`, {
+    method: "PUT",
+    token,
+    body: JSON.stringify({ value })
   });
 }
 
@@ -881,9 +902,9 @@ export function deletePriorityRule(token, id) {
   });
 }
 
-export function createMonitoringSocket(token) {
+export function createMonitoringSocket() {
   const wsUrl = buildWsUrl();
   if (!wsUrl) return null;
 
-  return new WebSocket(`${wsUrl}?token=${encodeURIComponent(token)}`);
+  return new WebSocket(wsUrl);
 }

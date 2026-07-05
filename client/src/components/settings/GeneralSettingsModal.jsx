@@ -445,7 +445,6 @@ export default function GeneralSettingsModal({
   onClose,
   onSystemModeChange,
   onToggleTheme,
-  onLogout,
   notify
 }) {
   const [section, setSection] = useState("usability");

@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { getJwtSecret } from "../config/environment.js";
 import { addLog } from "../repositories/logRepository.js";
 import { countActiveAdminsExcluding, createUser, findUserByEmail, toPublicUser } from "../repositories/userRepository.js";
+import { clearSessionCookie, setSessionCookie } from "../security/sessionCookie.js";
 
 function signToken(user) {
   return jwt.sign(
@@ -28,9 +29,11 @@ export async function register(req, res, next) {
     const user = await createUser({ name, email, password, role: "admin", permissions: ["admin.full"] });
     await addLog({ type: "auth", message: "First admin registered", userId: user.id });
 
+    const token = signToken(user);
+    setSessionCookie(res, token);
     res.status(201).json({
       user: toPublicUser(user),
-      token: signToken(user)
+      token
     });
   } catch (error) {
     next(error);
@@ -48,9 +51,11 @@ export async function login(req, res, next) {
 
     await addLog({ type: "auth", message: "User logged in", userId: user.id });
 
+    const token = signToken(user);
+    setSessionCookie(res, token);
     res.json({
       user: toPublicUser(user),
-      token: signToken(user)
+      token
     });
   } catch (error) {
     next(error);
@@ -58,5 +63,12 @@ export async function login(req, res, next) {
 }
 
 export function me(req, res) {
-  res.json({ user: req.user });
+  const token = signToken(req.user);
+  setSessionCookie(res, token);
+  res.json({ user: req.user, token });
+}
+
+export function logout(_req, res) {
+  clearSessionCookie(res);
+  res.status(204).end();
 }

@@ -27,14 +27,19 @@ import preventiveAutomationRoutes from "./routes/preventiveAutomationRoutes.js";
 import scriptLogRoutes from "./routes/scriptLogRoutes.js";
 import scriptValidationRoutes from "./routes/scriptValidationRoutes.js";
 import publicRoutes from "./routes/publicRoutes.js";
+import userPreferenceRoutes from "./routes/userPreferenceRoutes.js";
 import { initializeRuntime } from "./bootstrap.js";
 import { getCorsOrigins, isAllowedVercelOrigin } from "./config/environment.js";
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
+import { requestContext } from "./middleware/requestContextMiddleware.js";
+import { requireTrustedCookieOrigin } from "./middleware/csrfOriginMiddleware.js";
+import { query } from "./database.js";
 
 function buildCorsOptions() {
   const allowedOrigins = getCorsOrigins();
 
   return {
+    credentials: true,
     origin(origin, callback) {
       const normalizedOrigin = origin?.replace(/\/$/, "");
 
@@ -43,7 +48,10 @@ function buildCorsOptions() {
         return;
       }
 
-      callback(new Error(`Origem nao permitida pelo CORS: ${origin}`));
+      const error = new Error(`Origem nao permitida pelo CORS: ${origin}`);
+      error.statusCode = 403;
+      error.expose = true;
+      callback(error);
     }
   };
 }
@@ -51,10 +59,17 @@ function buildCorsOptions() {
 export function createApp({ initializeOnRequest = false } = {}) {
   const app = express();
 
+  app.disable("x-powered-by");
+  app.set("trust proxy", 1);
   app.use(helmet());
   app.use(cors(buildCorsOptions()));
-  app.use(express.json());
-  app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
+  app.use(express.json({ limit: "1mb" }));
+  app.use(express.urlencoded({ extended: false, limit: "1mb", parameterLimit: 100 }));
+  app.use(requestContext);
+  app.use(requireTrustedCookieOrigin);
+  if (process.env.NODE_ENV === "development") {
+    app.use(morgan("dev"));
+  }
 
   if (initializeOnRequest) {
     app.use(async (_req, _res, next) => {
@@ -67,16 +82,24 @@ export function createApp({ initializeOnRequest = false } = {}) {
     });
   }
 
-  app.get("/api/health", (_req, res) => {
-    res.json({
-      status: "ok",
-      service: "IT Guardian API",
-      timestamp: new Date().toISOString()
-    });
+  app.get("/api/health", async (_req, res, next) => {
+    try {
+      await query("SELECT 1 AS healthy");
+      res.json({
+        status: "ok",
+        database: "connected",
+        service: "IT Guardian API",
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      error.statusCode = 503;
+      next(error);
+    }
   });
 
   app.use("/api/public", publicRoutes);
   app.use("/api/auth", authRoutes);
+  app.use("/api/preferences", userPreferenceRoutes);
   app.use("/api/devices", deviceRoutes);
   app.use("/api/alerts", alertRoutes);
   app.use("/api/logs", logRoutes);

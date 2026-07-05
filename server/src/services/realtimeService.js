@@ -1,11 +1,18 @@
 import jwt from "jsonwebtoken";
 import { WebSocket, WebSocketServer } from "ws";
+import { getCorsOrigins, getJwtSecret, isAllowedVercelOrigin } from "../config/environment.js";
 import { findUserById } from "../repositories/userRepository.js";
+import { readSessionCookie } from "../security/sessionCookie.js";
 import { listSegments } from "../repositories/segmentRepository.js";
 import { getActiveAlertsWithAcknowledgements } from "./alertService.js";
 import { getDashboardSummary, listDevices } from "./monitoringService.js";
 
 const sockets = new Set();
+
+export function isTrustedRealtimeOrigin(origin = "") {
+  const normalized = String(origin).replace(/\/$/, "");
+  return getCorsOrigins().includes(normalized) || isAllowedVercelOrigin(normalized);
+}
 
 export function attachRealtimeServer(server) {
   const wss = new WebSocketServer({ server, path: "/ws" });
@@ -76,13 +83,21 @@ async function buildSnapshot() {
 
 async function authenticateSocket(request) {
   const url = new URL(request.url, "http://localhost");
-  const token = url.searchParams.get("token");
+  const legacyToken = url.searchParams.get("token");
+  const cookieToken = readSessionCookie(request);
+  const token = cookieToken || legacyToken;
 
   if (!token) {
     throw new Error("Missing token");
   }
 
-  const payload = jwt.verify(token, process.env.JWT_SECRET || "dev-secret");
+  if (cookieToken) {
+    if (!isTrustedRealtimeOrigin(request.headers.origin)) {
+      throw new Error("Untrusted WebSocket origin");
+    }
+  }
+
+  const payload = jwt.verify(token, getJwtSecret());
   const user = await findUserById(payload.sub);
 
   if (!user) {

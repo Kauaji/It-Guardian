@@ -26,7 +26,6 @@ function SegmentGroupContainer({ groupId, color, className = "", children }) {
 }
 
 export default function InventoryBoard({
-  devices,
   segments,
   machinesBySegment,
   search,
@@ -108,7 +107,6 @@ export default function InventoryBoard({
 
     return next;
   }, [groups, segments]);
-  const getGroupId = (segment) => segmentGroupIdMap.get(segment.id) || "";
   const visibleSegments = useMemo(() => segments.filter((segment) => {
     if (search.trim()) return (machinesBySegment.get(segment.id) || []).length > 0;
     if (selectedSegmentId !== "all") return segment.id === selectedSegmentId;

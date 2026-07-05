@@ -3,6 +3,7 @@ import { getJwtSecret } from "../config/environment.js";
 import { query } from "../database.js";
 import { findUserById } from "../repositories/userRepository.js";
 import { hasPermission } from "../permissions.js";
+import { readSessionCookie } from "../security/sessionCookie.js";
 
 function normalizeClientIds(value) {
   return Array.isArray(value) ? value.map((item) => String(item || "").trim()).filter(Boolean) : [];
@@ -11,7 +12,8 @@ function normalizeClientIds(value) {
 export async function requireAuth(req, res, next) {
   try {
     const header = req.headers.authorization || "";
-    const [, token] = header.split(" ");
+    const [, bearerToken] = header.split(" ");
+    const token = bearerToken || readSessionCookie(req);
 
     if (!token) {
       return res.status(401).json({ message: "Authentication token is required" });

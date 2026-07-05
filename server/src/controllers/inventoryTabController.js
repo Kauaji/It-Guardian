@@ -19,7 +19,7 @@ export async function list(_req, res, next) {
 
 export async function create(req, res, next) {
   try {
-    const tab = await createInventoryTab({ id: req.body.id, name: req.body.name, color: req.body.color, sortOrder: req.body.sortOrder  req.body.order, userId: req.user.id
+    const tab = await createInventoryTab({ id: req.body.id, name: req.body.name, color: req.body.color, sortOrder: req.body.sortOrder ?? req.body.order, userId: req.user.id
     });
 
     await addLog({ type: "inventory_tab_create", message: `Inventory tab created: ${tab.name}`, userId: req.user.id, meta: { tabId: tab.id }
@@ -37,7 +37,7 @@ export async function create(req, res, next) {
 
 export async function update(req, res, next) {
   try {
-    const tab = await updateInventoryTab({ id: req.params.id, name: req.body.name, color: req.body.color, sortOrder: req.body.sortOrder  req.body.order, active: req.body.active, isDefault: req.body.isDefault
+    const tab = await updateInventoryTab({ id: req.params.id, name: req.body.name, color: req.body.color, sortOrder: req.body.sortOrder ?? req.body.order, active: req.body.active, isDefault: req.body.isDefault
     });
 
     await addLog({ type: "inventory_tab_update", message: `Inventory tab updated: ${tab.name}`, userId: req.user.id, meta: { tabId: tab.id }

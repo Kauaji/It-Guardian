@@ -8,13 +8,13 @@ import {
   findScriptLogById,
   listMaintenanceScripts,
   listPendingScriptLogs,
-  listRecommendedScriptsForContext,
   listRecommendedScriptsForSuggestion,
   listScriptValidationsForSuggestion,
   registerMaintenanceScriptSimulation,
   updateMaintenanceScript,
   useScriptFromSuggestion
 } from "../repositories/maintenanceScriptRepository.js";
+import { listRecommendedScriptsForContext } from "../services/maintenanceScriptRecommendationService.js";
 
 export async function list(req, res, next) {
   try {

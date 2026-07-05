@@ -61,8 +61,11 @@ export function isAllowedVercelOrigin(origin) {
 export function getJwtSecret() {
   const secret = process.env.JWT_SECRET;
 
-  if (isProductionLike && (!secret || secret === "dev-secret" || secret === "change-me-in-production")) {
-    const error = new Error("JWT_SECRET precisa ser configurado com uma chave segura em produção.");
+  if (
+    isProductionLike &&
+    (!secret || secret.length < 32 || secret === "dev-secret" || secret === "change-me-in-production")
+  ) {
+    const error = new Error("JWT_SECRET precisa ter pelo menos 32 caracteres aleatórios em produção.");
     error.statusCode = 500;
     throw error;
   }
@@ -99,7 +102,10 @@ export function resolveDatabaseConfig() {
   return {
     mode: "postgres",
     connectionString,
-    ssl: shouldUseSsl ? { rejectUnauthorized: false } : false
+    ssl: shouldUseSsl ? { rejectUnauthorized: false } : false,
+    max: Math.max(1, Number(process.env.DB_POOL_MAX || 10)),
+    connectionTimeoutMillis: Math.max(1000, Number(process.env.DB_CONNECTION_TIMEOUT_MS || 10000)),
+    idleTimeoutMillis: Math.max(1000, Number(process.env.DB_IDLE_TIMEOUT_MS || 30000))
   };
 }
 

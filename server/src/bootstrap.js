@@ -1,5 +1,6 @@
 import { getJwtSecret, shouldSeedDemoData } from "./config/environment.js";
-import { initializeDatabase } from "./database.js";
+import { initializeDatabase } from "./schema/legacyBootstrap.js";
+import { runMigrations } from "./migrations/index.js";
 import { seedDemoOperationalData } from "./repositories/demoDataRepository.js";
 import { seedManualAssets } from "./repositories/manualAssetRepository.js";
 import { seedDefaultMaintenanceScripts } from "./repositories/maintenanceScriptRepository.js";
@@ -15,6 +16,7 @@ export function initializeRuntime() {
     runtimePromise = (async () => {
       getJwtSecret();
       await initializeDatabase();
+      await runMigrations();
       await seedDefaultSectors();
 
       if (shouldSeedDemoData()) {

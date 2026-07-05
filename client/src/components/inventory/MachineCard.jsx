@@ -54,7 +54,6 @@ function MachineCardContent({
   isOverlay = false,
   onMoveMachine = () => {},
   onOpenDetails = () => {},
-  onOpenMoveModal = () => {},
   onRefreshPing = () => {},
   onSelect = () => {},
   onToggleSelection = () => {},

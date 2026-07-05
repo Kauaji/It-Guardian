@@ -5,12 +5,10 @@ import {
   findAlertById,
   findServiceOrderSuggestionById,
   getAlertSettings,
-  listAlerts,
   markSuggestionValidated
 } from "./alertRepository.js";
 import { addLog } from "./logRepository.js";
 import { addServiceOrderHistory } from "./serviceOrderRepository.js";
-import { listDevices } from "../services/monitoringService.js";
 
 export const scriptTypes = new Set(["bat", "cmd", "powershell", "shell", "other"]);
 export const riskLevels = new Set(["low", "medium", "high", "critical"]);
@@ -442,7 +440,7 @@ function buildRecommendationContext(context = {}) {
   };
 }
 
-function inferTechnicalCategory(source = {}) {
+export function inferTechnicalCategory(source = {}) {
   const text = normalizeComparableText([
     source.alertType,
     source.metric,
@@ -730,42 +728,6 @@ function fromValidationRow(row) {
     activeKey: row.active_key || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at
-  };
-}
-
-function interpretScriptLog(rawLog = "", fallbackStatus = "registered") {
-  const text = String(rawLog || "").trim();
-
-  if (!text) {
-    return {
-      parsedSummary: "Uso registrado para validação. Nenhum comando foi executado nesta versão.",
-      errorDetected: false,
-      errorType: "",
-      probableCause: "",
-      suggestedSolution: "",
-      status: fallbackStatus
-    };
-  }
-
-  for (const rule of logErrorPatterns) {
-    if (!rule.patterns.some((pattern) => pattern.test(text))) continue;
-    return {
-      parsedSummary: rule.summary,
-      errorDetected: true,
-      errorType: rule.type,
-      probableCause: rule.cause,
-      suggestedSolution: rule.solution,
-      status: "error"
-    };
-  }
-
-  return {
-    parsedSummary: "Log registrado sem erro reconhecido.",
-    errorDetected: false,
-    errorType: "",
-    probableCause: "",
-    suggestedSolution: "",
-    status: fallbackStatus === "error" ? "registered" : fallbackStatus
   };
 }
 
@@ -1398,7 +1360,7 @@ async function findActiveScriptValidationForSuggestion(suggestionId, scriptId, d
   return result.rows[0] ? fromValidationRow(result.rows[0]) : null;
 }
 
-function toRecommendedScriptResponse(script) {
+export function toRecommendedScriptResponse(script) {
   return {
     id: script.id,
     name: script.name,
@@ -1456,111 +1418,6 @@ export async function listRecommendedScriptsForSuggestion(suggestionId) {
   return {
     recommended: recommendations.recommended.map(toRecommendedScriptResponse),
     others: recommendations.others.map(toRecommendedScriptResponse)
-  };
-}
-
-export async function listRecommendedScriptsForContext(payload = {}) {
-  const [scripts, devices, activeAlerts] = await Promise.all([
-    listMaintenanceScripts({ includeInactive: false }),
-    listDevices({}),
-    listAlerts({ status: "active" })
-  ]);
-  const assetIds = new Set((Array.isArray(payload.assetIds) ? payload.assetIds : []).map(String));
-  const alertsById = new Map();
-
-  for (const alertId of Array.isArray(payload.alertIds) ? payload.alertIds : []) {
-    const alert = await findAlertById(alertId);
-    if (alert) alertsById.set(String(alert.id), alert);
-  }
-
-  const assets = devices.filter((device) => assetIds.has(String(device.id)));
-  for (const alert of activeAlerts) {
-    if (assetIds.has(String(alert.assetId))) {
-      alertsById.set(String(alert.id), alert);
-    }
-  }
-
-  const alerts = [...alertsById.values()];
-  const contexts = [];
-
-  for (const asset of assets) {
-    const assetAlerts = alerts.filter((alert) => String(alert.assetId || "") === String(asset.id));
-    const relatedAlerts = assetAlerts.length ? assetAlerts : [null];
-
-    for (const alert of relatedAlerts) {
-      contexts.push({
-        ...(payload.context || {}),
-        alertType: payload.context?.alertType || alert?.type || "",
-        metric: payload.context?.metric || alert?.metric || "",
-        technicalCategory: payload.context?.technicalCategory || inferTechnicalCategory(alert || payload.context || {}),
-        severity: payload.context?.severity || alert?.severity || "",
-        title: payload.context?.title || alert?.title || "",
-        description: payload.context?.description || alert?.description || "",
-        assetType: payload.context?.assetType || asset.type || "",
-        operatingSystem: payload.context?.operatingSystem || asset.operatingSystem || "",
-        segmentName: payload.context?.segmentName || asset.segmentName || "",
-        groupName: payload.context?.groupName || asset.groupName || "",
-        tags: payload.context?.tags || [],
-        assetId: asset.id,
-        alertId: alert?.id || null
-      });
-    }
-  }
-
-  for (const alert of alerts.filter((alert) => !assetIds.has(String(alert.assetId || "")))) {
-    contexts.push({
-      ...(payload.context || {}),
-      alertType: payload.context?.alertType || alert.type || "",
-      metric: payload.context?.metric || alert.metric || "",
-      technicalCategory: payload.context?.technicalCategory || inferTechnicalCategory(alert),
-      severity: payload.context?.severity || alert.severity || "",
-      title: payload.context?.title || alert.title || "",
-      description: payload.context?.description || alert.description || "",
-      tags: payload.context?.tags || [],
-      assetId: alert.assetId || null,
-      alertId: alert.id
-    });
-  }
-
-  if (!contexts.length) {
-    contexts.push({ ...(payload.context || {}), tags: payload.context?.tags || [] });
-  }
-
-  const scored = scripts
-    .map((script) => {
-      const matches = contexts
-        .map((context) => ({ context, result: scoreMaintenanceScriptForContext(script, context) }))
-        .filter((item) => item.result);
-
-      if (!matches.length) return null;
-
-      const best = matches.sort((left, right) => right.result.recommendationScore - left.result.recommendationScore)[0];
-      const matchedAssetIds = [...new Set(matches.map((item) => item.context.assetId).filter(Boolean).map(String))];
-      const matchedAlertIds = [...new Set(matches.map((item) => item.context.alertId).filter(Boolean).map(String))];
-
-      return {
-        ...best.result,
-        matchedAssetIds,
-        matchedAlertIds
-      };
-    })
-    .filter(Boolean)
-    .sort((left, right) => {
-      if (right.recommendationScore !== left.recommendationScore) {
-        return right.recommendationScore - left.recommendationScore;
-      }
-      return String(left.name || "").localeCompare(String(right.name || ""));
-    });
-  const recommendations = {
-    recommended: scored.filter((script) => script.isRecommended),
-    others: scored.filter((script) => !script.isRecommended)
-  };
-
-  return {
-    recommended: recommendations.recommended.map(toRecommendedScriptResponse),
-    others: recommendations.others.map(toRecommendedScriptResponse),
-    context: contexts[0],
-    contextCount: contexts.length
   };
 }
 

@@ -120,7 +120,6 @@ export default function ServiceOrderDetailsModal({
   saving,
   onClose,
   onUpdate,
-  onAddHistory,
   onStatusChange,
   onDelete,
   onSelectBackup,

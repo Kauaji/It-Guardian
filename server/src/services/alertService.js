@@ -33,7 +33,7 @@ import {
 import { refreshDueScriptValidations } from "../repositories/maintenanceScriptRepository.js";
 import { listDeviceSegmentMap } from "../repositories/segmentRepository.js";
 import { listSegmentGroups } from "../repositories/segmentGroupRepository.js";
-import { getActiveAlerts, getAlertHistory, getHostAlerts } from "./zabbixService.js";
+import { getAlertHistory } from "./zabbixService.js";
 
 const alertTypeLabels = {
   ram_high: "Memória RAM acima do limite",
@@ -261,17 +261,6 @@ function getPriorityLabel(priority) {
     critical: "Crítica"
   };
   return labels[priority] || labels.medium;
-}
-
-function formatDate(value) {
-  if (!value) return "sem data";
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false
-  }).format(new Date(value));
 }
 
 function sameAsset(alert = {}, order = {}) {

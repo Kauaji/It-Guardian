@@ -5,7 +5,7 @@ export const DEFAULT_INVENTORY_TAB_ID = "tab-default";
 export const DEFAULT_INVENTORY_TAB_NAME = "Novo ambiente";
 export const DEFAULT_INVENTORY_TAB_COLOR = "#2563eb";
 
-function normalizeColor(color) { return /^#[0-9a-f]{6}$/i.test(color || "")  color: DEFAULT_INVENTORY_TAB_COLOR;
+function normalizeColor(color) { return /^#[0-9a-f]{6}$/i.test(color || "") ? color : DEFAULT_INVENTORY_TAB_COLOR;
 }
 
 function normalizeName(name) {
@@ -14,7 +14,7 @@ function normalizeName(name) {
 
 function normalizeSortOrder(value, fallback = 0) {
   const parsed = Number(value);
-return Number.isFinite(parsed)  parsed: fallback;
+  return Number.isFinite(parsed) ? parsed : fallback;
 }
 
 export async function seedDefaultInventoryTab() {
@@ -69,7 +69,8 @@ export async function listInventoryTabs({ includeInactive = false } = {}) {
   const result = await query(
     `
       SELECT id, name, color, sort_order, active, is_default, created_at, updated_at
-      FROM inventory_tabs ? WHERE ($1::boolean = TRUE OR active = TRUE)
+      FROM inventory_tabs
+      WHERE ($1::boolean = TRUE OR active = TRUE)
       ORDER BY sort_order ASC, created_at ASC
     `,
     [Boolean(includeInactive)]
@@ -87,7 +88,7 @@ export async function findInventoryTabById(id) {
     `,
     [id]
   );
-return result.rows[0]  fromRow(result.rows[0]): null;
+  return result.rows[0] ? fromRow(result.rows[0]) : null;
 }
 
 export async function createInventoryTab({ id, name, color, sortOrder, userId }) {
@@ -107,7 +108,7 @@ export async function createInventoryTab({ id, name, color, sortOrder, userId })
       VALUES ($1, $2, $3, $4, TRUE, $5)
       RETURNING id, name, color, sort_order, active, is_default, created_at, updated_at
     `,
-    [ ? id  String(id): randomUUID(),
+    [id ? String(id) : randomUUID(),
       cleanName,
       normalizeColor(color),
       normalizeSortOrder(sortOrder, await nextSortOrder()),
@@ -126,7 +127,7 @@ export async function updateInventoryTab({ id, name, color, sortOrder, active, i
     error.statusCode = 404;
     throw error;
   }
-const cleanName = name === undefined  existing.name: normalizeName(name);
+  const cleanName = name === undefined ? existing.name : normalizeName(name);
   if (cleanName.length < 2) {
     const error = new Error("O nome da aba deve ter pelo menos 2 caracteres.");
     error.statusCode = 400;
@@ -134,7 +135,7 @@ const cleanName = name === undefined  existing.name: normalizeName(name);
   }
 
   await assertTabNameAvailable(cleanName, id);
-const nextActive = active === undefined  existing.active: Boolean(active);
+  const nextActive = active === undefined ? existing.active : Boolean(active);
   if (!nextActive) {
     await assertCanDeactivateTab(id);
   }
@@ -166,8 +167,10 @@ const nextActive = active === undefined  existing.active: Boolean(active);
     [
       id,
       cleanName,
-      normalizeColor(color || existing.color), sortOrder === undefined  existing.order: normalizeSortOrder(sortOrder, existing.order),
-      nextActive, isDefault === undefined  existing.isDefault: Boolean(isDefault)
+      normalizeColor(color || existing.color),
+      sortOrder === undefined ? existing.order : normalizeSortOrder(sortOrder, existing.order),
+      nextActive,
+      isDefault === undefined ? existing.isDefault : Boolean(isDefault)
     ]
   );
 
@@ -199,7 +202,7 @@ export async function deleteInventoryTab(id) {
 }
 
 export async function reorderInventoryTabs(tabIds) {
-  const ids = Array.isArray(tabIds)  tabIds.map((id) => String(id || "").trim()).filter(Boolean) : [];
+  const ids = Array.isArray(tabIds) ? tabIds.map((id) => String(id || "").trim()).filter(Boolean) : [];
 
   if (!ids.length) {
     const error = new Error("Informe a ordem das abas.");
@@ -260,7 +263,8 @@ async function assertTabNameAvailable(name, ignoreId = null) {
       SELECT id
       FROM inventory_tabs
       WHERE active = TRUE
-        AND lower(name) = lower($1) ? AND ($2::text IS NULL OR id <> $2)
+        AND lower(name) = lower($1)
+        AND ($2::text IS NULL OR id <> $2)
       LIMIT 1
     `,
     [name, ignoreId]
@@ -275,7 +279,8 @@ async function assertTabNameAvailable(name, ignoreId = null) {
 
 async function assertCanDeactivateTab(id) {
   const result = await query(
-    ` ? SELECT COUNT(*)::int AS active_count
+    `
+      SELECT COUNT(*)::int AS active_count
       FROM inventory_tabs
       WHERE active = TRUE
         AND id <> $1
@@ -294,8 +299,10 @@ async function assertTabHasNoInventory(id) {
   const result = await query(
     `
       SELECT
-        (SELECT COUNT(*)::int FROM segment_groups WHERE tab_id = $1) AS group_count, (SELECT COUNT(*)::int FROM inventory_segments WHERE tab_id = $1) AS segment_count,
-        ( ? SELECT COUNT(*)::int
+        (SELECT COUNT(*)::int FROM segment_groups WHERE tab_id = $1) AS group_count,
+        (SELECT COUNT(*)::int FROM inventory_segments WHERE tab_id = $1) AS segment_count,
+        (
+          SELECT COUNT(*)::int
           FROM device_segments
           INNER JOIN inventory_segments ON inventory_segments.id = device_segments.segment_id
           WHERE inventory_segments.tab_id = $1

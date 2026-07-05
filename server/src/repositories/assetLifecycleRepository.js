@@ -233,6 +233,7 @@ export async function startMaintenanceForAsset({
 
   await addAssetHistory({
     assetId, eventType: "maintenance", message: serviceOrderId
+      ?
        "Máquina colocada em manutenção por Ordem de Serviço."
       : "Máquina colocada em manutenção.", oldValue: currentSegment.name, newValue: maintenanceSegment.name, userId: userInfo.id, userName: userInfo.name
   });
@@ -254,8 +255,10 @@ export async function finishMaintenanceForAsset({
   user,
   allowMissing = false
 }) {
-  const active = assetId ? await findActiveMaintenanceByAsset(assetId): serviceOrderId
-       await findActiveMaintenanceByServiceOrder(serviceOrderId)
+  const active = assetId
+    ? await findActiveMaintenanceByAsset(assetId)
+    : serviceOrderId
+      ? await findActiveMaintenanceByServiceOrder(serviceOrderId)
       : null;
 
   if (!active) {
@@ -296,6 +299,7 @@ export async function finishMaintenanceForAsset({
   const fallbackUsed = targetSegment.id !== active.originalSegmentId;
 
   await addAssetHistory({ assetId: active.assetId, eventType: "maintenance", message: fallbackUsed
+      ?
        "Máquina retirada da manutenção; segmento original indisponível, movida para Não organizadas."
       : "Máquina retirada da manutenção.", oldValue: "Manutenção", newValue: targetSegment.name, userId: userInfo.id, userName: userInfo.name
   });
@@ -303,6 +307,7 @@ export async function finishMaintenanceForAsset({
   const orderId = serviceOrderId || active.serviceOrderId;
   if (orderId) {
     await addServiceOrderHistory({ serviceOrderId: orderId, eventType: "maintenance", message: fallbackUsed
+        ?
          "Máquina saiu da manutenção, mas o segmento original não existe mais."
         : "Máquina saiu da manutenção.", oldValue: "Manutenção", newValue: targetSegment.name,
       user

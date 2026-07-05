@@ -799,6 +799,7 @@ export async function markSuggestionAccepted({ id, userId, serviceOrderId }) {
 
 export async function markSuggestionRejected({ id, userId, reason, silenceHours = 24 }) {
   const hours = Math.max(1, toNumber(silenceHours, 24));
+  const silenceUntil = new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
   const result = await query(
     `
       UPDATE service_order_suggestions
@@ -807,13 +808,13 @@ export async function markSuggestionRejected({ id, userId, reason, silenceHours 
           rejected_at = NOW(),
           last_rejected_at = NOW(),
           rejection_reason = $3,
-          ignored_until = NOW() + ($4::int * INTERVAL '1 hour'),
-          rejection_silence_until = NOW() + ($4::int * INTERVAL '1 hour'),
+          ignored_until = $4,
+          rejection_silence_until = $4,
           updated_at = NOW()
       WHERE id = $1
       RETURNING *
     `,
-    [id, userId || null, reason?.trim() || null, hours]
+    [id, userId || null, reason?.trim() || null, silenceUntil]
   );
 
   return result.rows[0] ? fromSuggestionRow(result.rows[0]) : null;

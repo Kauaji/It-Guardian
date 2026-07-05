@@ -91,8 +91,9 @@ export async function create(req, res, next) {
     res.status(201).json({ segment });
   } catch (error) {
     if (error.code === "23505") {
-      error = new Error("Ja existe um segmento com esse nome neste grupo.");
-      error.statusCode = 409;
+      const conflictError = new Error("Ja existe um segmento com esse nome neste grupo.");
+      conflictError.statusCode = 409;
+      return next(conflictError);
     }
     next(error);
   }
@@ -127,8 +128,9 @@ export async function rename(req, res, next) {
     res.json({ segment });
   } catch (error) {
     if (error.code === "23505") {
-      error = new Error("Ja existe um segmento com esse nome neste grupo.");
-      error.statusCode = 409;
+      const conflictError = new Error("Ja existe um segmento com esse nome neste grupo.");
+      conflictError.statusCode = 409;
+      return next(conflictError);
     }
     next(error);
   }

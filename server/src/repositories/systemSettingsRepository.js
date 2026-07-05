@@ -2,10 +2,6 @@ import { query } from "../database.js";
 
 const systemSettingsKey = "system";
 
-const defaultSystemSettings = {
-  systemMode: "local"
-};
-
 function normalizeSystemMode(value) {
   return value === "business" ? "business" : "local";
 }

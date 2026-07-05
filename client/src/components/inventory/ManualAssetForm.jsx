@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { assetTypeOptions } from "./assetTypes.js";
+import { useModalLifecycle } from "../../hooks/useModalLifecycle.js";
 
 const initialForm = {
   name: "",
@@ -18,23 +19,11 @@ const initialForm = {
 
 export default function ManualAssetForm({ open, saving, onClose, onSubmit }) {
   const [form, setForm] = useState(initialForm);
+  const dialogRef = useModalLifecycle(open, onClose);
 
   useEffect(() => {
     if (open) setForm(initialForm);
   }, [open]);
-
-  useEffect(() => {
-    if (!open) return undefined;
-
-    function handleKeydown(event) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
-    window.addEventListener("keydown", handleKeydown);
-    return () => window.removeEventListener("keydown", handleKeydown);
-  }, [open, onClose]);
 
   if (!open) return null;
 
@@ -49,7 +38,7 @@ export default function ManualAssetForm({ open, saving, onClose, onSubmit }) {
 
   return (
     <div className="modal-backdrop asset-modal-backdrop" role="presentation">
-      <section className="manual-asset-modal" role="dialog" aria-modal="true" aria-label="Novo ativo de rede">
+      <section ref={dialogRef} className="manual-asset-modal" role="dialog" aria-modal="true" aria-label="Novo ativo de rede">
         <header className="asset-modal-header">
           <div>
             <span className="asset-eyebrow">Cadastro manual</span>
