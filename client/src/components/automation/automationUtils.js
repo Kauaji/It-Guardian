@@ -62,6 +62,28 @@ export function shouldShowAutomationManagement(canView, planCount) {
   return Boolean(canView) && Number(planCount || 0) > 0;
 }
 
+export function groupAutomationAgendaItems(items = []) {
+  const grouped = new Map();
+
+  for (const item of items) {
+    const planKey = String(item.planId || item.planName || "plan");
+    const segmentKey = String(item.segmentId || item.segmentName || "segment");
+    const key = `${planKey}:${segmentKey}`;
+    const group = grouped.get(key) || {
+      key,
+      planId: item.planId,
+      planName: item.planName || "Plano preventivo",
+      segmentName: item.segmentName || "Não organizadas",
+      indicatorColor: item.indicatorColor || "#1f7a61",
+      items: []
+    };
+    group.items.push(item);
+    grouped.set(key, group);
+  }
+
+  return [...grouped.values()];
+}
+
 export function buildAutomationManagementGroups({
   machines = [],
   devices = [],

@@ -6,6 +6,7 @@ import { isScheduleLinkedToPlan } from "./preventiveAutomationRepository.js";
 import {
   automationMachineStatus,
   buildAutomationManagementGroups,
+  groupAutomationAgendaItems,
   shouldShowAutomationManagement
 } from "../../../client/src/components/automation/automationUtils.js";
 import {
@@ -459,6 +460,40 @@ test("escopo de automacao diferencia administrador e proprietario do plano", asy
     ).map((asset) => asset.id),
     ["asset-1"]
   );
+});
+
+test("agenda agrupa máquinas do mesmo plano e segmento em um único bloco", () => {
+  const groups = groupAutomationAgendaItems([
+    {
+      planId: "plan-1",
+      planName: "Plano financeiro",
+      segmentId: "segment-1",
+      segmentName: "Financeiro",
+      indicatorColor: "#1f7a61",
+      assetId: "asset-1"
+    },
+    {
+      planId: "plan-1",
+      planName: "Plano financeiro",
+      segmentId: "segment-1",
+      segmentName: "Financeiro",
+      indicatorColor: "#1f7a61",
+      assetId: "asset-2"
+    },
+    {
+      planId: "plan-2",
+      planName: "Plano servidores",
+      segmentId: "segment-2",
+      segmentName: "Servidores",
+      indicatorColor: "#2563eb",
+      assetId: "asset-3"
+    }
+  ]);
+
+  assert.equal(groups.length, 2);
+  assert.equal(groups[0].items.length, 2);
+  assert.equal(groups[0].indicatorColor, "#1f7a61");
+  assert.equal(groups[1].items.length, 1);
 });
 
 test("criação, edição e recorrência individual preservam histórico da máquina", () => {

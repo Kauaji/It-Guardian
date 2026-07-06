@@ -19,7 +19,10 @@ export default function ServiceOrderCard({
     <button
       type="button"
       className={`service-order-card priority-${order.priority} ${dragging ? "is-dragging" : ""}`}
-      style={{ "--service-order-priority": priorityColor, "--service-order-card-bg": priorityBackground }}
+      style={{
+        "--service-order-priority-color": priorityColor,
+        "--service-order-priority-bg": priorityBackground
+      }}
       draggable
       onDragStart={(event) => onDragStart(event, order)}
       onDragEnd={onDragEnd}

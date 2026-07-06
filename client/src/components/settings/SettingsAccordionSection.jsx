@@ -4,7 +4,12 @@ export default function SettingsAccordionSection({ id, title, description, activ
   const open = activeSection === id;
   return (
     <section className={`service-order-settings-accordion ${open ? "open" : ""}`}>
-      <button type="button" onClick={() => onToggle(open ? "" : id)} aria-expanded={open}>
+      <button
+        type="button"
+        className="service-order-settings-accordion-trigger"
+        onClick={() => onToggle(open ? "" : id)}
+        aria-expanded={open}
+      >
         <span>
           <strong>{title}</strong>
           <small>{description}</small>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, CalendarClock, RefreshCw } from "lucide-react";
-import { formatAutomationDate } from "./automationUtils.js";
+import { formatAutomationDate, groupAutomationAgendaItems } from "./automationUtils.js";
 
 function dayKey(value) {
   if (!value) return "Sem data";
@@ -58,18 +58,35 @@ export default function AutomationAgendaView({ plans = [], onLoad, onOpenPlan })
       {!loading && !error && groups.map(([label, items]) => (
         <section key={label} className="automation-agenda-group">
           <header><CalendarClock size={17} /><strong>{label}</strong><span>{items.length}</span></header>
-          <div>
-            {items.map((item) => {
-              const plan = plans.find((candidate) => String(candidate.id) === String(item.planId));
-              return (
-                <button key={`${item.planId}:${item.assetId}`} type="button" onClick={() => plan && onOpenPlan(plan)}>
-                  <i style={{ backgroundColor: item.indicatorColor }} />
-                  <span><strong>{item.assetName}</strong><small>{item.planName} · {item.segmentName}</small></span>
-                  <em className={`agenda-status ${item.status}`}>{item.status === "error" && <AlertTriangle size={13} />}{item.status.replaceAll("_", " ")}</em>
-                  <time>{formatAutomationDate(item.nextRunAt, "Sem data")}</time>
-                </button>
-              );
-            })}
+          <div className="automation-agenda-plan-groups">
+            {groupAutomationAgendaItems(items).map((group) => (
+              <section
+                key={group.key}
+                className="automation-agenda-plan-group"
+                style={{ "--agenda-plan-color": group.indicatorColor }}
+              >
+                <header>
+                  <i aria-hidden="true" />
+                  <span>
+                    <strong>{group.planName}</strong>
+                    <small>{group.segmentName}</small>
+                  </span>
+                  <em>{group.items.length} {group.items.length === 1 ? "máquina" : "máquinas"}</em>
+                </header>
+                <div>
+                  {group.items.map((item) => {
+                    const plan = plans.find((candidate) => String(candidate.id) === String(item.planId));
+                    return (
+                      <button key={`${item.planId}:${item.assetId}`} type="button" onClick={() => plan && onOpenPlan(plan)}>
+                        <span><strong>{item.assetName}</strong></span>
+                        <em className={`agenda-status ${item.status}`}>{item.status === "error" && <AlertTriangle size={13} />}{item.status.replaceAll("_", " ")}</em>
+                        <time>{formatAutomationDate(item.nextRunAt, "Sem data")}</time>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
           </div>
         </section>
       ))}
