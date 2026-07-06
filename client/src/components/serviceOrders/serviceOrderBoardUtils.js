@@ -54,6 +54,14 @@ export function formatDate(value) {
 }
 
 export function getMonthValue(value) {
+  if (typeof value === "string") {
+    const isoDate = value.match(/^(\d{4})-(\d{2})-\d{2}(?:T|$)/);
+    const month = Number(isoDate?.[2]);
+    if (isoDate && month >= 1 && month <= 12 && !Number.isNaN(new Date(value).getTime())) {
+      return `${isoDate[1]}-${isoDate[2]}`;
+    }
+  }
+
   const date = value ? new Date(value) : null;
   if (!date || Number.isNaN(date.getTime())) return "";
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;

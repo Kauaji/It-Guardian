@@ -10,16 +10,16 @@ export const migrations = [
 
 export async function runMigrations() {
   await withTransaction(async (db) => {
+    if (resolveDatabaseConfig().mode === "postgres") {
+      await db("SELECT pg_advisory_xact_lock($1)", [813_724_601]);
+    }
+
     await db(`
       CREATE TABLE IF NOT EXISTS schema_migrations (
         id TEXT PRIMARY KEY,
         applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `);
-
-    if (resolveDatabaseConfig().mode === "postgres") {
-      await db("SELECT pg_advisory_xact_lock($1)", [813_724_601]);
-    }
 
     for (const migration of migrations) {
       const applied = await db(
