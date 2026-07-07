@@ -50,7 +50,6 @@ import {
   fetchAlertCorrelations,
   fetchDevice,
   fetchPreventiveAutomationAsset,
-  fetchUserPreference,
   removeAssetFromPreventiveAutomationPlan,
   removePreventiveAutomationAssetOverride,
   rejectServiceOrderSuggestion,
@@ -70,7 +69,6 @@ import {
   updateMaintenanceScript,
   updatePreventiveAutomationPlan,
   savePreventiveAutomationAssetOverride,
-  saveUserPreference,
   updateSystemSettings,
   useSuggestionScript as executeSuggestionScript
 } from "./api.js";
@@ -98,26 +96,16 @@ import {
 } from "./components/inventory/inventoryUtils.js";
 import {
   activeInventoryTabKey,
-  aliasKey,
   applyInventoryLocalState,
   applySegmentGroups,
   backupSegmentId,
   backupSegmentName,
   defaultInventoryTab,
   getNextInventoryTabName,
-  inventoryTabMetaKey,
-  inventoryTabsKey,
   isReservedSegmentName,
-  maintenanceRecordsKey,
-  normalizeInventoryTabMeta,
-  normalizeInventoryTabs,
-  observationsKey,
-  peripheralHistoryKey,
   peripheralKey,
-  peripheralRemovalsKey,
   pickSegmentColor,
-  pickUnusedPaletteColor,
-  readStoredJson
+  pickUnusedPaletteColor
 } from "./components/inventory/inventoryLocalState.js";
 import ViewLoadingState from "./components/ui/ViewLoadingState.jsx";
 import SummaryCard from "./components/ui/SummaryCard.jsx";
@@ -130,6 +118,7 @@ import DeviceTable from "./components/dashboard/DeviceTable.jsx";
 import { isMaintenanceSegmentName } from "./utils/display.js";
 import { useAppSessionController } from "./hooks/useAppSessionController.js";
 import { useDashboardData } from "./hooks/useDashboardData.js";
+import { useInventoryPersistence } from "./hooks/useInventoryPersistence.js";
 
 const InventoryBoard = lazy(() => import("./components/inventory/InventoryBoard.jsx"));
 const ServiceOrdersBoard = lazy(() => import("./components/serviceOrders/ServiceOrdersBoard.jsx"));
@@ -301,30 +290,24 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   const [inventorySearch, setInventorySearch] = useState("");
   const [selectedInventoryGroup, setSelectedInventoryGroup] = useState("all");
   const [selectedInventorySegment, setSelectedInventorySegment] = useState("all");
-  const [machineAliases, setMachineAliases] = useState(() =>
-    JSON.parse(localStorage.getItem(aliasKey) || "{}")
-  );
-  const [machineObservations, setMachineObservations] = useState(() =>
-    JSON.parse(localStorage.getItem(observationsKey) || "{}")
-  );
-  const [removedPeripherals, setRemovedPeripherals] = useState(() =>
-    JSON.parse(localStorage.getItem(peripheralRemovalsKey) || "{}")
-  );
-  const [peripheralHistory, setPeripheralHistory] = useState(() =>
-    JSON.parse(localStorage.getItem(peripheralHistoryKey) || "{}")
-  );
-  const [maintenanceRecords, setMaintenanceRecords] = useState(() =>
-    readStoredJson(maintenanceRecordsKey, {})
-  );
-  const [inventoryTabs, setInventoryTabs] = useState(() =>
-    normalizeInventoryTabs(readStoredJson(inventoryTabsKey, [defaultInventoryTab]))
-  );
-  const [activeInventoryTabId, setActiveInventoryTabId] = useState(() =>
-    localStorage.getItem(activeInventoryTabKey) || defaultInventoryTab.id
-  );
-  const [inventoryTabMeta, setInventoryTabMeta] = useState(() =>
-    normalizeInventoryTabMeta(readStoredJson(inventoryTabMetaKey, {}))
-  );
+  const {
+    activeInventoryTabId,
+    inventoryTabMeta,
+    inventoryTabs,
+    machineAliases,
+    machineObservations,
+    maintenanceRecords,
+    peripheralHistory,
+    removedPeripherals,
+    saveInventoryTabMeta,
+    saveInventoryTabs,
+    saveMachineAliases,
+    saveMachineObservations,
+    saveMaintenanceRecords,
+    savePeripheralHistory,
+    saveRemovedPeripherals,
+    setActiveInventoryTabId
+  } = useInventoryPersistence(token);
   const [moveModal, setMoveModal] = useState(null);
   const [moveTarget, setMoveTarget] = useState("");
   const [segmentForm, setSegmentForm] = useState(null);
@@ -461,55 +444,6 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   const sidebarWasCollapsedBeforeDrag = useRef(true);
   const sidebarAutoCloseTimer = useRef(null);
   const dragStartScrollY = useRef(0);
-  const inventoryPreferenceHydrated = useRef(false);
-
-  useEffect(() => {
-    let active = true;
-
-    fetchUserPreference(token, "inventory-workspace")
-      .then(({ value }) => {
-        if (!active || !value) return;
-        setMachineAliases(value.aliases || {});
-        setMachineObservations(value.observations || {});
-        setRemovedPeripherals(value.removedPeripherals || {});
-        setPeripheralHistory(value.peripheralHistory || {});
-        setMaintenanceRecords(value.maintenanceRecords || {});
-      })
-      .catch(() => {
-        // Local cache remains available when the backend preference has not been created yet.
-      })
-      .finally(() => {
-        if (active) inventoryPreferenceHydrated.current = true;
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [token]);
-
-  useEffect(() => {
-    if (!inventoryPreferenceHydrated.current) return undefined;
-
-    const timeoutId = window.setTimeout(() => {
-      saveUserPreference(token, "inventory-workspace", {
-        aliases: machineAliases,
-        observations: machineObservations,
-        removedPeripherals,
-        peripheralHistory,
-        maintenanceRecords
-      }).catch(() => {});
-    }, 500);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [
-    machineAliases,
-    machineObservations,
-    maintenanceRecords,
-    peripheralHistory,
-    removedPeripherals,
-    token
-  ]);
-
   useEffect(() => {
     if (permittedViewIds.includes(activeView)) return;
     setActiveView(permittedViewIds[0] || "blocked");
@@ -525,29 +459,6 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
       document.body.classList.remove("qr-print-mode", "bulk-qr-print-mode");
     };
   }, []);
-
-  function saveInventoryTabs(updater) {
-    const nextTabs = typeof updater === "function" ? updater(inventoryTabs) : updater;
-    const normalized = normalizeInventoryTabs(nextTabs);
-    localStorage.setItem(inventoryTabsKey, JSON.stringify(normalized));
-    setInventoryTabs(normalized);
-  }
-
-  function saveInventoryTabMeta(updater) {
-    setInventoryTabMeta((current) => {
-      const next = normalizeInventoryTabMeta(typeof updater === "function" ? updater(current) : updater);
-      localStorage.setItem(inventoryTabMetaKey, JSON.stringify(next));
-      return next;
-    });
-  }
-
-  function saveMaintenanceRecords(updater) {
-    setMaintenanceRecords((current) => {
-      const next = typeof updater === "function" ? updater(current) : updater;
-      localStorage.setItem(maintenanceRecordsKey, JSON.stringify(next));
-      return next;
-    });
-  }
 
   async function changeSystemMode(mode) {
     const nextMode = mode === "business" ? "business" : "local";
@@ -2361,21 +2272,20 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   }
 
   function saveMachineAlias(machineId, alias) {
-    setMachineAliases((current) => {
+    saveMachineAliases((current) => {
       const next = { ...current };
       if (alias) {
         next[machineId] = alias;
       } else {
         delete next[machineId];
       }
-      localStorage.setItem(aliasKey, JSON.stringify(next));
       return next;
     });
     notify(alias ? "Nome fantasia atualizado." : "Nome fantasia removido.", "ok");
   }
 
   function addMachineObservation(machineId, text) {
-    setMachineObservations((current) => {
+    saveMachineObservations((current) => {
       const next = {
         ...current,
         [machineId]: [
@@ -2388,7 +2298,6 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
           ...(current[machineId] || [])
         ]
       };
-      localStorage.setItem(observationsKey, JSON.stringify(next));
       return next;
     });
     notify("Observacao adicionada.", "ok");
@@ -2410,21 +2319,19 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
       newValue: "Removido"
     };
 
-    setRemovedPeripherals((current) => {
+    saveRemovedPeripherals((current) => {
       const next = {
         ...current,
         [machineId]: Array.from(new Set([...(current[machineId] || []), removedKey]))
       };
-      localStorage.setItem(peripheralRemovalsKey, JSON.stringify(next));
       return next;
     });
 
-    setPeripheralHistory((current) => {
+    savePeripheralHistory((current) => {
       const next = {
         ...current,
         [machineId]: [event, ...(current[machineId] || [])]
       };
-      localStorage.setItem(peripheralHistoryKey, JSON.stringify(next));
       return next;
     });
 
