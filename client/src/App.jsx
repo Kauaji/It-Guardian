@@ -96,6 +96,29 @@ import {
   moveIdInList,
   upsertSegmentList
 } from "./components/inventory/inventoryUtils.js";
+import {
+  activeInventoryTabKey,
+  aliasKey,
+  applyInventoryLocalState,
+  applySegmentGroups,
+  backupSegmentId,
+  backupSegmentName,
+  defaultInventoryTab,
+  getNextInventoryTabName,
+  inventoryTabMetaKey,
+  inventoryTabsKey,
+  isReservedSegmentName,
+  maintenanceRecordsKey,
+  normalizeInventoryTabMeta,
+  normalizeInventoryTabs,
+  observationsKey,
+  peripheralHistoryKey,
+  peripheralKey,
+  peripheralRemovalsKey,
+  pickSegmentColor,
+  pickUnusedPaletteColor,
+  readStoredJson
+} from "./components/inventory/inventoryLocalState.js";
 import ViewLoadingState from "./components/ui/ViewLoadingState.jsx";
 import SummaryCard from "./components/ui/SummaryCard.jsx";
 import Toast from "./components/ui/Toast.jsx";
@@ -104,121 +127,15 @@ import AuthScreen from "./components/auth/AuthScreen.jsx";
 import AlertList from "./components/dashboard/AlertList.jsx";
 import DeviceDetails from "./components/dashboard/DeviceDetails.jsx";
 import DeviceTable from "./components/dashboard/DeviceTable.jsx";
-import { isMaintenanceSegmentName, normalizeMaintenanceName } from "./utils/display.js";
+import { isMaintenanceSegmentName } from "./utils/display.js";
 import { useAppSessionController } from "./hooks/useAppSessionController.js";
 import { useDashboardData } from "./hooks/useDashboardData.js";
 
 const InventoryBoard = lazy(() => import("./components/inventory/InventoryBoard.jsx"));
 const ServiceOrdersBoard = lazy(() => import("./components/serviceOrders/ServiceOrdersBoard.jsx"));
 
-const aliasKey = "it_guardian_machine_aliases";
-const observationsKey = "it_guardian_machine_observations";
-const peripheralRemovalsKey = "it_guardian_removed_peripherals";
-const peripheralHistoryKey = "it_guardian_peripheral_history";
-const inventoryTabsKey = "it_guardian_inventory_tabs";
-const activeInventoryTabKey = "it_guardian_active_inventory_tab";
-const inventoryTabMetaKey = "it_guardian_inventory_tab_meta";
-const maintenanceRecordsKey = "it_guardian_maintenance_records";
-const backupSegmentId = "system-backup";
-const backupSegmentName = "Backup";
-
-const defaultInventoryTab = {
-  id: "tab-default",
-  name: "Novo ambiente",
-  color: "#2563eb",
-  order: 0
-};
-
-const segmentPalette = [
-  "#2563eb",
-  "#16a34a",
-  "#7c3aed",
-  "#0891b2",
-  "#d97706",
-  "#dc2626",
-  "#ea580c",
-  "#db2777"
-];
-
-function pickSegmentColor(segments) {
-  const lastColor = segments.filter((segment) => !segment.isDefault).at(-1)?.color;
-  const index = Math.max(0, segments.filter((segment) => !segment.isDefault).length);
-  const preferred = segmentPalette[index % segmentPalette.length];
-
-  if (preferred !== lastColor) return preferred;
-  return segmentPalette[(index + 1) % segmentPalette.length];
-}
-
-function pickUnusedPaletteColor(items = []) {
-  const usedColors = new Set(
-    items
-      .map((item) => item?.color?.toLowerCase())
-      .filter(Boolean)
-  );
-  const unusedColor = segmentPalette.find((color) => !usedColors.has(color.toLowerCase()));
-
-  return unusedColor || pickSegmentColor(items);
-}
-
-function isReservedSegmentName(name = "") {
-  const normalizedName = normalizeMaintenanceName(name).replace(/\s+/g, " ");
-  return normalizedName === "manutencao" || normalizedName === "nao organizadas";
-}
-
-function getNextInventoryTabName(tabs = []) {
-  const usedNames = new Set(tabs.map((tab) => tab.name?.trim().toLowerCase()).filter(Boolean));
-  if (!usedNames.has("novo ambiente")) return "Novo ambiente";
-
-  let nextNumber = 2;
-  while (usedNames.has(`novo ambiente ${nextNumber}`)) {
-    nextNumber += 1;
-  }
-  return `Novo ambiente ${nextNumber}`;
-}
-
-function readStoredJson(key, fallback) {
-  try {
-    return JSON.parse(localStorage.getItem(key) || "null") ?? fallback;
-  } catch {
-    return fallback;
-  }
-}
-
 function readSystemMode() {
   return "local";
-}
-
-function normalizeInventoryTabs(value) {
-  const tabs = Array.isArray(value) && value.length ? value : [defaultInventoryTab];
-  const normalized = [];
-
-  for (const [index, tab] of tabs.entries()) {
-    const requestedName = tab.name?.trim();
-    const name =
-      !requestedName || requestedName === "Sem nome"
-        ? getNextInventoryTabName(normalized)
-        : requestedName;
-
-    normalized.push({
-      ...defaultInventoryTab,
-      ...tab,
-      id: tab.id || `tab-${index}`,
-      name,
-      color: tab.color || segmentPalette[index % segmentPalette.length],
-      order: Number.isFinite(tab.order) ? tab.order : index
-    });
-  }
-
-  return normalized
-    .sort((left, right) => left.order - right.order);
-}
-
-function normalizeInventoryTabMeta(value) {
-  return {
-    groups: value?.groups || {},
-    segments: value?.segments || {},
-    devices: value?.devices || {}
-  };
 }
 
 const inventoryDropAnimation = {
@@ -370,36 +287,6 @@ function formatTime(value) {
     hour: "2-digit",
     minute: "2-digit"
   }).format(new Date(value));
-}
-
-function applySegmentGroups(segmentList, groups) {
-  return segmentList.map((segment) => ({
-    ...segment,
-    groupId: getSegmentGroupId(segment, groups)
-  }));
-}
-
-function peripheralKey(peripheral) {
-  return peripheral?.id || `${peripheral?.type || "item"}-${peripheral?.brand || ""}-${peripheral?.assetTag || ""}`;
-}
-
-function applyInventoryLocalState(devices, removedPeripherals, peripheralHistory, maintenanceRecords = {}) {
-  return devices.map((device) => {
-    const removed = new Set(removedPeripherals[device.id] || []);
-    const peripherals = device.hardware?.peripherals || [];
-    const maintenanceRecord = maintenanceRecords[device.id];
-
-    return {
-      ...device,
-      maintenance: Boolean(maintenanceRecord?.active),
-      maintenanceOrigin: maintenanceRecord?.origin || null,
-      assetHistory: [...(peripheralHistory[device.id] || []), ...(device.assetHistory || [])],
-      hardware: {
-        ...device.hardware,
-        peripherals: peripherals.filter((peripheral) => !removed.has(peripheralKey(peripheral)))
-      }
-    };
-  });
 }
 
 function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
