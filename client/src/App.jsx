@@ -53,7 +53,6 @@ import {
   fetchAlertRules,
   fetchAlertSettings,
   fetchAlerts,
-  fetchAuthSession,
   fetchDevice,
   fetchDevices,
   fetchMaintenanceScripts,
@@ -67,7 +66,6 @@ import {
   fetchSegments,
   fetchSystemSettings,
   fetchUserPreference,
-  logoutSession,
   removeAssetFromPreventiveAutomationPlan,
   removePreventiveAutomationAssetOverride,
   rejectServiceOrderSuggestion,
@@ -103,10 +101,7 @@ import SegmentFormModal from "./components/inventory/SegmentFormModal.jsx";
 import SegmentGroupFormModal from "./components/inventory/SegmentGroupFormModal.jsx";
 import SidebarSegmentFilter from "./components/inventory/SidebarSegmentFilter.jsx";
 import { useInventoryDragAndDrop } from "./components/inventory/useInventoryDragAndDrop.js";
-import GeneralSettingsModal, {
-  applyStoredGeneralPreferences,
-  clearRuntimeAppearancePreferences
-} from "./components/settings/GeneralSettingsModal.jsx";
+import GeneralSettingsModal from "./components/settings/GeneralSettingsModal.jsx";
 import PublicSupportRequest from "./components/public/PublicSupportRequest.jsx";
 import { hasPermission } from "./permissions.js";
 import {
@@ -116,7 +111,6 @@ import {
   moveIdInList,
   upsertSegmentList
 } from "./components/inventory/inventoryUtils.js";
-import { clearAuthSession, readAuthSession, writeAuthSession } from "./authSession.js";
 import ViewLoadingState from "./components/ui/ViewLoadingState.jsx";
 import SummaryCard from "./components/ui/SummaryCard.jsx";
 import Toast from "./components/ui/Toast.jsx";
@@ -126,13 +120,13 @@ import AlertList from "./components/dashboard/AlertList.jsx";
 import DeviceDetails from "./components/dashboard/DeviceDetails.jsx";
 import DeviceTable from "./components/dashboard/DeviceTable.jsx";
 import { isMaintenanceSegmentName, normalizeMaintenanceName } from "./utils/display.js";
+import { useAppSessionController } from "./hooks/useAppSessionController.js";
 
 const InventoryBoard = lazy(() => import("./components/inventory/InventoryBoard.jsx"));
 const ServiceOrdersBoard = lazy(() => import("./components/serviceOrders/ServiceOrdersBoard.jsx"));
 
 const aliasKey = "it_guardian_machine_aliases";
 const observationsKey = "it_guardian_machine_observations";
-const themeKey = "it_guardian_theme";
 const peripheralRemovalsKey = "it_guardian_removed_peripherals";
 const peripheralHistoryKey = "it_guardian_peripheral_history";
 const inventoryTabsKey = "it_guardian_inventory_tabs";
@@ -3149,7 +3143,6 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   }
 
   function logout() {
-    clearAuthSession();
     onLogout();
   }
 
@@ -3602,73 +3595,18 @@ export default function App() {
   const assetId = pathAssetId
     ? decodeURIComponent(pathAssetId)
     : new URLSearchParams(window.location.search).get("asset");
-  const initialAuthSession = useMemo(() => readAuthSession(), []);
-  const [token, setToken] = useState(initialAuthSession.token);
-  const [user, setUser] = useState(initialAuthSession.user);
-  const [authLoading, setAuthLoading] = useState(!isPublicSupportPath && !assetId);
-  const [toast, setToast] = useState({ message: "", tone: "ok" });
-  const [theme, setTheme] = useState(() => localStorage.getItem(themeKey) || "light");
-
-  useEffect(() => {
-    if (isPublicSupportPath || assetId) {
-      setAuthLoading(false);
-      return undefined;
-    }
-
-    let active = true;
-    fetchAuthSession()
-      .then((session) => {
-        if (!active) return;
-        writeAuthSession();
-        setToken(session.token);
-        setUser(session.user);
-      })
-      .catch(() => {
-        if (!active) return;
-        clearAuthSession();
-        setToken(null);
-        setUser(null);
-      })
-      .finally(() => {
-        if (active) setAuthLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [assetId, isPublicSupportPath]);
-
-  useEffect(() => {
-    if (isPublicSupportPath || !token || !user) {
-      document.documentElement.dataset.theme = "light";
-      clearRuntimeAppearancePreferences();
-      return;
-    }
-
-    document.documentElement.dataset.theme = theme;
-    localStorage.setItem(themeKey, theme);
-    applyStoredGeneralPreferences();
-  }, [isPublicSupportPath, theme, token, user]);
-
-  function notify(message, tone = "ok") {
-    setToast({ message, tone });
-  }
-
-  useEffect(() => {
-    function handleAuthExpired() {
-      clearAuthSession();
-      setToken(null);
-      setUser(null);
-      notify("Sessao expirada. Faca login novamente.", "danger");
-    }
-
-    window.addEventListener("it-guardian:auth-expired", handleAuthExpired);
-    return () => window.removeEventListener("it-guardian:auth-expired", handleAuthExpired);
-  }, []);
-
-  function toggleTheme() {
-    setTheme((current) => (current === "dark" ? "light" : "dark"));
-  }
+  const {
+    authLoading,
+    clearToast,
+    handleAuth,
+    logout,
+    notify,
+    theme,
+    toast,
+    token,
+    toggleTheme,
+    user
+  } = useAppSessionController({ isPublicSupportPath, assetId });
 
   if (isPublicSupportPath) {
     return <PublicSupportRequest />;
@@ -3687,12 +3625,9 @@ export default function App() {
       <>
         <AuthScreen
           notify={notify}
-          onAuth={(data) => {
-            setToken(data.token);
-            setUser(data.user);
-          }}
+          onAuth={handleAuth}
         />
-        <Toast message={toast.message} tone={toast.tone} onClose={() => setToast({ message: "", tone: "ok" })} />
+        <Toast message={toast.message} tone={toast.tone} onClose={clearToast} />
       </>
     );
   }
@@ -3705,13 +3640,9 @@ export default function App() {
         theme={theme}
         notify={notify}
         onToggleTheme={toggleTheme}
-        onLogout={() => {
-          logoutSession(token).catch(() => {});
-          setToken(null);
-          setUser(null);
-        }}
+        onLogout={logout}
       />
-      <Toast message={toast.message} tone={toast.tone} onClose={() => setToast({ message: "", tone: "ok" })} />
+      <Toast message={toast.message} tone={toast.tone} onClose={clearToast} />
     </>
   );
 }
