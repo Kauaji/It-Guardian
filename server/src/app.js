@@ -10,6 +10,7 @@ import userRoutes from "./routes/userRoutes.js";
 import permissionRoutes from "./routes/permissionRoutes.js";
 import sectorRoutes from "./routes/sectorRoutes.js";
 import segmentRoutes from "./routes/segmentRoutes.js";
+import inventoryVisualMapRoutes, { inventoryVisualMapObjectRoutes } from "./routes/inventoryVisualMapRoutes.js";
 import serviceOrderRoutes from "./routes/serviceOrderRoutes.js";
 import serviceOrderSuggestionRoutes from "./routes/serviceOrderSuggestionRoutes.js";
 import serviceOrderSettingsRoutes from "./routes/serviceOrderSettingsRoutes.js";
@@ -107,6 +108,8 @@ export function createApp({ initializeOnRequest = false } = {}) {
   app.use("/api/permissions", permissionRoutes);
   app.use("/api/sectors", sectorRoutes);
   app.use("/api/segments", segmentRoutes);
+  app.use("/api/inventory-visual-maps", inventoryVisualMapRoutes);
+  app.use("/api/inventory-visual-map-objects", inventoryVisualMapObjectRoutes);
   app.use("/api/service-orders", serviceOrderRoutes);
   app.use("/api/service-order-suggestions", serviceOrderSuggestionRoutes);
   app.use("/api/service-order-settings", serviceOrderSettingsRoutes);

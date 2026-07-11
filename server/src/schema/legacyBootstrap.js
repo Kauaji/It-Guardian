@@ -309,6 +309,53 @@ export async function initializeDatabase() {
   `);
 
   await query(`
+    CREATE TABLE IF NOT EXISTS inventory_visual_maps (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      environment_id TEXT,
+      group_id TEXT REFERENCES segment_groups(id) ON DELETE SET NULL,
+      segment_id TEXT REFERENCES inventory_segments(id) ON DELETE SET NULL,
+      floor_label TEXT,
+      width NUMERIC(10, 2) NOT NULL DEFAULT 30,
+      depth NUMERIC(10, 2) NOT NULL DEFAULT 20,
+      scale NUMERIC(10, 2) NOT NULL DEFAULT 1,
+      notes TEXT,
+      created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+      updated_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS inventory_visual_map_objects (
+      id TEXT PRIMARY KEY,
+      map_id TEXT NOT NULL REFERENCES inventory_visual_maps(id) ON DELETE CASCADE,
+      layer TEXT NOT NULL DEFAULT 'assets'
+        CHECK (layer IN ('structure', 'assets')),
+      preset_type TEXT NOT NULL,
+      label TEXT NOT NULL,
+      linked_asset_id TEXT,
+      position_x NUMERIC(10, 2) NOT NULL DEFAULT 0,
+      position_y NUMERIC(10, 2) NOT NULL DEFAULT 0,
+      position_z NUMERIC(10, 2) NOT NULL DEFAULT 0,
+      rotation_x NUMERIC(10, 2) NOT NULL DEFAULT 0,
+      rotation_y NUMERIC(10, 2) NOT NULL DEFAULT 0,
+      rotation_z NUMERIC(10, 2) NOT NULL DEFAULT 0,
+      width NUMERIC(10, 2) NOT NULL DEFAULT 1,
+      depth NUMERIC(10, 2) NOT NULL DEFAULT 1,
+      height NUMERIC(10, 2) NOT NULL DEFAULT 1,
+      color TEXT NOT NULL DEFAULT '#1f7a61',
+      notes TEXT,
+      metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+      updated_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await query(`
     CREATE TABLE IF NOT EXISTS service_orders (
       id TEXT PRIMARY KEY,
       number TEXT NOT NULL UNIQUE,
@@ -1476,6 +1523,26 @@ export async function initializeDatabase() {
   await query(`
     CREATE INDEX IF NOT EXISTS idx_asset_history_asset_id
     ON asset_history (asset_id, created_at DESC);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_inventory_visual_maps_updated
+    ON inventory_visual_maps (updated_at DESC);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_inventory_visual_maps_scope
+    ON inventory_visual_maps (environment_id, group_id, segment_id);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_inventory_visual_map_objects_map
+    ON inventory_visual_map_objects (map_id, layer, created_at);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_inventory_visual_map_objects_asset
+    ON inventory_visual_map_objects (linked_asset_id);
   `);
 
   await query(`

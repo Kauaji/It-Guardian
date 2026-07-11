@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
-import { ArrowDown, ArrowUp, ChevronDown, Database, Edit3, ListFilter, MoreHorizontal, Plus, Search, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, Database, Edit3, ListFilter, Map as MapIcon, MoreHorizontal, Plus, Search, Trash2 } from "lucide-react";
 import SegmentCard from "./SegmentCard.jsx";
 import MoveMachineModal from "./MoveMachineModal.jsx";
 import MachineDetailsModal from "./MachineDetailsModal.jsx";
 import BulkActionsBar from "./BulkActionsBar.jsx";
 import InventoryTabs from "./InventoryTabs.jsx";
 import ColorPickerSegment from "./ColorPickerSegment.jsx";
+import InventoryVisualMapView from "./InventoryVisualMapView.jsx";
 
 function SegmentGroupContainer({ groupId, color, className = "", children }) {
   const { isOver, setNodeRef } = useDroppable({
@@ -26,8 +27,11 @@ function SegmentGroupContainer({ groupId, color, className = "", children }) {
 }
 
 export default function InventoryBoard({
+  devices = [],
   segments,
   machinesBySegment,
+  token,
+  notify,
   search,
   setSearch,
   selectedGroupId = "all",
@@ -89,6 +93,7 @@ export default function InventoryBoard({
   const [activePopoverId, setActivePopoverId] = useState(null);
   const [searchFocused, setSearchFocused] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [inventoryViewMode, setInventoryViewMode] = useState("board");
   const [selectedSegmentIds, setSelectedSegmentIds] = useState(new Set());
   const maintenanceSegment = segments.find((segment) => /manuten/i.test(segment.name || ""));
   const backupSegment = segments.find((segment) => segment.isBackupSegment || /backup/i.test(segment.name || ""));
@@ -196,6 +201,10 @@ export default function InventoryBoard({
   }, [activeTabId, selectedGroupId, selectedSegmentId]);
 
   useEffect(() => {
+    setActivePopoverId(null);
+  }, [inventoryViewMode]);
+
+  useEffect(() => {
     if (!selectedMachine) return undefined;
 
     const previousOverflow = document.body.style.overflow;
@@ -238,6 +247,29 @@ export default function InventoryBoard({
         setActivePopoverId={setActivePopoverId}
       />
 
+      <div className="inventory-view-switch" role="tablist" aria-label="Visualizacao do inventario">
+        <button
+          type="button"
+          className={inventoryViewMode === "board" ? "active" : ""}
+          onClick={() => setInventoryViewMode("board")}
+          aria-selected={inventoryViewMode === "board"}
+        >
+          <Database size={16} />
+          Quadro
+        </button>
+        <button
+          type="button"
+          className={inventoryViewMode === "map3d" ? "active" : ""}
+          onClick={() => setInventoryViewMode("map3d")}
+          aria-selected={inventoryViewMode === "map3d"}
+        >
+          <MapIcon size={16} />
+          Mapa visual 3D
+        </button>
+      </div>
+
+      {inventoryViewMode === "board" ? (
+        <>
       <section className="inventory-tab-panel">
         <div className="inventory-board-actions">
           <div className={`search-box compact-search ${searchFocused || search ? "expanded" : ""}`}>
@@ -583,6 +615,19 @@ export default function InventoryBoard({
           </section>
         )}
       </section>
+        </>
+      ) : (
+        <InventoryVisualMapView
+          token={token}
+          notify={notify}
+          devices={devices}
+          segments={segments}
+          groups={groups}
+          tabs={tabs}
+          activeTab={activeTab}
+          canManage={canManage}
+        />
+      )}
 
       <MoveMachineModal
         machine={moveModal}

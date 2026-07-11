@@ -3074,7 +3074,9 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
         {activeView === "inventory" && canViewInventory && (
           <Suspense fallback={<ViewLoadingState />}>
             <InventoryBoard
-            devices={inventoryViewDevices}
+            devices={decoratedAllDevices}
+            token={token}
+            notify={notify}
             segments={inventoryViewSegments}
             machinesBySegment={machinesBySegment}
             search={inventorySearch}
