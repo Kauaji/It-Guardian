@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, CalendarClock, RefreshCw } from "lucide-react";
 import { formatAutomationDate, groupAutomationAgendaItems } from "./automationUtils.js";
 
@@ -7,13 +7,12 @@ function dayKey(value) {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "full" }).format(new Date(value));
 }
 
-export default function AutomationAgendaView({ plans = [], onLoad, onOpenPlan }) {
-  const [status, setStatus] = useState("all");
+export default function AutomationAgendaView({ plans = [], onLoad, onOpenPlan, status = "all", onStatus }) {
   const [data, setData] = useState({ items: [], summary: {} });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -23,9 +22,9 @@ export default function AutomationAgendaView({ plans = [], onLoad, onOpenPlan })
     } finally {
       setLoading(false);
     }
-  }
+  }, [onLoad, status]);
 
-  useEffect(() => { load(); }, [status]);
+  useEffect(() => { load(); }, [load]);
 
   const groups = useMemo(() => Object.entries(data.items.reduce((result, item) => {
     const key = dayKey(item.nextRunAt);
@@ -44,7 +43,7 @@ export default function AutomationAgendaView({ plans = [], onLoad, onOpenPlan })
         <span>Com erro <strong>{data.summary?.errors || 0}</strong></span>
       </div>
       <div className="automation-agenda-toolbar">
-        <select value={status} onChange={(event) => setStatus(event.target.value)} aria-label="Filtrar agenda">
+        <select value={status} onChange={(event) => onStatus?.(event.target.value)} aria-label="Filtrar agenda">
           <option value="all">Toda a agenda</option>
           <option value="active">Ativas</option>
           <option value="overdue">Atrasadas</option>

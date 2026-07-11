@@ -1,6 +1,33 @@
-function planHasError(plan = {}) {
-  const status = String(plan.latestRun?.status || "").toLowerCase();
-  return status === "error" || status === "failed" || Boolean(plan.latestRun?.errorDetected);
+export function automationPlanHasError(plan = {}) {
+  const status = String(plan.status || plan.latestRun?.status || "").toLowerCase();
+  const scheduleHasError = Array.isArray(plan.assetSchedules) && plan.assetSchedules.some((schedule) => {
+    const scheduleStatus = String(schedule.status || "").toLowerCase();
+    const latestRun = schedule.latestRun || schedule.latest_run || {};
+    const runStatus = String(latestRun.status || "").toLowerCase();
+
+    return scheduleStatus === "error" || runStatus === "error" || runStatus === "failed" || Boolean(
+      latestRun.errorDetected || latestRun.error_detected
+    );
+  });
+
+  return (
+    status === "error" ||
+    status === "failed" ||
+    Boolean(plan.latestRun?.errorDetected || plan.latestRun?.error_detected) ||
+    Number(plan.errorAssetCount || 0) > 0 ||
+    scheduleHasError
+  );
+}
+
+export function automationPlanWithoutSchedule(plan = {}) {
+  if (plan.active === false) return false;
+  if (Number(plan.withoutScheduleCount || 0) > 0) return true;
+
+  const schedules = Array.isArray(plan.assetSchedules) ? plan.assetSchedules : [];
+  const activeSchedules = schedules.filter((schedule) => schedule.active !== false);
+
+  if (!plan.nextRunAt && activeSchedules.length === 0) return true;
+  return activeSchedules.some((schedule) => !schedule.nextRunAt && !schedule.next_run_at);
 }
 
 export function getAutomationMachineStatusSummary(machine = {}) {
@@ -10,7 +37,7 @@ export function getAutomationMachineStatusSummary(machine = {}) {
     summary.totalCount += 1;
     if (plan.active === false) summary.inactiveCount += 1;
     else summary.activeCount += 1;
-    if (planHasError(plan)) summary.errorCount += 1;
+    if (automationPlanHasError(plan)) summary.errorCount += 1;
     if (plan.active !== false && !plan.nextRunAt) summary.withoutScheduleCount += 1;
     return summary;
   }, {

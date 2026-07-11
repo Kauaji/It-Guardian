@@ -39,3 +39,10 @@ alterar as regras centrais. O backend continua sendo a fonte da verdade.
 
 Esses itens não impedem o uso atual, mas devem ser tratados antes de uma
 operação multiempresa ou de uma liberação comercial.
+## Complemento desta rodada
+
+- pausa e reativacao de automacoes foram separadas da edicao comum do plano;
+- agenda de automacao passou a aplicar escopo antes de contagem e paginacao;
+- filtros de maquinas, planos e agenda foram separados no frontend;
+- indices idempotentes foram acrescentados para planos ativos/excluidos, agendas ativas por data e overrides por alvo;
+- o escopo continua limitado pelos campos realmente existentes no usuario e nos ativos; em modo local/demo sem metadados de escopo, a visibilidade de ativos permanece compativel com o uso atual, enquanto planos seguem restricao por proprietario ou escopo compativel.

@@ -8,7 +8,7 @@ import AutomationPlansView from "./AutomationPlansView.jsx";
 import AutomationAgendaView from "./AutomationAgendaView.jsx";
 import { buildAutomationManagementGroups } from "./automationUtils.js";
 
-const statusOptions = [
+const machineStatusOptions = [
   ["all", "Todos"],
   ["active", "Ativos"],
   ["inactive", "Inativos"],
@@ -28,6 +28,8 @@ export default function AutomationManagementView({
   permissions,
   onRetry,
   onSavePlan,
+  onPausePlan,
+  onReactivatePlan,
   onDeletePlan,
   onSaveOverride,
   onRemoveOverride,
@@ -37,8 +39,11 @@ export default function AutomationManagementView({
   onFetchPlanHistory
 }) {
   const [activeView, setActiveView] = useState("machines");
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("active");
+  const [machineSearch, setMachineSearch] = useState("");
+  const [machineStatusFilter, setMachineStatusFilter] = useState("active");
+  const [planSearch, setPlanSearch] = useState("");
+  const [planStatusFilter, setPlanStatusFilter] = useState("all");
+  const [agendaStatusFilter, setAgendaStatusFilter] = useState("all");
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [selectedMachine, setSelectedMachine] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -63,10 +68,10 @@ export default function AutomationManagementView({
       segments,
       groups: segmentGroups,
       tabs: inventoryTabs,
-      search,
-      status
+      search: machineSearch,
+      status: machineStatusFilter
     });
-  }, [devices, inventoryTabs, management, search, segmentGroups, segments, status]);
+  }, [devices, inventoryTabs, machineSearch, machineStatusFilter, management, segmentGroups, segments]);
 
   function openPlan(plan, machine) {
     const fullPlan = management?.plans?.find((item) => String(item.id) === String(plan.id || plan.automationPlanId));
@@ -101,13 +106,13 @@ export default function AutomationManagementView({
         <label className="compact-search">
           <Search size={18} />
           <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            value={machineSearch}
+            onChange={(event) => setMachineSearch(event.target.value)}
             placeholder="Buscar máquina, grupo, segmento, ambiente ou plano"
           />
         </label>
-        <select value={status} onChange={(event) => setStatus(event.target.value)} aria-label="Filtrar automatizações por status">
-          {statusOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+        <select value={machineStatusFilter} onChange={(event) => setMachineStatusFilter(event.target.value)} aria-label="Filtrar automatizações por status">
+          {machineStatusOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
         </select>
       </div>}
 
@@ -131,15 +136,21 @@ export default function AutomationManagementView({
       {!loading && !error && activeView === "plans" && (
         <AutomationPlansView
           plans={management?.plans || []}
-          search={search}
-          status={status}
-          onSearch={setSearch}
-          onStatus={setStatus}
+          search={planSearch}
+          status={planStatusFilter}
+          onSearch={setPlanSearch}
+          onStatus={setPlanStatusFilter}
           onOpenPlan={setSelectedPlan}
         />
       )}
       {!loading && !error && activeView === "agenda" && (
-        <AutomationAgendaView plans={management?.plans || []} onLoad={onFetchAgenda} onOpenPlan={setSelectedPlan} />
+        <AutomationAgendaView
+          plans={management?.plans || []}
+          onLoad={onFetchAgenda}
+          onOpenPlan={setSelectedPlan}
+          status={agendaStatusFilter}
+          onStatus={setAgendaStatusFilter}
+        />
       )}
 
       <AutomationPlanDetails
@@ -152,6 +163,8 @@ export default function AutomationManagementView({
         saving={saving}
         onClose={() => setSelectedPlan(null)}
         onSave={(planId, payload) => run(() => onSavePlan(planId, payload))}
+        onPausePlan={onPausePlan ? (planId) => run(() => onPausePlan(planId)) : undefined}
+        onReactivatePlan={onReactivatePlan ? (planId) => run(() => onReactivatePlan(planId)) : undefined}
         onDelete={(plan) => run(async () => {
           await onDeletePlan(plan.id);
           setSelectedPlan(null);

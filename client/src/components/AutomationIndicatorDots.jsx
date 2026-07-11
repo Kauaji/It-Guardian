@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 
 const recurrenceLabels = {
-  daily: "Diaria",
+  daily: "Diária",
   weekly: "Semanal",
   biweekly: "Quinzenal",
   monthly: "Mensal",
@@ -9,9 +9,9 @@ const recurrenceLabels = {
 };
 
 function formatDateTime(value) {
-  if (!value) return "Nao agendada";
+  if (!value) return "Não agendada";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Nao agendada";
+  if (Number.isNaN(date.getTime())) return "Não agendada";
 
   return new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
@@ -38,7 +38,7 @@ export function getVisibleAutomationIndicators(indicators = [], maxVisible = 4) 
 
 export function formatAutomationIndicatorLabel(indicator = {}) {
   const name = indicator.planName || indicator.name || "Plano preventivo";
-  const recurrence = recurrenceLabels[indicator.recurrenceType] || indicator.recurrenceType || "Recorrencia";
+  const recurrence = recurrenceLabels[indicator.recurrenceType] || indicator.recurrenceType || "Recorrência";
   const interval = indicator.recurrenceIntervalDays || indicator.recurrenceInterval;
   const recurrenceText = interval ? `${recurrence} - ${interval} dia(s)` : recurrence;
   const preferredTime = indicator.preferredTime || "--:--";
@@ -46,7 +46,7 @@ export function formatAutomationIndicatorLabel(indicator = {}) {
   const scriptCount = Number(indicator.scriptCount || indicator.defaultScriptIds?.length || 0);
   const status = indicator.active === false ? "Inativo" : "Ativo";
 
-  return `${name}. ${recurrenceText}. Horario: ${preferredTime}. Proxima preparacao: ${nextRun}. Scripts: ${scriptCount}. Status: ${status}.`;
+  return `${name}. ${recurrenceText}. Horário: ${preferredTime}. Próxima preparação: ${nextRun}. Scripts: ${scriptCount}. Status: ${status}.`;
 }
 
 export default function AutomationIndicatorDots({

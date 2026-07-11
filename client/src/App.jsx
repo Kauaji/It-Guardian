@@ -52,6 +52,7 @@ import {
   fetchPreventiveAutomationAsset,
   removeAssetFromPreventiveAutomationPlan,
   removePreventiveAutomationAssetOverride,
+  reactivatePreventiveAutomationPlan,
   rejectServiceOrderSuggestion,
   renameSegment,
   registerMaintenanceScriptSimulation,
@@ -1076,8 +1077,24 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
       setPreventiveAutomationPlans((current) =>
         current.map((plan) => (plan.id === response.preventiveAutomationPlan.id ? response.preventiveAutomationPlan : plan))
       );
-      notify("Automação preventiva desativada.", "ok");
+      notify("Automação preventiva pausada.", "ok");
       await loadData(true);
+      return response.preventiveAutomationPlan;
+    } catch (error) {
+      notify(error.message, "danger");
+      throw error;
+    }
+  }
+
+  async function handleReactivatePreventiveAutomationPlan(planId) {
+    try {
+      const response = await reactivatePreventiveAutomationPlan(token, planId);
+      setPreventiveAutomationPlans((current) =>
+        current.map((plan) => (plan.id === response.preventiveAutomationPlan.id ? response.preventiveAutomationPlan : plan))
+      );
+      notify("Automação preventiva reativada.", "ok");
+      await loadData(true);
+      return response.preventiveAutomationPlan;
     } catch (error) {
       notify(error.message, "danger");
       throw error;
@@ -3032,6 +3049,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
             onCreatePreventivePlanServiceOrder={handleCreatePreventivePlanServiceOrder}
             onSavePreventiveAutomationPlan={handleSavePreventiveAutomationPlan}
             onDisablePreventiveAutomationPlan={handleDisablePreventiveAutomationPlan}
+            onReactivatePreventiveAutomationPlan={handleReactivatePreventiveAutomationPlan}
             onDeletePreventiveAutomationPlan={handleDeletePreventiveAutomationPlan}
             onSavePreventiveAutomationAssetOverride={handleSavePreventiveAutomationAssetOverride}
             onRemovePreventiveAutomationAssetOverride={handleRemovePreventiveAutomationAssetOverride}

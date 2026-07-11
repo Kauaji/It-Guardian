@@ -1011,8 +1011,19 @@ export async function disablePreventiveAutomationPlan(id, user = null) {
       [id]
     );
 
+    for (const schedule of current.assetSchedules || []) {
+      await addAssetHistory({
+        assetId: schedule.assetId,
+        eventType: "preventive_automation_paused",
+        message: `Automacao preventiva pausada: ${current.name}. Agenda desta maquina pausada.`,
+        userId: user?.id || null,
+        userName: user?.name || user?.email || "Sistema",
+        db
+      });
+    }
+
     await addLog({
-      type: "preventive_automation_disabled",
+      type: "preventive_automation_paused",
       message: `Automação preventiva desativada: ${current.name}.`,
       userId: user?.id || null,
       meta: { preventiveAutomationPlanId: id },
@@ -1020,7 +1031,72 @@ export async function disablePreventiveAutomationPlan(id, user = null) {
     });
   });
 
-  return findPreventiveAutomationPlanById(id);
+  return findPreventiveAutomationPlanById(id, user);
+}
+
+export async function reactivatePreventiveAutomationPlan(id, user = null) {
+  const current = await findPreventiveAutomationPlanById(id, user);
+  if (!current || current.deletedAt) return null;
+
+  await withTransaction(async (db) => {
+    await db(
+      `
+        UPDATE preventive_automation_plans
+        SET active = TRUE,
+            updated_at = NOW()
+        WHERE id = $1
+          AND deleted_at IS NULL
+      `,
+      [id]
+    );
+
+    for (const schedule of current.assetSchedules || []) {
+      const nextRunAt = computeNextScheduledFor(
+        {
+          recurrenceType: schedule.recurrenceType || current.recurrenceType,
+          recurrenceIntervalDays: schedule.recurrenceIntervalDays || current.recurrenceIntervalDays,
+          preferredTime: schedule.preferredTime || current.preferredTime,
+          timezone: schedule.timezone || current.timezone
+        },
+        new Date()
+      );
+
+      await db(
+        `
+          UPDATE preventive_automation_asset_schedules
+          SET active = TRUE,
+              next_run_at = $3,
+              updated_at = NOW()
+          WHERE plan_id = $1
+            AND asset_id = $2
+        `,
+        [id, schedule.assetId, nextRunAt]
+      );
+
+      await addAssetHistory({
+        assetId: schedule.assetId,
+        eventType: "preventive_automation_reactivated",
+        message: `Automacao preventiva reativada: ${current.name}. Proxima preparacao recalculada.`,
+        userId: user?.id || null,
+        userName: user?.name || user?.email || "Sistema",
+        db
+      });
+    }
+
+    const nextRunAt = await updatePlanNextRunFromAssetSchedules(id, db);
+    await addLog({
+      type: "preventive_automation_reactivated",
+      message: `Automacao preventiva reativada: ${current.name}.`,
+      userId: user?.id || null,
+      meta: {
+        preventiveAutomationPlanId: id,
+        nextRunAt
+      },
+      db
+    });
+  });
+
+  return findPreventiveAutomationPlanById(id, user);
 }
 
 export async function deletePreventiveAutomationPlan(id, user = null) {
@@ -1331,6 +1407,25 @@ function normalizeAgendaFilters(filters = {}) {
   };
 }
 
+function emptyAutomationAgenda(normalized) {
+  return {
+    items: [],
+    summary: {
+      today: 0,
+      nextSevenDays: 0,
+      overdue: 0,
+      withoutSchedule: 0,
+      errors: 0
+    },
+    pagination: {
+      limit: normalized.limit,
+      offset: normalized.offset,
+      total: 0,
+      hasMore: false
+    }
+  };
+}
+
 function agendaItemStatus({ planActive, scheduleActive, nextRunAt, latestRun }) {
   if (!planActive || !scheduleActive) return "paused";
   if (latestRun?.errorDetected || String(latestRun?.status || "").toLowerCase() === "error") return "error";
@@ -1347,6 +1442,16 @@ export async function listPreventiveAutomationAgenda(filters = {}, user = null) 
     values.push(value);
     conditions.push(sql.replace("?", `$${values.length}`));
   };
+
+  const allowedPlans = await listPreventiveAutomationPlans(user, { limit: 500 });
+  const allowedPlanIds = allowedPlans.map((plan) => String(plan.id));
+  if (!allowedPlanIds.length) return emptyAutomationAgenda(normalized);
+  if (normalized.planId && !allowedPlanIds.includes(String(normalized.planId))) {
+    return emptyAutomationAgenda(normalized);
+  }
+  const planPlaceholders = allowedPlanIds.map((_, index) => `$${values.length + index + 1}`).join(", ");
+  conditions.push(`plans.id IN (${planPlaceholders})`);
+  values.push(...allowedPlanIds);
 
   if (normalized.startDate) pushCondition("schedules.next_run_at >= ?", normalized.startDate);
   if (normalized.endDate) pushCondition("schedules.next_run_at <= ?", normalized.endDate);
@@ -1387,10 +1492,7 @@ export async function listPreventiveAutomationAgenda(filters = {}, user = null) 
 
   const devices = await listDevices({});
   const devicesById = new Map(devices.map((device) => [String(device.id), device]));
-  const allowedPlans = await listPreventiveAutomationPlans(user, { limit: 500 });
-  const allowedPlanIds = new Set(allowedPlans.map((plan) => String(plan.id)));
-  const agendaPlanIds = [...new Set(result.rows.map((row) => String(row.plan_id)))]
-    .filter((planId) => allowedPlanIds.has(planId));
+  const agendaPlanIds = [...new Set(result.rows.map((row) => String(row.plan_id)))];
   const latestRunsByAsset = new Map();
   if (agendaPlanIds.length) {
     const latestRunResult = await query(
@@ -1413,7 +1515,7 @@ export async function listPreventiveAutomationAgenda(filters = {}, user = null) 
       latestRunsByAsset.set(latestRunKey(row.plan_id, row.asset_id), fromRunRow(row));
     }
   }
-  let items = result.rows.filter((row) => allowedPlanIds.has(String(row.plan_id))).map((row) => {
+  let items = result.rows.map((row) => {
     const device = devicesById.get(String(row.asset_id));
     const latestRun = latestRunsByAsset.get(latestRunKey(row.plan_id, row.asset_id)) || null;
     return {
@@ -1467,8 +1569,10 @@ export async function listPreventiveAutomationAgenda(filters = {}, user = null) 
     pagination: {
       limit: normalized.limit,
       offset: normalized.offset,
-      total: normalized.status === "error" ? items.length : Number(countResult.rows[0]?.total_count || 0),
-      hasMore: normalized.status === "error"
+      total: (normalized.status === "error" || Boolean(normalized.segmentId))
+        ? items.length
+        : Number(countResult.rows[0]?.total_count || 0),
+      hasMore: (normalized.status === "error" || Boolean(normalized.segmentId))
         ? false
         : normalized.offset + result.rows.length < Number(countResult.rows[0]?.total_count || 0)
     }

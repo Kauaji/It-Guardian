@@ -469,6 +469,13 @@ export function disablePreventiveAutomationPlan(token, id) {
   });
 }
 
+export function reactivatePreventiveAutomationPlan(token, id) {
+  return apiFetch(`/preventive-automation-plans/${id}/reactivate`, {
+    token,
+    method: "POST"
+  });
+}
+
 export function deletePreventiveAutomationPlan(token, id) {
   return apiFetch(`/preventive-automation-plans/${id}`, {
     token,

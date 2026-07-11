@@ -294,8 +294,11 @@ test("migração cria exclusão lógica e índices de gerenciamento", () => {
   assert.match(database, /deleted_at TIMESTAMPTZ/);
   assert.match(database, /idx_preventive_automation_plans_deleted_at/);
   assert.match(database, /idx_preventive_automation_plans_active/);
+  assert.match(database, /idx_preventive_automation_plans_active_deleted/);
   assert.match(database, /idx_preventive_automation_asset_schedules_asset/);
   assert.match(database, /idx_preventive_automation_asset_schedules_plan/);
+  assert.match(database, /idx_preventive_automation_asset_schedules_active_next/);
+  assert.match(database, /idx_preventive_automation_overrides_plan_target/);
 });
 
 test("indicadores ignoram planos excluídos", () => {
@@ -341,12 +344,17 @@ test("edição protege alterações não salvas antes de fechar ou trocar de pla
 test("pausa e reativação usam a mesma atualização e sincronizam agendas", () => {
   const component = source("../../../client/src/components/automation/AutomationPlanDetails.jsx");
   const repository = source("./preventiveAutomationRepository.js");
+  const routes = source("../routes/preventiveAutomationRoutes.js");
+  const controller = source("../controllers/preventiveAutomationController.js");
   assert.match(component, /Pausar automação/);
   assert.match(component, /Reativar automação/);
-  assert.match(repository, /active = EXCLUDED\.active/);
-  assert.match(repository, /existing\?\.active === false && plan\.active !== false/);
+  assert.match(component, /onPausePlan/);
+  assert.match(component, /onReactivatePlan/);
+  assert.match(repository, /export async function reactivatePreventiveAutomationPlan/);
   assert.match(repository, /preventive_automation_paused/);
   assert.match(repository, /preventive_automation_reactivated/);
+  assert.match(routes, /"\/:id\/reactivate", requirePermission\("preventive_automation\.disable"\), reactivate/);
+  assert.match(controller, /reactivatePreventiveAutomationPlan/);
 });
 
 test("plano excluído logicamente não pode ser reativado", () => {
@@ -416,6 +424,9 @@ test("agenda usa rota protegida e consulta parametrizada", () => {
   assert.match(repository, /export async function listPreventiveAutomationAgenda/);
   assert.match(repository, /SELECT COUNT\(\*\)::int AS total_count/);
   assert.match(repository, /LEFT JOIN preventive_automation_runs newer/);
+  assert.match(repository, /allowedPlans = await listPreventiveAutomationPlans\(user/);
+  assert.match(repository, /plans\.id IN/);
+  assert.match(repository, /emptyAutomationAgenda/);
 });
 
 test("detalhe do plano centraliza as cinco areas operacionais", () => {

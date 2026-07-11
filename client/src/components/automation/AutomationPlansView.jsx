@@ -1,9 +1,19 @@
 import { CalendarClock, Pause, Play, Search, Settings2 } from "lucide-react";
 import { formatAutomationDate, formatRecurrence } from "./automationUtils.js";
+import { automationPlanHasError, automationPlanWithoutSchedule } from "./automationStatusUtils.js";
+
+function planMatchesStatus(plan, status) {
+  if (status === "all") return true;
+  if (status === "active") return plan.active !== false;
+  if (status === "paused") return plan.active === false;
+  if (status === "error") return automationPlanHasError(plan);
+  if (status === "without_schedule") return automationPlanWithoutSchedule(plan);
+  return true;
+}
 
 export default function AutomationPlansView({ plans = [], search, status, onSearch, onStatus, onOpenPlan }) {
   const visible = plans
-    .filter((plan) => status === "all" || (status === "active" ? plan.active !== false : plan.active === false))
+    .filter((plan) => planMatchesStatus(plan, status))
     .filter((plan) => !search || `${plan.name} ${plan.description || ""}`.toLowerCase().includes(search.toLowerCase()))
     .sort((left, right) => left.name.localeCompare(right.name, "pt-BR"));
 
@@ -17,7 +27,9 @@ export default function AutomationPlansView({ plans = [], search, status, onSear
         <select value={status} onChange={(event) => onStatus(event.target.value)} aria-label="Filtrar planos">
           <option value="all">Todos os planos</option>
           <option value="active">Ativos</option>
-          <option value="inactive">Inativos</option>
+          <option value="paused">Pausados</option>
+          <option value="error">Com erro</option>
+          <option value="without_schedule">Sem próxima agenda</option>
         </select>
         <strong>{visible.length} plano(s)</strong>
       </div>

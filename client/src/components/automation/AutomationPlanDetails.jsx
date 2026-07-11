@@ -22,6 +22,8 @@ export default function AutomationPlanDetails({
   saving,
   onClose,
   onSave,
+  onPausePlan,
+  onReactivatePlan,
   onDelete,
   onLoadHistory
 }) {
@@ -116,9 +118,11 @@ export default function AutomationPlanDetails({
 
   async function changeStatus() {
     if (busy) return;
+    const action = plan.active === false ? onReactivatePlan : onPausePlan;
+    if (!action) return;
     setSubmitting(true);
     try {
-      const savedPlan = await onSave(plan.id, { active: plan.active === false });
+      const savedPlan = await action(plan.id);
       const nextBaseline = buildAutomationPlanDraft(savedPlan || { ...plan, active: plan.active === false });
       setDraft(nextBaseline);
       setBaseline(nextBaseline);
@@ -363,7 +367,7 @@ export default function AutomationPlanDetails({
             </section>
             <footer>
               {canEdit && <button type="button" className="secondary-action compact-action" onClick={() => setEditing(true)}><Pencil size={15} /> Editar</button>}
-              {(canDisable || canEdit) && (
+              {canDisable && (onPausePlan || onReactivatePlan) && (
                 <button type="button" className="secondary-action compact-action" onClick={() => setConfirmingStatus(true)}>
                   {plan.active === false ? <Play size={15} /> : <Pause size={15} />}
                   {plan.active === false ? "Reativar automação" : "Pausar automação"}

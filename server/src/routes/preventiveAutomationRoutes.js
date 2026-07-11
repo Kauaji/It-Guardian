@@ -11,6 +11,7 @@ import {
   prepare,
   processDue,
   processDueCron,
+  reactivate,
   remove,
   removeAsset,
   removeAssetOverride,
@@ -50,6 +51,7 @@ router.delete(
 );
 router.patch("/:id", requirePermission("preventive_automation.update"), update);
 router.post("/:id/disable", requirePermission("preventive_automation.disable"), disable);
+router.post("/:id/reactivate", requirePermission("preventive_automation.disable"), reactivate);
 router.delete("/:id", requirePermission("preventive_automation.delete"), remove);
 router.post("/:id/prepare", requirePermission("preventive_automation.run_prepare"), prepare);
 

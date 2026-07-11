@@ -112,6 +112,7 @@ export default function AlertCenterV2({
   onCreatePreventivePlanServiceOrder,
   onSavePreventiveAutomationPlan,
   onDisablePreventiveAutomationPlan,
+  onReactivatePreventiveAutomationPlan,
   onDeletePreventiveAutomationPlan,
   onSavePreventiveAutomationAssetOverride,
   onRemovePreventiveAutomationAssetOverride,
@@ -1805,6 +1806,8 @@ export default function AlertCenterV2({
                 }}
                 onRetry={onRefreshPreventiveAutomationManagement}
                 onSavePlan={onSavePreventiveAutomationPlan}
+                onPausePlan={onDisablePreventiveAutomationPlan}
+                onReactivatePlan={onReactivatePreventiveAutomationPlan}
                 onDeletePlan={onDeletePreventiveAutomationPlan}
                 onSaveOverride={onSavePreventiveAutomationAssetOverride}
                 onRemoveOverride={onRemovePreventiveAutomationAssetOverride}

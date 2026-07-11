@@ -202,3 +202,14 @@ administrativa ainda não persiste essas duas listas em todos os fluxos de
 usuários; portanto, o mapeamento completo de cliente/ambiente para os ativos
 continua como evolução pendente. Nenhuma associação artificial foi criada para
 simular esse escopo.
+
+## Complemento desta rodada
+
+Pausar e reativar usam rotas dedicadas e a permissao
+`preventive_automation.disable`. A edicao do plano continua usando
+`preventive_automation.update`; portanto, alterar recorrencia, cor ou scripts
+nao se mistura com a mudanca de estado ativo/inativo.
+
+A tela de gerenciamento mantem filtros independentes para maquinas, planos e
+agenda. A agenda aplica o escopo do usuario antes de contar e paginar os dados,
+evitando que totais ou paginas incluam planos fora do alcance permitido.

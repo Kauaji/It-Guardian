@@ -1123,6 +1123,11 @@ export async function initializeDatabase() {
   `);
 
   await query(`
+    CREATE INDEX IF NOT EXISTS idx_preventive_automation_asset_schedules_active_next
+    ON preventive_automation_asset_schedules (active, next_run_at);
+  `);
+
+  await query(`
     CREATE INDEX IF NOT EXISTS idx_preventive_automation_asset_schedules_next_run
     ON preventive_automation_asset_schedules (next_run_at);
   `);
@@ -1393,6 +1398,11 @@ export async function initializeDatabase() {
   `);
 
   await query(`
+    CREATE INDEX IF NOT EXISTS idx_preventive_automation_plans_active_deleted
+    ON preventive_automation_plans (active, deleted_at);
+  `);
+
+  await query(`
     CREATE INDEX IF NOT EXISTS idx_preventive_automation_plans_deleted_at
     ON preventive_automation_plans (deleted_at);
   `);
@@ -1416,6 +1426,11 @@ export async function initializeDatabase() {
   await query(`
     CREATE INDEX IF NOT EXISTS idx_preventive_automation_overrides_plan
     ON preventive_automation_overrides (plan_id);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_preventive_automation_overrides_plan_target
+    ON preventive_automation_overrides (plan_id, target_key);
   `);
 
   await query(`

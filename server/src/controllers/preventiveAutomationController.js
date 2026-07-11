@@ -12,6 +12,7 @@ import {
   preparePreventiveAutomationPlan,
   processDuePreventiveAutomationPlans,
   processScheduledMaintenanceTasks,
+  reactivatePreventiveAutomationPlan,
   removeAssetFromPreventiveAutomationPlan,
   removePreventiveAutomationAssetOverride,
   upsertPreventiveAutomationAssetOverride,
@@ -120,6 +121,21 @@ export async function update(req, res, next) {
 export async function disable(req, res, next) {
   try {
     const preventiveAutomationPlan = await disablePreventiveAutomationPlan(req.params.id, req.user);
+
+    if (!preventiveAutomationPlan) {
+      res.status(404).json({ message: "Plano de automação preventiva não encontrado." });
+      return;
+    }
+
+    res.json({ preventiveAutomationPlan });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function reactivate(req, res, next) {
+  try {
+    const preventiveAutomationPlan = await reactivatePreventiveAutomationPlan(req.params.id, req.user);
 
     if (!preventiveAutomationPlan) {
       res.status(404).json({ message: "Plano de automação preventiva não encontrado." });

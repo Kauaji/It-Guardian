@@ -53,3 +53,6 @@ runs e auditoria.
 O sistema cadastra, agenda, prepara e audita. Ele não executa BAT, CMD,
 PowerShell ou comandos do sistema operacional. Uma execução futura depende de
 agente seguro externo.
+## Complemento desta rodada
+
+A automacao preventiva agora diferencia explicitamente pausa, reativacao e edicao. Pausar desativa agendas futuras sem excluir historico; reativar recalcula a proxima preparacao das agendas validas e registra auditoria e historico por maquina. A listagem da agenda deve respeitar o escopo do usuario antes da paginacao.
