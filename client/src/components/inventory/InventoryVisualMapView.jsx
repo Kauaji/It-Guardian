@@ -2,14 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Boxes,
   Building2,
-  Eye,
-  EyeOff,
+  Cable,
   Grid2X2,
   Layers3,
   Map,
   MousePointer2,
   Move3D,
   Pencil,
+  PlugZap,
   Plus,
   RefreshCw,
   RotateCw,
@@ -18,15 +18,28 @@ import {
 } from "lucide-react";
 import {
   createInventoryVisualMap,
+  createInventoryVisualMapConnection,
   createInventoryVisualMapObject,
   deleteInventoryVisualMap,
+  deleteInventoryVisualMapConnection,
   deleteInventoryVisualMapObject,
   fetchInventoryVisualMap,
   fetchInventoryVisualMaps,
   updateInventoryVisualMap,
+  updateInventoryVisualMapConnection,
   updateInventoryVisualMapObject
 } from "../../api.js";
+import InventoryVisualMapConnectionEditor from "./InventoryVisualMapConnectionEditor.jsx";
+import InventoryVisualMapConnectionPanel from "./InventoryVisualMapConnectionPanel.jsx";
+import InventoryVisualMapLayerPresetBar from "./InventoryVisualMapLayerPresetBar.jsx";
 import InventoryVisualMapScene from "./InventoryVisualMapScene.jsx";
+import {
+  ELECTRICAL_PRESETS,
+  INFRASTRUCTURE_PRESETS,
+  VISUAL_MAP_LAYER_OPTIONS,
+  buildDefaultConnectionDraft,
+  getQuickLayerState
+} from "./inventoryVisualMapConnectionUtils.js";
 
 const STRUCTURE_PRESETS = [
   { type: "wall", label: "Parede" },
@@ -48,6 +61,27 @@ const ASSET_PRESETS = [
   { type: "ups", label: "Nobreak" },
   { type: "network_point", label: "Ponto de rede" },
   { type: "power_point", label: "Ponto eletrico" }
+];
+
+const LAYER_LABELS = VISUAL_MAP_LAYER_OPTIONS.reduce((labels, option) => {
+  labels[option.key] = option.label;
+  return labels;
+}, {});
+
+const ALL_OBJECT_PRESETS = [
+  ...STRUCTURE_PRESETS,
+  ...ASSET_PRESETS,
+  ...INFRASTRUCTURE_PRESETS,
+  ...ELECTRICAL_PRESETS
+];
+
+const METADATA_FIELDS = [
+  { key: "circuit", label: "Circuito" },
+  { key: "voltage", label: "Tensao" },
+  { key: "panel", label: "Quadro" },
+  { key: "breaker", label: "Disjuntor" },
+  { key: "criticality", label: "Criticidade" },
+  { key: "note", label: "Nota" }
 ];
 
 const ASSET_TYPE_TO_PRESET = {
@@ -116,8 +150,32 @@ function objectToDraft(object) {
     depth: object.depth ?? 1,
     height: object.height ?? 1,
     color: object.color || "#2563eb",
-    notes: object.notes || ""
+    notes: object.notes || "",
+    metadata: object.metadata || {}
   };
+}
+
+function connectionToDraft(connection) {
+  if (!connection) return null;
+  return {
+    layer: connection.layer || "infrastructure",
+    connectionType: connection.connectionType || "network_cable",
+    label: connection.label || "",
+    sourceObjectId: connection.sourceObjectId || "",
+    targetObjectId: connection.targetObjectId || "",
+    sourceAssetId: connection.sourceAssetId || "",
+    targetAssetId: connection.targetAssetId || "",
+    points: Array.isArray(connection.points) ? connection.points : buildDefaultConnectionDraft(connection.layer).points,
+    color: connection.color || "#0ea5e9",
+    thickness: connection.thickness || 2,
+    dashed: !!connection.dashed,
+    notes: connection.notes || "",
+    metadata: connection.metadata || {}
+  };
+}
+
+function layerLabel(layer) {
+  return LAYER_LABELS[layer] || "Mapa";
 }
 
 function getDeviceName(device) {
@@ -155,19 +213,26 @@ export default function InventoryVisualMapView({
   const [activeMap, setActiveMap] = useState(null);
   const [mapDraft, setMapDraft] = useState(EMPTY_MAP_DRAFT);
   const [objects, setObjects] = useState([]);
+  const [connections, setConnections] = useState([]);
   const [selectedObjectId, setSelectedObjectId] = useState(null);
+  const [selectedConnectionId, setSelectedConnectionId] = useState(null);
   const [objectDraft, setObjectDraft] = useState(null);
+  const [connectionDraft, setConnectionDraft] = useState(null);
   const [assetToAdd, setAssetToAdd] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [mode, setMode] = useState("view");
   const [showGrid, setShowGrid] = useState(true);
-  const [layers, setLayers] = useState({ structure: true, assets: true });
+  const [layers, setLayers] = useState(getQuickLayerState("all"));
 
   const selectedObject = useMemo(
     () => objects.find((object) => object.id === selectedObjectId) || null,
     [objects, selectedObjectId]
+  );
+  const selectedConnection = useMemo(
+    () => connections.find((connection) => connection.id === selectedConnectionId) || null,
+    [connections, selectedConnectionId]
   );
   const linkedDevice = useMemo(
     () => devices.find((device) => device.id === selectedObject?.linkedAssetId) || null,
@@ -203,6 +268,9 @@ export default function InventoryVisualMapView({
       setActiveMap(null);
       setMapDraft(EMPTY_MAP_DRAFT);
       setObjects([]);
+      setConnections([]);
+      setSelectedObjectId(null);
+      setSelectedConnectionId(null);
       return;
     }
 
@@ -213,9 +281,14 @@ export default function InventoryVisualMapView({
       setActiveMap(response.map);
       setMapDraft(mapToDraft(response.map));
       setObjects(response.objects || []);
+      setConnections(response.connections || []);
       setSelectedObjectId((current) => {
         if (current && (response.objects || []).some((object) => object.id === current)) return current;
         return (response.objects || [])[0]?.id || null;
+      });
+      setSelectedConnectionId((current) => {
+        if (current && (response.connections || []).some((connection) => connection.id === current)) return current;
+        return null;
       });
     } catch (loadError) {
       setError(loadError.message || "Nao foi possivel abrir o mapa visual.");
@@ -235,6 +308,19 @@ export default function InventoryVisualMapView({
   useEffect(() => {
     setObjectDraft(objectToDraft(selectedObject));
   }, [selectedObject]);
+
+  useEffect(() => {
+    setConnectionDraft(connectionToDraft(selectedConnection));
+  }, [selectedConnection]);
+
+  useEffect(() => {
+    if (selectedObject && layers?.[selectedObject.layer] === false) {
+      setSelectedObjectId(null);
+    }
+    if (selectedConnection && layers?.[selectedConnection.layer] === false) {
+      setSelectedConnectionId(null);
+    }
+  }, [layers, selectedConnection, selectedObject]);
 
   async function handleCreateMap() {
     if (!canManage) return;
@@ -302,7 +388,7 @@ export default function InventoryVisualMapView({
 
   async function handleAddObject(presetType, layer) {
     if (!canManage || !activeMapId) return;
-    const preset = [...STRUCTURE_PRESETS, ...ASSET_PRESETS].find((item) => item.type === presetType);
+    const preset = ALL_OBJECT_PRESETS.find((item) => item.type === presetType);
     setSaving(true);
     setError("");
     try {
@@ -315,6 +401,7 @@ export default function InventoryVisualMapView({
       });
       setObjects((current) => [...current, response.object]);
       setSelectedObjectId(response.object.id);
+      setSelectedConnectionId(null);
       notify?.("Objeto adicionado ao mapa.", "success");
     } catch (createError) {
       setError(createError.message || "Nao foi possivel adicionar o objeto.");
@@ -341,10 +428,32 @@ export default function InventoryVisualMapView({
       });
       setObjects((current) => [...current, response.object]);
       setSelectedObjectId(response.object.id);
+      setSelectedConnectionId(null);
       setAssetToAdd("");
       notify?.("Ativo vinculado ao mapa.", "success");
     } catch (createError) {
       setError(createError.message || "Nao foi possivel vincular o ativo ao mapa.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleAddConnection(layer = "infrastructure") {
+    if (!canManage || !activeMapId) return;
+    const draft = buildDefaultConnectionDraft(layer);
+    setSaving(true);
+    setError("");
+    try {
+      const response = await createInventoryVisualMapConnection(token, activeMapId, {
+        ...draft,
+        label: layer === "electrical" ? "Linha eletrica" : "Cabo de rede"
+      });
+      setConnections((current) => [...current, response.connection]);
+      setSelectedConnectionId(response.connection.id);
+      setSelectedObjectId(null);
+      notify?.("Conexao adicionada ao mapa.", "success");
+    } catch (createError) {
+      setError(createError.message || "Nao foi possivel adicionar a conexao.");
     } finally {
       setSaving(false);
     }
@@ -395,12 +504,143 @@ export default function InventoryVisualMapView({
     }
   }
 
+  async function handleSaveConnection() {
+    if (!canManage || !selectedConnection || !connectionDraft) return;
+    setSaving(true);
+    setError("");
+    try {
+      const payload = {
+        ...connectionDraft,
+        sourceObjectId: connectionDraft.sourceObjectId || null,
+        targetObjectId: connectionDraft.targetObjectId || null,
+        sourceAssetId: connectionDraft.sourceAssetId || null,
+        targetAssetId: connectionDraft.targetAssetId || null,
+        points: (connectionDraft.points || []).map((point) => ({
+          x: numberInputValue(point.x),
+          y: numberInputValue(point.y, 0.08),
+          z: numberInputValue(point.z)
+        })),
+        thickness: numberInputValue(connectionDraft.thickness, 2)
+      };
+      const response = await updateInventoryVisualMapConnection(token, selectedConnection.id, payload);
+      setConnections((current) => current.map((connection) => (
+        connection.id === response.connection.id ? response.connection : connection
+      )));
+      setSelectedConnectionId(response.connection.id);
+      notify?.("Conexao salva.", "success");
+    } catch (saveError) {
+      setError(saveError.message || "Nao foi possivel salvar a conexao.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDeleteConnection() {
+    if (!canManage || !selectedConnection) return;
+    setSaving(true);
+    setError("");
+    try {
+      await deleteInventoryVisualMapConnection(token, selectedConnection.id);
+      setConnections((current) => current.filter((connection) => connection.id !== selectedConnection.id));
+      setSelectedConnectionId(null);
+      notify?.("Conexao removida do mapa.", "success");
+    } catch (deleteError) {
+      setError(deleteError.message || "Nao foi possivel remover a conexao.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   function updateMapDraft(key, value) {
     setMapDraft((current) => ({ ...current, [key]: value }));
   }
 
   function updateObjectDraft(key, value) {
     setObjectDraft((current) => ({ ...(current || {}), [key]: value }));
+  }
+
+  function updateObjectMetadata(key, value) {
+    setObjectDraft((current) => ({
+      ...(current || {}),
+      metadata: {
+        ...(current?.metadata || {}),
+        [key]: value
+      }
+    }));
+  }
+
+  function updateConnectionDraft(key, value) {
+    setConnectionDraft((current) => {
+      const base = current || buildDefaultConnectionDraft();
+      if (key === "layer") {
+        const defaults = buildDefaultConnectionDraft(value);
+        return {
+          ...base,
+          layer: value,
+          connectionType: defaults.connectionType,
+          color: defaults.color
+        };
+      }
+      return { ...base, [key]: value };
+    });
+  }
+
+  function updateConnectionPoint(index, key, value) {
+    setConnectionDraft((current) => {
+      const points = [...(current?.points || [])];
+      points[index] = {
+        ...(points[index] || { x: 0, y: 0.08, z: 0 }),
+        [key]: value
+      };
+      return { ...(current || buildDefaultConnectionDraft()), points };
+    });
+  }
+
+  function addConnectionPoint() {
+    setConnectionDraft((current) => {
+      const base = current || buildDefaultConnectionDraft();
+      const points = [...(base.points || [])];
+      const lastPoint = points[points.length - 1] || { x: 0, y: 0.08, z: 0 };
+      return {
+        ...base,
+        points: [
+          ...points,
+          {
+            x: numberInputValue(lastPoint.x) + 1,
+            y: numberInputValue(lastPoint.y, 0.08),
+            z: numberInputValue(lastPoint.z) + 1
+          }
+        ]
+      };
+    });
+  }
+
+  function removeConnectionPoint(index) {
+    setConnectionDraft((current) => {
+      const base = current || buildDefaultConnectionDraft();
+      const points = (base.points || []).filter((_, pointIndex) => pointIndex !== index);
+      return { ...base, points: points.length >= 2 ? points : base.points };
+    });
+  }
+
+  function updateConnectionMetadata(key, value) {
+    setConnectionDraft((current) => ({
+      ...(current || buildDefaultConnectionDraft()),
+      metadata: {
+        ...(current?.metadata || {}),
+        [key]: value
+      }
+    }));
+  }
+
+  function handleSelectObject(objectId) {
+    setSelectedObjectId(objectId);
+    if (objectId) setSelectedConnectionId(null);
+  }
+
+  function handleSelectConnection(connectionId) {
+    setSelectedConnectionId(connectionId);
+    if (connectionId) setSelectedObjectId(null);
   }
 
   return (
@@ -550,20 +790,11 @@ export default function InventoryVisualMapView({
                 <Layers3 size={16} />
                 Camadas
               </div>
-              {[
-                ["structure", "Estrutura"],
-                ["assets", "Ativos"]
-              ].map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  className={`inventory-visual-layer-toggle ${layers[key] ? "active" : ""}`}
-                  onClick={() => setLayers((current) => ({ ...current, [key]: !current[key] }))}
-                >
-                  {layers[key] ? <Eye size={16} /> : <EyeOff size={16} />}
-                  {label}
-                </button>
-              ))}
+              <InventoryVisualMapLayerPresetBar
+                layers={layers}
+                onLayersChange={setLayers}
+                onToggleLayer={(key) => setLayers((current) => ({ ...current, [key]: !current[key] }))}
+              />
             </section>
 
             {canManage && mode === "edit" && (
@@ -588,6 +819,22 @@ export default function InventoryVisualMapView({
                     </button>
                   ))}
                 </div>
+                <strong className="inventory-visual-preset-heading">Infraestrutura</strong>
+                <div className="inventory-visual-preset-grid">
+                  {INFRASTRUCTURE_PRESETS.map((preset) => (
+                    <button key={preset.type} type="button" onClick={() => handleAddObject(preset.type, "infrastructure")} disabled={saving}>
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+                <strong className="inventory-visual-preset-heading">Eletrica</strong>
+                <div className="inventory-visual-preset-grid">
+                  {ELECTRICAL_PRESETS.map((preset) => (
+                    <button key={preset.type} type="button" onClick={() => handleAddObject(preset.type, "electrical")} disabled={saving}>
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
                 <label>
                   Vincular ativo real
                   <select value={assetToAdd} onChange={(event) => setAssetToAdd(event.target.value)}>
@@ -603,6 +850,16 @@ export default function InventoryVisualMapView({
                   <Boxes size={15} />
                   Adicionar ativo
                 </button>
+                <div className="inventory-visual-connection-actions">
+                  <button type="button" className="secondary-action compact-action" onClick={() => handleAddConnection("infrastructure")} disabled={saving}>
+                    <Cable size={15} />
+                    Cabo/infra
+                  </button>
+                  <button type="button" className="secondary-action compact-action" onClick={() => handleAddConnection("electrical")} disabled={saving}>
+                    <PlugZap size={15} />
+                    Energia
+                  </button>
+                </div>
               </section>
             )}
           </aside>
@@ -611,17 +868,48 @@ export default function InventoryVisualMapView({
             <InventoryVisualMapScene
               map={activeMap}
               objects={objects}
+              connections={connections}
               selectedObjectId={selectedObjectId}
+              selectedConnectionId={selectedConnectionId}
               layers={layers}
               showGrid={showGrid}
-              onSelectObject={setSelectedObjectId}
+              onSelectObject={handleSelectObject}
+              onSelectConnection={handleSelectConnection}
             />
             <section className="inventory-visual-object-panel">
-              {selectedObject && objectDraft ? (
+              {selectedConnection && connectionDraft ? (
                 <>
                   <header>
                     <div>
-                      <span>{selectedObject.layer === "structure" ? "Estrutura" : "Ativo"}</span>
+                      <span>{layerLabel(selectedConnection.layer)}</span>
+                      <strong>{selectedConnection.label || "Conexao sem identificacao"}</strong>
+                    </div>
+                    <button type="button" className="icon-button" onClick={() => setSelectedConnectionId(null)} title="Limpar selecao">
+                      <MousePointer2 size={16} />
+                    </button>
+                  </header>
+                  <InventoryVisualMapConnectionPanel connection={selectedConnection} />
+                  {mode === "edit" && (
+                    <InventoryVisualMapConnectionEditor
+                      draft={connectionDraft}
+                      canManage={canManage}
+                      saving={saving}
+                      onChange={updateConnectionDraft}
+                      onPointChange={updateConnectionPoint}
+                      onAddPoint={addConnectionPoint}
+                      onRemovePoint={removeConnectionPoint}
+                      onMetadataChange={updateConnectionMetadata}
+                      onSave={handleSaveConnection}
+                      onDelete={handleDeleteConnection}
+                      onCancel={() => setConnectionDraft(connectionToDraft(selectedConnection))}
+                    />
+                  )}
+                </>
+              ) : selectedObject && objectDraft ? (
+                <>
+                  <header>
+                    <div>
+                      <span>{layerLabel(selectedObject.layer)}</span>
                       <strong>{selectedObject.label}</strong>
                     </div>
                     <button type="button" className="icon-button" onClick={() => setSelectedObjectId(null)} title="Limpar selecao">
@@ -704,6 +992,20 @@ export default function InventoryVisualMapView({
                       <span>Segmento: {linkedDeviceMeta.segment}</span>
                     </div>
                   )}
+                  {["infrastructure", "electrical"].includes(selectedObject.layer) && (
+                    <div className="inventory-visual-metadata-grid">
+                      {METADATA_FIELDS.map((field) => (
+                        <label key={field.key}>
+                          {field.label}
+                          <input
+                            value={objectDraft.metadata?.[field.key] || ""}
+                            onChange={(event) => updateObjectMetadata(field.key, event.target.value)}
+                            disabled={!canManage}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  )}
                   {canManage && (
                     <footer>
                       <button type="button" className="primary-action compact-action" onClick={handleSaveObject} disabled={saving}>
@@ -720,8 +1022,8 @@ export default function InventoryVisualMapView({
               ) : (
                 <div className="inventory-visual-object-empty">
                   <MousePointer2 size={22} />
-                  <strong>Selecione um objeto no mapa.</strong>
-                  <span>No modo editar, use o painel lateral para inserir estrutura ou ativos.</span>
+                  <strong>Selecione um objeto ou conexao no mapa.</strong>
+                  <span>No modo editar, use o painel lateral para inserir estrutura, ativos, infraestrutura ou eletrica.</span>
                 </div>
               )}
             </section>

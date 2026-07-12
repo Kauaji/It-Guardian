@@ -82,13 +82,76 @@ function buildObjectMesh(object, selectedId) {
   return { group, mesh };
 }
 
+function normalizePoint(point) {
+  if (!point) return null;
+  return new THREE.Vector3(
+    normalizeNumber(point.x, 0),
+    normalizeNumber(point.y, 0.12),
+    normalizeNumber(point.z, 0)
+  );
+}
+
+function getConnectionLabel(connection) {
+  return connection.label || connection.connectionType || "Conexao";
+}
+
+function buildConnectionLine(connection, selectedConnectionId) {
+  const points = (connection.points || []).map(normalizePoint).filter(Boolean);
+  if (points.length < 2) return null;
+
+  const selected = selectedConnectionId === connection.id;
+  const color = connection.color || (connection.layer === "electrical" ? "#f97316" : "#0ea5e9");
+  const materialOptions = {
+    color,
+    linewidth: Math.max(1, normalizeNumber(connection.thickness, 2) + (selected ? 2 : 0)),
+    transparent: true,
+    opacity: selected ? 0.98 : 0.78
+  };
+  const material = connection.dashed
+    ? new THREE.LineDashedMaterial({ ...materialOptions, dashSize: 0.42, gapSize: 0.22 })
+    : new THREE.LineBasicMaterial(materialOptions);
+
+  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+  const line = new THREE.Line(geometry, material);
+  line.userData.connectionId = connection.id;
+  if (connection.dashed) line.computeLineDistances();
+
+  const group = new THREE.Group();
+  group.add(line);
+
+  const endpointMaterial = new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.55,
+    metalness: 0.04,
+    transparent: true,
+    opacity: selected ? 1 : 0.86
+  });
+  const endpointGeometry = new THREE.SphereGeometry(selected ? 0.13 : 0.09, 16, 16);
+  points.forEach((point) => {
+    const endpoint = new THREE.Mesh(endpointGeometry, endpointMaterial);
+    endpoint.position.copy(point);
+    endpoint.userData.connectionId = connection.id;
+    group.add(endpoint);
+  });
+
+  const midpoint = points[Math.floor((points.length - 1) / 2)].clone().lerp(points[Math.ceil((points.length - 1) / 2)], 0.5);
+  const label = createTextSprite(getConnectionLabel(connection));
+  label.position.set(midpoint.x, midpoint.y + 0.35, midpoint.z);
+  group.add(label);
+
+  return { group, selectable: [line, ...group.children.filter((child) => child.userData.connectionId === connection.id && child !== line)] };
+}
+
 export default function InventoryVisualMapScene({
   map,
   objects,
+  connections = [],
   selectedObjectId,
+  selectedConnectionId,
   layers,
   showGrid,
-  onSelectObject
+  onSelectObject,
+  onSelectConnection
 }) {
   const hostRef = useRef(null);
   const selectableMeshesRef = useRef([]);
@@ -96,6 +159,11 @@ export default function InventoryVisualMapScene({
   const visibleObjects = useMemo(
     () => objects.filter((object) => layers?.[object.layer] !== false),
     [layers, objects]
+  );
+
+  const visibleConnections = useMemo(
+    () => connections.filter((connection) => layers?.[connection.layer] !== false),
+    [connections, layers]
   );
 
   useEffect(() => {
@@ -149,9 +217,17 @@ export default function InventoryVisualMapScene({
       selectableMeshes.push(mesh);
       scene.add(group);
     }
+
+    for (const connection of visibleConnections) {
+      const builtConnection = buildConnectionLine(connection, selectedConnectionId);
+      if (!builtConnection) continue;
+      selectableMeshes.push(...builtConnection.selectable);
+      scene.add(builtConnection.group);
+    }
     selectableMeshesRef.current = selectableMeshes;
 
     const raycaster = new THREE.Raycaster();
+    raycaster.params.Line = { threshold: 0.28 };
     const pointer = new THREE.Vector2();
 
     function handlePointerDown(event) {
@@ -160,6 +236,11 @@ export default function InventoryVisualMapScene({
       pointer.y = -(((event.clientY - bounds.top) / bounds.height) * 2 - 1);
       raycaster.setFromCamera(pointer, camera);
       const [hit] = raycaster.intersectObjects(selectableMeshesRef.current, false);
+      const connectionId = hit?.object?.userData?.connectionId || null;
+      if (connectionId) {
+        onSelectConnection?.(connectionId);
+        return;
+      }
       onSelectObject?.(hit?.object?.userData?.objectId || null);
     }
 
@@ -202,7 +283,7 @@ export default function InventoryVisualMapScene({
       host.replaceChildren();
       selectableMeshesRef.current = [];
     };
-  }, [map, onSelectObject, selectedObjectId, showGrid, visibleObjects]);
+  }, [map, onSelectConnection, onSelectObject, selectedConnectionId, selectedObjectId, showGrid, visibleConnections, visibleObjects]);
 
   if (!map) {
     return (

@@ -254,6 +254,10 @@ export function fetchInventoryVisualMapObjects(token, id) {
   return apiFetch(`/inventory-visual-maps/${id}/objects`, { token });
 }
 
+export function fetchInventoryVisualMapConnections(token, id) {
+  return apiFetch(`/inventory-visual-maps/${id}/connections`, { token });
+}
+
 export function createInventoryVisualMapObject(token, id, payload) {
   return apiFetch(`/inventory-visual-maps/${id}/objects`, {
     token,
@@ -272,6 +276,29 @@ export function updateInventoryVisualMapObject(token, objectId, payload) {
 
 export function deleteInventoryVisualMapObject(token, objectId) {
   return apiFetch(`/inventory-visual-map-objects/${objectId}`, {
+    token,
+    method: "DELETE"
+  });
+}
+
+export function createInventoryVisualMapConnection(token, id, payload) {
+  return apiFetch(`/inventory-visual-maps/${id}/connections`, {
+    token,
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function updateInventoryVisualMapConnection(token, connectionId, payload) {
+  return apiFetch(`/inventory-visual-map-connections/${connectionId}`, {
+    token,
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function deleteInventoryVisualMapConnection(token, connectionId) {
+  return apiFetch(`/inventory-visual-map-connections/${connectionId}`, {
     token,
     method: "DELETE"
   });

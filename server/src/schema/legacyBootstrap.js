@@ -332,7 +332,7 @@ export async function initializeDatabase() {
       id TEXT PRIMARY KEY,
       map_id TEXT NOT NULL REFERENCES inventory_visual_maps(id) ON DELETE CASCADE,
       layer TEXT NOT NULL DEFAULT 'assets'
-        CHECK (layer IN ('structure', 'assets')),
+        CHECK (layer IN ('structure', 'assets', 'infrastructure', 'electrical')),
       preset_type TEXT NOT NULL,
       label TEXT NOT NULL,
       linked_asset_id TEXT,
@@ -350,6 +350,40 @@ export async function initializeDatabase() {
       metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
       created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
       updated_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await query(`
+    ALTER TABLE inventory_visual_map_objects
+    DROP CONSTRAINT IF EXISTS inventory_visual_map_objects_layer_check;
+  `);
+
+  await queryIgnoringDuplicateConstraint(`
+    ALTER TABLE inventory_visual_map_objects
+    ADD CONSTRAINT inventory_visual_map_objects_layer_check
+    CHECK (layer IN ('structure', 'assets', 'infrastructure', 'electrical'));
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS inventory_visual_map_connections (
+      id TEXT PRIMARY KEY,
+      map_id TEXT NOT NULL REFERENCES inventory_visual_maps(id) ON DELETE CASCADE,
+      layer TEXT NOT NULL
+        CHECK (layer IN ('infrastructure', 'electrical')),
+      connection_type TEXT NOT NULL,
+      label TEXT,
+      source_object_id TEXT REFERENCES inventory_visual_map_objects(id) ON DELETE SET NULL,
+      target_object_id TEXT REFERENCES inventory_visual_map_objects(id) ON DELETE SET NULL,
+      source_asset_id TEXT,
+      target_asset_id TEXT,
+      points_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+      color TEXT,
+      thickness NUMERIC NOT NULL DEFAULT 2,
+      dashed BOOLEAN NOT NULL DEFAULT FALSE,
+      notes TEXT,
+      metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
@@ -1543,6 +1577,31 @@ export async function initializeDatabase() {
   await query(`
     CREATE INDEX IF NOT EXISTS idx_inventory_visual_map_objects_asset
     ON inventory_visual_map_objects (linked_asset_id);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_inventory_visual_map_connections_map
+    ON inventory_visual_map_connections (map_id);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_inventory_visual_map_connections_layer
+    ON inventory_visual_map_connections (layer);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_inventory_visual_map_connections_type
+    ON inventory_visual_map_connections (connection_type);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_inventory_visual_map_connections_source_asset
+    ON inventory_visual_map_connections (source_asset_id);
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_inventory_visual_map_connections_target_asset
+    ON inventory_visual_map_connections (target_asset_id);
   `);
 
   await query(`

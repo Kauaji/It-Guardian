@@ -3333,7 +3333,8 @@ tbody tr.selected {
 
 .inventory-visual-map-actions,
 .inventory-visual-card-actions,
-.inventory-visual-object-panel footer {
+.inventory-visual-object-panel footer,
+.inventory-visual-connection-editor footer {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -3384,7 +3385,8 @@ tbody tr.selected {
 
 .inventory-visual-map-sidebar > label,
 .inventory-visual-map-card label,
-.inventory-visual-object-panel label {
+.inventory-visual-object-panel label,
+.inventory-visual-connection-editor label {
   display: grid;
   gap: 6px;
   color: var(--text-muted);
@@ -3423,8 +3425,34 @@ tbody tr.selected {
   gap: 8px;
 }
 
+.inventory-visual-layer-controls,
+.inventory-visual-connection-editor,
+.inventory-visual-connection-summary,
+.inventory-visual-point-list {
+  display: grid;
+  gap: 10px;
+}
+
+.inventory-visual-quick-views {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.inventory-visual-layer-list,
+.inventory-visual-connection-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.inventory-visual-connection-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .inventory-visual-mode-toggle button,
+.inventory-visual-quick-views button,
 .inventory-visual-layer-toggle,
+.inventory-visual-connection-actions button,
 .inventory-visual-preset-grid button,
 .inventory-visual-nudge-row button {
   min-height: 40px;
@@ -3448,7 +3476,9 @@ tbody tr.selected {
 }
 
 .inventory-visual-mode-toggle button:hover,
+.inventory-visual-quick-views button:hover,
 .inventory-visual-layer-toggle:hover,
+.inventory-visual-connection-actions button:hover,
 .inventory-visual-preset-grid button:hover,
 .inventory-visual-nudge-row button:hover {
   border-color: color-mix(in srgb, var(--accent) 38%, var(--border-strong));
@@ -3463,7 +3493,105 @@ tbody tr.selected {
   color: var(--accent);
 }
 
+.inventory-visual-connection-summary dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.inventory-visual-connection-summary dl > div,
+.inventory-visual-metadata-readonly,
+.inventory-visual-metadata-grid,
+.inventory-visual-point-row {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 10px;
+}
+
+.inventory-visual-connection-summary dt {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.inventory-visual-connection-summary dd {
+  margin: 3px 0 0;
+  color: var(--text-strong);
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.inventory-visual-color-chip {
+  width: 12px;
+  height: 12px;
+  display: inline-flex;
+  border: 1px solid color-mix(in srgb, #ffffff 72%, var(--border-strong));
+  border-radius: 999px;
+  margin-right: 7px;
+  vertical-align: -1px;
+}
+
+.inventory-visual-metadata-readonly {
+  display: grid;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.inventory-visual-metadata-readonly strong {
+  color: var(--text-strong);
+}
+
+.inventory-visual-metadata-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.inventory-visual-point-row {
+  display: grid;
+  grid-template-columns: auto repeat(3, minmax(0, 1fr)) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.inventory-visual-point-row > span {
+  width: 24px;
+  height: 24px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface-soft));
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 950;
+}
+
+.inventory-visual-inline-check {
+  min-height: 40px;
+  display: flex !important;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-soft);
+  padding: 0 10px;
+}
+
+.inventory-visual-inline-check input {
+  width: 17px;
+  min-height: 17px;
+  padding: 0;
+}
+
 .inventory-visual-mode-toggle button:disabled,
+.inventory-visual-quick-views button:disabled,
+.inventory-visual-connection-actions button:disabled,
 .inventory-visual-preset-grid button:disabled,
 .inventory-visual-nudge-row button:disabled {
   cursor: not-allowed;
@@ -3607,7 +3735,8 @@ tbody tr.selected {
   .inventory-visual-map-header,
   .inventory-visual-map-actions,
   .inventory-visual-card-actions,
-  .inventory-visual-object-panel footer {
+  .inventory-visual-object-panel footer,
+  .inventory-visual-connection-editor footer {
     width: 100%;
   }
 
@@ -3618,14 +3747,27 @@ tbody tr.selected {
 
   .inventory-visual-map-actions > button,
   .inventory-visual-card-actions > button,
-  .inventory-visual-object-panel footer > button {
+  .inventory-visual-object-panel footer > button,
+  .inventory-visual-connection-editor footer > button {
     flex: 1 1 100%;
   }
 
   .inventory-visual-form-grid,
   .inventory-visual-form-grid.compact,
-  .inventory-visual-asset-info {
+  .inventory-visual-asset-info,
+  .inventory-visual-metadata-grid,
+  .inventory-visual-connection-summary dl,
+  .inventory-visual-connection-actions {
     grid-template-columns: 1fr;
+  }
+
+  .inventory-visual-point-row {
+    grid-template-columns: auto repeat(3, minmax(0, 1fr));
+  }
+
+  .inventory-visual-point-row .icon-button {
+    grid-column: 1 / -1;
+    width: 100%;
   }
 
   .inventory-visual-map-canvas {
