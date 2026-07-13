@@ -14,7 +14,6 @@ import {
   Plug,
   Printer,
   Router,
-  ScanLine,
   Server,
   Shield,
   Square,
@@ -25,14 +24,6 @@ import {
 export const FLOOR_PLAN_TOOLS = [
   { id: "select", label: "Selecionar", icon: MousePointer2 },
   { id: "pan", label: "Mover tela", icon: Hand },
-  { id: "wall", label: "Parede", icon: ScanLine },
-  { id: "door", label: "Porta/janela", icon: DoorOpen },
-  { id: "furniture", label: "Movel", icon: LampDesk },
-  { id: "asset", label: "Ativo TI", icon: Server },
-  { id: "network-point", label: "Ponto de rede", icon: Network },
-  { id: "power-point", label: "Ponto de energia", icon: Zap },
-  { id: "network-cable", label: "Cabo de rede", icon: Cable },
-  { id: "power-cable", label: "Cabo de energia", icon: Plug },
   { id: "group-brush", label: "Pincel de grupo", icon: Paintbrush },
   { id: "segment-brush", label: "Pincel de segmento", icon: Square },
   { id: "eraser", label: "Borracha", icon: Eraser }
@@ -40,29 +31,20 @@ export const FLOOR_PLAN_TOOLS = [
 
 export const FLOOR_PLAN_CATALOG = [
   {
-    id: "structure",
-    label: "Paredes",
+    id: "openings",
+    label: "Portas e janelas",
     items: [
-      { id: "wall", label: "Parede", category: "structure", objectType: "wall", width: 180, height: 14, color: "#334155" },
-      { id: "door", label: "Porta", category: "structure", objectType: "door", width: 72, height: 16, color: "#8b5e34" },
-      { id: "window", label: "Janela", category: "structure", objectType: "window", width: 88, height: 12, color: "#60a5fa" }
-    ]
-  },
-  {
-    id: "floors",
-    label: "Pisos",
-    items: [
-      { id: "room", label: "Sala", category: "zone", zoneType: "room", width: 250, height: 160, color: "#e2e8f0" },
-      { id: "technical-room", label: "Sala tecnica", category: "zone", zoneType: "room", width: 180, height: 130, color: "#dbeafe" }
+      { id: "door", label: "Porta", icon: DoorOpen, category: "structure", objectType: "door", width: 74, height: 20, color: "#8b5e34", metadata: { swing: "inward" } },
+      { id: "window", label: "Janela", icon: PanelTop, category: "structure", objectType: "window", width: 92, height: 16, color: "#60a5fa" }
     ]
   },
   {
     id: "furniture",
     label: "Moveis",
     items: [
-      { id: "desk", label: "Mesa", category: "furniture", objectType: "desk", width: 110, height: 64, color: "#b08968" },
-      { id: "chair", label: "Cadeira", category: "furniture", objectType: "chair", width: 42, height: 42, color: "#64748b" },
-      { id: "rack-furniture", label: "Armario", category: "furniture", objectType: "cabinet", width: 82, height: 52, color: "#8b5e34" }
+      { id: "desk", label: "Mesa", icon: LampDesk, category: "furniture", objectType: "desk", width: 110, height: 64, color: "#b08968" },
+      { id: "chair", label: "Cadeira", icon: Square, category: "furniture", objectType: "chair", width: 42, height: 42, color: "#64748b" },
+      { id: "rack-furniture", label: "Armario", icon: Box, category: "furniture", objectType: "cabinet", width: 82, height: 52, color: "#8b5e34" }
     ]
   },
   {
@@ -85,24 +67,28 @@ export const FLOOR_PLAN_CATALOG = [
     id: "network",
     label: "Rede",
     items: [
-      { id: "network-point", label: "Ponto RJ45", category: "point", pointType: "network", color: "#2563eb" },
-      { id: "network-route", label: "Cabo de rede", category: "route", routeType: "network", color: "#2563eb" }
+      { id: "network-point", label: "Ponto RJ45", icon: Network, category: "point", pointType: "network", color: "#2563eb" },
+      { id: "network-route", label: "Cabo de rede", icon: Cable, category: "route", routeType: "network", color: "#2563eb" }
     ]
   },
   {
     id: "energy",
     label: "Energia",
     items: [
-      { id: "power-point", label: "Tomada", category: "point", pointType: "power", color: "#f59e0b" },
-      { id: "power-route", label: "Cabo energia", category: "route", routeType: "power", color: "#f59e0b" }
+      { id: "power-point", label: "Tomada", icon: Plug, category: "point", pointType: "power", color: "#f59e0b" },
+      { id: "power-route", label: "Cabo energia", icon: Cable, category: "route", routeType: "power", color: "#f59e0b" },
+      { id: "stabilizer-600", label: "Estabilizador 600V", icon: Zap, category: "power", objectType: "stabilizer_600", width: 66, height: 48, color: "#d97706", metadata: { connectableToAssets: true, capacity: "600V" } },
+      { id: "stabilizer-1000", label: "Estabilizador 1000V", icon: Zap, category: "power", objectType: "stabilizer_1000", width: 76, height: 54, color: "#c2410c", metadata: { connectableToAssets: true, capacity: "1000V" } },
+      { id: "extension-cord", label: "Extensao", icon: Cable, category: "power", objectType: "extension_cord", width: 92, height: 24, color: "#92400e", metadata: { connectableToAssets: true } },
+      { id: "power-strip", label: "Regua de tomadas", icon: Plug, category: "power", objectType: "power_strip", width: 104, height: 28, color: "#7c2d12", metadata: { connectableToAssets: true } }
     ]
   },
   {
     id: "brushes",
     label: "Pinceis",
     items: [
-      { id: "group-zone", label: "Area de grupo", category: "zone", zoneType: "group", width: 280, height: 180, color: "#8b5cf6" },
-      { id: "segment-zone", label: "Area de segmento", category: "zone", zoneType: "segment", width: 210, height: 140, color: "#22c55e" }
+      { id: "group-zone", label: "Area de grupo", icon: Paintbrush, category: "zone", zoneType: "group", width: 280, height: 180, color: "#8b5cf6" },
+      { id: "segment-zone", label: "Area de segmento", icon: Square, category: "zone", zoneType: "segment", width: 210, height: 140, color: "#22c55e" }
     ]
   }
 ];

@@ -26,11 +26,11 @@ function SegmentGroupContainer({ groupId, color, className = "", children }) {
 }
 
 export default function InventoryBoard({
-  devices = [],
+  devices: _devices = [],
   segments,
   machinesBySegment,
-  token,
-  notify,
+  token: _token,
+  notify: _notify,
   search,
   setSearch,
   selectedGroupId = "all",

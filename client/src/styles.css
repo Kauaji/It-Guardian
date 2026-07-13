@@ -13337,7 +13337,11 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
   background: #f8fafc;
   border: 1px solid #dbe4ef;
   border-radius: 14px;
+  bottom: 10px;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.12);
   padding: 10px;
+  position: sticky;
+  z-index: 12;
 }
 
 .floor-plan-catalog nav {
@@ -13385,10 +13389,265 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
   gap: 7px;
   min-height: 82px;
   padding: 10px;
+  position: relative;
+}
+
+.floor-plan-catalog-items button::before {
+  background:
+    linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(20, 184, 166, 0.12)),
+    #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.62);
+  content: "";
+  height: 30px;
+  width: 56px;
 }
 
 .floor-plan-catalog-items button svg {
   color: #2563eb;
+  margin-top: -45px;
+  position: relative;
+}
+
+.floor-plan-power-link {
+  opacity: 0.68;
+  pointer-events: none;
+  stroke: #d97706;
+  stroke-dasharray: 9 7;
+  stroke-linecap: round;
+  stroke-width: 3;
+}
+
+.floor-plan-door-swing {
+  fill: none;
+  opacity: 0.62;
+  pointer-events: none;
+  stroke: #0f172a;
+  stroke-dasharray: 5 5;
+  stroke-linecap: round;
+  stroke-width: 2;
+}
+
+.floor-plan-object-resize-overlay {
+  pointer-events: none;
+}
+
+.floor-plan-object-resize-overlay > rect {
+  fill: none;
+  pointer-events: none;
+  stroke: #2563eb;
+  stroke-dasharray: 6 5;
+  stroke-width: 2;
+}
+
+.floor-plan-object-resize-handle {
+  cursor: grab;
+  pointer-events: all;
+}
+
+.floor-plan-object-resize-handle circle {
+  fill: #ffffff;
+  filter: drop-shadow(0 5px 10px rgba(37, 99, 235, 0.25));
+  stroke: #2563eb;
+  stroke-width: 2.5;
+}
+
+.floor-plan-object-resize-handle text {
+  fill: #2563eb;
+  font-size: 18px;
+  font-weight: 950;
+  pointer-events: none;
+}
+
+.floor-plan-catalog-hint {
+  align-items: center;
+  background: #eef7f4;
+  border: 1px solid #cfe7de;
+  border-radius: 10px;
+  color: #0f766e;
+  display: flex;
+  font-size: 0.8rem;
+  font-weight: 900;
+  gap: 7px;
+  margin-top: 10px;
+  padding: 9px 10px;
+}
+
+.room-catalog-grid {
+  display: grid;
+  gap: 9px;
+  grid-auto-columns: minmax(118px, 1fr);
+  grid-auto-flow: column;
+  overflow-x: auto;
+}
+
+.room-catalog-card {
+  align-items: stretch;
+  background: #ffffff;
+  border: 1px solid #dbe4ef;
+  border-radius: 12px;
+  color: #0f172a;
+  cursor: pointer;
+  display: grid;
+  gap: 7px;
+  min-height: 126px;
+  min-width: 118px;
+  padding: 8px;
+  text-align: left;
+}
+
+.room-catalog-card:hover,
+.room-catalog-card:focus-visible {
+  border-color: #7db9a8;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.1);
+  transform: translateY(-1px);
+}
+
+.room-catalog-card span {
+  align-items: center;
+  color: #102034;
+  display: flex;
+  font-size: 0.78rem;
+  font-weight: 950;
+  gap: 6px;
+  line-height: 1.15;
+}
+
+.room-catalog-card span svg {
+  color: #0f766e;
+  flex: 0 0 auto;
+}
+
+.room-catalog-card small {
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.room-template-thumbnail {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  display: block;
+  height: 78px;
+  width: 100%;
+}
+
+.floor-plan-room {
+  cursor: grab;
+}
+
+.floor-plan-room:active {
+  cursor: grabbing;
+}
+
+.floor-plan-room rect {
+  vector-effect: non-scaling-stroke;
+}
+
+.floor-plan-room text {
+  pointer-events: none;
+  user-select: none;
+}
+
+.floor-plan-room.selected {
+  filter: drop-shadow(0 10px 18px rgba(15, 23, 42, 0.16));
+}
+
+.floor-plan-room-name {
+  fill: #111827;
+  font-size: 18px;
+  font-weight: 950;
+  letter-spacing: 0;
+}
+
+.floor-plan-room-dimensions {
+  fill: #475569;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.room-placement-preview {
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.room-placement-preview.valid .floor-plan-room > rect:first-of-type {
+  stroke: #0f766e;
+}
+
+.room-placement-preview.invalid .floor-plan-room > rect:first-of-type {
+  fill: #fecaca;
+  stroke: #dc2626;
+}
+
+.room-placement-preview text {
+  fill: #0f172a;
+  font-size: 14px;
+  font-weight: 950;
+  paint-order: stroke;
+  stroke: #ffffff;
+  stroke-width: 4px;
+}
+
+.room-selection-overlay {
+  pointer-events: all;
+}
+
+.room-resize-handle {
+  cursor: grab;
+}
+
+.room-resize-handle circle {
+  fill: #ffffff;
+  filter: drop-shadow(0 7px 12px rgba(15, 23, 42, 0.18));
+  stroke: #2563eb;
+  stroke-width: 2.4;
+}
+
+.room-resize-handle svg {
+  color: #2563eb;
+}
+
+.room-floating-toolbar {
+  filter: drop-shadow(0 9px 18px rgba(15, 23, 42, 0.16));
+}
+
+.room-floating-toolbar > rect {
+  fill: #ffffff;
+  stroke: #cbd5e1;
+  stroke-width: 1.2;
+}
+
+.room-floating-toolbar text {
+  fill: #0f172a;
+  font-size: 12px;
+  font-weight: 950;
+  pointer-events: none;
+}
+
+.room-floating-toolbar > g {
+  cursor: pointer;
+}
+
+.room-floating-toolbar > g rect {
+  fill: #eff6ff;
+  stroke: #bfdbfe;
+}
+
+.room-floating-toolbar > g svg {
+  color: #2563eb;
+}
+
+.room-floating-toolbar > g:last-child rect {
+  fill: #fef2f2;
+  stroke: #fecaca;
+}
+
+.room-floating-toolbar > g:last-child svg {
+  color: #dc2626;
 }
 
 .floor-plan-inspector {
