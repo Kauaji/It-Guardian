@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   Bell,
@@ -176,6 +176,17 @@ export default function AlertCenterV2({
     canViewPreventiveAutomation,
     automationManagementPlanCount
   );
+  const handlePreventiveAutomationCreateRequestHandled = useCallback(() => {
+    setPreventiveAutomationCreateRequest(null);
+  }, []);
+  const loadPreventiveAutomationAgenda = useCallback(
+    (filters) => fetchPreventiveAutomationAgenda(token, filters),
+    [token]
+  );
+  const loadPreventiveAutomationPlanHistory = useCallback(
+    (planId) => fetchPreventiveAutomationPlanHistory(token, planId),
+    [token]
+  );
 
   useEffect(() => {
     if (alertActiveTab === "automation") {
@@ -290,7 +301,10 @@ export default function AlertCenterV2({
   ).size;
   const resolvedAlerts = history.filter((alert) => alert.status === "resolved");
   const handledSuggestions = suggestions.filter((suggestion) => suggestion.status === "accepted" || suggestion.status === "rejected");
-  const activeScripts = scripts.filter((script) => script.active !== false);
+  const activeScripts = useMemo(
+    () => scripts.filter((script) => script.active !== false),
+    [scripts]
+  );
   const selectedPreventiveAssetIds = useMemo(
     () => Array.from(selectedPreventiveAssets).map(String).sort(),
     [selectedPreventiveAssets]
@@ -323,7 +337,17 @@ export default function AlertCenterV2({
 
   useEffect(() => {
     if (!token || !selectedPreventiveAssetIds.length) {
-      setPreventiveScriptRecommendations({ recommended: [], others: [], loading: false, error: "" });
+      setPreventiveScriptRecommendations((current) => {
+        if (
+          !current.loading &&
+          !current.error &&
+          current.recommended.length === 0 &&
+          current.others.length === 0
+        ) {
+          return current;
+        }
+        return { recommended: [], others: [], loading: false, error: "" };
+      });
       return undefined;
     }
 
@@ -351,7 +375,7 @@ export default function AlertCenterV2({
         if (ignore) return;
         setPreventiveScriptRecommendations({
           recommended: [],
-          others: scripts.filter((script) => script.active !== false),
+          others: activeScripts,
           loading: false,
           error: error.message || "Não foi possível carregar recomendações."
         });
@@ -360,7 +384,7 @@ export default function AlertCenterV2({
     return () => {
       ignore = true;
     };
-  }, [token, selectedPreventiveAssetKey, scripts]);
+  }, [activeScripts, token, selectedPreventiveAssetKey]);
 
   function findSuggestionDevice(suggestion) {
     if (suggestion.assetId && deviceById.has(String(suggestion.assetId))) {
@@ -859,7 +883,7 @@ export default function AlertCenterV2({
 
     setSelectedPreventiveAssets(new Set());
     setSelectedPreventiveScripts(new Set());
-    setPreventiveScriptRecommendations({ recommended: [], others: [] });
+    setPreventiveScriptRecommendations({ recommended: [], others: [], loading: false, error: "" });
     setPreventiveAutomationCreateRequest(null);
     return createdPlan;
   }
@@ -959,8 +983,8 @@ export default function AlertCenterV2({
         ...current,
         [suggestionId]: {
           recommended: [],
-          others: [],
-          error: error.message || "Não foi possível carregar os scripts."
+          others: activeScripts,
+          error: activeScripts.length ? "" : error.message || "Não foi possível carregar os scripts."
         }
       }));
     } finally {
@@ -1780,7 +1804,7 @@ export default function AlertCenterV2({
                   onSave={onSavePreventiveAutomationPlan}
                   onDisable={onDisablePreventiveAutomationPlan}
                   onCreateAutomatedPreventivePlan={createAutomatedPreventivePlanFromSelection}
-                  onCreateRequestHandled={() => setPreventiveAutomationCreateRequest(null)}
+                  onCreateRequestHandled={handlePreventiveAutomationCreateRequestHandled}
                 />
               )}
             </section>
@@ -1813,8 +1837,8 @@ export default function AlertCenterV2({
                 onRemoveOverride={onRemovePreventiveAutomationAssetOverride}
                 onRemoveAsset={onRemoveAssetFromPreventiveAutomationPlan}
                 onFetchAssetDetails={onFetchPreventiveAutomationAsset}
-                onFetchAgenda={(filters) => fetchPreventiveAutomationAgenda(token, filters)}
-                onFetchPlanHistory={(planId) => fetchPreventiveAutomationPlanHistory(token, planId)}
+                onFetchAgenda={loadPreventiveAutomationAgenda}
+                onFetchPlanHistory={loadPreventiveAutomationPlanHistory}
               />
             </Suspense>
           )}

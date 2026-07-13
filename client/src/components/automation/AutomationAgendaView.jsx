@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, CalendarClock, RefreshCw } from "lucide-react";
 import { formatAutomationDate, groupAutomationAgendaItems } from "./automationUtils.js";
 
@@ -11,18 +11,23 @@ export default function AutomationAgendaView({ plans = [], onLoad, onOpenPlan, s
   const [data, setData] = useState({ items: [], summary: {} });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const onLoadRef = useRef(onLoad);
+
+  useEffect(() => {
+    onLoadRef.current = onLoad;
+  }, [onLoad]);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      setData(await onLoad({ status, limit: 300 }));
+      setData(await onLoadRef.current({ status, limit: 300 }));
     } catch (loadError) {
       setError(loadError.message || "Não foi possível carregar a agenda.");
     } finally {
       setLoading(false);
     }
-  }, [onLoad, status]);
+  }, [status]);
 
   useEffect(() => { load(); }, [load]);
 

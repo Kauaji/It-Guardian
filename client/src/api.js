@@ -304,6 +304,60 @@ export function deleteInventoryVisualMapConnection(token, connectionId) {
   });
 }
 
+export function fetchFloorPlans(token) {
+  return apiFetch("/floor-plans", { token });
+}
+
+export function fetchFloorPlan(token, id) {
+  return apiFetch(`/floor-plans/${id}`, { token });
+}
+
+export function createFloorPlan(token, payload = {}) {
+  return apiFetch("/floor-plans", {
+    token,
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function updateFloorPlan(token, id, payload = {}) {
+  return apiFetch(`/floor-plans/${id}`, {
+    token,
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function saveFloorPlanEditorData(token, id, payload = {}) {
+  return apiFetch(`/floor-plans/${id}/editor-data`, {
+    token,
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function duplicateFloorPlan(token, id) {
+  return apiFetch(`/floor-plans/${id}/duplicate`, {
+    token,
+    method: "POST"
+  });
+}
+
+export function deleteFloorPlan(token, id) {
+  return apiFetch(`/floor-plans/${id}`, {
+    token,
+    method: "DELETE"
+  });
+}
+
+export function linkFloorPlanObjectToAsset(token, objectId, payload = {}) {
+  return apiFetch(`/floor-plans/objects/${objectId}/link-equipment`, {
+    token,
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+}
+
 export function fetchAlerts(token) {
   return apiFetch("/alerts", { token });
 }

@@ -123,9 +123,18 @@ import { useInventoryPersistence } from "./hooks/useInventoryPersistence.js";
 
 const InventoryBoard = lazy(() => import("./components/inventory/InventoryBoard.jsx"));
 const ServiceOrdersBoard = lazy(() => import("./components/serviceOrders/ServiceOrdersBoard.jsx"));
+const FloorPlansModule = lazy(() => import("./components/floorPlans/FloorPlansModule.jsx"));
 
 function readSystemMode() {
   return "local";
+}
+
+function readInitialActiveView() {
+  if (typeof window !== "undefined" && window.location.pathname.startsWith("/plantas")) {
+    return "inventory";
+  }
+
+  return "dashboard";
 }
 
 const inventoryDropAnimation = {
@@ -282,7 +291,7 @@ function formatTime(value) {
 function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   const [selectedId, setSelectedId] = useState(null);
   const [selectedDevice, setSelectedDevice] = useState(null);
-  const [activeView, setActiveView] = useState("dashboard");
+  const [activeView, setActiveView] = useState(readInitialActiveView);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [severityFilter, setSeverityFilter] = useState("all");
@@ -338,6 +347,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   const canViewInventory = hasPermission(user, "inventory.view");
   const canViewMachine = hasPermission(user, "inventory.view_machine");
   const canViewServiceOrders = hasPermission(user, "service_orders.view");
+  const canViewFloorPlans = hasPermission(user, "floor_plans.view");
   const {
     alertCorrelations,
     alertPriorityColors,
@@ -3140,6 +3150,21 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
             onRemoveMachine={removeMachineFromInventory}
             onCloseMoveModal={() => setMoveModal(null)}
             onOpenMoveModal={openMoveModal}
+            floorPlansView={canViewFloorPlans ? (
+              <FloorPlansModule
+                token={token}
+                notify={notify}
+                devices={decoratedAllDevices}
+                segments={decoratedSegments}
+                groups={decoratedSegmentGroups}
+                permissions={{
+                  create: hasPermission(user, "floor_plans.create"),
+                  update: hasPermission(user, "floor_plans.update"),
+                  delete: hasPermission(user, "floor_plans.delete"),
+                  linkInventory: hasPermission(user, "floor_plans.link_inventory")
+                }}
+              />
+            ) : null}
             />
           </Suspense>
         )}

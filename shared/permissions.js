@@ -20,6 +20,17 @@ export const permissionGroups = [
     ]
   },
   {
+    id: "floor_plans",
+    label: "Plantas e Infraestrutura",
+    permissions: [
+      { id: "floor_plans.view", label: "Visualizar plantas" },
+      { id: "floor_plans.create", label: "Criar plantas" },
+      { id: "floor_plans.update", label: "Editar plantas" },
+      { id: "floor_plans.delete", label: "Excluir plantas" },
+      { id: "floor_plans.link_inventory", label: "Vincular ativos do inventario" }
+    ]
+  },
+  {
     id: "service_orders",
     label: "Ordens de Serviço",
     permissions: [
@@ -132,6 +143,11 @@ export const roleDefaultPermissions = {
     "inventory.manage_segments",
     "inventory.view_machine",
     "inventory.print_qrcode",
+    "floor_plans.view",
+    "floor_plans.create",
+    "floor_plans.update",
+    "floor_plans.delete",
+    "floor_plans.link_inventory",
     "service_orders.view",
     "service_orders.create",
     "service_orders.edit",

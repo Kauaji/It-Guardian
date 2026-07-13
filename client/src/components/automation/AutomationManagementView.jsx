@@ -51,14 +51,18 @@ export default function AutomationManagementView({
   useEffect(() => {
     if (!selectedPlan) return;
     const refreshed = management?.plans?.find((plan) => String(plan.id) === String(selectedPlan.id));
-    if (refreshed) setSelectedPlan(refreshed);
+    if (refreshed) {
+      setSelectedPlan((current) => (current === refreshed ? current : refreshed));
+    }
   }, [management, selectedPlan?.id]);
 
   useEffect(() => {
     if (!selectedMachine) return;
     const refreshed = management?.machines?.find((machine) => String(machine.assetId) === String(selectedMachine.assetId));
-    if (refreshed) setSelectedMachine(refreshed);
-    else setSelectedMachine(null);
+    setSelectedMachine((current) => {
+      if (refreshed) return current === refreshed ? current : refreshed;
+      return current ? null : current;
+    });
   }, [management, selectedMachine?.assetId]);
 
   const groups = useMemo(() => {

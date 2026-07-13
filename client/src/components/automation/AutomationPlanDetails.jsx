@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Pause, Pencil, Play, Save, Trash2, X } from "lucide-react";
 import {
   automationDraftsEqual,
@@ -38,6 +38,11 @@ export default function AutomationPlanDetails({
   const [baseline, setBaseline] = useState(() => buildAutomationPlanDraft(plan));
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const onLoadHistoryRef = useRef(onLoadHistory);
+
+  useEffect(() => {
+    onLoadHistoryRef.current = onLoadHistory;
+  }, [onLoadHistory]);
   const linkedScripts = useMemo(
     () => scripts.filter((script) => draft.defaultScriptIds.includes(script.id)),
     [draft.defaultScriptIds, scripts]
@@ -59,12 +64,12 @@ export default function AutomationPlanDetails({
   }, [plan?.id]);
 
   useEffect(() => {
-    if (!open || activeTab !== "history" || history.length || !onLoadHistory) return;
+    if (!open || activeTab !== "history" || history.length || !onLoadHistoryRef.current) return;
     setHistoryLoading(true);
-    onLoadHistory(plan.id)
+    onLoadHistoryRef.current(plan.id)
       .then((result) => setHistory(result?.items || []))
       .finally(() => setHistoryLoading(false));
-  }, [activeTab, history.length, onLoadHistory, open, plan?.id]);
+  }, [activeTab, history.length, open, plan?.id]);
 
   function requestClose() {
     unsavedChanges.requestAction(onClose);

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CalendarClock, ExternalLink, Trash2, X } from "lucide-react";
 import {
   automationDraftsEqual,
@@ -42,6 +42,11 @@ export default function AutomationMachineDetails({
   const [overrideBaseline, setOverrideBaseline] = useState(emptyOverrideDraft);
   const [overrideErrors, setOverrideErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const onLoadDetailsRef = useRef(onLoadDetails);
+
+  useEffect(() => {
+    onLoadDetailsRef.current = onLoadDetails;
+  }, [onLoadDetails]);
 
   useEffect(() => {
     setSelectedPlanId(machine?.plans?.[0]?.id || "");
@@ -63,7 +68,7 @@ export default function AutomationMachineDetails({
     const fallbackDraft = buildAutomationOverrideDraft({ plan: selectedPlan });
 
     setDetail(null);
-    setDetailLoading(Boolean(onLoadDetails));
+    setDetailLoading(Boolean(onLoadDetailsRef.current));
     setDetailError("");
     setEditingOverride(false);
     setConfirmingRemoval(false);
@@ -71,9 +76,9 @@ export default function AutomationMachineDetails({
     setOverrideDraft(fallbackDraft);
     setOverrideBaseline(fallbackDraft);
 
-    if (!onLoadDetails) return undefined;
+    if (!onLoadDetailsRef.current) return undefined;
 
-    onLoadDetails(selectedPlan.id, machine.assetId)
+    onLoadDetailsRef.current(selectedPlan.id, machine.assetId)
       .then((response) => {
         if (cancelled) return;
         const loadedDraft = buildAutomationOverrideDraft({
@@ -97,7 +102,7 @@ export default function AutomationMachineDetails({
     return () => {
       cancelled = true;
     };
-  }, [machine?.assetId, onLoadDetails, open, selectedPlan?.id]);
+  }, [machine?.assetId, open, selectedPlan?.id]);
 
   function requestClose() {
     unsavedChanges.requestAction(onClose);

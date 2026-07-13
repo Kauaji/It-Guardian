@@ -7,7 +7,6 @@ import MachineDetailsModal from "./MachineDetailsModal.jsx";
 import BulkActionsBar from "./BulkActionsBar.jsx";
 import InventoryTabs from "./InventoryTabs.jsx";
 import ColorPickerSegment from "./ColorPickerSegment.jsx";
-import InventoryVisualMapView from "./InventoryVisualMapView.jsx";
 
 function SegmentGroupContainer({ groupId, color, className = "", children }) {
   const { isOver, setNodeRef } = useDroppable({
@@ -87,7 +86,8 @@ export default function InventoryBoard({
   onToggleBackup,
   onRemoveMachine,
   onCloseMoveModal,
-  onOpenMoveModal
+  onOpenMoveModal,
+  floorPlansView = null
 }) {
   const [selectedMachine, setSelectedMachine] = useState(null);
   const [activePopoverId, setActivePopoverId] = useState(null);
@@ -205,6 +205,12 @@ export default function InventoryBoard({
   }, [inventoryViewMode]);
 
   useEffect(() => {
+    if (inventoryViewMode === "floor-plans" && !floorPlansView) {
+      setInventoryViewMode("board");
+    }
+  }, [floorPlansView, inventoryViewMode]);
+
+  useEffect(() => {
     if (!selectedMachine) return undefined;
 
     const previousOverflow = document.body.style.overflow;
@@ -257,15 +263,17 @@ export default function InventoryBoard({
           <Database size={16} />
           Quadro
         </button>
-        <button
-          type="button"
-          className={inventoryViewMode === "map3d" ? "active" : ""}
-          onClick={() => setInventoryViewMode("map3d")}
-          aria-selected={inventoryViewMode === "map3d"}
-        >
-          <MapIcon size={16} />
-          Mapa visual 3D
-        </button>
+        {floorPlansView && (
+          <button
+            type="button"
+            className={inventoryViewMode === "floor-plans" ? "active" : ""}
+            onClick={() => setInventoryViewMode("floor-plans")}
+            aria-selected={inventoryViewMode === "floor-plans"}
+          >
+            <MapIcon size={16} />
+            Plantas
+          </button>
+        )}
       </div>
 
       {inventoryViewMode === "board" ? (
@@ -617,16 +625,7 @@ export default function InventoryBoard({
       </section>
         </>
       ) : (
-        <InventoryVisualMapView
-          token={token}
-          notify={notify}
-          devices={devices}
-          segments={segments}
-          groups={groups}
-          tabs={tabs}
-          activeTab={activeTab}
-          canManage={canManage}
-        />
+        floorPlansView
       )}
 
       <MoveMachineModal
