@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { query, withTransaction } from "../database.js";
+import { validateFloorPlanEditorData } from "../domain/floorPlanValidation.js";
 import { addAssetHistory } from "./assetHistoryRepository.js";
 import { addLog } from "./logRepository.js";
 
@@ -420,30 +421,37 @@ async function insertCableRoute(db, route) {
   );
 }
 
+function normalizeEditorChildren(planId, data) {
+  const floors = data.floors;
+  const validFloorIds = new Set(floors.map((floor) => floor.id));
+  const fallbackFloorId = floors[0].id;
+  const zones = (data.zones || []).map((item, index) => normalizeZonePayload(item, planId, validFloorIds, fallbackFloorId, index));
+  const objects = (data.objects || []).map((item) => normalizeObjectPayload(item, planId, validFloorIds, fallbackFloorId));
+  const connectionPoints = (data.connectionPoints || data.connection_points || []).map((item) => (
+    normalizePointPayload(item, planId, validFloorIds, fallbackFloorId)
+  ));
+  const cableRoutes = (data.cableRoutes || data.cable_routes || []).map((item) => (
+    normalizeRoutePayload(item, planId, validFloorIds, fallbackFloorId)
+  ));
+  const normalized = { floors, zones, objects, connectionPoints, cableRoutes };
+  validateFloorPlanEditorData(normalized);
+  return { ...normalized, fallbackFloorId };
+}
+
 async function replaceEditorChildren(db, planId, data) {
+  const { floors, zones, objects, connectionPoints, cableRoutes, fallbackFloorId } = normalizeEditorChildren(planId, data);
+
   await db("DELETE FROM floor_plan_cable_routes WHERE plan_id = $1", [planId]);
   await db("DELETE FROM floor_plan_connection_points WHERE plan_id = $1", [planId]);
   await db("DELETE FROM floor_plan_objects WHERE plan_id = $1", [planId]);
   await db("DELETE FROM floor_plan_zones WHERE plan_id = $1", [planId]);
   await db("DELETE FROM floor_plan_floors WHERE plan_id = $1", [planId]);
 
-  const floors = data.floors;
-  const validFloorIds = new Set(floors.map((floor) => floor.id));
-  const fallbackFloorId = floors[0].id;
-
   for (const floor of floors) await insertFloor(db, planId, floor);
-  for (const [index, item] of (data.zones || []).entries()) {
-    await insertZone(db, normalizeZonePayload(item, planId, validFloorIds, fallbackFloorId, index));
-  }
-  for (const item of data.objects || []) {
-    await insertObject(db, normalizeObjectPayload(item, planId, validFloorIds, fallbackFloorId));
-  }
-  for (const item of data.connectionPoints || data.connection_points || []) {
-    await insertConnectionPoint(db, normalizePointPayload(item, planId, validFloorIds, fallbackFloorId));
-  }
-  for (const item of data.cableRoutes || data.cable_routes || []) {
-    await insertCableRoute(db, normalizeRoutePayload(item, planId, validFloorIds, fallbackFloorId));
-  }
+  for (const zone of zones) await insertZone(db, zone);
+  for (const object of objects) await insertObject(db, object);
+  for (const point of connectionPoints) await insertConnectionPoint(db, point);
+  for (const route of cableRoutes) await insertCableRoute(db, route);
 
   return fallbackFloorId;
 }
