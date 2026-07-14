@@ -7,6 +7,7 @@ import {
   Hand,
   LampDesk,
   Laptop,
+  Minus,
   MousePointer2,
   Network,
   PanelTop,
@@ -30,6 +31,14 @@ export const FLOOR_PLAN_TOOLS = [
 ];
 
 export const FLOOR_PLAN_CATALOG = [
+  {
+    id: "structure",
+    label: "Estrutura",
+    items: [
+      { id: "wall", label: "Parede", icon: Minus, category: "structure", objectType: "wall", width: 180, height: 12, color: "#64748b", metadata: { wallHeight: 110 } },
+      { id: "divider", label: "Divisoria", icon: Minus, category: "structure", objectType: "divider", width: 140, height: 8, color: "#94a3b8", metadata: { wallHeight: 82 } }
+    ]
+  },
   {
     id: "openings",
     label: "Portas e janelas",

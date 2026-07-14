@@ -13644,6 +13644,27 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
   stroke-width: 4px;
 }
 
+.floor-plan-wall-preview line {
+  stroke: #2563eb;
+  stroke-linecap: round;
+  stroke-width: 12px;
+}
+
+.floor-plan-wall-preview circle {
+  fill: #ffffff;
+  stroke: #2563eb;
+  stroke-width: 3px;
+}
+
+.floor-plan-wall-preview text {
+  fill: #0f172a;
+  font-size: 13px;
+  font-weight: 900;
+  paint-order: stroke;
+  stroke: #ffffff;
+  stroke-width: 5px;
+}
+
 .room-selection-overlay {
   pointer-events: all;
 }
@@ -13774,6 +13795,30 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
   min-height: 430px;
 }
 
+.floor-plan-scene-shell {
+  min-height: 430px;
+  position: relative;
+}
+
+.floor-plan-scene-actions {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid #dbe4ef;
+  border-radius: 8px;
+  bottom: 14px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.14);
+  display: flex;
+  font-size: 0.78rem;
+  font-weight: 800;
+  gap: 10px;
+  justify-content: space-between;
+  left: 14px;
+  max-width: calc(100% - 28px);
+  padding: 8px 10px;
+  position: absolute;
+  z-index: 3;
+}
+
 .floor-plan-scene-3d canvas {
   display: block;
   height: 100% !important;
@@ -13830,8 +13875,20 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
   }
 
   .floor-plan-canvas,
+  .floor-plan-scene-shell,
   .floor-plan-scene-3d,
   .floor-plan-scene-3d canvas {
     min-height: 360px;
+  }
+
+  .floor-plan-scene-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .floor-plan-scene-actions::before {
+    color: #b45309;
+    content: "A edicao 3D funciona melhor em telas maiores.";
+    font-size: 0.72rem;
   }
 }

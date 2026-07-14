@@ -72,11 +72,32 @@ export function validateFloorPlanEditorData(data = {}) {
   }
 
   const objectIds = new Set();
+  const objectsById = new Map();
   for (const object of objects) {
     addUniqueId(errors, objectIds, "Objeto", object);
+    if (object?.id) objectsById.set(object.id, object);
     assertFloorReference(errors, floorIds, "Objeto", object);
     assertPositiveSize(errors, "Objeto", object);
     assertPoint(errors, "Objeto", object);
+  }
+
+  for (const object of objects) {
+    if (object?.metadata?.anchorType !== "wall") continue;
+    const parent = objectsById.get(object.metadata.parentObjectId);
+    if (!parent) {
+      errors.push(`Objeto ${object.id} referencia uma parede inexistente.`);
+      continue;
+    }
+    if (!["wall", "divider"].includes(parent.objectType)) {
+      errors.push(`Objeto ${object.id} possui ancora em objeto que nao e parede.`);
+    }
+    const anchorOffset = Number(object.metadata.anchorOffset);
+    if (!Number.isFinite(anchorOffset) || anchorOffset < 0 || anchorOffset > 1) {
+      errors.push(`Objeto ${object.id} possui posicao de ancora invalida.`);
+    }
+    if (parent.floorId !== object.floorId) {
+      errors.push(`Objeto ${object.id} e sua parede pertencem a andares diferentes.`);
+    }
   }
 
   const pointIds = new Set();

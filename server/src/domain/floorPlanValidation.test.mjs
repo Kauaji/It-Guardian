@@ -88,3 +88,46 @@ test("rejects cable routes linked to missing points", () => {
     /referencia ponto de destino inexistente/
   );
 });
+
+test("accepts a door anchored to a wall", () => {
+  const anchored = {
+    ...validEditorData,
+    objects: [
+      ...validEditorData.objects,
+      { id: "wall-1", floorId: "floor-1", objectType: "wall", x: 20, y: 20, width: 240, height: 12 },
+      {
+        id: "door-1",
+        floorId: "floor-1",
+        objectType: "door",
+        x: 80,
+        y: 18,
+        width: 72,
+        height: 16,
+        metadata: { anchorType: "wall", parentObjectId: "wall-1", anchorOffset: 0.4 }
+      }
+    ]
+  };
+
+  assert.equal(validateFloorPlanEditorData(anchored), true);
+});
+
+test("rejects an anchored opening with a missing parent wall", () => {
+  const brokenAnchor = {
+    ...validEditorData,
+    objects: [
+      ...validEditorData.objects,
+      {
+        id: "door-1",
+        floorId: "floor-1",
+        objectType: "door",
+        x: 80,
+        y: 18,
+        width: 72,
+        height: 16,
+        metadata: { anchorType: "wall", parentObjectId: "missing-wall", anchorOffset: 0.4 }
+      }
+    ]
+  };
+
+  assert.throws(() => validateFloorPlanEditorData(brokenAnchor), /parede inexistente/);
+});

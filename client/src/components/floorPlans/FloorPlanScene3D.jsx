@@ -2,12 +2,13 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { getRoomGeometry, getRoomInterior, getRoomWalls, isRoomZone } from "./utils/roomGeometry.js";
+import { isWallObject, syncAnchoredOpenings } from "./utils/wallGeometry.js";
 
 function toColor(value, fallback = "#1f7a61") {
   return /^#[0-9a-f]{6}$/i.test(String(value || "")) ? value : fallback;
 }
 
-export default function FloorPlanScene3D({ data, activeFloorId }) {
+export default function FloorPlanScene3D({ data, activeFloorId, selected, onSelect, onMoveObject, onRotateSelected }) {
   const containerRef = useRef(null);
 
   useEffect(() => {
@@ -27,12 +28,10 @@ export default function FloorPlanScene3D({ data, activeFloorId }) {
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setSize(width, height);
-    renderer.shadowMap.enabled = true;
     container.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.08;
+    controls.enableDamping = false;
     controls.minDistance = 360;
     controls.maxDistance = 1900;
     controls.maxPolarAngle = Math.PI / 2.15;
@@ -43,7 +42,6 @@ export default function FloorPlanScene3D({ data, activeFloorId }) {
 
     const sun = new THREE.DirectionalLight("#ffffff", 0.74);
     sun.position.set(-200, 500, 360);
-    sun.castShadow = true;
     scene.add(sun);
 
     const floorWidth = Number(floor?.width || data.plan?.width || 1280);
@@ -57,7 +55,8 @@ export default function FloorPlanScene3D({ data, activeFloorId }) {
     const offsetX = floorWidth / 2;
     const offsetY = floorHeight / 2;
     const activeZones = (data.zones || []).filter((zone) => !activeFloorId || zone.floorId === activeFloorId);
-    const activeObjects = (data.objects || []).filter((object) => !activeFloorId || object.floorId === activeFloorId);
+    const activeObjects = syncAnchoredOpenings(data.objects || []).filter((object) => !activeFloorId || object.floorId === activeFloorId);
+    const objectGroups = new Map();
 
     const addBox = ({ x, y, width: boxWidth, depth, height: boxHeight, color, opacity = 1, verticalOffset = 0, metalness = 0.02 }) => {
       const material = new THREE.MeshStandardMaterial({
@@ -69,8 +68,6 @@ export default function FloorPlanScene3D({ data, activeFloorId }) {
       });
       const mesh = new THREE.Mesh(new THREE.BoxGeometry(boxWidth, boxHeight, depth), material);
       mesh.position.set(Number(x || 0) + boxWidth / 2 - offsetX, boxHeight / 2 + verticalOffset, Number(y || 0) + depth / 2 - offsetY);
-      mesh.castShadow = boxHeight > 20;
-      mesh.receiveShadow = true;
       scene.add(mesh);
       return mesh;
     };
@@ -86,8 +83,6 @@ export default function FloorPlanScene3D({ data, activeFloorId }) {
     const addModelPart = (group, { x = 0, z = 0, y = 0, width: partWidth = 12, depth: partDepth = 12, height: partHeight = 12, color = "#1f7a61", opacity = 1, metalness = 0.04 }) => {
       const mesh = new THREE.Mesh(new THREE.BoxGeometry(partWidth, partHeight, partDepth), createMaterial(color, opacity, metalness));
       mesh.position.set(x, y + partHeight / 2, z);
-      mesh.castShadow = partHeight > 8;
-      mesh.receiveShadow = true;
       group.add(mesh);
       return mesh;
     };
@@ -95,8 +90,6 @@ export default function FloorPlanScene3D({ data, activeFloorId }) {
     const addCylinderPart = (group, { x = 0, z = 0, y = 0, radius = 8, height: partHeight = 12, color = "#1f7a61", opacity = 1 }) => {
       const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, partHeight, 24), createMaterial(color, opacity, 0.08));
       mesh.position.set(x, y + partHeight / 2, z);
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
       group.add(mesh);
       return mesh;
     };
@@ -111,8 +104,19 @@ export default function FloorPlanScene3D({ data, activeFloorId }) {
       const group = new THREE.Group();
       group.position.set(Number(object.x || 0) + objectWidth / 2 - offsetX, 22, Number(object.y || 0) + objectDepth / 2 - offsetY);
       group.rotation.y = THREE.MathUtils.degToRad(Number(object.rotation || 0));
+      group.userData.objectId = object.id;
+      group.userData.object = object;
 
-      if (["desk", "table", "meeting_table"].includes(type)) {
+      if (isWallObject(object)) {
+        addModelPart(group, {
+          width: objectWidth,
+          depth: Math.max(4, objectDepth),
+          height: Number(object.height3d || (type === "divider" ? 82 : 110)),
+          y: -22,
+          color: object.color || "#64748b",
+          opacity: type === "divider" ? 0.82 : 0.96
+        });
+      } else if (["desk", "table", "meeting_table"].includes(type)) {
         addModelPart(group, { width: objectWidth, depth: objectDepth, height: 10, y: 36, color: "#a9825c" });
         const legOffsetX = objectWidth / 2 - 8;
         const legOffsetZ = objectDepth / 2 - 8;
@@ -164,6 +168,11 @@ export default function FloorPlanScene3D({ data, activeFloorId }) {
       }
 
       scene.add(group);
+      group.traverse((child) => {
+        child.userData.objectId = object.id;
+        child.userData.objectRoot = group;
+      });
+      objectGroups.set(object.id, group);
       return group;
     };
 
@@ -201,25 +210,121 @@ export default function FloorPlanScene3D({ data, activeFloorId }) {
     grid.position.y = 18;
     scene.add(grid);
 
-    let animationId = 0;
-    const animate = () => {
-      controls.update();
+    let selectionHelper = null;
+    const selectedGroup = selected?.type === "object" ? objectGroups.get(selected.id) : null;
+    if (selectedGroup) {
+      selectionHelper = new THREE.BoxHelper(selectedGroup, "#2563eb");
+      scene.add(selectionHelper);
+    }
+
+    const render = () => {
+      selectionHelper?.update();
       renderer.render(scene, camera);
-      animationId = requestAnimationFrame(animate);
     };
-    animationId = requestAnimationFrame(animate);
+    controls.addEventListener("change", render);
+
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    let dragState = null;
+
+    const setPointer = (event) => {
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+    };
+
+    const handlePointerDown = (event) => {
+      if (event.button !== 0) return;
+      setPointer(event);
+      const hits = raycaster.intersectObjects([...objectGroups.values()], true);
+      const hit = hits.find((entry) => entry.object?.userData?.objectId);
+      if (!hit) return;
+      const objectId = hit.object.userData.objectId;
+      const object = activeObjects.find((entry) => entry.id === objectId);
+      const root = objectGroups.get(objectId);
+      if (!object || !root) return;
+      const groundPoint = new THREE.Vector3();
+      if (!raycaster.ray.intersectPlane(groundPlane, groundPoint)) return;
+      dragState = {
+        object,
+        root,
+        start: groundPoint.clone(),
+        origin: root.position.clone()
+      };
+      controls.enabled = false;
+      renderer.domElement.setPointerCapture?.(event.pointerId);
+      event.preventDefault();
+    };
+
+    const handlePointerMove = (event) => {
+      if (!dragState) return;
+      setPointer(event);
+      const groundPoint = new THREE.Vector3();
+      if (!raycaster.ray.intersectPlane(groundPlane, groundPoint)) return;
+      dragState.root.position.x = dragState.origin.x + groundPoint.x - dragState.start.x;
+      dragState.root.position.z = dragState.origin.z + groundPoint.z - dragState.start.z;
+      render();
+    };
+
+    const handlePointerUp = (event) => {
+      if (!dragState) return;
+      const { object, root } = dragState;
+      onSelect?.({ type: "object", id: object.id });
+      onMoveObject?.(object.id, {
+        x: root.position.x + offsetX - Number(object.width || 0) / 2,
+        y: root.position.z + offsetY - Number(object.height || 0) / 2
+      });
+      dragState = null;
+      controls.enabled = true;
+      renderer.domElement.releasePointerCapture?.(event.pointerId);
+      render();
+    };
+
+    renderer.domElement.addEventListener("pointerdown", handlePointerDown);
+    renderer.domElement.addEventListener("pointermove", handlePointerMove);
+    renderer.domElement.addEventListener("pointerup", handlePointerUp);
+    renderer.domElement.addEventListener("pointercancel", handlePointerUp);
+
+    const resizeObserver = new ResizeObserver(() => {
+      const nextWidth = Math.max(container.clientWidth, 320);
+      const nextHeight = Math.max(container.clientHeight, 260);
+      camera.aspect = nextWidth / nextHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(nextWidth, nextHeight);
+      render();
+    });
+    resizeObserver.observe(container);
+    render();
 
     return () => {
-      cancelAnimationFrame(animationId);
+      resizeObserver.disconnect();
+      controls.removeEventListener("change", render);
+      renderer.domElement.removeEventListener("pointerdown", handlePointerDown);
+      renderer.domElement.removeEventListener("pointermove", handlePointerMove);
+      renderer.domElement.removeEventListener("pointerup", handlePointerUp);
+      renderer.domElement.removeEventListener("pointercancel", handlePointerUp);
       controls.dispose();
       renderer.dispose();
       container.removeChild(renderer.domElement);
       scene.traverse((item) => {
         if (item.geometry) item.geometry.dispose();
-        if (item.material) item.material.dispose?.();
+        if (Array.isArray(item.material)) item.material.forEach((material) => material.dispose?.());
+        else if (item.material) item.material.dispose?.();
       });
     };
-  }, [activeFloorId, data]);
+  }, [activeFloorId, data, onMoveObject, onSelect, selected]);
 
-  return <div className="floor-plan-scene-3d" ref={containerRef} aria-label="Visualizacao 3D da planta" />;
+  return (
+    <div className="floor-plan-scene-shell">
+      <div className="floor-plan-scene-3d" ref={containerRef} aria-label="Visualizacao 3D interativa da planta" />
+      <div className="floor-plan-scene-actions" aria-label="Acoes da selecao 3D">
+        <span>{selected?.type === "object" ? "Item selecionado" : "Clique em um item para selecionar"}</span>
+        {selected?.type === "object" ? (
+          <button type="button" className="secondary-action compact-action" onClick={onRotateSelected}>Girar 90 graus</button>
+        ) : null}
+      </div>
+    </div>
+  );
 }

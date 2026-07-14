@@ -7,6 +7,12 @@ import {
   normalizeResponsePlan,
   resizeObjectGeometry
 } from "../../../client/src/components/floorPlans/utils/editorGeometry.js";
+import {
+  attachOpeningToWall,
+  removeObjectCascade,
+  snapWallEndPoint,
+  syncAnchoredOpenings
+} from "../../../client/src/components/floorPlans/utils/wallGeometry.js";
 
 const floor = { id: "floor-1", width: 500, height: 400 };
 const room = {
@@ -116,5 +122,37 @@ describe("floor plan editor geometry rules", () => {
     assert.equal(normalizedPc.x, 160);
     assert.equal(normalizedPc.y, 145);
     assert.equal(normalizedPc.metadata.anchorObjectId, "table-1");
+  });
+
+  it("snaps wall endpoints to 45 degree increments", () => {
+    const endpoint = snapWallEndPoint({ x: 0, y: 0 }, { x: 93, y: 80 }, 5);
+
+    assert.equal(endpoint.angle, 45);
+    assert.equal(endpoint.length, 125);
+  });
+
+  it("keeps anchored openings attached when their wall moves", () => {
+    const wall = { id: "wall-1", objectType: "wall", x: 50, y: 80, width: 200, height: 12, rotation: 0 };
+    const door = attachOpeningToWall(
+      { id: "door-1", objectType: "door", x: 0, y: 0, width: 60, height: 16, metadata: {} },
+      wall,
+      { x: 150, y: 86 }
+    );
+    const movedWall = { ...wall, x: 100, y: 120 };
+    const syncedDoor = syncAnchoredOpenings([movedWall, door]).find((object) => object.id === "door-1");
+
+    assert.equal(syncedDoor.x, 170);
+    assert.equal(syncedDoor.y, 118);
+    assert.equal(syncedDoor.metadata.parentObjectId, "wall-1");
+  });
+
+  it("removes anchored openings together with their parent wall", () => {
+    const remaining = removeObjectCascade([
+      { id: "wall-1", objectType: "wall" },
+      { id: "door-1", objectType: "door", metadata: { parentObjectId: "wall-1" } },
+      { id: "pc-1", objectType: "pc" }
+    ], "wall-1");
+
+    assert.deepEqual(remaining.map((object) => object.id), ["pc-1"]);
   });
 });

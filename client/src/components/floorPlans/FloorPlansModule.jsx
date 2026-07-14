@@ -64,6 +64,18 @@ import {
   resizeObjectGeometry,
   snap
 } from "./utils/editorGeometry.js";
+import {
+  attachOpeningToWall,
+  createWallObjectFromPoints,
+  findNearestWall,
+  isAnchoredOpening,
+  isOpeningObject,
+  isWallObject,
+  removeObjectCascade,
+  resolveAnchoredOpening,
+  snapWallEndPoint,
+  syncAnchoredOpenings
+} from "./utils/wallGeometry.js";
 
 const FloorPlanScene3D = lazy(() => import("./FloorPlanScene3D.jsx"));
 
@@ -323,7 +335,11 @@ function FloorPlanCatalog({ activeSection, onActiveSectionChange, onAddItem, onS
       )}
       {placement ? (
         <div className="floor-plan-catalog-hint">
-          Clique na planta para posicionar. Use R para girar e Esc para cancelar.
+          {placement.kind === "room"
+            ? "Clique e arraste na planta para definir o tamanho. Use R para girar e Esc para cancelar."
+            : placement.kind === "wall"
+              ? "Clique no inicio e no fim da parede. O angulo sera ajustado automaticamente."
+              : "Clique sobre uma parede para encaixar a abertura. Use Esc para cancelar."}
         </div>
       ) : null}
     </section>
@@ -361,6 +377,21 @@ function ObjectSelectionOverlay({ object, onResizeStart }) {
   );
 }
 
+function WallPlacementPreview({ placement }) {
+  if (placement?.kind !== "wall" || !placement.start || !placement.end) return null;
+  const snappedEnd = snapWallEndPoint(placement.start, placement.end, placement.gridSize || 5);
+  return (
+    <g className="floor-plan-wall-preview" pointerEvents="none">
+      <line x1={placement.start.x} y1={placement.start.y} x2={snappedEnd.x} y2={snappedEnd.y} />
+      <circle cx={placement.start.x} cy={placement.start.y} r="7" />
+      <circle cx={snappedEnd.x} cy={snappedEnd.y} r="7" />
+      <text x={(placement.start.x + snappedEnd.x) / 2} y={(placement.start.y + snappedEnd.y) / 2 - 12} textAnchor="middle">
+        {Math.round(snappedEnd.length)} px / {snappedEnd.angle} graus
+      </text>
+    </g>
+  );
+}
+
 function FloorPlanCanvas({
   editor,
   activeFloorId,
@@ -384,7 +415,7 @@ function FloorPlanCanvas({
   const floor = getActiveFloor(editor, activeFloorId);
   const gridSize = editor?.plan?.gridSize || DEFAULT_PLAN_SIZE.gridSize;
   const zones = (editor?.zones || []).filter((zone) => zone.floorId === floor?.id);
-  const objects = (editor?.objects || []).filter((object) => object.floorId === floor?.id);
+  const objects = syncAnchoredOpenings(editor?.objects || []).filter((object) => object.floorId === floor?.id);
   const points = (editor?.connectionPoints || []).filter((point) => point.floorId === floor?.id);
   const routes = (editor?.cableRoutes || []).filter((route) => route.floorId === floor?.id);
   const width = floor?.width || editor?.plan?.width || DEFAULT_PLAN_SIZE.width;
@@ -505,7 +536,7 @@ function FloorPlanCanvas({
           const objectSelected = selected?.type === "object" && selected.id === object.id;
           const objectWidth = object.width || 80;
           const objectHeight = object.height || 56;
-          const hideObjectLabel = isTableObject(object);
+          const hideObjectLabel = isTableObject(object) || isWallObject(object) || isOpeningObject(object);
           const iconSize = hideObjectLabel ? 30 : 24;
           const iconX = hideObjectLabel ? objectWidth / 2 - iconSize / 2 : 10;
           const iconY = hideObjectLabel ? objectHeight / 2 - iconSize / 2 : 10;
@@ -520,8 +551,8 @@ function FloorPlanCanvas({
                 onSelect({ type: "object", id: object.id });
               }}
             >
-              <rect width={objectWidth} height={objectHeight} rx="8" fill="#ffffff" stroke={object.color} strokeWidth={objectSelected ? 4 : 2} />
-              <rect x="6" y="6" width={objectWidth - 12} height={objectHeight - 12} rx="6" fill={object.color} opacity="0.16" />
+              <rect width={objectWidth} height={objectHeight} rx={isWallObject(object) ? "3" : "8"} fill={isWallObject(object) ? object.color : "#ffffff"} stroke={object.color} strokeWidth={objectSelected ? 4 : 2} />
+              {!isWallObject(object) ? <rect x="6" y="6" width={Math.max(1, objectWidth - 12)} height={Math.max(1, objectHeight - 12)} rx="6" fill={object.color} opacity="0.16" /> : null}
               {object.objectType === "door" ? (
                 <path
                   className="floor-plan-door-swing"
@@ -530,7 +561,7 @@ function FloorPlanCanvas({
                     : `M 10 ${objectHeight - 8} A ${Math.max(24, objectWidth - 20)} ${Math.max(24, objectWidth - 20)} 0 0 1 ${objectWidth - 10} 8`}
                 />
               ) : null}
-              {Icon ? (
+              {Icon && !isWallObject(object) ? (
                 <foreignObject x={iconX} y={iconY} width={iconSize + 6} height={iconSize + 6}>
                   <Icon size={iconSize} color={object.color} />
                 </foreignObject>
@@ -564,7 +595,8 @@ function FloorPlanCanvas({
           </foreignObject>
         )}
 
-        <RoomPlacementPreview preview={placement?.preview} plan={editor.plan} />
+        <RoomPlacementPreview preview={placement?.kind === "room" ? placement.preview : null} plan={editor.plan} />
+        <WallPlacementPreview placement={placement} />
         <RoomSelectionOverlay
           zone={zones.find((zone) => selected?.type === "zone" && selected.id === zone.id && isRoomZone(zone))}
           plan={editor.plan}
@@ -626,7 +658,15 @@ function FloorPlanInspector({ editor, selected, onChangePlan, onChangeSelected, 
     );
   }
 
-  const linkedDevice = selected.type === "object" ? devices.find((device) => device.id === selectedEntity.linkedAssetId) : null;
+  const supportsInventoryLink = selected.type === "object"
+    && !isWallObject(selectedEntity)
+    && !isOpeningObject(selectedEntity);
+  const linkedDevice = supportsInventoryLink
+    ? devices.find((device) => device.id === selectedEntity.linkedAssetId)
+    : null;
+  const availableWalls = selected.type === "object"
+    ? (editor.objects || []).filter((object) => object.floorId === selectedEntity.floorId && isWallObject(object))
+    : [];
 
   return (
     <aside className="floor-plan-inspector">
@@ -642,7 +682,7 @@ function FloorPlanInspector({ editor, selected, onChangePlan, onChangeSelected, 
         <input value={selectedEntity.label || selectedEntity.name || ""} onChange={(event) => onChangeSelected({ label: event.target.value, name: event.target.value })} />
       </label>
 
-      {selected.type === "object" && (
+      {supportsInventoryLink && (
         <>
           <label>
             Vinculo com inventario
@@ -711,16 +751,80 @@ function FloorPlanInspector({ editor, selected, onChangePlan, onChangeSelected, 
         <input type="color" value={selectedEntity.color || "#1f7a61"} onChange={(event) => onChangeSelected({ color: event.target.value })} />
       </label>
 
-      {selected.type === "object" && (
+      {selected.type === "object" && isWallObject(selectedEntity) && (
         <div className="floor-plan-inspector-grid">
           <label>
-            X
-            <input type="number" value={Math.round(selectedEntity.x || 0)} onChange={(event) => onChangeSelected({ x: Number(event.target.value) })} />
+            Comprimento
+            <input type="number" min="40" step="5" value={Math.round(selectedEntity.width || 0)} onChange={(event) => onChangeSelected({ width: Number(event.target.value) })} />
           </label>
           <label>
-            Y
-            <input type="number" value={Math.round(selectedEntity.y || 0)} onChange={(event) => onChangeSelected({ y: Number(event.target.value) })} />
+            Espessura
+            <input type="number" min="4" step="1" value={Math.round(selectedEntity.height || 0)} onChange={(event) => onChangeSelected({ height: Number(event.target.value) })} />
           </label>
+          <label>
+            Angulo
+            <select value={Number(selectedEntity.rotation || 0)} onChange={(event) => onChangeSelected({ rotation: Number(event.target.value) })}>
+              {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => <option key={angle} value={angle}>{angle} graus</option>)}
+            </select>
+          </label>
+          <label>
+            Altura 3D
+            <input type="number" min="24" step="2" value={Math.round(selectedEntity.height3d || 110)} onChange={(event) => onChangeSelected({ height3d: Number(event.target.value) })} />
+          </label>
+        </div>
+      )}
+
+      {selected.type === "object" && isOpeningObject(selectedEntity) && (
+        <>
+          <label>
+            Parede vinculada
+            <select
+              value={selectedEntity.metadata?.parentObjectId || ""}
+              onChange={(event) => onChangeSelected({
+                metadata: {
+                  ...(selectedEntity.metadata || {}),
+                  anchorType: event.target.value ? "wall" : null,
+                  parentObjectId: event.target.value || null,
+                  anchorOffset: selectedEntity.metadata?.anchorOffset ?? 0.5
+                }
+              })}
+            >
+              <option value="">Sem parede</option>
+              {availableWalls.map((wall) => <option key={wall.id} value={wall.id}>{wall.label || "Parede"}</option>)}
+            </select>
+          </label>
+          {isAnchoredOpening(selectedEntity) ? (
+            <label>
+              Posicao na parede ({Math.round(Number(selectedEntity.metadata?.anchorOffset || 0) * 100)}%)
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={Number(selectedEntity.metadata?.anchorOffset ?? 0.5)}
+                onChange={(event) => onChangeSelected({ metadata: { ...(selectedEntity.metadata || {}), anchorOffset: Number(event.target.value) } })}
+              />
+            </label>
+          ) : null}
+          {selectedEntity.objectType === "door" ? (
+            <label>
+              Abertura da porta
+              <select
+                value={selectedEntity.metadata?.swing || "inward"}
+                onChange={(event) => onChangeSelected({ metadata: { ...(selectedEntity.metadata || {}), swing: event.target.value } })}
+              >
+                <option value="inward">Para dentro</option>
+                <option value="outward">Para fora</option>
+              </select>
+            </label>
+          ) : null}
+        </>
+      )}
+
+      {selected.type === "object" && !isWallObject(selectedEntity) && (
+        <div className="floor-plan-inspector-grid">
+          {!isAnchoredOpening(selectedEntity) ? <label>X<input type="number" value={Math.round(selectedEntity.x || 0)} onChange={(event) => onChangeSelected({ x: Number(event.target.value) })} /></label> : null}
+          {!isAnchoredOpening(selectedEntity) ? <label>Y<input type="number" value={Math.round(selectedEntity.y || 0)} onChange={(event) => onChangeSelected({ y: Number(event.target.value) })} /></label> : null}
           <label>
             Largura
             <input type="number" value={Math.round(selectedEntity.width || 0)} onChange={(event) => onChangeSelected({ width: Number(event.target.value) })} />
@@ -732,7 +836,7 @@ function FloorPlanInspector({ editor, selected, onChangePlan, onChangeSelected, 
         </div>
       )}
 
-      {!permissions.linkInventory && selected.type === "object" && (
+      {!permissions.linkInventory && supportsInventoryLink && (
         <div className="floor-plan-inspector-note">
           <Link2 size={16} />
           Seu usuario nao pode alterar vinculos com inventario.
@@ -930,7 +1034,9 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
             ? "connectionPoints"
             : "cableRoutes";
       if (patch.remove) {
-        draft[collectionKey] = draft[collectionKey].filter((entry) => entry.id !== selected.id);
+        draft[collectionKey] = selected.type === "object"
+          ? removeObjectCascade(draft[collectionKey], selected.id)
+          : draft[collectionKey].filter((entry) => entry.id !== selected.id);
         if (selected.type === "zone") {
           draft.objects = (draft.objects || []).filter((object) => object.metadata?.parentRoomId !== selected.id);
           draft.connectionPoints = (draft.connectionPoints || []).filter((point) => point.metadata?.parentRoomId !== selected.id);
@@ -945,10 +1051,16 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
         }
         if (selected.type === "object") {
           const floor = getActiveFloor(draft, activeFloorId);
-          return constrainObjectToBounds({ ...entry, ...patch }, draft, floor);
+          const updated = { ...entry, ...patch };
+          if (isAnchoredOpening(updated)) {
+            const parentWall = (draft.objects || []).find((object) => object.id === updated.metadata?.parentObjectId);
+            return parentWall ? resolveAnchoredOpening(updated, parentWall) : updated;
+          }
+          return constrainObjectToBounds(updated, draft, floor);
         }
         return { ...entry, ...patch };
       });
+      if (selected.type === "object") draft.objects = syncAnchoredOpenings(draft.objects || []);
       return draft;
     });
   }, [activeFloorId, commitEditor, selected]);
@@ -956,6 +1068,25 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
   const addCatalogItem = useCallback((item) => {
     const floor = getActiveFloor(editor, activeFloorId);
     if (!floor) return;
+    if (isWallObject(item)) {
+      setMode("2d");
+      setSelectedTool("select");
+      setSelected(null);
+      setPlacement({ kind: "wall", item, start: null, end: null, gridSize: getFineSnapSize(editor) });
+      return;
+    }
+    if (isOpeningObject(item)) {
+      const hasWall = (editor.objects || []).some((object) => object.floorId === floor.id && isWallObject(object));
+      if (!hasWall) {
+        notify?.("Crie uma parede antes de posicionar portas ou janelas.", "warning");
+        return;
+      }
+      setMode("2d");
+      setSelectedTool("select");
+      setSelected(null);
+      setPlacement({ kind: "opening", item });
+      return;
+    }
     const centerX = Math.round((floor.width || DEFAULT_PLAN_SIZE.width) / 2);
     const centerY = Math.round((floor.height || DEFAULT_PLAN_SIZE.height) / 2);
 
@@ -1053,7 +1184,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
       setSelected({ type: "object", id: anchoredObject.id });
       return draft;
     });
-  }, [activeFloorId, commitEditor, editor, groups, segments]);
+  }, [activeFloorId, commitEditor, editor, groups, notify, segments]);
 
   const getSvgPoint = useCallback((event) => {
     const svg = svgRef.current;
@@ -1127,38 +1258,88 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
     };
   }, [activeFloorId, editor]);
 
+  const buildDraggedRoomPreview = useCallback((template, start, end, rotation = 0) => {
+    const floor = getActiveFloor(editor, activeFloorId);
+    if (!floor || !template || !start || !end) return null;
+    const snapSize = editor?.plan?.snapSize || DEFAULT_PLAN_SIZE.snapSize;
+    const defaultSize = rotateRoomSize(template.width, template.height, rotation);
+    const snappedStart = {
+      x: snapToGrid(start.x, snapSize),
+      y: snapToGrid(start.y, snapSize)
+    };
+    const snappedEnd = {
+      x: snapToGrid(end.x, snapSize),
+      y: snapToGrid(end.y, snapSize)
+    };
+    const draggedWidth = Math.abs(snappedEnd.x - snappedStart.x);
+    const draggedHeight = Math.abs(snappedEnd.y - snappedStart.y);
+
+    if (draggedWidth < snapSize * 2 && draggedHeight < snapSize * 2) {
+      return buildRoomPlacementPreview(template, start, rotation);
+    }
+
+    const geometry = clampRoomGeometry({
+      x: Math.min(snappedStart.x, snappedEnd.x),
+      y: Math.min(snappedStart.y, snappedEnd.y),
+      width: Math.max(defaultSize.width, draggedWidth),
+      height: Math.max(defaultSize.height, draggedHeight)
+    }, floor, snapSize);
+    const zone = normalizeRoomZone({
+      id: "placement-preview",
+      planId: editor.plan.id,
+      floorId: floor.id,
+      zoneType: "room",
+      name: template.label,
+      color: template.color,
+      geometry,
+      metadata: {
+        room: {
+          templateId: template.id,
+          shape: "rect",
+          rotation,
+          wallThickness: 10,
+          wallHeight: 110,
+          metersPerGridCell: editor.plan.metersPerGridCell || 0.5
+        }
+      }
+    }, editor.plan);
+
+    return {
+      zone,
+      geometry,
+      valid: isRoomPlacementValid(geometry, floor, editor.zones || []),
+      rotation
+    };
+  }, [activeFloorId, buildRoomPlacementPreview, editor]);
+
   const beginRoomPlacement = useCallback((template) => {
     if (!editor) return;
     setMode("2d");
     setSelectedTool("select");
     setActiveCatalog("rooms");
     setSelected(null);
-    setPlacement({ template, rotation: 0, preview: null });
+    setPlacement({ kind: "room", template, rotation: 0, preview: null });
   }, [editor]);
 
   const updateRoomPlacementPreview = useCallback((event) => {
-    if (!placement) return;
+    if (placement?.kind !== "room") return;
     const point = getSvgPoint(event);
-    const preview = buildRoomPlacementPreview(placement.template, point, placement.rotation);
+    const preview = placement.start
+      ? buildDraggedRoomPreview(placement.template, placement.start, point, placement.rotation)
+      : buildRoomPlacementPreview(placement.template, point, placement.rotation);
     setPlacement((current) => (current ? { ...current, preview } : current));
-  }, [buildRoomPlacementPreview, getSvgPoint, placement]);
+  }, [buildDraggedRoomPreview, buildRoomPlacementPreview, getSvgPoint, placement]);
 
-  const confirmRoomPlacement = useCallback((event) => {
-    if (!placement) return;
-    event.preventDefault();
-    event.stopPropagation();
-    const floor = getActiveFloor(editor, activeFloorId);
-    if (!floor) return;
-    const point = getSvgPoint(event);
-    const preview = placement.preview || buildRoomPlacementPreview(placement.template, point, placement.rotation);
-    if (!preview?.valid) {
+  const commitRoomPlacement = useCallback((placementState, preview) => {
+    if (!placementState?.template || !preview?.valid) {
       notify?.("Escolha uma area livre da planta para posicionar o comodo.", "warning");
-      return;
+      return false;
     }
-
+    const floor = getActiveFloor(editor, activeFloorId);
+    if (!floor) return false;
     let createdRoomId = null;
     const template = {
-      ...placement.template,
+      ...placementState.template,
       width: preview.geometry.width,
       height: preview.geometry.height
     };
@@ -1171,17 +1352,93 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
         createId,
         x: preview.geometry.x,
         y: preview.geometry.y,
-        rotation: placement.rotation
+        rotation: placementState.rotation
       });
       zone.orderIndex = (draft.zones || []).length;
       createdRoomId = zone.id;
       draft.zones = [...(draft.zones || []), normalizeRoomZone(zone, draft.plan)];
-      draft.objects = [...(draft.objects || []), ...centerDesktopsOnTables(objects)];
+      draft.objects = syncAnchoredOpenings([
+        ...(draft.objects || []),
+        ...centerDesktopsOnTables(objects)
+      ]);
       return draft;
     });
 
     if (createdRoomId) setSelected({ type: "zone", id: createdRoomId });
     setPlacement(null);
+    return Boolean(createdRoomId);
+  }, [activeFloorId, commitEditor, editor, notify]);
+
+  const confirmRoomPlacement = useCallback((event) => {
+    if (!placement) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const floor = getActiveFloor(editor, activeFloorId);
+    if (!floor) return;
+    const point = getSvgPoint(event);
+    if (placement.kind === "wall") {
+      if (!placement.start) {
+        const start = { x: snap(point.x, placement.gridSize || 5), y: snap(point.y, placement.gridSize || 5) };
+        setPlacement((current) => current ? { ...current, start, end: start } : current);
+        return;
+      }
+      let createdWallId = null;
+      commitEditor((draft) => {
+        const wall = createWallObjectFromPoints({
+          id: createId("object"),
+          planId: draft.plan.id,
+          floorId: floor.id,
+          item: placement.item,
+          start: placement.start,
+          end: point,
+          gridSize: placement.gridSize || 5
+        });
+        createdWallId = wall.id;
+        draft.objects = [...(draft.objects || []), wall];
+        return draft;
+      });
+      if (createdWallId) setSelected({ type: "object", id: createdWallId });
+      setPlacement((current) => current ? { ...current, start: null, end: null } : current);
+      return;
+    }
+    if (placement.kind === "opening") {
+      const nearest = findNearestWall(point, editor.objects || [], floor.id);
+      if (!nearest) {
+        notify?.("Clique sobre uma parede para encaixar a abertura.", "warning");
+        return;
+      }
+      let createdOpeningId = null;
+      commitEditor((draft) => {
+        const opening = attachOpeningToWall({
+          id: createId("object"),
+          planId: draft.plan.id,
+          floorId: floor.id,
+          objectType: placement.item.objectType,
+          category: "structure",
+          label: placement.item.label,
+          linkedAssetId: null,
+          groupId: null,
+          segmentId: null,
+          x: point.x - Number(placement.item.width || 72) / 2,
+          y: point.y - Number(placement.item.height || 16) / 2,
+          width: placement.item.width || 72,
+          height: placement.item.height || 16,
+          rotation: 0,
+          z: 0,
+          height3d: placement.item.objectType === "window" ? 48 : 96,
+          color: placement.item.color || "#64748b",
+          metadata: { ...(placement.item.metadata || {}), parentRoomId: nearest.wall.metadata?.parentRoomId || null }
+        }, nearest.wall, point);
+        createdOpeningId = opening.id;
+        draft.objects = [...(draft.objects || []), opening];
+        return draft;
+      });
+      if (createdOpeningId) setSelected({ type: "object", id: createdOpeningId });
+      return;
+    }
+    if (placement.kind !== "room") return;
+    const preview = placement.preview || buildRoomPlacementPreview(placement.template, point, placement.rotation);
+    setPlacement((current) => current ? { ...current, start: point, preview } : current);
   }, [activeFloorId, buildRoomPlacementPreview, commitEditor, editor, getSvgPoint, notify, placement]);
 
   const beginDrag = useCallback((event, type, id) => {
@@ -1234,6 +1491,15 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
         let movedTable = null;
         draft.objects = (draft.objects || []).map((object) => {
           if (object.id !== drag.id) return object;
+          if (isAnchoredOpening(object)) {
+            const parentWall = (draft.objects || []).find((entry) => entry.id === object.metadata.parentObjectId);
+            if (parentWall) {
+              return attachOpeningToWall(object, parentWall, {
+                x: nextX + Number(object.width || 0) / 2,
+                y: nextY + Number(object.height || 0) / 2
+              });
+            }
+          }
           const movedObject = constrainObjectToBounds(object, draft, draftFloor, { x: nextX, y: nextY });
           if (isTableObject(movedObject)) movedTable = movedObject;
           return movedObject;
@@ -1241,6 +1507,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
         if (movedTable) {
           draft.objects = centerLinkedAssetsOnTable(draft.objects, movedTable);
         }
+        draft.objects = syncAnchoredOpenings(draft.objects);
       } else if (drag.type === "zone") {
         let movedRoom = false;
         draft.zones = draft.zones.map((zone) => {
@@ -1258,6 +1525,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
             const origin = drag.childObjects.find((entry) => entry.id === object.id);
             return origin ? { ...object, x: origin.x + deltaX, y: origin.y + deltaY } : object;
           });
+          draft.objects = syncAnchoredOpenings(draft.objects);
           draft.connectionPoints = (draft.connectionPoints || []).map((pointEntry) => {
             const origin = drag.childPoints.find((entry) => entry.id === pointEntry.id);
             return origin ? { ...pointEntry, x: origin.x + deltaX, y: origin.y + deltaY } : pointEntry;
@@ -1283,6 +1551,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
           const origin = drag.childObjects.find((entry) => entry.id === object.id);
           return origin ? { ...object, x: origin.x + roomDeltaX, y: origin.y + roomDeltaY } : object;
         });
+        draft.objects = syncAnchoredOpenings(draft.objects);
         draft.connectionPoints = (draft.connectionPoints || []).map((pointEntry) => {
           const origin = drag.childPoints.find((entry) => entry.id === pointEntry.id);
           return origin ? { ...pointEntry, x: origin.x + roomDeltaX, y: origin.y + roomDeltaY } : pointEntry;
@@ -1308,6 +1577,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
         if (resizedObject && isTableObject(resizedObject)) {
           draft.objects = centerLinkedAssetsOnTable(draft.objects, resizedObject);
         }
+        draft.objects = syncAnchoredOpenings(draft.objects);
       } else if (drag.type === "point") {
         draft.connectionPoints = draft.connectionPoints.map((pointEntry) => (
           pointEntry.id === drag.id
@@ -1323,9 +1593,19 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
     }, { track: false });
   }, [activeFloorId, commitEditor, editor, getSvgPoint]);
 
-  const endDrag = useCallback(() => {
+  const endDrag = useCallback((event) => {
+    if (placement?.kind === "room" && placement.start) {
+      const point = event ? getSvgPoint(event) : placement.start;
+      const preview = buildDraggedRoomPreview(
+        placement.template,
+        placement.start,
+        point,
+        placement.rotation
+      ) || placement.preview;
+      commitRoomPlacement(placement, preview);
+    }
     dragRef.current = null;
-  }, []);
+  }, [buildDraggedRoomPreview, commitRoomPlacement, getSvgPoint, placement]);
 
   const beginRoomResize = useCallback((event, zoneId, side) => {
     if (!editor) return;
@@ -1377,6 +1657,31 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
     if (!selected) return;
     updateSelectedEntity({ remove: true });
   }, [selected, updateSelectedEntity]);
+
+  const moveObjectFrom3D = useCallback((objectId, position) => {
+    commitEditor((draft) => {
+      const draftFloor = getActiveFloor(draft, activeFloorId);
+      let movedTable = null;
+      draft.objects = (draft.objects || []).map((object) => {
+        if (object.id !== objectId) return object;
+        if (isAnchoredOpening(object)) {
+          const parentWall = (draft.objects || []).find((entry) => entry.id === object.metadata.parentObjectId);
+          if (parentWall) {
+            return attachOpeningToWall(object, parentWall, {
+              x: Number(position.x || 0) + Number(object.width || 0) / 2,
+              y: Number(position.y || 0) + Number(object.height || 0) / 2
+            });
+          }
+        }
+        const moved = constrainObjectToBounds(object, draft, draftFloor, position);
+        if (isTableObject(moved)) movedTable = moved;
+        return moved;
+      });
+      if (movedTable) draft.objects = centerLinkedAssetsOnTable(draft.objects, movedTable);
+      draft.objects = syncAnchoredOpenings(draft.objects);
+      return draft;
+    });
+  }, [activeFloorId, commitEditor]);
 
   const duplicateSelectedRoom = useCallback(() => {
     if (selected?.type !== "zone") return;
@@ -1450,6 +1755,17 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
         draft.objects = (draft.objects || []).map((object) => {
           if (object.id !== selected.id) return object;
           const isDoor = object.objectType === "door";
+          if (isAnchoredOpening(object)) {
+            return isDoor
+              ? {
+                ...object,
+                metadata: {
+                  ...(object.metadata || {}),
+                  swing: object.metadata?.swing === "outward" ? "inward" : "outward"
+                }
+              }
+              : object;
+          }
           const rotatedObject = constrainObjectToBounds({
             ...object,
             rotation: (Number(object.rotation || 0) + 90) % 360,
@@ -1464,6 +1780,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
         if (rotatedTable) {
           draft.objects = centerLinkedAssetsOnTable(draft.objects, rotatedTable);
         }
+        draft.objects = syncAnchoredOpenings(draft.objects);
         return draft;
       });
       return;
@@ -1521,12 +1838,17 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
   }, [activeFloorId, commitEditor, editor, notify, placement, selected]);
 
   const handleCanvasPointerMove = useCallback((event) => {
-    if (placement) {
+    if (placement?.kind === "room") {
       updateRoomPlacementPreview(event);
       return;
     }
+    if (placement?.kind === "wall" && placement.start) {
+      const point = getSvgPoint(event);
+      setPlacement((current) => current ? { ...current, end: point } : current);
+      return;
+    }
     moveDrag(event);
-  }, [moveDrag, placement, updateRoomPlacementPreview]);
+  }, [getSvgPoint, moveDrag, placement, updateRoomPlacementPreview]);
 
   const undo = useCallback(() => {
     setPast((items) => {
@@ -1696,7 +2018,14 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
             />
           ) : (
             <Suspense fallback={<div className="floor-plan-loading">Carregando 3D...</div>}>
-              <FloorPlanScene3D data={editor} activeFloorId={activeFloorId} />
+              <FloorPlanScene3D
+                data={editor}
+                activeFloorId={activeFloorId}
+                selected={selected}
+                onSelect={setSelected}
+                onMoveObject={moveObjectFrom3D}
+                onRotateSelected={rotateSelectedRoom}
+              />
             </Suspense>
           )}
 

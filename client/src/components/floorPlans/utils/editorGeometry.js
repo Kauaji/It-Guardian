@@ -1,4 +1,5 @@
 import { getRoomInterior, isRoomZone, normalizeRoomZone } from "./roomGeometry.js";
+import { syncAnchoredOpenings } from "./wallGeometry.js";
 
 export const DEFAULT_PLAN_SIZE = { width: 1280, height: 820, gridSize: 25, snapSize: 25 };
 export const FINE_OBJECT_SNAP_SIZE = 5;
@@ -29,7 +30,7 @@ export function normalizeEditorData(editorData) {
     ...editorData,
     plan,
     zones: (editorData.zones || []).map((zone) => normalizeRoomZone(zone, plan)),
-    objects: centerDesktopsOnTables(editorData.objects || [])
+    objects: syncAnchoredOpenings(centerDesktopsOnTables(editorData.objects || []))
   };
 }
 
