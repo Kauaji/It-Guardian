@@ -3331,6 +3331,18 @@ tbody tr.selected {
   font-weight: 950;
 }
 
+.inventory-visual-unsaved-badge {
+  width: fit-content;
+  margin-top: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #d97706 12%, var(--surface));
+  color: #9a5700;
+  padding: 3px 8px;
+  font-size: 0.7rem;
+  font-style: normal;
+  font-weight: 900;
+}
+
 .inventory-visual-map-actions,
 .inventory-visual-card-actions,
 .inventory-visual-object-panel footer,
@@ -3381,6 +3393,32 @@ tbody tr.selected {
   display: grid;
   gap: 12px;
   min-width: 0;
+}
+
+.inventory-visual-map-main {
+  position: relative;
+}
+
+.inventory-visual-camera-actions {
+  position: absolute;
+  z-index: 3;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  padding: 5px;
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(8px);
+}
+
+.inventory-visual-camera-actions .icon-button {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
 }
 
 .inventory-visual-map-sidebar > label,
@@ -3658,6 +3696,11 @@ tbody tr.selected {
   display: block;
 }
 
+.inventory-visual-map-canvas:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 34%, transparent);
+  outline-offset: 2px;
+}
+
 .inventory-visual-map-canvas.empty {
   display: grid;
   place-items: center;
@@ -3731,6 +3774,10 @@ tbody tr.selected {
 }
 
 @media (max-width: 760px) {
+  .inventory-visual-map-main {
+    order: -1;
+  }
+
   .inventory-view-switch,
   .inventory-visual-map-header,
   .inventory-visual-map-actions,
@@ -3773,6 +3820,11 @@ tbody tr.selected {
   .inventory-visual-map-canvas {
     height: 380px;
     min-height: 360px;
+  }
+
+  .inventory-visual-camera-actions {
+    top: 8px;
+    right: 8px;
   }
 }
 

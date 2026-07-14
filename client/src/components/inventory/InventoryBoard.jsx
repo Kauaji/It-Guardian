@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
-import { ArrowDown, ArrowUp, ChevronDown, Database, Edit3, ListFilter, Map as MapIcon, MoreHorizontal, Plus, Search, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Box, ChevronDown, Database, Edit3, ListFilter, Map as MapIcon, MoreHorizontal, Plus, Search, Trash2 } from "lucide-react";
 import SegmentCard from "./SegmentCard.jsx";
 import MoveMachineModal from "./MoveMachineModal.jsx";
 import MachineDetailsModal from "./MachineDetailsModal.jsx";
@@ -87,7 +87,8 @@ export default function InventoryBoard({
   onRemoveMachine,
   onCloseMoveModal,
   onOpenMoveModal,
-  floorPlansView = null
+  floorPlansView = null,
+  visualMapView = null
 }) {
   const [selectedMachine, setSelectedMachine] = useState(null);
   const [activePopoverId, setActivePopoverId] = useState(null);
@@ -208,7 +209,10 @@ export default function InventoryBoard({
     if (inventoryViewMode === "floor-plans" && !floorPlansView) {
       setInventoryViewMode("board");
     }
-  }, [floorPlansView, inventoryViewMode]);
+    if (inventoryViewMode === "visual-map" && !visualMapView) {
+      setInventoryViewMode("board");
+    }
+  }, [floorPlansView, inventoryViewMode, visualMapView]);
 
   useEffect(() => {
     if (!selectedMachine) return undefined;
@@ -272,6 +276,17 @@ export default function InventoryBoard({
           >
             <MapIcon size={16} />
             Plantas
+          </button>
+        )}
+        {visualMapView && (
+          <button
+            type="button"
+            className={inventoryViewMode === "visual-map" ? "active" : ""}
+            onClick={() => setInventoryViewMode("visual-map")}
+            aria-selected={inventoryViewMode === "visual-map"}
+          >
+            <Box size={16} />
+            Mapa 3D
           </button>
         )}
       </div>
@@ -624,9 +639,7 @@ export default function InventoryBoard({
         )}
       </section>
         </>
-      ) : (
-        floorPlansView
-      )}
+      ) : inventoryViewMode === "floor-plans" ? floorPlansView : visualMapView}
 
       <MoveMachineModal
         machine={moveModal}

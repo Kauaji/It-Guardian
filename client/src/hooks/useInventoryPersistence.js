@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchUserPreference, saveUserPreference } from "../api.js";
 import {
   activeInventoryTabKey,
@@ -99,40 +99,42 @@ export function useInventoryPersistence(token) {
     token
   ]);
 
-  function saveMachineAliases(updater) {
+  const saveMachineAliases = useCallback((updater) => {
     persistState(setMachineAliases, aliasKey, updater);
-  }
+  }, []);
 
-  function saveMachineObservations(updater) {
+  const saveMachineObservations = useCallback((updater) => {
     persistState(setMachineObservations, observationsKey, updater);
-  }
+  }, []);
 
-  function saveRemovedPeripherals(updater) {
+  const saveRemovedPeripherals = useCallback((updater) => {
     persistState(setRemovedPeripherals, peripheralRemovalsKey, updater);
-  }
+  }, []);
 
-  function savePeripheralHistory(updater) {
+  const savePeripheralHistory = useCallback((updater) => {
     persistState(setPeripheralHistory, peripheralHistoryKey, updater);
-  }
+  }, []);
 
-  function saveInventoryTabs(updater) {
-    const nextTabs = typeof updater === "function" ? updater(inventoryTabs) : updater;
-    const normalized = normalizeInventoryTabs(nextTabs);
-    localStorage.setItem(inventoryTabsKey, JSON.stringify(normalized));
-    setInventoryTabs(normalized);
-  }
+  const saveInventoryTabs = useCallback((updater) => {
+    setInventoryTabs((current) => {
+      const nextTabs = typeof updater === "function" ? updater(current) : updater;
+      const normalized = normalizeInventoryTabs(nextTabs);
+      localStorage.setItem(inventoryTabsKey, JSON.stringify(normalized));
+      return normalized;
+    });
+  }, []);
 
-  function saveInventoryTabMeta(updater) {
+  const saveInventoryTabMeta = useCallback((updater) => {
     setInventoryTabMeta((current) => {
       const next = normalizeInventoryTabMeta(typeof updater === "function" ? updater(current) : updater);
       localStorage.setItem(inventoryTabMetaKey, JSON.stringify(next));
       return next;
     });
-  }
+  }, []);
 
-  function saveMaintenanceRecords(updater) {
+  const saveMaintenanceRecords = useCallback((updater) => {
     persistState(setMaintenanceRecords, maintenanceRecordsKey, updater);
-  }
+  }, []);
 
   return {
     activeInventoryTabId,

@@ -3,6 +3,8 @@ import {
   Boxes,
   Building2,
   Cable,
+  Copy,
+  Focus,
   Grid2X2,
   Layers3,
   Map,
@@ -12,6 +14,7 @@ import {
   PlugZap,
   Plus,
   RefreshCw,
+  RotateCcw,
   RotateCw,
   Save,
   Trash2
@@ -120,6 +123,25 @@ function numberInputValue(value, fallback = 0) {
   return Number.isFinite(numeric) ? numeric : fallback;
 }
 
+function draftsMatch(left, right) {
+  return JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
+}
+
+function getNextObjectPosition(objects, map) {
+  const step = 1.5;
+  const columns = Math.max(1, Math.floor(Math.min(Number(map?.width) || 30, 18) / step));
+  const index = objects.length;
+  const column = index % columns;
+  const row = Math.floor(index / columns);
+  const startX = -((columns - 1) * step) / 2;
+  const maxZ = Math.max(0, (Number(map?.depth) || 20) / 2 - 1);
+
+  return {
+    positionX: Number((startX + column * step).toFixed(1)),
+    positionZ: Number(Math.min(maxZ, -maxZ + row * step).toFixed(1))
+  };
+}
+
 function mapToDraft(map) {
   if (!map) return EMPTY_MAP_DRAFT;
   return {
@@ -225,6 +247,7 @@ export default function InventoryVisualMapView({
   const [mode, setMode] = useState("view");
   const [showGrid, setShowGrid] = useState(true);
   const [layers, setLayers] = useState(getQuickLayerState("all"));
+  const [cameraAction, setCameraAction] = useState({ type: "fit", revision: 0 });
 
   const selectedObject = useMemo(
     () => objects.find((object) => object.id === selectedObjectId) || null,
@@ -244,6 +267,29 @@ export default function InventoryVisualMapView({
     () => maps.find((map) => map.id === activeMapId) || null,
     [activeMapId, maps]
   );
+  const mapDirty = useMemo(
+    () => Boolean(activeMap && !draftsMatch(mapDraft, mapToDraft(activeMap))),
+    [activeMap, mapDraft]
+  );
+  const objectDirty = useMemo(
+    () => Boolean(selectedObject && objectDraft && !draftsMatch(objectDraft, objectToDraft(selectedObject))),
+    [objectDraft, selectedObject]
+  );
+  const connectionDirty = useMemo(
+    () => Boolean(selectedConnection && connectionDraft && !draftsMatch(connectionDraft, connectionToDraft(selectedConnection))),
+    [connectionDraft, selectedConnection]
+  );
+  const hasUnsavedChanges = mapDirty || objectDirty || connectionDirty;
+  const isEditing = Boolean(canManage && mode === "edit");
+  const usedAssetIds = useMemo(
+    () => new Set(objects.map((object) => object.linkedAssetId).filter(Boolean)),
+    [objects]
+  );
+
+  const confirmDiscardChanges = useCallback((message = "Descartar as alteracoes nao salvas?") => {
+    if (!hasUnsavedChanges) return true;
+    return window.confirm(message);
+  }, [hasUnsavedChanges]);
 
   const loadMaps = useCallback(async () => {
     setLoading(true);
@@ -306,6 +352,16 @@ export default function InventoryVisualMapView({
   }, [loadActiveMap]);
 
   useEffect(() => {
+    if (!hasUnsavedChanges) return undefined;
+    const handleBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  useEffect(() => {
     setObjectDraft(objectToDraft(selectedObject));
   }, [selectedObject]);
 
@@ -324,6 +380,7 @@ export default function InventoryVisualMapView({
 
   async function handleCreateMap() {
     if (!canManage) return;
+    if (!confirmDiscardChanges("Criar outro mapa e descartar as alteracoes nao salvas?")) return;
     setSaving(true);
     setError("");
     try {
@@ -396,8 +453,7 @@ export default function InventoryVisualMapView({
         presetType,
         layer,
         label: preset?.label || "Objeto",
-        positionX: Math.round((objects.length % 5) * 1.8 - 3.6),
-        positionZ: Math.floor(objects.length / 5) * 1.6 - 2.4
+        ...getNextObjectPosition(objects, activeMap)
       });
       setObjects((current) => [...current, response.object]);
       setSelectedObjectId(response.object.id);
@@ -423,8 +479,7 @@ export default function InventoryVisualMapView({
         layer: "assets",
         label: getDeviceName(device),
         linkedAssetId: device.id,
-        positionX: Math.round((objects.length % 5) * 1.8 - 3.6),
-        positionZ: Math.floor(objects.length / 5) * 1.6 - 1.2
+        ...getNextObjectPosition(objects, activeMap)
       });
       setObjects((current) => [...current, response.object]);
       setSelectedObjectId(response.object.id);
@@ -490,6 +545,7 @@ export default function InventoryVisualMapView({
 
   async function handleDeleteObject() {
     if (!canManage || !selectedObject) return;
+    if (!window.confirm(`Remover "${selectedObject.label}" deste mapa visual?`)) return;
     setSaving(true);
     setError("");
     try {
@@ -499,6 +555,28 @@ export default function InventoryVisualMapView({
       notify?.("Objeto removido do mapa.", "success");
     } catch (deleteError) {
       setError(deleteError.message || "Nao foi possivel remover o objeto.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDuplicateObject() {
+    if (!isEditing || !selectedObject || !objectDraft) return;
+    setSaving(true);
+    setError("");
+    try {
+      const response = await createInventoryVisualMapObject(token, activeMapId, {
+        ...objectDraft,
+        label: `${objectDraft.label || selectedObject.label} (copia)`,
+        linkedAssetId: null,
+        positionX: numberInputValue(objectDraft.positionX) + 0.5,
+        positionZ: numberInputValue(objectDraft.positionZ) + 0.5
+      });
+      setObjects((current) => [...current, response.object]);
+      setSelectedObjectId(response.object.id);
+      notify?.("Objeto duplicado.", "success");
+    } catch (duplicateError) {
+      setError(duplicateError.message || "Nao foi possivel duplicar o objeto.");
     } finally {
       setSaving(false);
     }
@@ -537,6 +615,7 @@ export default function InventoryVisualMapView({
 
   async function handleDeleteConnection() {
     if (!canManage || !selectedConnection) return;
+    if (!window.confirm(`Remover a conexao "${selectedConnection.label || "sem identificacao"}"?`)) return;
     setSaving(true);
     setError("");
     try {
@@ -634,13 +713,42 @@ export default function InventoryVisualMapView({
   }
 
   function handleSelectObject(objectId) {
+    if (objectId !== selectedObjectId && objectDirty && !window.confirm("Descartar as alteracoes deste objeto?")) return;
     setSelectedObjectId(objectId);
     if (objectId) setSelectedConnectionId(null);
   }
 
   function handleSelectConnection(connectionId) {
+    if (connectionId !== selectedConnectionId && connectionDirty && !window.confirm("Descartar as alteracoes desta conexao?")) return;
     setSelectedConnectionId(connectionId);
     if (connectionId) setSelectedObjectId(null);
+  }
+
+  function handleMapChange(nextMapId) {
+    if (nextMapId === activeMapId) return;
+    if (!confirmDiscardChanges("Trocar de mapa e descartar as alteracoes nao salvas?")) return;
+    setActiveMapId(nextMapId);
+  }
+
+  function handleModeChange(nextMode) {
+    if (nextMode === mode) return;
+    if (nextMode === "view" && !confirmDiscardChanges("Sair do modo de edicao e descartar as alteracoes nao salvas?")) return;
+    if (nextMode === "view") {
+      setMapDraft(mapToDraft(activeMap));
+      setObjectDraft(objectToDraft(selectedObject));
+      setConnectionDraft(connectionToDraft(selectedConnection));
+    }
+    setMode(nextMode);
+  }
+
+  async function handleRefresh() {
+    if (!confirmDiscardChanges("Atualizar o mapa e descartar as alteracoes nao salvas?")) return;
+    await loadMaps();
+    await loadActiveMap();
+  }
+
+  function runCameraAction(type) {
+    setCameraAction((current) => ({ type, revision: current.revision + 1 }));
   }
 
   return (
@@ -649,9 +757,10 @@ export default function InventoryVisualMapView({
         <div>
           <span>Mapa visual 3D</span>
           <strong>{activeMap?.name || activeMapOption?.name || "Sem mapa selecionado"}</strong>
+          {hasUnsavedChanges && <em className="inventory-visual-unsaved-badge">Alteracoes nao salvas</em>}
         </div>
         <div className="inventory-visual-map-actions">
-          <button type="button" className="icon-button" onClick={loadMaps} disabled={loading} title="Atualizar mapas">
+          <button type="button" className="icon-button" onClick={handleRefresh} disabled={loading} title="Atualizar mapas">
             <RefreshCw size={18} />
           </button>
           {canManage && (
@@ -691,7 +800,7 @@ export default function InventoryVisualMapView({
           <aside className="inventory-visual-map-sidebar">
             <label>
               Mapa
-              <select value={activeMapId} onChange={(event) => setActiveMapId(event.target.value)}>
+              <select value={activeMapId} onChange={(event) => handleMapChange(event.target.value)}>
                 {maps.map((map) => (
                   <option key={map.id} value={map.id}>
                     {map.name} ({map.objectCount || 0})
@@ -701,11 +810,11 @@ export default function InventoryVisualMapView({
             </label>
 
             <div className="inventory-visual-mode-toggle" role="group" aria-label="Modo do mapa">
-              <button type="button" className={mode === "view" ? "active" : ""} onClick={() => setMode("view")}>
+              <button type="button" className={mode === "view" ? "active" : ""} onClick={() => handleModeChange("view")}>
                 <MousePointer2 size={16} />
                 Visualizar
               </button>
-              <button type="button" className={mode === "edit" ? "active" : ""} onClick={() => setMode("edit")} disabled={!canManage}>
+              <button type="button" className={mode === "edit" ? "active" : ""} onClick={() => handleModeChange("edit")} disabled={!canManage}>
                 <Pencil size={16} />
                 Editar
               </button>
@@ -718,12 +827,12 @@ export default function InventoryVisualMapView({
               </div>
               <label>
                 Nome
-                <input value={mapDraft.name} onChange={(event) => updateMapDraft("name", event.target.value)} disabled={!canManage} />
+                <input value={mapDraft.name} onChange={(event) => updateMapDraft("name", event.target.value)} disabled={!isEditing} />
               </label>
               <div className="inventory-visual-form-grid">
                 <label>
                   Aba
-                  <select value={mapDraft.environmentId || ""} onChange={(event) => updateMapDraft("environmentId", event.target.value)} disabled={!canManage}>
+                  <select value={mapDraft.environmentId || ""} onChange={(event) => updateMapDraft("environmentId", event.target.value)} disabled={!isEditing}>
                     <option value="">Nao vinculado</option>
                     {tabs.map((tab) => (
                       <option key={tab.id} value={tab.id}>{tab.name}</option>
@@ -732,7 +841,7 @@ export default function InventoryVisualMapView({
                 </label>
                 <label>
                   Grupo
-                  <select value={mapDraft.groupId || ""} onChange={(event) => updateMapDraft("groupId", event.target.value)} disabled={!canManage}>
+                  <select value={mapDraft.groupId || ""} onChange={(event) => updateMapDraft("groupId", event.target.value)} disabled={!isEditing}>
                     <option value="">Nao vinculado</option>
                     {groups.map((group) => (
                       <option key={group.id} value={group.id}>{group.name}</option>
@@ -741,7 +850,7 @@ export default function InventoryVisualMapView({
                 </label>
                 <label>
                   Segmento
-                  <select value={mapDraft.segmentId || ""} onChange={(event) => updateMapDraft("segmentId", event.target.value)} disabled={!canManage}>
+                  <select value={mapDraft.segmentId || ""} onChange={(event) => updateMapDraft("segmentId", event.target.value)} disabled={!isEditing}>
                     <option value="">Nao vinculado</option>
                     {segments.map((segment) => (
                       <option key={segment.id} value={segment.id}>{segment.name}</option>
@@ -750,27 +859,31 @@ export default function InventoryVisualMapView({
                 </label>
                 <label>
                   Andar
-                  <input value={mapDraft.floorLabel || ""} onChange={(event) => updateMapDraft("floorLabel", event.target.value)} disabled={!canManage} placeholder="Ex: 2o andar" />
+                  <input value={mapDraft.floorLabel || ""} onChange={(event) => updateMapDraft("floorLabel", event.target.value)} disabled={!isEditing} placeholder="Ex: 2o andar" />
                 </label>
                 <label>
                   Largura
-                  <input type="number" min="5" max="200" value={mapDraft.width} onChange={(event) => updateMapDraft("width", event.target.value)} disabled={!canManage} />
+                  <input type="number" min="5" max="200" value={mapDraft.width} onChange={(event) => updateMapDraft("width", event.target.value)} disabled={!isEditing} />
                 </label>
                 <label>
                   Profundidade
-                  <input type="number" min="5" max="200" value={mapDraft.depth} onChange={(event) => updateMapDraft("depth", event.target.value)} disabled={!canManage} />
+                  <input type="number" min="5" max="200" value={mapDraft.depth} onChange={(event) => updateMapDraft("depth", event.target.value)} disabled={!isEditing} />
+                </label>
+                <label>
+                  Escala da grade
+                  <input type="number" min="0.1" max="10" step="0.1" value={mapDraft.scale} onChange={(event) => updateMapDraft("scale", event.target.value)} disabled={!isEditing} />
                 </label>
               </div>
               <label>
                 Observacoes
-                <textarea value={mapDraft.notes || ""} onChange={(event) => updateMapDraft("notes", event.target.value)} disabled={!canManage} rows={3} />
+                <textarea value={mapDraft.notes || ""} onChange={(event) => updateMapDraft("notes", event.target.value)} disabled={!isEditing} rows={3} />
               </label>
               <div className="inventory-visual-card-actions">
                 <button type="button" className="secondary-action compact-action" onClick={() => setShowGrid((current) => !current)}>
                   <Grid2X2 size={15} />
                   Grade
                 </button>
-                {canManage && (
+                {isEditing && (
                   <>
                     <button type="button" className="primary-action compact-action" onClick={handleSaveMap} disabled={saving}>
                       <Save size={15} />
@@ -840,8 +953,9 @@ export default function InventoryVisualMapView({
                   <select value={assetToAdd} onChange={(event) => setAssetToAdd(event.target.value)}>
                     <option value="">Selecionar ativo</option>
                     {devices.map((device) => (
-                      <option key={device.id} value={device.id}>
+                      <option key={device.id} value={device.id} disabled={usedAssetIds.has(device.id)}>
                         {getDeviceName(device)}
+                        {usedAssetIds.has(device.id) ? " (ja posicionado)" : ""}
                       </option>
                     ))}
                   </select>
@@ -865,6 +979,11 @@ export default function InventoryVisualMapView({
           </aside>
 
           <main className="inventory-visual-map-main">
+            <div className="inventory-visual-camera-actions" role="group" aria-label="Controles da camera">
+              <button type="button" className="icon-button" onClick={() => runCameraAction("fit")} title="Enquadrar mapa"><Focus size={16} /></button>
+              <button type="button" className="icon-button" onClick={() => runCameraAction("selection")} disabled={!selectedObjectId} title="Centralizar objeto"><MousePointer2 size={16} /></button>
+              <button type="button" className="icon-button" onClick={() => runCameraAction("reset")} title="Redefinir camera"><RotateCcw size={16} /></button>
+            </div>
             <InventoryVisualMapScene
               map={activeMap}
               objects={objects}
@@ -873,6 +992,7 @@ export default function InventoryVisualMapView({
               selectedConnectionId={selectedConnectionId}
               layers={layers}
               showGrid={showGrid}
+              cameraAction={cameraAction}
               onSelectObject={handleSelectObject}
               onSelectConnection={handleSelectConnection}
             />
@@ -892,7 +1012,7 @@ export default function InventoryVisualMapView({
                   {mode === "edit" && (
                     <InventoryVisualMapConnectionEditor
                       draft={connectionDraft}
-                      canManage={canManage}
+                      canManage={isEditing}
                       saving={saving}
                       onChange={updateConnectionDraft}
                       onPointChange={updateConnectionPoint}
@@ -919,67 +1039,81 @@ export default function InventoryVisualMapView({
                   <div className="inventory-visual-form-grid compact">
                     <label>
                       Nome
-                      <input value={objectDraft.label} onChange={(event) => updateObjectDraft("label", event.target.value)} disabled={!canManage} />
+                      <input value={objectDraft.label} onChange={(event) => updateObjectDraft("label", event.target.value)} disabled={!isEditing} />
                     </label>
                     <label>
                       Cor
-                      <input type="color" value={objectDraft.color} onChange={(event) => updateObjectDraft("color", event.target.value)} disabled={!canManage} />
+                      <input type="color" value={objectDraft.color} onChange={(event) => updateObjectDraft("color", event.target.value)} disabled={!isEditing} />
                     </label>
                     <label>
                       Ativo vinculado
-                      <select value={objectDraft.linkedAssetId || ""} onChange={(event) => updateObjectDraft("linkedAssetId", event.target.value)} disabled={!canManage}>
+                      <select value={objectDraft.linkedAssetId || ""} onChange={(event) => updateObjectDraft("linkedAssetId", event.target.value)} disabled={!isEditing}>
                         <option value="">Nao vinculado</option>
                         {devices.map((device) => (
-                          <option key={device.id} value={device.id}>{getDeviceName(device)}</option>
+                          <option key={device.id} value={device.id} disabled={usedAssetIds.has(device.id) && device.id !== selectedObject.linkedAssetId}>
+                            {getDeviceName(device)}{usedAssetIds.has(device.id) && device.id !== selectedObject.linkedAssetId ? " (ja posicionado)" : ""}
+                          </option>
                         ))}
                       </select>
                     </label>
                     <label>
                       X
-                      <input type="number" step="0.1" value={objectDraft.positionX} onChange={(event) => updateObjectDraft("positionX", event.target.value)} disabled={!canManage} />
+                      <input type="number" step="0.1" value={objectDraft.positionX} onChange={(event) => updateObjectDraft("positionX", event.target.value)} disabled={!isEditing} />
+                    </label>
+                    <label>
+                      Y
+                      <input type="number" step="0.1" value={objectDraft.positionY} onChange={(event) => updateObjectDraft("positionY", event.target.value)} disabled={!isEditing} />
                     </label>
                     <label>
                       Z
-                      <input type="number" step="0.1" value={objectDraft.positionZ} onChange={(event) => updateObjectDraft("positionZ", event.target.value)} disabled={!canManage} />
+                      <input type="number" step="0.1" value={objectDraft.positionZ} onChange={(event) => updateObjectDraft("positionZ", event.target.value)} disabled={!isEditing} />
                     </label>
                     <label>
-                      Rotacao
-                      <input type="number" step="5" value={objectDraft.rotationY} onChange={(event) => updateObjectDraft("rotationY", event.target.value)} disabled={!canManage} />
+                      Rotacao X
+                      <input type="number" step="5" value={objectDraft.rotationX} onChange={(event) => updateObjectDraft("rotationX", event.target.value)} disabled={!isEditing} />
+                    </label>
+                    <label>
+                      Rotacao Y
+                      <input type="number" step="5" value={objectDraft.rotationY} onChange={(event) => updateObjectDraft("rotationY", event.target.value)} disabled={!isEditing} />
+                    </label>
+                    <label>
+                      Rotacao Z
+                      <input type="number" step="5" value={objectDraft.rotationZ} onChange={(event) => updateObjectDraft("rotationZ", event.target.value)} disabled={!isEditing} />
                     </label>
                     <label>
                       Largura
-                      <input type="number" step="0.1" min="0.1" value={objectDraft.width} onChange={(event) => updateObjectDraft("width", event.target.value)} disabled={!canManage} />
+                      <input type="number" step="0.1" min="0.1" value={objectDraft.width} onChange={(event) => updateObjectDraft("width", event.target.value)} disabled={!isEditing} />
                     </label>
                     <label>
                       Profundidade
-                      <input type="number" step="0.1" min="0.1" value={objectDraft.depth} onChange={(event) => updateObjectDraft("depth", event.target.value)} disabled={!canManage} />
+                      <input type="number" step="0.1" min="0.1" value={objectDraft.depth} onChange={(event) => updateObjectDraft("depth", event.target.value)} disabled={!isEditing} />
                     </label>
                     <label>
                       Altura
-                      <input type="number" step="0.1" min="0.05" value={objectDraft.height} onChange={(event) => updateObjectDraft("height", event.target.value)} disabled={!canManage} />
+                      <input type="number" step="0.1" min="0.05" value={objectDraft.height} onChange={(event) => updateObjectDraft("height", event.target.value)} disabled={!isEditing} />
                     </label>
                   </div>
                   <div className="inventory-visual-nudge-row">
-                    <button type="button" onClick={() => updateObjectDraft("positionX", numberInputValue(objectDraft.positionX) - 0.5)} disabled={!canManage}>
+                    <button type="button" onClick={() => updateObjectDraft("positionX", numberInputValue(objectDraft.positionX) - 0.5)} disabled={!isEditing}>
                       <Move3D size={14} />
                       X-
                     </button>
-                    <button type="button" onClick={() => updateObjectDraft("positionX", numberInputValue(objectDraft.positionX) + 0.5)} disabled={!canManage}>
+                    <button type="button" onClick={() => updateObjectDraft("positionX", numberInputValue(objectDraft.positionX) + 0.5)} disabled={!isEditing}>
                       <Move3D size={14} />
                       X+
                     </button>
-                    <button type="button" onClick={() => updateObjectDraft("positionZ", numberInputValue(objectDraft.positionZ) - 0.5)} disabled={!canManage}>
+                    <button type="button" onClick={() => updateObjectDraft("positionZ", numberInputValue(objectDraft.positionZ) - 0.5)} disabled={!isEditing}>
                       <Move3D size={14} />
                       Z-
                     </button>
-                    <button type="button" onClick={() => updateObjectDraft("rotationY", numberInputValue(objectDraft.rotationY) + 15)} disabled={!canManage}>
+                    <button type="button" onClick={() => updateObjectDraft("rotationY", numberInputValue(objectDraft.rotationY) + 15)} disabled={!isEditing}>
                       <RotateCw size={14} />
                       Girar
                     </button>
                   </div>
                   <label>
                     Notas
-                    <textarea value={objectDraft.notes || ""} onChange={(event) => updateObjectDraft("notes", event.target.value)} disabled={!canManage} rows={2} />
+                    <textarea value={objectDraft.notes || ""} onChange={(event) => updateObjectDraft("notes", event.target.value)} disabled={!isEditing} rows={2} />
                   </label>
                   {linkedDevice && (
                     <div className="inventory-visual-asset-info">
@@ -1000,17 +1134,24 @@ export default function InventoryVisualMapView({
                           <input
                             value={objectDraft.metadata?.[field.key] || ""}
                             onChange={(event) => updateObjectMetadata(field.key, event.target.value)}
-                            disabled={!canManage}
+                            disabled={!isEditing}
                           />
                         </label>
                       ))}
                     </div>
                   )}
-                  {canManage && (
+                  {isEditing && (
                     <footer>
                       <button type="button" className="primary-action compact-action" onClick={handleSaveObject} disabled={saving}>
                         <Save size={15} />
                         Salvar objeto
+                      </button>
+                      <button type="button" className="secondary-action compact-action" onClick={handleDuplicateObject} disabled={saving}>
+                        <Copy size={15} />
+                        Duplicar
+                      </button>
+                      <button type="button" className="secondary-action compact-action" onClick={() => setObjectDraft(objectToDraft(selectedObject))} disabled={!objectDirty || saving}>
+                        Cancelar
                       </button>
                       <button type="button" className="danger-action compact-action" onClick={handleDeleteObject} disabled={saving}>
                         <Trash2 size={15} />

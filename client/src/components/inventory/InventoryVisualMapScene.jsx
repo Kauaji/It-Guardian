@@ -150,11 +150,19 @@ export default function InventoryVisualMapScene({
   selectedConnectionId,
   layers,
   showGrid,
+  cameraAction,
   onSelectObject,
   onSelectConnection
 }) {
   const hostRef = useRef(null);
   const selectableMeshesRef = useRef([]);
+  const cameraContextRef = useRef(null);
+  const cameraStateRef = useRef(null);
+  const selectObjectRef = useRef(onSelectObject);
+  const selectConnectionRef = useRef(onSelectConnection);
+
+  selectObjectRef.current = onSelectObject;
+  selectConnectionRef.current = onSelectConnection;
 
   const visibleObjects = useMemo(
     () => objects.filter((object) => layers?.[object.layer] !== false),
@@ -176,7 +184,16 @@ export default function InventoryVisualMapScene({
     scene.background = new THREE.Color("#f8fafc");
 
     const camera = new THREE.PerspectiveCamera(46, width / height, 0.1, 1000);
-    camera.position.set(map.width * 0.35, Math.max(map.depth, 14), map.depth * 0.82);
+    const mapWidth = normalizeNumber(map.width, 30);
+    const mapDepth = normalizeNumber(map.depth, 20);
+    const maxMapDimension = Math.max(mapWidth, mapDepth);
+    const initialCameraPosition = new THREE.Vector3(
+      mapWidth * 0.35,
+      Math.max(mapDepth, 14),
+      mapDepth * 0.82
+    );
+    const savedCameraState = cameraStateRef.current?.mapId === map.id ? cameraStateRef.current : null;
+    camera.position.copy(savedCameraState?.position || initialCameraPosition);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
@@ -185,12 +202,11 @@ export default function InventoryVisualMapScene({
     host.replaceChildren(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.08;
-    controls.target.set(0, 0, 0);
+    controls.enableDamping = false;
+    controls.target.copy(savedCameraState?.target || new THREE.Vector3(0, 0, 0));
     controls.maxPolarAngle = Math.PI * 0.48;
     controls.minDistance = 4;
-    controls.maxDistance = Math.max(map.width, map.depth) * 2.4;
+    controls.maxDistance = maxMapDimension * 2.4;
 
     const ambient = new THREE.HemisphereLight("#ffffff", "#cbd5e1", 2.1);
     scene.add(ambient);
@@ -198,14 +214,16 @@ export default function InventoryVisualMapScene({
     directional.position.set(10, 18, 8);
     scene.add(directional);
 
-    const floorGeometry = new THREE.BoxGeometry(map.width, 0.08, map.depth);
+    const floorGeometry = new THREE.BoxGeometry(mapWidth, 0.08, mapDepth);
     const floorMaterial = new THREE.MeshStandardMaterial({ color: "#e2e8f0", roughness: 0.85 });
     const floor = new THREE.Mesh(floorGeometry, floorMaterial);
     floor.position.y = -0.04;
     scene.add(floor);
 
     if (showGrid) {
-      const grid = new THREE.GridHelper(Math.max(map.width, map.depth), Math.max(8, Math.round(Math.max(map.width, map.depth))));
+      const gridScale = Math.max(0.1, normalizeNumber(map.scale, 1));
+      const divisions = Math.min(400, Math.max(8, Math.round(maxMapDimension / gridScale)));
+      const grid = new THREE.GridHelper(maxMapDimension, divisions);
       grid.material.opacity = 0.32;
       grid.material.transparent = true;
       scene.add(grid);
@@ -238,20 +256,60 @@ export default function InventoryVisualMapScene({
       const [hit] = raycaster.intersectObjects(selectableMeshesRef.current, false);
       const connectionId = hit?.object?.userData?.connectionId || null;
       if (connectionId) {
-        onSelectConnection?.(connectionId);
+        selectConnectionRef.current?.(connectionId);
         return;
       }
-      onSelectObject?.(hit?.object?.userData?.objectId || null);
+      selectObjectRef.current?.(hit?.object?.userData?.objectId || null);
     }
 
     renderer.domElement.addEventListener("pointerdown", handlePointerDown);
 
-    let frameId = 0;
     function render() {
-      controls.update();
       renderer.render(scene, camera);
-      frameId = window.requestAnimationFrame(render);
     }
+
+    function resetCamera() {
+      controls.target.set(0, 0, 0);
+      camera.position.copy(initialCameraPosition);
+      camera.near = 0.1;
+      camera.far = Math.max(1000, maxMapDimension * 10);
+      camera.updateProjectionMatrix();
+      controls.update();
+      render();
+    }
+
+    function fitMap() {
+      const distance = Math.max(8, maxMapDimension * 1.35);
+      controls.target.set(0, 0, 0);
+      camera.position.set(distance * 0.48, distance * 0.72, distance * 0.88);
+      camera.lookAt(controls.target);
+      controls.update();
+      render();
+    }
+
+    function focusSelection() {
+      const selected = visibleObjects.find((object) => object.id === selectedObjectId);
+      if (!selected) return;
+      const target = new THREE.Vector3(
+        normalizeNumber(selected.positionX, 0),
+        normalizeNumber(selected.positionY, 0) + normalizeNumber(selected.height, 1) / 2,
+        normalizeNumber(selected.positionZ, 0)
+      );
+      const direction = camera.position.clone().sub(controls.target).normalize();
+      const objectSize = Math.max(
+        normalizeNumber(selected.width, 1),
+        normalizeNumber(selected.depth, 1),
+        normalizeNumber(selected.height, 1)
+      );
+      controls.target.copy(target);
+      camera.position.copy(target).add(direction.multiplyScalar(Math.max(4, objectSize * 4)));
+      camera.lookAt(target);
+      controls.update();
+      render();
+    }
+
+    controls.addEventListener("change", render);
+    cameraContextRef.current = { fitMap, focusSelection, resetCamera };
     render();
 
     const resizeObserver = new ResizeObserver(([entry]) => {
@@ -260,13 +318,19 @@ export default function InventoryVisualMapScene({
       camera.aspect = nextWidth / nextHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(nextWidth, nextHeight);
+      render();
     });
     resizeObserver.observe(host);
 
     return () => {
-      window.cancelAnimationFrame(frameId);
       resizeObserver.disconnect();
+      cameraStateRef.current = {
+        mapId: map.id,
+        position: camera.position.clone(),
+        target: controls.target.clone()
+      };
       renderer.domElement.removeEventListener("pointerdown", handlePointerDown);
+      controls.removeEventListener("change", render);
       controls.dispose();
       scene.traverse((child) => {
         if (child.geometry) child.geometry.dispose();
@@ -282,8 +346,18 @@ export default function InventoryVisualMapScene({
       renderer.dispose();
       host.replaceChildren();
       selectableMeshesRef.current = [];
+      cameraContextRef.current = null;
     };
-  }, [map, onSelectConnection, onSelectObject, selectedConnectionId, selectedObjectId, showGrid, visibleConnections, visibleObjects]);
+  }, [map, selectedConnectionId, selectedObjectId, showGrid, visibleConnections, visibleObjects]);
+
+  useEffect(() => {
+    if (!cameraAction?.revision) return;
+    const context = cameraContextRef.current;
+    if (!context) return;
+    if (cameraAction.type === "selection") context.focusSelection();
+    else if (cameraAction.type === "reset") context.resetCamera();
+    else context.fitMap();
+  }, [cameraAction]);
 
   if (!map) {
     return (
@@ -293,5 +367,13 @@ export default function InventoryVisualMapScene({
     );
   }
 
-  return <div className="inventory-visual-map-canvas" ref={hostRef} />;
+  return (
+    <div
+      className="inventory-visual-map-canvas"
+      ref={hostRef}
+      role="img"
+      aria-label={`Cena 3D do mapa ${map.name || "sem nome"}. Arraste para orbitar e use a roda do mouse para aproximar.`}
+      tabIndex={0}
+    />
+  );
 }
