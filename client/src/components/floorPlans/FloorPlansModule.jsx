@@ -327,7 +327,7 @@ function FloorPlanCatalog({ activeSection, onActiveSectionChange, onAddItem, onS
   const section = FLOOR_PLAN_CATALOG.find((entry) => entry.id === activeSection) || FLOOR_PLAN_CATALOG[0];
 
   return (
-    <section className="floor-plan-catalog">
+    <section className={`floor-plan-catalog${activeSection === "rooms" ? " room-catalog-active" : ""}`}>
       <nav aria-label="Catalogo da planta">
         {catalogSections.map((entry) => (
           <button className={activeSection === entry.id ? "active" : ""} key={entry.id} type="button" onClick={() => onActiveSectionChange(entry.id)}>
