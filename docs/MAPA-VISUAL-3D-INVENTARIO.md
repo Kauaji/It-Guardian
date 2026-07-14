@@ -181,9 +181,9 @@ Objetos de infraestrutura/eletrica e conexoes podem registrar:
 
 A cena renderiza por demanda: interacoes, alteracoes de dados e redimensionamento disparam um novo quadro, sem manter um loop continuo quando o mapa esta parado.
 
-## Limitacoes conhecidas
+## Limitacoes conhecidas do Mapa Visual 3D
 
-- Nao ha drag-and-drop direto dentro da cena 3D.
+- O modulo `InventoryVisualMap` ainda nao possui drag-and-drop direto dentro da cena 3D.
 - Nao ha importacao de planta baixa.
 - Nao ha roteamento automatico de cabos.
 - Nao ha calculo eletrico, carga, disjuntor real ou validacao normativa.
@@ -194,7 +194,7 @@ A cena renderiza por demanda: interacoes, alteracoes de dados e redimensionament
 
 ## Roadmap sugerido
 
-- Arrastar objetos diretamente na cena.
+- Arrastar objetos diretamente na cena do `InventoryVisualMap`.
 - Importar planta baixa como referencia.
 - Criar snapping e alinhamento por grade.
 - Criar assistente para posicionamento automatico a partir de grupo/segmento.
@@ -224,3 +224,64 @@ A cena renderiza por demanda: interacoes, alteracoes de dados e redimensionament
 18. Alternar camadas e confirmar que itens ocultos nao sao selecionaveis.
 19. Recarregar a pagina e confirmar persistencia.
 20. Repetir visualizacao em desktop, tablet e celular, verificando scroll e controles da camera.
+
+## Editor de Plantas 2D/3D
+
+O editor acessado por Plantas usa o mesmo cadastro de plantas e pavimentos ja existente. Este fluxo e separado do `InventoryVisualMap`: ele serve para desenhar ambientes, paredes, aberturas e objetos de uma planta, mantendo uma visualizacao 3D leve e sincronizada com o editor 2D.
+
+### Persistencia e compatibilidade
+
+As novas relacoes ficam no JSON do editor e nao exigem uma tabela paralela. Objetos antigos continuam validos porque os metadados de ancoragem sao opcionais.
+
+Paredes e divisorias registram:
+
+- `geometryVersion`
+- `startPoint`
+- `endPoint`
+- comprimento, espessura, rotacao e altura 3D
+
+Portas e janelas vinculadas registram:
+
+- `anchorType: wall`
+- `parentObjectId`
+- `anchorOffset`, entre 0 e 1
+- `anchorMetadata` com altura da abertura, peitoril e sentido de abertura quando aplicavel
+
+Ao mover, redimensionar ou girar uma parede, suas aberturas acompanham a nova geometria. Ao excluir a parede, as aberturas filhas tambem sao removidas. O backend valida o pai, o pavimento e o intervalo da posicao relativa antes de persistir.
+
+### Edicao 2D
+
+- Salas e corredores podem ser criados por clique ou por arraste.
+- Paredes e divisorias sao criadas informando inicio e fim.
+- O fim da parede usa grade e angulos de 45 graus.
+- Portas e janelas so podem ser adicionadas quando existe uma parede proxima.
+- Aberturas podem ser reposicionadas ao longo da parede pelo inspetor.
+- Comprimento, espessura, angulo e altura 3D da parede podem ser ajustados no inspetor.
+- A selecao, o historico de desfazer/refazer e a normalizacao do editor continuam usando o estado central da planta.
+
+### Edicao e visualizacao 3D
+
+- A cena usa modelos procedurais leves para estrutura, moveis, ativos, rede e energia.
+- Objetos podem ser selecionados diretamente na cena.
+- Objetos comuns podem ser arrastados no plano do pavimento.
+- A selecao pode ser girada em incrementos simples pelo controle da cena.
+- Selecao, posicao e rotacao permanecem sincronizadas com o inspetor e a vista 2D.
+- A renderizacao acontece por demanda, inclusive durante navegacao, selecao e redimensionamento.
+- Sombras pesadas e loop continuo de animacao permanecem desativados.
+
+Em telas pequenas, o editor continua acessivel com scroll interno e controles reorganizados, mas a edicao detalhada de uma planta e recomendada em desktop ou notebook.
+
+### Checklist manual do editor de Plantas
+
+1. Criar uma planta e um pavimento.
+2. Criar uma sala por clique e outra por arraste.
+3. Criar uma parede horizontal, uma vertical e uma diagonal.
+4. Alterar comprimento, espessura, angulo e altura 3D da parede.
+5. Inserir porta e janela sobre uma parede.
+6. Mover e girar a parede e confirmar que as aberturas acompanham.
+7. Reposicionar uma abertura pelo controle de posicao na parede.
+8. Excluir uma parede e confirmar a remocao de suas aberturas.
+9. Alternar para 3D, selecionar um objeto e arrasta-lo.
+10. Girar a selecao no 3D e confirmar a atualizacao no 2D e no inspetor.
+11. Salvar, recarregar e confirmar que paredes, aberturas e vinculos foram preservados.
+12. Abrir uma planta antiga sem ancoragem e confirmar que ela continua editavel.
