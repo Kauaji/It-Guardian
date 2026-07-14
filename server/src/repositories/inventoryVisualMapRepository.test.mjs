@@ -107,6 +107,8 @@ test("schema e rotas do mapa visual estao registrados", () => {
   assert.match(schema, /CREATE TABLE IF NOT EXISTS inventory_visual_map_objects/);
   assert.match(schema, /CREATE TABLE IF NOT EXISTS inventory_visual_map_connections/);
   assert.match(schema, /idx_inventory_visual_map_connections_map/);
+  assert.match(schema, /idx_inventory_visual_map_objects_unique_asset/);
+  assert.match(schema, /idx_inventory_visual_map_objects_preset/);
   assert.match(schema, /layer IN \('structure', 'assets', 'infrastructure', 'electrical'\)/);
   assert.match(app, /\/api\/inventory-visual-maps/);
   assert.match(app, /\/api\/inventory-visual-map-objects/);
@@ -124,4 +126,14 @@ test("listagem de mapas evita recursos SQL nao suportados pelo pg-mem", () => {
   assert.doesNotMatch(repository, /\bROW_NUMBER\s*\(/);
   assert.match(repository, /COUNT\(\*\) AS object_count/);
   assert.match(repository, /GROUP BY map_id/);
+});
+
+test("vinculos de ativos sao validados e nao podem se repetir no mesmo mapa", () => {
+  const repository = source("inventoryVisualMapRepository.js");
+
+  assert.match(repository, /removed_at IS NULL/);
+  assert.match(repository, /ensureAssetLinkAvailable\(mapId, data\.linkedAssetId/);
+  assert.match(repository, /ensureAssetLinkAvailable\(existing\.mapId, data\.linkedAssetId, id/);
+  assert.match(repository, /Este ativo ja esta posicionado neste mapa visual/);
+  assert.doesNotMatch(repository, /OR EXISTS \(SELECT 1 FROM inventory_visual_map_objects WHERE linked_asset_id/);
 });

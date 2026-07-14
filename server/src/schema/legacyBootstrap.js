@@ -1695,6 +1695,17 @@ export async function initializeDatabase() {
   `);
 
   await query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_inventory_visual_map_objects_unique_asset
+    ON inventory_visual_map_objects (map_id, linked_asset_id)
+    WHERE linked_asset_id IS NOT NULL;
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_inventory_visual_map_objects_preset
+    ON inventory_visual_map_objects (map_id, preset_type);
+  `);
+
+  await query(`
     CREATE INDEX IF NOT EXISTS idx_inventory_visual_map_connections_map
     ON inventory_visual_map_connections (map_id);
   `);

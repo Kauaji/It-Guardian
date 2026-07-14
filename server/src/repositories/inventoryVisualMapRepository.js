@@ -412,16 +412,35 @@ async function ensureAssetsExist(assetIds, db = query) {
       `
         SELECT $1 AS id
         WHERE EXISTS (SELECT 1 FROM manual_network_assets WHERE id = $1)
-           OR EXISTS (SELECT 1 FROM device_metadata WHERE device_id = $1)
+           OR EXISTS (SELECT 1 FROM device_metadata WHERE device_id = $1 AND removed_at IS NULL)
            OR EXISTS (SELECT 1 FROM device_segments WHERE device_id = $1)
-           OR EXISTS (SELECT 1 FROM inventory_visual_map_objects WHERE linked_asset_id = $1)
       `,
       [assetId]
     );
 
     if (!result.rows.length) {
-      throw makeHttpError("Ativo informado para a conexao nao foi encontrado.");
+      throw makeHttpError("Ativo informado nao foi encontrado.");
     }
+  }
+}
+
+async function ensureAssetLinkAvailable(mapId, linkedAssetId, excludeObjectId = null, db = query) {
+  if (!linkedAssetId) return;
+
+  const result = await db(
+    `
+      SELECT id
+      FROM inventory_visual_map_objects
+      WHERE map_id = $1
+        AND linked_asset_id = $2
+        AND ($3::text IS NULL OR id <> $3)
+      LIMIT 1
+    `,
+    [mapId, linkedAssetId, excludeObjectId]
+  );
+
+  if (result.rows.length) {
+    throw makeHttpError("Este ativo ja esta posicionado neste mapa visual.", 409);
   }
 }
 
@@ -592,6 +611,8 @@ export async function createInventoryVisualMapObject(mapId, payload, user) {
 
   return withTransaction(async (db) => {
     const map = await getMapOrThrow(mapId, db);
+    await ensureAssetsExist([data.linkedAssetId], db);
+    await ensureAssetLinkAvailable(mapId, data.linkedAssetId, null, db);
     const result = await db(
       `
         INSERT INTO inventory_visual_map_objects (
@@ -658,6 +679,8 @@ export async function updateInventoryVisualMapObject(id, payload, user) {
     const existing = await getObjectOrThrow(id, db);
     const map = await getMapOrThrow(existing.mapId, db);
     const data = normalizeObjectPayload(payload, existing);
+    await ensureAssetsExist([data.linkedAssetId], db);
+    await ensureAssetLinkAvailable(existing.mapId, data.linkedAssetId, id, db);
     const result = await db(
       `
         UPDATE inventory_visual_map_objects
