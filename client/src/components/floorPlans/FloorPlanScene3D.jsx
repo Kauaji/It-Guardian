@@ -58,6 +58,7 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = false;
+    controls.enableZoom = false;
     controls.minDistance = 360;
     controls.maxDistance = 1900;
     controls.maxPolarAngle = Math.PI / 2.15;
@@ -293,6 +294,23 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
     };
     controls.addEventListener("change", render);
 
+    const handleWheel = (event) => {
+      if (!event.ctrlKey) return;
+      event.preventDefault();
+      const offset = camera.position.clone().sub(controls.target);
+      const zoomFactor = event.deltaY < 0 ? 0.88 : 1.12;
+      const nextDistance = THREE.MathUtils.clamp(
+        offset.length() * zoomFactor,
+        controls.minDistance,
+        controls.maxDistance
+      );
+      offset.setLength(nextDistance);
+      camera.position.copy(controls.target).add(offset);
+      camera.updateProjectionMatrix();
+      controls.update();
+      render();
+    };
+
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
     const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
@@ -356,6 +374,7 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
     renderer.domElement.addEventListener("pointermove", handlePointerMove);
     renderer.domElement.addEventListener("pointerup", handlePointerUp);
     renderer.domElement.addEventListener("pointercancel", handlePointerUp);
+    renderer.domElement.addEventListener("wheel", handleWheel, { passive: false });
 
     const resizeObserver = new ResizeObserver(() => {
       const nextWidth = Math.max(container.clientWidth, 320);
@@ -376,6 +395,7 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
       renderer.domElement.removeEventListener("pointermove", handlePointerMove);
       renderer.domElement.removeEventListener("pointerup", handlePointerUp);
       renderer.domElement.removeEventListener("pointercancel", handlePointerUp);
+      renderer.domElement.removeEventListener("wheel", handleWheel);
       controls.dispose();
       renderer.dispose();
       container.removeChild(renderer.domElement);

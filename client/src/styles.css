@@ -114,6 +114,10 @@ body.modal-open {
   overflow: hidden;
 }
 
+body.modal-open:not(:has(.modal-backdrop)) {
+  overflow: auto;
+}
+
 body.modal-open .sidebar {
   pointer-events: none;
 }
@@ -13625,7 +13629,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
   grid-auto-flow: column;
   max-height: 136px;
   overflow-x: auto;
-  overscroll-behavior: contain;
+  overscroll-behavior: auto;
 }
 
 .room-catalog-card {
