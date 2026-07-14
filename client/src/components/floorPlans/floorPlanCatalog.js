@@ -3,7 +3,6 @@ import {
   Building2,
   Cable,
   DoorOpen,
-  Eraser,
   Hand,
   LampDesk,
   Laptop,
@@ -26,8 +25,7 @@ export const FLOOR_PLAN_TOOLS = [
   { id: "select", label: "Selecionar", icon: MousePointer2 },
   { id: "pan", label: "Mover tela", icon: Hand },
   { id: "group-brush", label: "Pincel de grupo", icon: Paintbrush },
-  { id: "segment-brush", label: "Pincel de segmento", icon: Square },
-  { id: "eraser", label: "Borracha", icon: Eraser }
+  { id: "segment-brush", label: "Pincel de segmento", icon: Square }
 ];
 
 export const FLOOR_PLAN_CATALOG = [

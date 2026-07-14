@@ -1,8 +1,17 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { getRoomGeometry, getRoomInterior, getRoomWalls, isRoomZone } from "./utils/roomGeometry.js";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { getRoomGeometry, getRoomInterior, isRoomZone } from "./utils/roomGeometry.js";
 import { isWallObject, syncAnchoredOpenings } from "./utils/wallGeometry.js";
+import { getPaintCellSize, getPaintCells, getPaintRuns, isPaintAreaZone } from "./utils/paintAreaGeometry.js";
+import {
+  MODEL_QUALITY_DETAILED,
+  MODEL_QUALITY_SIMPLE,
+  resolveInventoryMapAssetMode
+} from "./assets/inventoryMapAssetRegistry.js";
+
+const MODEL_QUALITY_STORAGE_KEY = "it-guardian.floor-plan.model-quality";
 
 function toColor(value, fallback = "#1f7a61") {
   return /^#[0-9a-f]{6}$/i.test(String(value || "")) ? value : fallback;
@@ -10,6 +19,23 @@ function toColor(value, fallback = "#1f7a61") {
 
 export default function FloorPlanScene3D({ data, activeFloorId, selected, onSelect, onMoveObject, onRotateSelected }) {
   const containerRef = useRef(null);
+  const [modelQuality, setModelQuality] = useState(() => {
+    try {
+      return window.localStorage.getItem(MODEL_QUALITY_STORAGE_KEY) === MODEL_QUALITY_DETAILED
+        ? MODEL_QUALITY_DETAILED
+        : MODEL_QUALITY_SIMPLE;
+    } catch {
+      return MODEL_QUALITY_SIMPLE;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(MODEL_QUALITY_STORAGE_KEY, modelQuality);
+    } catch {
+      // Storage is optional; the renderer still works with the current session state.
+    }
+  }, [modelQuality]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -57,6 +83,16 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
     const activeZones = (data.zones || []).filter((zone) => !activeFloorId || zone.floorId === activeFloorId);
     const activeObjects = syncAnchoredOpenings(data.objects || []).filter((object) => !activeFloorId || object.floorId === activeFloorId);
     const objectGroups = new Map();
+    const modelLoader = modelQuality === MODEL_QUALITY_DETAILED ? new GLTFLoader() : null;
+    let disposed = false;
+
+    const disposeObject3D = (root) => {
+      root?.traverse?.((child) => {
+        child.geometry?.dispose?.();
+        if (Array.isArray(child.material)) child.material.forEach((material) => material.dispose?.());
+        else child.material?.dispose?.();
+      });
+    };
 
     const addBox = ({ x, y, width: boxWidth, depth, height: boxHeight, color, opacity = 1, verticalOffset = 0, metalness = 0.02 }) => {
       const material = new THREE.MeshStandardMaterial({
@@ -106,6 +142,7 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
       group.rotation.y = THREE.MathUtils.degToRad(Number(object.rotation || 0));
       group.userData.objectId = object.id;
       group.userData.object = object;
+      const assetMode = resolveInventoryMapAssetMode(type, modelQuality);
 
       if (isWallObject(object)) {
         addModelPart(group, {
@@ -173,30 +210,63 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
         child.userData.objectRoot = group;
       });
       objectGroups.set(object.id, group);
+      if (assetMode.mode === "model" && modelLoader) {
+        modelLoader.load(assetMode.url, (gltf) => {
+          if (disposed || !gltf?.scene) {
+            disposeObject3D(gltf?.scene);
+            return;
+          }
+          group.children.forEach(disposeObject3D);
+          group.clear();
+          const model = gltf.scene.clone(true);
+          const bounds = new THREE.Box3().setFromObject(model);
+          const size = bounds.getSize(new THREE.Vector3());
+          const targetHeight = Number(object.height3d || 70);
+          const scale = Math.min(
+            objectWidth / Math.max(size.x, 1),
+            targetHeight / Math.max(size.y, 1),
+            objectDepth / Math.max(size.z, 1)
+          );
+          model.scale.setScalar(scale);
+          const scaledBounds = new THREE.Box3().setFromObject(model);
+          const center = scaledBounds.getCenter(new THREE.Vector3());
+          model.position.set(-center.x, -scaledBounds.min.y - 22, -center.z);
+          model.traverse((child) => {
+            child.userData.objectId = object.id;
+            child.userData.objectRoot = group;
+          });
+          group.add(model);
+          render();
+        }, undefined, () => {
+          // The procedural representation remains visible when a local model fails.
+        });
+      }
       return group;
     };
 
     activeZones.forEach((zone) => {
       const geometry = zone.geometry || {};
+      if (isPaintAreaZone(zone)) {
+        const cellSize = getPaintCellSize(zone);
+        getPaintRuns(getPaintCells(zone)).forEach((run) => {
+          addBox({
+            x: run.startColumn * cellSize,
+            y: run.row * cellSize,
+            width: (run.endColumn - run.startColumn + 1) * cellSize,
+            depth: cellSize,
+            height: 2,
+            color: zone.color,
+            opacity: zone.zoneType === "segment" ? 0.42 : 0.28,
+            verticalOffset: 23
+          });
+        });
+        return;
+      }
       if (isRoomZone(zone)) {
         const room = getRoomGeometry(zone);
         const interior = getRoomInterior(zone);
-        const walls = getRoomWalls(zone);
-        const wallHeight = Number(zone.metadata?.room?.wallHeight || 110);
         addBox({ x: room.x, y: room.y, width: room.width, depth: room.height, height: 10, color: zone.color, opacity: 0.22, verticalOffset: 10 });
         addBox({ x: interior.x, y: interior.y, width: interior.width, depth: interior.height, height: 6, color: "#f8fafc", opacity: 0.88, verticalOffset: 17 });
-        Object.values(walls).forEach((wall) => {
-          addBox({
-            x: wall.x,
-            y: wall.y,
-            width: wall.width,
-            depth: wall.height,
-            height: wallHeight,
-            color: "#f8fafc",
-            opacity: 0.82,
-            verticalOffset: 18
-          });
-        });
         return;
       }
       const zoneWidth = Number(geometry.width || 180);
@@ -299,6 +369,7 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
     render();
 
     return () => {
+      disposed = true;
       resizeObserver.disconnect();
       controls.removeEventListener("change", render);
       renderer.domElement.removeEventListener("pointerdown", handlePointerDown);
@@ -314,13 +385,17 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
         else if (item.material) item.material.dispose?.();
       });
     };
-  }, [activeFloorId, data, onMoveObject, onSelect, selected]);
+  }, [activeFloorId, data, modelQuality, onMoveObject, onSelect, selected]);
 
   return (
     <div className="floor-plan-scene-shell">
       <div className="floor-plan-scene-3d" ref={containerRef} aria-label="Visualizacao 3D interativa da planta" />
       <div className="floor-plan-scene-actions" aria-label="Acoes da selecao 3D">
         <span>{selected?.type === "object" ? "Item selecionado" : "Clique em um item para selecionar"}</span>
+        <div className="segmented-control compact floor-plan-model-quality" aria-label="Qualidade dos modelos 3D">
+          <button type="button" className={modelQuality === MODEL_QUALITY_SIMPLE ? "active" : ""} onClick={() => setModelQuality(MODEL_QUALITY_SIMPLE)}>Simples</button>
+          <button type="button" className={modelQuality === MODEL_QUALITY_DETAILED ? "active" : ""} onClick={() => setModelQuality(MODEL_QUALITY_DETAILED)} title="Usa modelos locais quando disponiveis e fallback seguro nos demais itens">Detalhado</button>
+        </div>
         {selected?.type === "object" ? (
           <button type="button" className="secondary-action compact-action" onClick={onRotateSelected}>Girar 90 graus</button>
         ) : null}

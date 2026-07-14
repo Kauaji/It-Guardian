@@ -195,3 +195,101 @@ export function syncAnchoredOpenings(objects = []) {
 export function removeObjectCascade(objects = [], objectId) {
   return objects.filter((object) => object.id !== objectId && object.metadata?.parentObjectId !== objectId);
 }
+
+const ROOM_WALL_SIDES = ["top", "right", "bottom", "left"];
+
+function stableUuid(value) {
+  const text = String(value || "floor-plan-wall");
+  const seeds = [2166136261, 2246822507, 3266489909, 668265263];
+  const hex = seeds.map((seed) => {
+    let hash = seed >>> 0;
+    for (let index = 0; index < text.length; index += 1) {
+      hash = Math.imul(hash ^ text.charCodeAt(index), 16777619);
+    }
+    return (hash >>> 0).toString(16).padStart(8, "0");
+  }).join("").split("");
+
+  hex[12] = "5";
+  hex[16] = ["8", "9", "a", "b"][Number.parseInt(hex[16], 16) % 4];
+  const compact = hex.join("");
+  return `${compact.slice(0, 8)}-${compact.slice(8, 12)}-${compact.slice(12, 16)}-${compact.slice(16, 20)}-${compact.slice(20)}`;
+}
+
+export function getRoomWallId(roomId, side) {
+  return stableUuid(`${roomId}:wall:${side}`);
+}
+
+export function createRoomWallObjects(room, planId = room?.planId) {
+  const geometry = room?.geometry || {};
+  const x = Number(geometry.x || 0);
+  const y = Number(geometry.y || 0);
+  const width = Math.max(MIN_WALL_LENGTH, Number(geometry.width || 0));
+  const height = Math.max(MIN_WALL_LENGTH, Number(geometry.height || 0));
+  const thickness = Math.max(4, Number(room?.metadata?.room?.wallThickness || 10));
+  const wallHeight = Number(room?.metadata?.room?.wallHeight || 110);
+  const segments = {
+    top: [{ x, y }, { x: x + width, y }],
+    right: [{ x: x + width, y }, { x: x + width, y: y + height }],
+    bottom: [{ x: x + width, y: y + height }, { x, y: y + height }],
+    left: [{ x, y: y + height }, { x, y }]
+  };
+
+  return ROOM_WALL_SIDES.map((side, orderIndex) => {
+    const wall = createWallObjectFromPoints({
+      id: getRoomWallId(room.id, side),
+      planId,
+      floorId: room.floorId,
+      item: {
+        objectType: "wall",
+        label: `Parede ${side}`,
+        height: thickness,
+        color: "#e2e8f0",
+        metadata: { wallHeight }
+      },
+      start: segments[side][0],
+      end: segments[side][1],
+      gridSize: 1
+    });
+    return {
+      ...wall,
+      orderIndex,
+      metadata: {
+        ...(wall.metadata || {}),
+        geometryVersion: 2,
+        wallHeight,
+        parentRoomId: room.id,
+        roomWallSide: side,
+        generatedFromRoom: true
+      }
+    };
+  });
+}
+
+export function ensureRoomWallObjects(objects = [], zones = []) {
+  const rooms = zones.filter((zone) => zone?.zoneType === "room");
+  const roomIds = new Set(rooms.map((room) => room.id));
+  const retained = objects.filter((object) => !object.metadata?.generatedFromRoom || roomIds.has(object.metadata?.parentRoomId));
+  const byId = new Map(retained.map((object) => [object.id, object]));
+
+  for (const room of rooms) {
+    for (const wall of createRoomWallObjects(room, room.planId)) {
+      const existing = byId.get(wall.id);
+      byId.set(wall.id, existing ? {
+        ...wall,
+        color: existing.color || wall.color,
+        metadata: { ...(existing.metadata || {}), ...wall.metadata }
+      } : wall);
+    }
+  }
+  return [...byId.values()];
+}
+
+export function removeRoomCascade(objects = [], zones = [], roomId) {
+  const roomWallIds = new Set(objects
+    .filter((object) => object.metadata?.parentRoomId === roomId && object.metadata?.generatedFromRoom)
+    .map((object) => object.id));
+  return {
+    objects: objects.filter((object) => object.metadata?.parentRoomId !== roomId && !roomWallIds.has(object.metadata?.parentObjectId)),
+    zones: zones.filter((zone) => zone.id !== roomId && zone.metadata?.paintArea?.parentAreaId !== roomId)
+  };
+}

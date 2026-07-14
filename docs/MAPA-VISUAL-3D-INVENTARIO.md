@@ -262,6 +262,8 @@ Ao mover, redimensionar ou girar uma parede, suas aberturas acompanham a nova ge
 ### Edicao e visualizacao 3D
 
 - A cena usa modelos procedurais leves para estrutura, moveis, ativos, rede e energia.
+- O seletor `Simples/Detalhado` guarda a preferencia local do tecnico. O modo detalhado tenta carregar apenas modelos locais registrados; se o arquivo nao existir, o modelo procedural continua visivel.
+- O registro de modelos fica em `client/src/components/floorPlans/assets/inventoryMapAssetRegistry.js` e as licencas devem ser registradas em `client/public/assets/inventory-map-3d/models/ASSET-LICENSES.md`.
 - Objetos podem ser selecionados diretamente na cena.
 - Objetos comuns podem ser arrastados no plano do pavimento.
 - A selecao pode ser girada em incrementos simples pelo controle da cena.
@@ -270,6 +272,28 @@ Ao mover, redimensionar ou girar uma parede, suas aberturas acompanham a nova ge
 - Sombras pesadas e loop continuo de animacao permanecem desativados.
 
 Em telas pequenas, o editor continua acessivel com scroll interno e controles reorganizados, mas a edicao detalhada de uma planta e recomendada em desktop ou notebook.
+
+### Demarcacao de areas com pincel
+
+O editor usa uma mascara 2D em grade sobre o piso. A mascara e consolidada em faixas na visualizacao 3D para evitar uma malha por pincelada.
+
+#### Pincel de Grupo
+
+- `Pincel` pinta ao clicar e arrastar.
+- `Completar area` preenche o interior de um comodo pronto reconhecido pelo editor.
+- `Borracha` apaga somente a demarcacao temporaria.
+- O tamanho pequeno, medio ou grande afeta pincel e borracha.
+- `Confirmar area` exige pintura e um grupo valido antes de salvar.
+- `Cancelar area` descarta somente a pintura temporaria.
+
+#### Pincel de Segmento
+
+- Fica indisponivel enquanto nao existe uma area de grupo salva.
+- Exige a escolha da area de grupo pai e de um segmento compativel.
+- Pincel, borracha e preenchimento sao recortados pelas celulas do grupo pai e nao ultrapassam seu limite.
+- Ao confirmar, a area registra `parentAreaId`, `groupId` e `segmentId`.
+
+As areas usam zonas com `geometry.kind: paint-mask`, `cellSize` e uma lista consolidada de celulas. Recarregar o editor restaura as demarcacoes pelo mesmo JSON persistido da planta. Nesta versao o balde cobre comodos prontos retangulares; deteccao de regioes complexas formadas por paredes livres continua como limitacao conhecida.
 
 ### Checklist manual do editor de Plantas
 
@@ -285,3 +309,11 @@ Em telas pequenas, o editor continua acessivel com scroll interno e controles re
 10. Girar a selecao no 3D e confirmar a atualizacao no 2D e no inspetor.
 11. Salvar, recarregar e confirmar que paredes, aberturas e vinculos foram preservados.
 12. Abrir uma planta antiga sem ancoragem e confirmar que ela continua editavel.
+13. Abrir o Pincel de Grupo, pintar, mudar o tamanho e apagar parte da area.
+14. Usar o balde dentro de um comodo pronto e validar o aviso fora de uma area reconhecida.
+15. Cancelar a demarcacao e confirmar que nenhuma area foi salva.
+16. Pintar novamente, confirmar, escolher um grupo e salvar.
+17. Abrir o Pincel de Segmento, selecionar o grupo pai e pintar dentro dele.
+18. Tentar pintar fora do grupo e confirmar que a pintura foi recortada.
+19. Confirmar o segmento, recarregar a pagina e validar a persistencia das duas areas.
+20. Alternar entre modelos Simples e Detalhados e confirmar o fallback procedural sem erros.

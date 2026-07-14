@@ -1,5 +1,5 @@
 import { getRoomInterior, isRoomZone, normalizeRoomZone } from "./roomGeometry.js";
-import { syncAnchoredOpenings } from "./wallGeometry.js";
+import { ensureRoomWallObjects, syncAnchoredOpenings } from "./wallGeometry.js";
 
 export const DEFAULT_PLAN_SIZE = { width: 1280, height: 820, gridSize: 25, snapSize: 25 };
 export const FINE_OBJECT_SNAP_SIZE = 5;
@@ -26,11 +26,13 @@ export function snap(value, size = 25) {
 export function normalizeEditorData(editorData) {
   if (!editorData?.plan) return editorData;
   const plan = { metersPerGridCell: 0.5, ...editorData.plan };
+  const zones = (editorData.zones || []).map((zone) => normalizeRoomZone(zone, plan));
+  const objects = ensureRoomWallObjects(centerDesktopsOnTables(editorData.objects || []), zones);
   return {
     ...editorData,
     plan,
-    zones: (editorData.zones || []).map((zone) => normalizeRoomZone(zone, plan)),
-    objects: syncAnchoredOpenings(centerDesktopsOnTables(editorData.objects || []))
+    zones,
+    objects: syncAnchoredOpenings(objects)
   };
 }
 

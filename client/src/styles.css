@@ -13145,8 +13145,9 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
   gap: 14px;
   padding: 12px 14px;
   position: sticky;
-  top: 14px;
-  z-index: 12;
+  top: 0;
+  z-index: 30;
+  backdrop-filter: blur(12px);
 }
 
 .floor-plan-editor-identity,
@@ -13280,9 +13281,14 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 .floor-plan-canvas-panel {
   display: grid;
   gap: 12px;
-  grid-template-rows: auto minmax(430px, 1fr) auto;
+  grid-auto-rows: auto;
   min-width: 0;
   padding: 12px;
+}
+
+.floor-plan-canvas-wrap,
+.floor-plan-scene-shell {
+  min-height: 430px;
 }
 
 .floor-plan-floorbar {
@@ -13319,6 +13325,83 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 .floor-plan-floorbar span {
   color: #64748b;
   font-weight: 900;
+}
+
+.floor-plan-paint-panel {
+  align-items: end;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(170px, 1fr) auto minmax(120px, 0.55fr) minmax(160px, 0.75fr) auto;
+  padding: 10px;
+}
+
+.floor-plan-paint-panel-title {
+  align-items: center;
+  display: flex;
+  gap: 9px;
+  min-width: 0;
+}
+
+.floor-plan-paint-panel-title strong,
+.floor-plan-paint-panel-title span {
+  display: block;
+}
+
+.floor-plan-paint-panel-title strong {
+  color: #0f172a;
+}
+
+.floor-plan-paint-panel-title span {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.floor-plan-paint-panel > label {
+  color: #64748b;
+  display: grid;
+  font-size: 0.72rem;
+  font-weight: 900;
+  gap: 4px;
+}
+
+.floor-plan-paint-panel select {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  color: #0f172a;
+  font: inherit;
+  min-height: 36px;
+  padding: 0 9px;
+}
+
+.floor-plan-paint-modes button {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+  padding: 0 9px !important;
+}
+
+.floor-plan-paint-actions {
+  display: flex;
+  gap: 7px;
+}
+
+.floor-plan-paint-area path {
+  cursor: pointer;
+  transition: fill-opacity 140ms ease, stroke-width 140ms ease;
+}
+
+.floor-plan-paint-area:hover path,
+.floor-plan-paint-area.selected path {
+  fill-opacity: 0.42;
+}
+
+.floor-plan-paint-draft {
+  filter: drop-shadow(0 2px 3px rgba(15, 23, 42, 0.18));
 }
 
 .floor-plan-canvas-wrap,
@@ -13394,6 +13477,8 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
   padding: 10px;
   position: sticky;
   z-index: 12;
+  max-height: 184px;
+  overflow: auto;
 }
 
 .floor-plan-catalog nav {
@@ -13481,6 +13566,13 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
   stroke-width: 2;
 }
 
+.floor-plan-door-leaf {
+  pointer-events: none;
+  stroke: #0f172a;
+  stroke-linecap: round;
+  stroke-width: 3;
+}
+
 .floor-plan-object-resize-overlay {
   pointer-events: none;
 }
@@ -13531,7 +13623,9 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
   gap: 9px;
   grid-auto-columns: minmax(118px, 1fr);
   grid-auto-flow: column;
+  max-height: 136px;
   overflow-x: auto;
+  overscroll-behavior: contain;
 }
 
 .room-catalog-card {
@@ -13836,6 +13930,15 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
     max-height: none;
     position: static;
   }
+
+  .floor-plan-paint-panel {
+    align-items: stretch;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .floor-plan-paint-actions {
+    justify-content: flex-end;
+  }
 }
 
 @media (max-width: 760px) {
@@ -13865,13 +13968,18 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
     flex: 0 0 82px;
   }
 
-  .floor-plan-card dl,
-  .floor-plan-inspector-grid {
+  .floor-plan-paint-panel {
     grid-template-columns: 1fr;
   }
 
-  .floor-plan-canvas-panel {
-    grid-template-rows: auto 360px auto;
+  .floor-plan-paint-actions,
+  .floor-plan-paint-actions button {
+    width: 100%;
+  }
+
+  .floor-plan-card dl,
+  .floor-plan-inspector-grid {
+    grid-template-columns: 1fr;
   }
 
   .floor-plan-canvas,

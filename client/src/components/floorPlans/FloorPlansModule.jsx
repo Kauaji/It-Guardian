@@ -8,12 +8,15 @@ import {
   Layers3,
   Link2,
   Loader2,
+  PaintBucket,
+  Paintbrush,
   Plus,
   Redo2,
   Save,
   Search,
   Settings,
   Trash2,
+  Eraser,
   Undo2
 } from "lucide-react";
 import {
@@ -67,15 +70,29 @@ import {
 import {
   attachOpeningToWall,
   createWallObjectFromPoints,
+  ensureRoomWallObjects,
   findNearestWall,
+  getRoomWallId,
   isAnchoredOpening,
   isOpeningObject,
   isWallObject,
   removeObjectCascade,
+  removeRoomCascade,
   resolveAnchoredOpening,
   snapWallEndPoint,
   syncAnchoredOpenings
 } from "./utils/wallGeometry.js";
+import {
+  createPaintAreaZone,
+  eraseCells,
+  fillRoomCells,
+  getBrushCells,
+  getPaintCells,
+  getPaintCellSize,
+  isPaintAreaZone,
+  paintCells,
+  parseCellKey
+} from "./utils/paintAreaGeometry.js";
 
 const FloorPlanScene3D = lazy(() => import("./FloorPlanScene3D.jsx"));
 
@@ -392,6 +409,99 @@ function WallPlacementPreview({ placement }) {
   );
 }
 
+function PaintToolPanel({ draft, groups, segments, groupAreas, onChange, onConfirm, onCancel }) {
+  if (!draft) return null;
+  const isSegment = draft.areaType === "segment";
+  const parentArea = groupAreas.find((area) => area.id === draft.parentAreaId) || null;
+  const compatibleSegments = segments.filter((segment) => !parentArea?.groupId || !segment.groupId || segment.groupId === parentArea.groupId);
+
+  return (
+    <section className="floor-plan-paint-panel" aria-label={isSegment ? "Pincel de segmento" : "Pincel de grupo"}>
+      <div className="floor-plan-paint-panel-title">
+        <Paintbrush size={18} />
+        <div>
+          <strong>{isSegment ? "Demarcar segmento" : "Demarcar grupo"}</strong>
+          <span>{draft.cells.length} bloco(s) na demarcacao temporaria</span>
+        </div>
+      </div>
+      <div className="segmented-control compact floor-plan-paint-modes">
+        <button className={draft.mode === "brush" ? "active" : ""} type="button" onClick={() => onChange({ mode: "brush" })} title="Pincel"><Paintbrush size={16} /></button>
+        <button className={draft.mode === "bucket" ? "active" : ""} type="button" onClick={() => onChange({ mode: "bucket" })} title="Completar comodo"><PaintBucket size={16} /></button>
+        <button className={draft.mode === "eraser" ? "active" : ""} type="button" onClick={() => onChange({ mode: "eraser" })} title="Borracha"><Eraser size={16} /></button>
+      </div>
+      <label>
+        Tamanho
+        <select value={draft.brushSize} onChange={(event) => onChange({ brushSize: Number(event.target.value) })}>
+          <option value="1">Pequeno</option>
+          <option value="2">Medio</option>
+          <option value="3">Grande</option>
+        </select>
+      </label>
+      {isSegment ? (
+        <>
+          <label>
+            Area de grupo
+            <select value={draft.parentAreaId || ""} onChange={(event) => onChange({ parentAreaId: event.target.value, cells: [] })}>
+              {groupAreas.map((area) => <option key={area.id} value={area.id}>{area.name}</option>)}
+            </select>
+          </label>
+          <label>
+            Segmento
+            <select value={draft.segmentId || ""} onChange={(event) => onChange({ segmentId: event.target.value })}>
+              <option value="">Selecione</option>
+              {compatibleSegments.map((segment) => <option key={segment.id} value={segment.id}>{segment.name}</option>)}
+            </select>
+          </label>
+        </>
+      ) : (
+        <label>
+          Grupo
+          <select value={draft.groupId || ""} onChange={(event) => onChange({ groupId: event.target.value })}>
+            <option value="">Selecione</option>
+            {groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
+          </select>
+        </label>
+      )}
+      <div className="floor-plan-paint-actions">
+        <button className="secondary-action compact-action" type="button" onClick={onCancel}>Cancelar area</button>
+        <button className="primary-action compact-action" type="button" onClick={onConfirm}>Confirmar area</button>
+      </div>
+    </section>
+  );
+}
+
+function paintCellsPath(cells, cellSize) {
+  return cells.map((key) => {
+    const { column, row } = parseCellKey(key);
+    const x = column * cellSize;
+    const y = row * cellSize;
+    return `M${x} ${y}h${cellSize}v${cellSize}h-${cellSize}Z`;
+  }).join(" ");
+}
+
+function PaintAreaShape({ zone, selected, onSelect }) {
+  const cells = getPaintCells(zone);
+  const cellSize = getPaintCellSize(zone);
+  if (!cells.length) return null;
+  return (
+    <g className={`floor-plan-paint-area ${zone.zoneType} ${selected ? "selected" : ""}`}>
+      <path
+        d={paintCellsPath(cells, cellSize)}
+        fill={zone.color || (zone.zoneType === "segment" ? "#22c55e" : "#8b5cf6")}
+        fillOpacity={zone.zoneType === "segment" ? 0.32 : 0.2}
+        stroke={zone.color || "#8b5cf6"}
+        strokeWidth={selected ? 3 : 1.5}
+        strokeDasharray={zone.zoneType === "segment" ? "6 4" : undefined}
+        onClick={(event) => {
+          event.stopPropagation();
+          onSelect?.();
+        }}
+      />
+      <title>{zone.name}</title>
+    </g>
+  );
+}
+
 function FloorPlanCanvas({
   editor,
   activeFloorId,
@@ -408,6 +518,7 @@ function FloorPlanCanvas({
   onDeleteSelected,
   onRotateSelected,
   placement,
+  paintDraft,
   viewBox,
   onWheel,
   svgRef
@@ -469,6 +580,16 @@ function FloorPlanCanvas({
               />
             );
           }
+          if (isPaintAreaZone(zone)) {
+            return (
+              <PaintAreaShape
+                key={zone.id}
+                zone={zone}
+                selected={zoneSelected}
+                onSelect={() => onSelect({ type: "zone", id: zone.id })}
+              />
+            );
+          }
           return (
             <g
               key={zone.id}
@@ -495,6 +616,19 @@ function FloorPlanCanvas({
             </g>
           );
         })}
+
+        {paintDraft?.cells?.length ? (
+          <path
+            className="floor-plan-paint-draft"
+            d={paintCellsPath(paintDraft.cells, paintDraft.cellSize)}
+            fill={paintDraft.color}
+            fillOpacity={paintDraft.areaType === "segment" ? 0.38 : 0.26}
+            stroke={paintDraft.color}
+            strokeDasharray="6 4"
+            strokeWidth="2"
+            pointerEvents="none"
+          />
+        ) : null}
 
         {routes.map((route) => {
           const path = route.path || [];
@@ -554,12 +688,21 @@ function FloorPlanCanvas({
               <rect width={objectWidth} height={objectHeight} rx={isWallObject(object) ? "3" : "8"} fill={isWallObject(object) ? object.color : "#ffffff"} stroke={object.color} strokeWidth={objectSelected ? 4 : 2} />
               {!isWallObject(object) ? <rect x="6" y="6" width={Math.max(1, objectWidth - 12)} height={Math.max(1, objectHeight - 12)} rx="6" fill={object.color} opacity="0.16" /> : null}
               {object.objectType === "door" ? (
-                <path
-                  className="floor-plan-door-swing"
-                  d={object.metadata?.swing === "outward"
-                    ? `M 10 8 A ${Math.max(24, objectWidth - 20)} ${Math.max(24, objectWidth - 20)} 0 0 0 ${objectWidth - 10} ${objectHeight - 8}`
-                    : `M 10 ${objectHeight - 8} A ${Math.max(24, objectWidth - 20)} ${Math.max(24, objectWidth - 20)} 0 0 1 ${objectWidth - 10} 8`}
-                />
+                <>
+                  <line
+                    className="floor-plan-door-leaf"
+                    x1="10"
+                    y1={object.metadata?.swing === "outward" ? 8 : objectHeight - 8}
+                    x2={objectWidth - 10}
+                    y2={object.metadata?.swing === "outward" ? objectHeight - 8 : 8}
+                  />
+                  <path
+                    className="floor-plan-door-swing"
+                    d={object.metadata?.swing === "outward"
+                      ? `M 10 8 A ${Math.max(24, objectWidth - 20)} ${Math.max(24, objectWidth - 20)} 0 0 0 ${objectWidth - 10} ${objectHeight - 8}`
+                      : `M 10 ${objectHeight - 8} A ${Math.max(24, objectWidth - 20)} ${Math.max(24, objectWidth - 20)} 0 0 1 ${objectWidth - 10} 8`}
+                  />
+                </>
               ) : null}
               {Icon && !isWallObject(object) ? (
                 <foreignObject x={iconX} y={iconY} width={iconSize + 6} height={iconSize + 6}>
@@ -863,16 +1006,64 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
   const [future, setFuture] = useState([]);
   const [error, setError] = useState("");
   const [canvasViewBox, setCanvasViewBox] = useState(null);
+  const [paintDraft, setPaintDraft] = useState(null);
   const dragRef = useRef(null);
+  const paintPointerRef = useRef(false);
   const svgRef = useRef(null);
   const autosaveRef = useRef(null);
 
+  const savedGroupAreas = useMemo(() => (editor?.zones || []).filter((zone) => (
+    zone.floorId === activeFloorId && zone.zoneType === "group" && isPaintAreaZone(zone)
+  )), [activeFloorId, editor?.zones]);
+
   const handleToolChange = useCallback((tool) => {
+    setPlacement(null);
+    if (tool === "group-brush") {
+      const group = groups[0] || null;
+      setMode("2d");
+      setPaintDraft({
+        areaType: "group",
+        mode: "brush",
+        brushSize: 1,
+        cellSize: 20,
+        cells: [],
+        groupId: group?.id || "",
+        segmentId: "",
+        parentAreaId: null,
+        color: group?.color || "#8b5cf6"
+      });
+    } else if (tool === "segment-brush") {
+      const parentArea = savedGroupAreas[0] || null;
+      if (!parentArea) {
+        notify?.("Crie uma area de grupo antes de demarcar segmentos.", "warning");
+        setSelectedTool("select");
+        setPaintDraft(null);
+        return;
+      }
+      const compatibleSegment = segments.find((segment) => (
+        !parentArea.groupId || !segment.groupId || segment.groupId === parentArea.groupId
+      )) || null;
+      setMode("2d");
+      setPaintDraft({
+        areaType: "segment",
+        mode: "brush",
+        brushSize: 1,
+        cellSize: getPaintCellSize(parentArea),
+        cells: [],
+        groupId: parentArea.groupId || "",
+        segmentId: compatibleSegment?.id || "",
+        parentAreaId: parentArea.id,
+        color: compatibleSegment?.color || "#22c55e"
+      });
+    } else {
+      setPaintDraft(null);
+      paintPointerRef.current = false;
+    }
     setSelectedTool(tool);
     if (tool === "group-brush" || tool === "segment-brush") {
       setActiveCatalog("brushes");
     }
-  }, []);
+  }, [groups, notify, savedGroupAreas, segments]);
 
   const loadPlans = useCallback(async () => {
     setPlansLoading(true);
@@ -913,6 +1104,9 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
       if (!current) return current;
       const before = cloneEditor(current);
       const next = typeof updater === "function" ? updater(cloneEditor(current)) : updater;
+      if (next) {
+        next.objects = syncAnchoredOpenings(ensureRoomWallObjects(next.objects || [], next.zones || []));
+      }
       if (track) {
         setPast((items) => [...items.slice(-29), before]);
         setFuture([]);
@@ -1034,19 +1228,22 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
             ? "connectionPoints"
             : "cableRoutes";
       if (patch.remove) {
-        draft[collectionKey] = selected.type === "object"
-          ? removeObjectCascade(draft[collectionKey], selected.id)
-          : draft[collectionKey].filter((entry) => entry.id !== selected.id);
         if (selected.type === "zone") {
-          draft.objects = (draft.objects || []).filter((object) => object.metadata?.parentRoomId !== selected.id);
+          const cascade = removeRoomCascade(draft.objects || [], draft.zones || [], selected.id);
+          draft.objects = cascade.objects;
+          draft.zones = cascade.zones;
           draft.connectionPoints = (draft.connectionPoints || []).filter((point) => point.metadata?.parentRoomId !== selected.id);
+        } else {
+          draft[collectionKey] = selected.type === "object"
+            ? removeObjectCascade(draft[collectionKey], selected.id)
+            : draft[collectionKey].filter((entry) => entry.id !== selected.id);
         }
         setSelected(null);
         return draft;
       }
       draft[collectionKey] = draft[collectionKey].map((entry) => {
         if (entry.id !== selected.id) return entry;
-        if (selected.type === "zone" && (patch.x !== undefined || patch.y !== undefined || patch.width !== undefined || patch.height !== undefined)) {
+        if (selected.type === "zone" && isRoomZone(entry) && (patch.x !== undefined || patch.y !== undefined || patch.width !== undefined || patch.height !== undefined)) {
           return normalizeRoomZone({ ...entry, geometry: { ...entry.geometry, ...patch } }, draft.plan);
         }
         if (selected.type === "object") {
@@ -1068,6 +1265,10 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
   const addCatalogItem = useCallback((item) => {
     const floor = getActiveFloor(editor, activeFloorId);
     if (!floor) return;
+    if (item.category === "zone") {
+      handleToolChange(item.zoneType === "segment" ? "segment-brush" : "group-brush");
+      return;
+    }
     if (isWallObject(item)) {
       setMode("2d");
       setSelectedTool("select");
@@ -1095,31 +1296,6 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
       const { bounds: placementBounds, parentRoomId } = getDefaultPlacementBounds(draft, floor);
       const placementCenterX = placementBounds.x + placementBounds.width / 2;
       const placementCenterY = placementBounds.y + placementBounds.height / 2;
-      if (item.category === "zone") {
-        const group = item.zoneType === "group" ? groups[0] : groups.find((entry) => entry.id === segments[0]?.groupId) || groups[0];
-        const segment = item.zoneType === "segment" ? segments[0] : null;
-        const zone = {
-          id: createId("zone"),
-          planId: draft.plan.id,
-          floorId: floor.id,
-          zoneType: item.zoneType || "room",
-          groupId: group?.id || null,
-          segmentId: segment?.id || null,
-          name: segment?.name || group?.name || item.label,
-          color: segment?.color || group?.color || item.color,
-          geometry: {
-            x: centerX - (item.width || 200) / 2,
-            y: centerY - (item.height || 140) / 2,
-            width: item.width || 200,
-            height: item.height || 140
-          },
-          orderIndex: (draft.zones || []).length,
-          metadata: {}
-        };
-        draft.zones = [...(draft.zones || []), zone];
-        setSelected({ type: "zone", id: zone.id });
-        return draft;
-      }
       if (item.category === "point") {
         const point = {
           id: createId("point"),
@@ -1184,7 +1360,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
       setSelected({ type: "object", id: anchoredObject.id });
       return draft;
     });
-  }, [activeFloorId, commitEditor, editor, groups, notify, segments]);
+  }, [activeFloorId, commitEditor, editor, handleToolChange, notify]);
 
   const getSvgPoint = useCallback((event) => {
     const svg = svgRef.current;
@@ -1196,6 +1372,118 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
       y: ((event.clientY - rect.top) / rect.height) * viewBox.height + viewBox.y
     };
   }, []);
+
+  const updatePaintDraft = useCallback((patch) => {
+    setPaintDraft((current) => {
+      if (!current) return current;
+      const next = { ...current, ...patch };
+      if (patch.groupId !== undefined && current.areaType === "group") {
+        next.color = groups.find((group) => group.id === patch.groupId)?.color || next.color;
+      }
+      if (patch.parentAreaId !== undefined && current.areaType === "segment") {
+        const parentArea = savedGroupAreas.find((area) => area.id === patch.parentAreaId);
+        next.groupId = parentArea?.groupId || "";
+        const compatible = segments.find((segment) => (
+          !parentArea?.groupId || !segment.groupId || segment.groupId === parentArea.groupId
+        ));
+        next.segmentId = compatible?.id || "";
+        next.color = compatible?.color || "#22c55e";
+        next.cellSize = parentArea ? getPaintCellSize(parentArea) : next.cellSize;
+      }
+      if (patch.segmentId !== undefined && current.areaType === "segment") {
+        next.color = segments.find((segment) => segment.id === patch.segmentId)?.color || next.color;
+      }
+      return next;
+    });
+  }, [groups, savedGroupAreas, segments]);
+
+  const applyPaintAtPoint = useCallback((point) => {
+    setPaintDraft((current) => {
+      if (!current) return current;
+      const parentArea = current.areaType === "segment"
+        ? savedGroupAreas.find((area) => area.id === current.parentAreaId)
+        : null;
+      const allowedCells = parentArea ? getPaintCells(parentArea) : null;
+      if (current.mode === "bucket") {
+        const room = (editor?.zones || []).find((zone) => {
+          if (zone.floorId !== activeFloorId || !isRoomZone(zone)) return false;
+          const geometry = getRoomGeometry(zone);
+          return point.x >= geometry.x && point.x <= geometry.x + geometry.width
+            && point.y >= geometry.y && point.y <= geometry.y + geometry.height;
+        });
+        if (!room) {
+          notify?.("Nao foi possivel completar a area. Verifique se o espaco esta fechado por paredes.", "warning");
+          return current;
+        }
+        return {
+          ...current,
+          cells: paintCells(current.cells, fillRoomCells(room, current.cellSize, allowedCells), allowedCells)
+        };
+      }
+      const brushCells = getBrushCells(point, current.brushSize, current.cellSize);
+      return {
+        ...current,
+        cells: current.mode === "eraser"
+          ? eraseCells(current.cells, brushCells)
+          : paintCells(current.cells, brushCells, allowedCells)
+      };
+    });
+  }, [activeFloorId, editor?.zones, notify, savedGroupAreas]);
+
+  const confirmPaintArea = useCallback(() => {
+    if (!paintDraft?.cells?.length) {
+      notify?.("Nenhuma area foi demarcada.", "warning");
+      return;
+    }
+    const group = groups.find((entry) => entry.id === paintDraft.groupId) || null;
+    const segment = segments.find((entry) => entry.id === paintDraft.segmentId) || null;
+    if (paintDraft.areaType === "group" && !group) {
+      notify?.("Selecione o grupo da area demarcada.", "warning");
+      return;
+    }
+    const parentArea = paintDraft.areaType === "segment"
+      ? savedGroupAreas.find((area) => area.id === paintDraft.parentAreaId)
+      : null;
+    if (paintDraft.areaType === "segment" && (!parentArea || !segment)) {
+      notify?.("Selecione a area de grupo e o segmento antes de confirmar.", "warning");
+      return;
+    }
+    if (parentArea?.groupId && segment?.groupId && parentArea.groupId !== segment.groupId) {
+      notify?.("O segmento selecionado nao pertence ao grupo desta area.", "warning");
+      return;
+    }
+    let createdAreaId = null;
+    commitEditor((draft) => {
+      const area = createPaintAreaZone({
+        id: createId("zone"),
+        planId: draft.plan.id,
+        floorId: activeFloorId,
+        areaType: paintDraft.areaType,
+        name: segment?.name || group?.name || "Area demarcada",
+        color: segment?.color || group?.color || paintDraft.color,
+        cells: paintDraft.cells,
+        cellSize: paintDraft.cellSize,
+        groupId: parentArea?.groupId || group?.id || null,
+        segmentId: segment?.id || null,
+        parentAreaId: parentArea?.id || null
+      });
+      area.orderIndex = (draft.zones || []).length;
+      createdAreaId = area.id;
+      draft.zones = [...(draft.zones || []), area];
+      return draft;
+    });
+    setPaintDraft(null);
+    setSelectedTool("select");
+    if (createdAreaId) setSelected({ type: "zone", id: createdAreaId });
+    notify?.("Area demarcada e vinculada com sucesso.", "ok");
+  }, [activeFloorId, commitEditor, groups, notify, paintDraft, savedGroupAreas, segments]);
+
+  const cancelPaintArea = useCallback(() => {
+    if (paintDraft?.cells?.length && !window.confirm("Cancelar demarcacao atual?")) return;
+    setPaintDraft(null);
+    paintPointerRef.current = false;
+    setSelectedTool("select");
+  }, [paintDraft?.cells?.length]);
 
   const handleCanvasWheel = useCallback((event) => {
     if (!event.ctrlKey) return;
@@ -1441,6 +1729,18 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
     setPlacement((current) => current ? { ...current, start: point, preview } : current);
   }, [activeFloorId, buildRoomPlacementPreview, commitEditor, editor, getSvgPoint, notify, placement]);
 
+  const handleCanvasPointerDown = useCallback((event) => {
+    if (!paintDraft) {
+      confirmRoomPlacement(event);
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const point = getSvgPoint(event);
+    applyPaintAtPoint(point);
+    paintPointerRef.current = paintDraft.mode !== "bucket";
+  }, [applyPaintAtPoint, confirmRoomPlacement, getSvgPoint, paintDraft]);
+
   const beginDrag = useCallback((event, type, id) => {
     if (selectedTool !== "select" || placement) return;
     event.stopPropagation();
@@ -1594,6 +1894,11 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
   }, [activeFloorId, commitEditor, editor, getSvgPoint]);
 
   const endDrag = useCallback((event) => {
+    paintPointerRef.current = false;
+    if (paintDraft) {
+      dragRef.current = null;
+      return;
+    }
     if (placement?.kind === "room" && placement.start) {
       const point = event ? getSvgPoint(event) : placement.start;
       const preview = buildDraggedRoomPreview(
@@ -1605,7 +1910,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
       commitRoomPlacement(placement, preview);
     }
     dragRef.current = null;
-  }, [buildDraggedRoomPreview, commitRoomPlacement, getSvgPoint, placement]);
+  }, [buildDraggedRoomPreview, commitRoomPlacement, getSvgPoint, paintDraft, placement]);
 
   const beginRoomResize = useCallback((event, zoneId, side) => {
     if (!editor) return;
@@ -1721,15 +2026,27 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
         orderIndex: (draft.zones || []).length
       }, draft.plan);
       nextRoomId = duplicatedZone.id;
+      const sourceWalls = new Map((draft.objects || [])
+        .filter((object) => object.metadata?.parentRoomId === zone.id && object.metadata?.generatedFromRoom)
+        .map((object) => [object.id, object]));
       const duplicatedObjects = (draft.objects || [])
-        .filter((object) => object.metadata?.parentRoomId === zone.id)
-        .map((object) => ({
-          ...object,
-          id: createId("object"),
-          x: (object.x || 0) + deltaX,
-          y: (object.y || 0) + deltaY,
-          metadata: { ...(object.metadata || {}), parentRoomId: duplicatedZone.id }
-        }));
+        .filter((object) => object.metadata?.parentRoomId === zone.id && !object.metadata?.generatedFromRoom)
+        .map((object) => {
+          const parentWall = sourceWalls.get(object.metadata?.parentObjectId);
+          return {
+            ...object,
+            id: createId("object"),
+            x: (object.x || 0) + deltaX,
+            y: (object.y || 0) + deltaY,
+            metadata: {
+              ...(object.metadata || {}),
+              parentRoomId: duplicatedZone.id,
+              ...(parentWall?.metadata?.roomWallSide
+                ? { parentObjectId: getRoomWallId(duplicatedZone.id, parentWall.metadata.roomWallSide) }
+                : {})
+            }
+          };
+        });
       const duplicatedPoints = (draft.connectionPoints || [])
         .filter((pointEntry) => pointEntry.metadata?.parentRoomId === zone.id)
         .map((pointEntry) => ({
@@ -1838,6 +2155,10 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
   }, [activeFloorId, commitEditor, editor, notify, placement, selected]);
 
   const handleCanvasPointerMove = useCallback((event) => {
+    if (paintDraft && paintPointerRef.current) {
+      applyPaintAtPoint(getSvgPoint(event));
+      return;
+    }
     if (placement?.kind === "room") {
       updateRoomPlacementPreview(event);
       return;
@@ -1848,7 +2169,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
       return;
     }
     moveDrag(event);
-  }, [getSvgPoint, moveDrag, placement, updateRoomPlacementPreview]);
+  }, [applyPaintAtPoint, getSvgPoint, moveDrag, paintDraft, placement, updateRoomPlacementPreview]);
 
   const undo = useCallback(() => {
     setPast((items) => {
@@ -1878,6 +2199,13 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
       const tagName = event.target?.tagName?.toLowerCase();
       if (["input", "textarea", "select"].includes(tagName) || event.target?.isContentEditable) return;
       if (event.key === "Escape") {
+        if (paintDraft) {
+          event.preventDefault();
+          setPaintDraft(null);
+          paintPointerRef.current = false;
+          setSelectedTool("select");
+          return;
+        }
         if (placement) {
           event.preventDefault();
           setPlacement(null);
@@ -1908,7 +2236,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [deleteSelectedEntity, duplicateSelectedRoom, placement, redo, rotateSelectedRoom, undo, view]);
+  }, [deleteSelectedEntity, duplicateSelectedRoom, paintDraft, placement, redo, rotateSelectedRoom, undo, view]);
 
   const linkObject = useCallback(async (objectId, assetId) => {
     const device = devices.find((entry) => entry.id === assetId);
@@ -1995,6 +2323,16 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
             <span>{Math.round(floor?.width || DEFAULT_PLAN_SIZE.width)} x {Math.round(floor?.height || DEFAULT_PLAN_SIZE.height)}</span>
           </div>
 
+          <PaintToolPanel
+            draft={paintDraft}
+            groups={groups}
+            segments={segments}
+            groupAreas={savedGroupAreas}
+            onChange={updatePaintDraft}
+            onConfirm={confirmPaintArea}
+            onCancel={cancelPaintArea}
+          />
+
           {mode === "2d" ? (
             <FloorPlanCanvas
               editor={editor}
@@ -2003,7 +2341,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
               selectedTool={selectedTool}
               onSelect={setSelected}
               onPointerDown={beginDrag}
-              onCanvasPointerDown={confirmRoomPlacement}
+              onCanvasPointerDown={handleCanvasPointerDown}
               onPointerMove={handleCanvasPointerMove}
               onPointerUp={endDrag}
               onResizeStart={beginRoomResize}
@@ -2012,6 +2350,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
               onDeleteSelected={deleteSelectedEntity}
               onRotateSelected={rotateSelectedRoom}
               placement={placement}
+              paintDraft={paintDraft}
               viewBox={canvasViewBox}
               onWheel={handleCanvasWheel}
               svgRef={svgRef}
