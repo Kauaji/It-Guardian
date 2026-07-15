@@ -188,7 +188,7 @@ A cena renderiza por demanda: interacoes, alteracoes de dados e redimensionament
 - Nao ha roteamento automatico de cabos.
 - Nao ha calculo eletrico, carga, disjuntor real ou validacao normativa.
 - Nao ha descoberta automatica de switches, portas ou topologia.
-- Nao ha modelos 3D detalhados ou texturas pesadas.
+- O modo detalhado possui modelos locais somente para moveis selecionados; ativos de TI e outros tipos ainda usam fallback procedural.
 - Nao ha fisica, sombras complexas ou simulacao de ocupacao.
 - O uso em telas pequenas e funcional, mas edicoes extensas continuam mais ergonomicas em desktop.
 
@@ -275,9 +275,11 @@ Ao mover, redimensionar ou girar uma parede, suas aberturas acompanham a nova ge
 
 ### Edicao e visualizacao 3D
 
-- A cena usa modelos procedurais leves para estrutura, moveis, ativos, rede e energia.
+- A cena usa modelos procedurais leves para estrutura, ativos, rede e energia. No modo detalhado, mesa, cadeira, armario, estante e porta podem usar GLBs locais do Quaternius.
 - O seletor `Simples/Detalhado` guarda a preferencia local do tecnico. O modo detalhado tenta carregar apenas modelos locais registrados; se o arquivo nao existir, o modelo procedural continua visivel.
 - O registro de modelos fica em `client/src/components/floorPlans/assets/inventoryMapAssetRegistry.js` e as licencas devem ser registradas em `client/public/assets/inventory-map-3d/models/ASSET-LICENSES.md`.
+- Modelos repetidos na mesma cena compartilham a mesma requisicao de carregamento. Somente tipos presentes no pavimento ativo sao solicitados.
+- Falhas de rede, arquivo ou parse mantem a representacao procedural e registram um aviso discreto no console, sem bloquear selecao, arraste ou rotacao.
 - Objetos podem ser selecionados diretamente na cena.
 - Objetos comuns podem ser arrastados no plano do pavimento.
 - A selecao pode ser girada em incrementos simples pelo controle da cena.
@@ -286,6 +288,18 @@ Ao mover, redimensionar ou girar uma parede, suas aberturas acompanham a nova ge
 - Sombras pesadas e loop continuo de animacao permanecem desativados.
 
 Em telas pequenas, o editor continua acessivel com scroll interno e controles reorganizados, mas a edicao detalhada de uma planta e recomendada em desktop ou notebook.
+
+### Modelos Quaternius
+
+O conjunto local usa seis modelos operacionais do [Quaternius Ultimate Furniture Pack](https://quaternius.com/packs/ultimatefurniture.html), disponibilizado pelo autor sob licenca CC0. Foram selecionados apenas mesa de escritorio, mesa, cadeira de escritorio, armario, estante e porta. Camas, sofas, mesas de cabeceira e outros itens domesticos do pack nao foram incorporados.
+
+Os FBX oficiais foram baixados temporariamente em `tmp/quaternius/`, pasta ignorada pelo Git. Como o Blender nao estava disponivel no ambiente, a conversao real foi feita com FBX2glTF 0.9.7 e validada com glTF Transform 4.4.1. A otimizacao usou:
+
+```powershell
+npx @gltf-transform/cli optimize input.glb output.glb --compress false --texture-compress false
+```
+
+A compressao de geometria foi mantida desativada para que o `GLTFLoader` nao dependa de Draco ou Meshopt. Os GLBs finais ficam em `client/public/assets/inventory-map-3d/models/quaternius/`, todos abaixo de 200 KB. A tabela completa de origem e transformacoes esta em `client/public/assets/inventory-map-3d/models/ASSET-LICENSES.md`.
 
 ### Demarcacao de areas com pincel
 

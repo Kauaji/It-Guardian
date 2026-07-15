@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
+import { stat } from "node:fs/promises";
+import path from "node:path";
 import { describe, it } from "node:test";
+import { fileURLToPath } from "node:url";
 
 import {
   MODEL_QUALITY_DETAILED,
@@ -122,5 +125,24 @@ describe("local 3D asset registry", () => {
 
     assert.equal(definition.fallback, "box");
     assert.equal(resolveInventoryMapAssetMode("custom-device", MODEL_QUALITY_DETAILED).url, null);
+  });
+
+  it("registers optimized Quaternius furniture only for detailed mode", async () => {
+    const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
+    const expectedModels = ["desk", "table", "chair", "cabinet", "shelf", "door"];
+
+    for (const type of expectedModels) {
+      const definition = getInventoryMapAssetDefinition(type);
+      const detailed = resolveInventoryMapAssetMode(type, MODEL_QUALITY_DETAILED);
+      const simple = resolveInventoryMapAssetMode(type, MODEL_QUALITY_SIMPLE);
+      const modelPath = path.join(repoRoot, "client/public", detailed.url.replace(/^\//, ""));
+      const modelStat = await stat(modelPath);
+
+      assert.equal(detailed.mode, "model");
+      assert.equal(simple.mode, "fallback");
+      assert.equal(definition.source, "Quaternius Ultimate Furniture Pack");
+      assert.equal(definition.license, "CC0");
+      assert.ok(modelStat.size > 0 && modelStat.size < 1_000_000);
+    }
   });
 });

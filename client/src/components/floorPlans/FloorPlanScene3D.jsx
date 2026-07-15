@@ -86,7 +86,23 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
     const activeObjects = syncAnchoredOpenings(data.objects || []).filter((object) => !activeFloorId || object.floorId === activeFloorId);
     const objectGroups = new Map();
     const modelLoader = !preview && modelQuality === MODEL_QUALITY_DETAILED ? new GLTFLoader() : null;
+    const modelScenePromises = new Map();
+    const warnedModelUrls = new Set();
     let disposed = false;
+
+    const loadModelScene = (url) => {
+      if (!modelLoader) return Promise.reject(new Error("Model loader is disabled"));
+      if (!modelScenePromises.has(url)) {
+        const promise = modelLoader.loadAsync(url)
+          .then((gltf) => gltf?.scene || null)
+          .catch((error) => {
+            modelScenePromises.delete(url);
+            throw error;
+          });
+        modelScenePromises.set(url, promise);
+      }
+      return modelScenePromises.get(url);
+    };
 
     const disposeObject3D = (root) => {
       root?.traverse?.((child) => {
@@ -213,14 +229,12 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
       });
       objectGroups.set(object.id, group);
       if (assetMode.mode === "model" && modelLoader) {
-        modelLoader.load(assetMode.url, (gltf) => {
-          if (disposed || !gltf?.scene) {
-            disposeObject3D(gltf?.scene);
-            return;
-          }
+        loadModelScene(assetMode.url).then((sourceScene) => {
+          if (disposed || !sourceScene) return;
           group.children.forEach(disposeObject3D);
           group.clear();
-          const model = gltf.scene.clone(true);
+          const model = sourceScene.clone(true);
+          model.rotation.y = THREE.MathUtils.degToRad(Number(assetMode.definition.defaultRotationY || 0));
           const bounds = new THREE.Box3().setFromObject(model);
           const size = bounds.getSize(new THREE.Vector3());
           const targetHeight = Number(object.height3d || 70);
@@ -239,8 +253,11 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
           });
           group.add(model);
           render();
-        }, undefined, () => {
-          // The procedural representation remains visible when a local model fails.
+        }).catch((error) => {
+          if (!warnedModelUrls.has(assetMode.url)) {
+            warnedModelUrls.add(assetMode.url);
+            console.warn(`Modelo 3D local indisponivel; usando fallback procedural: ${assetMode.url}`, error);
+          }
         });
       }
       return group;
