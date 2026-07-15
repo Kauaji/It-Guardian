@@ -17,7 +17,7 @@ function toColor(value, fallback = "#1f7a61") {
   return /^#[0-9a-f]{6}$/i.test(String(value || "")) ? value : fallback;
 }
 
-export default function FloorPlanScene3D({ data, activeFloorId, selected, onSelect, onMoveObject, onRotateSelected }) {
+export default function FloorPlanScene3D({ data, activeFloorId, selected, onSelect, onMoveObject, onRotateSelected, preview = false }) {
   const containerRef = useRef(null);
   const [modelQuality, setModelQuality] = useState(() => {
     try {
@@ -52,12 +52,13 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
     camera.lookAt(0, 0, 0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setPixelRatio(preview ? 1 : Math.min(window.devicePixelRatio || 1, 2));
     renderer.setSize(width, height);
     container.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = false;
+    controls.enabled = !preview;
     controls.enableZoom = false;
     controls.minDistance = 360;
     controls.maxDistance = 1900;
@@ -84,7 +85,7 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
     const activeZones = (data.zones || []).filter((zone) => !activeFloorId || zone.floorId === activeFloorId);
     const activeObjects = syncAnchoredOpenings(data.objects || []).filter((object) => !activeFloorId || object.floorId === activeFloorId);
     const objectGroups = new Map();
-    const modelLoader = modelQuality === MODEL_QUALITY_DETAILED ? new GLTFLoader() : null;
+    const modelLoader = !preview && modelQuality === MODEL_QUALITY_DETAILED ? new GLTFLoader() : null;
     let disposed = false;
 
     const disposeObject3D = (root) => {
@@ -370,11 +371,13 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
       render();
     };
 
-    renderer.domElement.addEventListener("pointerdown", handlePointerDown);
-    renderer.domElement.addEventListener("pointermove", handlePointerMove);
-    renderer.domElement.addEventListener("pointerup", handlePointerUp);
-    renderer.domElement.addEventListener("pointercancel", handlePointerUp);
-    renderer.domElement.addEventListener("wheel", handleWheel, { passive: false });
+    if (!preview) {
+      renderer.domElement.addEventListener("pointerdown", handlePointerDown);
+      renderer.domElement.addEventListener("pointermove", handlePointerMove);
+      renderer.domElement.addEventListener("pointerup", handlePointerUp);
+      renderer.domElement.addEventListener("pointercancel", handlePointerUp);
+      renderer.domElement.addEventListener("wheel", handleWheel, { passive: false });
+    }
 
     const resizeObserver = new ResizeObserver(() => {
       const nextWidth = Math.max(container.clientWidth, 320);
@@ -405,12 +408,12 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
         else if (item.material) item.material.dispose?.();
       });
     };
-  }, [activeFloorId, data, modelQuality, onMoveObject, onSelect, selected]);
+  }, [activeFloorId, data, modelQuality, onMoveObject, onSelect, preview, selected]);
 
   return (
-    <div className="floor-plan-scene-shell">
+    <div className={`floor-plan-scene-shell ${preview ? "preview" : ""}`}>
       <div className="floor-plan-scene-3d" ref={containerRef} aria-label="Visualizacao 3D interativa da planta" />
-      <div className="floor-plan-scene-actions" aria-label="Acoes da selecao 3D">
+      {!preview ? <div className="floor-plan-scene-actions" aria-label="Acoes da selecao 3D">
         <span>{selected?.type === "object" ? "Item selecionado" : "Clique em um item para selecionar"}</span>
         <div className="segmented-control compact floor-plan-model-quality" aria-label="Qualidade dos modelos 3D">
           <button type="button" className={modelQuality === MODEL_QUALITY_SIMPLE ? "active" : ""} onClick={() => setModelQuality(MODEL_QUALITY_SIMPLE)}>Simples</button>
@@ -419,7 +422,7 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
         {selected?.type === "object" ? (
           <button type="button" className="secondary-action compact-action" onClick={onRotateSelected}>Girar 90 graus</button>
         ) : null}
-      </div>
+      </div> : null}
     </div>
   );
 }

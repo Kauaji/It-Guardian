@@ -229,6 +229,20 @@ A cena renderiza por demanda: interacoes, alteracoes de dados e redimensionament
 
 O editor acessado por Plantas usa o mesmo cadastro de plantas e pavimentos ja existente. Este fluxo e separado do `InventoryVisualMap`: ele serve para desenhar ambientes, paredes, aberturas e objetos de uma planta, mantendo uma visualizacao 3D leve e sincronizada com o editor 2D.
 
+### Composicao operacional do editor
+
+A interface foi reorganizada sem substituir os motores 2D e 3D existentes:
+
+- A barra superior fixa concentra planta/pavimento, desfazer, refazer, estado de salvamento, alternancia 2D/3D, ferramentas de navegacao e salvamento.
+- O painel esquerdo concentra os pinceis de Grupo e Segmento, mantendo as regras de selecao e compatibilidade ja existentes.
+- O centro continua sendo a area principal de edicao. No modo 2D usa o SVG operacional; no modo 3D usa a cena Three.js carregada sob demanda.
+- O painel direito apresenta propriedades do mapa ou do objeto selecionado, incluindo vinculo com Inventario, Grupo, Segmento, status, pontos de rede e energia e metadados tecnicos.
+- O catalogo inferior permanece horizontal e rolavel, organizado pelas categorias de ambientes, estrutura, portas e janelas, moveis, ativos, rede, energia e pinceis.
+- No modo 2D, uma miniatura 3D leve fornece contexto espacial sem criar uma segunda cena interativa pesada.
+- Acoes rapidas de cabeamento, rede e energia ficam proximas da area de trabalho, sem alterar a persistencia dos objetos.
+
+Em larguras menores os paineis sao reorganizados em blocos, o catalogo mantem rolagem interna e a miniatura 3D e removida para preservar a area util do canvas. Compartilhamento e navegacao direta para o Inventario aparecem apenas como controles desabilitados enquanto esses fluxos nao possuem integracao segura no editor.
+
 ### Persistencia e compatibilidade
 
 As novas relacoes ficam no JSON do editor e nao exigem uma tabela paralela. Objetos antigos continuam validos porque os metadados de ancoragem sao opcionais.

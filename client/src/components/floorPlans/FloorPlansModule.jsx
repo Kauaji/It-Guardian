@@ -1,9 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowLeft,
-  Check,
   Copy,
-  Grid3X3,
   Info,
   Layers3,
   Link2,
@@ -11,13 +8,12 @@ import {
   PaintBucket,
   Paintbrush,
   Plus,
-  Redo2,
-  Save,
   Search,
   Settings,
   Trash2,
   Eraser,
-  Undo2
+  Monitor,
+  X
 } from "lucide-react";
 import {
   createFloorPlan,
@@ -28,7 +24,13 @@ import {
   linkFloorPlanObjectToAsset,
   saveFloorPlanEditorData
 } from "../../api.js";
-import { FLOOR_PLAN_CATALOG, FLOOR_PLAN_TOOLS, getCatalogItem } from "./floorPlanCatalog.js";
+import { FLOOR_PLAN_CATALOG, getCatalogItem } from "./floorPlanCatalog.js";
+import {
+  FloorPlanBrushPanel,
+  FloorPlanPreviewCard,
+  FloorPlanQuickActions,
+  FloorPlanTopbar
+} from "./FloorPlanEditorChrome.jsx";
 import RoomCatalog from "./rooms/RoomCatalog.jsx";
 import RoomPlacementPreview from "./rooms/RoomPlacementPreview.jsx";
 import RoomRenderer from "./rooms/RoomRenderer.jsx";
@@ -237,91 +239,6 @@ function FloorPlansList({ plans, loading, query, onQueryChange, onCreate, onOpen
   );
 }
 
-function FloorPlanTopbar({
-  editor,
-  activeFloorId,
-  onBack,
-  onSave,
-  saveState,
-  mode,
-  onModeChange,
-  canUndo,
-  canRedo,
-  onUndo,
-  onRedo,
-  selectedTool,
-  onToolChange
-}) {
-  const floors = editor?.floors || [];
-
-  return (
-    <header className="floor-plan-editor-topbar">
-      <div className="floor-plan-editor-identity">
-        <button className="icon-button" type="button" onClick={onBack} title="Voltar para plantas">
-          <ArrowLeft size={18} />
-        </button>
-        <div>
-          <strong>{editor?.plan?.name || "Planta"}</strong>
-          <span>{floors.find((floor) => floor.id === activeFloorId)?.name || "Planta 1"}</span>
-        </div>
-      </div>
-
-      <div className="floor-plan-editor-center-actions">
-        <button className="icon-button" type="button" onClick={onUndo} disabled={!canUndo} title="Desfazer">
-          <Undo2 size={17} />
-        </button>
-        <button className="icon-button" type="button" onClick={onRedo} disabled={!canRedo} title="Refazer">
-          <Redo2 size={17} />
-        </button>
-        <span className={`floor-plan-save-state ${saveState}`}>
-          {saveState === "saving" ? <Loader2 size={15} /> : <Check size={15} />}
-          {saveState === "dirty" ? "Alteracoes pendentes" : saveState === "saving" ? "Salvando" : saveState === "error" ? "Erro ao salvar" : "Salvo"}
-        </span>
-      </div>
-
-      <div className="floor-plan-editor-actions">
-        <div className="segmented-control compact">
-          <button className={mode === "2d" ? "active" : ""} type="button" onClick={() => onModeChange("2d")}>
-            2D
-          </button>
-          <button className={mode === "3d" ? "active" : ""} type="button" onClick={() => onModeChange("3d")}>
-            3D
-          </button>
-        </div>
-        <button className="icon-button" type="button" onClick={() => onToolChange(selectedTool === "pan" ? "select" : "pan")} title="Mover tela">
-          <Grid3X3 size={17} />
-        </button>
-        <button className="secondary-action compact-action" type="button" onClick={onSave}>
-          <Save size={16} />
-          Salvar
-        </button>
-      </div>
-    </header>
-  );
-}
-
-function FloorPlanToolRail({ selectedTool, onToolChange }) {
-  return (
-    <aside className="floor-plan-toolrail">
-      {FLOOR_PLAN_TOOLS.map((tool) => {
-        const Icon = tool.icon;
-        return (
-          <button
-            className={selectedTool === tool.id ? "active" : ""}
-            key={tool.id}
-            type="button"
-            onClick={() => onToolChange(tool.id)}
-            title={tool.label}
-          >
-            <Icon size={18} />
-            <span>{tool.label}</span>
-          </button>
-        );
-      })}
-    </aside>
-  );
-}
-
 function FloorPlanCatalog({ activeSection, onActiveSectionChange, onAddItem, onSelectRoomTemplate, placement }) {
   const catalogSections = [{ id: "rooms", label: "Comodos" }, ...FLOOR_PLAN_CATALOG];
   const section = FLOOR_PLAN_CATALOG.find((entry) => entry.id === activeSection) || FLOOR_PLAN_CATALOG[0];
@@ -521,7 +438,8 @@ function FloorPlanCanvas({
   paintDraft,
   viewBox,
   onWheel,
-  svgRef
+  svgRef,
+  showGrid = true
 }) {
   const floor = getActiveFloor(editor, activeFloorId);
   const gridSize = editor?.plan?.gridSize || DEFAULT_PLAN_SIZE.gridSize;
@@ -544,7 +462,7 @@ function FloorPlanCanvas({
   if (!floor) return <EditorEmptyState />;
 
   return (
-    <div className={`floor-plan-canvas-wrap tool-${selectedTool}`}>
+    <div className={`floor-plan-canvas-wrap tool-${selectedTool} ${showGrid ? "" : "no-grid"}`}>
       <svg
         ref={svgRef}
         className="floor-plan-canvas"
@@ -563,7 +481,7 @@ function FloorPlanCanvas({
           </pattern>
         </defs>
         <rect x="0" y="0" width={width} height={height} fill="#fbfdff" />
-        <rect x="0" y="0" width={width} height={height} fill="url(#floor-grid)" />
+        {showGrid ? <rect x="0" y="0" width={width} height={height} fill="url(#floor-grid)" /> : null}
 
         {zones.map((zone) => {
           const geometry = zone.geometry || {};
@@ -754,7 +672,7 @@ function FloorPlanCanvas({
   );
 }
 
-function FloorPlanInspector({ editor, selected, onChangePlan, onChangeSelected, devices, groups, segments, permissions, onLinkObject }) {
+function FloorPlanInspector({ editor, selected, onChangePlan, onChangeSelected, onClearSelected, devices, groups, segments, permissions, onLinkObject }) {
   const selectedEntity = useMemo(() => {
     if (!editor || !selected) return null;
     const collections = {
@@ -770,33 +688,39 @@ function FloorPlanInspector({ editor, selected, onChangePlan, onChangeSelected, 
     return (
       <aside className="floor-plan-inspector">
         <header>
-          <span>Propriedades</span>
+          <span>Propriedades do ativo</span>
           <Settings size={18} />
         </header>
-        <label>
-          Nome da planta
-          <input value={editor?.plan?.name || ""} onChange={(event) => onChangePlan({ name: event.target.value })} />
-        </label>
-        <label>
-          Empresa
-          <input value={editor?.plan?.company || ""} onChange={(event) => onChangePlan({ company: event.target.value })} />
-        </label>
-        <label>
-          Unidade / andar
-          <input value={editor?.plan?.floorLabel || ""} onChange={(event) => onChangePlan({ floorLabel: event.target.value })} />
-        </label>
-        <label>
-          Status
-          <select value={editor?.plan?.status || "draft"} onChange={(event) => onChangePlan({ status: event.target.value })}>
-            <option value="draft">Rascunho</option>
-            <option value="active">Ativa</option>
-            <option value="archived">Arquivada</option>
-          </select>
-        </label>
-        <div className="floor-plan-inspector-note">
-          <Info size={16} />
-          Selecione um objeto da planta para editar vinculo, grupo, segmento e posicao.
+        <div className="floor-plan-inspector-empty">
+          <Monitor size={26} />
+          <strong>Selecione um ativo no mapa</strong>
+          <span>As propriedades, vinculos e pontos associados aparecem aqui.</span>
         </div>
+        <details className="floor-plan-map-settings">
+          <summary>Configuracoes da planta</summary>
+          <div>
+            <label>
+              Nome da planta
+              <input value={editor?.plan?.name || ""} onChange={(event) => onChangePlan({ name: event.target.value })} />
+            </label>
+            <label>
+              Empresa
+              <input value={editor?.plan?.company || ""} onChange={(event) => onChangePlan({ company: event.target.value })} />
+            </label>
+            <label>
+              Unidade / andar
+              <input value={editor?.plan?.floorLabel || ""} onChange={(event) => onChangePlan({ floorLabel: event.target.value })} />
+            </label>
+            <label>
+              Status
+              <select value={editor?.plan?.status || "draft"} onChange={(event) => onChangePlan({ status: event.target.value })}>
+                <option value="draft">Rascunho</option>
+                <option value="active">Ativa</option>
+                <option value="archived">Arquivada</option>
+              </select>
+            </label>
+          </div>
+        </details>
       </aside>
     );
   }
@@ -810,18 +734,56 @@ function FloorPlanInspector({ editor, selected, onChangePlan, onChangeSelected, 
   const availableWalls = selected.type === "object"
     ? (editor.objects || []).filter((object) => object.floorId === selectedEntity.floorId && isWallObject(object))
     : [];
+  const availablePoints = (editor.connectionPoints || []).filter((point) => point.floorId === selectedEntity.floorId);
+  const networkPoints = availablePoints.filter((point) => point.pointType === "network");
+  const powerPoints = availablePoints.filter((point) => point.pointType === "power");
+  const linkedDeviceStatus = String(linkedDevice?.status || "").toLowerCase();
+  const statusTone = linkedDeviceStatus.includes("online") || linkedDeviceStatus.includes("ativo")
+    ? "online"
+    : linkedDeviceStatus.includes("problem") || linkedDeviceStatus.includes("erro")
+      ? "warning"
+      : linkedDeviceStatus
+        ? "offline"
+        : "neutral";
+  const tags = Array.isArray(linkedDevice?.tags)
+    ? linkedDevice.tags
+    : String(linkedDevice?.tags || "").split(",").map((tag) => tag.trim()).filter(Boolean);
+  const AssetIcon = getObjectIcon(selectedEntity.objectType) || Monitor;
 
   return (
     <aside className="floor-plan-inspector">
       <header>
         <span>{selected.type === "object" ? "Ativo/objeto" : selected.type === "zone" ? "Zona" : selected.type === "point" ? "Ponto" : "Rota"}</span>
-        <button className="icon-button" type="button" onClick={() => onChangeSelected({ remove: true })} title="Remover selecionado">
-          <Trash2 size={17} />
+        <button className="icon-button" type="button" onClick={onClearSelected} title="Fechar propriedades">
+          <X size={17} />
         </button>
       </header>
 
+      {supportsInventoryLink && (
+        <>
+          <div className="floor-plan-asset-summary">
+            <span className="floor-plan-asset-icon"><AssetIcon size={27} /></span>
+            <span>
+              <strong>{linkedDevice ? deviceLabel(linkedDevice) : selectedEntity.label || "Ativo sem vinculo"}</strong>
+              <small className={`floor-plan-asset-status ${statusTone}`}>
+                <i />
+                {linkedDevice?.status || "Sem status"}
+              </small>
+            </span>
+          </div>
+          <button
+            className="floor-plan-correlate-action"
+            type="button"
+            onClick={() => document.getElementById("floor-plan-inventory-link")?.focus()}
+          >
+            <Link2 size={16} />
+            Correlacionar maquina
+          </button>
+        </>
+      )}
+
       <label>
-        Nome
+        Nome do ativo
         <input value={selectedEntity.label || selectedEntity.name || ""} onChange={(event) => onChangeSelected({ label: event.target.value, name: event.target.value })} />
       </label>
 
@@ -829,7 +791,7 @@ function FloorPlanInspector({ editor, selected, onChangePlan, onChangeSelected, 
         <>
           <label>
             Vinculo com inventario
-            <select value={selectedEntity.linkedAssetId || ""} onChange={(event) => onLinkObject(selectedEntity.id, event.target.value)}>
+            <select id="floor-plan-inventory-link" value={selectedEntity.linkedAssetId || ""} onChange={(event) => onLinkObject(selectedEntity.id, event.target.value)}>
               <option value="">Sem vinculo</option>
               {devices.map((device) => (
                 <option key={device.id} value={device.id}>
@@ -838,13 +800,30 @@ function FloorPlanInspector({ editor, selected, onChangePlan, onChangeSelected, 
               ))}
             </select>
           </label>
-          {linkedDevice && (
-            <div className="floor-plan-linked-asset">
-              <strong>{deviceLabel(linkedDevice)}</strong>
-              <span>{linkedDevice.ip || linkedDevice.hostname || "Sem IP informado"}</span>
-              <span>{linkedDevice.status || "status nao informado"}</span>
-            </div>
-          )}
+          <label>
+            Hostname / IP
+            <input readOnly value={linkedDevice?.ip || linkedDevice?.hostname || "Nao informado"} />
+          </label>
+          <label>
+            Tomada de energia
+            <select
+              value={selectedEntity.metadata?.powerPointId || ""}
+              onChange={(event) => onChangeSelected({ metadata: { ...(selectedEntity.metadata || {}), powerPointId: event.target.value || null } })}
+            >
+              <option value="">Sem tomada associada</option>
+              {powerPoints.map((point) => <option key={point.id} value={point.id}>{point.label || "Tomada"}</option>)}
+            </select>
+          </label>
+          <label>
+            Ponto de rede
+            <select
+              value={selectedEntity.metadata?.networkPointId || ""}
+              onChange={(event) => onChangeSelected({ metadata: { ...(selectedEntity.metadata || {}), networkPointId: event.target.value || null } })}
+            >
+              <option value="">Sem ponto associado</option>
+              {networkPoints.map((point) => <option key={point.id} value={point.id}>{point.label || "Ponto RJ45"}</option>)}
+            </select>
+          </label>
           <label>
             Grupo
             <select value={selectedEntity.groupId || ""} onChange={(event) => onChangeSelected({ groupId: event.target.value || null })}>
@@ -863,6 +842,24 @@ function FloorPlanInspector({ editor, selected, onChangePlan, onChangeSelected, 
               ))}
             </select>
           </label>
+          <div className="floor-plan-inspector-status-row">
+            <span>Status</span>
+            <strong className={`floor-plan-asset-status ${statusTone}`}><i />{linkedDevice?.status || "Nao informado"}</strong>
+          </div>
+          <div className="floor-plan-inspector-tags">
+            <span>Tags</span>
+            <div>
+              {tags.length > 0 ? tags.map((tag) => <em key={tag}>{tag}</em>) : <small>Nenhuma tag cadastrada</small>}
+            </div>
+          </div>
+          <button
+            className="secondary-action compact-action floor-plan-open-inventory"
+            type="button"
+            disabled
+            title="Navegacao direta pelo editor em desenvolvimento"
+          >
+            Ver no inventario
+          </button>
         </>
       )}
 
@@ -985,6 +982,10 @@ function FloorPlanInspector({ editor, selected, onChangePlan, onChangeSelected, 
           Seu usuario nao pode alterar vinculos com inventario.
         </div>
       )}
+      <button className="danger-action compact-action floor-plan-remove-selection" type="button" onClick={() => onChangeSelected({ remove: true })}>
+        <Trash2 size={16} />
+        Remover do mapa
+      </button>
     </aside>
   );
 }
@@ -1001,6 +1002,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
   const [activeCatalog, setActiveCatalog] = useState("rooms");
   const [placement, setPlacement] = useState(null);
   const [mode, setMode] = useState("2d");
+  const [showGrid, setShowGrid] = useState(true);
   const [saveState, setSaveState] = useState("saved");
   const [past, setPast] = useState([]);
   const [future, setFuture] = useState([]);
@@ -2294,6 +2296,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
       <FloorPlanTopbar
         editor={editor}
         activeFloorId={activeFloorId}
+        onFloorChange={setActiveFloorId}
         onBack={goBack}
         onSave={persistEditor}
         saveState={saveState}
@@ -2305,24 +2308,24 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
         onRedo={redo}
         selectedTool={selectedTool}
         onToolChange={handleToolChange}
+        onActivateWall={() => addCatalogItem(getCatalogItem("wall"))}
+        onActivateEraser={() => {
+          if (paintDraft) updatePaintDraft({ mode: "eraser" });
+          else notify?.("Ative um pincel para usar a borracha da demarcacao.", "warning");
+        }}
+        showGrid={showGrid}
+        onToggleGrid={() => setShowGrid((current) => !current)}
       />
 
       <div className="floor-plan-editor-layout">
-        <FloorPlanToolRail selectedTool={selectedTool} onToolChange={handleToolChange} />
+        <FloorPlanBrushPanel
+          selectedTool={selectedTool}
+          onToolChange={handleToolChange}
+          hasGroupArea={savedGroupAreas.length > 0}
+          selectedGroupName={groups.find((group) => group.id === paintDraft?.groupId)?.name}
+        />
 
         <main className="floor-plan-canvas-panel">
-          <div className="floor-plan-floorbar">
-            <label>
-              Andar
-              <select value={activeFloorId} onChange={(event) => setActiveFloorId(event.target.value)}>
-                {(editor?.floors || []).map((entry) => (
-                  <option key={entry.id} value={entry.id}>{entry.name}</option>
-                ))}
-              </select>
-            </label>
-            <span>{Math.round(floor?.width || DEFAULT_PLAN_SIZE.width)} x {Math.round(floor?.height || DEFAULT_PLAN_SIZE.height)}</span>
-          </div>
-
           <PaintToolPanel
             draft={paintDraft}
             groups={groups}
@@ -2333,40 +2336,62 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
             onCancel={cancelPaintArea}
           />
 
-          {mode === "2d" ? (
-            <FloorPlanCanvas
-              editor={editor}
-              activeFloorId={activeFloorId}
-              selected={selected}
-              selectedTool={selectedTool}
-              onSelect={setSelected}
-              onPointerDown={beginDrag}
-              onCanvasPointerDown={handleCanvasPointerDown}
-              onPointerMove={handleCanvasPointerMove}
-              onPointerUp={endDrag}
-              onResizeStart={beginRoomResize}
-              onObjectResizeStart={beginObjectResize}
-              onDuplicateSelected={duplicateSelectedRoom}
-              onDeleteSelected={deleteSelectedEntity}
-              onRotateSelected={rotateSelectedRoom}
-              placement={placement}
-              paintDraft={paintDraft}
-              viewBox={canvasViewBox}
-              onWheel={handleCanvasWheel}
-              svgRef={svgRef}
-            />
-          ) : (
-            <Suspense fallback={<div className="floor-plan-loading">Carregando 3D...</div>}>
-              <FloorPlanScene3D
+          <div className="floor-plan-stage">
+            <span className="floor-plan-dimensions-badge">
+              {Math.round(floor?.width || DEFAULT_PLAN_SIZE.width)} x {Math.round(floor?.height || DEFAULT_PLAN_SIZE.height)}
+            </span>
+            {mode === "2d" ? (
+              <FloorPlanCanvas
                 data={editor}
+                editor={editor}
                 activeFloorId={activeFloorId}
                 selected={selected}
+                selectedTool={selectedTool}
                 onSelect={setSelected}
-                onMoveObject={moveObjectFrom3D}
+                onPointerDown={beginDrag}
+                onCanvasPointerDown={handleCanvasPointerDown}
+                onPointerMove={handleCanvasPointerMove}
+                onPointerUp={endDrag}
+                onResizeStart={beginRoomResize}
+                onObjectResizeStart={beginObjectResize}
+                onDuplicateSelected={duplicateSelectedRoom}
+                onDeleteSelected={deleteSelectedEntity}
                 onRotateSelected={rotateSelectedRoom}
+                placement={placement}
+                paintDraft={paintDraft}
+                viewBox={canvasViewBox}
+                onWheel={handleCanvasWheel}
+                svgRef={svgRef}
+                showGrid={showGrid}
               />
-            </Suspense>
-          )}
+            ) : (
+              <Suspense fallback={<div className="floor-plan-loading">Carregando 3D...</div>}>
+                <FloorPlanScene3D
+                  data={editor}
+                  activeFloorId={activeFloorId}
+                  selected={selected}
+                  onSelect={setSelected}
+                  onMoveObject={moveObjectFrom3D}
+                  onRotateSelected={rotateSelectedRoom}
+                />
+              </Suspense>
+            )}
+
+            {mode === "2d" ? (
+              <FloorPlanPreviewCard mode="3d" onModeChange={setMode} onExpand={() => setMode("3d")}>
+                <Suspense fallback={<div className="floor-plan-loading">Carregando preview...</div>}>
+                  <FloorPlanScene3D
+                    preview
+                    data={editor}
+                    activeFloorId={activeFloorId}
+                    selected={selected}
+                  />
+                </Suspense>
+              </FloorPlanPreviewCard>
+            ) : null}
+
+            <FloorPlanQuickActions activeSection={activeCatalog} onSectionChange={setActiveCatalog} />
+          </div>
 
           <FloorPlanCatalog
             activeSection={activeCatalog}
@@ -2382,6 +2407,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
           selected={selected}
           onChangePlan={updatePlanFields}
           onChangeSelected={updateSelectedEntity}
+          onClearSelected={() => setSelected(null)}
           devices={devices}
           groups={groups}
           segments={segments}
