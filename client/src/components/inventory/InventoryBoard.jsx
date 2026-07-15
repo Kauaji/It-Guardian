@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
-import { ArrowDown, ArrowUp, Box, ChevronDown, Database, Edit3, ListFilter, Map as MapIcon, MoreHorizontal, Plus, Search, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, Database, Edit3, ListFilter, Map as MapIcon, MoreHorizontal, Plus, Search, Trash2 } from "lucide-react";
 import SegmentCard from "./SegmentCard.jsx";
 import MoveMachineModal from "./MoveMachineModal.jsx";
 import MachineDetailsModal from "./MachineDetailsModal.jsx";
@@ -87,14 +87,15 @@ export default function InventoryBoard({
   onRemoveMachine,
   onCloseMoveModal,
   onOpenMoveModal,
-  floorPlansView = null,
-  visualMapView = null
+  floorPlansView = null
 }) {
   const [selectedMachine, setSelectedMachine] = useState(null);
   const [activePopoverId, setActivePopoverId] = useState(null);
   const [searchFocused, setSearchFocused] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [inventoryViewMode, setInventoryViewMode] = useState("board");
+  const [inventoryViewMode, setInventoryViewMode] = useState(() => (
+    window.location.pathname.startsWith("/plantas") ? "floor-plans" : "board"
+  ));
   const [selectedSegmentIds, setSelectedSegmentIds] = useState(new Set());
   const maintenanceSegment = segments.find((segment) => /manuten/i.test(segment.name || ""));
   const backupSegment = segments.find((segment) => segment.isBackupSegment || /backup/i.test(segment.name || ""));
@@ -209,23 +210,15 @@ export default function InventoryBoard({
     if (inventoryViewMode === "floor-plans" && !floorPlansView) {
       setInventoryViewMode("board");
     }
-    if (inventoryViewMode === "visual-map" && !visualMapView) {
-      setInventoryViewMode("board");
-    }
-  }, [floorPlansView, inventoryViewMode, visualMapView]);
+  }, [floorPlansView, inventoryViewMode]);
 
   useEffect(() => {
     if (!selectedMachine) return undefined;
 
-    const previousOverflow = document.body.style.overflow;
-    const previousPaddingRight = document.body.style.paddingRight;
-    document.body.style.overflow = "hidden";
     document.body.classList.add("machine-details-open");
     setActivePopoverId(null);
 
     return () => {
-      document.body.style.overflow = previousOverflow;
-      document.body.style.paddingRight = previousPaddingRight;
       document.body.classList.remove("machine-details-open");
     };
   }, [selectedMachine]);
@@ -276,17 +269,6 @@ export default function InventoryBoard({
           >
             <MapIcon size={16} />
             Plantas
-          </button>
-        )}
-        {visualMapView && (
-          <button
-            type="button"
-            className={inventoryViewMode === "visual-map" ? "active" : ""}
-            onClick={() => setInventoryViewMode("visual-map")}
-            aria-selected={inventoryViewMode === "visual-map"}
-          >
-            <Box size={16} />
-            Mapa 3D
           </button>
         )}
       </div>
@@ -639,7 +621,7 @@ export default function InventoryBoard({
         )}
       </section>
         </>
-      ) : inventoryViewMode === "floor-plans" ? floorPlansView : visualMapView}
+      ) : floorPlansView}
 
       <MoveMachineModal
         machine={moveModal}

@@ -11,7 +11,7 @@ import {
   resolveInventoryMapAssetMode
 } from "./assets/inventoryMapAssetRegistry.js";
 
-const MODEL_QUALITY_STORAGE_KEY = "it-guardian.floor-plan.model-quality";
+const MODEL_QUALITY_STORAGE_KEY = "it-guardian.floor-plan.model-quality.v2";
 
 function toColor(value, fallback = "#1f7a61") {
   return /^#[0-9a-f]{6}$/i.test(String(value || "")) ? value : fallback;
@@ -21,11 +21,11 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
   const containerRef = useRef(null);
   const [modelQuality, setModelQuality] = useState(() => {
     try {
-      return window.localStorage.getItem(MODEL_QUALITY_STORAGE_KEY) === MODEL_QUALITY_DETAILED
-        ? MODEL_QUALITY_DETAILED
-        : MODEL_QUALITY_SIMPLE;
+      return window.localStorage.getItem(MODEL_QUALITY_STORAGE_KEY) === MODEL_QUALITY_SIMPLE
+        ? MODEL_QUALITY_SIMPLE
+        : MODEL_QUALITY_DETAILED;
     } catch {
-      return MODEL_QUALITY_SIMPLE;
+      return MODEL_QUALITY_DETAILED;
     }
   });
 

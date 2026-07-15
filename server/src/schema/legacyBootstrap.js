@@ -392,6 +392,7 @@ export async function initializeDatabase() {
   await query(`
     CREATE TABLE IF NOT EXISTS floor_plans (
       id TEXT PRIMARY KEY,
+      inventory_tab_id TEXT,
       name TEXT NOT NULL,
       company TEXT,
       unit TEXT,
@@ -408,6 +409,11 @@ export async function initializeDatabase() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+  `);
+
+  await query(`
+    ALTER TABLE floor_plans
+    ADD COLUMN IF NOT EXISTS inventory_tab_id TEXT;
   `);
 
   await query(`
@@ -1733,6 +1739,11 @@ export async function initializeDatabase() {
   await query(`
     CREATE INDEX IF NOT EXISTS idx_floor_plans_updated
     ON floor_plans (updated_at DESC);
+  `);
+
+  await query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_floor_plans_inventory_tab_unique
+    ON floor_plans (inventory_tab_id);
   `);
 
   await query(`

@@ -9,9 +9,9 @@ import {
   updateFloorPlan
 } from "../repositories/floorPlanRepository.js";
 
-export async function listFloorPlanController(_req, res, next) {
+export async function listFloorPlanController(req, res, next) {
   try {
-    const plans = await listFloorPlans();
+    const plans = await listFloorPlans(req.query.inventoryTabId);
     res.json({ plans });
   } catch (error) {
     next(error);

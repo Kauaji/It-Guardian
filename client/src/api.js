@@ -304,8 +304,9 @@ export function deleteInventoryVisualMapConnection(token, connectionId) {
   });
 }
 
-export function fetchFloorPlans(token) {
-  return apiFetch("/floor-plans", { token });
+export function fetchFloorPlans(token, inventoryTabId = "") {
+  const query = inventoryTabId ? `?inventoryTabId=${encodeURIComponent(inventoryTabId)}` : "";
+  return apiFetch(`/floor-plans${query}`, { token });
 }
 
 export function fetchFloorPlan(token, id) {

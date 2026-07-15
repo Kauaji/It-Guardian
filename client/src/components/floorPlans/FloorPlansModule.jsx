@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Check,
   Copy,
   Info,
   Layers3,
@@ -9,7 +10,7 @@ import {
   Paintbrush,
   Plus,
   Search,
-  Settings,
+  SlidersVertical,
   Trash2,
   Eraser,
   Monitor,
@@ -22,12 +23,11 @@ import {
   fetchFloorPlan,
   fetchFloorPlans,
   linkFloorPlanObjectToAsset,
-  saveFloorPlanEditorData
+  saveFloorPlanEditorData,
+  updateFloorPlan
 } from "../../api.js";
 import { FLOOR_PLAN_CATALOG, getCatalogItem } from "./floorPlanCatalog.js";
 import {
-  FloorPlanBrushPanel,
-  FloorPlanPreviewCard,
   FloorPlanQuickActions,
   FloorPlanTopbar
 } from "./FloorPlanEditorChrome.jsx";
@@ -327,6 +327,7 @@ function WallPlacementPreview({ placement }) {
 }
 
 function PaintToolPanel({ draft, groups, segments, groupAreas, onChange, onConfirm, onCancel }) {
+  const [sizeControlOpen, setSizeControlOpen] = useState(false);
   if (!draft) return null;
   const isSegment = draft.areaType === "segment";
   const parentArea = groupAreas.find((area) => area.id === draft.parentAreaId) || null;
@@ -346,14 +347,34 @@ function PaintToolPanel({ draft, groups, segments, groupAreas, onChange, onConfi
         <button className={draft.mode === "bucket" ? "active" : ""} type="button" onClick={() => onChange({ mode: "bucket" })} title="Completar comodo"><PaintBucket size={16} /></button>
         <button className={draft.mode === "eraser" ? "active" : ""} type="button" onClick={() => onChange({ mode: "eraser" })} title="Borracha"><Eraser size={16} /></button>
       </div>
-      <label>
-        Tamanho
-        <select value={draft.brushSize} onChange={(event) => onChange({ brushSize: Number(event.target.value) })}>
-          <option value="1">Pequeno</option>
-          <option value="2">Medio</option>
-          <option value="3">Grande</option>
-        </select>
-      </label>
+      <div className="floor-plan-brush-size-control">
+        <button
+          className={`icon-button ${sizeControlOpen ? "active" : ""}`}
+          type="button"
+          onClick={() => setSizeControlOpen((open) => !open)}
+          title="Ajustar tamanho do pincel e da borracha"
+          aria-label="Ajustar tamanho do pincel e da borracha"
+          aria-expanded={sizeControlOpen}
+        >
+          <SlidersVertical size={17} />
+        </button>
+        {sizeControlOpen && (
+          <div className="floor-plan-brush-size-popover">
+            <span>Menor</span>
+            <input
+              type="range"
+              min="1"
+              max="5"
+              step="1"
+              value={draft.brushSize}
+              onChange={(event) => onChange({ brushSize: Number(event.target.value) })}
+              aria-label="Tamanho do pincel e da borracha"
+              orient="vertical"
+            />
+            <span>Maior</span>
+          </div>
+        )}
+      </div>
       {isSegment ? (
         <>
           <label>
@@ -380,8 +401,12 @@ function PaintToolPanel({ draft, groups, segments, groupAreas, onChange, onConfi
         </label>
       )}
       <div className="floor-plan-paint-actions">
-        <button className="secondary-action compact-action" type="button" onClick={onCancel}>Cancelar area</button>
-        <button className="primary-action compact-action" type="button" onClick={onConfirm}>Confirmar area</button>
+        <button className="icon-button primary-action" type="button" onClick={onConfirm} title="Confirmar area" aria-label="Confirmar area">
+          <Check size={18} />
+        </button>
+        <button className="icon-button secondary-action" type="button" onClick={onCancel} title="Cancelar area" aria-label="Cancelar area">
+          <X size={18} />
+        </button>
       </div>
     </section>
   );
@@ -672,7 +697,7 @@ function FloorPlanCanvas({
   );
 }
 
-function FloorPlanInspector({ editor, selected, onChangePlan, onChangeSelected, onClearSelected, devices, groups, segments, permissions, onLinkObject }) {
+function FloorPlanInspector({ editor, selected, onChangeSelected, onClearSelected, devices, groups, segments, permissions, onLinkObject }) {
   const selectedEntity = useMemo(() => {
     if (!editor || !selected) return null;
     const collections = {
@@ -684,46 +709,7 @@ function FloorPlanInspector({ editor, selected, onChangePlan, onChangeSelected, 
     return collections[selected.type]?.find((item) => item.id === selected.id) || null;
   }, [editor, selected]);
 
-  if (!selectedEntity) {
-    return (
-      <aside className="floor-plan-inspector">
-        <header>
-          <span>Propriedades do ativo</span>
-          <Settings size={18} />
-        </header>
-        <div className="floor-plan-inspector-empty">
-          <Monitor size={26} />
-          <strong>Selecione um ativo no mapa</strong>
-          <span>As propriedades, vinculos e pontos associados aparecem aqui.</span>
-        </div>
-        <details className="floor-plan-map-settings">
-          <summary>Configuracoes da planta</summary>
-          <div>
-            <label>
-              Nome da planta
-              <input value={editor?.plan?.name || ""} onChange={(event) => onChangePlan({ name: event.target.value })} />
-            </label>
-            <label>
-              Empresa
-              <input value={editor?.plan?.company || ""} onChange={(event) => onChangePlan({ company: event.target.value })} />
-            </label>
-            <label>
-              Unidade / andar
-              <input value={editor?.plan?.floorLabel || ""} onChange={(event) => onChangePlan({ floorLabel: event.target.value })} />
-            </label>
-            <label>
-              Status
-              <select value={editor?.plan?.status || "draft"} onChange={(event) => onChangePlan({ status: event.target.value })}>
-                <option value="draft">Rascunho</option>
-                <option value="active">Ativa</option>
-                <option value="archived">Arquivada</option>
-              </select>
-            </label>
-          </div>
-        </details>
-      </aside>
-    );
-  }
+  if (!selectedEntity) return null;
 
   const supportsInventoryLink = selected.type === "object"
     && !isWallObject(selectedEntity)
@@ -990,11 +976,12 @@ function FloorPlanInspector({ editor, selected, onChangePlan, onChangeSelected, 
   );
 }
 
-export default function FloorPlansModule({ token, devices = [], segments = [], groups = [], notify, permissions = {} }) {
+export default function FloorPlansModule({ token, devices = [], segments = [], groups = [], activeTab, notify, permissions = {} }) {
   const [plans, setPlans] = useState([]);
   const [plansLoading, setPlansLoading] = useState(false);
   const [listQuery, setListQuery] = useState("");
   const [view, setView] = useState("list");
+  const [isEditing, setIsEditing] = useState(false);
   const [editor, setEditor] = useState(null);
   const [activeFloorId, setActiveFloorId] = useState("");
   const [selected, setSelected] = useState(null);
@@ -1071,27 +1058,51 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
     setPlansLoading(true);
     setError("");
     try {
-      const payload = await fetchFloorPlans(token);
-      setPlans(payload.plans || []);
+      const payload = await fetchFloorPlans(token, activeTab?.id || "");
+      let nextPlans = payload.plans || [];
+
+      if (!nextPlans.length && activeTab?.id && permissions.update) {
+        const legacyPayload = await fetchFloorPlans(token);
+        const legacyPlan = (legacyPayload.plans || []).find((plan) => !plan.inventoryTabId);
+        if (legacyPlan) {
+          const claimedPayload = await updateFloorPlan(token, legacyPlan.id, {
+            inventoryTabId: activeTab.id,
+            name: `Planta ${activeTab.name || "principal"}`
+          });
+          const claimedEditor = normalizeResponsePlan(claimedPayload);
+          nextPlans = claimedEditor?.plan?.id ? [claimedEditor.plan] : [];
+        }
+      }
+
+      setPlans(nextPlans);
     } catch (requestError) {
       setError(requestError.message);
       notify?.(requestError.message, "danger");
     } finally {
       setPlansLoading(false);
     }
-  }, [notify, token]);
+  }, [activeTab?.id, activeTab?.name, notify, permissions.update, token]);
 
   useEffect(() => {
     loadPlans();
   }, [loadPlans]);
 
   useEffect(() => {
+    setPlans([]);
+    setView("list");
+    setIsEditing(false);
+    setEditor(null);
+    setSelected(null);
+  }, [activeTab?.id]);
+
+  useEffect(() => {
     if (view === "list") {
+      if (!editor && /^\/plantas\/[^/]+(?:\/editor)?$/.test(window.location.pathname)) return;
       window.history.replaceState(null, "", "/plantas");
     } else if (editor?.plan?.id) {
-      window.history.replaceState(null, "", `/plantas/${editor.plan.id}/editor`);
+      window.history.replaceState(null, "", isEditing ? `/plantas/${editor.plan.id}/editor` : `/plantas/${editor.plan.id}`);
     }
-  }, [editor?.plan?.id, view]);
+  }, [editor, isEditing, view]);
 
   useEffect(() => {
     setCanvasViewBox(null);
@@ -1144,7 +1155,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
     return () => window.clearTimeout(autosaveRef.current);
   }, [editor, persistEditor, saveState]);
 
-  const openPlan = useCallback(async (id) => {
+  const openPlan = useCallback(async (id, editing = false) => {
     setPlansLoading(true);
     setError("");
     try {
@@ -1156,6 +1167,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
       setPast([]);
       setFuture([]);
       setSaveState("saved");
+      setIsEditing(editing);
       setView("editor");
     } catch (requestError) {
       setError(requestError.message);
@@ -1165,12 +1177,21 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
     }
   }, [notify, token]);
 
+  useEffect(() => {
+    if (!plansLoading && view === "list" && plans.length > 0) {
+      const routeMatch = window.location.pathname.match(/^\/plantas\/([^/]+)(\/editor)?$/);
+      const routePlan = routeMatch && plans.find((plan) => plan.id === routeMatch[1]);
+      openPlan(routePlan?.id || plans[0].id, Boolean(routePlan && routeMatch?.[2]));
+    }
+  }, [openPlan, plans, plansLoading, view]);
+
   const createNewPlan = useCallback(async () => {
     if (!permissions.create) return;
     setPlansLoading(true);
     try {
       const payload = await createFloorPlan(token, {
-        name: "Nova planta",
+        name: `Planta ${activeTab?.name || "principal"}`,
+        inventoryTabId: activeTab?.id || null,
         company: "IT Guardian",
         unit: "Unidade principal",
         floorLabel: "Planta 1",
@@ -1181,6 +1202,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
       setPlans((current) => [created.plan, ...current]);
       setEditor(created);
       setActiveFloorId(created?.plan?.activeFloorId || created?.floors?.[0]?.id || "");
+      setIsEditing(true);
       setView("editor");
       notify?.("Planta criada.", "ok");
     } catch (requestError) {
@@ -1188,7 +1210,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
     } finally {
       setPlansLoading(false);
     }
-  }, [notify, permissions.create, token]);
+  }, [activeTab?.id, activeTab?.name, notify, permissions.create, token]);
 
   const duplicatePlan = useCallback(async (id) => {
     try {
@@ -1212,15 +1234,37 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
     }
   }, [notify, token]);
 
-  const updatePlanFields = useCallback((patch) => {
-    commitEditor((draft) => ({
-      ...draft,
-      plan: { ...draft.plan, ...patch }
-    }));
+  const removeEntity = useCallback((target) => {
+    if (!target) return;
+    commitEditor((draft) => {
+      const collectionKey = target.type === "object"
+        ? "objects"
+        : target.type === "zone"
+          ? "zones"
+          : target.type === "point"
+            ? "connectionPoints"
+            : "cableRoutes";
+      if (target.type === "zone") {
+        const cascade = removeRoomCascade(draft.objects || [], draft.zones || [], target.id);
+        draft.objects = cascade.objects;
+        draft.zones = cascade.zones;
+        draft.connectionPoints = (draft.connectionPoints || []).filter((point) => point.metadata?.parentRoomId !== target.id);
+      } else {
+        draft[collectionKey] = target.type === "object"
+          ? removeObjectCascade(draft[collectionKey] || [], target.id)
+          : (draft[collectionKey] || []).filter((entry) => entry.id !== target.id);
+      }
+      return draft;
+    });
+    setSelected((current) => current?.type === target.type && current?.id === target.id ? null : current);
   }, [commitEditor]);
 
   const updateSelectedEntity = useCallback((patch) => {
     if (!selected) return;
+    if (patch.remove) {
+      removeEntity(selected);
+      return;
+    }
     commitEditor((draft) => {
       const collectionKey = selected.type === "object"
         ? "objects"
@@ -1229,20 +1273,6 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
           : selected.type === "point"
             ? "connectionPoints"
             : "cableRoutes";
-      if (patch.remove) {
-        if (selected.type === "zone") {
-          const cascade = removeRoomCascade(draft.objects || [], draft.zones || [], selected.id);
-          draft.objects = cascade.objects;
-          draft.zones = cascade.zones;
-          draft.connectionPoints = (draft.connectionPoints || []).filter((point) => point.metadata?.parentRoomId !== selected.id);
-        } else {
-          draft[collectionKey] = selected.type === "object"
-            ? removeObjectCascade(draft[collectionKey], selected.id)
-            : draft[collectionKey].filter((entry) => entry.id !== selected.id);
-        }
-        setSelected(null);
-        return draft;
-      }
       draft[collectionKey] = draft[collectionKey].map((entry) => {
         if (entry.id !== selected.id) return entry;
         if (selected.type === "zone" && isRoomZone(entry) && (patch.x !== undefined || patch.y !== undefined || patch.width !== undefined || patch.height !== undefined)) {
@@ -1262,7 +1292,19 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
       if (selected.type === "object") draft.objects = syncAnchoredOpenings(draft.objects || []);
       return draft;
     });
-  }, [activeFloorId, commitEditor, selected]);
+  }, [activeFloorId, commitEditor, removeEntity, selected]);
+
+  const handleEntitySelect = useCallback((target) => {
+    if (!target) {
+      if (selectedTool !== "delete") setSelected(null);
+      return;
+    }
+    if (selectedTool === "delete") {
+      removeEntity(target);
+      return;
+    }
+    setSelected(target);
+  }, [removeEntity, selectedTool]);
 
   const addCatalogItem = useCallback((item) => {
     const floor = getActiveFloor(editor, activeFloorId);
@@ -2262,14 +2304,6 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
     }
   }, [devices, notify, permissions.linkInventory, token, updateSelectedEntity]);
 
-  const goBack = useCallback(async () => {
-    if (saveState === "dirty") await persistEditor();
-    setView("list");
-    setEditor(null);
-    setSelected(null);
-    await loadPlans();
-  }, [loadPlans, persistEditor, saveState]);
-
   if (view === "list") {
     return (
       <>
@@ -2294,12 +2328,8 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
   return (
     <section className="floor-plan-editor-shell">
       <FloorPlanTopbar
-        editor={editor}
-        activeFloorId={activeFloorId}
-        onFloorChange={setActiveFloorId}
-        onBack={goBack}
+        title={`Planta ${activeTab?.name || editor?.plan?.name || "principal"}`}
         onSave={persistEditor}
-        saveState={saveState}
         mode={mode}
         onModeChange={setMode}
         canUndo={past.length > 0}
@@ -2308,25 +2338,17 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
         onRedo={redo}
         selectedTool={selectedTool}
         onToolChange={handleToolChange}
-        onActivateWall={() => addCatalogItem(getCatalogItem("wall"))}
-        onActivateEraser={() => {
-          if (paintDraft) updatePaintDraft({ mode: "eraser" });
-          else notify?.("Ative um pincel para usar a borracha da demarcacao.", "warning");
-        }}
+        hasGroupArea={savedGroupAreas.length > 0}
         showGrid={showGrid}
         onToggleGrid={() => setShowGrid((current) => !current)}
+        isEditing={isEditing}
+        onEdit={() => setIsEditing(true)}
+        canEdit={permissions.update}
       />
 
-      <div className="floor-plan-editor-layout">
-        <FloorPlanBrushPanel
-          selectedTool={selectedTool}
-          onToolChange={handleToolChange}
-          hasGroupArea={savedGroupAreas.length > 0}
-          selectedGroupName={groups.find((group) => group.id === paintDraft?.groupId)?.name}
-        />
-
+      <div className={`floor-plan-editor-layout ${isEditing ? "editing" : "view-only"}`}>
         <main className="floor-plan-canvas-panel">
-          <PaintToolPanel
+          {isEditing && <PaintToolPanel
             draft={paintDraft}
             groups={groups}
             segments={segments}
@@ -2334,7 +2356,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
             onChange={updatePaintDraft}
             onConfirm={confirmPaintArea}
             onCancel={cancelPaintArea}
-          />
+          />}
 
           <div className="floor-plan-stage">
             <span className="floor-plan-dimensions-badge">
@@ -2345,15 +2367,15 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
                 data={editor}
                 editor={editor}
                 activeFloorId={activeFloorId}
-                selected={selected}
+                selected={isEditing ? selected : null}
                 selectedTool={selectedTool}
-                onSelect={setSelected}
-                onPointerDown={beginDrag}
-                onCanvasPointerDown={handleCanvasPointerDown}
-                onPointerMove={handleCanvasPointerMove}
-                onPointerUp={endDrag}
-                onResizeStart={beginRoomResize}
-                onObjectResizeStart={beginObjectResize}
+                onSelect={isEditing ? handleEntitySelect : () => {}}
+                onPointerDown={isEditing ? beginDrag : () => {}}
+                onCanvasPointerDown={isEditing ? handleCanvasPointerDown : () => {}}
+                onPointerMove={isEditing ? handleCanvasPointerMove : () => {}}
+                onPointerUp={isEditing ? endDrag : () => {}}
+                onResizeStart={isEditing ? beginRoomResize : () => {}}
+                onObjectResizeStart={isEditing ? beginObjectResize : () => {}}
                 onDuplicateSelected={duplicateSelectedRoom}
                 onDeleteSelected={deleteSelectedEntity}
                 onRotateSelected={rotateSelectedRoom}
@@ -2369,43 +2391,29 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
                 <FloorPlanScene3D
                   data={editor}
                   activeFloorId={activeFloorId}
-                  selected={selected}
-                  onSelect={setSelected}
-                  onMoveObject={moveObjectFrom3D}
+                  selected={isEditing ? selected : null}
+                  onSelect={isEditing ? handleEntitySelect : () => {}}
+                  onMoveObject={isEditing && selectedTool !== "delete" ? moveObjectFrom3D : () => {}}
                   onRotateSelected={rotateSelectedRoom}
                 />
               </Suspense>
             )}
 
-            {mode === "2d" ? (
-              <FloorPlanPreviewCard mode="3d" onModeChange={setMode} onExpand={() => setMode("3d")}>
-                <Suspense fallback={<div className="floor-plan-loading">Carregando preview...</div>}>
-                  <FloorPlanScene3D
-                    preview
-                    data={editor}
-                    activeFloorId={activeFloorId}
-                    selected={selected}
-                  />
-                </Suspense>
-              </FloorPlanPreviewCard>
-            ) : null}
-
-            <FloorPlanQuickActions activeSection={activeCatalog} onSectionChange={setActiveCatalog} />
+            {isEditing && <FloorPlanQuickActions activeSection={activeCatalog} onSectionChange={setActiveCatalog} />}
           </div>
 
-          <FloorPlanCatalog
+          {isEditing && <FloorPlanCatalog
             activeSection={activeCatalog}
             onActiveSectionChange={setActiveCatalog}
             onAddItem={addCatalogItem}
             onSelectRoomTemplate={beginRoomPlacement}
             placement={placement}
-          />
+          />}
         </main>
 
-        <FloorPlanInspector
+        {isEditing && selected && <FloorPlanInspector
           editor={editor}
           selected={selected}
-          onChangePlan={updatePlanFields}
           onChangeSelected={updateSelectedEntity}
           onClearSelected={() => setSelected(null)}
           devices={devices}
@@ -2413,7 +2421,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
           segments={segments}
           permissions={permissions}
           onLinkObject={linkObject}
-        />
+        />}
       </div>
     </section>
   );

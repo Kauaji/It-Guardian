@@ -122,7 +122,6 @@ import { useDashboardData } from "./hooks/useDashboardData.js";
 import { useInventoryPersistence } from "./hooks/useInventoryPersistence.js";
 
 const InventoryBoard = lazy(() => import("./components/inventory/InventoryBoard.jsx"));
-const InventoryVisualMapView = lazy(() => import("./components/inventory/InventoryVisualMapView.jsx"));
 const ServiceOrdersBoard = lazy(() => import("./components/serviceOrders/ServiceOrdersBoard.jsx"));
 const FloorPlansModule = lazy(() => import("./components/floorPlans/FloorPlansModule.jsx"));
 
@@ -3158,6 +3157,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
                 devices={decoratedAllDevices}
                 segments={decoratedSegments}
                 groups={decoratedSegmentGroups}
+                activeTab={activeInventoryTab}
                 permissions={{
                   create: hasPermission(user, "floor_plans.create"),
                   update: hasPermission(user, "floor_plans.update"),
@@ -3166,18 +3166,6 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
                 }}
               />
             ) : null}
-            visualMapView={(
-              <InventoryVisualMapView
-                token={token}
-                notify={notify}
-                devices={decoratedAllDevices}
-                segments={decoratedSegments}
-                groups={decoratedSegmentGroups}
-                tabs={inventoryTabs}
-                activeTab={activeInventoryTab}
-                canManage={canManageInventory}
-              />
-            )}
             />
           </Suspense>
         )}

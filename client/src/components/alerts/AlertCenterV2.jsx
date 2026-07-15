@@ -228,11 +228,9 @@ export default function AlertCenterV2({
   useEffect(() => {
     const dialogOpen = settingsOpen || preventiveReviewOpen || Boolean(selectedSuggestionInfoId) || Boolean(selectedScriptLog);
     if (!dialogOpen) return undefined;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
+
+    document.body.classList.add("alert-modal-open");
+    return () => document.body.classList.remove("alert-modal-open");
   }, [settingsOpen, preventiveReviewOpen, selectedSuggestionInfoId, selectedScriptLog]);
 
   useEffect(() => {

@@ -56,6 +56,7 @@ function getUserId(user) {
 function mapPlan(row, counts = {}) {
   return {
     id: row.id,
+    inventoryTabId: row.inventory_tab_id,
     name: row.name,
     company: row.company,
     unit: row.unit,
@@ -170,6 +171,7 @@ function mapCableRoute(row) {
 function normalizePlanPayload(payload = {}, existing = {}) {
   const status = PLAN_STATUSES.has(payload.status) ? payload.status : existing.status || "draft";
   return {
+    inventoryTabId: nullableText(payload.inventoryTabId ?? payload.inventory_tab_id ?? existing.inventoryTabId),
     name: normalizeText(payload.name ?? existing.name, "Planta sem nome"),
     company: nullableText(payload.company ?? existing.company),
     unit: nullableText(payload.unit ?? existing.unit),
@@ -302,8 +304,11 @@ async function loadBundle(planId, db = query) {
   };
 }
 
-export async function listFloorPlans() {
-  const plansResult = await query("SELECT * FROM floor_plans ORDER BY updated_at DESC, created_at DESC");
+export async function listFloorPlans(inventoryTabId = "") {
+  const normalizedTabId = nullableText(inventoryTabId);
+  const plansResult = normalizedTabId
+    ? await query("SELECT * FROM floor_plans WHERE inventory_tab_id = $1 ORDER BY updated_at DESC, created_at DESC", [normalizedTabId])
+    : await query("SELECT * FROM floor_plans ORDER BY updated_at DESC, created_at DESC");
   const [objectCounts, assetCounts, floorCounts] = await Promise.all([
     query("SELECT plan_id, COUNT(*)::int AS count FROM floor_plan_objects GROUP BY plan_id"),
     query("SELECT plan_id, COUNT(*)::int AS count FROM floor_plan_objects WHERE linked_asset_id IS NOT NULL GROUP BY plan_id"),
@@ -483,16 +488,21 @@ export async function createFloorPlan(payload = {}, user = {}) {
     : editorData.floors[0].id;
 
   return withTransaction(async (db) => {
+    if (plan.inventoryTabId) {
+      const existingPlan = await db("SELECT id FROM floor_plans WHERE inventory_tab_id = $1 LIMIT 1", [plan.inventoryTabId]);
+      if (existingPlan.rows.length) throw makeHttpError(409, "Esta aba ja possui uma planta cadastrada.");
+    }
     await db(
       `
         INSERT INTO floor_plans (
-          id, name, company, unit, floor_label, status, width, height, grid_size, snap_size,
+          id, inventory_tab_id, name, company, unit, floor_label, status, width, height, grid_size, snap_size,
           active_floor_id, created_by, updated_by
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $12)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $13)
       `,
       [
         planId,
+        plan.inventoryTabId,
         plan.name,
         plan.company,
         plan.unit,
@@ -526,23 +536,25 @@ export async function updateFloorPlan(id, payload = {}, user = {}) {
     await db(
       `
         UPDATE floor_plans
-        SET name = $2,
-            company = $3,
-            unit = $4,
-            floor_label = $5,
-            status = $6,
-            width = $7,
-            height = $8,
-            grid_size = $9,
-            snap_size = $10,
-            active_floor_id = $11,
-            updated_by = $12,
+        SET inventory_tab_id = $2,
+            name = $3,
+            company = $4,
+            unit = $5,
+            floor_label = $6,
+            status = $7,
+            width = $8,
+            height = $9,
+            grid_size = $10,
+            snap_size = $11,
+            active_floor_id = $12,
+            updated_by = $13,
             updated_at = NOW()
         WHERE id = $1
         RETURNING *
       `,
       [
         id,
+        plan.inventoryTabId,
         plan.name,
         plan.company,
         plan.unit,
@@ -579,22 +591,24 @@ export async function saveFloorPlanEditorData(id, payload = {}, user = {}) {
     await db(
       `
         UPDATE floor_plans
-        SET name = $2,
-            company = $3,
-            unit = $4,
-            floor_label = $5,
-            status = $6,
-            width = $7,
-            height = $8,
-            grid_size = $9,
-            snap_size = $10,
-            active_floor_id = $11,
-            updated_by = $12,
+        SET inventory_tab_id = $2,
+            name = $3,
+            company = $4,
+            unit = $5,
+            floor_label = $6,
+            status = $7,
+            width = $8,
+            height = $9,
+            grid_size = $10,
+            snap_size = $11,
+            active_floor_id = $12,
+            updated_by = $13,
             updated_at = NOW()
         WHERE id = $1
       `,
       [
         id,
+        plan.inventoryTabId,
         plan.name,
         plan.company,
         plan.unit,

@@ -50,8 +50,10 @@ export const FLOOR_PLAN_CATALOG = [
     label: "Moveis",
     items: [
       { id: "desk", label: "Mesa", icon: LampDesk, category: "furniture", objectType: "desk", width: 110, height: 64, color: "#b08968" },
+      { id: "meeting-table", label: "Mesa de reuniao", icon: LampDesk, category: "furniture", objectType: "meeting_table", width: 150, height: 78, color: "#a16207" },
       { id: "chair", label: "Cadeira", icon: Square, category: "furniture", objectType: "chair", width: 42, height: 42, color: "#64748b" },
-      { id: "rack-furniture", label: "Armario", icon: Box, category: "furniture", objectType: "cabinet", width: 82, height: 52, color: "#8b5e34" }
+      { id: "rack-furniture", label: "Armario", icon: Box, category: "furniture", objectType: "cabinet", width: 82, height: 52, color: "#8b5e34" },
+      { id: "shelf", label: "Estante", icon: Box, category: "furniture", objectType: "shelf", width: 96, height: 40, color: "#92400e" }
     ]
   },
   {
