@@ -3,6 +3,7 @@ import { closestCenter, DndContext, DragOverlay } from "@dnd-kit/core";
 import {
   Activity,
   AlertTriangle,
+  BookOpen,
   Database,
   LogOut,
   Moon,
@@ -124,6 +125,7 @@ import { useInventoryPersistence } from "./hooks/useInventoryPersistence.js";
 const InventoryBoard = lazy(() => import("./components/inventory/InventoryBoard.jsx"));
 const ServiceOrdersBoard = lazy(() => import("./components/serviceOrders/ServiceOrdersBoard.jsx"));
 const FloorPlansModule = lazy(() => import("./components/floorPlans/FloorPlansModule.jsx"));
+const StudyContestModule = lazy(() => import("./components/study/StudyContestModule.jsx"));
 
 function readSystemMode() {
   return "local";
@@ -422,6 +424,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     if (canViewAlerts || canViewScripts || canViewPreventivePlans || canViewPreventiveAutomation) views.push("alerts");
     if (canViewServiceOrders) views.push("service-orders");
     if (canViewInventory) views.push("inventory");
+    views.push("study");
     return views;
   }, [canViewAlerts, canViewDashboard, canViewInventory, canViewPreventiveAutomation, canViewPreventivePlans, canViewScripts, canViewServiceOrders]);
   const canConfigureAlerts = hasPermission(user, "alerts.configure");
@@ -2878,6 +2881,9 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
               <Database size={18} /> <span className="nav-label">Inventário</span>
             </button>
           )}
+          <button className={activeView === "study" ? "nav-active" : ""} onClick={() => setActiveView("study")}>
+            <BookOpen size={18} /> <span className="nav-label">Concursos</span>
+          </button>
           {activeView === "inventory" && sidebarExpanded && (
             <SidebarSegmentFilter
               devices={activeAllDevices}
@@ -3204,6 +3210,12 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
               settings: hasPermission(user, "service_orders.settings")
             }}
             />
+          </Suspense>
+        )}
+
+        {activeView === "study" && (
+          <Suspense fallback={<ViewLoadingState />}>
+            <StudyContestModule token={token} user={user} notify={notify} />
           </Suspense>
         )}
 

@@ -84,6 +84,56 @@ export function logoutSession(token) {
   return apiFetch("/auth/logout", { method: "POST", token });
 }
 
+export function fetchStudyContests(token) {
+  return apiFetch("/study/contests", { token });
+}
+
+export function fetchStudyContestOverview(token, contestId) {
+  return apiFetch(`/study/contests/${encodeURIComponent(contestId)}`, { token });
+}
+
+export function fetchStudyQuestions(token, contestId, params = {}) {
+  const search = new URLSearchParams(
+    Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== "")
+  ).toString();
+  return apiFetch(`/study/contests/${encodeURIComponent(contestId)}/questions${search ? `?${search}` : ""}`, { token });
+}
+
+export function fetchStudyWrongQuestions(token, contestId, params = {}) {
+  const search = new URLSearchParams(
+    Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== "")
+  ).toString();
+  return apiFetch(`/study/contests/${encodeURIComponent(contestId)}/wrong${search ? `?${search}` : ""}`, { token });
+}
+
+export function fetchStudySimulation(token, contestId, roleId) {
+  return apiFetch(`/study/contests/${encodeURIComponent(contestId)}/simulation?roleId=${encodeURIComponent(roleId)}`, { token });
+}
+
+export function answerStudyQuestion(token, questionId, selectedAnswer) {
+  return apiFetch(`/study/questions/${encodeURIComponent(questionId)}/answer`, {
+    token,
+    method: "POST",
+    body: JSON.stringify({ selectedAnswer })
+  });
+}
+
+export function favoriteStudyQuestion(token, questionId, favorite) {
+  return apiFetch(`/study/questions/${encodeURIComponent(questionId)}/favorite`, {
+    token,
+    method: "POST",
+    body: JSON.stringify({ favorite })
+  });
+}
+
+export function createStudyAttempt(token, contestId, roleId, payload) {
+  return apiFetch(`/study/contests/${encodeURIComponent(contestId)}/roles/${encodeURIComponent(roleId)}/attempts`, {
+    token,
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
 export function fetchUserPreference(token, key) {
   return apiFetch(`/preferences/${encodeURIComponent(key)}`, { token });
 }

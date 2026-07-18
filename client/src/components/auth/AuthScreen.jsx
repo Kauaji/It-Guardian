@@ -21,7 +21,7 @@ export default function AuthScreen({ onAuth, notify }) {
       onAuth(data);
       notify(mode === "login" ? "Login realizado com sucesso." : "Conta criada com sucesso.", "ok");
     } catch (error) {
-      notify(error.statusCode === 401 ? "E-mail ou senha invalidos." : error.message, "danger");
+      notify(error.statusCode === 401 ? "Usuario/e-mail ou senha invalidos." : error.message, "danger");
     } finally {
       setLoading(false);
     }
@@ -61,12 +61,12 @@ export default function AuthScreen({ onAuth, notify }) {
             </label>
           )}
           <label>
-            E-mail
+            {mode === "login" ? "Usuario ou e-mail" : "E-mail"}
             <input
-              type="email"
+              type={mode === "login" ? "text" : "email"}
               value={form.email}
               onChange={(event) => setForm({ ...form, email: event.target.value })}
-              placeholder="admin@empresa.com"
+              placeholder={mode === "login" ? "mequis ou admin@empresa.com" : "admin@empresa.com"}
             />
           </label>
           <label>

@@ -33,6 +33,7 @@ import scriptLogRoutes from "./routes/scriptLogRoutes.js";
 import scriptValidationRoutes from "./routes/scriptValidationRoutes.js";
 import publicRoutes from "./routes/publicRoutes.js";
 import userPreferenceRoutes from "./routes/userPreferenceRoutes.js";
+import studyContestRoutes from "./routes/studyContestRoutes.js";
 import { initializeRuntime } from "./bootstrap.js";
 import { getCorsOrigins, isAllowedVercelOrigin } from "./config/environment.js";
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
@@ -105,6 +106,7 @@ export function createApp({ initializeOnRequest = false } = {}) {
   app.use("/api/public", publicRoutes);
   app.use("/api/auth", authRoutes);
   app.use("/api/preferences", userPreferenceRoutes);
+  app.use("/api/study", studyContestRoutes);
   app.use("/api/devices", deviceRoutes);
   app.use("/api/alerts", alertRoutes);
   app.use("/api/logs", logRoutes);
