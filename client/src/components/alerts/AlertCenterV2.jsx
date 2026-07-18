@@ -1335,8 +1335,14 @@ export default function AlertCenterV2({
                         {canManageSuggestions && (canCreateServiceOrderFromSuggestion(suggestion) || canRejectSuggestion(suggestion)) && (
                           <>
                             {canCreateServiceOrderFromSuggestion(suggestion) && (
-                              <button type="button" className="primary-action compact-action" onClick={() => onAcceptSuggestion(suggestion.id)}>
-                                Criar OS
+                              <button
+                                type="button"
+                                className="primary-action compact-action suggestion-create-order-trigger"
+                                onClick={() => onAcceptSuggestion(suggestion.id)}
+                                title="Criar Ordem de Serviço"
+                                aria-label="Criar Ordem de Serviço"
+                              >
+                                <Plus size={16} />
                               </button>
                             )}
                             {canRejectSuggestion(suggestion) && (

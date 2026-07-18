@@ -10,6 +10,7 @@ import {
   getInventoryMapAssetDefinition,
   resolveInventoryMapAssetMode
 } from "../../../client/src/components/floorPlans/assets/inventoryMapAssetRegistry.js";
+import { getCatalogItem } from "../../../client/src/components/floorPlans/floorPlanCatalog.js";
 import {
   createPaintAreaZone,
   eraseCells,
@@ -27,6 +28,11 @@ import {
   removeRoomCascade,
   syncAnchoredOpenings
 } from "../../../client/src/components/floorPlans/utils/wallGeometry.js";
+import {
+  findSupportingFurniture,
+  getSceneBaseElevation,
+  resolveSceneObjectType
+} from "../../../client/src/components/floorPlans/utils/sceneObjectPlacement.js";
 
 const room = {
   id: "room-1",
@@ -115,9 +121,10 @@ describe("room wall generation", () => {
 });
 
 describe("local 3D asset registry", () => {
-  it("uses procedural fallback in simple mode and when no local model exists", () => {
+  it("uses procedural fallback in simple mode and a Kenney composite PC in detailed mode", () => {
     assert.equal(resolveInventoryMapAssetMode("pc", MODEL_QUALITY_SIMPLE).mode, "fallback");
-    assert.equal(resolveInventoryMapAssetMode("pc", MODEL_QUALITY_DETAILED).mode, "fallback");
+    assert.equal(resolveInventoryMapAssetMode("pc", MODEL_QUALITY_DETAILED).mode, "composite");
+    assert.equal(resolveInventoryMapAssetMode("pc", MODEL_QUALITY_DETAILED).parts.length, 3);
   });
 
   it("provides a safe fallback for unknown object types", () => {
@@ -142,7 +149,119 @@ describe("local 3D asset registry", () => {
       assert.equal(simple.mode, "fallback");
       assert.equal(definition.source, "Quaternius Ultimate Furniture Pack");
       assert.equal(definition.license, "CC0");
-      assert.ok(modelStat.size > 0 && modelStat.size < 1_000_000);
+      assert.ok(modelStat.size > 0 && modelStat.size <= 5_000_000);
+    }
+  });
+
+  it("registers the local Kenney computer assets under the 5 MB limit", async () => {
+    const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
+    const detailedPc = resolveInventoryMapAssetMode("pc", MODEL_QUALITY_DETAILED);
+    const detailedNotebook = resolveInventoryMapAssetMode("notebook", MODEL_QUALITY_DETAILED);
+    const modelUrls = [...detailedPc.parts.map((part) => part.url), detailedNotebook.url];
+
+    assert.equal(detailedNotebook.definition.source, "Kenney Furniture Kit");
+    assert.equal(detailedNotebook.definition.license, "CC0");
+    for (const modelUrl of modelUrls) {
+      const modelPath = path.join(repoRoot, "client/public", modelUrl.replace(/^\//, ""));
+      const modelStat = await stat(modelPath);
+      assert.ok(modelStat.size > 0 && modelStat.size <= 5_000_000);
+    }
+  });
+
+  it("registers a local Kenney TV model and keeps legacy TV objects compatible", async () => {
+    const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
+    const detailedTv = resolveInventoryMapAssetMode("tv", MODEL_QUALITY_DETAILED);
+    const modelPath = path.join(repoRoot, "client/public", detailedTv.url.replace(/^\//, ""));
+    const modelStat = await stat(modelPath);
+
+    assert.equal(detailedTv.mode, "model");
+    assert.equal(detailedTv.definition.source, "Kenney Furniture Kit");
+    assert.equal(detailedTv.definition.license, "CC0");
+    assert.equal(resolveSceneObjectType({ objectType: "camera", label: "TV" }), "tv");
+    assert.equal(resolveSceneObjectType({ objectType: "camera", label: "Televisao da sala" }), "tv");
+    assert.equal(resolveSceneObjectType({ objectType: "desktop", label: "PC legado" }), "pc");
+    assert.equal(resolveSceneObjectType({ objectType: "laptop", label: "Notebook legado" }), "notebook");
+    assert.equal(resolveSceneObjectType({ objectType: "camera", label: "Camera" }), "camera");
+    assert.ok(modelStat.size > 0 && modelStat.size <= 5_000_000);
+  });
+});
+
+describe("3D object placement", () => {
+  it("rests anchored computers on the top surface of their table", () => {
+    const table = {
+      id: "table-1",
+      objectType: "desk",
+      floorId: "floor-1",
+      x: 100,
+      y: 100,
+      width: 120,
+      height: 60,
+      height3d: 46,
+      metadata: { parentRoomId: "room-1" }
+    };
+    const pc = {
+      id: "pc-1",
+      objectType: "pc",
+      floorId: "floor-1",
+      x: 140,
+      y: 115,
+      width: 40,
+      height: 30,
+      metadata: { parentRoomId: "room-1", anchorObjectId: "table-1" }
+    };
+
+    assert.equal(findSupportingFurniture(pc, [table, pc])?.id, "table-1");
+    assert.equal(getSceneBaseElevation(pc, [table, pc]), 48);
+  });
+
+  it("keeps a slightly displaced computer on an overlapping meeting table", () => {
+    const table = {
+      id: "meeting-table-1",
+      objectType: "meeting-table",
+      floorId: "floor-1",
+      x: 100,
+      y: 100,
+      width: 150,
+      height: 78,
+      height3d: 48,
+      metadata: { parentRoomId: "room-1" }
+    };
+    const pc = {
+      id: "pc-1",
+      objectType: "pc",
+      floorId: "floor-1",
+      x: 232,
+      y: 118,
+      width: 44,
+      height: 34,
+      metadata: { parentRoomId: "room-1" }
+    };
+
+    assert.equal(findSupportingFurniture(pc, [table, pc])?.id, "meeting-table-1");
+    assert.equal(getSceneBaseElevation(pc, [table, pc]), 50);
+  });
+
+  it("keeps unsupported devices on the floor", () => {
+    const pc = { id: "pc-1", objectType: "pc", x: 20, y: 20, width: 40, height: 30 };
+
+    assert.equal(findSupportingFurniture(pc, [pc]), null);
+    assert.equal(getSceneBaseElevation(pc, [pc]), 0);
+  });
+});
+
+describe("door catalog variants", () => {
+  it("keeps four compatible door designs with distinct metadata", () => {
+    const expected = [
+      ["door", "single"],
+      ["door-double", "double"],
+      ["door-sliding", "sliding"],
+      ["door-pocket", "pocket"]
+    ];
+
+    for (const [id, doorType] of expected) {
+      const item = getCatalogItem(id);
+      assert.equal(item.objectType, "door");
+      assert.equal(item.metadata.doorType, doorType);
     }
   });
 });

@@ -2,9 +2,7 @@ import {
   Cable,
   Grid3X3,
   Layers3,
-  Monitor,
   MousePointer2,
-  Paintbrush,
   Pencil,
   Redo2,
   Save,
@@ -24,7 +22,6 @@ export function FloorPlanTopbar({
   onRedo,
   selectedTool,
   onToolChange,
-  hasGroupArea = false,
   showGrid,
   onToggleGrid,
   isEditing,
@@ -56,25 +53,6 @@ export function FloorPlanTopbar({
         {isEditing && <div className="floor-plan-top-tools" aria-label="Ferramentas da planta">
           <button className={selectedTool === "select" ? "active" : ""} type="button" onClick={() => onToolChange("select")} title="Selecionar">
             <MousePointer2 size={17} />
-          </button>
-          <button
-            className={`floor-plan-expandable-tool ${selectedTool === "group-brush" ? "active expanded" : ""}`}
-            type="button"
-            onClick={() => onToolChange(selectedTool === "group-brush" ? "select" : "group-brush")}
-            title="Pincel de grupo"
-          >
-            <Paintbrush size={17} />
-            <span>Pincel de grupo</span>
-          </button>
-          <button
-            className={`floor-plan-expandable-tool ${selectedTool === "segment-brush" ? "active expanded" : ""}`}
-            type="button"
-            onClick={() => onToolChange(selectedTool === "segment-brush" ? "select" : "segment-brush")}
-            title={hasGroupArea ? "Pincel de segmento" : "Crie uma area de grupo antes de demarcar segmentos"}
-            disabled={!hasGroupArea}
-          >
-            <Monitor size={17} />
-            <span>Pincel de segmento</span>
           </button>
           <button
             className={selectedTool === "delete" ? "active danger-tool" : ""}

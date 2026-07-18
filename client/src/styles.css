@@ -1735,19 +1735,20 @@ tbody tr.selected {
   z-index: 1;
   width: 100%;
   max-width: none;
-  height: 188px;
-  min-height: 188px;
+  height: 214px;
+  min-height: 214px;
   min-width: 0;
   grid-template-rows: auto minmax(2.1em, auto) auto auto 1fr auto;
   align-content: start;
   gap: 5px;
   padding: 10px 11px;
   cursor: default;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .service-order-card.suggestion-card:has(.suggestion-script-popover) {
   z-index: 220;
+  overflow: visible;
 }
 
 .suggestion-card strong {
@@ -1795,9 +1796,30 @@ tbody tr.selected {
 .suggestion-card .suggestion-actions {
   display: flex;
   flex-wrap: nowrap;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   gap: 3px;
   margin-top: auto;
+  margin-bottom: 3px;
   min-height: 28px;
+  position: relative;
+  top: -5px;
+}
+
+.suggestion-card .suggestion-actions > button,
+.suggestion-card .suggestion-actions > .suggestion-script-menu {
+  flex: 0 0 auto;
+}
+
+.suggestion-card .suggestion-actions > .primary-action {
+  flex: 0 0 28px;
+  width: 28px;
+  min-width: 28px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  overflow: hidden;
 }
 
 .suggestion-card .suggestion-actions .compact-action {
@@ -3833,6 +3855,136 @@ tbody tr.selected {
   }
 }
 
+.suggestion-card .suggestion-actions .suggestion-create-order-trigger {
+  height: 28px;
+  min-height: 28px;
+  border-radius: 8px;
+}
+
+/* Floor-plan interaction layer: top-down symbols, marquee selection and bounded inspector. */
+.floor-plan-object-glyph {
+  pointer-events: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.floor-plan-object-hit-target {
+  cursor: grab;
+  fill: transparent;
+  pointer-events: all;
+  stroke: none;
+}
+
+.floor-plan-object:active .floor-plan-object-hit-target {
+  cursor: grabbing;
+}
+
+.floor-plan-object-glyph.fixture rect,
+.floor-plan-object-glyph.fixture path {
+  fill: rgba(255, 255, 255, 0.9);
+}
+
+.floor-plan-object-glyph.fixture circle {
+  fill: currentColor;
+}
+
+.floor-plan-object-glyph.fixture .floor-plan-tv-bezel {
+  fill: #475569;
+  stroke-width: 1.8;
+}
+
+.floor-plan-object-glyph.fixture .floor-plan-tv-screen {
+  fill: #0f172a;
+  stroke: #2563eb;
+  stroke-width: 1.4;
+}
+
+.floor-plan-object-glyph.fixture .floor-plan-tv-stand {
+  fill: none;
+  stroke-width: 2;
+}
+
+.floor-plan-object-glyph.opening {
+  fill: none;
+  stroke-width: 3;
+}
+
+.floor-plan-object-selection-outline {
+  fill: none !important;
+  stroke: #2563eb !important;
+  stroke-width: 2.5 !important;
+  stroke-dasharray: 7 5;
+  vector-effect: non-scaling-stroke;
+}
+
+.floor-plan-object-label {
+  fill: #172033;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+  paint-order: stroke;
+  pointer-events: none;
+  stroke: rgba(255, 255, 255, 0.96);
+  stroke-linejoin: round;
+  stroke-width: 4px;
+}
+
+.floor-plan-marquee-selection {
+  fill: rgba(37, 99, 235, 0.14);
+  pointer-events: none;
+  stroke: #2563eb;
+  stroke-dasharray: 7 5;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.floor-plan-object-resize-overlay.wall-endpoints circle {
+  cursor: crosshair;
+  fill: #ffffff;
+  stroke: #2563eb;
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.floor-plan-editor-shell .floor-plan-editor-layout.editing .floor-plan-inspector {
+  bottom: 196px;
+  height: auto;
+  max-height: none;
+  overflow-x: hidden;
+  overflow-y: auto;
+  top: 10px;
+}
+
+.floor-plan-editor-shell .floor-plan-stage > .floor-plan-inspector {
+  bottom: 10px;
+  height: auto;
+  max-height: none;
+  position: absolute;
+  right: 10px;
+  top: 10px;
+}
+
+@media (max-width: 760px) {
+  .floor-plan-editor-shell .floor-plan-editor-layout.editing .floor-plan-inspector {
+    bottom: 190px;
+    max-height: none;
+    top: 76px;
+  }
+
+
+  .floor-plan-editor-shell .floor-plan-stage > .floor-plan-inspector {
+    bottom: 8px;
+    left: 8px;
+    max-height: none;
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    width: auto;
+  }
+}
+
 /* Floor plan operations desk: editor chrome around the existing SVG/Three.js engines. */
 .floor-plan-editor-shell {
   --plan-border: #dce5ef;
@@ -4341,7 +4493,7 @@ tbody tr.selected {
   width: auto;
   min-width: min(280px, 100%);
   max-width: none;
-  min-height: 46px;
+  min-height: 38px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--surface-soft);
@@ -4360,20 +4512,21 @@ tbody tr.selected {
 .inventory-board-actions .compact-search:focus-within,
 .inventory-board-actions .compact-search.expanded {
   flex-basis: 420px;
-  border-color: color-mix(in srgb, var(--accent) 38%, var(--border-strong));
-  box-shadow: var(--shadow-sm);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: var(--surface);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
 .inventory-board-actions .compact-search input {
   width: 100%;
   min-width: 0;
-  height: 44px;
-  min-height: 44px;
+  height: 36px;
+  min-height: 36px;
   box-sizing: border-box;
   color: var(--text-strong);
   font: inherit;
-  font-size: 0.95rem;
-  font-weight: 850;
+  font-size: 0.9rem;
+  font-weight: 800;
   opacity: 1;
   transition:
     opacity 120ms var(--ease-premium);
@@ -6766,16 +6919,54 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
   margin: 4px 0 0;
 }
 
-.hardware-change p {
+.hardware-change details {
+  display: grid;
+  gap: 8px;
+}
+
+.hardware-change summary {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.hardware-change summary::-webkit-details-marker {
+  display: none;
+}
+
+.hardware-change summary > span {
+  flex: 0 0 auto;
+  color: #1f7a61;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.hardware-change-details {
+  display: grid;
+  gap: 7px;
+  padding-top: 7px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.hardware-change-details p {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
   color: #536074;
 }
 
-.hardware-change b {
+.hardware-change-details b {
+  flex: 0 0 90px;
   color: #1f7a61;
+}
+
+.hardware-change-details span {
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .qr-panel {
@@ -11496,7 +11687,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
   position: sticky;
   top: 12px;
   max-height: calc(100dvh - 108px);
-  overflow-y: hidden;
+  overflow-y: auto;
   scrollbar-gutter: stable;
   padding: 14px;
   border: 1px solid var(--border-soft);
@@ -11525,10 +11716,6 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
     opacity: 1;
     transform: translateY(0) scale(1);
   }
-}
-
-.preventive-plan-builder:hover {
-  overflow-y: auto;
 }
 
 .preventive-plan-builder.collapsed > :not(header) {
@@ -12032,9 +12219,10 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 
 .preventive-automation-modal > header {
   position: sticky;
-  top: 0;
+  top: -20px;
   z-index: 4;
-  padding-bottom: 12px;
+  margin: -20px -20px 0;
+  padding: 20px 20px 12px;
   border-bottom: 1px solid var(--border-soft);
   background: var(--surface);
 }
@@ -13317,6 +13505,8 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 
   .preventive-plan-builder {
     position: static;
+    max-height: min(72vh, 720px);
+    width: 100%;
   }
 
   .preventive-review-grid {
@@ -15167,6 +15357,16 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
   margin-top: 0;
 }
 
+.floor-plan-editor-shell .floor-plan-catalog-object-preview {
+  height: 34px;
+  overflow: visible;
+  width: 58px;
+}
+
+.floor-plan-editor-shell .floor-plan-catalog-object-preview .floor-plan-object-glyph {
+  vector-effect: non-scaling-stroke;
+}
+
 body:not(.modal-open):not(.alert-modal-open):not(.machine-details-open) {
   overflow-x: hidden;
   overflow-y: auto;
@@ -15389,5 +15589,172 @@ body:not(.modal-open):not(.alert-modal-open):not(.machine-details-open) {
     right: 8px;
     top: 76px;
     width: auto;
+  }
+}
+
+/* Keep the editor inspector inside the stage so it cannot cover the catalog. */
+.floor-plan-editor-shell .floor-plan-editor-layout.editing .floor-plan-stage > .floor-plan-inspector {
+  bottom: auto;
+  height: auto;
+  max-height: var(--floor-plan-inspector-max-height, calc(100% - 20px));
+  overflow-x: hidden;
+  overflow-y: auto;
+  position: absolute;
+  right: 10px;
+  top: 10px;
+}
+
+.floor-plan-editor-shell .floor-plan-object-glyph,
+.floor-plan-editor-shell .floor-plan-object-glyph * {
+  filter: none;
+}
+
+.floor-plan-editor-shell .floor-plan-object-selection-outline {
+  fill: none !important;
+  stroke: #2563eb !important;
+  stroke-dasharray: 7 5;
+  stroke-width: 2.5 !important;
+}
+
+@media (max-width: 760px) {
+  .floor-plan-editor-shell .floor-plan-editor-layout.editing .floor-plan-stage > .floor-plan-inspector {
+    bottom: auto;
+    left: 8px;
+    max-height: var(--floor-plan-inspector-max-height, calc(100% - 16px));
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    width: auto;
+  }
+}
+
+/* Final editor interaction and responsive safeguards. */
+.suggestion-card .suggestion-actions {
+  bottom: 8px;
+  left: 11px;
+  margin: 0;
+  max-width: calc(100% - 22px);
+  position: absolute;
+  right: 11px;
+  top: auto;
+}
+
+.service-order-card.suggestion-card {
+  padding-bottom: 44px;
+}
+
+.floor-plan-editor-shell .floor-plan-paint-panel {
+  position: sticky;
+  top: 8px;
+  z-index: 55;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.12);
+}
+
+.floor-plan-editor-shell .floor-plan-paint-panel > label select {
+  height: 36px;
+  min-height: 36px;
+}
+
+.floor-plan-canvas-wrap.tool-group-brush .floor-plan-object,
+.floor-plan-canvas-wrap.tool-group-brush .floor-plan-zone,
+.floor-plan-canvas-wrap.tool-group-brush .floor-plan-point,
+.floor-plan-canvas-wrap.tool-group-brush .floor-plan-route,
+.floor-plan-canvas-wrap.tool-segment-brush .floor-plan-object,
+.floor-plan-canvas-wrap.tool-segment-brush .floor-plan-zone,
+.floor-plan-canvas-wrap.tool-segment-brush .floor-plan-point,
+.floor-plan-canvas-wrap.tool-segment-brush .floor-plan-route,
+.floor-plan-canvas-wrap.tool-group-brush .floor-plan-paint-area,
+.floor-plan-canvas-wrap.tool-segment-brush .floor-plan-paint-area {
+  pointer-events: none;
+}
+
+.floor-plan-paint-area-label {
+  fill: #0f172a;
+  font-size: 15px;
+  font-weight: 900;
+  paint-order: stroke;
+  pointer-events: none;
+  stroke: rgba(255, 255, 255, 0.94);
+  stroke-width: 5px;
+}
+
+.floor-plan-route.style-conduit {
+  filter: drop-shadow(0 1px 1px rgba(15, 23, 42, 0.24));
+  stroke-linecap: round;
+}
+
+.floor-plan-route.style-channel {
+  stroke-linecap: square;
+  stroke-linejoin: bevel;
+}
+
+.floor-plan-dimensions-badge {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+}
+
+.floor-plan-canvas-expand-actions {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.floor-plan-canvas-expand-actions button {
+  align-items: center;
+  background: #eef6f3;
+  border: 1px solid #b7d7cd;
+  border-radius: 5px;
+  color: #176b56;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.58rem;
+  font-weight: 900;
+  gap: 1px;
+  height: 22px;
+  justify-content: center;
+  padding: 0 4px;
+}
+
+.floor-plan-rack-config {
+  background: #f8fafc;
+  border: 1px solid #dbe4ee;
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  margin: 6px 0;
+  padding: 8px;
+}
+
+.floor-plan-rack-config > header {
+  align-items: center;
+  border: 0;
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  padding: 0;
+}
+
+.floor-plan-rack-switch circle.working {
+  fill: #22c55e;
+}
+
+.floor-plan-rack-switch circle.offline {
+  fill: #ef4444;
+}
+
+@media (max-width: 980px) {
+  .suggestion-board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .suggestion-board {
+    grid-template-columns: 1fr;
+  }
+
+  .floor-plan-editor-shell .floor-plan-paint-panel {
+    position: relative;
+    top: 0;
   }
 }

@@ -5,8 +5,8 @@ export const DEFAULT_PLAN_SIZE = { width: 1280, height: 820, gridSize: 25, snapS
 export const FINE_OBJECT_SNAP_SIZE = 5;
 export const OBJECT_MIN_SIZE = { width: 34, height: 24 };
 
-const TABLE_OBJECT_TYPES = new Set(["desk", "table", "meeting_table"]);
-const DESKTOP_OBJECT_TYPES = new Set(["pc", "notebook"]);
+const TABLE_OBJECT_TYPES = new Set(["desk", "table", "meeting_table", "meeting-table"]);
+const DESKTOP_OBJECT_TYPES = new Set(["pc", "desktop", "computer", "workstation", "notebook", "laptop"]);
 const POWER_ACCESSORY_TYPES = new Set(["stabilizer_600", "stabilizer_1000", "extension_cord", "power_strip"]);
 
 export function cloneEditor(editor) {
@@ -70,16 +70,70 @@ export function getObjectCenter(object) {
   };
 }
 
+export function normalizeSelectionRect(start, end) {
+  const x1 = Number(start?.x || 0);
+  const y1 = Number(start?.y || 0);
+  const x2 = Number(end?.x || 0);
+  const y2 = Number(end?.y || 0);
+  return {
+    x: Math.min(x1, x2),
+    y: Math.min(y1, y2),
+    width: Math.abs(x2 - x1),
+    height: Math.abs(y2 - y1)
+  };
+}
+
+export function getObjectBounds(object) {
+  const { width, height } = getObjectSize(object);
+  const x = Number(object?.x || 0);
+  const y = Number(object?.y || 0);
+  const angle = Number(object?.rotation || 0) * Math.PI / 180;
+  if (!angle) return { x, y, width, height };
+  const centerX = x + width / 2;
+  const centerY = y + height / 2;
+  const corners = [
+    { x, y },
+    { x: x + width, y },
+    { x: x + width, y: y + height },
+    { x, y: y + height }
+  ].map((point) => ({
+    x: centerX + (point.x - centerX) * Math.cos(angle) - (point.y - centerY) * Math.sin(angle),
+    y: centerY + (point.x - centerX) * Math.sin(angle) + (point.y - centerY) * Math.cos(angle)
+  }));
+  const xs = corners.map((point) => point.x);
+  const ys = corners.map((point) => point.y);
+  return {
+    x: Math.min(...xs),
+    y: Math.min(...ys),
+    width: Math.max(...xs) - Math.min(...xs),
+    height: Math.max(...ys) - Math.min(...ys)
+  };
+}
+
+export function findObjectsInSelectionRect(objects = [], rectangle, floorId = null) {
+  if (!rectangle || rectangle.width < 2 || rectangle.height < 2) return [];
+  const right = rectangle.x + rectangle.width;
+  const bottom = rectangle.y + rectangle.height;
+  return objects.filter((object) => {
+    if (floorId && object.floorId !== floorId) return false;
+    const bounds = getObjectBounds(object);
+    return bounds.x <= right
+      && bounds.x + bounds.width >= rectangle.x
+      && bounds.y <= bottom
+      && bounds.y + bounds.height >= rectangle.y;
+  });
+}
+
 export function getFineSnapSize(editor) {
   return Math.max(FINE_OBJECT_SNAP_SIZE, Math.round(Number(editor?.plan?.snapSize || DEFAULT_PLAN_SIZE.snapSize) / 5));
 }
 
 export function isTableObject(object) {
-  return TABLE_OBJECT_TYPES.has(object?.objectType);
+  return TABLE_OBJECT_TYPES.has(String(object?.objectType || "").trim().toLowerCase());
 }
 
 export function isDesktopObject(object) {
-  return DESKTOP_OBJECT_TYPES.has(object?.objectType);
+  return DESKTOP_OBJECT_TYPES.has(String(object?.objectType || "").trim().toLowerCase());
 }
 
 export function isPowerAccessoryObject(object) {
@@ -157,8 +211,19 @@ export function findNearestObject(source, candidates) {
 }
 
 export function findNearestTable(asset, objects) {
+  const anchoredTable = (objects || []).find((object) => (
+    object?.id === asset?.metadata?.anchorObjectId
+    && isTableObject(object)
+    && (!asset?.floorId || !object?.floorId || object.floorId === asset.floorId)
+  ));
+  if (anchoredTable) return anchoredTable;
+
   const roomId = asset?.metadata?.parentRoomId || null;
-  const tables = (objects || []).filter((object) => isTableObject(object) && (!roomId || object.metadata?.parentRoomId === roomId));
+  const tables = (objects || []).filter((object) => (
+    isTableObject(object)
+    && (!asset?.floorId || !object?.floorId || object.floorId === asset.floorId)
+    && (!roomId || object.metadata?.parentRoomId === roomId)
+  ));
   return findNearestObject(asset, tables);
 }
 

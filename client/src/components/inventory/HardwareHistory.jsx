@@ -14,17 +14,46 @@ export default function HardwareHistory({ changes = [], compact = false }) {
 
   return (
     <div className={compact ? "hardware-history compact" : "hardware-history"}>
-      {items.map((change) => (
-        <article key={change.id} className="hardware-change">
-          <time>{formatDateTime(change.detectedAt || change.createdAt)}</time>
-          <strong>{change.change || change.message}</strong>
-          <p>
-            <span>{change.oldValue || "Não informado"}</span>
-            <b>-&gt;</b>
-            <span>{change.newValue || "Não informado"}</span>
-          </p>
-        </article>
-      ))}
+      {items.map((change) => {
+        const title = change.change || change.message;
+        const hasTechnicalDetails = Boolean(change.oldValue || change.newValue || change.userName);
+
+        return (
+          <article key={change.id} className="hardware-change">
+            <time>{formatDateTime(change.detectedAt || change.createdAt)}</time>
+            {hasTechnicalDetails ? (
+              <details>
+                <summary>
+                  <strong>{title}</strong>
+                  <span>Ver detalhes</span>
+                </summary>
+                <div className="hardware-change-details">
+                  {change.userName && (
+                    <p>
+                      <b>Responsavel</b>
+                      <span>{change.userName}</span>
+                    </p>
+                  )}
+                  {change.oldValue && (
+                    <p>
+                      <b>Valor anterior</b>
+                      <span>{change.oldValue}</span>
+                    </p>
+                  )}
+                  {change.newValue && (
+                    <p>
+                      <b>Detalhes</b>
+                      <span>{change.newValue}</span>
+                    </p>
+                  )}
+                </div>
+              </details>
+            ) : (
+              <strong>{title}</strong>
+            )}
+          </article>
+        );
+      })}
       {!items.length && <p className="empty">Nenhuma mudanca detectada.</p>}
     </div>
   );

@@ -47,7 +47,7 @@ export const ROOM_TEMPLATES = [
     color: ROOM_COLORS.meeting,
     objects: [
       { type: "desk", label: "Mesa de reuniao", x: 82, y: 66, width: 140, height: 72, color: "#b08968" },
-      { type: "camera", label: "TV", x: 132, y: 18, width: 62, height: 32, color: "#334155" }
+      { type: "tv", label: "TV", x: 132, y: 18, width: 62, height: 32, color: "#334155" }
     ]
   },
   {
@@ -177,7 +177,7 @@ export const ROOM_TEMPLATES = [
     objects: [
       { type: "desk", label: "Mesa", x: 58, y: 66, width: 96, height: 50, color: "#b08968" },
       { type: "desk", label: "Mesa", x: 198, y: 66, width: 96, height: 50, color: "#b08968" },
-      { type: "camera", label: "Tela", x: 154, y: 22, width: 70, height: 34, color: "#334155" }
+      { type: "tv", label: "Tela", x: 154, y: 22, width: 70, height: 34, color: "#334155" }
     ]
   },
   {
@@ -208,6 +208,21 @@ export const ROOM_TEMPLATES = [
 export function getRoomTemplate(id) {
   return ROOM_TEMPLATES.find((template) => template.id === id) || null;
 }
+
+const ROOM_OBJECT_HEIGHTS_3D = {
+  desk: 46,
+  meeting_table: 46,
+  pc: 68,
+  notebook: 42,
+  printer: 46,
+  tv: 52,
+  chair: 78,
+  sofa: 68,
+  cabinet: 96,
+  shelf: 92,
+  rack: 80,
+  server: 80
+};
 
 export function createRoomEntitiesFromTemplate({ template, floor, planId, createId, x, y, rotation = 0 }) {
   const roomId = createId("zone");
@@ -255,7 +270,7 @@ export function createRoomEntitiesFromTemplate({ template, floor, planId, create
     height: object.height,
     rotation: 0,
     z: 0,
-    height3d: object.type === "rack" || object.type === "server" ? 80 : 34,
+    height3d: ROOM_OBJECT_HEIGHTS_3D[object.type] || 34,
     color: object.color,
     orderIndex: index,
     metadata: {

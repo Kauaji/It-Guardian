@@ -183,6 +183,45 @@ export function findNearestWall(point, objects = [], floorId = null, maxDistance
   return nearest;
 }
 
+export function findNearestWallEndpoint(point, objects = [], floorId = null, excludeId = null, maxDistance = 22) {
+  let nearest = null;
+  for (const wall of objects) {
+    if (!isWallObject(wall) || wall.id === excludeId || (floorId && wall.floorId !== floorId)) continue;
+    const segment = getWallSegment(wall);
+    for (const endpoint of [segment.start, segment.end]) {
+      const distance = Math.hypot(Number(point?.x || 0) - endpoint.x, Number(point?.y || 0) - endpoint.y);
+      if (distance <= maxDistance && (!nearest || distance < nearest.distance)) nearest = { point: endpoint, wall, distance };
+    }
+  }
+  return nearest;
+}
+
+export function snapPointToWallEndpoints(point, objects = [], floorId = null, excludeId = null, maxDistance = 22) {
+  return findNearestWallEndpoint(point, objects, floorId, excludeId, maxDistance)?.point || point;
+}
+
+export function resizeWallEndpoint(wall, side, point, objects = [], gridSize = 5) {
+  if (!isWallObject(wall)) return wall;
+  const segment = getWallSegment(wall);
+  const moving = snapPointToWallEndpoints(point, objects, wall.floorId, wall.id);
+  const start = side === "wall-start" ? moving : segment.start;
+  const end = side === "wall-start" ? segment.end : moving;
+  const rebuilt = createWallObjectFromPoints({
+    id: wall.id,
+    planId: wall.planId,
+    floorId: wall.floorId,
+    item: wall,
+    start,
+    end,
+    gridSize
+  });
+  return {
+    ...wall,
+    ...rebuilt,
+    metadata: { ...(wall.metadata || {}), ...(rebuilt.metadata || {}) }
+  };
+}
+
 export function syncAnchoredOpenings(objects = []) {
   const walls = new Map(objects.filter(isWallObject).map((wall) => [wall.id, wall]));
   return objects.map((object) => {

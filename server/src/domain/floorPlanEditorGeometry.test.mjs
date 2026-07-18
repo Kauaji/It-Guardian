@@ -4,12 +4,16 @@ import { describe, it } from "node:test";
 import {
   centerAssetOnTable,
   constrainObjectToBounds,
+  findObjectsInSelectionRect,
   normalizeResponsePlan,
+  normalizeSelectionRect,
   resizeObjectGeometry
 } from "../../../client/src/components/floorPlans/utils/editorGeometry.js";
 import {
   attachOpeningToWall,
+  resizeWallEndpoint,
   removeObjectCascade,
+  snapPointToWallEndpoints,
   snapWallEndPoint,
   syncAnchoredOpenings
 } from "../../../client/src/components/floorPlans/utils/wallGeometry.js";
@@ -154,5 +158,36 @@ describe("floor plan editor geometry rules", () => {
     ], "wall-1");
 
     assert.deepEqual(remaining.map((object) => object.id), ["pc-1"]);
+  });
+
+  it("selects only objects intersecting the marquee on the active floor", () => {
+    const rectangle = normalizeSelectionRect({ x: 90, y: 90 }, { x: 230, y: 190 });
+    const selected = findObjectsInSelectionRect([
+      { id: "desk-1", floorId: "floor-1", x: 100, y: 100, width: 100, height: 60, rotation: 0 },
+      { id: "chair-1", floorId: "floor-1", x: 218, y: 170, width: 30, height: 30, rotation: 45 },
+      { id: "pc-other-floor", floorId: "floor-2", x: 120, y: 120, width: 50, height: 40 }
+    ], rectangle, "floor-1");
+
+    assert.deepEqual(selected.map((object) => object.id), ["desk-1", "chair-1"]);
+  });
+
+  it("snaps new wall points to nearby wall endpoints", () => {
+    const walls = [
+      { id: "wall-1", floorId: "floor-1", objectType: "wall", x: 100, y: 100, width: 120, height: 10, rotation: 0 }
+    ];
+
+    const snapped = snapPointToWallEndpoints({ x: 216, y: 104 }, walls, "floor-1", null, 10);
+
+    assert.deepEqual(snapped, { x: 220, y: 105 });
+  });
+
+  it("resizes walls through endpoints without generic box handles", () => {
+    const wall = { id: "wall-1", objectType: "wall", x: 100, y: 100, width: 120, height: 10, rotation: 0 };
+    const resized = resizeWallEndpoint(wall, "wall-end", { x: 220, y: 85 }, [], 5);
+
+    assert.equal(resized.x, 100);
+    assert.equal(resized.y, 100);
+    assert.equal(resized.width, 120);
+    assert.equal(Math.abs(resized.rotation), 0);
   });
 });

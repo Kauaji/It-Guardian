@@ -35,6 +35,7 @@ import RoomCatalog from "./rooms/RoomCatalog.jsx";
 import RoomPlacementPreview from "./rooms/RoomPlacementPreview.jsx";
 import RoomRenderer from "./rooms/RoomRenderer.jsx";
 import RoomSelectionOverlay from "./rooms/RoomSelectionOverlay.jsx";
+import FloorPlanObjectGlyph from "./FloorPlanObjectGlyph.jsx";
 import { createRoomEntitiesFromTemplate } from "./utils/roomTemplates.js";
 import {
   clampRoomGeometry,
@@ -56,6 +57,7 @@ import {
   cloneEditor,
   constrainObjectToBounds,
   findNearestDesktop,
+  findObjectsInSelectionRect,
   findNearestTable,
   getActiveFloor,
   getDefaultPlacementBounds,
@@ -65,6 +67,7 @@ import {
   isDesktopObject,
   isPowerAccessoryObject,
   isTableObject,
+  normalizeSelectionRect,
   normalizeResponsePlan,
   resizeObjectGeometry,
   snap
@@ -74,6 +77,7 @@ import {
   createWallObjectFromPoints,
   ensureRoomWallObjects,
   findNearestWall,
+  getWallSegment,
   getRoomWallId,
   isAnchoredOpening,
   isOpeningObject,
@@ -81,6 +85,8 @@ import {
   removeObjectCascade,
   removeRoomCascade,
   resolveAnchoredOpening,
+  resizeWallEndpoint,
+  snapPointToWallEndpoints,
   snapWallEndPoint,
   syncAnchoredOpenings
 } from "./utils/wallGeometry.js";
@@ -239,12 +245,12 @@ function FloorPlansList({ plans, loading, query, onQueryChange, onCreate, onOpen
   );
 }
 
-function FloorPlanCatalog({ activeSection, onActiveSectionChange, onAddItem, onSelectRoomTemplate, placement }) {
+function FloorPlanCatalog({ activeSection, onActiveSectionChange, onAddItem, onSelectRoomTemplate, placement, catalogRef }) {
   const catalogSections = [{ id: "rooms", label: "Comodos" }, ...FLOOR_PLAN_CATALOG];
   const section = FLOOR_PLAN_CATALOG.find((entry) => entry.id === activeSection) || FLOOR_PLAN_CATALOG[0];
 
   return (
-    <section className={`floor-plan-catalog${activeSection === "rooms" ? " room-catalog-active" : ""}`}>
+    <section ref={catalogRef} className={`floor-plan-catalog${activeSection === "rooms" ? " room-catalog-active" : ""}`}>
       <nav aria-label="Catalogo da planta">
         {catalogSections.map((entry) => (
           <button className={activeSection === entry.id ? "active" : ""} key={entry.id} type="button" onClick={() => onActiveSectionChange(entry.id)}>
@@ -258,9 +264,20 @@ function FloorPlanCatalog({ activeSection, onActiveSectionChange, onAddItem, onS
         <div className="floor-plan-catalog-items">
           {section.items.map((item) => {
             const Icon = item.icon || Info;
+            const usesPlanGlyph = item.objectType === "door" || item.objectType === "tv";
             return (
               <button key={item.id} type="button" onClick={() => onAddItem(item)}>
-                <Icon size={22} />
+                {usesPlanGlyph ? (
+                  <svg
+                    aria-hidden="true"
+                    className="floor-plan-catalog-object-preview"
+                    viewBox={`0 0 ${item.width} ${item.height}`}
+                  >
+                    <FloorPlanObjectGlyph object={item} width={item.width} height={item.height} />
+                  </svg>
+                ) : (
+                  <Icon size={22} />
+                )}
                 <span>{item.label}</span>
               </button>
             );
@@ -282,6 +299,18 @@ function FloorPlanCatalog({ activeSection, onActiveSectionChange, onAddItem, onS
 
 function ObjectSelectionOverlay({ object, onResizeStart }) {
   if (!object) return null;
+  if (isWallObject(object)) {
+    const segment = getWallSegment(object);
+    return (
+      <g className="floor-plan-object-resize-overlay wall-endpoints">
+        {[{ side: "wall-start", ...segment.start }, { side: "wall-end", ...segment.end }].map((handle) => (
+          <g key={handle.side} className="floor-plan-object-resize-handle" onPointerDown={(event) => onResizeStart(event, object.id, handle.side)}>
+            <circle cx={handle.x} cy={handle.y} r="10" />
+          </g>
+        ))}
+      </g>
+    );
+  }
   const { width, height } = getObjectSize(object);
   const x = Number(object.x || 0);
   const y = Number(object.y || 0);
@@ -294,7 +323,7 @@ function ObjectSelectionOverlay({ object, onResizeStart }) {
     { side: "west", x: x - 18, y: centerY, label: "Ajustar largura para esquerda", text: "←" }
   ];
   return (
-    <g className="floor-plan-object-resize-overlay">
+    <g className="floor-plan-object-resize-overlay" transform={`rotate(${Number(object.rotation || 0)} ${centerX} ${centerY})`}>
       <rect x={x - 3} y={y - 3} width={width + 6} height={height + 6} rx="10" />
       {handles.map((handle) => (
         <g
@@ -425,6 +454,13 @@ function PaintAreaShape({ zone, selected, onSelect }) {
   const cells = getPaintCells(zone);
   const cellSize = getPaintCellSize(zone);
   if (!cells.length) return null;
+  const parsedCells = cells.map(parseCellKey);
+  const minColumn = Math.min(...parsedCells.map((cell) => cell.column));
+  const maxColumn = Math.max(...parsedCells.map((cell) => cell.column));
+  const minRow = Math.min(...parsedCells.map((cell) => cell.row));
+  const maxRow = Math.max(...parsedCells.map((cell) => cell.row));
+  const labelX = ((minColumn + maxColumn + 1) * cellSize) / 2;
+  const labelY = ((minRow + maxRow + 1) * cellSize) / 2;
   return (
     <g className={`floor-plan-paint-area ${zone.zoneType} ${selected ? "selected" : ""}`}>
       <path
@@ -439,6 +475,9 @@ function PaintAreaShape({ zone, selected, onSelect }) {
           onSelect?.();
         }}
       />
+      <text className="floor-plan-paint-area-label" x={labelX} y={labelY} textAnchor="middle">
+        {zone.name}
+      </text>
       <title>{zone.name}</title>
     </g>
   );
@@ -448,6 +487,8 @@ function FloorPlanCanvas({
   editor,
   activeFloorId,
   selected,
+  selectedObjectIds = [],
+  selectionBox,
   selectedTool,
   onSelect,
   onPointerDown,
@@ -476,6 +517,7 @@ function FloorPlanCanvas({
   const height = floor?.height || editor?.plan?.height || DEFAULT_PLAN_SIZE.height;
   const viewBoxValue = viewBox || { x: 0, y: 0, width, height };
   const selectedObject = objects.find((object) => selected?.type === "object" && selected.id === object.id);
+  const selectedIdSet = new Set(selectedObjectIds);
   const powerLinks = objects
     .filter(isPowerAccessoryObject)
     .map((accessory) => {
@@ -576,15 +618,17 @@ function FloorPlanCanvas({
         {routes.map((route) => {
           const path = route.path || [];
           if (path.length < 2) return null;
+          const routeStyle = route.metadata?.routeStyle || "free";
+          const routeWidth = routeStyle === "conduit" ? 10 : routeStyle === "channel" ? 8 : route.routeType === "power" ? 5 : 4;
           return (
             <polyline
               key={route.id}
-              className={`floor-plan-route ${selected?.type === "route" && selected.id === route.id ? "selected" : ""}`}
+              className={`floor-plan-route style-${routeStyle} ${selected?.type === "route" && selected.id === route.id ? "selected" : ""}`}
               points={path.map((point) => `${point.x},${point.y}`).join(" ")}
               fill="none"
               stroke={route.color}
-              strokeWidth={route.routeType === "power" ? 5 : 4}
-              strokeDasharray={route.routeType === "power" ? "12 8" : "0"}
+              strokeWidth={routeWidth}
+              strokeDasharray={routeStyle === "free" && route.routeType === "power" ? "12 8" : "0"}
               onClick={(event) => {
                 event.stopPropagation();
                 onSelect({ type: "route", id: route.id });
@@ -609,50 +653,43 @@ function FloorPlanCanvas({
         })}
 
         {objects.map((object) => {
-          const Icon = getObjectIcon(object.objectType);
-          const objectSelected = selected?.type === "object" && selected.id === object.id;
+          const objectSelected = selectedIdSet.has(object.id) || (selected?.type === "object" && selected.id === object.id);
           const objectWidth = object.width || 80;
           const objectHeight = object.height || 56;
           const hideObjectLabel = isTableObject(object) || isWallObject(object) || isOpeningObject(object);
-          const iconSize = hideObjectLabel ? 30 : 24;
-          const iconX = hideObjectLabel ? objectWidth / 2 - iconSize / 2 : 10;
-          const iconY = hideObjectLabel ? objectHeight / 2 - iconSize / 2 : 10;
+          const wallOpenings = isWallObject(object)
+            ? objects.filter((candidate) => candidate.metadata?.parentObjectId === object.id && isOpeningObject(candidate))
+            : [];
           return (
             <g
               key={object.id}
               className={`floor-plan-object ${objectSelected ? "selected" : ""}`}
-              transform={`translate(${object.x || 0} ${object.y || 0}) rotate(${object.rotation || 0} ${objectWidth / 2} ${objectHeight / 2})`}
+              transform={`translate(${object.x || 0} ${object.y || 0})`}
               onPointerDown={(event) => onPointerDown(event, "object", object.id)}
               onClick={(event) => {
                 event.stopPropagation();
-                onSelect({ type: "object", id: object.id });
+                onSelect({ type: "object", id: object.id }, event);
               }}
             >
-              <rect width={objectWidth} height={objectHeight} rx={isWallObject(object) ? "3" : "8"} fill={isWallObject(object) ? object.color : "#ffffff"} stroke={object.color} strokeWidth={objectSelected ? 4 : 2} />
-              {!isWallObject(object) ? <rect x="6" y="6" width={Math.max(1, objectWidth - 12)} height={Math.max(1, objectHeight - 12)} rx="6" fill={object.color} opacity="0.16" /> : null}
-              {object.objectType === "door" ? (
-                <>
-                  <line
-                    className="floor-plan-door-leaf"
-                    x1="10"
-                    y1={object.metadata?.swing === "outward" ? 8 : objectHeight - 8}
-                    x2={objectWidth - 10}
-                    y2={object.metadata?.swing === "outward" ? objectHeight - 8 : 8}
-                  />
-                  <path
-                    className="floor-plan-door-swing"
-                    d={object.metadata?.swing === "outward"
-                      ? `M 10 8 A ${Math.max(24, objectWidth - 20)} ${Math.max(24, objectWidth - 20)} 0 0 0 ${objectWidth - 10} ${objectHeight - 8}`
-                      : `M 10 ${objectHeight - 8} A ${Math.max(24, objectWidth - 20)} ${Math.max(24, objectWidth - 20)} 0 0 1 ${objectWidth - 10} 8`}
-                  />
-                </>
-              ) : null}
-              {Icon && !isWallObject(object) ? (
-                <foreignObject x={iconX} y={iconY} width={iconSize + 6} height={iconSize + 6}>
-                  <Icon size={iconSize} color={object.color} />
-                </foreignObject>
-              ) : null}
-              {!hideObjectLabel ? <text x="44" y="28">{object.label}</text> : null}
+              <g transform={`rotate(${object.rotation || 0} ${objectWidth / 2} ${objectHeight / 2})`}>
+                <rect
+                  className="floor-plan-object-hit-target"
+                  x="-3"
+                  y="-3"
+                  width={objectWidth + 6}
+                  height={objectHeight + 6}
+                  rx="5"
+                />
+                <FloorPlanObjectGlyph
+                  object={object}
+                  width={objectWidth}
+                  height={objectHeight}
+                  selected={objectSelected}
+                  openings={wallOpenings}
+                />
+                {objectSelected ? <rect className="floor-plan-object-selection-outline" x="-3" y="-3" width={objectWidth + 6} height={objectHeight + 6} rx="5" /> : null}
+              </g>
+              {!hideObjectLabel ? <text className="floor-plan-object-label" x={objectWidth / 2} y={objectHeight + 15} textAnchor="middle">{object.label}</text> : null}
             </g>
           );
         })}
@@ -692,12 +729,13 @@ function FloorPlanCanvas({
           onRotate={onRotateSelected}
         />
         <ObjectSelectionOverlay object={selectedObject} onResizeStart={onObjectResizeStart} />
+        {selectionBox ? <rect className="floor-plan-marquee-selection" {...selectionBox} /> : null}
       </svg>
     </div>
   );
 }
 
-function FloorPlanInspector({ editor, selected, onChangeSelected, onClearSelected, devices, groups, segments, permissions, onLinkObject }) {
+function FloorPlanInspector({ editor, selected, onChangeSelected, onClearSelected, devices, permissions, onLinkObject }) {
   const selectedEntity = useMemo(() => {
     if (!editor || !selected) return null;
     const collections = {
@@ -810,24 +848,6 @@ function FloorPlanInspector({ editor, selected, onChangeSelected, onClearSelecte
               {networkPoints.map((point) => <option key={point.id} value={point.id}>{point.label || "Ponto RJ45"}</option>)}
             </select>
           </label>
-          <label>
-            Grupo
-            <select value={selectedEntity.groupId || ""} onChange={(event) => onChangeSelected({ groupId: event.target.value || null })}>
-              <option value="">Sem grupo</option>
-              {groups.map((group) => (
-                <option key={group.id} value={group.id}>{group.name}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Segmento
-            <select value={selectedEntity.segmentId || ""} onChange={(event) => onChangeSelected({ segmentId: event.target.value || null })}>
-              <option value="">Sem segmento</option>
-              {segments.map((segment) => (
-                <option key={segment.id} value={segment.id}>{segment.name}</option>
-              ))}
-            </select>
-          </label>
           <div className="floor-plan-inspector-status-row">
             <span>Status</span>
             <strong className={`floor-plan-asset-status ${statusTone}`}><i />{linkedDevice?.status || "Nao informado"}</strong>
@@ -849,55 +869,140 @@ function FloorPlanInspector({ editor, selected, onChangeSelected, onClearSelecte
         </>
       )}
 
-      {selected.type === "zone" && (
-        <>
-          <label>
-            Grupo
-            <select value={selectedEntity.groupId || ""} onChange={(event) => onChangeSelected({ groupId: event.target.value || null })}>
-              <option value="">Sem grupo</option>
-              {groups.map((group) => (
-                <option key={group.id} value={group.id}>{group.name}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Segmento
-            <select value={selectedEntity.segmentId || ""} onChange={(event) => onChangeSelected({ segmentId: event.target.value || null })}>
-              <option value="">Sem segmento</option>
-              {segments.map((segment) => (
-                <option key={segment.id} value={segment.id}>{segment.name}</option>
-              ))}
-            </select>
-          </label>
-        </>
-      )}
-
       <label>
         Cor
         <input type="color" value={selectedEntity.color || "#1f7a61"} onChange={(event) => onChangeSelected({ color: event.target.value })} />
       </label>
 
       {selected.type === "object" && isWallObject(selectedEntity) && (
-        <div className="floor-plan-inspector-grid">
+        <>
+          <div className="floor-plan-inspector-grid">
+            <label>
+              Comprimento
+              <input type="number" min="40" step="5" value={Math.round(selectedEntity.width || 0)} onChange={(event) => onChangeSelected({ width: Number(event.target.value) })} />
+            </label>
+            <label>
+              Espessura
+              <input type="number" min="4" step="1" value={Math.round(selectedEntity.height || 0)} onChange={(event) => onChangeSelected({ height: Number(event.target.value) })} />
+            </label>
+            <label>
+              Angulo
+              <select value={Number(selectedEntity.rotation || 0)} onChange={(event) => onChangeSelected({ rotation: Number(event.target.value) })}>
+                {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => <option key={angle} value={angle}>{angle} graus</option>)}
+              </select>
+            </label>
+            <label>
+              Altura 3D
+              <input type="number" min="24" step="2" value={Math.round(selectedEntity.height3d || 110)} onChange={(event) => onChangeSelected({ height3d: Number(event.target.value) })} />
+            </label>
+          </div>
           <label>
-            Comprimento
-            <input type="number" min="40" step="5" value={Math.round(selectedEntity.width || 0)} onChange={(event) => onChangeSelected({ width: Number(event.target.value) })} />
-          </label>
-          <label>
-            Espessura
-            <input type="number" min="4" step="1" value={Math.round(selectedEntity.height || 0)} onChange={(event) => onChangeSelected({ height: Number(event.target.value) })} />
-          </label>
-          <label>
-            Angulo
-            <select value={Number(selectedEntity.rotation || 0)} onChange={(event) => onChangeSelected({ rotation: Number(event.target.value) })}>
-              {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => <option key={angle} value={angle}>{angle} graus</option>)}
+            Textura da parede
+            <select
+              value={selectedEntity.metadata?.texturePreset || "paint"}
+              onChange={(event) => onChangeSelected({ metadata: { ...(selectedEntity.metadata || {}), texturePreset: event.target.value } })}
+            >
+              <option value="paint">Pintura lisa</option>
+              <option value="concrete">Concreto</option>
+              <option value="brick">Tijolo</option>
+              <option value="wood">Madeira</option>
             </select>
           </label>
-          <label>
-            Altura 3D
-            <input type="number" min="24" step="2" value={Math.round(selectedEntity.height3d || 110)} onChange={(event) => onChangeSelected({ height3d: Number(event.target.value) })} />
-          </label>
-        </div>
+        </>
+      )}
+
+      {selected.type === "zone" && isRoomZone(selectedEntity) && (
+        <label>
+          Textura do piso
+          <select
+            value={selectedEntity.metadata?.floorTexture || "ceramic"}
+            onChange={(event) => onChangeSelected({ metadata: { ...(selectedEntity.metadata || {}), floorTexture: event.target.value } })}
+          >
+            <option value="ceramic">Ceramica</option>
+            <option value="wood">Madeira</option>
+            <option value="carpet">Carpete</option>
+            <option value="concrete">Concreto</option>
+          </select>
+        </label>
+      )}
+
+      {selected.type === "route" && (
+        <label>
+          Tipo de passagem
+          <select
+            value={selectedEntity.metadata?.routeStyle || "free"}
+            onChange={(event) => onChangeSelected({ metadata: { ...(selectedEntity.metadata || {}), routeStyle: event.target.value } })}
+          >
+            <option value="free">Cabo aparente</option>
+            <option value="conduit">Eletroduto</option>
+            <option value="channel">Canaleta</option>
+          </select>
+        </label>
+      )}
+
+      {selected.type === "object" && selectedEntity.objectType === "rack" && (
+        <section className="floor-plan-rack-config">
+          <header>
+            <strong>Switch no rack</strong>
+            {!selectedEntity.metadata?.switchInstalled ? (
+              <button
+                type="button"
+                className="icon-button"
+                title="Adicionar switch"
+                onClick={() => onChangeSelected({
+                  metadata: {
+                    ...(selectedEntity.metadata || {}),
+                    switchInstalled: true,
+                    switchTotalPorts: 24,
+                    switchWorkingPorts: 24
+                  }
+                })}
+              >
+                <Plus size={17} />
+              </button>
+            ) : null}
+          </header>
+          {selectedEntity.metadata?.switchInstalled ? (
+            <>
+              <div className="floor-plan-inspector-grid">
+                <label>
+                  Portas totais
+                  <input
+                    type="number"
+                    min="1"
+                    max="96"
+                    value={Number(selectedEntity.metadata?.switchTotalPorts || 24)}
+                    onChange={(event) => onChangeSelected({ metadata: { ...(selectedEntity.metadata || {}), switchTotalPorts: Number(event.target.value) } })}
+                  />
+                </label>
+                <label>
+                  Funcionando
+                  <input
+                    type="number"
+                    min="0"
+                    max={Number(selectedEntity.metadata?.switchTotalPorts || 24)}
+                    value={Number(selectedEntity.metadata?.switchWorkingPorts ?? selectedEntity.metadata?.switchTotalPorts ?? 24)}
+                    onChange={(event) => onChangeSelected({ metadata: { ...(selectedEntity.metadata || {}), switchWorkingPorts: Number(event.target.value) } })}
+                  />
+                </label>
+              </div>
+              <button
+                type="button"
+                className="secondary-action compact-action"
+                onClick={() => onChangeSelected({
+                  metadata: {
+                    ...(selectedEntity.metadata || {}),
+                    switchInstalled: false,
+                    switchTotalPorts: null,
+                    switchWorkingPorts: null
+                  }
+                })}
+              >
+                Remover switch
+              </button>
+            </>
+          ) : <small>Adicione um switch para controlar as portas do rack.</small>}
+        </section>
       )}
 
       {selected.type === "object" && isOpeningObject(selectedEntity) && (
@@ -933,16 +1038,54 @@ function FloorPlanInspector({ editor, selected, onChangeSelected, onClearSelecte
             </label>
           ) : null}
           {selectedEntity.objectType === "door" ? (
-            <label>
-              Abertura da porta
-              <select
-                value={selectedEntity.metadata?.swing || "inward"}
-                onChange={(event) => onChangeSelected({ metadata: { ...(selectedEntity.metadata || {}), swing: event.target.value } })}
-              >
-                <option value="inward">Para dentro</option>
-                <option value="outward">Para fora</option>
-              </select>
-            </label>
+            <>
+              <label>
+                Tipo da porta
+                <select
+                  value={selectedEntity.metadata?.doorType || "single"}
+                  onChange={(event) => {
+                    const doorType = event.target.value;
+                    onChangeSelected({
+                      metadata: {
+                        ...(selectedEntity.metadata || {}),
+                        doorType,
+                        ...(doorType === "single" || doorType === "double"
+                          ? { swing: selectedEntity.metadata?.swing || "inward" }
+                          : { slideDirection: selectedEntity.metadata?.slideDirection || "right" })
+                      }
+                    });
+                  }}
+                >
+                  <option value="single">Porta simples</option>
+                  <option value="double">Porta dupla</option>
+                  <option value="sliding">Porta de correr</option>
+                  <option value="pocket">Porta embutida</option>
+                </select>
+              </label>
+              {["sliding", "pocket"].includes(selectedEntity.metadata?.doorType) ? (
+                <label>
+                  Direcao de correr
+                  <select
+                    value={selectedEntity.metadata?.slideDirection || "right"}
+                    onChange={(event) => onChangeSelected({ metadata: { ...(selectedEntity.metadata || {}), slideDirection: event.target.value } })}
+                  >
+                    <option value="right">Para a direita</option>
+                    <option value="left">Para a esquerda</option>
+                  </select>
+                </label>
+              ) : (
+                <label>
+                  Abertura da porta
+                  <select
+                    value={selectedEntity.metadata?.swing || "inward"}
+                    onChange={(event) => onChangeSelected({ metadata: { ...(selectedEntity.metadata || {}), swing: event.target.value } })}
+                  >
+                    <option value="inward">Para dentro</option>
+                    <option value="outward">Para fora</option>
+                  </select>
+                </label>
+              )}
+            </>
           ) : null}
         </>
       )}
@@ -985,6 +1128,8 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
   const [editor, setEditor] = useState(null);
   const [activeFloorId, setActiveFloorId] = useState("");
   const [selected, setSelected] = useState(null);
+  const [selectedObjectIds, setSelectedObjectIds] = useState([]);
+  const [selectionBox, setSelectionBox] = useState(null);
   const [selectedTool, setSelectedTool] = useState("select");
   const [activeCatalog, setActiveCatalog] = useState("rooms");
   const [placement, setPlacement] = useState(null);
@@ -999,6 +1144,8 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
   const dragRef = useRef(null);
   const paintPointerRef = useRef(false);
   const svgRef = useRef(null);
+  const stageRef = useRef(null);
+  const catalogRef = useRef(null);
   const autosaveRef = useRef(null);
 
   const savedGroupAreas = useMemo(() => (editor?.zones || []).filter((zone) => (
@@ -1007,6 +1154,9 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
 
   const handleToolChange = useCallback((tool) => {
     setPlacement(null);
+    setSelectionBox(null);
+    setSelectedObjectIds([]);
+    if (tool === "group-brush" || tool === "segment-brush") setSelected(null);
     if (tool === "group-brush") {
       const group = groups[0] || null;
       setMode("2d");
@@ -1107,6 +1257,42 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
   useEffect(() => {
     setCanvasViewBox(null);
   }, [activeFloorId, editor?.plan?.id]);
+
+  useEffect(() => {
+    if (!isEditing || !selected) return undefined;
+    const stage = stageRef.current;
+    const catalog = catalogRef.current;
+    if (!stage || !catalog) return undefined;
+
+    let frame = 0;
+    const updateInspectorHeight = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        const stageBox = stage.getBoundingClientRect();
+        const catalogBox = catalog.getBoundingClientRect();
+        const availableHeight = Math.max(180, Math.min(
+          stageBox.height - 20,
+          catalogBox.top - stageBox.top - 20
+        ));
+        stage.style.setProperty("--floor-plan-inspector-max-height", `${availableHeight}px`);
+      });
+    };
+
+    updateInspectorHeight();
+    const resizeObserver = new ResizeObserver(updateInspectorHeight);
+    resizeObserver.observe(stage);
+    resizeObserver.observe(catalog);
+    window.addEventListener("resize", updateInspectorHeight);
+    window.addEventListener("scroll", updateInspectorHeight, true);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", updateInspectorHeight);
+      window.removeEventListener("scroll", updateInspectorHeight, true);
+      stage.style.removeProperty("--floor-plan-inspector-max-height");
+    };
+  }, [activeCatalog, isEditing, selected]);
 
   const markDirty = useCallback(() => {
     setSaveState((current) => (current === "saving" ? "saving" : "dirty"));
@@ -1257,6 +1443,9 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
       return draft;
     });
     setSelected((current) => current?.type === target.type && current?.id === target.id ? null : current);
+    if (target.type === "object") {
+      setSelectedObjectIds((current) => current.filter((id) => id !== target.id));
+    }
   }, [commitEditor]);
 
   const updateSelectedEntity = useCallback((patch) => {
@@ -1294,17 +1483,36 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
     });
   }, [activeFloorId, commitEditor, removeEntity, selected]);
 
-  const handleEntitySelect = useCallback((target) => {
+  const handleEntitySelect = useCallback((target, event) => {
+    if (paintDraft) return;
     if (!target) {
-      if (selectedTool !== "delete") setSelected(null);
+      if (selectedTool !== "delete") {
+        setSelected(null);
+        setSelectedObjectIds([]);
+      }
       return;
     }
     if (selectedTool === "delete") {
       removeEntity(target);
       return;
     }
+    if (target.type === "object") {
+      if (event?.shiftKey || event?.ctrlKey || event?.metaKey) {
+        setSelectedObjectIds((current) => {
+          const next = current.includes(target.id)
+            ? current.filter((id) => id !== target.id)
+            : [...current, target.id];
+          setSelected(next.length ? { type: "object", id: next[next.length - 1] } : null);
+          return next;
+        });
+        return;
+      }
+      setSelectedObjectIds((current) => current.includes(target.id) ? current : [target.id]);
+    } else {
+      setSelectedObjectIds([]);
+    }
     setSelected(target);
-  }, [removeEntity, selectedTool]);
+  }, [paintDraft, removeEntity, selectedTool]);
 
   const addCatalogItem = useCallback((item) => {
     const floor = getActiveFloor(editor, activeFloorId);
@@ -1370,7 +1578,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
             { x: centerX + 90, y: centerY }
           ],
           color: item.color,
-          metadata: {}
+          metadata: { ...(item.metadata || {}) }
         };
         draft.cableRoutes = [...(draft.cableRoutes || []), route];
         setSelected({ type: "route", id: route.id });
@@ -1392,7 +1600,27 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
         height: item.height || 56,
         rotation: 0,
         z: 0,
-        height3d: item.category === "asset" ? 48 : item.category === "structure" ? 92 : 28,
+        height3d: {
+          desk: 46,
+          meeting_table: 46,
+          chair: 78,
+          cabinet: 96,
+          shelf: 92,
+          pc: 68,
+          notebook: 42,
+          printer: 46,
+          switch: 16,
+          rack: 112,
+          access_point: 12,
+          server: 104,
+          router: 20,
+          tv: 52,
+          camera: 34,
+          stabilizer_600: 36,
+          stabilizer_1000: 44,
+          extension_cord: 10,
+          power_strip: 10
+        }[item.objectType] || (item.category === "asset" ? 56 : item.category === "structure" ? 92 : 42),
         color: item.color || "#1f7a61",
         metadata: { ...(item.metadata || {}), parentRoomId }
       };
@@ -1710,19 +1938,25 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
     const point = getSvgPoint(event);
     if (placement.kind === "wall") {
       if (!placement.start) {
-        const start = { x: snap(point.x, placement.gridSize || 5), y: snap(point.y, placement.gridSize || 5) };
+        const snappedPoint = { x: snap(point.x, placement.gridSize || 5), y: snap(point.y, placement.gridSize || 5) };
+        const start = snapPointToWallEndpoints(snappedPoint, editor.objects || [], floor.id);
         setPlacement((current) => current ? { ...current, start, end: start } : current);
         return;
       }
       let createdWallId = null;
       commitEditor((draft) => {
+        const snappedEnd = {
+          x: snap(point.x, placement.gridSize || 5),
+          y: snap(point.y, placement.gridSize || 5)
+        };
+        const end = snapPointToWallEndpoints(snappedEnd, draft.objects || [], floor.id);
         const wall = createWallObjectFromPoints({
           id: createId("object"),
           planId: draft.plan.id,
           floorId: floor.id,
           item: placement.item,
           start: placement.start,
-          end: point,
+          end,
           gridSize: placement.gridSize || 5
         });
         createdWallId = wall.id;
@@ -1774,19 +2008,34 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
   }, [activeFloorId, buildRoomPlacementPreview, commitEditor, editor, getSvgPoint, notify, placement]);
 
   const handleCanvasPointerDown = useCallback((event) => {
-    if (!paintDraft) {
+    if (paintDraft) {
+      event.preventDefault();
+      event.stopPropagation();
+      const point = getSvgPoint(event);
+      applyPaintAtPoint(point);
+      paintPointerRef.current = paintDraft.mode !== "bucket";
+      return;
+    }
+    if (placement) {
       confirmRoomPlacement(event);
       return;
     }
+    if (selectedTool !== "select") return;
     event.preventDefault();
     event.stopPropagation();
     const point = getSvgPoint(event);
-    applyPaintAtPoint(point);
-    paintPointerRef.current = paintDraft.mode !== "bucket";
-  }, [applyPaintAtPoint, confirmRoomPlacement, getSvgPoint, paintDraft]);
+    const additive = Boolean(event.ctrlKey || event.metaKey);
+    dragRef.current = { type: "marquee", startX: point.x, startY: point.y, additive };
+    setSelectionBox({ x: point.x, y: point.y, width: 0, height: 0 });
+    if (!additive) {
+      setSelected(null);
+      setSelectedObjectIds([]);
+    }
+  }, [applyPaintAtPoint, confirmRoomPlacement, getSvgPoint, paintDraft, placement, selectedTool]);
 
   const beginDrag = useCallback((event, type, id) => {
-    if (selectedTool !== "select" || placement) return;
+    if (selectedTool !== "select" || placement || paintDraft) return;
+    event.preventDefault();
     event.stopPropagation();
     const point = getSvgPoint(event);
     const entity = type === "object"
@@ -1795,7 +2044,16 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
         ? editor.zones.find((entry) => entry.id === id)
         : editor.connectionPoints.find((entry) => entry.id === id);
     if (!entity) return;
+    if (type === "object" && (event.shiftKey || event.ctrlKey || event.metaKey)) {
+      handleEntitySelect({ type, id }, event);
+      return;
+    }
     const origin = type === "zone" ? entity.geometry || {} : entity;
+    const objectIds = type === "object" && selectedObjectIds.includes(id)
+      ? selectedObjectIds
+      : type === "object"
+        ? [id]
+        : [];
     dragRef.current = {
       id,
       type,
@@ -1804,6 +2062,9 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
       originX: origin.x || 0,
       originY: origin.y || 0,
       originObject: type === "object" ? { ...entity } : null,
+      selectedObjectOrigins: type === "object"
+        ? (editor.objects || []).filter((object) => objectIds.includes(object.id)).map((object) => ({ ...object }))
+        : [],
       originGeometry: type === "zone" ? getRoomGeometry(entity) : null,
       childObjects: type === "zone" && isRoomZone(entity)
         ? (editor.objects || []).filter((object) => object.metadata?.parentRoomId === id).map((object) => ({ ...object }))
@@ -1815,12 +2076,17 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
     setPast((items) => [...items.slice(-29), cloneEditor(editor)]);
     setFuture([]);
     setSelected({ type, id });
-  }, [editor, getSvgPoint, placement, selectedTool]);
+    setSelectedObjectIds(objectIds);
+  }, [editor, getSvgPoint, handleEntitySelect, paintDraft, placement, selectedObjectIds, selectedTool]);
 
   const moveDrag = useCallback((event) => {
     const drag = dragRef.current;
     if (!drag) return;
     const point = getSvgPoint(event);
+    if (drag.type === "marquee") {
+      setSelectionBox(normalizeSelectionRect({ x: drag.startX, y: drag.startY }, point));
+      return;
+    }
     const floor = getActiveFloor(editor, activeFloorId);
     const snapSize = drag.type === "object" || drag.type === "object-resize" || drag.type === "point"
       ? getFineSnapSize(editor)
@@ -1832,23 +2098,30 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
     commitEditor((draft) => {
       if (drag.type === "object") {
         const draftFloor = getActiveFloor(draft, activeFloorId) || floor;
-        let movedTable = null;
+        const origins = drag.selectedObjectOrigins?.length
+          ? drag.selectedObjectOrigins
+          : [drag.originObject].filter(Boolean);
+        const selectedIds = new Set(origins.map((object) => object.id));
+        const movedTables = [];
         draft.objects = (draft.objects || []).map((object) => {
-          if (object.id !== drag.id) return object;
+          if (!selectedIds.has(object.id)) return object;
+          const objectOrigin = origins.find((entry) => entry.id === object.id) || object;
+          const proposedX = Number(objectOrigin.x || 0) + deltaX;
+          const proposedY = Number(objectOrigin.y || 0) + deltaY;
           if (isAnchoredOpening(object)) {
             const parentWall = (draft.objects || []).find((entry) => entry.id === object.metadata.parentObjectId);
             if (parentWall) {
               return attachOpeningToWall(object, parentWall, {
-                x: nextX + Number(object.width || 0) / 2,
-                y: nextY + Number(object.height || 0) / 2
+                x: proposedX + Number(object.width || 0) / 2,
+                y: proposedY + Number(object.height || 0) / 2
               });
             }
           }
-          const movedObject = constrainObjectToBounds(object, draft, draftFloor, { x: nextX, y: nextY });
-          if (isTableObject(movedObject)) movedTable = movedObject;
+          const movedObject = constrainObjectToBounds(object, draft, draftFloor, { x: proposedX, y: proposedY });
+          if (isTableObject(movedObject)) movedTables.push(movedObject);
           return movedObject;
         });
-        if (movedTable) {
+        for (const movedTable of movedTables) {
           draft.objects = centerLinkedAssetsOnTable(draft.objects, movedTable);
         }
         draft.objects = syncAnchoredOpenings(draft.objects);
@@ -1907,15 +2180,17 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
         let resizedObject = null;
         draft.objects = (draft.objects || []).map((object) => {
           if (object.id !== drag.id) return object;
-          resizedObject = resizeObjectGeometry({
-            object: drag.originObject || object,
-            side: drag.side,
-            deltaX: pointerDeltaX,
-            deltaY: pointerDeltaY,
-            editor: draft,
-            floor: draftFloor,
-            snapSize
-          });
+          resizedObject = isWallObject(drag.originObject || object)
+            ? resizeWallEndpoint(drag.originObject || object, drag.side, point, draft.objects || [], snapSize)
+            : resizeObjectGeometry({
+              object: drag.originObject || object,
+              side: drag.side,
+              deltaX: pointerDeltaX,
+              deltaY: pointerDeltaY,
+              editor: draft,
+              floor: draftFloor,
+              snapSize
+            });
           return resizedObject;
         });
         if (resizedObject && isTableObject(resizedObject)) {
@@ -1939,6 +2214,27 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
 
   const endDrag = useCallback((event) => {
     paintPointerRef.current = false;
+    if (dragRef.current?.type === "marquee") {
+      const point = event ? getSvgPoint(event) : {
+        x: dragRef.current.startX,
+        y: dragRef.current.startY
+      };
+      const rectangle = normalizeSelectionRect(
+        { x: dragRef.current.startX, y: dragRef.current.startY },
+        point
+      );
+      const selectedObjects = findObjectsInSelectionRect(editor?.objects || [], rectangle, activeFloorId);
+      const ids = selectedObjects.map((object) => object.id);
+      const additive = Boolean(dragRef.current.additive);
+      setSelectedObjectIds((current) => {
+        const nextIds = additive ? [...new Set([...current, ...ids])] : ids;
+        setSelected(nextIds.length ? { type: "object", id: nextIds[nextIds.length - 1] } : null);
+        return nextIds;
+      });
+      setSelectionBox(null);
+      dragRef.current = null;
+      return;
+    }
     if (paintDraft) {
       dragRef.current = null;
       return;
@@ -1954,7 +2250,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
       commitRoomPlacement(placement, preview);
     }
     dragRef.current = null;
-  }, [buildDraggedRoomPreview, commitRoomPlacement, getSvgPoint, paintDraft, placement]);
+  }, [activeFloorId, buildDraggedRoomPreview, commitRoomPlacement, editor?.objects, getSvgPoint, paintDraft, placement]);
 
   const beginRoomResize = useCallback((event, zoneId, side) => {
     if (!editor) return;
@@ -1978,6 +2274,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
     setPast((items) => [...items.slice(-29), cloneEditor(editor)]);
     setFuture([]);
     setSelected({ type: "zone", id: zoneId });
+    setSelectedObjectIds([]);
   }, [editor, getSvgPoint]);
 
   const beginObjectResize = useCallback((event, objectId, side) => {
@@ -2000,12 +2297,24 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
     setPast((items) => [...items.slice(-29), cloneEditor(editor)]);
     setFuture([]);
     setSelected({ type: "object", id: objectId });
+    setSelectedObjectIds([objectId]);
   }, [editor, getSvgPoint]);
 
   const deleteSelectedEntity = useCallback(() => {
+    if (selectedObjectIds.length > 1) {
+      commitEditor((draft) => {
+        let objects = draft.objects || [];
+        for (const objectId of selectedObjectIds) objects = removeObjectCascade(objects, objectId);
+        draft.objects = objects;
+        return draft;
+      });
+      setSelected(null);
+      setSelectedObjectIds([]);
+      return;
+    }
     if (!selected) return;
     updateSelectedEntity({ remove: true });
-  }, [selected, updateSelectedEntity]);
+  }, [commitEditor, selected, selectedObjectIds, updateSelectedEntity]);
 
   const moveObjectFrom3D = useCallback((objectId, position) => {
     commitEditor((draft) => {
@@ -2116,13 +2425,17 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
         draft.objects = (draft.objects || []).map((object) => {
           if (object.id !== selected.id) return object;
           const isDoor = object.objectType === "door";
+          const isSlidingDoor = isDoor && ["sliding", "pocket"].includes(object.metadata?.doorType);
+          const toggledDoorMetadata = isSlidingDoor
+            ? { slideDirection: object.metadata?.slideDirection === "left" ? "right" : "left" }
+            : { swing: object.metadata?.swing === "outward" ? "inward" : "outward" };
           if (isAnchoredOpening(object)) {
             return isDoor
               ? {
                 ...object,
                 metadata: {
                   ...(object.metadata || {}),
-                  swing: object.metadata?.swing === "outward" ? "inward" : "outward"
+                  ...toggledDoorMetadata
                 }
               }
               : object;
@@ -2132,7 +2445,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
             rotation: (Number(object.rotation || 0) + 90) % 360,
             metadata: {
               ...(object.metadata || {}),
-              ...(isDoor ? { swing: object.metadata?.swing === "outward" ? "inward" : "outward" } : {})
+              ...(isDoor ? toggledDoorMetadata : {})
             }
           }, draft, draftFloor);
           if (isTableObject(rotatedObject)) rotatedTable = rotatedObject;
@@ -2209,11 +2522,47 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
     }
     if (placement?.kind === "wall" && placement.start) {
       const point = getSvgPoint(event);
-      setPlacement((current) => current ? { ...current, end: point } : current);
+      const gridPoint = {
+        x: snapToGrid(point.x, editor?.plan?.snapSize || DEFAULT_PLAN_SIZE.snapSize),
+        y: snapToGrid(point.y, editor?.plan?.snapSize || DEFAULT_PLAN_SIZE.snapSize)
+      };
+      const endpoint = snapPointToWallEndpoints(
+        gridPoint,
+        editor?.objects || [],
+        activeFloorId,
+        null,
+        Math.max(18, editor?.plan?.snapSize || DEFAULT_PLAN_SIZE.snapSize)
+      );
+      setPlacement((current) => current ? { ...current, end: endpoint } : current);
       return;
     }
     moveDrag(event);
-  }, [applyPaintAtPoint, getSvgPoint, moveDrag, paintDraft, placement, updateRoomPlacementPreview]);
+  }, [activeFloorId, applyPaintAtPoint, editor, getSvgPoint, moveDrag, paintDraft, placement, updateRoomPlacementPreview]);
+
+  const expandCanvas = useCallback((axis) => {
+    commitEditor((draft) => {
+      const activeFloor = getActiveFloor(draft, activeFloorId);
+      if (!activeFloor) return draft;
+      const widthIncrement = axis === "width" ? 320 : 0;
+      const heightIncrement = axis === "height" ? 205 : 0;
+      draft.floors = (draft.floors || []).map((floorEntry) => (
+        floorEntry.id === activeFloor.id
+          ? {
+            ...floorEntry,
+            width: Number(floorEntry.width || draft.plan?.width || DEFAULT_PLAN_SIZE.width) + widthIncrement,
+            height: Number(floorEntry.height || draft.plan?.height || DEFAULT_PLAN_SIZE.height) + heightIncrement
+          }
+          : floorEntry
+      ));
+      draft.plan = {
+        ...draft.plan,
+        width: Math.max(...draft.floors.map((floorEntry) => Number(floorEntry.width || DEFAULT_PLAN_SIZE.width))),
+        height: Math.max(...draft.floors.map((floorEntry) => Number(floorEntry.height || DEFAULT_PLAN_SIZE.height)))
+      };
+      return draft;
+    });
+    setCanvasViewBox(null);
+  }, [activeFloorId, commitEditor]);
 
   const undo = useCallback(() => {
     setPast((items) => {
@@ -2256,6 +2605,8 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
           return;
         }
         setSelected(null);
+        setSelectedObjectIds([]);
+        setSelectionBox(null);
       }
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
         event.preventDefault();
@@ -2338,7 +2689,6 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
         onRedo={redo}
         selectedTool={selectedTool}
         onToolChange={handleToolChange}
-        hasGroupArea={savedGroupAreas.length > 0}
         showGrid={showGrid}
         onToggleGrid={() => setShowGrid((current) => !current)}
         isEditing={isEditing}
@@ -2358,9 +2708,31 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
             onCancel={cancelPaintArea}
           />}
 
-          <div className="floor-plan-stage">
+          <div className="floor-plan-stage" ref={stageRef}>
             <span className="floor-plan-dimensions-badge">
-              {Math.round(floor?.width || DEFAULT_PLAN_SIZE.width)} x {Math.round(floor?.height || DEFAULT_PLAN_SIZE.height)}
+              <span>{Math.round(floor?.width || DEFAULT_PLAN_SIZE.width)} x {Math.round(floor?.height || DEFAULT_PLAN_SIZE.height)}</span>
+              {isEditing ? (
+                <span className="floor-plan-canvas-expand-actions">
+                  <button
+                    type="button"
+                    title="Aumentar largura da area"
+                    aria-label="Aumentar largura da area"
+                    onClick={() => expandCanvas("width")}
+                  >
+                    <Plus size={13} aria-hidden="true" />
+                    <span>L</span>
+                  </button>
+                  <button
+                    type="button"
+                    title="Aumentar altura da area"
+                    aria-label="Aumentar altura da area"
+                    onClick={() => expandCanvas("height")}
+                  >
+                    <Plus size={13} aria-hidden="true" />
+                    <span>A</span>
+                  </button>
+                </span>
+              ) : null}
             </span>
             {mode === "2d" ? (
               <FloorPlanCanvas
@@ -2368,6 +2740,8 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
                 editor={editor}
                 activeFloorId={activeFloorId}
                 selected={isEditing ? selected : null}
+                selectedObjectIds={isEditing ? selectedObjectIds : []}
+                selectionBox={isEditing ? selectionBox : null}
                 selectedTool={selectedTool}
                 onSelect={isEditing ? handleEntitySelect : () => {}}
                 onPointerDown={isEditing ? beginDrag : () => {}}
@@ -2400,6 +2774,19 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
             )}
 
             {isEditing && <FloorPlanQuickActions activeSection={activeCatalog} onSectionChange={setActiveCatalog} />}
+
+            {isEditing && selected && !paintDraft && <FloorPlanInspector
+              editor={editor}
+              selected={selected}
+              onChangeSelected={updateSelectedEntity}
+              onClearSelected={() => {
+                setSelected(null);
+                setSelectedObjectIds([]);
+              }}
+              devices={devices}
+              permissions={permissions}
+              onLinkObject={linkObject}
+            />}
           </div>
 
           {isEditing && <FloorPlanCatalog
@@ -2408,20 +2795,10 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
             onAddItem={addCatalogItem}
             onSelectRoomTemplate={beginRoomPlacement}
             placement={placement}
+            catalogRef={catalogRef}
           />}
         </main>
 
-        {isEditing && selected && <FloorPlanInspector
-          editor={editor}
-          selected={selected}
-          onChangeSelected={updateSelectedEntity}
-          onClearSelected={() => setSelected(null)}
-          devices={devices}
-          groups={groups}
-          segments={segments}
-          permissions={permissions}
-          onLinkObject={linkObject}
-        />}
       </div>
     </section>
   );
