@@ -44,7 +44,6 @@ export async function requireAuth(req, res, next) {
     req.user = {
       id: user.id,
       name: user.name,
-      username: user.username,
       email: user.email,
       role: user.role,
       active: user.active,

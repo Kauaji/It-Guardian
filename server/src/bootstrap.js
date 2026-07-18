@@ -7,7 +7,6 @@ import { seedDefaultMaintenanceScripts } from "./repositories/maintenanceScriptR
 import { backfillPreventiveAutomationAssetSchedules } from "./repositories/preventiveAutomationRepository.js";
 import { seedDefaultSegment } from "./repositories/segmentRepository.js";
 import { seedDefaultSectors } from "./repositories/sectorRepository.js";
-import { seedStudyContestCatalog } from "./repositories/studyContestRepository.js";
 import { seedDefaultAdmin, seedDemoUsers } from "./repositories/userRepository.js";
 
 let runtimePromise;
@@ -19,7 +18,6 @@ export function initializeRuntime() {
       await initializeDatabase();
       await runMigrations();
       await seedDefaultSectors();
-      await seedStudyContestCatalog();
 
       if (shouldSeedDemoData()) {
         await seedDefaultAdmin();

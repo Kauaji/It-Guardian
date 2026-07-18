@@ -46,7 +46,7 @@ export async function login(req, res, next) {
     const user = await findUserByEmail(email || "");
 
     if (!user || user.active === false || !(await bcrypt.compare(password || "", user.passwordHash))) {
-      return res.status(401).json({ message: "Usuario/e-mail ou senha invalidos." });
+      return res.status(401).json({ message: "E-mail ou senha invalidos." });
     }
 
     await addLog({ type: "auth", message: "User logged in", userId: user.id });

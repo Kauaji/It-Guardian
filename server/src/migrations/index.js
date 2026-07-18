@@ -2,12 +2,10 @@ import { withTransaction } from "../database.js";
 import { resolveDatabaseConfig } from "../config/environment.js";
 import { migration001RuntimeFoundation } from "./001-runtime-foundation.js";
 import { migration002UserPreferences } from "./002-user-preferences.js";
-import { migration003StudyContests } from "./003-study-contests.js";
 
 export const migrations = [
   migration001RuntimeFoundation,
-  migration002UserPreferences,
-  migration003StudyContests
+  migration002UserPreferences
 ];
 
 export async function runMigrations() {

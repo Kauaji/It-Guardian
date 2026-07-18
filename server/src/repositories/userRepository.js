@@ -7,7 +7,6 @@ const userSelect = `
   SELECT
     users.id,
     users.name,
-    users.username,
     users.email,
     users.password_hash,
     users.role,
@@ -36,7 +35,7 @@ export async function listUsers() {
 
 export async function findUserByEmail(email) {
   const result = await query(
-    `${userSelect} WHERE LOWER(users.email) = LOWER($1) OR LOWER(COALESCE(users.username, '')) = LOWER($1)`,
+    `${userSelect} WHERE LOWER(users.email) = LOWER($1)`,
     [email]
   );
   return result.rows[0] ? fromRow(result.rows[0]) : null;
@@ -52,7 +51,6 @@ export async function findUserById(id) {
 
 export async function createUser({
   name,
-  username = null,
   email,
   password,
   role = "viewer",
@@ -67,14 +65,13 @@ export async function createUser({
     const isAdmin = role === "admin";
     const result = await query(
       `
-        INSERT INTO users (id, name, username, email, password_hash, role, active, sector_id, job_title, is_admin, permissions)
-        VALUES ($1, $2, LOWER($3), LOWER($4), $5, $6, $7, $8, $9, $10, $11::jsonb)
+        INSERT INTO users (id, name, email, password_hash, role, active, sector_id, job_title, is_admin, permissions)
+        VALUES ($1, $2, LOWER($3), $4, $5, $6, $7, $8, $9, $10::jsonb)
         RETURNING id
       `,
       [
         randomUUID(),
         name,
-        username || null,
         email,
         passwordHash,
         role,
@@ -237,12 +234,11 @@ export async function seedDefaultAdmin() {
 }
 
 export async function seedDemoUsers() {
-  const defaultPasswordHash = await bcrypt.hash("123456", 10);
+  const passwordHash = await bcrypt.hash("123456", 10);
   const users = [
     {
       id: "seed-admin",
       name: "Admin Sistema",
-      username: "admin",
       email: "admin@itguardian.local",
       role: "admin",
       sectorId: "sector-administracao",
@@ -253,7 +249,6 @@ export async function seedDemoUsers() {
     {
       id: "seed-admin-marina",
       name: "Marina Duarte",
-      username: "marina",
       email: "marina.duarte@itguardian.local",
       role: "admin",
       sectorId: "sector-administracao",
@@ -264,7 +259,6 @@ export async function seedDemoUsers() {
     {
       id: "seed-user-rafael",
       name: "Rafael Nunes",
-      username: "rafael",
       email: "rafael.nunes@itguardian.local",
       role: "viewer",
       sectorId: "sector-support-n1",
@@ -275,7 +269,6 @@ export async function seedDemoUsers() {
     {
       id: "seed-user-felipe",
       name: "Felipe Castro",
-      username: "felipe",
       email: "felipe.castro@itguardian.local",
       role: "viewer",
       sectorId: "sector-suporte-n2",
@@ -286,7 +279,6 @@ export async function seedDemoUsers() {
     {
       id: "seed-user-bruno",
       name: "Bruno Almeida",
-      username: "bruno",
       email: "bruno.almeida@itguardian.local",
       role: "viewer",
       sectorId: "sector-infra",
@@ -297,7 +289,6 @@ export async function seedDemoUsers() {
     {
       id: "seed-user-camila",
       name: "Camila Rocha",
-      username: "camila",
       email: "camila.rocha@itguardian.local",
       role: "viewer",
       sectorId: "sector-redes",
@@ -308,7 +299,6 @@ export async function seedDemoUsers() {
     {
       id: "seed-user-patricia",
       name: "Patricia Lima",
-      username: "patricia",
       email: "patricia.lima@itguardian.local",
       role: "viewer",
       sectorId: "sector-financeiro",
@@ -319,7 +309,6 @@ export async function seedDemoUsers() {
     {
       id: "seed-user-andre",
       name: "Andre Torres",
-      username: "andre",
       email: "andre.torres@itguardian.local",
       role: "viewer",
       sectorId: "sector-diretoria",
@@ -330,7 +319,6 @@ export async function seedDemoUsers() {
     {
       id: "seed-user-lucas",
       name: "Lucas Pereira",
-      username: "lucas",
       email: "lucas.pereira@itguardian.local",
       role: "viewer",
       sectorId: "sector-geral",
@@ -341,7 +329,6 @@ export async function seedDemoUsers() {
     {
       id: "seed-demo-tecnico-n1",
       name: "Tecnico N1 Demo",
-      username: "tecnico.n1",
       email: "tecnico.n1@itguardian.local",
       role: "viewer",
       sectorId: "sector-support-n1",
@@ -352,7 +339,6 @@ export async function seedDemoUsers() {
     {
       id: "seed-demo-tecnico-n2",
       name: "Tecnico N2 Demo",
-      username: "tecnico.n2",
       email: "tecnico.n2@itguardian.local",
       role: "viewer",
       sectorId: "sector-suporte-n2",
@@ -363,7 +349,6 @@ export async function seedDemoUsers() {
     {
       id: "seed-demo-usuario-comum",
       name: "Usuario Comum Demo",
-      username: "usuario.comum",
       email: "usuario.comum@itguardian.local",
       role: "viewer",
       sectorId: "sector-geral",
@@ -374,39 +359,24 @@ export async function seedDemoUsers() {
     {
       id: "seed-demo-sem-permissao",
       name: "Sem Permissao Demo",
-      username: "sem.permissao",
       email: "sem.permissao@itguardian.local",
       role: "viewer",
       sectorId: "sector-geral",
       jobTitle: "Usuario sem permissao",
       isAdmin: false,
       permissions: []
-    },
-    {
-      id: "seed-user-mequis",
-      name: "Mequis",
-      username: "mequis",
-      email: "mequis@itguardian.local",
-      password: "Mequis!2026",
-      role: "viewer",
-      sectorId: "sector-geral",
-      jobTitle: "Usuario de teste - Concursos",
-      isAdmin: false,
-      permissions: ["dashboard.view"]
     }
   ];
 
   for (const user of users) {
-    const passwordHash = user.password ? await bcrypt.hash(user.password, 10) : defaultPasswordHash;
     await query(
       `
         INSERT INTO users (
-          id, name, username, email, password_hash, role, active, sector_id, job_title, is_admin, permissions
+          id, name, email, password_hash, role, active, sector_id, job_title, is_admin, permissions
         )
-        VALUES ($1, $2, LOWER($3), LOWER($4), $5, $6, TRUE, $7, $8, $9, $10::jsonb)
+        VALUES ($1, $2, LOWER($3), $4, $5, TRUE, $6, $7, $8, $9::jsonb)
         ON CONFLICT (email) DO UPDATE SET
           name = EXCLUDED.name,
-          username = EXCLUDED.username,
           password_hash = EXCLUDED.password_hash,
           role = EXCLUDED.role,
           active = TRUE,
@@ -419,7 +389,6 @@ export async function seedDemoUsers() {
       [
         user.id,
         user.name,
-        user.username || null,
         user.email,
         passwordHash,
         user.role,
@@ -436,7 +405,6 @@ export function toPublicUser(user) {
   return {
     id: user.id,
     name: user.name,
-    username: user.username,
     email: user.email,
     role: user.role,
     active: user.active,
@@ -456,7 +424,6 @@ function fromRow(row) {
   return {
     id: row.id,
     name: row.name,
-    username: row.username,
     email: row.email,
     passwordHash: row.password_hash,
     role: row.role,
