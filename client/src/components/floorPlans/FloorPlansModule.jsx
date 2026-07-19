@@ -104,6 +104,20 @@ import {
 
 const FloorPlanScene3D = lazy(() => import("./FloorPlanScene3D.jsx"));
 
+const FLOOR_PLAN_LAYER_OPTIONS = [
+  { id: "rooms", label: "Comodos" },
+  { id: "areas", label: "Areas" },
+  { id: "objects", label: "Objetos" },
+  { id: "network", label: "Rede" },
+  { id: "energy", label: "Energia" },
+  { id: "labels", label: "Textos" }
+];
+
+const DEFAULT_FLOOR_PLAN_LAYERS = FLOOR_PLAN_LAYER_OPTIONS.reduce((layers, option) => ({
+  ...layers,
+  [option.id]: true
+}), {});
+
 function createId(prefix) {
   if (typeof crypto !== "undefined" && crypto.randomUUID) return `${prefix}-${crypto.randomUUID()}`;
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -264,7 +278,7 @@ function FloorPlanCatalog({ activeSection, onActiveSectionChange, onAddItem, onS
         <div className="floor-plan-catalog-items">
           {section.items.map((item) => {
             const Icon = item.icon || Info;
-            const usesPlanGlyph = item.objectType === "door" || item.objectType === "tv";
+            const usesPlanGlyph = Boolean(item.objectType);
             return (
               <button key={item.id} type="button" onClick={() => onAddItem(item)}>
                 {usesPlanGlyph ? (
@@ -294,6 +308,39 @@ function FloorPlanCatalog({ activeSection, onActiveSectionChange, onAddItem, onS
         </div>
       ) : null}
     </section>
+  );
+}
+
+function FloorPlanViewerControls({ mode, visibleLayers, onToggleLayer, onFit, onReset }) {
+  if (mode !== "2d") return null;
+
+  return (
+    <div className="floor-plan-viewer-controls" aria-label="Controles de visualizacao 2D">
+      <button type="button" className="secondary-action compact-action" onClick={onFit}>
+        Enquadrar
+      </button>
+      <button type="button" className="secondary-action compact-action" onClick={onReset}>
+        100%
+      </button>
+      <details className="floor-plan-layer-menu">
+        <summary>
+          <Layers3 size={16} />
+          <span>Camadas</span>
+        </summary>
+        <div>
+          {FLOOR_PLAN_LAYER_OPTIONS.map((option) => (
+            <label key={option.id}>
+              <input
+                type="checkbox"
+                checked={Boolean(visibleLayers[option.id])}
+                onChange={() => onToggleLayer(option.id)}
+              />
+              <span>{option.label}</span>
+            </label>
+          ))}
+        </div>
+      </details>
+    </div>
   );
 }
 
@@ -505,14 +552,24 @@ function FloorPlanCanvas({
   viewBox,
   onWheel,
   svgRef,
-  showGrid = true
+  showGrid = true,
+  visibleLayers = DEFAULT_FLOOR_PLAN_LAYERS
 }) {
   const floor = getActiveFloor(editor, activeFloorId);
   const gridSize = editor?.plan?.gridSize || DEFAULT_PLAN_SIZE.gridSize;
+  const layerState = { ...DEFAULT_FLOOR_PLAN_LAYERS, ...(visibleLayers || {}) };
   const zones = (editor?.zones || []).filter((zone) => zone.floorId === floor?.id);
-  const objects = syncAnchoredOpenings(editor?.objects || []).filter((object) => object.floorId === floor?.id);
-  const points = (editor?.connectionPoints || []).filter((point) => point.floorId === floor?.id);
-  const routes = (editor?.cableRoutes || []).filter((route) => route.floorId === floor?.id);
+  const roomZones = layerState.rooms ? zones.filter(isRoomZone) : [];
+  const areaZones = layerState.areas ? zones.filter((zone) => !isRoomZone(zone)) : [];
+  const objects = layerState.objects
+    ? syncAnchoredOpenings(editor?.objects || []).filter((object) => object.floorId === floor?.id)
+    : [];
+  const points = (editor?.connectionPoints || [])
+    .filter((point) => point.floorId === floor?.id)
+    .filter((point) => point.pointType === "power" ? layerState.energy : layerState.network);
+  const routes = (editor?.cableRoutes || [])
+    .filter((route) => route.floorId === floor?.id)
+    .filter((route) => route.routeType === "power" ? layerState.energy : layerState.network);
   const width = floor?.width || editor?.plan?.width || DEFAULT_PLAN_SIZE.width;
   const height = floor?.height || editor?.plan?.height || DEFAULT_PLAN_SIZE.height;
   const viewBoxValue = viewBox || { x: 0, y: 0, width, height };
@@ -532,7 +589,7 @@ function FloorPlanCanvas({
     <div className={`floor-plan-canvas-wrap tool-${selectedTool} ${showGrid ? "" : "no-grid"}`}>
       <svg
         ref={svgRef}
-        className="floor-plan-canvas"
+        className={`floor-plan-canvas ${layerState.labels ? "" : "layers-hide-labels"}`}
         viewBox={`${viewBoxValue.x} ${viewBoxValue.y} ${viewBoxValue.width} ${viewBoxValue.height}`}
         role="img"
         aria-label="Editor 2D da planta"
@@ -550,7 +607,7 @@ function FloorPlanCanvas({
         <rect x="0" y="0" width={width} height={height} fill="#fbfdff" />
         {showGrid ? <rect x="0" y="0" width={width} height={height} fill="url(#floor-grid)" /> : null}
 
-        {zones.map((zone) => {
+        {[...roomZones, ...areaZones].map((zone) => {
           const geometry = zone.geometry || {};
           const zoneSelected = selected?.type === "zone" && selected.id === zone.id;
           if (isRoomZone(zone)) {
@@ -602,7 +659,7 @@ function FloorPlanCanvas({
           );
         })}
 
-        {paintDraft?.cells?.length ? (
+        {layerState.areas && paintDraft?.cells?.length ? (
           <path
             className="floor-plan-paint-draft"
             d={paintCellsPath(paintDraft.cells, paintDraft.cellSize)}
@@ -1135,6 +1192,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
   const [placement, setPlacement] = useState(null);
   const [mode, setMode] = useState("2d");
   const [showGrid, setShowGrid] = useState(true);
+  const [visibleLayers, setVisibleLayers] = useState(DEFAULT_FLOOR_PLAN_LAYERS);
   const [saveState, setSaveState] = useState("saved");
   const [past, setPast] = useState([]);
   const [future, setFuture] = useState([]);
@@ -2564,6 +2622,31 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
     setCanvasViewBox(null);
   }, [activeFloorId, commitEditor]);
 
+  const fitCanvasToFloor = useCallback(() => {
+    const activeFloor = getActiveFloor(editor, activeFloorId);
+    if (!activeFloor) return;
+    const width = Number(activeFloor.width || editor?.plan?.width || DEFAULT_PLAN_SIZE.width);
+    const height = Number(activeFloor.height || editor?.plan?.height || DEFAULT_PLAN_SIZE.height);
+    const padding = Math.max(32, Math.round(Math.min(width, height) * 0.04));
+    setCanvasViewBox({
+      x: -padding,
+      y: -padding,
+      width: width + padding * 2,
+      height: height + padding * 2
+    });
+  }, [activeFloorId, editor]);
+
+  const resetCanvasZoom = useCallback(() => {
+    setCanvasViewBox(null);
+  }, []);
+
+  const toggleVisibleLayer = useCallback((layerId) => {
+    setVisibleLayers((current) => ({
+      ...current,
+      [layerId]: !current[layerId]
+    }));
+  }, []);
+
   const undo = useCallback(() => {
     setPast((items) => {
       if (items.length === 0) return items;
@@ -2734,6 +2817,13 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
                 </span>
               ) : null}
             </span>
+            <FloorPlanViewerControls
+              mode={mode}
+              visibleLayers={visibleLayers}
+              onToggleLayer={toggleVisibleLayer}
+              onFit={fitCanvasToFloor}
+              onReset={resetCanvasZoom}
+            />
             {mode === "2d" ? (
               <FloorPlanCanvas
                 data={editor}
@@ -2759,6 +2849,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
                 onWheel={handleCanvasWheel}
                 svgRef={svgRef}
                 showGrid={showGrid}
+                visibleLayers={visibleLayers}
               />
             ) : (
               <Suspense fallback={<div className="floor-plan-loading">Carregando 3D...</div>}>

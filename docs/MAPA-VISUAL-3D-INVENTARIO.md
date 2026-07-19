@@ -272,6 +272,10 @@ Ao mover, redimensionar ou girar uma parede, suas aberturas acompanham a nova ge
 - Aberturas podem ser reposicionadas ao longo da parede pelo inspetor.
 - Comprimento, espessura, angulo e altura 3D da parede podem ser ajustados no inspetor.
 - A selecao, o historico de desfazer/refazer e a normalizacao do editor continuam usando o estado central da planta.
+- A vista 2D possui controles de enquadramento, retorno para 100% e camadas visuais.
+- As camadas permitem ocultar temporariamente comodos, areas, objetos, rede, energia ou textos sem alterar o JSON salvo.
+- O catalogo inferior usa os desenhos 2D reais dos objetos sempre que disponiveis, mantendo a leitura parecida com planta baixa.
+- A lista de presets mantem rolagem interna para evitar que o catalogo empurre a area de trabalho para fora da tela.
 
 ### Edicao e visualizacao 3D
 

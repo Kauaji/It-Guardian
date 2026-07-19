@@ -15367,6 +15367,22 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
   vector-effect: non-scaling-stroke;
 }
 
+.floor-plan-editor-shell .floor-plan-catalog {
+  max-height: 220px;
+  overflow: auto;
+}
+
+.floor-plan-editor-shell .floor-plan-catalog-items,
+.floor-plan-editor-shell .room-catalog-grid {
+  scrollbar-width: thin;
+}
+
+.floor-plan-editor-shell .room-catalog-active .room-catalog-grid {
+  max-height: 126px;
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
 body:not(.modal-open):not(.alert-modal-open):not(.machine-details-open) {
   overflow-x: hidden;
   overflow-y: auto;
@@ -15692,6 +15708,80 @@ body:not(.modal-open):not(.alert-modal-open):not(.machine-details-open) {
   align-items: center;
   display: inline-flex;
   gap: 6px;
+}
+
+.floor-plan-viewer-controls {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  z-index: 12;
+}
+
+.floor-plan-viewer-controls > button,
+.floor-plan-layer-menu > summary {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #cbd6e3;
+  border-radius: 7px;
+  color: #334155;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.7rem;
+  font-weight: 850;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 9px;
+}
+
+.floor-plan-layer-menu {
+  position: relative;
+}
+
+.floor-plan-layer-menu > summary {
+  list-style: none;
+}
+
+.floor-plan-layer-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.floor-plan-layer-menu > div {
+  background: #fff;
+  border: 1px solid var(--plan-border);
+  border-radius: 8px;
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.16);
+  display: grid;
+  gap: 4px;
+  min-width: 156px;
+  padding: 8px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 7px);
+  z-index: 72;
+}
+
+.floor-plan-layer-menu label {
+  align-items: center;
+  color: #334155;
+  display: flex;
+  font-size: 0.72rem;
+  font-weight: 800;
+  gap: 7px;
+  min-height: 28px;
+}
+
+.floor-plan-layer-menu input {
+  accent-color: var(--plan-green);
+  height: 14px;
+  width: 14px;
+}
+
+.floor-plan-canvas.layers-hide-labels text {
+  display: none;
 }
 
 .floor-plan-canvas-expand-actions {
