@@ -30,7 +30,7 @@ function Get-AgentConfig {
   if (-not [Uri]::TryCreate($config.serverUrl, [UriKind]::Absolute, [ref]$uri) -or $uri.Scheme -notin @("http", "https")) {
     throw "serverUrl deve ser uma URL HTTP ou HTTPS valida."
   }
-  $interval = if ($null -eq $config.intervalSeconds) { 60 } else { [int]$config.intervalSeconds }
+  $interval = if ($null -eq $config.intervalSeconds) { 300 } else { [int]$config.intervalSeconds }
   if ($interval -lt 30 -or $interval -gt 86400) { throw "intervalSeconds deve estar entre 30 e 86400." }
   return $config
 }
@@ -82,7 +82,7 @@ function New-InventoryPayload {
     uptimeSeconds = [int64]$Snapshot.uptimeSeconds
     agentVersion = $script:AgentVersion
     collectedAt = (Get-Date).ToUniversalTime().ToString("o")
-    intervalSeconds = if ($null -eq $Config.intervalSeconds) { 60 } else { [int]$Config.intervalSeconds }
+    intervalSeconds = if ($null -eq $Config.intervalSeconds) { 300 } else { [int]$Config.intervalSeconds }
     environment = [string]$Config.environment
     group = [string]$Config.group
     segment = [string]$Config.segment
@@ -115,7 +115,7 @@ function Start-AgentLoop {
       if ($RunOnce) { throw }
     }
     if (-not $RunOnce) {
-      $sleepSeconds = if ($null -eq $config.intervalSeconds) { 60 } else { [int]$config.intervalSeconds }
+      $sleepSeconds = if ($null -eq $config.intervalSeconds) { 300 } else { [int]$config.intervalSeconds }
       Write-AgentLog -Message ("Proximo envio em {0} segundos." -f $sleepSeconds)
       Start-Sleep -Seconds $sleepSeconds
     }

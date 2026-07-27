@@ -2,7 +2,7 @@
 param(
   [Parameter(Mandatory = $true)][string]$ServerUrl,
   [Parameter(Mandatory = $true)][string]$AgentToken,
-  [int]$IntervalSeconds = 60,
+  [int]$IntervalSeconds = 300,
   [string]$MachineAlias = "",
   [string]$Environment = "",
   [string]$Group = "",
@@ -26,6 +26,8 @@ if ($IntervalSeconds -lt 30 -or $IntervalSeconds -gt 86400) {
 New-Item -ItemType Directory -Force -Path $installDirectory | Out-Null
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "it-guardian-agent.ps1") -Destination $installDirectory -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "Uninstall-Agent.ps1") -Destination $installDirectory -Force
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot "diagnose-agent.ps1") -Destination $installDirectory -Force
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot "test-heartbeat.ps1") -Destination $installDirectory -Force
 
 [ordered]@{
   serverUrl = $ServerUrl.TrimEnd("/")
@@ -57,4 +59,11 @@ $taskPrincipal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceA
 Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Principal $taskPrincipal -Description "Coleta inventario basico e envia heartbeat ao IT Guardian." -Force | Out-Null
 Start-ScheduledTask -TaskName $taskName
 
+$logPath = Join-Path $installDirectory "logs\agent.log"
+$uninstallScript = Join-Path $installDirectory "Uninstall-Agent.ps1"
+
 Write-Host "Agente instalado em $installDirectory e registrado no Agendador de Tarefas." -ForegroundColor Green
+Write-Host "Heartbeat imediato solicitado pela tarefa agendada." -ForegroundColor Green
+Write-Host "Logs: Get-Content `"$logPath`" -Tail 50"
+Write-Host "Diagnostico: & `"$installDirectory\diagnose-agent.ps1`""
+Write-Host "Desinstalar: & `"$uninstallScript`""
