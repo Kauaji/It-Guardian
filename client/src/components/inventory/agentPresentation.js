@@ -7,7 +7,22 @@ const SOURCE_LABELS = {
 };
 
 export function getMachineSourceLabel(machine) {
-  return SOURCE_LABELS[machine?.source] || "OCS";
+  const sources = Array.isArray(machine?.dataSources) && machine.dataSources.length
+    ? machine.dataSources
+    : [machine?.source];
+  const labels = Array.from(new Set(sources.filter(Boolean)))
+    .map((source) => SOURCE_LABELS[source] || source);
+  return labels.join(" + ") || "Desconhecida";
+}
+
+export function getMachineSourceCollections(machine) {
+  return Object.entries(machine?.sourceCollections || {})
+    .filter(([, collectedAt]) => collectedAt)
+    .map(([source, collectedAt]) => ({
+      source,
+      label: SOURCE_LABELS[source] || source,
+      collectedAt
+    }));
 }
 
 export function isAgentMachine(machine) {

@@ -28,6 +28,21 @@ services:
       CLIENT_ORIGIN: http://localhost:5173
       DATABASE_URL: postgres://itguardian:itguardian@db:5432/itguardian
       STREAM_INTERVAL_MS: 10000
+      OCS_MODE: ${OCS_MODE:-disabled}
+      OCS_ENABLED: ${OCS_ENABLED:-false}
+      OCS_BASE_URL: ${OCS_BASE_URL:-}
+      OCS_USER: ${OCS_USER:-}
+      OCS_PASSWORD: ${OCS_PASSWORD:-}
+      OCS_COMPUTERS_PATH: ${OCS_COMPUTERS_PATH:-/computers}
+      OCS_TIMEOUT_MS: ${OCS_TIMEOUT_MS:-10000}
+      OCS_RETRIES: ${OCS_RETRIES:-1}
+      ZABBIX_MODE: ${ZABBIX_MODE:-disabled}
+      ZABBIX_ENABLED: ${ZABBIX_ENABLED:-false}
+      ZABBIX_API_URL: ${ZABBIX_API_URL:-}
+      ZABBIX_API_TOKEN: ${ZABBIX_API_TOKEN:-}
+      ZABBIX_TIMEOUT_MS: ${ZABBIX_TIMEOUT_MS:-10000}
+      ZABBIX_RETRIES: ${ZABBIX_RETRIES:-1}
+      INTEGRATION_STORE_RAW_DATA: ${INTEGRATION_STORE_RAW_DATA:-false}
     ports:
       - "4000:4000"
     depends_on:

@@ -37,7 +37,7 @@ it-guardian/
   server/src/routes/           Rotas HTTP
   server/src/repositories/     Persistencia PostgreSQL
   server/src/services/         Orquestracao de dominio
-  server/src/integrations/     Adaptadores mock/reais futuros
+  server/src/integrations/     Adaptadores mock/reais opcionais
   server/src/jobs/             Jobs futuros para VPS
 ```
 
@@ -138,7 +138,9 @@ JWT_SECRET=uma-chave-grande-e-segura
 FRONTEND_URL=https://seu-projeto.vercel.app
 PING_MODE=mock
 OCS_MODE=mock
+OCS_ENABLED=false
 ZABBIX_MODE=mock
+ZABBIX_ENABLED=false
 ```
 
 Variaveis de frontend:
@@ -184,6 +186,10 @@ Tabelas criadas automaticamente no bootstrap:
 - `technicians`
 - `problem_types`
 - `priority_rules`
+- `integration_sync_state`
+- `integration_assets`
+- `integration_alerts`
+- `integration_conflicts`
 
 ## API e CORS
 
@@ -212,18 +218,22 @@ Localmente, usam `VITE_FRONTEND_URL` ou `window.location.origin`.
 
 O Vercel serve bem para demo/TCC, CRUD, login, inventario, segmentos, grupos, ativos manuais, historico e QR Code.
 
-Ping real, OCS Inventory real, Zabbix real e monitoramento continuo precisam de uma VPS ou agente dentro da rede da empresa, porque IPs internos como `10.10.x.x` nao sao acessiveis diretamente pelo Vercel.
+Ping real e monitoramento continuo precisam de uma VPS ou agente dentro da rede da empresa, porque IPs internos como `10.10.x.x` nao sao acessiveis diretamente pelo Vercel. OCS Inventory e Zabbix possuem adaptadores reais opcionais e somente leitura, mas tambem precisam ser executados em uma maquina que alcance essas APIs internas.
 
-## Fase Futura em VPS
+## Integracoes OCS e Zabbix
 
-Os pontos de troca ja estao isolados:
+Os adaptadores preservam `mock`, aceitam `disabled` e podem operar em modo `real`:
 
 - `server/src/integrations/ping/PingService.js`
 - `server/src/integrations/ocs/OcsInventoryService.js`
 - `server/src/integrations/zabbix/ZabbixService.js`
 - `server/src/jobs/`
 
-Na VPS, a ideia e alterar `PING_MODE`, `OCS_MODE` e `ZABBIX_MODE` para modos reais e implementar os clientes internos sem reescrever controllers, rotas ou frontend.
+OCS e Zabbix sao desabilitados por padrao no perfil local, usam snapshots persistidos e nao sao dependencias obrigatorias. A sincronizacao inicial e manual e protegida por administrador. Consulte:
+
+- `docs/INTEGRACAO-OCS.md`
+- `docs/INTEGRACAO-ZABBIX.md`
+- `docs/FONTES-DE-DADOS.md`
 
 ## Scripts
 

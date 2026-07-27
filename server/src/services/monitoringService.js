@@ -42,13 +42,54 @@ function backupMetadata(metadata) {
   };
 }
 
+function uniqueSources(...sources) {
+  return Array.from(new Set(sources.flat().filter(Boolean)));
+}
+
+function sourceCollections(host, inventory) {
+  return {
+    ...(host && host.source !== "ocs"
+      ? { zabbix: host.collectedAt || host.lastSeenAt || null }
+      : {}),
+    ...(inventory
+      ? { ocs: inventory.collectedAt || inventory.lastInventoryAt || null }
+      : {})
+  };
+}
+
+function sourceConflicts(host, inventory) {
+  return [
+    ...(host?.sourceConflicts || []),
+    ...(inventory?.sourceConflicts || [])
+  ];
+}
+
+function buildInventoryOnlyHost(inventory) {
+  return {
+    id: inventory.hostId,
+    name: inventory.displayName || inventory.hostname || inventory.hostId,
+    source: "ocs",
+    ip: inventory.ip || "Nao informado",
+    status: inventory.status || "unknown",
+    uptimeHours: null,
+    metrics: {},
+    history: [],
+    collectedAt: inventory.collectedAt || inventory.lastInventoryAt || null,
+    sourceConflicts: []
+  };
+}
+
 function enrichDevice(host, inventory, segment, metadata) {
   const assetType = metadata?.assetType || inferAssetType(host, inventory);
+  const dataSources = uniqueSources(host?.source || "zabbix", inventory ? "ocs" : null);
 
   return {
     id: host.id,
     name: host.name,
-    source: "ocs",
+    source: host.source || (inventory ? "ocs" : "zabbix"),
+    dataSources,
+    sourceCollections: sourceCollections(host, inventory),
+    sourceConflicts: sourceConflicts(host, inventory),
     assetType,
     type: assetType,
     ip: host.ip,
@@ -73,6 +114,8 @@ function buildManualDevice(asset, segment, metadata) {
     id: asset.id,
     name: asset.name,
     source: "manual",
+    dataSources: ["manual"],
+    sourceCollections: { manual: asset.updatedAt || lastPingAt },
     assetType,
     type: assetType,
     ip: asset.ip,
@@ -136,6 +179,8 @@ function buildAgentDevice(asset, segment, metadata) {
     id: asset.id,
     name: asset.machineAlias || asset.hostname,
     source: "agent",
+    dataSources: ["agent"],
+    sourceCollections: { agent: asset.collectedAt || asset.lastSeenAt },
     assetType: metadata?.assetType || "desktop",
     type: metadata?.assetType || "desktop",
     ip: asset.localIp || "Nao informado",
@@ -185,6 +230,15 @@ function mergeAgentDevice(baseDevice, agentDevice) {
     ...baseDevice,
     ...agentDevice,
     source: "agent",
+    dataSources: uniqueSources(baseDevice.dataSources || baseDevice.source, "agent"),
+    sourceCollections: {
+      ...(baseDevice.sourceCollections || {}),
+      ...(agentDevice.sourceCollections || {})
+    },
+    sourceConflicts: [
+      ...(baseDevice.sourceConflicts || []),
+      ...(agentDevice.sourceConflicts || [])
+    ],
     upstreamSource: baseDevice.source,
     assetType: baseDevice.assetType || agentDevice.assetType,
     type: baseDevice.type || agentDevice.type,
@@ -211,8 +265,14 @@ export async function listDevices({ search = "", status = "" }) {
   ]);
   const term = search.trim().toLowerCase();
 
+  const hostIds = new Set(hosts.map((host) => String(host.id)));
+  const inventoryOnlyHosts = inventory
+    .filter((item) => !hostIds.has(String(item.hostId)))
+    .map(buildInventoryOnlyHost);
+  const monitoredHosts = [...hosts, ...inventoryOnlyHosts];
+
   const baseDevices = [
-    ...hosts
+    ...monitoredHosts
       .filter((host) => !metadataMap.get(host.id)?.removedAt)
       .map((host) =>
         enrichDevice(
@@ -257,7 +317,8 @@ export async function listDevices({ search = "", status = "" }) {
         device.agent?.operatingSystem,
         device.agent?.windowsVersion,
         device.agent?.environment,
-        device.agent?.group
+        device.agent?.group,
+        ...(device.dataSources || [])
       ].filter(Boolean).join(" ").toLowerCase();
       const matchesSearch =
         !term ||
@@ -269,7 +330,7 @@ export async function listDevices({ search = "", status = "" }) {
 }
 
 export async function getDeviceDetails(id) {
-  const [host, inventory, alerts, deviceSegments, metadata, automationIndicatorsByAsset, agentAsset] = await Promise.all([
+  const [storedHost, inventory, alerts, deviceSegments, metadata, automationIndicatorsByAsset, agentAsset] = await Promise.all([
     getHostById(id),
     getInventoryByHostId(id),
     getHostAlertsWithAcknowledgements(id),
@@ -279,6 +340,7 @@ export async function getDeviceDetails(id) {
     findAgentAssetById(id)
   ]);
   const automationIndicators = automationIndicatorsByAsset.get(String(id)) || [];
+  const host = storedHost || (inventory ? buildInventoryOnlyHost(inventory) : null);
 
   if (host) {
     if (metadata?.removedAt) return null;

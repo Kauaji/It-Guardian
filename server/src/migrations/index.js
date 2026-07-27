@@ -3,11 +3,13 @@ import { resolveDatabaseConfig } from "../config/environment.js";
 import { migration001RuntimeFoundation } from "./001-runtime-foundation.js";
 import { migration002UserPreferences } from "./002-user-preferences.js";
 import { migration003WindowsAgentFoundation } from "./003-windows-agent-foundation.js";
+import { migration004ExternalIntegrations } from "./004-external-integrations.js";
 
 export const migrations = [
   migration001RuntimeFoundation,
   migration002UserPreferences,
-  migration003WindowsAgentFoundation
+  migration003WindowsAgentFoundation,
+  migration004ExternalIntegrations
 ];
 
 export async function runMigrations() {

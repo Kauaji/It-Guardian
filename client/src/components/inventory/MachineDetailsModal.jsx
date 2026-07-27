@@ -9,7 +9,11 @@ import ObservationTimeline from "./ObservationTimeline.jsx";
 import PeripheralList from "./PeripheralList.jsx";
 import QRCodePrint from "./QRCodePrint.jsx";
 import AutomationIndicatorDots from "../AutomationIndicatorDots.jsx";
-import { getMachineSourceLabel, isAgentMachine } from "./agentPresentation.js";
+import {
+  getMachineSourceCollections,
+  getMachineSourceLabel,
+  isAgentMachine
+} from "./agentPresentation.js";
 
 const tabs = [
   { id: "general", label: "Geral" },
@@ -298,6 +302,10 @@ export default function MachineDetailsModal({
     [hardware.software]
   );
   const diskHealth = useMemo(() => getDiskHealth(hardware), [hardware]);
+  const sourceCollections = useMemo(
+    () => getMachineSourceCollections(machine),
+    [machine]
+  );
 
   useEffect(() => {
     if (!visibleTabs.some((tab) => tab.id === activeTab)) {
@@ -414,17 +422,17 @@ export default function MachineDetailsModal({
                     <article>
                       <Cpu size={18} />
                       <span>CPU</span>
-                      <strong>{machine.metrics.cpu}%</strong>
+                      <strong>{machine.metrics?.cpu == null ? "Nao disponivel" : `${machine.metrics.cpu}%`}</strong>
                     </article>
                     <article>
                       <MemoryStick size={18} />
                       <span>RAM</span>
-                      <strong>{machine.metrics.ram}%</strong>
+                      <strong>{machine.metrics?.ram == null ? "Nao disponivel" : `${machine.metrics.ram}%`}</strong>
                     </article>
                     <article>
                       <HardDrive size={18} />
                       <span>Disco</span>
-                      <strong>{machine.metrics.disk}%</strong>
+                      <strong>{machine.metrics?.disk == null ? "Nao disponivel" : `${machine.metrics.disk}%`}</strong>
                     </article>
                     <article>
                       <HardDrive size={18} />
@@ -466,6 +474,19 @@ export default function MachineDetailsModal({
                 <DetailItem label={isManualAsset ? "Localização" : "Usuário logado"} value={isManualAsset ? manualAsset?.location : hardware.loggedUser} />
                 <DetailItem label={isManualAsset ? "Última verificação" : "Último inventário"} value={formatDate(isManualAsset ? machine.lastPingAt : hardware.lastInventoryAt)} />
                 <DetailItem label={isManualAsset ? "MAC Address" : "Uptime"} value={isManualAsset ? hardware.macAddress : `${machine.uptimeHours} h`} />
+                {sourceCollections.map((collection) => (
+                  <DetailItem
+                    key={collection.source}
+                    label={`Ultima coleta ${collection.label}`}
+                    value={formatDate(collection.collectedAt)}
+                  />
+                ))}
+                {Boolean(machine.sourceConflicts?.length) && (
+                  <DetailItem
+                    label="Correlacao entre fontes"
+                    value="Conflito pendente de revisao"
+                  />
+                )}
               </div>
 
               {latestChange && (

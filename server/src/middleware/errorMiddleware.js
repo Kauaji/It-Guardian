@@ -8,12 +8,17 @@ export function errorHandler(error, req, res, _next) {
   const statusCode = error.statusCode || 500;
   const databaseErrorCodes = new Set(["ECONNREFUSED", "ENOTFOUND", "ETIMEDOUT", "28P01", "3D000"]);
   const isDatabaseError =
-    databaseErrorCodes.has(error.code) ||
-    /database|banco de dados|connection|connect|pool/i.test(error.message || "");
+    error.code !== "EXTERNAL_INTEGRATION_UNAVAILABLE" &&
+    (
+      databaseErrorCodes.has(error.code) ||
+      /database|banco de dados|connection|connect|pool/i.test(error.message || "")
+    );
 
   const exposeInternalMessage = process.env.NODE_ENV !== "production" || statusCode < 500;
   const message = statusCode >= 500
-    ? isDatabaseError
+    ? error.expose
+      ? error.message
+      : isDatabaseError
       ? "Erro ao conectar ao banco de dados."
       : exposeInternalMessage
         ? error.message || "Internal server error"
