@@ -23,6 +23,7 @@ administrador e o enrollment do agente com os comandos de
 
 Documentos do beta:
 
+- [Diario de bordo](docs/DIARIO-DE-BORDO.md)
 - [Instalacao e validacao da beta](docs/BETA-FUNCIONAL.md)
 - [Teste em maquinas reais](docs/TESTE-EM-MAQUINAS-REAIS.md)
 - [Backup, restore e reset](docs/BACKUP-E-RESTORE.md)
