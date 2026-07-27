@@ -7,7 +7,8 @@ import {
   findObjectsInSelectionRect,
   normalizeResponsePlan,
   normalizeSelectionRect,
-  resizeObjectGeometry
+  resizeObjectGeometry,
+  snapObjectToAlignment
 } from "../../../client/src/components/floorPlans/utils/editorGeometry.js";
 import {
   attachOpeningToWall,
@@ -95,6 +96,55 @@ describe("floor plan editor geometry rules", () => {
     assert.equal(expanded.height, 50);
     assert.equal(shrunken.width, 34);
     assert.equal(shrunken.height, 50);
+  });
+
+  it("preserves the aspect ratio when a corner is resized with Shift", () => {
+    const editor = createEditor();
+    const object = {
+      id: "desk-1",
+      objectType: "desk",
+      x: 120,
+      y: 120,
+      width: 80,
+      height: 40,
+      metadata: { parentRoomId: "room-1" }
+    };
+
+    const resized = resizeObjectGeometry({
+      object,
+      side: "south-east",
+      deltaX: 20,
+      deltaY: 2,
+      editor,
+      floor,
+      snapSize: 5,
+      preserveAspectRatio: true
+    });
+
+    assert.equal(resized.width, 100);
+    assert.equal(resized.height, 50);
+  });
+
+  it("snaps object edges to nearby objects and returns visual guides", () => {
+    const moving = { id: "moving", floorId: "floor-1", x: 20, y: 20, width: 80, height: 40 };
+    const target = { id: "target", floorId: "floor-1", x: 250, y: 180, width: 100, height: 60 };
+
+    const aligned = snapObjectToAlignment({
+      object: moving,
+      proposedX: 254,
+      proposedY: 184,
+      objects: [moving, target],
+      floor,
+      excludedIds: [moving.id],
+      threshold: 6
+    });
+
+    assert.equal(aligned.x, 250);
+    assert.equal(aligned.y, 180);
+    assert.deepEqual(aligned.guides, [
+      { axis: "x", value: 250 },
+      { axis: "y", value: 180 }
+    ]);
   });
 
   it("normalizes loaded plans and recenters desktop assets", () => {

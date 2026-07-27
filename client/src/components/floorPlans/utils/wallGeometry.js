@@ -183,7 +183,7 @@ export function findNearestWall(point, objects = [], floorId = null, maxDistance
   return nearest;
 }
 
-export function findNearestWallEndpoint(point, objects = [], floorId = null, excludeId = null, maxDistance = 22) {
+export function findNearestWallEndpoint(point, objects = [], floorId = null, excludeId = null, maxDistance = 36) {
   let nearest = null;
   for (const wall of objects) {
     if (!isWallObject(wall) || wall.id === excludeId || (floorId && wall.floorId !== floorId)) continue;
@@ -196,7 +196,7 @@ export function findNearestWallEndpoint(point, objects = [], floorId = null, exc
   return nearest;
 }
 
-export function snapPointToWallEndpoints(point, objects = [], floorId = null, excludeId = null, maxDistance = 22) {
+export function snapPointToWallEndpoints(point, objects = [], floorId = null, excludeId = null, maxDistance = 36) {
   return findNearestWallEndpoint(point, objects, floorId, excludeId, maxDistance)?.point || point;
 }
 

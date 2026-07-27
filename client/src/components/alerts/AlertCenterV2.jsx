@@ -265,6 +265,7 @@ export default function AlertCenterV2({
     return severityMatches && statusMatches;
   });
   const visibleSuggestions = suggestions
+    .filter(canCreateServiceOrderFromSuggestion)
     .filter((suggestion) => {
       if (suggestionStatusFilter === "all") return true;
       return suggestion.status === suggestionStatusFilter;
@@ -1259,8 +1260,6 @@ export default function AlertCenterV2({
                 <select value={suggestionStatusFilter} onChange={(event) => setSuggestionStatusFilter(event.target.value)}>
                   <option value="all">Todas as sugestões</option>
                   <option value="pending">Pendentes</option>
-                  <option value="accepted">Aceitas</option>
-                  <option value="rejected">Recusadas</option>
                   <option value="observed_resolved">Observadas como normalizadas</option>
                   <option value="observed_persistent">Observadas como persistentes</option>
                   <option value="validation_cancelled">Observações canceladas</option>

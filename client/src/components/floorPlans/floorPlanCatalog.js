@@ -29,15 +29,19 @@ export const FLOOR_PLAN_TOOLS = [
   { id: "segment-brush", label: "Pincel de segmento", icon: Paintbrush }
 ];
 
+export const FLOOR_PLAN_DIVIDER_ITEM = {
+  id: "divider",
+  label: "Divisoria",
+  icon: Minus,
+  category: "structure",
+  objectType: "divider",
+  width: 140,
+  height: 8,
+  color: "#94a3b8",
+  metadata: { wallHeight: 82 }
+};
+
 export const FLOOR_PLAN_CATALOG = [
-  {
-    id: "structure",
-    label: "Estrutura",
-    items: [
-      { id: "wall", label: "Parede", icon: Minus, category: "structure", objectType: "wall", width: 180, height: 12, color: "#64748b", metadata: { wallHeight: 110 } },
-      { id: "divider", label: "Divisoria", icon: Minus, category: "structure", objectType: "divider", width: 140, height: 8, color: "#94a3b8", metadata: { wallHeight: 82 } }
-    ]
-  },
   {
     id: "openings",
     label: "Portas e janelas",
@@ -53,7 +57,7 @@ export const FLOOR_PLAN_CATALOG = [
     id: "furniture",
     label: "Moveis",
     items: [
-      { id: "desk", label: "Mesa", icon: LampDesk, category: "furniture", objectType: "desk", width: 110, height: 64, color: "#b08968" },
+      { id: "desk", label: "Mesa", icon: LampDesk, category: "furniture", objectType: "desk", width: 96, height: 54, color: "#b08968" },
       { id: "meeting-table", label: "Mesa de reuniao", icon: LampDesk, category: "furniture", objectType: "meeting_table", width: 150, height: 78, color: "#a16207" },
       { id: "chair", label: "Cadeira", icon: Armchair, category: "furniture", objectType: "chair", width: 42, height: 42, color: "#64748b" },
       { id: "rack-furniture", label: "Armario", icon: Box, category: "furniture", objectType: "cabinet", width: 82, height: 52, color: "#8b5e34" },
@@ -65,8 +69,8 @@ export const FLOOR_PLAN_CATALOG = [
     label: "Ativos TI",
     items: [
       { id: "pc", label: "PC", icon: Monitor, category: "asset", objectType: "pc", width: 82, height: 58, color: "#2563eb" },
-      { id: "notebook", label: "Notebook", icon: Laptop, category: "asset", objectType: "notebook", width: 78, height: 48, color: "#2563eb" },
-      { id: "printer", label: "Impressora", icon: Printer, category: "asset", objectType: "printer", width: 84, height: 56, color: "#475569" },
+      { id: "notebook", label: "Notebook", icon: Laptop, category: "asset", objectType: "notebook", width: 56, height: 36, color: "#2563eb" },
+      { id: "printer", label: "Impressora", icon: Printer, category: "asset", objectType: "printer", width: 58, height: 40, color: "#475569" },
       { id: "switch", label: "Switch", icon: Network, category: "asset", objectType: "switch", width: 96, height: 36, color: "#334155" },
       { id: "rack", label: "Rack 12U", icon: Box, category: "asset", objectType: "rack", width: 70, height: 92, color: "#1f2937" },
       { id: "access-point", label: "Access Point", icon: Wifi, category: "asset", objectType: "access_point", width: 62, height: 62, color: "#64748b" },
@@ -104,8 +108,8 @@ export const FLOOR_PLAN_CATALOG = [
     id: "brushes",
     label: "Pinceis",
     items: [
-      { id: "group-zone", label: "Area de grupo", icon: Paintbrush, category: "zone", zoneType: "group", width: 280, height: 180, color: "#8b5cf6" },
-      { id: "segment-zone", label: "Area de segmento", icon: Paintbrush, category: "zone", zoneType: "segment", width: 210, height: 140, color: "#22c55e" }
+      { id: "group-zone", label: "Pincel de grupo", icon: Paintbrush, category: "zone", zoneType: "group", width: 280, height: 180, color: "#8b5cf6" },
+      { id: "segment-zone", label: "Pincel de segmento", icon: Paintbrush, category: "zone", zoneType: "segment", width: 210, height: 140, color: "#22c55e" }
     ]
   }
 ];

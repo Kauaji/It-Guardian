@@ -327,7 +327,7 @@ export async function remove(req, res, next) {
       });
     }
 
-    const serviceOrder = await deleteServiceOrder(req.params.id);
+    const serviceOrder = await deleteServiceOrder(req.params.id, req.user);
 
     await addLog({
       type: "service_order_delete",

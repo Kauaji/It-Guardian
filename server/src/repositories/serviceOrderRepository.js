@@ -509,6 +509,15 @@ async function applyAutoPriority(row, settings) {
     newValue: nextPriority,
     user: { name: "Sistema" }
   });
+  await addServiceOrderAssetHistory({
+    assetId: row.asset_id,
+    serviceOrder: row,
+    eventType: "auto_priority",
+    message: "Prioridade automática alterada por tempo.",
+    oldValue: row.priority,
+    newValue: nextPriority,
+    user: { name: "Sistema" }
+  });
 
   return result.rows[0] || row;
 }
@@ -972,6 +981,29 @@ export async function addServiceOrderHistory({ serviceOrderId, eventType, messag
   return fromHistoryRow(result.rows[0]);
 }
 
+async function addServiceOrderAssetHistory({
+  assetId,
+  serviceOrder,
+  eventType,
+  message,
+  oldValue,
+  newValue,
+  user,
+  db = query
+}) {
+  if (!assetId) return null;
+  return addAssetHistory({
+    assetId,
+    eventType: `service_order_${eventType}`,
+    message: `OS ${serviceOrder.number}: ${message}`,
+    oldValue: oldValue ?? null,
+    newValue: newValue ?? null,
+    userId: user?.id || null,
+    userName: user?.name || null,
+    db
+  });
+}
+
 function isDuplicateServiceOrderNumberError(error) {
   return error?.code === "23505" &&
     /service_orders.*number|idx_service_orders_number_unique|number/i.test(
@@ -1081,6 +1113,15 @@ export async function createServiceOrder({ payload, user, db = query }) {
     user,
     db
   });
+  await addServiceOrderAssetHistory({
+    assetId: insertedRow.asset_id,
+    serviceOrder: insertedRow,
+    eventType: "created",
+    message: `criada no setor ${sector.sectorName}.`,
+    newValue: payload.title,
+    user,
+    db
+  });
 
   return fromOrderRow(insertedRow, [createdHistory], items);
 }
@@ -1159,7 +1200,9 @@ export async function updateServiceOrder({ id, payload, user }) {
       nextStatus,
       payload.priority ?? current.priority,
       payload.category ?? current.category,
-      payload.assetId ?? current.assetId,
+      Object.prototype.hasOwnProperty.call(payload, "assetId")
+        ? payload.assetId || null
+        : current.assetId,
       payload.problemType ?? current.problemType,
       payload.environmentId ?? current.environmentId,
       payload.environmentName ?? current.environmentName,
@@ -1199,25 +1242,73 @@ export async function updateServiceOrder({ id, payload, user }) {
     await replaceServiceOrderItems(id, nextItems);
   }
 
+  const updatedRow = result.rows[0];
+  const nextAssetId = updatedRow.asset_id || null;
   const changes = [
+    ["title", "Título alterado.", current.title, payload.title],
+    ["description", "Descrição alterada.", current.description, payload.description],
+    ["status", "Status alterado.", current.status, payload.status],
     ["priority", "Prioridade alterada.", current.priority, payload.priority],
-    ["assigned", "Tecnico responsavel alterado.", current.assignedTechnicianName, payload.assignedTechnicianName],
-    ["asset", "Maquina vinculada a Ordem de Servico.", current.assetId, payload.assetId],
-    ["backup", "Maquina Backup vinculada a OS.", current.backupAssetId, payload.backupAssetId],
-    ["auto_priority", "Prioridade automatica alterada.", current.autoPriorityEnabled, payload.autoPriorityEnabled],
-    ["diagnosis", "Diagnostico atualizado.", current.diagnosis, payload.diagnosis],
-    ["service_performed", "Servico realizado atualizado.", current.servicePerformed, payload.servicePerformed],
-    ["attendance_notes", "Observacoes do atendimento atualizadas.", current.attendanceNotes, payload.attendanceNotes],
+    ["category", "Categoria alterada.", current.category, payload.category],
+    ["problem_type", "Tipo de problema alterado.", current.problemType, payload.problemType],
+    ["assigned", "Técnico responsável alterado.", current.assignedTechnicianName, payload.assignedTechnicianName],
+    ["asset", "Máquina vinculada à Ordem de Serviço.", current.assetId, Object.prototype.hasOwnProperty.call(payload, "assetId") ? nextAssetId : undefined],
+    ["backup", "Máquina Backup vinculada à OS.", current.backupAssetId, payload.backupAssetId],
+    ["environment", "Ambiente alterado.", current.environmentName, payload.environmentName],
+    ["location", "Localização alterada.", current.location, payload.location],
+    ["source", "Origem alterada.", current.source, payload.source],
+    ["auto_priority", "Prioridade automática alterada.", current.autoPriorityEnabled, payload.autoPriorityEnabled],
+    ["work_notes", "Notas de trabalho atualizadas.", current.workNotes, payload.workNotes],
+    ["diagnosis", "Diagnóstico atualizado.", current.diagnosis, payload.diagnosis],
+    ["solution", "Solução atualizada.", current.solution, payload.solution],
+    ["notes", "Observações da OS atualizadas.", current.notes, payload.notes],
+    ["service_performed", "Serviço realizado atualizado.", current.servicePerformed, payload.servicePerformed],
+    ["attendance_notes", "Observações do atendimento atualizadas.", current.attendanceNotes, payload.attendanceNotes],
     ["service_value", "Valor do serviço alterado.", current.serviceValue, payload.serviceValue !== undefined ? serviceValue : undefined],
     ["sector", `Setor alterado de ${current.sectorName || generalSector.name} para ${sector.sectorName}.`, current.sectorName, sector.sectorName],
-    ["service", "Servico da OS alterado.", current.serviceName || current.serviceCode, service.serviceName || service.serviceCode],
-    ["parts", `Pecas trocadas registradas na OS ${current.number}.`, current.partsUsed, hasItemsPayload ? undefined : payload.partsUsed]
+    ["service", "Serviço da OS alterado.", current.serviceName || current.serviceCode, service.serviceName || service.serviceCode],
+    ["parts", "Peças trocadas registradas.", current.partsUsed, hasItemsPayload ? undefined : payload.partsUsed]
   ];
 
   for (const [eventType, message, oldValue, newValue] of changes) {
-    if (newValue !== undefined && `${oldValue || ""}` !== `${newValue || ""}`) {
+    if (newValue !== undefined && String(oldValue ?? "") !== String(newValue ?? "")) {
       await addServiceOrderHistory({ serviceOrderId: id, eventType, message, oldValue, newValue, user });
+      if (eventType !== "asset") {
+        await addServiceOrderAssetHistory({
+          assetId: nextAssetId,
+          serviceOrder: updatedRow,
+          eventType,
+          message,
+          oldValue,
+          newValue,
+          user
+        });
+      }
     }
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(payload, "assetId")
+    && String(current.assetId || "") !== String(nextAssetId || "")
+  ) {
+    await addServiceOrderAssetHistory({
+      assetId: current.assetId,
+      serviceOrder: updatedRow,
+      eventType: "unlinked",
+      message: "desvinculada desta máquina.",
+      oldValue: current.assetId,
+      newValue: nextAssetId,
+      user
+    });
+    await addServiceOrderAssetHistory({
+      assetId: nextAssetId,
+      serviceOrder: updatedRow,
+      eventType: "linked",
+      message: "vinculada a esta máquina.",
+      oldValue: current.assetId,
+      newValue: nextAssetId,
+      user
+    });
   }
 
   if (itemsChanged) {
@@ -1231,39 +1322,19 @@ export async function updateServiceOrder({ id, payload, user }) {
       newValue,
       user
     });
-  }
-
-  if (
-    payload.partsUsed !== undefined &&
-    !hasItemsPayload &&
-    `${current.partsUsed || ""}` !== `${payload.partsUsed || ""}` &&
-    (payload.assetId || current.assetId)
-  ) {
-    await addAssetHistory({
-      assetId: payload.assetId || current.assetId,
-      eventType: "parts",
-      message: `Peca trocada na OS ${current.number}: ${payload.partsUsed}`,
-      oldValue: current.partsUsed,
-      newValue: payload.partsUsed,
-      userId: user?.id || null,
-      userName: user?.name || null
-    });
-  }
-
-  if (itemsChanged && (payload.assetId || current.assetId)) {
-    await addAssetHistory({
-      assetId: payload.assetId || current.assetId,
-      eventType: "parts",
-      message: `Pecas trocadas na OS ${current.number}: ${formatItemsForHistory(nextItems)}`,
-      oldValue: formatItemsForHistory(current.items || []),
-      newValue: formatItemsForHistory(nextItems),
-      userId: user?.id || null,
-      userName: user?.name || null
+    await addServiceOrderAssetHistory({
+      assetId: nextAssetId,
+      serviceOrder: updatedRow,
+      eventType: "items",
+      message: "Peças e valores atualizados.",
+      oldValue,
+      newValue,
+      user
     });
   }
 
   return {
-    ...fromOrderRow(result.rows[0], await listServiceOrderHistory(id), await listServiceOrderItems(id))
+    ...fromOrderRow(updatedRow, await listServiceOrderHistory(id), await listServiceOrderItems(id))
   };
 }
 
@@ -1294,16 +1365,33 @@ export async function updateServiceOrderStatus({ id, status, user }) {
     newValue: status,
     user
   });
+  await addServiceOrderAssetHistory({
+    assetId: current.assetId,
+    serviceOrder: result.rows[0],
+    eventType: status === finalStatus ? "closed" : status === initialStatus ? "reopened" : "status",
+    message: status === finalStatus ? "finalizada." : status === initialStatus ? "reaberta." : "status alterado.",
+    oldValue: current.status,
+    newValue: status,
+    user
+  });
 
   return {
     ...fromOrderRow(result.rows[0], await listServiceOrderHistory(id), await listServiceOrderItems(id))
   };
 }
 
-export async function deleteServiceOrder(id) {
+export async function deleteServiceOrder(id, user = null) {
   const current = await findServiceOrderById(id);
   if (!current) return null;
 
+  await addServiceOrderAssetHistory({
+    assetId: current.assetId,
+    serviceOrder: current,
+    eventType: "deleted",
+    message: "excluída do sistema.",
+    oldValue: current.status,
+    user
+  });
   await query("DELETE FROM service_orders WHERE id = $1", [id]);
   return current;
 }

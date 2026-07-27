@@ -6,7 +6,16 @@ export const FINE_OBJECT_SNAP_SIZE = 5;
 export const OBJECT_MIN_SIZE = { width: 34, height: 24 };
 
 const TABLE_OBJECT_TYPES = new Set(["desk", "table", "meeting_table", "meeting-table"]);
-const DESKTOP_OBJECT_TYPES = new Set(["pc", "desktop", "computer", "workstation", "notebook", "laptop"]);
+const DESKTOP_OBJECT_TYPES = new Set([
+  "pc",
+  "desktop",
+  "computer",
+  "workstation",
+  "notebook",
+  "laptop",
+  "printer",
+  "multifunction_printer"
+]);
 const POWER_ACCESSORY_TYPES = new Set(["stabilizer_600", "stabilizer_1000", "extension_cord", "power_strip"]);
 
 export function cloneEditor(editor) {
@@ -107,6 +116,66 @@ export function getObjectBounds(object) {
     y: Math.min(...ys),
     width: Math.max(...xs) - Math.min(...xs),
     height: Math.max(...ys) - Math.min(...ys)
+  };
+}
+
+export function snapObjectToAlignment({
+  object,
+  proposedX,
+  proposedY,
+  objects = [],
+  floor = null,
+  excludedIds = [],
+  threshold = 6
+}) {
+  const { width, height } = getObjectSize(object);
+  const x = Number(proposedX || 0);
+  const y = Number(proposedY || 0);
+  const excluded = new Set(excludedIds);
+  const movingAnchors = {
+    x: [x, x + width / 2, x + width],
+    y: [y, y + height / 2, y + height]
+  };
+  const candidateAnchors = { x: [], y: [] };
+
+  for (const candidate of objects) {
+    if (!candidate || excluded.has(candidate.id)) continue;
+    if (floor?.id && candidate.floorId && candidate.floorId !== floor.id) continue;
+    const bounds = getObjectBounds(candidate);
+    candidateAnchors.x.push(bounds.x, bounds.x + bounds.width / 2, bounds.x + bounds.width);
+    candidateAnchors.y.push(bounds.y, bounds.y + bounds.height / 2, bounds.y + bounds.height);
+  }
+
+  if (floor) {
+    const floorWidth = Number(floor.width || DEFAULT_PLAN_SIZE.width);
+    const floorHeight = Number(floor.height || DEFAULT_PLAN_SIZE.height);
+    candidateAnchors.x.push(0, floorWidth / 2, floorWidth);
+    candidateAnchors.y.push(0, floorHeight / 2, floorHeight);
+  }
+
+  const findBest = (axis) => {
+    let best = null;
+    for (const movingValue of movingAnchors[axis]) {
+      for (const candidateValue of candidateAnchors[axis]) {
+        const delta = candidateValue - movingValue;
+        if (Math.abs(delta) > threshold) continue;
+        if (!best || Math.abs(delta) < Math.abs(best.delta)) {
+          best = { delta, value: candidateValue };
+        }
+      }
+    }
+    return best;
+  };
+
+  const horizontal = findBest("x");
+  const vertical = findBest("y");
+  return {
+    x: x + (horizontal?.delta || 0),
+    y: y + (vertical?.delta || 0),
+    guides: [
+      ...(horizontal ? [{ axis: "x", value: horizontal.value }] : []),
+      ...(vertical ? [{ axis: "y", value: vertical.value }] : [])
+    ]
   };
 }
 
@@ -265,21 +334,33 @@ export function centerLinkedAssetsOnTable(objects, table) {
   });
 }
 
-export function resizeObjectGeometry({ object, side, deltaX, deltaY, editor, floor, snapSize }) {
+export function resizeObjectGeometry({ object, side, deltaX, deltaY, editor, floor, snapSize, preserveAspectRatio = false }) {
   const current = getObjectSize(object);
+  const horizontalSide = side.includes("east") ? "east" : side.includes("west") ? "west" : null;
+  const verticalSide = side.includes("south") ? "south" : side.includes("north") ? "north" : null;
   let nextX = Number(object.x || 0);
   let nextY = Number(object.y || 0);
   let nextWidth = current.width;
   let nextHeight = current.height;
-  if (side === "east") nextWidth = current.width + deltaX;
-  if (side === "west") {
+  if (horizontalSide === "east") nextWidth = current.width + deltaX;
+  if (horizontalSide === "west") {
     nextX = Number(object.x || 0) + deltaX;
     nextWidth = current.width - deltaX;
   }
-  if (side === "south") nextHeight = current.height + deltaY;
-  if (side === "north") {
+  if (verticalSide === "south") nextHeight = current.height + deltaY;
+  if (verticalSide === "north") {
     nextY = Number(object.y || 0) + deltaY;
     nextHeight = current.height - deltaY;
+  }
+
+  if (preserveAspectRatio && horizontalSide && verticalSide) {
+    const ratio = current.width / Math.max(1, current.height);
+    const widthScale = Math.abs(nextWidth - current.width) / Math.max(1, current.width);
+    const heightScale = Math.abs(nextHeight - current.height) / Math.max(1, current.height);
+    if (widthScale >= heightScale) nextHeight = nextWidth / ratio;
+    else nextWidth = nextHeight * ratio;
+    if (horizontalSide === "west") nextX = Number(object.x || 0) + current.width - nextWidth;
+    if (verticalSide === "north") nextY = Number(object.y || 0) + current.height - nextHeight;
   }
   nextWidth = Math.max(OBJECT_MIN_SIZE.width, snap(nextWidth, snapSize));
   nextHeight = Math.max(OBJECT_MIN_SIZE.height, snap(nextHeight, snapSize));
