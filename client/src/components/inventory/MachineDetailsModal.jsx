@@ -9,6 +9,7 @@ import ObservationTimeline from "./ObservationTimeline.jsx";
 import PeripheralList from "./PeripheralList.jsx";
 import QRCodePrint from "./QRCodePrint.jsx";
 import AutomationIndicatorDots from "../AutomationIndicatorDots.jsx";
+import { getMachineSourceLabel, isAgentMachine } from "./agentPresentation.js";
 
 const tabs = [
   { id: "general", label: "Geral" },
@@ -17,6 +18,7 @@ const tabs = [
   { id: "software", label: "Softwares" },
   { id: "network", label: "Rede" },
   { id: "peripherals", label: "Periféricos" },
+  { id: "agent", label: "Agente IT Guardian" },
   { id: "notes", label: "Observações" },
   { id: "history", label: "Histórico" }
 ];
@@ -39,6 +41,27 @@ function formatDate(value) {
     hour: "2-digit",
     minute: "2-digit"
   }).format(new Date(value));
+}
+
+function formatBytes(value) {
+  const bytes = Number(value);
+  if (!Number.isFinite(bytes) || bytes < 0) return "Nao informado";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let amount = bytes;
+  let unitIndex = 0;
+  while (amount >= 1024 && unitIndex < units.length - 1) {
+    amount /= 1024;
+    unitIndex += 1;
+  }
+  return `${amount.toFixed(unitIndex >= 3 ? 1 : 0)} ${units[unitIndex]}`;
+}
+
+function formatDuration(value) {
+  const seconds = Number(value);
+  if (!Number.isFinite(seconds) || seconds < 0) return "Nao informado";
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  return days > 0 ? `${days} d ${hours} h` : `${hours} h`;
 }
 
 function buildMetricAlert({ metric, label, value, warningLimit = 70, criticalLimit = 85 }) {
@@ -252,6 +275,8 @@ export default function MachineDetailsModal({
   const hardware = machine?.hardware || {};
   const manualAsset = machine?.manualAsset;
   const isManualAsset = machine?.source === "manual";
+  const isAgentAsset = isAgentMachine(machine);
+  const agent = machine?.agent;
   const inMaintenance = Boolean(machine?.maintenance) || isMaintenanceSegmentName(machine?.segmentName);
   const backupInUse = machine?.backupStatus === "in_use";
   const latestChange = useMemo(
@@ -261,8 +286,12 @@ export default function MachineDetailsModal({
   const activeAlerts = useMemo(() => buildActiveAlerts(machine), [machine]);
   const resolvedAlerts = useMemo(() => buildResolvedAlerts(machine, hardware), [hardware, machine]);
   const visibleTabs = useMemo(
-    () => tabs.filter((tab) => tab.id !== "alerts" || activeAlerts.length > 0 || resolvedAlerts.length > 0),
-    [activeAlerts.length, resolvedAlerts.length]
+    () => tabs.filter((tab) => {
+      if (tab.id === "alerts") return activeAlerts.length > 0 || resolvedAlerts.length > 0;
+      if (tab.id === "agent") return isAgentAsset;
+      return true;
+    }),
+    [activeAlerts.length, isAgentAsset, resolvedAlerts.length]
   );
   const softwareRows = useMemo(
     () => (hardware.software || []).map(normalizeSoftware),
@@ -296,7 +325,9 @@ export default function MachineDetailsModal({
       <section className="asset-modal" role="dialog" aria-modal="true" aria-label="Detalhes do ativo">
         <header className="asset-modal-header">
           <div>
-            <span className="asset-eyebrow">{isManualAsset ? "Ativo de rede manual" : "Inventário OCS"}</span>
+            <span className="asset-eyebrow">
+              {isAgentAsset ? "Maquina real · Agente IT Guardian" : isManualAsset ? "Ativo de rede manual" : "Inventário OCS"}
+            </span>
             <h2>{alias || machine.name}</h2>
             <p>{machine.name} - {machine.ip}</p>
             <AutomationIndicatorDots indicators={machine.automationIndicators} maxVisible={4} />
@@ -342,7 +373,25 @@ export default function MachineDetailsModal({
                   <span>Status</span>
                   <strong>{machine.statusLabel}</strong>
                 </article>
-                {isManualAsset ? (
+                {isAgentAsset ? (
+                  <>
+                    <article>
+                      <Clock3 size={18} />
+                      <span>Ultima comunicacao</span>
+                      <strong>{formatDate(agent?.lastSeenAt || machine.lastSeenAt)}</strong>
+                    </article>
+                    <article>
+                      <Network size={18} />
+                      <span>Origem</span>
+                      <strong>Agent</strong>
+                    </article>
+                    <article>
+                      <HardDrive size={18} />
+                      <span>Disco livre</span>
+                      <strong>{formatBytes(agent?.diskFreeBytes)}</strong>
+                    </article>
+                  </>
+                ) : isManualAsset ? (
                   <>
                     <article>
                       <Clock3 size={18} />
@@ -406,9 +455,10 @@ export default function MachineDetailsModal({
               </div>
 
               <div className="detail-grid">
-                <DetailItem label={isManualAsset ? "Nome cadastrado" : "Hostname OCS"} value={machine.name} />
+                <DetailItem label={isAgentAsset ? "Hostname" : isManualAsset ? "Nome cadastrado" : "Hostname OCS"} value={machine.name} />
                 <DetailItem label="Nome fantasia" value={alias || machine.name} />
                 <DetailItem label="Tipo" value={assetTypeLabel(machine.assetType)} />
+                <DetailItem label="Origem" value={getMachineSourceLabel(machine)} />
                 <DetailItem label="IP" value={machine.ip} />
                 <DetailItem label={isManualAsset ? "Hostname" : "Sistema operacional"} value={isManualAsset ? manualAsset?.hostname : hardware.os} />
                 <DetailItem label="Arquitetura" value={hardware.architecture} />
@@ -426,6 +476,43 @@ export default function MachineDetailsModal({
               )}
 
               <QRCodePrint machine={machine} alias={alias} />
+            </section>
+          )}
+
+          {activeTab === "agent" && isAgentAsset && (
+            <section className="asset-tab-content agent-details-section">
+              <div className={`agent-status-summary ${machine.status === "online" ? "online" : "offline"}`}>
+                <span className="agent-status-pulse" aria-hidden="true" />
+                <div>
+                  <strong>{machine.status === "online" ? "Agente comunicando" : "Sem heartbeat no intervalo esperado"}</strong>
+                  <span>Ultima comunicacao: {formatDate(agent?.lastSeenAt || machine.lastSeenAt)}</span>
+                </div>
+              </div>
+              <div className="detail-grid agent-details-grid">
+                <DetailItem label="Origem" value="Agent" />
+                <DetailItem label="Versao do agente" value={agent?.agentVersion} />
+                <DetailItem label="Hostname" value={agent?.hostname || machine.name} />
+                <DetailItem label="IP local" value={agent?.localIp || machine.ip} />
+                <DetailItem label="MAC Address" value={agent?.macAddress} />
+                <DetailItem label="Sistema operacional" value={agent?.operatingSystem} />
+                <DetailItem label="Versao do Windows" value={agent?.windowsVersion} />
+                <DetailItem label="Arquitetura" value={agent?.osArchitecture} />
+                <DetailItem label="CPU" value={agent?.cpuModel} />
+                <DetailItem label="RAM total" value={formatBytes(agent?.memoryTotalBytes)} />
+                <DetailItem label="Disco total" value={formatBytes(agent?.diskTotalBytes)} />
+                <DetailItem label="Disco livre" value={formatBytes(agent?.diskFreeBytes)} />
+                <DetailItem label="Uptime" value={formatDuration(agent?.uptimeSeconds)} />
+                <DetailItem label="Intervalo" value={agent?.intervalSeconds ? `${agent.intervalSeconds} s` : null} />
+                <DetailItem label="Coletado em" value={formatDate(agent?.collectedAt)} />
+                <DetailItem label="Usuario local" value={agent?.loggedUser || "Coleta desativada"} />
+                <DetailItem label="Ambiente" value={agent?.environment} />
+                <DetailItem label="Grupo informado" value={agent?.group} />
+                <DetailItem label="Segmento informado" value={agent?.segment} />
+              </div>
+              <div className="network-card agent-privacy-note">
+                <KeyRound size={18} />
+                <span>O agente envia somente inventario tecnico permitido. Ele nao executa comandos remotos nem coleta arquivos, senhas ou capturas de tela.</span>
+              </div>
             </section>
           )}
 
@@ -497,7 +584,7 @@ export default function MachineDetailsModal({
                 <DetailItem label="MAC Address" value={hardware.macAddress} />
                 <DetailItem label="Hostname" value={manualAsset?.hostname} />
                 <DetailItem label="Modo de identificação" value={manualAsset?.identificationMode} />
-                {!isManualAsset && (
+                {!isManualAsset && !isAgentAsset && machine.metrics && (
                   <>
                     <DetailItem label="Entrada" value={`${machine.metrics.networkInMbps} Mbps`} />
                     <DetailItem label="Saída" value={`${machine.metrics.networkOutMbps} Mbps`} />
@@ -506,7 +593,13 @@ export default function MachineDetailsModal({
               </div>
               <div className="network-card">
                 <Network size={18} />
-                <span>{isManualAsset ? "Status preparado para ping real; o MVP usa simulação separada no backend." : "Telemetria em tempo real via Zabbix"}</span>
+                <span>
+                  {isAgentAsset
+                    ? "IP e MAC coletados localmente pelo Agente IT Guardian. Tráfego de rede não é coletado."
+                    : isManualAsset
+                      ? "Status preparado para ping real; o MVP usa simulação separada no backend."
+                      : "Telemetria em tempo real via Zabbix"}
+                </span>
               </div>
             </section>
           )}

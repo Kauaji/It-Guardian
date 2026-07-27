@@ -62,3 +62,10 @@ export async function withTransaction(operation) {
     client.release();
   }
 }
+
+export async function closeDatabase() {
+  if (!poolPromise) return;
+  const pool = await poolPromise;
+  await pool.end();
+  poolPromise = undefined;
+}

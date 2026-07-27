@@ -6006,6 +6006,25 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
   line-height: 1.25;
 }
 
+.machine-source-badge,
+.agent-origin-badge {
+  width: fit-content;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 7px;
+  background: var(--surface-soft);
+  color: var(--text-muted);
+  font-size: 10.5px;
+  font-weight: 850;
+  line-height: 1.25;
+}
+
+.agent-origin-badge {
+  border-color: color-mix(in srgb, #0f8c67 30%, var(--border));
+  background: color-mix(in srgb, #0f8c67 11%, var(--surface));
+  color: #087558;
+}
+
 .backup-badge {
   width: fit-content;
   border: 1px solid color-mix(in srgb, #f59e0b 45%, var(--border));
@@ -6114,6 +6133,53 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
 
 .machine-metrics strong.danger {
   color: #dc2626;
+}
+
+.agent-card-facts {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.8fr);
+  gap: 5px;
+}
+
+.agent-card-facts > div {
+  min-width: 0;
+  border: 1px solid color-mix(in srgb, #0f8c67 18%, var(--border));
+  border-radius: 6px;
+  padding: 4px 6px;
+  background: color-mix(in srgb, #0f8c67 7%, var(--surface-soft));
+}
+
+.agent-card-facts span,
+.agent-card-facts strong {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.agent-card-facts span {
+  color: var(--text-soft);
+  font-size: 9.8px;
+  font-weight: 800;
+}
+
+.agent-card-facts strong {
+  overflow: hidden;
+  color: var(--text-strong);
+  font-size: 10.8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-heartbeat-warning {
+  grid-column: 1 / -1;
+  border: 1px solid rgba(217, 119, 6, 0.26);
+  border-radius: 6px;
+  padding: 4px 6px;
+  background: rgba(217, 119, 6, 0.1);
+  color: #9a5a00 !important;
+  font-size: 10.5px !important;
+  font-weight: 850;
 }
 
 .machine-card-actions {
@@ -7204,6 +7270,55 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 5px;
+}
+
+.agent-status-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  background: var(--surface-soft);
+}
+
+.agent-status-summary > div {
+  display: grid;
+  gap: 3px;
+}
+
+.agent-status-summary strong {
+  color: var(--text-strong);
+}
+
+.agent-status-summary span {
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.agent-status-pulse {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #16a34a;
+  box-shadow: 0 0 0 5px rgba(22, 163, 74, 0.13);
+}
+
+.agent-status-summary.offline .agent-status-pulse {
+  background: #d97706;
+  box-shadow: 0 0 0 5px rgba(217, 119, 6, 0.13);
+}
+
+.agent-details-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.agent-privacy-note {
+  display: flex;
+  align-items: center;
+  gap: 9px;
 }
 
 .network-asset-facts div {

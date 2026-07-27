@@ -10,6 +10,7 @@ import {
   listDeviceSegmentMap
 } from "../repositories/segmentRepository.js";
 import { listAutomationIndicatorsByAssetIds } from "../repositories/automationIndicatorRepository.js";
+import { findAgentAssetById, listAgentAssets } from "../repositories/agentRepository.js";
 
 function normalizeStatus(status) {
   return {
@@ -116,17 +117,101 @@ function buildManualDevice(asset, segment, metadata) {
   };
 }
 
+function agentStatus(asset) {
+  const configuredThreshold = Math.max(60, Number(process.env.AGENT_OFFLINE_AFTER_SECONDS || 180));
+  const thresholdSeconds = Math.max(configuredThreshold, Number(asset.intervalSeconds || 60) * 3);
+  return Date.now() - new Date(asset.lastSeenAt).getTime() <= thresholdSeconds * 1000
+    ? "online"
+    : "offline";
+}
+
+function buildAgentDevice(asset, segment, metadata) {
+  const status = agentStatus(asset);
+  const diskUsedPercent =
+    asset.diskTotalBytes > 0 && asset.diskFreeBytes != null
+      ? Math.round(((asset.diskTotalBytes - asset.diskFreeBytes) / asset.diskTotalBytes) * 100)
+      : null;
+
+  return {
+    id: asset.id,
+    name: asset.machineAlias || asset.hostname,
+    source: "agent",
+    assetType: metadata?.assetType || "desktop",
+    type: metadata?.assetType || "desktop",
+    ip: asset.localIp || "Nao informado",
+    status,
+    statusLabel: normalizeStatus(status),
+    segmentId: segment?.segmentId || DEFAULT_SEGMENT_ID,
+    segmentName: segment?.segmentName || asset.segment || DEFAULT_SEGMENT_NAME,
+    segmentGroupId: segment?.segmentGroupId || "",
+    ...backupMetadata(metadata),
+    uptimeHours: asset.uptimeSeconds == null ? null : Math.floor(asset.uptimeSeconds / 3600),
+    metrics: diskUsedPercent == null ? null : { cpu: null, ram: null, disk: diskUsedPercent },
+    history: [],
+    lastSeenAt: asset.lastSeenAt,
+    agent: asset,
+    hardware: {
+      hostId: asset.id,
+      manufacturer: "Coletado pelo agente",
+      model: asset.cpuModel || "Nao informado",
+      assetTag: null,
+      serialNumber: null,
+      loggedUser: asset.loggedUser || "Coleta desativada",
+      macAddress: asset.macAddress,
+      os: [asset.operatingSystem, asset.windowsVersion, asset.osArchitecture].filter(Boolean).join(" - "),
+      cpuModel: asset.cpuModel,
+      cpuCores: null,
+      ramGb: asset.memoryTotalBytes == null
+        ? null
+        : Math.round((asset.memoryTotalBytes / 1024 ** 3) * 10) / 10,
+      disks: asset.diskTotalBytes == null
+        ? []
+        : [{
+            name: "Disco do sistema",
+            totalBytes: asset.diskTotalBytes,
+            freeBytes: asset.diskFreeBytes
+          }],
+      peripherals: [],
+      changeHistory: [],
+      software: [],
+      lastInventoryAt: asset.collectedAt
+    }
+  };
+}
+
+function mergeAgentDevice(baseDevice, agentDevice) {
+  if (!baseDevice) return agentDevice;
+  return {
+    ...baseDevice,
+    ...agentDevice,
+    source: "agent",
+    upstreamSource: baseDevice.source,
+    assetType: baseDevice.assetType || agentDevice.assetType,
+    type: baseDevice.type || agentDevice.type,
+    segmentId: baseDevice.segmentId || agentDevice.segmentId,
+    segmentName: baseDevice.segmentName || agentDevice.segmentName,
+    segmentGroupId: baseDevice.segmentGroupId || agentDevice.segmentGroupId,
+    hardware: {
+      ...baseDevice.hardware,
+      ...agentDevice.hardware,
+      peripherals: baseDevice.hardware?.peripherals || [],
+      software: baseDevice.hardware?.software || []
+    }
+  };
+}
+
 export async function listDevices({ search = "", status = "" }) {
-  const [hosts, inventory, deviceSegments, metadataMap, manualAssets] = await Promise.all([
+  const [hosts, inventory, deviceSegments, metadataMap, manualAssets, agentAssets] = await Promise.all([
     getHosts(),
     getInventory(),
     listDeviceSegmentMap(),
     listDeviceMetadataMap(),
-    listManualAssets()
+    listManualAssets(),
+    listAgentAssets()
   ]);
   const term = search.trim().toLowerCase();
 
-  const devices = [
+  const baseDevices = [
     ...hosts
       .filter((host) => !metadataMap.get(host.id)?.removedAt)
       .map((host) =>
@@ -139,6 +224,12 @@ export async function listDevices({ search = "", status = "" }) {
       ),
     ...manualAssets.map((asset) => buildManualDevice(asset, deviceSegments.get(asset.id), metadataMap.get(asset.id)))
   ];
+  const devicesById = new Map(baseDevices.map((device) => [String(device.id), device]));
+  for (const asset of agentAssets) {
+    const agentDevice = buildAgentDevice(asset, deviceSegments.get(asset.id), metadataMap.get(asset.id));
+    devicesById.set(String(asset.id), mergeAgentDevice(devicesById.get(String(asset.id)), agentDevice));
+  }
+  const devices = Array.from(devicesById.values());
   const automationIndicatorsByAsset = await listAutomationIndicatorsByAssetIds(devices.map((device) => device.id));
 
   return devices
@@ -161,7 +252,12 @@ export async function listDevices({ search = "", status = "" }) {
         device.hardware?.macAddress,
         device.manualAsset?.hostname,
         device.manualAsset?.location,
-        device.manualAsset?.notes
+        device.manualAsset?.notes,
+        device.agent?.agentVersion,
+        device.agent?.operatingSystem,
+        device.agent?.windowsVersion,
+        device.agent?.environment,
+        device.agent?.group
       ].filter(Boolean).join(" ").toLowerCase();
       const matchesSearch =
         !term ||
@@ -173,21 +269,26 @@ export async function listDevices({ search = "", status = "" }) {
 }
 
 export async function getDeviceDetails(id) {
-  const [host, inventory, alerts, deviceSegments, metadata, automationIndicatorsByAsset] = await Promise.all([
+  const [host, inventory, alerts, deviceSegments, metadata, automationIndicatorsByAsset, agentAsset] = await Promise.all([
     getHostById(id),
     getInventoryByHostId(id),
     getHostAlertsWithAcknowledgements(id),
     listDeviceSegmentMap(),
     findDeviceMetadata(id),
-    listAutomationIndicatorsByAssetIds([id])
+    listAutomationIndicatorsByAssetIds([id]),
+    findAgentAssetById(id)
   ]);
   const automationIndicators = automationIndicatorsByAsset.get(String(id)) || [];
 
   if (host) {
     if (metadata?.removedAt) return null;
 
+    const hostDevice = enrichDevice(host, inventory, deviceSegments.get(host.id), metadata);
+    const device = agentAsset
+      ? mergeAgentDevice(hostDevice, buildAgentDevice(agentAsset, deviceSegments.get(id), metadata))
+      : hostDevice;
     return {
-      ...enrichDevice(host, inventory, deviceSegments.get(host.id), metadata),
+      ...device,
       automationIndicators,
       assetHistory: await listAssetHistory(id),
       alerts
@@ -196,14 +297,21 @@ export async function getDeviceDetails(id) {
 
   const manualAsset = await findManualAssetById(id);
 
-  if (!manualAsset) {
+  if (!manualAsset && !agentAsset) {
     return null;
   }
 
+  const baseDevice = manualAsset
+    ? buildManualDevice(manualAsset, deviceSegments.get(manualAsset.id), metadata)
+    : null;
+  const device = agentAsset
+    ? mergeAgentDevice(baseDevice, buildAgentDevice(agentAsset, deviceSegments.get(id), metadata))
+    : baseDevice;
+
   return {
-    ...buildManualDevice(manualAsset, deviceSegments.get(manualAsset.id), metadata),
+    ...device,
     automationIndicators,
-    assetHistory: manualAsset.manualHistory || [],
+    assetHistory: await listAssetHistory(id),
     alerts: []
   };
 }

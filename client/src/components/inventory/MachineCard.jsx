@@ -6,6 +6,11 @@ import { assetTypeLabel } from "./assetTypes.js";
 import PeripheralList from "./PeripheralList.jsx";
 import SelectionCheckbox from "./SelectionCheckbox.jsx";
 import AutomationIndicatorDots from "../AutomationIndicatorDots.jsx";
+import {
+  getAgentHeartbeatState,
+  getMachineSourceLabel,
+  isAgentMachine
+} from "./agentPresentation.js";
 
 const pingTimeFormatter = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
@@ -29,6 +34,16 @@ function metricTone(value) {
   if (value >= 85) return "danger";
   if (value >= 70) return "warning";
   return "ok";
+}
+
+function formatAgentHeartbeat(value) {
+  if (!value) return "Sem comunicacao";
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(new Date(value));
 }
 
 function DiskIndicator({ value }) {
@@ -73,6 +88,8 @@ function MachineCardContent({
   const showMoveMenu = availableSegments.length > 0;
   const showDetails = true;
   const isManualAsset = machine.source === "manual";
+  const isAgentAsset = isAgentMachine(machine);
+  const agentHeartbeat = getAgentHeartbeatState(machine);
   const isBackup = Boolean(machine.isBackup);
   const backupInUse = machine.backupStatus === "in_use";
   const metrics = machine.metrics || {};
@@ -143,6 +160,8 @@ function MachineCardContent({
           <span className={`status-dot ${statusTone(machine.status)}`}>{statusLabel(machine.status)}</span>
         )}
         <span className="asset-type-badge">{typeLabel}</span>
+        <span className="machine-source-badge">{getMachineSourceLabel(machine)}</span>
+        {isAgentAsset && <span className="agent-origin-badge">Maquina real</span>}
         {isBackup && (
           <span className={`backup-badge ${backupInUse ? "in-use" : "available"}`}>
             {backupInUse ? "Backup em uso" : "Backup disponivel"}
@@ -172,6 +191,20 @@ function MachineCardContent({
             <strong>{lastPing}</strong>
           </div>
         </div>
+      ) : isAgentAsset ? (
+        <div className="agent-card-facts">
+          <div>
+            <span><Clock3 size={13} /> Ultima comunicacao</span>
+            <strong>{formatAgentHeartbeat(agentHeartbeat.lastSeenAt)}</strong>
+          </div>
+          <div>
+            <span>Agente</span>
+            <strong>v{machine.agent?.agentVersion || "Nao informada"}</strong>
+          </div>
+          {agentHeartbeat.status === "offline" && (
+            <p className="agent-heartbeat-warning">Sem heartbeat no intervalo esperado</p>
+          )}
+        </div>
       ) : (
         <div className="machine-metrics">
           <div>
@@ -187,7 +220,7 @@ function MachineCardContent({
 
       {showDetails && (
         <div className="machine-card-actions">
-          {!isManualAsset && <DiskIndicator value={metrics.disk} />}
+          {!isManualAsset && metrics?.disk != null && <DiskIndicator value={metrics.disk} />}
           <div className="details-menu">
             <button
               type="button"
@@ -212,6 +245,11 @@ function MachineCardContent({
                   <div className="manual-asset-mini">
                     <span>{machine.manualAsset?.location || "Sem localizacao"}</span>
                     <strong>{machine.manualAsset?.hostname || machine.manualAsset?.macAddress || "Sem hostname/MAC"}</strong>
+                  </div>
+                ) : isAgentAsset ? (
+                  <div className="manual-asset-mini agent-asset-mini">
+                    <span>{machine.agent?.operatingSystem || "Sistema nao informado"}</span>
+                    <strong>{machine.agent?.localIp || machine.ip} · {machine.agent?.osArchitecture || "Arquitetura nao informada"}</strong>
                   </div>
                 ) : (
                   <PeripheralList
