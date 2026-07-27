@@ -39,6 +39,15 @@ test("apresentacao marca heartbeat atrasado como offline", () => {
   });
 });
 
+test("apresentacao distingue agente ainda sem heartbeat", () => {
+  const machine = { source: "agent", agent: {} };
+
+  assert.deepEqual(getAgentHeartbeatState(machine, { now }), {
+    status: "unknown",
+    lastSeenAt: null
+  });
+});
+
 test("maquina manual continua compativel sem dados de agente", () => {
   const machine = { source: "manual", name: "Impressora local" };
 

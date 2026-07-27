@@ -12,6 +12,10 @@ const agentSource = await readFile(
   path.join(repositoryRoot, "agent/windows/it-guardian-agent.ps1"),
   "utf8"
 );
+const heartbeatTestSource = await readFile(
+  path.join(repositoryRoot, "agent/windows/test-heartbeat.ps1"),
+  "utf8"
+);
 
 test("agente Windows nao contem primitivas de execucao remota ou coleta invasiva", () => {
   const forbiddenPatterns = [
@@ -32,4 +36,10 @@ test("agente Windows nao contem primitivas de execucao remota ou coleta invasiva
   }
   assert.match(agentSource, /Invoke-RestMethod/);
   assert.match(agentSource, /Get-CimInstance Win32_OperatingSystem/);
+});
+
+test("diagnostico de heartbeat nao imprime o token do agente", () => {
+  assert.doesNotMatch(heartbeatTestSource, /Write-(Host|Output).*\$AgentToken/i);
+  assert.doesNotMatch(heartbeatTestSource, /ConvertTo-Json.*AgentToken/i);
+  assert.match(heartbeatTestSource, /Authorization\s*=\s*"Bearer \$AgentToken"/);
 });

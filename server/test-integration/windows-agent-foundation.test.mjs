@@ -56,6 +56,13 @@ test("agente autentica, valida, atualiza inventario e respeita revogacao", async
   });
   const baseUrl = `http://127.0.0.1:${server.address().port}`;
 
+  const health = await fetch(`${baseUrl}/health`);
+  assert.equal(health.status, 200);
+  assert.deepEqual(
+    Object.fromEntries(Object.entries(await health.json()).filter(([key]) => ["ok", "status", "service", "database"].includes(key))),
+    { ok: true, status: "ok", service: "it-guardian-api", database: "ok" }
+  );
+
   const missingToken = await fetch(`${baseUrl}/api/agents/heartbeat`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -72,6 +79,16 @@ test("agente autentica, valida, atualiza inventario e respeita revogacao", async
     body: JSON.stringify(payload())
   });
   assert.equal(invalidToken.status, 401);
+
+  const emptyPayload = await fetch(`${baseUrl}/api/agents/heartbeat`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${enrollment.token}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({})
+  });
+  assert.equal(emptyPayload.status, 400);
 
   const accepted = await fetch(`${baseUrl}/api/agents/heartbeat`, {
     method: "POST",
@@ -104,7 +121,8 @@ test("agente autentica, valida, atualiza inventario e respeita revogacao", async
   });
   assert.equal(invalidDisk.status, 400);
 
-  const updated = await fetch(`${baseUrl}/api/agents/inventory`, {
+  const beforeUpdate = (await listAgentAssets())[0].lastSeenAt;
+  const updated = await fetch(`${baseUrl}/agent/heartbeat`, {
     method: "POST",
     headers: {
       authorization: `Bearer ${enrollment.token}`,
@@ -117,6 +135,19 @@ test("agente autentica, valida, atualiza inventario e respeita revogacao", async
   const assets = await listAgentAssets();
   assert.equal(assets.length, 1);
   assert.equal(assets[0].localIp, "192.168.10.22");
+  assert.ok(new Date(assets[0].lastSeenAt).getTime() >= new Date(beforeUpdate).getTime());
+
+  const enrollmentRows = await query(
+    "SELECT token_hash, token_prefix FROM agent_enrollments WHERE id = $1",
+    [enrollment.enrollment.id]
+  );
+  assert.notEqual(enrollmentRows.rows[0].token_hash, enrollment.token);
+  assert.notEqual(enrollmentRows.rows[0].token_prefix, enrollment.token);
+  const heartbeatRows = await query(
+    "SELECT payload FROM agent_heartbeats WHERE asset_id = $1",
+    ["machine-guid-agent-test"]
+  );
+  assert.equal(JSON.stringify(heartbeatRows.rows).includes(enrollment.token), false);
 
   const devices = await listDevices({});
   const device = devices.find((item) => item.id === "machine-guid-agent-test");

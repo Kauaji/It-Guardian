@@ -85,7 +85,7 @@ export function validateAgentPayload(input) {
     intervalSeconds: integer(input.intervalSeconds, "intervalSeconds", {
       min: 30,
       max: 86400,
-      fallback: 60
+      fallback: 300
     }),
     environment: text(input.environment, "environment", { max: 120 }),
     group: text(input.group, "group", { max: 120 }),

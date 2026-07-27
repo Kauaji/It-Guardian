@@ -8,6 +8,7 @@ RUN npm ci --workspace server --omit=dev
 
 COPY server/src ./server/src
 COPY server/.env.example ./server/.env.example
+COPY shared ./shared
 
 WORKDIR /app/server
 

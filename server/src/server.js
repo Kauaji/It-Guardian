@@ -4,6 +4,7 @@ import { initializeRuntime } from "./bootstrap.js";
 import { attachRealtimeServer } from "./services/realtimeService.js";
 
 const port = Number(process.env.PORT || 4000);
+const host = process.env.HOST || "0.0.0.0";
 
 await initializeRuntime();
 
@@ -25,6 +26,6 @@ server.on("clientError", (error, socket) => {
 
 attachRealtimeServer(server);
 
-server.listen(port, () => {
-  console.log(`IT Guardian API running on http://localhost:${port}`);
+server.listen(port, host, () => {
+  console.log(`IT Guardian API running on http://${host}:${port}`);
 });

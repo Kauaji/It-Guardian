@@ -181,7 +181,13 @@ export async function recordAgentInventory({ enrollment, payload }) {
     );
     await db("UPDATE agent_enrollments SET last_used_at = NOW() WHERE id = $1", [enrollment.id]);
 
-    const staleThresholdMs = Math.max(180, Number(previousRow?.interval_seconds || payload.intervalSeconds) * 3) * 1000;
+    const configuredThresholdSeconds = process.env.AGENT_OFFLINE_AFTER_SECONDS
+      ? Number(process.env.AGENT_OFFLINE_AFTER_SECONDS)
+      : Number(process.env.AGENT_OFFLINE_AFTER_MINUTES || 10) * 60;
+    const staleThresholdMs = Math.max(
+      configuredThresholdSeconds,
+      Number(previousRow?.interval_seconds || payload.intervalSeconds) * 3
+    ) * 1000;
     const wasStale = previousRow && Date.now() - new Date(previousRow.last_seen_at).getTime() > staleThresholdMs;
     if (!previousRow || wasStale) {
       await addAssetHistory({

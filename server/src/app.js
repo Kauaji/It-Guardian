@@ -42,6 +42,29 @@ import { requestContext } from "./middleware/requestContextMiddleware.js";
 import { requireTrustedCookieOrigin } from "./middleware/csrfOriginMiddleware.js";
 import { query } from "./database.js";
 
+async function healthCheck(_req, res) {
+  const checkedAt = new Date().toISOString();
+
+  try {
+    await query("SELECT 1 AS healthy");
+    res.json({
+      ok: true,
+      status: "ok",
+      service: "it-guardian-api",
+      timestamp: checkedAt,
+      database: "ok"
+    });
+  } catch (_error) {
+    res.status(503).json({
+      ok: false,
+      status: "error",
+      service: "it-guardian-api",
+      timestamp: checkedAt,
+      database: "unavailable"
+    });
+  }
+}
+
 function buildCorsOptions() {
   const allowedOrigins = getCorsOrigins();
 
@@ -89,25 +112,14 @@ export function createApp({ initializeOnRequest = false } = {}) {
     });
   }
 
-  app.get("/api/health", async (_req, res, next) => {
-    try {
-      await query("SELECT 1 AS healthy");
-      res.json({
-        status: "ok",
-        database: "connected",
-        service: "IT Guardian API",
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      error.statusCode = 503;
-      next(error);
-    }
-  });
+  app.get("/health", healthCheck);
+  app.get("/api/health", healthCheck);
 
   app.use("/api/public", publicRoutes);
   app.use("/api/auth", authRoutes);
   app.use("/api/preferences", userPreferenceRoutes);
   app.use("/api/agents", agentRoutes);
+  app.use("/agent", agentRoutes);
   app.use("/api/integrations", integrationRoutes);
   app.use("/api/devices", deviceRoutes);
   app.use("/api/alerts", alertRoutes);

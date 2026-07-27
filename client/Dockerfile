@@ -16,6 +16,7 @@ RUN npm ci --workspace client
 
 COPY client/index.html client/vite.config.js ./client/
 COPY client/src ./client/src
+COPY shared ./shared
 WORKDIR /app/client
 RUN npm run build
 

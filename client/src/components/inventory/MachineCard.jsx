@@ -18,8 +18,9 @@ function statusLabel(status) {
   return {
     online: "Online",
     offline: "Erro",
-    problem: "Problema"
-  }[status] || "Desconhecido";
+    problem: "Problema",
+    unknown: "Sem dados"
+  }[status] || "Sem dados";
 }
 
 function statusTone(status) {

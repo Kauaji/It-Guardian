@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
+    "seed:admin": "node src/cli/createLocalAdmin.js",
+    "agent:enroll": "node src/cli/createAgentEnrollment.js",
     "test": "node --test",
     "test:coverage": "node --test --experimental-test-coverage --test-coverage-lines=40 --test-coverage-branches=60 --test-coverage-functions=30 --test-coverage-include=\"../client/src/components/automation/*.js\" --test-coverage-include=\"../client/src/components/serviceOrders/serviceOrderBoardUtils.js\" --test-coverage-include=\"src/domain/*.js\" --test-coverage-include=\"src/repositories/automationAccessScope.js\" --test-coverage-include=\"src/security/*.js\" --test-coverage-include=\"src/middleware/csrfOriginMiddleware.js\" --test-coverage-include=\"src/middleware/rateLimitMiddleware.js\"",
     "test:integration": "node --test test-integration/*.test.mjs"

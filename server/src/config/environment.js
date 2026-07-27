@@ -37,10 +37,16 @@ export function getFrontendUrl() {
 }
 
 export function getCorsOrigins() {
+  const configuredOrigins = String(process.env.CORS_ORIGIN || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
   return Array.from(
     new Set([
       "http://localhost:5173",
       "http://127.0.0.1:5173",
+      ...configuredOrigins,
       process.env.CLIENT_ORIGIN,
       process.env.FRONTEND_URL,
       process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,

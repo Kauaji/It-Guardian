@@ -16,7 +16,8 @@ function normalizeStatus(status) {
   return {
     online: "Online",
     offline: "Erro",
-    problem: "Problema"
+    problem: "Problema",
+    unknown: "Sem dados"
   }[status] || status;
 }
 
@@ -161,7 +162,16 @@ function buildManualDevice(asset, segment, metadata) {
 }
 
 function agentStatus(asset) {
-  const configuredThreshold = Math.max(60, Number(process.env.AGENT_OFFLINE_AFTER_SECONDS || 180));
+  if (!asset?.lastSeenAt || !Number.isFinite(new Date(asset.lastSeenAt).getTime())) {
+    return "unknown";
+  }
+
+  const configuredMinutes = Number(process.env.AGENT_OFFLINE_AFTER_MINUTES || 10);
+  const legacySeconds = Number(process.env.AGENT_OFFLINE_AFTER_SECONDS || 0);
+  const configuredThreshold = Math.max(
+    60,
+    legacySeconds > 0 ? legacySeconds : configuredMinutes * 60
+  );
   const thresholdSeconds = Math.max(configuredThreshold, Number(asset.intervalSeconds || 60) * 3);
   return Date.now() - new Date(asset.lastSeenAt).getTime() <= thresholdSeconds * 1000
     ? "online"

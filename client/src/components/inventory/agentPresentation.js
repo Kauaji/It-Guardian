@@ -48,7 +48,7 @@ export function getAgentHeartbeatState(
 
   const lastSeenTime = Date.parse(lastSeenAt);
   if (!Number.isFinite(lastSeenTime)) {
-    return { status: "offline", lastSeenAt };
+    return { status: "unknown", lastSeenAt };
   }
 
   const intervalSeconds = Math.max(30, Number(machine?.agent?.intervalSeconds || 60));
