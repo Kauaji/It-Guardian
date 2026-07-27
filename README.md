@@ -5,6 +5,29 @@ IT Guardian e um MVP funcional para monitoramento e inventario de infraestrutura
 - Fase atual: frontend React e API Express leve no Vercel, usando PostgreSQL externo via Supabase ou Neon.
 - Fase futura: backend completo em VPS para ping real, OCS Inventory, Zabbix e jobs continuos dentro da rede da empresa.
 
+## Beta funcional local
+
+O caminho oficial para o beta e o perfil local com Docker Compose, PostgreSQL
+persistente, frontend Nginx e API Express. Ele nao depende de OCS ou Zabbix.
+
+```powershell
+Copy-Item .env.local.example .env.local
+notepad .env.local
+.\installers\windows\start-server.ps1
+```
+
+Depois de trocar `POSTGRES_PASSWORD` e `JWT_SECRET`, abra
+`http://localhost`. Valide a API em `http://localhost/health`. Crie o primeiro
+administrador e o enrollment do agente com os comandos de
+[`docs/BETA-FUNCIONAL.md`](docs/BETA-FUNCIONAL.md).
+
+Documentos do beta:
+
+- [Instalacao e validacao da beta](docs/BETA-FUNCIONAL.md)
+- [Teste em maquinas reais](docs/TESTE-EM-MAQUINAS-REAIS.md)
+- [Backup, restore e reset](docs/BACKUP-E-RESTORE.md)
+- [Checklist de liberacao](release/beta/CHECKLIST-BETA.md)
+
 ## Stack
 
 - Frontend: React, Vite, dnd-kit, Recharts, Lucide
@@ -84,10 +107,10 @@ npm run dev:server
 URLs locais:
 
 - Frontend: http://localhost:5173
-- API health: http://localhost:4000/api/health
+- API health: http://localhost:4000/health
 - WebSocket local: ws://localhost:4000/ws
 
-Conta demo:
+Conta demo, somente quando `ENABLE_DEMO_SEED=true`:
 
 ```text
 email: admin@itguardian.local

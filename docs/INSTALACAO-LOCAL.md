@@ -39,7 +39,8 @@ Ou use o instalador:
 
 Acesse `http://localhost` no servidor ou `http://IP-DO-SERVIDOR` em outro
 computador da rede. O endpoint de diagnostico e
-`http://IP-DO-SERVIDOR:4000/api/health`.
+`http://IP-DO-SERVIDOR/health` (via frontend) ou
+`http://IP-DO-SERVIDOR:4000/health` (API direta).
 
 ## Primeiro administrador
 
@@ -48,6 +49,12 @@ container:
 
 ```powershell
 docker compose --env-file .env.local -f docker-compose.local.yml exec server node src/cli/createLocalAdmin.js --name "Administrador" --email "admin@empresa.local" --password "troque-por-uma-senha-forte"
+```
+
+Equivalente fora do container, quando a API usa um PostgreSQL acessivel:
+
+```powershell
+npm run seed:admin -- --name "Administrador" --email "admin@empresa.local" --password "senha-com-12-ou-mais"
 ```
 
 ## Token do agente
@@ -61,6 +68,12 @@ docker compose --env-file .env.local -f docker-compose.local.yml exec server nod
 Guarde o token em um gerenciador de segredos. O banco armazena somente o hash
 SHA-256 e um prefixo para identificacao. Um administrador tambem pode criar,
 listar e revogar enrollments pela API autenticada.
+
+Diagnostico do servidor:
+
+```powershell
+.\installers\windows\diagnose-server.ps1
+```
 
 ## Operacao
 

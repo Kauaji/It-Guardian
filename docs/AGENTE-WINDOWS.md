@@ -30,12 +30,16 @@ lista detalhada de processos ou conteudo pessoal.
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
-.\Install-Agent.ps1 -ServerUrl "http://192.168.1.10" -AgentToken "itg_TOKEN" -IntervalSeconds 60 -MachineAlias "Bancada 01" -Environment "Laboratorio"
+.\Install-Agent.ps1 -ServerUrl "http://192.168.1.10" -AgentToken "itg_TOKEN" -IntervalSeconds 300 -MachineAlias "Bancada 01" -Environment "Laboratorio"
 ```
 
 O intervalo aceito vai de 30 a 86400 segundos. O token fica no arquivo local de
 configuracao com acesso restrito a `SYSTEM` e administradores. No servidor ele
 fica somente em hash.
+
+O padrao oficial e um heartbeat a cada 300 segundos. Uma maquina fica `offline`
+depois do periodo configurado em `AGENT_OFFLINE_AFTER_MINUTES` (10 minutos por
+padrao), respeitando no minimo tres intervalos do agente.
 
 ## Verificar e diagnosticar
 
@@ -45,6 +49,18 @@ Executar uma coleta manual sem instalar:
 Copy-Item config.example.json config.json
 notepad config.json
 .\it-guardian-agent.ps1 -Once
+```
+
+Teste de conectividade e autenticacao, sem instalar:
+
+```powershell
+.\test-heartbeat.ps1 -ServerUrl "http://192.168.1.10" -Token "itg_TOKEN"
+```
+
+Diagnostico da instalacao:
+
+```powershell
+& "$env:ProgramData\ITGuardianAgent\diagnose-agent.ps1"
 ```
 
 Logs:
