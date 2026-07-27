@@ -1,0 +1,54 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-itguardian}
+      POSTGRES_USER: ${POSTGRES_USER:-itguardian}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD em .env.local}
+    volumes:
+      - it_guardian_local_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-itguardian} -d ${POSTGRES_DB:-itguardian}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      JWT_SECRET: ${JWT_SECRET:?Defina JWT_SECRET em .env.local}
+      JWT_EXPIRES_IN: 8h
+      DATABASE_URL: postgres://${POSTGRES_USER:-itguardian}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-itguardian}
+      DB_SSL: "false"
+      ENABLE_DEMO_SEED: ${ENABLE_DEMO_SEED:-false}
+      PING_MODE: ${PING_MODE:-mock}
+      OCS_MODE: ${OCS_MODE:-mock}
+      ZABBIX_MODE: ${ZABBIX_MODE:-mock}
+      AGENT_OFFLINE_AFTER_SECONDS: ${AGENT_OFFLINE_AFTER_SECONDS:-180}
+    ports:
+      - "${API_PORT:-4000}:4000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  client:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+      args:
+        VITE_API_URL: /api
+        VITE_ENABLE_WS: "true"
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-80}:80"
+    depends_on:
+      - server
+
+volumes:
+  it_guardian_local_pgdata:

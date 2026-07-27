@@ -1,6 +1,11 @@
 node_modules/
 dist/
 .env
+.env.local
+backups/
+.playwright-cli/
+output/
+test-results/
 .DS_Store
 *.log
 .codex-logs/

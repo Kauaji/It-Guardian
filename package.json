@@ -23,7 +23,13 @@
     "check:architecture": "node scripts/check-architecture.mjs",
     "check": "npm run lint && npm run check:architecture && npm run test:coverage && npm run build",
     "docker:up": "docker compose up --build",
-    "docker:down": "docker compose down"
+    "docker:down": "docker compose down",
+    "local:start": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local/Start-ITGuardian.ps1",
+    "local:stop": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local/Stop-ITGuardian.ps1",
+    "local:reset": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local/Reset-ITGuardian.ps1",
+    "local:backup": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local/Backup-ITGuardian.ps1",
+    "local:restore": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local/Restore-ITGuardian.ps1",
+    "agent:test": "powershell -NoProfile -ExecutionPolicy Bypass -File agent/windows/Test-Agent.ps1"
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",
