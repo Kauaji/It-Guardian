@@ -18,6 +18,10 @@ IT Guardian e um MVP funcional para monitoramento e inventario de infraestrutura
 - [Fase 1 - Inventario](docs/FASE-1-INVENTARIO.md)
 - [Fase 2 - Ordens de Servico](docs/FASE-2-ORDENS-SERVICO.md)
 - [Documentacao completa do codigo](docs/DOCUMENTACAO-CODIGO-COMPLETA.md)
+- [Instalacao local - IT Guardian Local Lab](docs/INSTALACAO-LOCAL.md)
+- [Agente Windows](docs/AGENTE-WINDOWS.md)
+- [Teste em computadores reais](docs/TESTE-EM-COMPUTADORES-REAIS.md)
+- [Seguranca do agente](docs/SEGURANCA-DO-AGENTE.md)
 
 ## Estrutura
 
