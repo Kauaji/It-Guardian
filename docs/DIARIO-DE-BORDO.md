@@ -4,6 +4,51 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-07-28 - Coletor cloud e licenciamento por chave
+
+### Entrega
+
+- chaves de produto armazenadas somente em hash, com expiracao, estado e limite
+  transacional de computadores;
+- ativacoes por fingerprint em hash, reinstalacao idempotente, revogacao de
+  tokens e liberacao de vagas;
+- endpoint publico e limitado para ativar o coletor, com rotas administrativas
+  protegidas por autenticacao e papel de administrador;
+- telemetria real ampliada com CPU, memoria, disco, fabricante, modelo e serial;
+- instalador visual Inno Setup que pede somente a chave, cria tarefa SYSTEM,
+  valida o primeiro heartbeat e instala o atalho de abertura de chamado;
+- painel administrativo para chaves, ativacoes, OCS, Zabbix e download do
+  instalador;
+- arquitetura cloud/local e runbook operacional documentados.
+
+### Validacoes executadas ate a consolidacao
+
+- teste de ativacao invalida, inativa, expirada e acima do limite;
+- reinstalacao da mesma maquina sem consumir nova vaga;
+- concorrencia de duas maquinas pela ultima vaga sem ultrapassar o limite;
+- acesso administrativo validado em `401`, `403` e `200`;
+- token anterior revogado e heartbeat real persistido no inventario;
+- instalador verificado contra persistencia da chave e execucao remota;
+- suite completa do servidor: 154 testes aprovados, 1 ignorado por exigir
+  PostgreSQL real e 0 falhas;
+- suite de integracao: 7 testes aprovados, 1 ignorado pelo mesmo requisito e
+  0 falhas;
+- lint sem avisos, verificacao arquitetural aprovada em 248 arquivos e
+  `git diff --check` aprovado;
+- cinco scripts PowerShell do agente e do instalador aprovados pelo parser;
+- build de producao aprovado, com 2.353 modulos transformados e saida da
+  Vercel preparada;
+- compilacao do instalador chegou corretamente ao compilador e confirmou como
+  unica dependencia ausente o Inno Setup 6.
+
+### Pendencias conhecidas
+
+- instalar o Inno Setup 6 para gerar o executavel final neste computador;
+- assinar o executavel e testar instalacao/desinstalacao em VM Windows limpa;
+- publicar o instalador em HTTPS e configurar `VITE_COLLECTOR_INSTALLER_URL`;
+- configurar PostgreSQL gerenciado e variaveis no deploy definitivo;
+- executar OCS/Zabbix em processo com acesso a LAN quando forem habilitados.
+
 ## 2026-07-27 - Beta funcional consolidada na main
 
 ### Entrega

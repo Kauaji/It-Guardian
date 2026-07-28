@@ -9,6 +9,22 @@ O projeto usa um workspace npm com:
 - `tests/e2e`: fluxos de navegador com Playwright;
 - `server/test-integration`: validacao de migracoes em PostgreSQL real.
 
+## Topologia cloud e local
+
+- Na Vercel, o frontend e a API Express compartilham o mesmo dominio por meio de
+  `api/index.js` e das regras em `vercel.json`.
+- PostgreSQL gerenciado e obrigatorio em producao; Supabase e Neon sao opcoes,
+  nao dependencias de dominio.
+- Ativacao e heartbeat do coletor sao requisicoes HTTP curtas e compativeis com
+  funcao serverless.
+- OCS, Zabbix, polling de LAN e jobs persistentes exigem um processo sempre
+  ligado com acesso a rede interna.
+- O perfil Docker/local permanece a topologia indicada para instalacoes dentro
+  da empresa sem dependencia de cloud.
+
+O runbook detalhado esta em
+[`CLOUD-COLLECTOR-E-LICENCIAMENTO.md`](CLOUD-COLLECTOR-E-LICENCIAMENTO.md).
+
 ## Fronteiras principais
 
 - O backend e a fonte da verdade para autenticacao, permissoes, inventario, OS, alertas, preventivas, automacoes e preferencias.

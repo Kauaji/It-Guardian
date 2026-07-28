@@ -21,6 +21,16 @@ Ele e um script PowerShell visivel, instalado em
 O agente nao coleta arquivos, senhas, teclas, tela, historico, geolocalizacao,
 lista detalhada de processos ou conteudo pessoal.
 
+## Instalacao cloud por chave de produto
+
+Para novos computadores cloud, use o instalador visual descrito em
+[`CLOUD-COLLECTOR-E-LICENCIAMENTO.md`](CLOUD-COLLECTOR-E-LICENCIAMENTO.md).
+Ele pede somente a chave de produto, cria o enrollment automaticamente e
+instala a tarefa `IT Guardian Cloud Collector`.
+
+A instalacao manual abaixo continua sendo o caminho para servidores locais e
+laboratorios que administram os enrollments diretamente.
+
 ## Instalar
 
 1. Gere um token conforme `docs/INSTALACAO-LOCAL.md`.

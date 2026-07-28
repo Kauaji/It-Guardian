@@ -44,6 +44,7 @@ Documentos do beta:
 - [Documentacao completa do codigo](docs/DOCUMENTACAO-CODIGO-COMPLETA.md)
 - [Instalacao local - IT Guardian Local Lab](docs/INSTALACAO-LOCAL.md)
 - [Agente Windows](docs/AGENTE-WINDOWS.md)
+- [Cloud, coletor Windows e licenciamento](docs/CLOUD-COLLECTOR-E-LICENCIAMENTO.md)
 - [Teste em computadores reais](docs/TESTE-EM-COMPUTADORES-REAIS.md)
 - [Seguranca do agente](docs/SEGURANCA-DO-AGENTE.md)
 
@@ -160,6 +161,7 @@ NODE_ENV=production
 DATABASE_URL=postgresql://...
 JWT_SECRET=uma-chave-grande-e-segura
 FRONTEND_URL=https://seu-projeto.vercel.app
+PUBLIC_APP_URL=https://seu-projeto.vercel.app
 PING_MODE=mock
 OCS_MODE=mock
 OCS_ENABLED=false
@@ -171,6 +173,7 @@ Variaveis de frontend:
 
 ```env
 VITE_FRONTEND_URL=https://seu-projeto.vercel.app
+VITE_COLLECTOR_INSTALLER_URL=https://endereco-publico/ITGuardianCollectorSetup.exe
 ```
 
 `VITE_API_URL` nao e obrigatoria no Vercel. Em producao, o frontend chama a API por `/api`.
@@ -214,6 +217,8 @@ Tabelas criadas automaticamente no bootstrap:
 - `integration_assets`
 - `integration_alerts`
 - `integration_conflicts`
+- `product_keys`
+- `device_activations`
 
 ## API e CORS
 
