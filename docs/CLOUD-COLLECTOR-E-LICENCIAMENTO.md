@@ -29,18 +29,22 @@ bloqueado em producao.
 ## Fluxo cloud
 
 1. Um administrador gera uma chave de produto.
-2. O administrador vincula os destinos centrais OCS e Zabbix a chave.
+2. Opcionalmente, o administrador vincula destinos centrais OCS e Zabbix reais
+   a chave.
 3. O instalador pede somente a chave.
 4. O instalador envia a chave, o fingerprint e o hostname por HTTPS para
    `POST /api/collector/activate`.
-5. A API valida estado, expiracao, configuracao de monitoramento e limite de
-   computadores de forma transacional.
+5. A API valida estado, expiracao e limite de computadores de forma
+   transacional.
 6. A API devolve o token derivado e os destinos OCS/Zabbix vinculados a chave.
    A chave de produto nao e persistida no computador.
-7. O coletor envia inventario e heartbeat para `/api/agents/heartbeat`.
-8. O ativo aparece no Inventario com origem `cloud_collector`/agente e, sem
+7. O coletor nativo e sempre instalado. OCS Inventory Agent e Zabbix Agent 2
+   somente sao instalados quando os tres destinos externos estiverem
+   configurados.
+8. O coletor envia inventario e heartbeat para `/api/agents/heartbeat`.
+9. O ativo aparece no Inventario com origem `cloud_collector`/agente e, sem
    organizacao previa, fica em `Nao organizadas`.
-9. O tecnico pode vincular o ativo a grupo, segmento e objeto do mapa 2D.
+10. O tecnico pode vincular o ativo a grupo, segmento e objeto do mapa 2D.
 
 Uma reinstalacao com a mesma chave e o mesmo fingerprint reutiliza a ativacao,
 revoga o token anterior e nao consome outra vaga. Fingerprints diferentes
@@ -231,8 +235,8 @@ executa scripts e nao possui mecanismo de atualizacao remota.
 ## OCS e Zabbix
 
 Os adaptadores de leitura OCS e Zabbix do backend continuam opcionais e
-desabilitados por padrao. O instalador Windows 1.3.0, por outro lado, incorpora
-os dois agentes de endpoint oficiais e exige seus destinos centrais.
+desabilitados por padrao. O instalador Windows 1.3.0 incorpora os dois agentes
+de endpoint oficiais, mas nao exige seus destinos para ativar o coletor nativo.
 
 - OCS importa inventario em modo somente leitura.
 - Zabbix importa hosts, disponibilidade e problemas em modo somente leitura.
@@ -240,9 +244,10 @@ os dois agentes de endpoint oficiais e exige seus destinos centrais.
 - Em um processo persistente com acesso a LAN, a sincronizacao inicial ocorre
   ao iniciar e continua nos intervalos configurados.
 - Credenciais ficam em variaveis de ambiente e nunca sao devolvidas pela API.
-- O instalador instala OCS Inventory Agent e Zabbix Agent 2 como servicos
-  automaticos usando os destinos devolvidos pela chave, mas nao instala os
-  servidores centrais.
+- Quando a chave possui os tres destinos, o instalador instala OCS Inventory
+  Agent e Zabbix Agent 2 como servicos automaticos. Sem essa configuracao, ele
+  instala somente o coletor nativo e conclui normalmente.
+- O instalador nao cria servidores centrais OCS ou Zabbix.
 - Para endpoints internos, rode a API/worker em uma maquina que alcance a LAN.
 - Na Vercel, use apenas endpoints publicamente acessiveis por HTTPS, o que nao e
   recomendado para sistemas internos sem uma camada segura.

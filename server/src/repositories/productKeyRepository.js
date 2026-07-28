@@ -182,13 +182,6 @@ export async function activateCollector({
       throw activationError("Esta chave de produto expirou.", 403, "EXPIRED_PRODUCT_KEY");
     }
     const monitoring = monitoringFromRow(keyRow);
-    if (!monitoring.configured) {
-      throw activationError(
-        "A organizacao desta chave ainda nao possui OCS e Zabbix configurados.",
-        409,
-        "MONITORING_NOT_CONFIGURED"
-      );
-    }
 
     const existingResult = await db(
       `

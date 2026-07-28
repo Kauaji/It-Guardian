@@ -5,7 +5,9 @@
 O instalador 1.3.0 tambem distribui os agentes oficiais OCS Inventory e Zabbix
 Agent 2. Durante a ativacao, a API devolve automaticamente os servidores
 centrais vinculados a chave da organizacao. Os pacotes sao verificados por hash
-e assinatura antes do build e novamente antes da instalacao.
+e assinatura antes do build e novamente antes da instalacao. Os agentes
+externos somente sao instalados quando a chave possui a configuracao completa;
+o coletor nativo nao depende deles.
 
 O instalador nao cria servidores OCS ou Zabbix dentro do computador monitorado.
 Sem uma infraestrutura central real e acessivel, os agentes nao podem enviar
@@ -39,7 +41,8 @@ Para novos computadores cloud, use o instalador visual descrito em
 Ele pede somente a chave de produto, baixa da API os destinos centrais
 OCS/Zabbix vinculados a ela, cria o enrollment automaticamente e instala o
 executavel nativo `ITGuardian.exe`, a tarefa `IT Guardian Collector`, o
-indicador visual da bandeja e os dois agentes de monitoramento.
+indicador visual da bandeja e, quando configurados, os dois agentes de
+monitoramento externos.
 
 Na instalacao cloud, o executavel aparece como `IT Guardian` no Gerenciador de
 Tarefas, inicia com o Windows e usa o mesmo icone no programa, na bandeja e no

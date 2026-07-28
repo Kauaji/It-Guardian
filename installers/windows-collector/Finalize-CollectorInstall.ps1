@@ -1,9 +1,9 @@
 [CmdletBinding()]
 param(
   [Parameter(Mandatory = $true)][string]$InstallDirectory,
-  [Parameter(Mandatory = $true)][string]$OcsServerUrl,
-  [Parameter(Mandatory = $true)][string]$ZabbixServer,
-  [Parameter(Mandatory = $true)][string]$ZabbixServerActive
+  [AllowEmptyString()][string]$OcsServerUrl = "",
+  [AllowEmptyString()][string]$ZabbixServer = "",
+  [AllowEmptyString()][string]$ZabbixServerActive = ""
 )
 
 Set-StrictMode -Version Latest
@@ -23,17 +23,26 @@ if (-not (Test-Path -LiteralPath $configPath)) {
 if (-not (Test-Path -LiteralPath $collectorPath)) {
   throw "Executavel do coletor nao encontrado."
 }
-if (-not (Test-Path -LiteralPath $monitoringInstallerPath)) {
-  throw "Instalador dos agentes OCS e Zabbix nao encontrado."
+$monitoringValues = @($OcsServerUrl, $ZabbixServer, $ZabbixServerActive)
+$configuredMonitoringValues = @($monitoringValues | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+
+if ($configuredMonitoringValues.Count -gt 0 -and $configuredMonitoringValues.Count -lt 3) {
+  throw "A configuracao de OCS e Zabbix recebida esta incompleta."
 }
 
-& $monitoringInstallerPath `
-  -InstallDirectory $resolvedDirectory `
-  -OcsSetupPath $ocsSetupPath `
-  -ZabbixMsiPath $zabbixMsiPath `
-  -OcsServerUrl $OcsServerUrl `
-  -ZabbixServer $ZabbixServer `
-  -ZabbixServerActive $ZabbixServerActive
+if ($configuredMonitoringValues.Count -eq 3) {
+  if (-not (Test-Path -LiteralPath $monitoringInstallerPath)) {
+    throw "Instalador dos agentes OCS e Zabbix nao encontrado."
+  }
+
+  & $monitoringInstallerPath `
+    -InstallDirectory $resolvedDirectory `
+    -OcsSetupPath $ocsSetupPath `
+    -ZabbixMsiPath $zabbixMsiPath `
+    -OcsServerUrl $OcsServerUrl `
+    -ZabbixServer $ZabbixServer `
+    -ZabbixServerActive $ZabbixServerActive
+}
 
 $configAcl = New-Object System.Security.AccessControl.FileSecurity
 $configAcl.SetAccessRuleProtection($true, $false)

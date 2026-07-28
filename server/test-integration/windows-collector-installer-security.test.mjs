@@ -49,6 +49,7 @@ test("instalador cloud nao persiste nem repassa a chave de produto", async () =>
   assert.match(setup, /JsonStringValue\(ResponseBody, 'ocsServerUrl'\)/);
   assert.match(setup, /JsonStringValue\(ResponseBody, 'zabbixServer'\)/);
   assert.match(setup, /JsonStringValue\(ResponseBody, 'zabbixServerActive'\)/);
+  assert.doesNotMatch(setup, /configuracao completa do OCS e Zabbix/);
 
   assert.match(postInstall, /New-ScheduledTaskPrincipal/);
   assert.match(postInstall, /-UserId "SYSTEM"/);
@@ -58,6 +59,8 @@ test("instalador cloud nao persiste nem repassa a chave de produto", async () =>
   assert.match(postInstall, /--once/);
   assert.match(postInstall, /CurrentVersion\\Run/);
   assert.match(postInstall, /--tray/);
+  assert.match(postInstall, /configuredMonitoringValues\.Count -eq 3/);
+  assert.match(postInstall, /configuracao de OCS e Zabbix recebida esta incompleta/);
   assert.match(setup, /SetupIconFile=it-guardian\.ico/);
   assert.match(setup, /UninstallDisplayIcon=\{app\}\\ITGuardian\.exe/);
   assert.match(setup, /Uninstallable=yes/);

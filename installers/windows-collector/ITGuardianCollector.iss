@@ -31,7 +31,7 @@ DisableReadyPage=yes
 WelcomeLabel1=Bem-vindo a Instalacao do IT Guardian
 WelcomeLabel2=Este assistente instalara o IT Guardian neste computador.%n%nO aplicativo coleta inventario real em segundo plano e exibe a presenca do IT Guardian na bandeja do Windows.
 FinishedHeadingLabel=Instalacao do IT Guardian concluida
-FinishedLabel=O IT Guardian, o OCS Inventory Agent e o Zabbix Agent 2 foram instalados. O primeiro contato do coletor com o servidor foi validado.
+FinishedLabel=O IT Guardian foi instalado e o primeiro contato do coletor com o servidor foi validado.
 
 [Files]
 Source: "ITGuardian.exe"; DestDir: "{app}"; Flags: ignoreversion
@@ -168,16 +168,14 @@ begin
       Exit;
     end;
     if
-      (OcsServerUrl = '') or
-      (ZabbixServer = '') or
-      (ZabbixServerActive = '') or
+      (OcsServerUrl <> '') and
       ((Pos('http://', Lowercase(OcsServerUrl)) <> 1) and
        (Pos('https://', Lowercase(OcsServerUrl)) <> 1))
     then
     begin
       AgentToken := '';
       MsgBox(
-        'A chave foi validada, mas o servidor nao retornou a configuracao completa do OCS e Zabbix. A instalacao nao foi iniciada.',
+        'O servidor retornou um endereco OCS invalido. A instalacao nao foi iniciada.',
         mbError,
         MB_OK
       );

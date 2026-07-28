@@ -125,17 +125,24 @@ test("ativacao cloud controla licencas, reinstalacao, revogacao e heartbeat", as
   });
 
   const missingMonitoring = await activate(baseUrl, created.key, "fingerprint-a");
-  assert.equal(missingMonitoring.status, 409);
-  assert.match(
-    (await missingMonitoring.json()).message,
-    /ainda nao possui OCS e Zabbix configurados/
-  );
-  const untouchedKey = await query(
+  assert.equal(missingMonitoring.status, 201);
+  const missingMonitoringBody = await missingMonitoring.json();
+  assert.match(missingMonitoringBody.agentToken, /^itg_/);
+  assert.deepEqual(missingMonitoringBody.monitoring, {
+    configured: false,
+    ocsServerUrl: null,
+    zabbixServer: null,
+    zabbixServerActive: null
+  });
+  assert.equal(missingMonitoringBody.ocsServerUrl, null);
+  assert.equal(missingMonitoringBody.zabbixServer, null);
+  assert.equal(missingMonitoringBody.zabbixServerActive, null);
+  const activatedKey = await query(
     "SELECT activation_count FROM product_keys WHERE id = $1",
     [created.productKey.id]
   );
-  assert.equal(Number(untouchedKey.rows[0].activation_count), 0);
-  const untouchedRelations = await query(
+  assert.equal(Number(activatedKey.rows[0].activation_count), 1);
+  const activatedRelations = await query(
     `
       SELECT
         (SELECT COUNT(*) FROM device_activations WHERE product_key_id = $1) AS activations,
@@ -143,8 +150,8 @@ test("ativacao cloud controla licencas, reinstalacao, revogacao e heartbeat", as
     `,
     [created.productKey.id]
   );
-  assert.equal(Number(untouchedRelations.rows[0].activations), 0);
-  assert.equal(Number(untouchedRelations.rows[0].enrollments), 0);
+  assert.equal(Number(activatedRelations.rows[0].activations), 1);
+  assert.equal(Number(activatedRelations.rows[0].enrollments), 1);
 
   const forbiddenMonitoring = await fetch(
     `${baseUrl}/api/product-keys/${created.productKey.id}/monitoring`,

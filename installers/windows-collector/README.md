@@ -3,7 +3,8 @@
 O instalador visual solicita somente a chave de produto. A URL da API do
 IT Guardian e incorporada durante o build, e a chave e enviada diretamente ao
 endpoint HTTPS de ativacao sem ser gravada em arquivo ou log. A resposta de
-ativacao entrega automaticamente os destinos OCS e Zabbix vinculados a chave.
+ativacao entrega automaticamente os destinos OCS e Zabbix quando eles estiverem
+vinculados a chave.
 
 O mesmo executavel inclui pacotes oficiais e assinados do OCS Inventory Agent
 2.11.0.1 e do Zabbix Agent 2 7.0.29. O build baixa os pacotes das paginas
@@ -48,16 +49,16 @@ assine o executavel e valide a instalacao e a remocao em uma VM Windows limpa.
 - desinstalador registrado em `Aplicativos instalados` e atalho
   `Desinstalar IT Guardian` criado no menu Iniciar;
 - logs em `C:\ProgramData\ITGuardian\logs\agent.log`.
-- OCS Inventory Agent configurado para o servidor devolvido pela chave,
-  instalado como servico automatico;
-- Zabbix Agent 2 configurado com `Server`, `ServerActive` e o hostname real do
-  Windows, instalado como servico automatico;
-- marcador `monitoring-agents.json`, usado para remover somente agentes que
-  tenham sido instalados pelo IT Guardian.
+- quando a chave possui destinos completos, OCS Inventory Agent configurado
+  para o servidor devolvido e instalado como servico automatico;
+- quando a chave possui destinos completos, Zabbix Agent 2 configurado com
+  `Server`, `ServerActive` e o hostname real do Windows;
+- quando esses agentes sao instalados, marcador `monitoring-agents.json` usado
+  para remover somente os agentes pertencentes ao IT Guardian.
 
-Se a chave ainda nao tiver OCS, Zabbix passivo e Zabbix ativo configurados, a
-API recusa a ativacao antes de consumir uma vaga e o instalador nao altera o
-computador.
+Se a chave ainda nao tiver OCS, Zabbix passivo e Zabbix ativo configurados, o
+instalador ativa normalmente o coletor nativo e ignora somente a instalacao
+desses dois agentes externos. Nenhum endereco ficticio e criado.
 
 O coletor apenas envia inventario e heartbeat. Ele nao recebe nem executa
 comandos remotos. O indicador da bandeja apenas informa visualmente que o

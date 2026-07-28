@@ -4,6 +4,44 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-07-28 - Ativacao cloud independente de OCS e Zabbix
+
+### Entrega
+
+- ativacao por chave deixa de exigir infraestrutura OCS/Zabbix para cadastrar o
+  coletor nativo do IT Guardian;
+- instalador sempre configura o coletor, a tarefa SYSTEM, o indicador da
+  bandeja e valida o primeiro heartbeat;
+- OCS Inventory Agent e Zabbix Agent 2 permanecem incorporados ao pacote, mas
+  so sao instalados quando a chave devolve os tres destinos completos;
+- configuracao externa parcial continua bloqueada para evitar agentes
+  instalados incorretamente;
+- nenhuma URL ficticia, dependencia de Radmin ou servidor local improvisado foi
+  introduzido.
+
+### Validacoes executadas
+
+- integracao confirmou ativacao `201`, token derivado, vaga e enrollment para
+  chave sem monitoramento externo;
+- integracao confirmou resposta explicita `monitoring.configured=false` e
+  destinos nulos;
+- teste de seguranca do instalador confirmou instalacao condicional dos agentes
+  externos e ausencia de persistencia da chave;
+- lint, verificacao de arquitetura, integracao completa e build de producao
+  aprovados;
+- parser do PowerShell aprovado para os scripts operacionais;
+- Inno Setup 6.7.3 compilou o instalador 1.3.0 com sucesso;
+- artefato final `ITGuardian-Collector-Setup.exe` com 24.078.647 bytes e
+  SHA-256
+  `0D0A999BE485920C0D0478A54908CBFB64575A2B37D48386FD9CF288081126E2`.
+
+### Pendencias conhecidas
+
+- OCS e Zabbix somente funcionarao depois que servidores centrais reais e
+  acessiveis forem vinculados a chave;
+- validar o novo executavel em uma VM Windows limpa e assina-lo antes da
+  distribuicao publica.
+
 ## 2026-07-28 - Destinos OCS e Zabbix automaticos por chave
 
 ### Entrega
@@ -17,16 +55,16 @@ entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
   credenciais das APIs centrais;
 - resposta de ativacao mantem o objeto `monitoring` e tambem entrega os tres
   destinos no nivel principal esperado pelo instalador Windows 1.3.0;
-- chave sem configuracao completa falha com `409` antes de reservar vaga,
-  criar ativacao, enrollment ou token;
+- destinos externos ausentes sao devolvidos como nulos; desde a correcao de
+  compatibilidade posterior, isso nao bloqueia o coletor nativo;
 - instalador 1.3.0 simplificado para solicitar somente a chave de produto;
 - chave e destinos nao sao gravados no `config.json`; somente o token derivado
   e mantido com ACL restrita.
 
 ### Validacoes executadas
 
-- teste de integracao confirmou bloqueio sem consumo de vaga ou registros
-  parciais;
+- teste de integracao original cobriu o bloqueio anterior; a entrada posterior
+  registra a substituicao por monitoramento externo opcional;
 - acesso a configuracao validado em `403` para operador e `200` para
   administrador;
 - URL OCS com protocolo invalido rejeitada em `400`;
