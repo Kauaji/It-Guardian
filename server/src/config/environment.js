@@ -16,17 +16,9 @@ function isTruthyEnv(value) {
   return ["1", "true", "yes", "sim"].includes(String(value || "").trim().toLowerCase());
 }
 
-function isFalsyEnv(value) {
-  return ["0", "false", "no", "nao", "não"].includes(String(value || "").trim().toLowerCase());
-}
-
 export function shouldSeedDemoData() {
   const flag = process.env.ENABLE_DEMO_SEED ?? process.env.IT_GUARDIAN_ENABLE_DEMO_SEED;
-
-  if (isTruthyEnv(flag)) return true;
-  if (isFalsyEnv(flag)) return false;
-
-  return !isProductionLike || vercelEnv === "preview";
+  return isTruthyEnv(flag);
 }
 
 export function getFrontendUrl() {

@@ -1,4 +1,3 @@
-import { ocsInventory } from "../../data/mockOcs.js";
 import {
   ExternalIntegrationError,
   joinIntegrationUrl,
@@ -7,7 +6,7 @@ import {
 
 export class OcsInventoryService {
   constructor({
-    mode = process.env.OCS_MODE || "mock",
+    mode = process.env.OCS_MODE || "disabled",
     enabled,
     baseUrl = process.env.OCS_BASE_URL || "",
     username = process.env.OCS_USER || "",
@@ -17,10 +16,9 @@ export class OcsInventoryService {
     retries = Number(process.env.OCS_RETRIES || 1),
     fetchImpl = globalThis.fetch
   } = {}) {
-    this.mode = ["mock", "real", "disabled"].includes(mode) ? mode : "disabled";
+    this.mode = mode === "real" ? "real" : "disabled";
     this.enabled = enabled ?? (
-      this.mode === "mock" ||
-      (this.mode === "real" && String(process.env.OCS_ENABLED || "").toLowerCase() === "true")
+      this.mode === "real" && String(process.env.OCS_ENABLED || "").toLowerCase() === "true"
     );
     this.baseUrl = baseUrl.replace(/\/+$/, "");
     this.username = username;
@@ -37,17 +35,13 @@ export class OcsInventoryService {
       mode: this.mode,
       enabled: Boolean(this.enabled),
       baseUrl: this.baseUrl || null,
-      configured: this.mode === "mock" || Boolean(this.baseUrl && this.username && this.password)
+      configured: Boolean(this.baseUrl && this.username && this.password)
     };
   }
 
   async listInventory() {
     if (!this.enabled || this.mode === "disabled") return [];
-    if (this.mode === "real") {
-      return this.listInventoryFromApi();
-    }
-
-    return ocsInventory;
+    return this.listInventoryFromApi();
   }
 
   async getInventoryByHostId(hostId) {

@@ -1,15 +1,17 @@
 [CmdletBinding()]
 param(
-  [string]$InstallDirectory = (Join-Path $env:ProgramData "ITGuardianAgent")
+  [string]$InstallDirectory = (Join-Path $env:ProgramData "ITGuardian")
 )
 
 $ErrorActionPreference = "Continue"
-$taskName = "IT Guardian Agent"
+$taskName = "IT Guardian Collector"
 $configPath = Join-Path $InstallDirectory "config.json"
 $logPath = Join-Path $InstallDirectory "logs\agent.log"
+$executablePath = Join-Path $InstallDirectory "ITGuardian.exe"
 
-Write-Host "IT Guardian Agent - diagnostico" -ForegroundColor Cyan
+Write-Host "IT Guardian - diagnostico" -ForegroundColor Cyan
 Write-Host "Diretorio: $InstallDirectory"
+Write-Host "Aplicativo: $(if (Test-Path -LiteralPath $executablePath) { 'OK' } else { 'AUSENTE' })"
 Write-Host "Configuracao: $(if (Test-Path -LiteralPath $configPath) { 'OK' } else { 'AUSENTE' })"
 
 $task = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue

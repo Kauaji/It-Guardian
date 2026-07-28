@@ -1,4 +1,3 @@
-import { ocsInventoryService } from "../integrations/ocs/OcsInventoryService.js";
 import {
   findIntegrationAsset,
   listIntegrationAssets
@@ -51,10 +50,6 @@ function toLegacyInventory(asset, assets) {
 }
 
 export async function getInventory() {
-  if (ocsInventoryService.mode === "mock") {
-    return ocsInventoryService.listInventory();
-  }
-
   const assets = await listIntegrationAssets();
   return assets
     .filter((asset) => asset.source === "ocs")
@@ -62,10 +57,6 @@ export async function getInventory() {
 }
 
 export async function getInventoryByHostId(hostId) {
-  if (ocsInventoryService.mode === "mock") {
-    return ocsInventoryService.getInventoryByHostId(hostId);
-  }
-
   const directAsset = await findIntegrationAsset("ocs", hostId);
   if (directAsset) {
     const assets = await listIntegrationAssets();

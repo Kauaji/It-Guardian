@@ -2,6 +2,7 @@ import http from "node:http";
 import { createApp } from "./app.js";
 import { initializeRuntime } from "./bootstrap.js";
 import { attachRealtimeServer } from "./services/realtimeService.js";
+import { startIntegrationSyncScheduler } from "./services/integrationSyncScheduler.js";
 
 const port = Number(process.env.PORT || 4000);
 const host = process.env.HOST || "0.0.0.0";
@@ -29,3 +30,11 @@ attachRealtimeServer(server);
 server.listen(port, host, () => {
   console.log(`IT Guardian API running on http://${host}:${port}`);
 });
+
+const stopIntegrationScheduler = startIntegrationSyncScheduler();
+for (const signal of ["SIGINT", "SIGTERM"]) {
+  process.once(signal, () => {
+    stopIntegrationScheduler();
+    server.close(() => process.exit(0));
+  });
+}

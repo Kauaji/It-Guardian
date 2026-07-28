@@ -16,6 +16,18 @@ function activationError(message, statusCode = 400, code = "ACTIVATION_FAILED") 
   return error;
 }
 
+function monitoringFromRow(row) {
+  const ocsServerUrl = row.ocs_server_url || null;
+  const zabbixServer = row.zabbix_server || null;
+  const zabbixServerActive = row.zabbix_server_active || null;
+  return {
+    configured: Boolean(ocsServerUrl && zabbixServer && zabbixServerActive),
+    ocsServerUrl,
+    zabbixServer,
+    zabbixServerActive
+  };
+}
+
 function productKeyFromRow(row) {
   return {
     id: row.id,
@@ -27,6 +39,7 @@ function productKeyFromRow(row) {
     activationCount: Number(row.activation_count),
     active: row.active,
     expiresAt: row.expires_at,
+    monitoring: monitoringFromRow(row),
     createdBy: row.created_by,
     createdAt: row.created_at,
     updatedAt: row.updated_at
@@ -78,7 +91,8 @@ export async function createProductKey({
   planName,
   activationLimit,
   expiresAt = null,
-  createdBy = null
+  createdBy = null,
+  monitoring = null
 }) {
   const key = generateProductKey();
   const id = randomUUID();
@@ -86,9 +100,10 @@ export async function createProductKey({
     `
       INSERT INTO product_keys (
         id, key_hash, key_hint, display_name, organization_name, plan_name,
-        activation_limit, expires_at, created_by
+        activation_limit, expires_at, created_by, ocs_server_url, zabbix_server,
+        zabbix_server_active
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *
     `,
     [
@@ -100,7 +115,10 @@ export async function createProductKey({
       planName,
       activationLimit,
       expiresAt,
-      createdBy
+      createdBy,
+      monitoring?.ocsServerUrl || null,
+      monitoring?.zabbixServer || null,
+      monitoring?.zabbixServerActive || null
     ]
   );
 
@@ -162,6 +180,14 @@ export async function activateCollector({
     }
     if (keyRow.expires_at && new Date(keyRow.expires_at).getTime() <= Date.now()) {
       throw activationError("Esta chave de produto expirou.", 403, "EXPIRED_PRODUCT_KEY");
+    }
+    const monitoring = monitoringFromRow(keyRow);
+    if (!monitoring.configured) {
+      throw activationError(
+        "A organizacao desta chave ainda nao possui OCS e Zabbix configurados.",
+        409,
+        "MONITORING_NOT_CONFIGURED"
+      );
     }
 
     const existingResult = await db(
@@ -250,6 +276,7 @@ export async function activateCollector({
     return {
       activation: activationFromRow(activationRow),
       productKey: productKeyFromRow(currentKeyRow),
+      monitoring,
       token
     };
   });
@@ -352,4 +379,25 @@ export async function setProductKeyActive(id, active) {
 
     return productKeyFromRow(result.rows[0]);
   });
+}
+
+export async function updateProductKeyMonitoring(id, monitoring) {
+  const result = await query(
+    `
+      UPDATE product_keys
+      SET ocs_server_url = $2,
+          zabbix_server = $3,
+          zabbix_server_active = $4,
+          updated_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    `,
+    [
+      id,
+      monitoring.ocsServerUrl,
+      monitoring.zabbixServer,
+      monitoring.zabbixServerActive
+    ]
+  );
+  return result.rows[0] ? productKeyFromRow(result.rows[0]) : null;
 }

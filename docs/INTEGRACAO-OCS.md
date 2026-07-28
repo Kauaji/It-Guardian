@@ -1,5 +1,17 @@
 # Integracao OCS Inventory
 
+## Instalacao do agente Windows
+
+O instalador do IT Guardian inclui o OCS Inventory Agent 2.11.0.1 oficial. A
+URL de comunicacao, normalmente terminada em `/ocsinventory`, e vinculada a
+chave pelo administrador e devolvida automaticamente durante a ativacao. O
+agente e instalado como servico automatico e envia o primeiro inventario ao
+servidor configurado.
+
+Isso nao substitui o OCS Communication Server. O adaptador de leitura do
+backend continua precisando de `OCS_BASE_URL`, `OCS_USER` e `OCS_PASSWORD` para
+consultar a API central em um processo com acesso a rede.
+
 ## Objetivo
 
 O OCS Inventory e uma fonte opcional de inventario de hardware e software. O IT Guardian
@@ -8,7 +20,7 @@ inventario usa esse snapshot e nao depende de uma chamada ao OCS em cada abertur
 
 A integracao:
 
-- preserva o modo `mock`;
+- aceita somente os modos `real` e `disabled`;
 - fica desabilitada por padrao em instalacoes locais;
 - opera somente em leitura;
 - nao altera computadores, agentes ou configuracoes no OCS;
@@ -30,14 +42,17 @@ INTEGRATION_STORE_RAW_DATA=false
 ```
 
 Use uma conta dedicada e somente leitura. Credenciais ficam apenas no ambiente e nunca sao
-devolvidas por endpoints de status. `OCS_SYNC_INTERVAL_MINUTES` esta reservado para um job
-futuro; nesta etapa a sincronizacao e manual.
+devolvidas por endpoints de status. Em um servidor Node persistente,
+`OCS_SYNC_INTERVAL_MINUTES` controla a sincronizacao automatica e a primeira consulta ocorre
+na inicializacao. A sincronizacao manual continua disponivel.
 
 Modos:
 
-- `mock`: usa os dados de demonstracao existentes;
 - `real`: usa a API configurada, desde que `OCS_ENABLED=true`;
 - `disabled`: retorna uma lista vazia sem acessar a rede.
+
+Qualquer valor legado, inclusive `mock`, e tratado como `disabled`. O IT Guardian nunca
+inventa computadores quando o OCS esta ausente ou mal configurado.
 
 ## Endpoints administrativos
 
@@ -81,7 +96,8 @@ IT Guardian, e dados manuais nao sao sobrescritos pelo OCS.
 ## Falhas e limitacoes
 
 - O formato da API OCS varia por versao e plugin; ajuste `OCS_COMPUTERS_PATH` quando preciso.
-- Nao ha job automatico nesta etapa.
+- Jobs continuos nao rodam dentro de funcoes serverless da Vercel. Execute a API local,
+  em Docker ou em uma VPS com acesso ao OCS para obter sincronizacao periodica.
 - Nao ha formulario para gravar credenciais pela interface; use variaveis de ambiente.
 - O sistema continua funcional com OCS indisponivel e preserva o ultimo snapshot valido.
 

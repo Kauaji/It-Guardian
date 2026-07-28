@@ -30,6 +30,23 @@ test("integracoes desabilitadas nao acessam a rede nem quebram o sistema", async
   assert.equal(calls, 0);
 });
 
+test("modo mock legado e tratado como desabilitado e nunca produz maquinas falsas", async () => {
+  let calls = 0;
+  const fetchImpl = async () => {
+    calls += 1;
+    throw new Error("nao deveria chamar a rede");
+  };
+  const ocs = new OcsInventoryService({ mode: "mock", enabled: true, fetchImpl });
+  const zabbix = new ZabbixService({ mode: "mock", enabled: true, fetchImpl });
+
+  assert.equal(ocs.getConfiguration().mode, "disabled");
+  assert.equal(zabbix.getConfiguration().mode, "disabled");
+  assert.deepEqual(await ocs.listInventory(), []);
+  assert.deepEqual(await zabbix.getHosts(), []);
+  assert.deepEqual(await zabbix.getAlerts(), []);
+  assert.equal(calls, 0);
+});
+
 test("cliente OCS usa autenticacao sem expor credenciais na configuracao", async () => {
   const password = "senha-super-secreta";
   let request;

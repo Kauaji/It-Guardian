@@ -29,17 +29,18 @@ bloqueado em producao.
 ## Fluxo cloud
 
 1. Um administrador gera uma chave de produto.
-2. O instalador pede somente essa chave.
-3. O instalador envia a chave, o fingerprint e o hostname por HTTPS para
+2. O administrador vincula os destinos centrais OCS e Zabbix a chave.
+3. O instalador pede somente a chave.
+4. O instalador envia a chave, o fingerprint e o hostname por HTTPS para
    `POST /api/collector/activate`.
-4. A API valida estado, expiracao e limite de computadores de forma
-   transacional.
-5. A API devolve um token de agente derivado. A chave de produto nao e
-   persistida no computador.
-6. O coletor envia inventario e heartbeat para `/api/agents/heartbeat`.
-7. O ativo aparece no Inventario com origem `cloud_collector`/agente e, sem
+5. A API valida estado, expiracao, configuracao de monitoramento e limite de
+   computadores de forma transacional.
+6. A API devolve o token derivado e os destinos OCS/Zabbix vinculados a chave.
+   A chave de produto nao e persistida no computador.
+7. O coletor envia inventario e heartbeat para `/api/agents/heartbeat`.
+8. O ativo aparece no Inventario com origem `cloud_collector`/agente e, sem
    organizacao previa, fica em `Nao organizadas`.
-8. O tecnico pode vincular o ativo a grupo, segmento e objeto do mapa 2D.
+9. O tecnico pode vincular o ativo a grupo, segmento e objeto do mapa 2D.
 
 Uma reinstalacao com a mesma chave e o mesmo fingerprint reutiliza a ativacao,
 revoga o token anterior e nao consome outra vaga. Fingerprints diferentes
@@ -59,6 +60,9 @@ A migracao `005-cloud-product-activation` cria:
 
 A chave completa e gerada com entropia criptografica, exibida uma vez e
 armazenada apenas como SHA-256. O fingerprint tambem e armazenado em hash.
+A migracao `007-product-key-monitoring` adiciona os destinos OCS, Zabbix
+passivo e Zabbix ativo por chave. Esses campos contem somente enderecos; as
+credenciais das APIs centrais continuam fora deste fluxo.
 
 ## Configuracao cloud
 
@@ -107,8 +111,25 @@ npm run product-key:create -- `
   --organization "Empresa Exemplo" `
   --plan "Beta" `
   --limit 10 `
-  --expires "2027-12-31"
+  --expires "2027-12-31" `
+  --ocs-url "https://ocs.empresa/ocsinventory" `
+  --zabbix-server "zabbix.empresa" `
+  --zabbix-active "zabbix.empresa"
 ```
+
+Para configurar uma chave existente pelo ID:
+
+```powershell
+npm run product-key:monitoring -- `
+  --id "id-da-chave" `
+  --ocs-url "https://ocs.empresa/ocsinventory" `
+  --zabbix-server "zabbix.empresa" `
+  --zabbix-active "zabbix.empresa"
+```
+
+Administradores tambem podem usar `PUT /api/product-keys/:id/monitoring`.
+Uma chave sem os tres destinos pode ser cadastrada, mas sua ativacao retorna
+`409` antes de reservar vaga, criar token ou persistir uma ativacao parcial.
 
 O painel permite listar chaves mascaradas, consultar uso, ver computadores,
 desativar uma ativacao e desativar ou reativar a chave. Desativar a chave revoga
@@ -153,13 +174,20 @@ executavel e nao e solicitada ao usuario.
 
 O instalador:
 
-- grava arquivos em `C:\ProgramData\ITGuardianCollector`;
+- grava arquivos em `C:\ProgramData\ITGuardian`;
 - salva somente o token derivado em `config.json`;
 - restringe a configuracao a SYSTEM e administradores;
-- cria a tarefa `IT Guardian Cloud Collector` como SYSTEM na inicializacao;
+- instala `ITGuardian.exe`, identificado como `IT Guardian` no Gerenciador de
+  Tarefas;
+- cria a tarefa `IT Guardian Collector` como SYSTEM na inicializacao;
+- inicia um indicador visual do IT Guardian na bandeja quando o usuario entra
+  no Windows;
 - executa um primeiro heartbeat antes de concluir;
-- cria `Abrir chamado - IT Guardian` na area de trabalho;
+- cria `Abrir chamado - IT Guardian` na area de trabalho com o icone oficial;
 - registra logs locais e oferece desinstalacao.
+
+O indicador da bandeja nao abre menus e nao executa comandos. Ele existe apenas
+para comunicar visualmente que o IT Guardian esta instalado e ativo.
 
 Atalho de suporte:
 
@@ -179,10 +207,10 @@ https://it-guardian-server.vercel.app/abrir-chamado
 Se o ativo nao aparecer:
 
 ```powershell
-Get-ScheduledTask -TaskName "IT Guardian Cloud Collector"
-Get-ScheduledTaskInfo -TaskName "IT Guardian Cloud Collector"
-Get-Content "$env:ProgramData\ITGuardianCollector\logs\agent.log" -Tail 100
-& "$env:ProgramData\ITGuardianCollector\diagnose-agent.ps1"
+Get-ScheduledTask -TaskName "IT Guardian Collector"
+Get-ScheduledTaskInfo -TaskName "IT Guardian Collector"
+Get-Content "$env:ProgramData\ITGuardian\logs\agent.log" -Tail 100
+& "$env:ProgramData\ITGuardian\diagnose-agent.ps1"
 ```
 
 ## Dados coletados
@@ -202,12 +230,19 @@ executa scripts e nao possui mecanismo de atualizacao remota.
 
 ## OCS e Zabbix
 
-OCS e Zabbix continuam opcionais e desabilitados por padrao.
+Os adaptadores de leitura OCS e Zabbix do backend continuam opcionais e
+desabilitados por padrao. O instalador Windows 1.3.0, por outro lado, incorpora
+os dois agentes de endpoint oficiais e exige seus destinos centrais.
 
 - OCS importa inventario em modo somente leitura.
 - Zabbix importa hosts, disponibilidade e problemas em modo somente leitura.
+- Nao existe modo mock para OCS ou Zabbix e nenhuma maquina e inventada.
+- Em um processo persistente com acesso a LAN, a sincronizacao inicial ocorre
+  ao iniciar e continua nos intervalos configurados.
 - Credenciais ficam em variaveis de ambiente e nunca sao devolvidas pela API.
-- O instalador comum do coletor nao pede nem instala OCS/Zabbix.
+- O instalador instala OCS Inventory Agent e Zabbix Agent 2 como servicos
+  automaticos usando os destinos devolvidos pela chave, mas nao instala os
+  servidores centrais.
 - Para endpoints internos, rode a API/worker em uma maquina que alcance a LAN.
 - Na Vercel, use apenas endpoints publicamente acessiveis por HTTPS, o que nao e
   recomendado para sistemas internos sem uma camada segura.
@@ -247,5 +282,6 @@ antes de uma liberacao publica.
 - a Vercel nao substitui um worker permanente para LAN, polling ou jobs longos;
 - o instalador precisa do Inno Setup 6 para gerar o `.exe`;
 - o executavel ainda precisa de assinatura de codigo e ensaio em Windows limpo;
-- OCS/Zabbix fazem sincronizacao administrativa manual nesta etapa;
+- OCS/Zabbix exigem endpoints e credenciais reais e um processo persistente com
+  acesso a rede onde os servicos estao instalados;
 - a URL de download do instalador depende de publicacao externa do artefato.

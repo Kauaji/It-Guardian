@@ -1,4 +1,3 @@
-import { zabbixAlerts, zabbixHosts } from "../../data/mockZabbix.js";
 import {
   ExternalIntegrationError,
   requestJson
@@ -6,7 +5,7 @@ import {
 
 export class ZabbixService {
   constructor({
-    mode = process.env.ZABBIX_MODE || "mock",
+    mode = process.env.ZABBIX_MODE || "disabled",
     enabled,
     apiUrl = process.env.ZABBIX_API_URL || "",
     token = process.env.ZABBIX_API_TOKEN || "",
@@ -14,10 +13,9 @@ export class ZabbixService {
     retries = Number(process.env.ZABBIX_RETRIES || 1),
     fetchImpl = globalThis.fetch
   } = {}) {
-    this.mode = ["mock", "real", "disabled"].includes(mode) ? mode : "disabled";
+    this.mode = mode === "real" ? "real" : "disabled";
     this.enabled = enabled ?? (
-      this.mode === "mock" ||
-      (this.mode === "real" && String(process.env.ZABBIX_ENABLED || "").toLowerCase() === "true")
+      this.mode === "real" && String(process.env.ZABBIX_ENABLED || "").toLowerCase() === "true"
     );
     this.apiUrl = apiUrl.replace(/\/+$/, "");
     this.token = token;
@@ -33,17 +31,13 @@ export class ZabbixService {
       mode: this.mode,
       enabled: Boolean(this.enabled),
       baseUrl: this.apiUrl || null,
-      configured: this.mode === "mock" || Boolean(this.apiUrl && this.token)
+      configured: Boolean(this.apiUrl && this.token)
     };
   }
 
   async getHosts() {
     if (!this.enabled || this.mode === "disabled") return [];
-    if (this.mode === "real") {
-      return this.getHostsFromApi();
-    }
-
-    return zabbixHosts;
+    return this.getHostsFromApi();
   }
 
   async getHostById(id) {
@@ -53,11 +47,7 @@ export class ZabbixService {
 
   async getAlerts() {
     if (!this.enabled || this.mode === "disabled") return [];
-    if (this.mode === "real") {
-      return this.getAlertsFromApi();
-    }
-
-    return zabbixAlerts;
+    return this.getAlertsFromApi();
   }
 
   async rpc(method, params = {}) {
@@ -163,9 +153,6 @@ export class ZabbixService {
   async testConnection() {
     if (!this.enabled || this.mode === "disabled") {
       return { ok: true, skipped: true, mode: this.mode };
-    }
-    if (this.mode === "mock") {
-      return { ok: true, skipped: false, mode: this.mode, discoveredHosts: zabbixHosts.length };
     }
     const hosts = await this.getHostsFromApi();
     return { ok: true, skipped: false, mode: this.mode, discoveredHosts: hosts.length };

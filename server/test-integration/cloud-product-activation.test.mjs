@@ -18,6 +18,18 @@ const {
 } = await import("../src/repositories/productKeyRepository.js");
 const { createUser } = await import("../src/repositories/userRepository.js");
 
+const monitoringA = {
+  ocsServerUrl: "https://ocs.empresa-a.test/ocsinventory",
+  zabbixServer: "zabbix.empresa-a.test",
+  zabbixServerActive: "zabbix-active.empresa-a.test"
+};
+
+const monitoringB = {
+  ocsServerUrl: "https://ocs.empresa-b.test/ocsinventory",
+  zabbixServer: "zabbix.empresa-b.test",
+  zabbixServerActive: "zabbix-active.empresa-b.test"
+};
+
 function listen(app) {
   return new Promise((resolve) => {
     const server = app.listen(0, "127.0.0.1", () => resolve(server));
@@ -111,12 +123,82 @@ test("ativacao cloud controla licencas, reinstalacao, revogacao e heartbeat", as
     planName: "Beta",
     activationLimit: 1
   });
+
+  const missingMonitoring = await activate(baseUrl, created.key, "fingerprint-a");
+  assert.equal(missingMonitoring.status, 409);
+  assert.match(
+    (await missingMonitoring.json()).message,
+    /ainda nao possui OCS e Zabbix configurados/
+  );
+  const untouchedKey = await query(
+    "SELECT activation_count FROM product_keys WHERE id = $1",
+    [created.productKey.id]
+  );
+  assert.equal(Number(untouchedKey.rows[0].activation_count), 0);
+  const untouchedRelations = await query(
+    `
+      SELECT
+        (SELECT COUNT(*) FROM device_activations WHERE product_key_id = $1) AS activations,
+        (SELECT COUNT(*) FROM agent_enrollments WHERE product_key_id = $1) AS enrollments
+    `,
+    [created.productKey.id]
+  );
+  assert.equal(Number(untouchedRelations.rows[0].activations), 0);
+  assert.equal(Number(untouchedRelations.rows[0].enrollments), 0);
+
+  const forbiddenMonitoring = await fetch(
+    `${baseUrl}/api/product-keys/${created.productKey.id}/monitoring`,
+    {
+      method: "PUT",
+      headers: {
+        authorization: `Bearer ${regularToken}`,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(monitoringA)
+    }
+  );
+  assert.equal(forbiddenMonitoring.status, 403);
+
+  const invalidMonitoring = await fetch(
+    `${baseUrl}/api/product-keys/${created.productKey.id}/monitoring`,
+    {
+      method: "PUT",
+      headers: {
+        authorization: `Bearer ${adminToken}`,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({ ...monitoringA, ocsServerUrl: "file:///servidor" })
+    }
+  );
+  assert.equal(invalidMonitoring.status, 400);
+
+  const configuredMonitoring = await fetch(
+    `${baseUrl}/api/product-keys/${created.productKey.id}/monitoring`,
+    {
+      method: "PUT",
+      headers: {
+        authorization: `Bearer ${adminToken}`,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(monitoringA)
+    }
+  );
+  assert.equal(configuredMonitoring.status, 200);
+  assert.deepEqual(
+    (await configuredMonitoring.json()).productKey.monitoring,
+    { configured: true, ...monitoringA }
+  );
+
   const first = await activate(baseUrl, created.key, "fingerprint-a");
   assert.equal(first.status, 201);
   const firstBody = await first.json();
   assert.match(firstBody.agentToken, /^itg_/);
   assert.equal(firstBody.supportUrl, "https://it-guardian-server.vercel.app/abrir-chamado");
   assert.equal(firstBody.organization.organizationName, "Empresa Teste");
+  assert.deepEqual(firstBody.monitoring, { configured: true, ...monitoringA });
+  assert.equal(firstBody.ocsServerUrl, monitoringA.ocsServerUrl);
+  assert.equal(firstBody.zabbixServer, monitoringA.zabbixServer);
+  assert.equal(firstBody.zabbixServerActive, monitoringA.zabbixServerActive);
   assert.equal(JSON.stringify(firstBody).includes(created.key), false);
 
   const accepted = await fetch(`${baseUrl}/api/agents/heartbeat`, {
@@ -186,7 +268,8 @@ test("ativacao cloud controla licencas, reinstalacao, revogacao e heartbeat", as
     organizationName: "Empresa Teste",
     planName: "Beta",
     activationLimit: 1,
-    expiresAt: new Date(Date.now() - 60_000).toISOString()
+    expiresAt: new Date(Date.now() - 60_000).toISOString(),
+    monitoring: monitoringA
   });
   const expiredResponse = await activate(baseUrl, expired.key, "fingerprint-expired");
   assert.equal(expiredResponse.status, 403);
@@ -195,7 +278,8 @@ test("ativacao cloud controla licencas, reinstalacao, revogacao e heartbeat", as
     displayName: "Concorrencia",
     organizationName: "Empresa Teste",
     planName: "Beta",
-    activationLimit: 1
+    activationLimit: 1,
+    monitoring: monitoringA
   });
   const concurrentResponses = await Promise.all([
     activate(baseUrl, concurrent.key, "concurrent-a", "CLOUD-CONCURRENT-A"),
@@ -221,4 +305,22 @@ test("ativacao cloud controla licencas, reinstalacao, revogacao e heartbeat", as
   );
   assert.equal(Number(concurrentRows.rows[0].activation_count), 1);
   assert.equal(Number(concurrentRows.rows[0].activation_rows), 1);
+
+  const isolated = await createProductKey({
+    displayName: "Cliente isolado",
+    organizationName: "Empresa B",
+    planName: "Beta",
+    activationLimit: 1,
+    monitoring: monitoringB
+  });
+  const isolatedResponse = await activate(
+    baseUrl,
+    isolated.key,
+    "fingerprint-isolated",
+    "CLOUD-ISOLATED"
+  );
+  assert.equal(isolatedResponse.status, 201);
+  const isolatedBody = await isolatedResponse.json();
+  assert.deepEqual(isolatedBody.monitoring, { configured: true, ...monitoringB });
+  assert.notDeepEqual(isolatedBody.monitoring, firstBody.monitoring);
 });

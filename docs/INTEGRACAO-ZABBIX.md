@@ -1,5 +1,16 @@
 # Integracao Zabbix
 
+## Instalacao do agente Windows
+
+O instalador do IT Guardian inclui o Zabbix Agent 2 7.0.29 oficial. Os campos
+`Server` e `ServerActive` sao vinculados a chave pelo administrador e
+devolvidos automaticamente durante a ativacao. O hostname usado pelo agente e
+o nome real do computador Windows. O servico fica automatico.
+
+O host correspondente ainda precisa existir no servidor/proxy Zabbix. O
+adaptador de leitura do backend continua precisando de `ZABBIX_API_URL` e
+`ZABBIX_API_TOKEN` para consultar a API central.
+
 ## Objetivo
 
 O Zabbix e uma fonte opcional de monitoramento. O IT Guardian consulta hosts e problemas,
@@ -8,7 +19,7 @@ contra a API Zabbix.
 
 A integracao:
 
-- preserva os mocks existentes;
+- aceita somente os modos `real` e `disabled`;
 - fica desabilitada por padrao;
 - usa token de API;
 - consulta hosts, disponibilidade e problemas;
@@ -28,15 +39,17 @@ ZABBIX_SYNC_INTERVAL_MINUTES=5
 INTEGRATION_STORE_RAW_DATA=false
 ```
 
-O token nunca e retornado na configuracao publica nem inserido em mensagens de erro.
-`ZABBIX_SYNC_INTERVAL_MINUTES` esta reservado para um job futuro; a sincronizacao atual e
-manual.
+O token nunca e retornado na configuracao publica nem inserido em mensagens de erro. Em um
+servidor Node persistente, `ZABBIX_SYNC_INTERVAL_MINUTES` controla a sincronizacao automatica
+e a primeira consulta ocorre na inicializacao. A sincronizacao manual continua disponivel.
 
 Modos:
 
-- `mock`: usa os hosts e alertas demonstrativos;
 - `real`: consulta JSON-RPC quando `ZABBIX_ENABLED=true`;
 - `disabled`: nao acessa a rede.
+
+Qualquer valor legado, inclusive `mock`, e tratado como `disabled`. Sem conexao real, a
+integracao retorna uma lista vazia em vez de exibir hosts ou alertas ficticios.
 
 ## Endpoints administrativos
 
@@ -85,7 +98,8 @@ Conflitos sao persistidos para revisao e nunca provocam fusao automatica.
 ## Falhas e limitacoes
 
 - O token precisa de permissoes para `host.get`, `problem.get` e `trigger.get`.
-- Nao ha job automatico nem tela para armazenar token.
+- Jobs continuos nao rodam dentro de funcoes serverless da Vercel. Execute a API local,
+  em Docker ou em uma VPS com acesso ao Zabbix para obter sincronizacao periodica.
 - Nao ha leitura de historico completo ou `item.get` nesta etapa.
 - Quando o Zabbix falha, o sistema mostra erro seguro e mantem o ultimo snapshot.
 

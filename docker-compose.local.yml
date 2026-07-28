@@ -29,8 +29,8 @@ services:
       DB_SSL: "false"
       ENABLE_DEMO_SEED: ${ENABLE_DEMO_SEED:-false}
       PING_MODE: ${PING_MODE:-mock}
-      FRONTEND_URL: http://localhost
-      CORS_ORIGIN: http://localhost
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
       OCS_MODE: ${OCS_MODE:-disabled}
       OCS_ENABLED: ${OCS_ENABLED:-false}
       ZABBIX_MODE: ${ZABBIX_MODE:-disabled}

@@ -1,4 +1,3 @@
-import { zabbixService } from "../integrations/zabbix/ZabbixService.js";
 import {
   findIntegrationAsset,
   listIntegrationAlerts,
@@ -42,19 +41,11 @@ function toLegacyAlert(alert) {
 }
 
 export async function getHosts() {
-  if (zabbixService.mode === "mock") {
-    return zabbixService.getHosts();
-  }
-
   const assets = await listIntegrationAssets({ source: "zabbix" });
   return assets.map(toLegacyHost);
 }
 
 export async function getHostById(id) {
-  if (zabbixService.mode === "mock") {
-    return zabbixService.getHostById(id);
-  }
-
   const asset = await findIntegrationAsset("zabbix", id);
   return asset ? toLegacyHost(asset) : null;
 }
@@ -65,10 +56,6 @@ export async function getActiveAlerts() {
 }
 
 export async function getAlertHistory() {
-  if (zabbixService.mode === "mock") {
-    return zabbixService.getAlerts();
-  }
-
   const alerts = await listIntegrationAlerts({ source: "zabbix" });
   return alerts.map(toLegacyAlert);
 }

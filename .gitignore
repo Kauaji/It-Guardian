@@ -11,3 +11,6 @@ test-results/
 .codex-logs/
 tmp/
 *.zip
+installers/windows-collector/ITGuardian.exe
+installers/windows-collector/it-guardian.ico
+installers/windows-collector/vendor/

@@ -5,13 +5,17 @@ import { migration002UserPreferences } from "./002-user-preferences.js";
 import { migration003WindowsAgentFoundation } from "./003-windows-agent-foundation.js";
 import { migration004ExternalIntegrations } from "./004-external-integrations.js";
 import { migration005CloudProductActivation } from "./005-cloud-product-activation.js";
+import { migration006RemoveDemoInventory } from "./006-remove-demo-inventory.js";
+import { migration007ProductKeyMonitoring } from "./007-product-key-monitoring.js";
 
 export const migrations = [
   migration001RuntimeFoundation,
   migration002UserPreferences,
   migration003WindowsAgentFoundation,
   migration004ExternalIntegrations,
-  migration005CloudProductActivation
+  migration005CloudProductActivation,
+  migration006RemoveDemoInventory,
+  migration007ProductKeyMonitoring
 ];
 
 export async function runMigrations() {

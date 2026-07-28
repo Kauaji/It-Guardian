@@ -1,5 +1,6 @@
 import {
   activateCollector,
+  configureProductKeyMonitoring,
   createManagedProductKey,
   deactivateDeviceActivation,
   listDeviceActivations,
@@ -67,3 +68,12 @@ export async function changeStatus(req, res, next) {
   }
 }
 
+export async function configureMonitoring(req, res, next) {
+  try {
+    const productKey = await configureProductKeyMonitoring(req.params.id, req.body);
+    if (!productKey) return res.status(404).json({ message: "Chave de produto nao encontrada." });
+    return res.json({ productKey });
+  } catch (error) {
+    return next(error);
+  }
+}

@@ -1,5 +1,5 @@
-#define MyAppName "Coletor IT Guardian"
-#define MyAppVersion "1.1.0"
+#define MyAppName "IT Guardian"
+#define MyAppVersion "1.3.0"
 #define MyAppPublisher "IT Guardian"
 #ifndef ApiBaseUrl
   #define ApiBaseUrl "https://it-guardian-server.vercel.app"
@@ -10,7 +10,7 @@ AppId={{7CA73097-A67E-4551-94A2-CB11A0F61E91}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
-DefaultDirName={commonappdata}\ITGuardianCollector
+DefaultDirName={commonappdata}\ITGuardian
 DisableDirPage=yes
 DisableProgramGroupPage=yes
 PrivilegesRequired=admin
@@ -22,25 +22,33 @@ SolidCompression=yes
 WizardStyle=modern
 SetupLogging=yes
 UninstallDisplayName={#MyAppName}
+UninstallDisplayIcon={app}\ITGuardian.exe
+Uninstallable=yes
+SetupIconFile=it-guardian.ico
 DisableReadyPage=yes
 
 [Messages]
 WelcomeLabel1=Bem-vindo a Instalacao do IT Guardian
-WelcomeLabel2=Este assistente instalara o Coletor IT Guardian neste computador.%n%nO coletor envia inventario e heartbeat para o ambiente protegido da sua organizacao.
+WelcomeLabel2=Este assistente instalara o IT Guardian neste computador.%n%nO aplicativo coleta inventario real em segundo plano e exibe a presenca do IT Guardian na bandeja do Windows.
 FinishedHeadingLabel=Instalacao do IT Guardian concluida
-FinishedLabel=O Coletor IT Guardian foi instalado e o primeiro contato com o servidor foi validado.
+FinishedLabel=O IT Guardian, o OCS Inventory Agent e o Zabbix Agent 2 foram instalados. O primeiro contato do coletor com o servidor foi validado.
 
 [Files]
-Source: "..\..\agent\windows\it-guardian-agent.ps1"; DestDir: "{app}"; Flags: ignoreversion
+Source: "ITGuardian.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "it-guardian.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\agent\windows\diagnose-agent.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "Finalize-CollectorInstall.ps1"; DestDir: "{app}"; Flags: ignoreversion
+Source: "Install-MonitoringAgents.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "Uninstall-Collector.ps1"; DestDir: "{app}"; Flags: ignoreversion
+Source: "vendor\ocs-extracted\OCS-Windows-Agent-2.11.0.1_x64\OCS-Windows-Agent-Setup-x64.exe"; DestDir: "{app}\packages"; Flags: ignoreversion
+Source: "vendor\zabbix_agent2-7.0.29-windows-amd64-openssl.msi"; DestDir: "{app}\packages"; Flags: ignoreversion
 
 [Icons]
-Name: "{commondesktop}\Abrir chamado - IT Guardian"; Filename: "{code:GetSupportUrl}"; WorkingDir: "{app}"
+Name: "{commondesktop}\Abrir chamado - IT Guardian"; Filename: "{code:GetSupportUrl}"; WorkingDir: "{app}"; IconFilename: "{app}\ITGuardian.exe"
+Name: "{commonprograms}\IT Guardian\Desinstalar IT Guardian"; Filename: "{uninstallexe}"; IconFilename: "{app}\ITGuardian.exe"
 
 [UninstallRun]
-Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\Uninstall-Collector.ps1"""; Flags: runhidden waituntilterminated
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\Uninstall-Collector.ps1"""; Flags: runhidden waituntilterminated; RunOnceId: "ITGuardianCleanup"
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"
@@ -51,6 +59,9 @@ var
   ActivatedProductKey: string;
   AgentToken: string;
   SupportUrl: string;
+  OcsServerUrl: string;
+  ZabbixServer: string;
+  ZabbixServerActive: string;
   MachineFingerprint: string;
   IntervalSeconds: Integer;
 
@@ -147,10 +158,29 @@ begin
 
     AgentToken := JsonStringValue(ResponseBody, 'agentToken');
     SupportUrl := JsonStringValue(ResponseBody, 'supportUrl');
+    OcsServerUrl := JsonStringValue(ResponseBody, 'ocsServerUrl');
+    ZabbixServer := JsonStringValue(ResponseBody, 'zabbixServer');
+    ZabbixServerActive := JsonStringValue(ResponseBody, 'zabbixServerActive');
     IntervalSeconds := JsonIntegerValue(ResponseBody, 'intervalSeconds', 300);
     if AgentToken = '' then
     begin
       MsgBox('O servidor nao retornou o token do coletor.', mbError, MB_OK);
+      Exit;
+    end;
+    if
+      (OcsServerUrl = '') or
+      (ZabbixServer = '') or
+      (ZabbixServerActive = '') or
+      ((Pos('http://', Lowercase(OcsServerUrl)) <> 1) and
+       (Pos('https://', Lowercase(OcsServerUrl)) <> 1))
+    then
+    begin
+      AgentToken := '';
+      MsgBox(
+        'A chave foi validada, mas o servidor nao retornou a configuracao completa do OCS e Zabbix. A instalacao nao foi iniciada.',
+        mbError,
+        MB_OK
+      );
       Exit;
     end;
     if SupportUrl = '' then
@@ -190,6 +220,9 @@ begin
   ActivatedProductKey := '';
   AgentToken := '';
   SupportUrl := '';
+  OcsServerUrl := '';
+  ZabbixServer := '';
+  ZabbixServerActive := '';
   IntervalSeconds := 300;
 end;
 
@@ -230,6 +263,7 @@ begin
   ConfigJson :=
     '{' + #13#10 +
     '  "serverUrl": "{#ApiBaseUrl}",' + #13#10 +
+    '  "supportUrl": "' + JsonEscape(SupportUrl) + '",' + #13#10 +
     '  "agentToken": "' + JsonEscape(AgentToken) + '",' + #13#10 +
     '  "intervalSeconds": ' + IntToStr(IntervalSeconds) + ',' + #13#10 +
     '  "machineId": "' + JsonEscape(MachineFingerprint) + '",' + #13#10 +
@@ -245,7 +279,10 @@ begin
     ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
     '-NoProfile -ExecutionPolicy Bypass -File "' +
       ExpandConstant('{app}\Finalize-CollectorInstall.ps1') +
-      '" -InstallDirectory "' + ExpandConstant('{app}') + '"',
+      '" -InstallDirectory "' + ExpandConstant('{app}') +
+      '" -OcsServerUrl "' + OcsServerUrl +
+      '" -ZabbixServer "' + ZabbixServer +
+      '" -ZabbixServerActive "' + ZabbixServerActive + '"',
     '',
     SW_HIDE,
     ewWaitUntilTerminated,

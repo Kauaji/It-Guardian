@@ -7,6 +7,7 @@ process.env.JWT_SECRET = "integration-test-secret-with-at-least-32-characters";
 process.env.NODE_ENV = "test";
 
 const { createApp } = await import("../src/app.js");
+const { upsertAlert } = await import("../src/repositories/alertRepository.js");
 
 const trustedOrigin = "http://localhost:5173";
 
@@ -40,6 +41,44 @@ test("sugestão exige decisão humana, cria uma única OS e preserva rastreabili
   const address = server.address();
   const baseUrl = `http://127.0.0.1:${address.port}`;
   const cookie = await login(baseUrl);
+  const observedAt = new Date().toISOString();
+
+  await Promise.all([
+    upsertAlert({
+      id: "integration-alert-disk-health-1",
+      assetId: "integration-asset-1",
+      hostName: "INTEGRATION-01",
+      type: "disk_health_low",
+      metric: "disk_health",
+      title: "Saude do disco abaixo do limite",
+      description: "Alerta deterministico criado somente pelo teste integrado.",
+      severity: "critical",
+      value: 35,
+      threshold: 80,
+      status: "active",
+      firstSeenAt: observedAt,
+      lastSeenAt: observedAt,
+      occurrencesCount: 1,
+      source: "integration_test"
+    }),
+    upsertAlert({
+      id: "integration-alert-disk-health-2",
+      assetId: "integration-asset-2",
+      hostName: "INTEGRATION-02",
+      type: "disk_health_low",
+      metric: "disk_health",
+      title: "Saude do disco abaixo do limite",
+      description: "Segundo alerta deterministico criado somente pelo teste integrado.",
+      severity: "critical",
+      value: 42,
+      threshold: 80,
+      status: "active",
+      firstSeenAt: observedAt,
+      lastSeenAt: observedAt,
+      occurrencesCount: 1,
+      source: "integration_test"
+    })
+  ]);
 
   const beforeOrdersResponse = await fetch(`${baseUrl}/api/service-orders`, {
     headers: { cookie }

@@ -231,6 +231,19 @@ async function updateState(db, state) {
   return stateFromRow(result.rows[0]);
 }
 
+async function removeMissingRows(db, tableName, source, externalIds) {
+  if (!externalIds.length) {
+    await db(`DELETE FROM ${tableName} WHERE source = $1`, [source]);
+    return;
+  }
+
+  const placeholders = externalIds.map((_, index) => `$${index + 2}`).join(", ");
+  await db(
+    `DELETE FROM ${tableName} WHERE source = $1 AND external_id NOT IN (${placeholders})`,
+    [source, ...externalIds]
+  );
+}
+
 export async function saveIntegrationSync({
   source,
   enabled,
@@ -242,6 +255,20 @@ export async function saveIntegrationSync({
   metadata = {}
 }) {
   return withTransaction(async (db) => {
+    await removeMissingRows(
+      db,
+      "integration_assets",
+      source,
+      assets.map((asset) => asset.externalId)
+    );
+    await removeMissingRows(
+      db,
+      "integration_alerts",
+      source,
+      alerts.map((alert) => alert.externalId)
+    );
+    await db("DELETE FROM integration_conflicts WHERE source = $1", [source]);
+
     const savedAssets = [];
     const savedAlerts = [];
     for (const asset of assets) savedAssets.push(await upsertAsset(db, asset));
@@ -262,6 +289,35 @@ export async function saveIntegrationSync({
       metadata: { ...metadata, conflicts: conflicts.length }
     });
     return { state, assets: savedAssets, alerts: savedAlerts, conflicts };
+  });
+}
+
+export async function purgeLegacyMockIntegrationSnapshots() {
+  return withTransaction(async (db) => {
+    const states = await db(
+      "SELECT source FROM integration_sync_state WHERE mode = 'mock'"
+    );
+    const sources = states.rows.map((row) => row.source);
+
+    for (const source of sources) {
+      await db("DELETE FROM integration_assets WHERE source = $1", [source]);
+      await db("DELETE FROM integration_alerts WHERE source = $1", [source]);
+      await db("DELETE FROM integration_conflicts WHERE source = $1", [source]);
+      await db(
+        `UPDATE integration_sync_state
+         SET enabled = FALSE,
+             mode = 'disabled',
+             last_status = 'legacy_mock_removed',
+             last_error = NULL,
+             imported_assets = 0,
+             imported_alerts = 0,
+             updated_at = NOW()
+         WHERE source = $1`,
+        [source]
+      );
+    }
+
+    return sources;
   });
 }
 

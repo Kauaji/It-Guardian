@@ -62,7 +62,7 @@ it-guardian/
   server/src/routes/           Rotas HTTP
   server/src/repositories/     Persistencia PostgreSQL
   server/src/services/         Orquestracao de dominio
-  server/src/integrations/     Adaptadores mock/reais opcionais
+  server/src/integrations/     Adaptadores reais opcionais
   server/src/jobs/             Jobs futuros para VPS
 ```
 
@@ -163,9 +163,9 @@ JWT_SECRET=uma-chave-grande-e-segura
 FRONTEND_URL=https://seu-projeto.vercel.app
 PUBLIC_APP_URL=https://seu-projeto.vercel.app
 PING_MODE=mock
-OCS_MODE=mock
+OCS_MODE=disabled
 OCS_ENABLED=false
-ZABBIX_MODE=mock
+ZABBIX_MODE=disabled
 ZABBIX_ENABLED=false
 ```
 
@@ -251,14 +251,20 @@ Ping real e monitoramento continuo precisam de uma VPS ou agente dentro da rede 
 
 ## Integracoes OCS e Zabbix
 
-Os adaptadores preservam `mock`, aceitam `disabled` e podem operar em modo `real`:
+OCS e Zabbix aceitam somente `disabled` ou `real`. Nao existe fallback mock e
+nenhuma maquina e criada quando os servicos nao estao configurados:
 
 - `server/src/integrations/ping/PingService.js`
 - `server/src/integrations/ocs/OcsInventoryService.js`
 - `server/src/integrations/zabbix/ZabbixService.js`
-- `server/src/jobs/`
+- `server/src/services/integrationSyncScheduler.js`
 
-OCS e Zabbix sao desabilitados por padrao no perfil local, usam snapshots persistidos e nao sao dependencias obrigatorias. A sincronizacao inicial e manual e protegida por administrador. Consulte:
+OCS e Zabbix sao desabilitados por padrao no perfil local, usam snapshots
+persistidos e nao sao dependencias obrigatorias. Quando configurados em um
+processo persistente com acesso a LAN, sincronizam ao iniciar e nos intervalos
+configurados. A sincronizacao administrativa manual continua disponivel.
+Ambientes serverless como a Vercel nao substituem esse processo persistente.
+Consulte:
 
 - `docs/INTEGRACAO-OCS.md`
 - `docs/INTEGRACAO-ZABBIX.md`

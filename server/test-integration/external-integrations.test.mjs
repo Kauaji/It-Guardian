@@ -39,9 +39,10 @@ function asset(overrides = {}) {
   };
 }
 
-test("snapshots externos preservam ativos, alertas, correlacao e conflitos", async (t) => {
+test.after(closeDatabase);
+
+test("snapshots externos preservam ativos, alertas, correlacao e conflitos", async () => {
   await initializeRuntime();
-  t.after(closeDatabase);
 
   const result = await saveIntegrationSync({
     source: "ocs",
@@ -99,4 +100,53 @@ test("snapshots externos preservam ativos, alertas, correlacao e conflitos", asy
   assert.equal(ocsState.importedAssets, 1);
   assert.equal(zabbixState.importedAssets, 1);
   assert.equal(zabbixState.importedAlerts, 1);
+});
+
+test("sincronizacao real remove maquinas e alertas que deixaram de existir na origem", async () => {
+  await initializeRuntime();
+
+  await saveIntegrationSync({
+    source: "ocs",
+    enabled: true,
+    mode: "real",
+    baseUrl: "http://ocs.internal",
+    assets: [asset({ externalId: "stale-asset" })]
+  });
+  await saveIntegrationSync({
+    source: "zabbix",
+    enabled: true,
+    mode: "real",
+    baseUrl: "http://zabbix.internal/api_jsonrpc.php",
+    alerts: [{
+      source: "zabbix",
+      externalId: "stale-alert",
+      assetExternalId: "stale-asset",
+      assetHostname: "old-host",
+      name: "Alerta removido na origem",
+      severity: "high",
+      status: "active",
+      occurredAt: "2026-07-27T12:05:00.000Z",
+      resolvedAt: null,
+      metadata: {},
+      rawData: null
+    }]
+  });
+
+  await saveIntegrationSync({
+    source: "ocs",
+    enabled: true,
+    mode: "real",
+    baseUrl: "http://ocs.internal",
+    assets: []
+  });
+  await saveIntegrationSync({
+    source: "zabbix",
+    enabled: true,
+    mode: "real",
+    baseUrl: "http://zabbix.internal/api_jsonrpc.php",
+    alerts: []
+  });
+
+  assert.equal((await listIntegrationAssets({ source: "ocs" })).length, 0);
+  assert.equal((await listIntegrationAlerts({ source: "zabbix" })).length, 0);
 });
