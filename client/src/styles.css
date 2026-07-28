@@ -11100,6 +11100,384 @@ table strong,
   color: var(--text-muted);
 }
 
+.cloud-admin-panel {
+  min-width: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.cloud-admin-heading,
+.cloud-admin-section-title,
+.cloud-integration-heading,
+.cloud-integration-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cloud-admin-heading {
+  justify-content: space-between;
+  padding-bottom: 2px;
+}
+
+.cloud-admin-heading > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.cloud-admin-heading strong,
+.cloud-admin-section-title strong,
+.cloud-key-reveal strong,
+.cloud-key-summary strong,
+.cloud-activation-list strong,
+.cloud-integration-heading strong {
+  color: var(--text-strong);
+}
+
+.cloud-admin-heading span,
+.cloud-admin-section-title > span,
+.cloud-key-reveal span,
+.cloud-key-summary small,
+.cloud-activation-list small,
+.cloud-integration-heading > div > span,
+.cloud-integration-grid dt,
+.cloud-integration-grid dd {
+  color: var(--text-muted);
+}
+
+.cloud-installer-action {
+  flex: 0 0 auto;
+  text-decoration: none;
+}
+
+.cloud-admin-create-layout {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(250px, 0.75fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+.cloud-key-form .admin-form-header strong,
+.cloud-security-note,
+.cloud-key-reveal,
+.cloud-admin-section-title > div,
+.cloud-key-state,
+.cloud-activation-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.cloud-security-note {
+  color: var(--accent);
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.cloud-key-reveal {
+  min-width: 0;
+  min-height: 154px;
+  align-content: center;
+  align-items: flex-start;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px 10px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface-soft) 82%, transparent);
+  padding: 16px;
+}
+
+.cloud-key-reveal > svg {
+  color: var(--text-muted);
+}
+
+.cloud-key-reveal > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.cloud-key-reveal.visible {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+}
+
+.cloud-key-reveal.visible > svg {
+  color: var(--accent);
+}
+
+.cloud-key-reveal code {
+  grid-column: 1 / -1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border));
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-strong);
+  padding: 10px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  user-select: all;
+}
+
+.cloud-key-reveal .secondary-action {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+.cloud-admin-section {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-soft);
+  padding: 12px;
+}
+
+.cloud-admin-section-title {
+  min-width: 0;
+  justify-content: space-between;
+}
+
+.cloud-admin-section-title > div {
+  min-width: 0;
+}
+
+.cloud-admin-section-title > div > svg {
+  color: var(--accent);
+}
+
+.cloud-key-list,
+.cloud-activation-list {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.cloud-key-list > article {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  padding: 7px;
+}
+
+.cloud-key-list > article.inactive {
+  opacity: 0.72;
+}
+
+.cloud-key-summary {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(150px, 1fr) minmax(120px, auto) auto minmax(130px, auto);
+  gap: 10px;
+  align-items: center;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 3px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cloud-key-summary > span:nth-child(2) {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.cloud-key-summary code {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.cloud-key-state {
+  width: 28px;
+  height: 28px;
+  justify-content: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+  color: var(--danger);
+}
+
+.cloud-key-state.active {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  color: var(--accent);
+}
+
+.cloud-key-usage,
+.cloud-key-expiry {
+  display: grid;
+  gap: 1px;
+  color: var(--text-strong);
+  font-size: 0.82rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.cloud-key-usage small {
+  font-size: 0.68rem;
+}
+
+.cloud-key-expiry {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+.cloud-key-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.cloud-activation-list > article {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(150px, 1fr) minmax(150px, auto) minmax(150px, auto) auto;
+  gap: 10px;
+  align-items: center;
+  border-top: 1px solid var(--border);
+  padding: 10px 2px 2px;
+}
+
+.cloud-activation-list > article > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.cloud-activation-status {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.cloud-activation-status > span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-soft);
+}
+
+.cloud-activation-status.active {
+  color: var(--accent);
+}
+
+.cloud-activation-status.active > span {
+  background: var(--accent);
+}
+
+.cloud-integration-grid {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.cloud-integration-grid > article {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  padding: 12px;
+}
+
+.cloud-integration-heading > svg {
+  color: var(--accent);
+}
+
+.cloud-integration-heading > div {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex: 1;
+}
+
+.cloud-integration-badge {
+  min-height: 22px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 11%, var(--surface));
+  color: var(--accent);
+  padding: 0 8px;
+  font-size: 0.68rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.cloud-integration-badge.muted {
+  background: var(--surface-soft);
+  color: var(--text-muted);
+}
+
+.cloud-integration-badge.danger {
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+  color: var(--danger);
+}
+
+.cloud-integration-grid dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.cloud-integration-grid dl > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.cloud-integration-grid dt {
+  font-size: 0.68rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.cloud-integration-grid dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.cloud-integration-error {
+  color: var(--danger);
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.cloud-integration-actions {
+  justify-content: flex-end;
+  margin-top: auto;
+}
+
+.cloud-admin-panel .spin {
+  animation: cloud-admin-spin 0.8s linear infinite;
+}
+
+@keyframes cloud-admin-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .permission-blocked-panel {
   min-height: 360px;
   display: grid;
@@ -11125,6 +11503,38 @@ table strong,
 }
 
 @media (max-width: 1020px) {
+  .cloud-admin-create-layout,
+  .cloud-integration-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cloud-key-summary {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .cloud-key-summary code,
+  .cloud-key-expiry {
+    grid-column: 2;
+  }
+
+  .cloud-key-usage {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+  }
+
+  .cloud-activation-list > article {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .cloud-activation-list > article > small {
+    grid-column: 2;
+  }
+
+  .cloud-activation-list > article > button {
+    grid-column: 3;
+    grid-row: 1 / span 3;
+  }
+
   .settings-toolbar,
   .service-order-card footer {
     align-items: flex-start;
@@ -11145,6 +11555,54 @@ table strong,
 }
 
 @media (max-width: 720px) {
+  .cloud-admin-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .cloud-installer-action {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .cloud-key-list > article,
+  .cloud-key-summary,
+  .cloud-activation-list > article {
+    grid-template-columns: 1fr;
+  }
+
+  .cloud-key-state {
+    grid-row: auto;
+  }
+
+  .cloud-key-summary code,
+  .cloud-key-expiry,
+  .cloud-key-usage,
+  .cloud-activation-list > article > small,
+  .cloud-activation-list > article > button {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .cloud-key-actions,
+  .cloud-key-actions > button,
+  .cloud-activation-list > article > button {
+    width: 100%;
+  }
+
+  .cloud-integration-grid dl {
+    grid-template-columns: 1fr;
+  }
+
+  .cloud-integration-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .cloud-integration-actions button {
+    width: 100%;
+  }
+
   .service-orders-header {
     grid-template-columns: 1fr;
   }

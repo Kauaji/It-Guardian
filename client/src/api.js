@@ -854,6 +854,55 @@ export function deleteSector(token, id) {
   });
 }
 
+export function fetchProductKeys(token) {
+  return apiFetch("/product-keys", { token });
+}
+
+export function createProductKey(token, payload) {
+  return apiFetch("/product-keys", {
+    token,
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function updateProductKeyStatus(token, id, active) {
+  return apiFetch(`/product-keys/${id}`, {
+    token,
+    method: "PATCH",
+    body: JSON.stringify({ active })
+  });
+}
+
+export function fetchProductKeyActivations(token, id) {
+  return apiFetch(`/product-keys/${id}/activations`, { token });
+}
+
+export function deactivateProductKeyActivation(token, id) {
+  return apiFetch(`/product-keys/activations/${id}/deactivate`, {
+    token,
+    method: "POST"
+  });
+}
+
+export function fetchIntegrationStatus(token, source) {
+  return apiFetch(`/integrations/${encodeURIComponent(source)}/status`, { token });
+}
+
+export function testIntegrationConnection(token, source) {
+  return apiFetch(`/integrations/${encodeURIComponent(source)}/test`, {
+    token,
+    method: "POST"
+  });
+}
+
+export function synchronizeIntegration(token, source) {
+  return apiFetch(`/integrations/${encodeURIComponent(source)}/sync`, {
+    token,
+    method: "POST"
+  });
+}
+
 export function fetchPublicSupportOptions() {
   return apiFetch("/public/support-options");
 }

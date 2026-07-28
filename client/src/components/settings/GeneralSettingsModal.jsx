@@ -23,6 +23,7 @@ import {
   updateUserAccess
 } from "../../api.js";
 import { permissionGroups } from "../../permissions.js";
+import CloudProductAdminPanel from "./CloudProductAdminPanel.jsx";
 
 const accentColorKey = "it_guardian_accent_color";
 const generalPreferencesKey = "it_guardian_general_preferences";
@@ -920,6 +921,9 @@ export default function GeneralSettingsModal({
                   <button type="button" className={adminTab === "permissions" ? "active" : ""} onClick={() => setAdminTab("permissions")}>
                     Permissões
                   </button>
+                  <button type="button" className={adminTab === "cloud" ? "active" : ""} onClick={() => setAdminTab("cloud")}>
+                    Cloud e coletores
+                  </button>
                 </div>
 
                 {loadingAdmin && <p className="empty">Carregando administração...</p>}
@@ -1137,6 +1141,10 @@ export default function GeneralSettingsModal({
                       disabled
                     />
                   </div>
+                )}
+
+                {adminTab === "cloud" && (
+                  <CloudProductAdminPanel token={token} notify={notify} />
                 )}
               </div>
             )}
