@@ -16,9 +16,15 @@ const acceptedFields = new Set([
   "localIp",
   "macAddress",
   "cpuModel",
+  "cpuUsagePercent",
   "memoryTotalBytes",
+  "memoryUsedBytes",
+  "memoryFreeBytes",
   "diskTotalBytes",
   "diskFreeBytes",
+  "deviceManufacturer",
+  "deviceModel",
+  "serialNumber",
   "uptimeSeconds",
   "loggedUser",
   "agentVersion",
@@ -75,9 +81,15 @@ export function validateAgentPayload(input) {
     localIp: text(input.localIp, "localIp", { max: 64 }),
     macAddress: text(input.macAddress, "macAddress", { max: 32 }),
     cpuModel: text(input.cpuModel, "cpuModel", { max: 255 }),
+    cpuUsagePercent: integer(input.cpuUsagePercent, "cpuUsagePercent", { max: 100 }),
     memoryTotalBytes: integer(input.memoryTotalBytes, "memoryTotalBytes"),
+    memoryUsedBytes: integer(input.memoryUsedBytes, "memoryUsedBytes"),
+    memoryFreeBytes: integer(input.memoryFreeBytes, "memoryFreeBytes"),
     diskTotalBytes: integer(input.diskTotalBytes, "diskTotalBytes"),
     diskFreeBytes: integer(input.diskFreeBytes, "diskFreeBytes"),
+    deviceManufacturer: text(input.deviceManufacturer, "deviceManufacturer", { max: 180 }),
+    deviceModel: text(input.deviceModel, "deviceModel", { max: 180 }),
+    serialNumber: text(input.serialNumber, "serialNumber", { max: 180 }),
     uptimeSeconds: integer(input.uptimeSeconds, "uptimeSeconds"),
     loggedUser: text(input.loggedUser, "loggedUser", { max: 180 }),
     agentVersion: text(input.agentVersion, "agentVersion", { required: true, max: 40 }),
@@ -98,6 +110,20 @@ export function validateAgentPayload(input) {
     payload.diskFreeBytes > payload.diskTotalBytes
   ) {
     throw badRequest("diskFreeBytes nao pode ser maior que diskTotalBytes.");
+  }
+  if (
+    payload.memoryTotalBytes != null &&
+    payload.memoryUsedBytes != null &&
+    payload.memoryUsedBytes > payload.memoryTotalBytes
+  ) {
+    throw badRequest("memoryUsedBytes nao pode ser maior que memoryTotalBytes.");
+  }
+  if (
+    payload.memoryTotalBytes != null &&
+    payload.memoryFreeBytes != null &&
+    payload.memoryFreeBytes > payload.memoryTotalBytes
+  ) {
+    throw badRequest("memoryFreeBytes nao pode ser maior que memoryTotalBytes.");
   }
 
   return payload;

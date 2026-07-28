@@ -1,10 +1,7 @@
-import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { query, withTransaction } from "../database.js";
+import { createAgentToken, hashAgentToken } from "../domain/agentToken.js";
 import { addAssetHistory } from "./assetHistoryRepository.js";
-
-function hashToken(token) {
-  return createHash("sha256").update(String(token || ""), "utf8").digest("hex");
-}
 
 function enrollmentFromRow(row) {
   return {
@@ -13,6 +10,8 @@ function enrollmentFromRow(row) {
     tokenPrefix: row.token_prefix,
     active: row.active,
     createdBy: row.created_by,
+    productKeyId: row.product_key_id || null,
+    activationId: row.activation_id || null,
     createdAt: row.created_at,
     revokedAt: row.revoked_at,
     lastUsedAt: row.last_used_at
@@ -31,9 +30,15 @@ function assetFromRow(row) {
     localIp: row.local_ip,
     macAddress: row.mac_address,
     cpuModel: row.cpu_model,
+    cpuUsagePercent: row.cpu_usage_percent == null ? null : Number(row.cpu_usage_percent),
     memoryTotalBytes: row.memory_total_bytes == null ? null : Number(row.memory_total_bytes),
+    memoryUsedBytes: row.memory_used_bytes == null ? null : Number(row.memory_used_bytes),
+    memoryFreeBytes: row.memory_free_bytes == null ? null : Number(row.memory_free_bytes),
     diskTotalBytes: row.disk_total_bytes == null ? null : Number(row.disk_total_bytes),
     diskFreeBytes: row.disk_free_bytes == null ? null : Number(row.disk_free_bytes),
+    deviceManufacturer: row.device_manufacturer,
+    deviceModel: row.device_model,
+    serialNumber: row.serial_number,
     uptimeSeconds: row.uptime_seconds == null ? null : Number(row.uptime_seconds),
     loggedUser: row.logged_user,
     agentVersion: row.agent_version,
@@ -49,14 +54,14 @@ function assetFromRow(row) {
 }
 
 export async function createAgentEnrollment({ name, createdBy = null }) {
-  const token = `itg_${randomBytes(32).toString("base64url")}`;
+  const token = createAgentToken();
   const result = await query(
     `
       INSERT INTO agent_enrollments (id, name, token_hash, token_prefix, created_by)
       VALUES ($1, $2, $3, $4, $5)
       RETURNING *
     `,
-    [randomUUID(), name, hashToken(token), token.slice(0, 12), createdBy]
+    [randomUUID(), name, hashAgentToken(token), token.slice(0, 12), createdBy]
   );
 
   return { enrollment: enrollmentFromRow(result.rows[0]), token };
@@ -93,7 +98,7 @@ export async function authenticateAgentToken(token) {
       WHERE token_hash = $1 AND active = TRUE
       LIMIT 1
     `,
-    [hashToken(token)]
+    [hashAgentToken(token)]
   );
   return result.rows[0] ? enrollmentFromRow(result.rows[0]) : null;
 }
@@ -111,14 +116,15 @@ export async function recordAgentInventory({ enrollment, payload }) {
         INSERT INTO agent_assets (
           asset_id, enrollment_id, hostname, machine_alias, operating_system,
           os_architecture, windows_version, local_ip, mac_address, cpu_model,
-          memory_total_bytes, disk_total_bytes, disk_free_bytes, uptime_seconds,
-          logged_user, agent_version, interval_seconds, environment_name,
-          group_name, segment_name, collected_at, last_seen_at, updated_at
+          cpu_usage_percent, memory_total_bytes, memory_used_bytes, memory_free_bytes,
+          disk_total_bytes, disk_free_bytes, device_manufacturer, device_model,
+          serial_number, uptime_seconds, logged_user, agent_version, interval_seconds,
+          environment_name, group_name, segment_name, collected_at, last_seen_at, updated_at
         )
         VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
           $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-          $21, NOW(), NOW()
+          $21, $22, $23, $24, $25, $26, $27, NOW(), NOW()
         )
         ON CONFLICT (asset_id) DO UPDATE SET
           enrollment_id = EXCLUDED.enrollment_id,
@@ -130,9 +136,15 @@ export async function recordAgentInventory({ enrollment, payload }) {
           local_ip = EXCLUDED.local_ip,
           mac_address = EXCLUDED.mac_address,
           cpu_model = EXCLUDED.cpu_model,
+          cpu_usage_percent = EXCLUDED.cpu_usage_percent,
           memory_total_bytes = EXCLUDED.memory_total_bytes,
+          memory_used_bytes = EXCLUDED.memory_used_bytes,
+          memory_free_bytes = EXCLUDED.memory_free_bytes,
           disk_total_bytes = EXCLUDED.disk_total_bytes,
           disk_free_bytes = EXCLUDED.disk_free_bytes,
+          device_manufacturer = EXCLUDED.device_manufacturer,
+          device_model = EXCLUDED.device_model,
+          serial_number = EXCLUDED.serial_number,
           uptime_seconds = EXCLUDED.uptime_seconds,
           logged_user = EXCLUDED.logged_user,
           agent_version = EXCLUDED.agent_version,
@@ -156,9 +168,15 @@ export async function recordAgentInventory({ enrollment, payload }) {
         payload.localIp,
         payload.macAddress,
         payload.cpuModel,
+        payload.cpuUsagePercent,
         payload.memoryTotalBytes,
+        payload.memoryUsedBytes,
+        payload.memoryFreeBytes,
         payload.diskTotalBytes,
         payload.diskFreeBytes,
+        payload.deviceManufacturer,
+        payload.deviceModel,
+        payload.serialNumber,
         payload.uptimeSeconds,
         payload.loggedUser,
         payload.agentVersion,
@@ -180,6 +198,25 @@ export async function recordAgentInventory({ enrollment, payload }) {
       [randomUUID(), payload.machineId, enrollment.id, payload.collectedAt, payload]
     );
     await db("UPDATE agent_enrollments SET last_used_at = NOW() WHERE id = $1", [enrollment.id]);
+    if (enrollment.activationId) {
+      await db(
+        `
+          UPDATE device_activations
+          SET hostname = $2,
+              alias = COALESCE($3, alias),
+              collector_version = $4,
+              last_seen_at = NOW(),
+              updated_at = NOW()
+          WHERE id = $1 AND status = 'active'
+        `,
+        [
+          enrollment.activationId,
+          payload.hostname,
+          payload.machineAlias,
+          payload.agentVersion
+        ]
+      );
+    }
 
     const configuredThresholdSeconds = process.env.AGENT_OFFLINE_AFTER_SECONDS
       ? Number(process.env.AGENT_OFFLINE_AFTER_SECONDS)

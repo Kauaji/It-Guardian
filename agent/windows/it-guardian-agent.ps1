@@ -7,7 +7,7 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
-$script:AgentVersion = "1.0.0"
+$script:AgentVersion = "1.1.0"
 
 function Write-AgentLog {
   param([string]$Message, [ValidateSet("INFO", "WARN", "ERROR")][string]$Level = "INFO")
@@ -38,6 +38,8 @@ function Get-AgentConfig {
 function Get-SystemSnapshot {
   $os = Get-CimInstance Win32_OperatingSystem
   $cpu = Get-CimInstance Win32_Processor | Select-Object -First 1
+  $computer = Get-CimInstance Win32_ComputerSystem
+  $bios = Get-CimInstance Win32_BIOS
   $disk = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'"
   $network = Get-CimInstance Win32_NetworkAdapterConfiguration |
     Where-Object { $_.IPEnabled -and $_.IPAddress } |
@@ -53,9 +55,15 @@ function Get-SystemSnapshot {
     localIp = [string]($network.IPAddress | Where-Object { $_ -match '^\d+\.' } | Select-Object -First 1)
     macAddress = [string]$network.MACAddress
     cpuModel = [string]$cpu.Name
+    cpuUsagePercent = [int][Math]::Max(0, [Math]::Min(100, $cpu.LoadPercentage))
     memoryTotalBytes = [int64]$os.TotalVisibleMemorySize * 1KB
+    memoryFreeBytes = [int64]$os.FreePhysicalMemory * 1KB
+    memoryUsedBytes = ([int64]$os.TotalVisibleMemorySize - [int64]$os.FreePhysicalMemory) * 1KB
     diskTotalBytes = [int64]$disk.Size
     diskFreeBytes = [int64]$disk.FreeSpace
+    deviceManufacturer = [string]$computer.Manufacturer
+    deviceModel = [string]$computer.Model
+    serialNumber = [string]$bios.SerialNumber
     uptimeSeconds = [int64]((Get-Date) - $os.LastBootUpTime).TotalSeconds
   }
 }
@@ -76,9 +84,15 @@ function New-InventoryPayload {
     localIp = [string]$Snapshot.localIp
     macAddress = [string]$Snapshot.macAddress
     cpuModel = [string]$Snapshot.cpuModel
+    cpuUsagePercent = [int]$Snapshot.cpuUsagePercent
     memoryTotalBytes = [int64]$Snapshot.memoryTotalBytes
+    memoryUsedBytes = [int64]$Snapshot.memoryUsedBytes
+    memoryFreeBytes = [int64]$Snapshot.memoryFreeBytes
     diskTotalBytes = [int64]$Snapshot.diskTotalBytes
     diskFreeBytes = [int64]$Snapshot.diskFreeBytes
+    deviceManufacturer = [string]$Snapshot.deviceManufacturer
+    deviceModel = [string]$Snapshot.deviceModel
+    serialNumber = [string]$Snapshot.serialNumber
     uptimeSeconds = [int64]$Snapshot.uptimeSeconds
     agentVersion = $script:AgentVersion
     collectedAt = (Get-Date).ToUniversalTime().ToString("o")

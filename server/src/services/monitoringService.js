@@ -180,6 +180,10 @@ function agentStatus(asset) {
 
 function buildAgentDevice(asset, segment, metadata) {
   const status = agentStatus(asset);
+  const ramUsedPercent =
+    asset.memoryTotalBytes > 0 && asset.memoryUsedBytes != null
+      ? Math.round((asset.memoryUsedBytes / asset.memoryTotalBytes) * 100)
+      : null;
   const diskUsedPercent =
     asset.diskTotalBytes > 0 && asset.diskFreeBytes != null
       ? Math.round(((asset.diskTotalBytes - asset.diskFreeBytes) / asset.diskTotalBytes) * 100)
@@ -201,16 +205,20 @@ function buildAgentDevice(asset, segment, metadata) {
     segmentGroupId: segment?.segmentGroupId || "",
     ...backupMetadata(metadata),
     uptimeHours: asset.uptimeSeconds == null ? null : Math.floor(asset.uptimeSeconds / 3600),
-    metrics: diskUsedPercent == null ? null : { cpu: null, ram: null, disk: diskUsedPercent },
+    metrics: {
+      cpu: asset.cpuUsagePercent,
+      ram: ramUsedPercent,
+      disk: diskUsedPercent
+    },
     history: [],
     lastSeenAt: asset.lastSeenAt,
     agent: asset,
     hardware: {
       hostId: asset.id,
-      manufacturer: "Coletado pelo agente",
-      model: asset.cpuModel || "Nao informado",
+      manufacturer: asset.deviceManufacturer || "Coletado pelo agente",
+      model: asset.deviceModel || asset.cpuModel || "Nao informado",
       assetTag: null,
-      serialNumber: null,
+      serialNumber: asset.serialNumber,
       loggedUser: asset.loggedUser || "Coleta desativada",
       macAddress: asset.macAddress,
       os: [asset.operatingSystem, asset.windowsVersion, asset.osArchitecture].filter(Boolean).join(" - "),

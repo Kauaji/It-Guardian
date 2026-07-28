@@ -17,6 +17,8 @@
     "start": "npm run start --workspace server",
     "seed:admin": "npm run seed:admin --workspace server --",
     "agent:enroll": "npm run agent:enroll --workspace server --",
+    "product-key:create": "npm run product-key:create --workspace server --",
+    "installer:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File installers/windows-collector/build-installer.ps1",
     "test": "npm run test --workspace server",
     "test:coverage": "npm run test:coverage --workspace server",
     "test:integration": "npm run test:integration --workspace server",
