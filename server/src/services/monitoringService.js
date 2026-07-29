@@ -231,6 +231,12 @@ function buildAgentDevice(asset, segment, metadata) {
         ? null
         : Math.round((asset.memoryTotalBytes / 1024 ** 3) * 10) / 10,
       memoryHealth: details.memoryHealth || null,
+      cpuDetails: details.cpu || {},
+      memoryModules: details.memoryHealth?.moduleDetails || [],
+      graphics: Array.isArray(details.graphics) ? details.graphics : [],
+      motherboard: details.motherboard || {},
+      networkAdapters: Array.isArray(details.networkAdapters) ? details.networkAdapters : [],
+      battery: details.battery || null,
       licenses: details.licenses || {},
       officeVersion: [details.office?.name, details.office?.version, details.office?.architecture]
         .filter(Boolean)
@@ -247,7 +253,7 @@ function buildAgentDevice(asset, segment, metadata) {
               sizeGb: Math.round((asset.diskTotalBytes / 1024 ** 3) * 10) / 10,
               type: "Nao identificado"
             }],
-      peripherals: [],
+      peripherals: Array.isArray(details.peripherals) ? details.peripherals : [],
       changeHistory: [],
       software: Array.isArray(details.software) ? details.software : [],
       lastInventoryAt: asset.collectedAt
@@ -279,7 +285,9 @@ function mergeAgentDevice(baseDevice, agentDevice) {
     hardware: {
       ...baseDevice.hardware,
       ...agentDevice.hardware,
-      peripherals: baseDevice.hardware?.peripherals || [],
+      peripherals: baseDevice.hardware?.peripherals?.length
+        ? baseDevice.hardware.peripherals
+        : agentDevice.hardware?.peripherals || [],
       software: baseDevice.hardware?.software?.length
         ? baseDevice.hardware.software
         : agentDevice.hardware?.software || []

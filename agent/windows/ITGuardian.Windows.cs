@@ -15,8 +15,8 @@ using System.Windows.Forms;
 [assembly: System.Reflection.AssemblyDescription("Inventario e presenca do IT Guardian")]
 [assembly: System.Reflection.AssemblyCompany("IT Guardian")]
 [assembly: System.Reflection.AssemblyProduct("IT Guardian")]
-[assembly: System.Reflection.AssemblyVersion("1.4.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.4.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.5.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.5.0.0")]
 
 namespace ITGuardian.Windows
 {
@@ -63,7 +63,7 @@ namespace ITGuardian.Windows
 
     internal static class Program
     {
-        private const string AgentVersion = "1.4.0";
+        private const string AgentVersion = "1.5.0";
         private const int MaximumOutputLength = 65536;
 
         [STAThread]
@@ -446,10 +446,16 @@ namespace ITGuardian.Windows
 
             Dictionary<string, object> inventoryDetails = new Dictionary<string, object>();
             inventoryDetails["cpuCores"] = CollectCpuCoreCount();
+            inventoryDetails["cpu"] = CollectCpuDetails();
             inventoryDetails["loggedUser"] = config.includeLoggedUser ? loggedUser : "";
             inventoryDetails["memoryHealth"] = CollectMemoryHealth();
             inventoryDetails["licenses"] = CollectLicenses();
             inventoryDetails["office"] = CollectOffice();
+            inventoryDetails["graphics"] = CollectGraphicsAdapters();
+            inventoryDetails["motherboard"] = CollectMotherboard();
+            inventoryDetails["networkAdapters"] = CollectNetworkAdapters();
+            inventoryDetails["battery"] = CollectBattery();
+            inventoryDetails["peripherals"] = CollectPeripherals();
             inventoryDetails["disks"] = CollectPhysicalDisks(
                 ToLong(Value(disk, "Size")),
                 ToLong(Value(disk, "FreeSpace"))
@@ -463,11 +469,12 @@ namespace ITGuardian.Windows
         {
             Dictionary<string, object> result = new Dictionary<string, object>();
             List<string> warnings = new List<string>();
+            List<Dictionary<string, object>> moduleDetails = new List<Dictionary<string, object>>();
             int modules = 0;
             try
             {
                 using (ManagementObjectSearcher searcher = new ManagementObjectSearcher(
-                    "SELECT Status FROM Win32_PhysicalMemory"
+                    "SELECT Status, Capacity, Speed, ConfiguredClockSpeed, Manufacturer, PartNumber, SerialNumber, BankLabel FROM Win32_PhysicalMemory"
                 ))
                 using (ManagementObjectCollection rows = searcher.Get())
                 {
@@ -475,6 +482,17 @@ namespace ITGuardian.Windows
                     {
                         modules++;
                         string status = Text(row, "Status");
+                        Dictionary<string, object> module = new Dictionary<string, object>();
+                        module["bank"] = Text(row, "BankLabel");
+                        module["manufacturer"] = Text(row, "Manufacturer");
+                        module["partNumber"] = Text(row, "PartNumber").Trim();
+                        module["serialNumber"] = Text(row, "SerialNumber").Trim();
+                        module["capacityGb"] = Math.Round(ToLong(Value(row, "Capacity")) / 1073741824d, 1);
+                        module["speedMhz"] = ToInt(Value(row, "ConfiguredClockSpeed")) > 0
+                            ? ToInt(Value(row, "ConfiguredClockSpeed"))
+                            : ToInt(Value(row, "Speed"));
+                        module["status"] = string.IsNullOrWhiteSpace(status) ? "Nao informado" : status;
+                        moduleDetails.Add(module);
                         if (!string.IsNullOrWhiteSpace(status) &&
                             !string.Equals(status, "OK", StringComparison.OrdinalIgnoreCase))
                         {
@@ -490,6 +508,7 @@ namespace ITGuardian.Windows
                     ? "Sem falhas reportadas"
                     : string.Join(", ", warnings.ToArray());
             result["modules"] = modules;
+            result["moduleDetails"] = moduleDetails;
             return result;
         }
 
@@ -511,6 +530,196 @@ namespace ITGuardian.Windows
             }
             catch { }
             return cores > 0 ? cores : Math.Max(1, Environment.ProcessorCount);
+        }
+
+        private static Dictionary<string, object> CollectCpuDetails()
+        {
+            Dictionary<string, object> result = new Dictionary<string, object>();
+            int cores = 0;
+            int logicalProcessors = 0;
+            int maxClockMhz = 0;
+            int sockets = 0;
+            try
+            {
+                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher(
+                    "SELECT Name, NumberOfCores, NumberOfLogicalProcessors, MaxClockSpeed, SocketDesignation, VirtualizationFirmwareEnabled FROM Win32_Processor"
+                ))
+                using (ManagementObjectCollection rows = searcher.Get())
+                {
+                    foreach (ManagementObject row in rows)
+                    {
+                        sockets++;
+                        if (!result.ContainsKey("name")) result["name"] = Text(row, "Name");
+                        cores += Math.Max(0, ToInt(Value(row, "NumberOfCores")));
+                        logicalProcessors += Math.Max(0, ToInt(Value(row, "NumberOfLogicalProcessors")));
+                        maxClockMhz = Math.Max(maxClockMhz, ToInt(Value(row, "MaxClockSpeed")));
+                        if (!result.ContainsKey("socket")) result["socket"] = Text(row, "SocketDesignation");
+                        object virtualization = Value(row, "VirtualizationFirmwareEnabled");
+                        if (virtualization != null)
+                        {
+                            result["virtualizationEnabled"] = Convert.ToBoolean(virtualization);
+                        }
+                    }
+                }
+            }
+            catch { }
+            result["cores"] = cores > 0 ? cores : Math.Max(1, Environment.ProcessorCount);
+            result["logicalProcessors"] = logicalProcessors > 0 ? logicalProcessors : Environment.ProcessorCount;
+            result["maxClockMhz"] = maxClockMhz;
+            result["sockets"] = sockets;
+            return result;
+        }
+
+        private static List<Dictionary<string, object>> CollectGraphicsAdapters()
+        {
+            List<Dictionary<string, object>> adapters = new List<Dictionary<string, object>>();
+            try
+            {
+                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher(
+                    "SELECT Name, AdapterRAM, DriverVersion, VideoProcessor, Status, CurrentHorizontalResolution, CurrentVerticalResolution FROM Win32_VideoController"
+                ))
+                using (ManagementObjectCollection rows = searcher.Get())
+                {
+                    foreach (ManagementObject row in rows)
+                    {
+                        Dictionary<string, object> adapter = new Dictionary<string, object>();
+                        adapter["name"] = Text(row, "Name");
+                        adapter["videoProcessor"] = Text(row, "VideoProcessor");
+                        adapter["memoryBytes"] = ToLong(Value(row, "AdapterRAM"));
+                        adapter["driverVersion"] = Text(row, "DriverVersion");
+                        adapter["status"] = Text(row, "Status");
+                        adapter["resolution"] = ToInt(Value(row, "CurrentHorizontalResolution")) > 0
+                            ? ToInt(Value(row, "CurrentHorizontalResolution")) + "x" +
+                              ToInt(Value(row, "CurrentVerticalResolution"))
+                            : "";
+                        adapters.Add(adapter);
+                    }
+                }
+            }
+            catch { }
+            return adapters;
+        }
+
+        private static Dictionary<string, object> CollectMotherboard()
+        {
+            Dictionary<string, object> result = new Dictionary<string, object>();
+            try
+            {
+                ManagementObject board = First("SELECT Manufacturer, Product, SerialNumber, Version, Status FROM Win32_BaseBoard");
+                result["manufacturer"] = Text(board, "Manufacturer");
+                result["product"] = Text(board, "Product");
+                result["serialNumber"] = Text(board, "SerialNumber").Trim();
+                result["version"] = Text(board, "Version");
+                result["status"] = Text(board, "Status");
+            }
+            catch { }
+            return result;
+        }
+
+        private static List<Dictionary<string, object>> CollectNetworkAdapters()
+        {
+            List<Dictionary<string, object>> adapters = new List<Dictionary<string, object>>();
+            try
+            {
+                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher(
+                    "SELECT Description, MACAddress, DHCPEnabled, IPAddress, DefaultIPGateway, DNSServerSearchOrder FROM Win32_NetworkAdapterConfiguration WHERE IPEnabled=True"
+                ))
+                using (ManagementObjectCollection rows = searcher.Get())
+                {
+                    foreach (ManagementObject row in rows)
+                    {
+                        Dictionary<string, object> adapter = new Dictionary<string, object>();
+                        adapter["name"] = Text(row, "Description");
+                        adapter["macAddress"] = Text(row, "MACAddress");
+                        adapter["dhcpEnabled"] = Value(row, "DHCPEnabled") != null &&
+                            Convert.ToBoolean(Value(row, "DHCPEnabled"));
+                        adapter["ipAddresses"] = Value(row, "IPAddress") as string[] ?? new string[0];
+                        adapter["gateways"] = Value(row, "DefaultIPGateway") as string[] ?? new string[0];
+                        adapter["dnsServers"] = Value(row, "DNSServerSearchOrder") as string[] ?? new string[0];
+                        adapters.Add(adapter);
+                    }
+                }
+            }
+            catch { }
+            return adapters;
+        }
+
+        private static Dictionary<string, object> CollectBattery()
+        {
+            Dictionary<string, object> result = new Dictionary<string, object>();
+            try
+            {
+                ManagementObject battery = First(
+                    "SELECT Name, EstimatedChargeRemaining, BatteryStatus, EstimatedRunTime, Status FROM Win32_Battery"
+                );
+                result["name"] = Text(battery, "Name");
+                result["chargePercent"] = ToInt(Value(battery, "EstimatedChargeRemaining"));
+                result["batteryStatus"] = ToInt(Value(battery, "BatteryStatus"));
+                result["estimatedMinutes"] = ToInt(Value(battery, "EstimatedRunTime"));
+                result["status"] = Text(battery, "Status");
+            }
+            catch { }
+            return result;
+        }
+
+        private static List<Dictionary<string, object>> CollectPeripherals()
+        {
+            List<Dictionary<string, object>> peripherals = new List<Dictionary<string, object>>();
+            HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher(
+                    "SELECT Name, Manufacturer, PNPClass, DeviceID, Status FROM Win32_PnPEntity"
+                ))
+                using (ManagementObjectCollection rows = searcher.Get())
+                {
+                    foreach (ManagementObject row in rows)
+                    {
+                        string name = Text(row, "Name").Trim();
+                        string pnpClass = Text(row, "PNPClass").Trim();
+                        string type = ResolvePeripheralType(name, pnpClass);
+                        if (string.IsNullOrWhiteSpace(type) || string.IsNullOrWhiteSpace(name)) continue;
+                        string deviceId = Text(row, "DeviceID");
+                        string key = string.IsNullOrWhiteSpace(deviceId) ? type + "|" + name : deviceId;
+                        if (!seen.Add(key)) continue;
+
+                        Dictionary<string, object> peripheral = new Dictionary<string, object>();
+                        peripheral["id"] = key;
+                        peripheral["type"] = type;
+                        peripheral["name"] = name;
+                        peripheral["brand"] = Text(row, "Manufacturer");
+                        peripheral["assetTag"] = "";
+                        peripheral["status"] = Text(row, "Status");
+                        peripherals.Add(peripheral);
+                        if (peripherals.Count >= 100) break;
+                    }
+                }
+            }
+            catch { }
+            return peripherals;
+        }
+
+        private static string ResolvePeripheralType(string name, string pnpClass)
+        {
+            string normalized = (name + " " + pnpClass).ToLowerInvariant();
+            if (pnpClass.Equals("Monitor", StringComparison.OrdinalIgnoreCase) || normalized.Contains("monitor"))
+                return "Monitor";
+            if (pnpClass.Equals("Keyboard", StringComparison.OrdinalIgnoreCase) || normalized.Contains("keyboard") || normalized.Contains("teclado"))
+                return "Teclado";
+            if (pnpClass.Equals("Mouse", StringComparison.OrdinalIgnoreCase) || normalized.Contains("mouse"))
+                return "Mouse";
+            if (pnpClass.Equals("Printer", StringComparison.OrdinalIgnoreCase) || normalized.Contains("printer") || normalized.Contains("impressora"))
+                return "Impressora";
+            if (normalized.Contains("scanner")) return "Scanner";
+            if (pnpClass.Equals("Camera", StringComparison.OrdinalIgnoreCase) ||
+                pnpClass.Equals("Image", StringComparison.OrdinalIgnoreCase) ||
+                normalized.Contains("webcam") || normalized.Contains("camera"))
+                return "Webcam";
+            if (normalized.Contains("headset") || normalized.Contains("headphone") || normalized.Contains("fone"))
+                return "Headset";
+            if (normalized.Contains("dock") || normalized.Contains("docking"))
+                return "Dockstation";
+            return "";
         }
 
         private static Dictionary<string, object> CollectLicenses()

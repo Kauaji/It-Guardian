@@ -15,7 +15,13 @@ const peripheralTypes = [
   "Outro"
 ];
 
-export default function PeripheralList({ peripherals = [], segmentColor, canManage = false, onRemove = () => {} }) {
+export default function PeripheralList({
+  peripherals = [],
+  segmentColor,
+  canManage = false,
+  allowAdd = true,
+  onRemove = () => {}
+}) {
   const [items, setItems] = useState(peripherals);
   const [draft, setDraft] = useState({
     type: "Monitor",
@@ -71,7 +77,7 @@ export default function PeripheralList({ peripherals = [], segmentColor, canMana
         {!items.length && <li className="peripheral-empty">Nenhum periferico vinculado.</li>}
       </ul>
 
-      <form className="peripheral-add-form" onSubmit={addPeripheral}>
+      {allowAdd && <form className="peripheral-add-form" onSubmit={addPeripheral}>
         <select value={draft.type} onChange={(event) => setDraft({ ...draft, type: event.target.value })}>
           {peripheralTypes.map((type) => <option key={type} value={type}>{type}</option>)}
         </select>
@@ -95,7 +101,7 @@ export default function PeripheralList({ peripherals = [], segmentColor, canMana
         <button type="submit" title="Adicionar periferico">
           <Plus size={14} />
         </button>
-      </form>
+      </form>}
     </section>
   );
 }

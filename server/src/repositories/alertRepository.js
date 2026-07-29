@@ -638,9 +638,11 @@ export async function listServiceOrderSuggestions() {
            alerts.source AS alert_source,
            alerts.severity AS alert_severity,
            alerts.first_seen_at AS alert_first_seen_at,
-           alerts.last_seen_at AS alert_last_seen_at
+           alerts.last_seen_at AS alert_last_seen_at,
+           agent_assets.machine_alias
     FROM service_order_suggestions suggestions
     LEFT JOIN alerts ON alerts.id = suggestions.alert_id
+    LEFT JOIN agent_assets ON agent_assets.asset_id = suggestions.asset_id
     WHERE alerts.source <> 'mock'
     ORDER BY suggestions.created_at DESC
   `);
@@ -686,6 +688,7 @@ export async function listServiceOrderSuggestions() {
   return result.rows.map((row) => ({
     ...fromSuggestionRow(row),
     hostName: row.host_name,
+    machineAlias: row.machine_alias,
     alertType: row.alert_type,
     alertMetric: row.alert_metric,
     alertValue: toNumber(row.alert_value),

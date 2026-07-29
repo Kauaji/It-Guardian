@@ -13,6 +13,19 @@ export const alertTypeLabels = {
   service_unavailable: "Serviço crítico indisponível"
 };
 
+const compactAlertTypeLabels = {
+  ram_high: "RAM alta",
+  cpu_high: "CPU alta",
+  disk_high: "Disco em alerta",
+  disk_full: "Disco crítico",
+  disk_health_low: "Saúde do disco baixa",
+  machine_offline: "Máquina offline",
+  network_high: "Rede em alerta",
+  temperature_high: "Temperatura alta",
+  ping_failure: "Falha de ping",
+  service_unavailable: "Serviço indisponível"
+};
+
 export const priorityLabels = {
   low: "Baixa",
   medium: "Média",
@@ -167,11 +180,26 @@ export function formatSuggestionCode(suggestion, index) {
 }
 
 export function getSuggestionMachineLabel(suggestion) {
+  if (suggestion.machineAlias) return suggestion.machineAlias;
   if (suggestion.hostName) return suggestion.hostName;
   if (suggestion.assetName) return suggestion.assetName;
   if (suggestion.assetId) return suggestion.assetId;
   const match = String(suggestion.title || "").match(/\bem\s+([A-Z0-9._-]+)$/i);
   return match?.[1] || "Máquina não vinculada";
+}
+
+export function formatCompactSuggestionTitle(suggestion, machineLabel) {
+  const type = suggestion.alertType || suggestion.suggestedProblemTypeId;
+  const compactLabel = compactAlertTypeLabels[type];
+  if (compactLabel) return `${compactLabel} em ${machineLabel}`;
+
+  const title = String(suggestion.title || "Aviso preventivo")
+    .replace(/^Verifica\S+\s+preventiva:\s*/i, "")
+    .replace(/\s+acima do limite\b/gi, " alta");
+  const originalName = String(suggestion.hostName || "");
+  return originalName && originalName !== machineLabel
+    ? title.split(originalName).join(machineLabel)
+    : title;
 }
 
 export function formatAlertThreshold(alert) {

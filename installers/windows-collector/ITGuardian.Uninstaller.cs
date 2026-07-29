@@ -6,7 +6,7 @@ using System.Windows.Forms;
 [assembly: System.Reflection.AssemblyProduct("IT Guardian Uninstaller")]
 [assembly: System.Reflection.AssemblyTitle("Desinstalar IT Guardian")]
 [assembly: System.Reflection.AssemblyCompany("IT Guardian")]
-[assembly: System.Reflection.AssemblyVersion("1.4.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.5.0.0")]
 
 internal static class ITGuardianUninstaller
 {

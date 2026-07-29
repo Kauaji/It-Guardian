@@ -31,7 +31,7 @@ export default function PeripheralItem({ peripheral, canRemove = false, onRemove
     <li className="peripheral-item">
       <Icon size={15} />
       <span>{peripheral.type}</span>
-      <strong>{peripheral.brand || "Sem marca"}</strong>
+      <strong>{peripheral.name || peripheral.brand || "Sem identificacao"}</strong>
       <em>{peripheral.assetTag || "Sem patrimonio"}</em>
       {canRemove && (
         <button

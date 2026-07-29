@@ -518,8 +518,35 @@ export default function MachineDetailsModal({
                 <DetailItem label="Serial number" value={hardware.serialNumber} />
                 <DetailItem label="Processador" value={hardware.cpuModel} />
                 <DetailItem label="Núcleos" value={hardware.cpuCores} />
+                <DetailItem label="Processadores lógicos" value={hardware.cpuDetails?.logicalProcessors} />
+                <DetailItem
+                  label="Clock máximo"
+                  value={hardware.cpuDetails?.maxClockMhz ? `${hardware.cpuDetails.maxClockMhz} MHz` : null}
+                />
                 <DetailItem label="Memória RAM" value={hardware.ramGb ? `${hardware.ramGb} GB` : null} />
                 <DetailItem label="Saúde da memória" value={hardware.memoryHealth?.status || hardware.memoryHealth} />
+                <DetailItem
+                  label="Módulos de memória"
+                  value={hardware.memoryModules?.length
+                    ? hardware.memoryModules
+                      .map((module) => `${module.capacityGb || "?"} GB ${module.speedMhz ? `@ ${module.speedMhz} MHz` : ""}`.trim())
+                      .join(", ")
+                    : null}
+                />
+                <DetailItem
+                  label="Placa de vídeo"
+                  value={hardware.graphics?.map((adapter) => adapter.name).filter(Boolean).join(", ")}
+                />
+                <DetailItem
+                  label="Placa-mãe"
+                  value={[hardware.motherboard?.manufacturer, hardware.motherboard?.product].filter(Boolean).join(" ")}
+                />
+                <DetailItem
+                  label="Bateria"
+                  value={hardware.battery?.chargePercent != null
+                    ? `${hardware.battery.chargePercent}% - ${hardware.battery.status || "status não informado"}`
+                    : null}
+                />
                 <DetailItem label="Licença Windows" value={hardware.licenses?.windowsKey || hardware.windowsKey} />
                 <DetailItem label="Office" value={hardware.licenses?.officeVersion || hardware.officeVersion} />
                 <DetailItem label="Licença Office" value={hardware.licenses?.officeKey || hardware.officeKey} />
@@ -583,6 +610,10 @@ export default function MachineDetailsModal({
                 <DetailItem label="IP" value={machine.ip} />
                 <DetailItem label="MAC Address" value={agent?.macAddress || hardware.macAddress} />
                 <DetailItem label="Hostname" value={agent?.hostname || manualAsset?.hostname || machine.name} />
+                <DetailItem
+                  label="Adaptadores ativos"
+                  value={hardware.networkAdapters?.map((adapter) => adapter.name).filter(Boolean).join(", ")}
+                />
                 {isManualAsset && <DetailItem label="Modo de identificação" value={manualAsset?.identificationMode} />}
                 {!isManualAsset && !isAgentAsset && machine.metrics && (
                   <>
@@ -615,7 +646,8 @@ export default function MachineDetailsModal({
                 <PeripheralList
                   peripherals={hardware.peripherals || []}
                   segmentColor={segmentColor}
-                  canManage
+                  canManage={!isAgentAsset}
+                  allowAdd={!isAgentAsset}
                   onRemove={onRemovePeripheral}
                 />
               )}

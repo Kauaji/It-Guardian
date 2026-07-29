@@ -4,6 +4,43 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-07-29 - Alias nos avisos e inventario ampliado do agente 1.5.0
+
+### Entrega
+
+- sugestoes de OS passaram a resolver o nome fantasia persistido da maquina,
+  inclusive para avisos criados antes da alteracao;
+- titulos dos cards foram resumidos para formatos como `RAM alta em <maquina>`
+  e `Disco em alerta em <maquina>`;
+- a seta do card de maquina real voltou a exibir os perifericos coletados, em
+  modo somente leitura;
+- coletor Windows 1.5.0 passou a enriquecer CPU, modulos de memoria, video,
+  placa-mae, bateria, adaptadores de rede e perifericos Plug and Play;
+- os novos dados foram distribuidos nas abas Hardware, Rede e Perifericos do
+  inventario, preservando a organizacao atual da interface;
+- instalador e desinstalador foram recompilados na versao 1.5.0.
+
+### Validacoes
+
+- 165 testes unitarios aprovados e 1 teste dependente de PostgreSQL real
+  ignorado;
+- 9 testes de integracao aprovados e 1 teste dependente de PostgreSQL real
+  ignorado;
+- lint, build de producao e compilacao do instalador aprovados;
+- `git diff --check` aprovado;
+- SHA-256 do instalador:
+  `7E789297A7C74EA5B82B42793E2A2206DBC5EF30EAC7CB3FCDD6C050060781B2`.
+
+### Pendencias conhecidas
+
+- as maquinas existentes precisam receber o coletor 1.5.0 e concluir uma nova
+  coleta para que os campos adicionais e perifericos aparecam;
+- SMART, temperatura, desgaste, licencas e sensores dependem do que o Windows,
+  o fabricante e as permissoes do endpoint realmente disponibilizam; o sistema
+  nao inventa valores quando a fonte nao responde;
+- assinatura do instalador e ensaio em maquina Windows limpa continuam
+  necessarios antes da distribuicao publica.
+
 ## 2026-07-29 - Beta centrada no coletor nativo
 
 ### Decisao e entrega

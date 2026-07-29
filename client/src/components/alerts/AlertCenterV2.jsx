@@ -37,6 +37,7 @@ import {
   defaultPriorityColors,
   formatAlertThreshold,
   formatAlertValue,
+  formatCompactSuggestionTitle,
   formatSuggestionCode,
   getAlertCategory,
   getAlertConfidence,
@@ -436,15 +437,12 @@ export default function AlertCenterV2({
   }
 
   function getResolvedSuggestionMachineLabel(suggestion) {
-    return findSuggestionDevice(suggestion)?.name || getSuggestionMachineLabel(suggestion);
+    return suggestion.machineAlias || findSuggestionDevice(suggestion)?.name || getSuggestionMachineLabel(suggestion);
   }
 
   function getResolvedSuggestionTitle(suggestion) {
-    const title = String(suggestion.title || "");
-    const originalName = String(getSuggestionMachineLabel(suggestion) || "");
     const resolvedName = String(getResolvedSuggestionMachineLabel(suggestion) || "");
-    if (!originalName || !resolvedName || originalName === resolvedName) return title;
-    return title.split(originalName).join(resolvedName);
+    return formatCompactSuggestionTitle(suggestion, resolvedName);
   }
 
   function getSuggestionLocation(suggestion) {

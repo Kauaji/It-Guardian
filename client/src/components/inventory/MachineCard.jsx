@@ -224,16 +224,12 @@ function MachineCardContent({
                     <span>{machine.manualAsset?.location || "Sem localizacao"}</span>
                     <strong>{machine.manualAsset?.hostname || machine.manualAsset?.macAddress || "Sem hostname/MAC"}</strong>
                   </div>
-                ) : isAgentAsset ? (
-                  <div className="manual-asset-mini agent-asset-mini">
-                    <span>{machine.agent?.operatingSystem || "Sistema nao informado"}</span>
-                    <strong>{machine.agent?.localIp || machine.ip} · {machine.agent?.osArchitecture || "Arquitetura nao informada"}</strong>
-                  </div>
                 ) : (
                   <PeripheralList
                     peripherals={machine.hardware?.peripherals || []}
                     segmentColor={segmentColor}
                     canManage={canManage}
+                    allowAdd={!isAgentAsset}
                     onRemove={(peripheral) => onRemovePeripheral(machine.id, peripheral)}
                   />
                 )}

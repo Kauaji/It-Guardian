@@ -49,6 +49,19 @@ const alertTypeLabels = {
   service_unavailable: "Serviço crítico indisponível"
 };
 
+const compactAlertTypeLabels = {
+  ram_high: "RAM alta",
+  cpu_high: "CPU alta",
+  disk_high: "Disco em alerta",
+  disk_full: "Disco crítico",
+  disk_health_low: "Saúde do disco baixa",
+  machine_offline: "Máquina offline",
+  network_high: "Rede em alerta",
+  temperature_high: "Temperatura alta",
+  ping_failure: "Falha de ping",
+  service_unavailable: "Serviço indisponível"
+};
+
 const alertCategoryByType = {
   ram_high: "Desempenho",
   cpu_high: "Desempenho",
@@ -421,7 +434,7 @@ function buildSuggestionPayload(alert = {}, rule = null) {
   const priority = suggestedPriority(alert, rule);
 
   return {
-    title: `Verificação preventiva: ${label.toLowerCase()} em ${hostName}`,
+    title: `${compactAlertTypeLabels[alert.type] || label} em ${hostName}`,
     description:
       `O sistema identificou ${label.toLowerCase()} acima do limite configurado em ` +
       `${alert.occurrencesCount || 1} ocorrência(s) no período analisado. ` +
