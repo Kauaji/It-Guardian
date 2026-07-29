@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -11,7 +11,7 @@ async function readProjectFile(...segments) {
   return readFile(path.join(projectRoot, ...segments), "utf8");
 }
 
-test("instalador cloud nao persiste nem repassa a chave de produto", async () => {
+test("instalador cloud usa apenas a chave e instala o coletor nativo", async () => {
   const setup = await readProjectFile(
     "installers",
     "windows-collector",
@@ -27,15 +27,10 @@ test("instalador cloud nao persiste nem repassa a chave de produto", async () =>
     "windows-collector",
     "Uninstall-Collector.ps1"
   );
-  const monitoringInstall = await readProjectFile(
+  const buildInstaller = await readProjectFile(
     "installers",
     "windows-collector",
-    "Install-MonitoringAgents.ps1"
-  );
-  const packageDownload = await readProjectFile(
-    "installers",
-    "windows-collector",
-    "Get-OfficialMonitoringAgents.ps1"
+    "build-installer.ps1"
   );
 
   const configSection = setup.match(/ConfigJson :=([\s\S]*?)SaveStringToFile/)?.[1] || "";
@@ -46,15 +41,9 @@ test("instalador cloud nao persiste nem repassa a chave de produto", async () =>
   assert.match(setup, /\/api\/collector\/activate/);
   assert.doesNotMatch(setup, /MonitoringPage/);
   assert.doesNotMatch(setup, /Informe os servidores OCS e Zabbix/);
-  assert.match(setup, /JsonStringValue\(ResponseBody, 'ocsServerUrl'\)/);
-  assert.match(setup, /JsonStringValue\(ResponseBody, 'zabbixServer'\)/);
-  assert.match(setup, /JsonStringValue\(ResponseBody, 'zabbixServerActive'\)/);
-  assert.doesNotMatch(setup, /configuracao completa do OCS e Zabbix/);
+  assert.doesNotMatch(setup, /ocsServerUrl|zabbixServer|OcsServerUrl|ZabbixServer/);
   assert.match(setup, /FinalizeParameters :=/);
-  assert.match(
-    setup,
-    /if\s+\(OcsServerUrl <> ''\) and\s+\(ZabbixServer <> ''\) and\s+\(ZabbixServerActive <> ''\)/
-  );
+  assert.doesNotMatch(setup, /Install-MonitoringAgents|monitoring-agents\.json/);
 
   assert.match(postInstall, /System32\\schtasks\.exe/);
   assert.match(postInstall, /\/RU SYSTEM/);
@@ -64,8 +53,8 @@ test("instalador cloud nao persiste nem repassa a chave de produto", async () =>
   assert.match(postInstall, /--once/);
   assert.match(postInstall, /CurrentVersion\\Run/);
   assert.match(postInstall, /--tray/);
-  assert.match(postInstall, /configuredMonitoringValues\.Count -eq 3/);
-  assert.match(postInstall, /configuracao de OCS e Zabbix recebida esta incompleta/);
+  assert.match(postInstall, /Coletor nativo selecionado/);
+  assert.doesNotMatch(postInstall, /OcsServerUrl|ZabbixServer|Install-MonitoringAgents/);
   assert.match(setup, /SetupIconFile=it-guardian\.ico/);
   assert.match(setup, /UninstallDisplayIcon=\{app\}\\ITGuardian\.exe/);
   assert.match(setup, /Uninstallable=yes/);
@@ -74,19 +63,18 @@ test("instalador cloud nao persiste nem repassa a chave de produto", async () =>
   assert.match(postInstall, /install-finalize\.log/);
   assert.match(uninstall, /Unregister-ScheduledTask/);
   assert.match(uninstall, /Stop-Process -Name "ITGuardian"/);
-  assert.match(setup, /OCS-Windows-Agent-Setup-x64\.exe/);
-  assert.match(setup, /zabbix_agent2-7\.0\.29-windows-amd64-openssl\.msi/);
-  assert.match(setup, /OcsServerUrl/);
-  assert.match(setup, /ZabbixServerActive/);
-  assert.match(monitoringInstall, /STARTUPTYPE=automatic/);
-  assert.match(monitoringInstall, /monitoring-agents\.json/);
-  assert.match(monitoringInstall, /Get-AuthenticodeSignature/);
-  assert.match(packageDownload, /Get-FileHash/);
-  assert.match(packageDownload, /Get-AuthenticodeSignature/);
+  assert.doesNotMatch(setup, /OCS-Windows-Agent|zabbix_agent|vendor\\ocs|vendor\\zabbix/);
+  assert.doesNotMatch(buildInstaller, /Get-OfficialMonitoringAgents|OCS-Windows-Agent|zabbix_agent/);
+  await assert.rejects(
+    access(path.join(projectRoot, "installers", "windows-collector", "Get-OfficialMonitoringAgents.ps1"))
+  );
+  await assert.rejects(
+    access(path.join(projectRoot, "installers", "windows-collector", "Install-MonitoringAgents.ps1"))
+  );
   assert.match(uninstall, /installedByItGuardian/);
 });
 
-test("coletor nao introduz primitivas de execucao remota", async () => {
+test("coletor PowerShell permanece restrito a inventario", async () => {
   const collector = await readProjectFile(
     "agent",
     "windows",
@@ -107,22 +95,34 @@ test("coletor nao introduz primitivas de execucao remota", async () => {
     assert.doesNotMatch(collector, pattern);
   }
 
+});
+
+test("agente nativo executa somente trabalhos autenticados e controlados", async () => {
   const nativeCollector = await readProjectFile(
     "agent",
     "windows",
     "ITGuardian.Windows.cs"
   );
   const nativeForbidden = [
-    /\bProcess\.Start\b/,
-    /\bcmd\.exe\b/i,
-    /\bpowershell(?:\.exe)?\b/i,
     /\bCreateProcess\b/i,
-    /\bShellExecute\b/i
+    /UseShellExecute\s*=\s*true/i,
+    /\bInvoke-Expression\b/i,
+    /\bScriptBlock\.Create\b/i
   ];
 
   for (const pattern of nativeForbidden) {
     assert.doesNotMatch(nativeCollector, pattern);
   }
+  assert.match(nativeCollector, /\/api\/agents\/jobs\/.*\/result/);
+  assert.match(nativeCollector, /Authorization.*Bearer/);
+  assert.match(nativeCollector, /type != "bat".*type != "cmd".*type != "powershell"/s);
+  assert.match(nativeCollector, /SpecialFolder\.System[\s\S]*"cmd\.exe"/);
+  assert.match(nativeCollector, /SpecialFolder\.System[\s\S]*"powershell\.exe"/);
+  assert.match(nativeCollector, /UseShellExecute\s*=\s*false/);
+  assert.match(nativeCollector, /Math\.Max\(15,\s*Math\.Min\(600,\s*job\.timeoutSeconds\)\)/);
+  assert.match(nativeCollector, /MaximumOutputLength\s*=\s*65536/);
+  assert.match(nativeCollector, /requiresAdmin[\s\S]*IsAdministrator/);
+  assert.match(nativeCollector, /requiresLoggedUser[\s\S]*Environment\.UserInteractive/);
   assert.match(nativeCollector, /AssemblyProduct\("IT Guardian"\)/);
   assert.match(nativeCollector, /NotifyIcon/);
   assert.match(nativeCollector, /Text = "IT Guardian ativo"/);

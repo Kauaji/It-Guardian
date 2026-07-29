@@ -39,10 +39,7 @@ Source: "ITGuardian-Uninstaller.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "it-guardian.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\agent\windows\diagnose-agent.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "Finalize-CollectorInstall.ps1"; DestDir: "{app}"; Flags: ignoreversion
-Source: "Install-MonitoringAgents.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "Uninstall-Collector.ps1"; DestDir: "{app}"; Flags: ignoreversion
-Source: "vendor\ocs-extracted\OCS-Windows-Agent-2.11.0.1_x64\OCS-Windows-Agent-Setup-x64.exe"; DestDir: "{app}\packages"; Flags: ignoreversion
-Source: "vendor\zabbix_agent2-7.0.29-windows-amd64-openssl.msi"; DestDir: "{app}\packages"; Flags: ignoreversion
 
 [Icons]
 Name: "{commondesktop}\Abrir chamado - IT Guardian"; Filename: "{code:GetSupportUrl}"; WorkingDir: "{app}"; IconFilename: "{app}\ITGuardian.exe"
@@ -60,9 +57,6 @@ var
   ActivatedProductKey: string;
   AgentToken: string;
   SupportUrl: string;
-  OcsServerUrl: string;
-  ZabbixServer: string;
-  ZabbixServerActive: string;
   MachineFingerprint: string;
   IntervalSeconds: Integer;
 
@@ -159,40 +153,10 @@ begin
 
     AgentToken := JsonStringValue(ResponseBody, 'agentToken');
     SupportUrl := JsonStringValue(ResponseBody, 'supportUrl');
-    OcsServerUrl := JsonStringValue(ResponseBody, 'ocsServerUrl');
-    ZabbixServer := JsonStringValue(ResponseBody, 'zabbixServer');
-    ZabbixServerActive := JsonStringValue(ResponseBody, 'zabbixServerActive');
     IntervalSeconds := JsonIntegerValue(ResponseBody, 'intervalSeconds', 300);
     if AgentToken = '' then
     begin
       MsgBox('O servidor nao retornou o token do coletor.', mbError, MB_OK);
-      Exit;
-    end;
-    if
-      (OcsServerUrl <> '') and
-      ((Pos('http://', Lowercase(OcsServerUrl)) <> 1) and
-       (Pos('https://', Lowercase(OcsServerUrl)) <> 1))
-    then
-    begin
-      AgentToken := '';
-      MsgBox(
-        'O servidor retornou um endereco OCS invalido. A instalacao nao foi iniciada.',
-        mbError,
-        MB_OK
-      );
-      Exit;
-    end;
-    if
-      ((OcsServerUrl <> '') or (ZabbixServer <> '') or (ZabbixServerActive <> '')) and
-      ((OcsServerUrl = '') or (ZabbixServer = '') or (ZabbixServerActive = ''))
-    then
-    begin
-      AgentToken := '';
-      MsgBox(
-        'O servidor retornou uma configuracao externa incompleta. Tente novamente mais tarde.',
-        mbError,
-        MB_OK
-      );
       Exit;
     end;
     if SupportUrl = '' then
@@ -232,9 +196,6 @@ begin
   ActivatedProductKey := '';
   AgentToken := '';
   SupportUrl := '';
-  OcsServerUrl := '';
-  ZabbixServer := '';
-  ZabbixServerActive := '';
   IntervalSeconds := 300;
 end;
 
@@ -292,15 +253,6 @@ begin
     '-NoProfile -ExecutionPolicy Bypass -File "' +
     ExpandConstant('{app}\Finalize-CollectorInstall.ps1') +
     '" -InstallDirectory "' + ExpandConstant('{app}') + '"';
-  if
-    (OcsServerUrl <> '') and
-    (ZabbixServer <> '') and
-    (ZabbixServerActive <> '')
-  then
-    FinalizeParameters := FinalizeParameters +
-      ' -OcsServerUrl "' + OcsServerUrl +
-      '" -ZabbixServer "' + ZabbixServer +
-      '" -ZabbixServerActive "' + ZabbixServerActive + '"';
 
   if not Exec(
     ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),

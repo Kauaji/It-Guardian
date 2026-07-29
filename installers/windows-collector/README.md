@@ -2,14 +2,8 @@
 
 O instalador visual solicita somente a chave de produto. A URL da API do
 IT Guardian e incorporada durante o build, e a chave e enviada diretamente ao
-endpoint HTTPS de ativacao sem ser gravada em arquivo ou log. A resposta de
-ativacao entrega automaticamente os destinos OCS e Zabbix quando eles estiverem
-vinculados a chave.
-
-O mesmo executavel inclui pacotes oficiais e assinados do OCS Inventory Agent
-2.11.0.1 e do Zabbix Agent 2 7.0.29. O build baixa os pacotes das paginas
-oficiais, confere hashes SHA-256 fixos e recusa arquivos sem a assinatura
-esperada.
+endpoint HTTPS de ativacao sem ser gravada em arquivo ou log. O instalador
+configura somente o coletor nativo e nao baixa agentes externos.
 
 ## Compilar
 
@@ -49,21 +43,11 @@ assine o executavel e valide a instalacao e a remocao em uma VM Windows limpa.
 - desinstalador registrado em `Aplicativos instalados` e atalho
   `Desinstalar IT Guardian` criado no menu Iniciar;
 - logs em `C:\ProgramData\ITGuardian\logs\agent.log`.
-- quando a chave possui destinos completos, OCS Inventory Agent configurado
-  para o servidor devolvido e instalado como servico automatico;
-- quando a chave possui destinos completos, Zabbix Agent 2 configurado com
-  `Server`, `ServerActive` e o hostname real do Windows;
-- quando esses agentes sao instalados, marcador `monitoring-agents.json` usado
-  para remover somente os agentes pertencentes ao IT Guardian.
 
-Se a chave ainda nao tiver OCS, Zabbix passivo e Zabbix ativo configurados, o
-instalador ativa normalmente o coletor nativo e ignora somente a instalacao
-desses dois agentes externos. Nenhum endereco ficticio e criado.
-
-O coletor apenas envia inventario e heartbeat. Ele nao recebe nem executa
-comandos remotos. O indicador da bandeja apenas informa visualmente que o
-IT Guardian esta instalado. OCS e Zabbix continuam dependendo dos respectivos
-servidores centrais, que nao sao instalados nos computadores monitorados.
+O coletor envia inventario e heartbeat e pode consumir trabalhos de manutencao
+cadastrados pela fila autenticada. Nao existe terminal remoto, download
+arbitrario ou `shell: true`. O indicador da bandeja apenas informa visualmente
+que o IT Guardian esta instalado.
 
 O runbook completo de arquitetura, licenciamento, deploy e diagnostico esta em
 [`docs/CLOUD-COLLECTOR-E-LICENCIAMENTO.md`](../../docs/CLOUD-COLLECTOR-E-LICENCIAMENTO.md).

@@ -1,9 +1,6 @@
 [CmdletBinding()]
 param(
-  [Parameter(Mandatory = $true)][string]$InstallDirectory,
-  [AllowEmptyString()][string]$OcsServerUrl = "",
-  [AllowEmptyString()][string]$ZabbixServer = "",
-  [AllowEmptyString()][string]$ZabbixServerActive = ""
+  [Parameter(Mandatory = $true)][string]$InstallDirectory
 )
 
 Set-StrictMode -Version Latest
@@ -15,9 +12,6 @@ $configPath = Join-Path $resolvedDirectory "config.json"
 $collectorPath = Join-Path $resolvedDirectory "ITGuardian.exe"
 $logDirectory = Join-Path $resolvedDirectory "logs"
 $installLogPath = Join-Path $logDirectory "install-finalize.log"
-$monitoringInstallerPath = Join-Path $resolvedDirectory "Install-MonitoringAgents.ps1"
-$ocsSetupPath = Join-Path $resolvedDirectory "packages\OCS-Windows-Agent-Setup-x64.exe"
-$zabbixMsiPath = Join-Path $resolvedDirectory "packages\zabbix_agent2-7.0.29-windows-amd64-openssl.msi"
 
 New-Item -ItemType Directory -Path $logDirectory -Force | Out-Null
 
@@ -42,29 +36,7 @@ if (-not (Test-Path -LiteralPath $configPath)) {
 if (-not (Test-Path -LiteralPath $collectorPath)) {
   throw "Executavel do coletor nao encontrado."
 }
-$monitoringValues = @($OcsServerUrl, $ZabbixServer, $ZabbixServerActive)
-$configuredMonitoringValues = @($monitoringValues | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
-
-if ($configuredMonitoringValues.Count -gt 0 -and $configuredMonitoringValues.Count -lt 3) {
-  throw "A configuracao de OCS e Zabbix recebida esta incompleta."
-}
-
-if ($configuredMonitoringValues.Count -eq 3) {
-  if (-not (Test-Path -LiteralPath $monitoringInstallerPath)) {
-    throw "Instalador dos agentes OCS e Zabbix nao encontrado."
-  }
-
-  & $monitoringInstallerPath `
-    -InstallDirectory $resolvedDirectory `
-    -OcsSetupPath $ocsSetupPath `
-    -ZabbixMsiPath $zabbixMsiPath `
-    -OcsServerUrl $OcsServerUrl `
-    -ZabbixServer $ZabbixServer `
-    -ZabbixServerActive $ZabbixServerActive
-  Write-InstallLog "Agentes externos configurados."
-} else {
-  Write-InstallLog "Agentes externos nao configurados; mantendo apenas o coletor nativo."
-}
+Write-InstallLog "Coletor nativo selecionado; integracoes externas nao fazem parte do instalador comum."
 
 $configAcl = New-Object System.Security.AccessControl.FileSecurity
 $configAcl.SetAccessRuleProtection($true, $false)

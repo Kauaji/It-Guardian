@@ -19,7 +19,6 @@ $uninstallerSourcePath = Join-Path $PSScriptRoot "ITGuardian.Uninstaller.cs"
 $iconScriptPath = Join-Path $PSScriptRoot "New-ITGuardianIcon.ps1"
 $frameworkDirectory = Join-Path $env:WINDIR "Microsoft.NET\Framework64\v4.0.30319"
 $csharpCompiler = Join-Path $frameworkDirectory "csc.exe"
-$monitoringPackagesScript = Join-Path $PSScriptRoot "Get-OfficialMonitoringAgents.ps1"
 
 if (-not (Test-Path -LiteralPath $csharpCompiler)) {
   throw "Compilador .NET Framework x64 nao encontrado."
@@ -30,15 +29,6 @@ if (-not (Test-Path -LiteralPath $sourcePath)) {
 if (-not (Test-Path -LiteralPath $uninstallerSourcePath)) {
   throw "Codigo-fonte do desinstalador Windows nao encontrado."
 }
-if (-not (Test-Path -LiteralPath $monitoringPackagesScript)) {
-  throw "Script de obtencao dos agentes OCS e Zabbix nao encontrado."
-}
-
-$monitoringPackages = & $monitoringPackagesScript
-if (-not $monitoringPackages) {
-  throw "Nao foi possivel preparar os pacotes oficiais do OCS e Zabbix."
-}
-
 & $iconScriptPath -OutputPath $iconPath
 & $csharpCompiler `
   /nologo `
@@ -102,10 +92,7 @@ if (-not $compiler) {
 $requiredSources = @(
   (Join-Path $PSScriptRoot "ITGuardianCollector.iss"),
   (Join-Path $PSScriptRoot "Finalize-CollectorInstall.ps1"),
-  (Join-Path $PSScriptRoot "Install-MonitoringAgents.ps1"),
   (Join-Path $PSScriptRoot "Uninstall-Collector.ps1"),
-  $monitoringPackages.OcsSetupPath,
-  $monitoringPackages.ZabbixMsiPath,
   $executablePath,
   $uninstallerExecutablePath,
   $iconPath,
