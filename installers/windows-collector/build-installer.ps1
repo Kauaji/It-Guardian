@@ -13,7 +13,9 @@ if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
 
 $iconPath = Join-Path $PSScriptRoot "it-guardian.ico"
 $executablePath = Join-Path $PSScriptRoot "ITGuardian.exe"
+$uninstallerExecutablePath = Join-Path $PSScriptRoot "ITGuardian-Uninstaller.exe"
 $sourcePath = Join-Path $PSScriptRoot "..\..\agent\windows\ITGuardian.Windows.cs"
+$uninstallerSourcePath = Join-Path $PSScriptRoot "ITGuardian.Uninstaller.cs"
 $iconScriptPath = Join-Path $PSScriptRoot "New-ITGuardianIcon.ps1"
 $frameworkDirectory = Join-Path $env:WINDIR "Microsoft.NET\Framework64\v4.0.30319"
 $csharpCompiler = Join-Path $frameworkDirectory "csc.exe"
@@ -24,6 +26,9 @@ if (-not (Test-Path -LiteralPath $csharpCompiler)) {
 }
 if (-not (Test-Path -LiteralPath $sourcePath)) {
   throw "Codigo-fonte do aplicativo Windows nao encontrado."
+}
+if (-not (Test-Path -LiteralPath $uninstallerSourcePath)) {
+  throw "Codigo-fonte do desinstalador Windows nao encontrado."
 }
 if (-not (Test-Path -LiteralPath $monitoringPackagesScript)) {
   throw "Script de obtencao dos agentes OCS e Zabbix nao encontrado."
@@ -50,6 +55,20 @@ if (-not $monitoringPackages) {
   $sourcePath
 if ($LASTEXITCODE -ne 0) {
   throw "A compilacao do ITGuardian.exe falhou com codigo $LASTEXITCODE."
+}
+
+& $csharpCompiler `
+  /nologo `
+  /target:winexe `
+  /optimize+ `
+  /platform:x64 `
+  "/win32icon:$iconPath" `
+  "/out:$uninstallerExecutablePath" `
+  "/reference:$(Join-Path $frameworkDirectory 'System.dll')" `
+  "/reference:$(Join-Path $frameworkDirectory 'System.Windows.Forms.dll')" `
+  $uninstallerSourcePath
+if ($LASTEXITCODE -ne 0) {
+  throw "A compilacao do ITGuardian-Uninstaller.exe falhou com codigo $LASTEXITCODE."
 }
 
 $uri = $null
@@ -88,6 +107,7 @@ $requiredSources = @(
   $monitoringPackages.OcsSetupPath,
   $monitoringPackages.ZabbixMsiPath,
   $executablePath,
+  $uninstallerExecutablePath,
   $iconPath,
   (Join-Path $PSScriptRoot "..\..\agent\windows\diagnose-agent.ps1")
 )

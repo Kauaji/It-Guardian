@@ -13,9 +13,28 @@ $legacyTaskName = "IT Guardian Cloud Collector"
 $resolvedDirectory = [IO.Path]::GetFullPath($InstallDirectory)
 $configPath = Join-Path $resolvedDirectory "config.json"
 $collectorPath = Join-Path $resolvedDirectory "ITGuardian.exe"
+$logDirectory = Join-Path $resolvedDirectory "logs"
+$installLogPath = Join-Path $logDirectory "install-finalize.log"
 $monitoringInstallerPath = Join-Path $resolvedDirectory "Install-MonitoringAgents.ps1"
 $ocsSetupPath = Join-Path $resolvedDirectory "packages\OCS-Windows-Agent-Setup-x64.exe"
 $zabbixMsiPath = Join-Path $resolvedDirectory "packages\zabbix_agent2-7.0.29-windows-amd64-openssl.msi"
+
+New-Item -ItemType Directory -Path $logDirectory -Force | Out-Null
+
+function Write-InstallLog {
+  param([Parameter(Mandatory = $true)][string]$Message)
+  Add-Content `
+    -LiteralPath $installLogPath `
+    -Value ("{0:o} {1}" -f [DateTime]::UtcNow, $Message) `
+    -Encoding UTF8
+}
+
+trap {
+  Write-InstallLog ("ERRO: {0}`r`n{1}" -f $_.Exception.Message, ($_ | Out-String))
+  exit 1
+}
+
+Write-InstallLog "Iniciando finalizacao da instalacao."
 
 if (-not (Test-Path -LiteralPath $configPath)) {
   throw "Configuracao do coletor nao encontrada."
@@ -42,6 +61,9 @@ if ($configuredMonitoringValues.Count -eq 3) {
     -OcsServerUrl $OcsServerUrl `
     -ZabbixServer $ZabbixServer `
     -ZabbixServerActive $ZabbixServerActive
+  Write-InstallLog "Agentes externos configurados."
+} else {
+  Write-InstallLog "Agentes externos nao configurados; mantendo apenas o coletor nativo."
 }
 
 $configAcl = New-Object System.Security.AccessControl.FileSecurity
@@ -56,28 +78,22 @@ foreach ($sidValue in @("S-1-5-18", "S-1-5-32-544")) {
   $configAcl.AddAccessRule($rule)
 }
 Set-Acl -LiteralPath $configPath -AclObject $configAcl
+Write-InstallLog "ACL da configuracao aplicada."
 
-$action = New-ScheduledTaskAction `
-  -Execute $collectorPath `
-  -Argument "--collector --config `"$configPath`""
-$trigger = New-ScheduledTaskTrigger -AtStartup
-$settings = New-ScheduledTaskSettingsSet `
-  -RestartCount 5 `
-  -RestartInterval (New-TimeSpan -Minutes 1) `
-  -ExecutionTimeLimit (New-TimeSpan -Days 3650)
-$principal = New-ScheduledTaskPrincipal `
-  -UserId "SYSTEM" `
-  -LogonType ServiceAccount `
-  -RunLevel Highest
-
-Register-ScheduledTask `
-  -TaskName $taskName `
-  -Action $action `
-  -Trigger $trigger `
-  -Settings $settings `
-  -Principal $principal `
-  -Description "Coleta inventario e heartbeat para o IT Guardian Cloud." `
-  -Force | Out-Null
+$taskScheduler = Join-Path $env:WINDIR "System32\schtasks.exe"
+$taskCommand = "`"$collectorPath`" --collector --config `"$configPath`""
+& $taskScheduler `
+  /Create `
+  /TN $taskName `
+  /TR $taskCommand `
+  /SC ONSTART `
+  /RU SYSTEM `
+  /RL HIGHEST `
+  /F | Out-Null
+if ($LASTEXITCODE -ne 0) {
+  throw "Nao foi possivel registrar a tarefa do coletor (codigo $LASTEXITCODE)."
+}
+Write-InstallLog "Tarefa de inicializacao registrada."
 
 Stop-ScheduledTask -TaskName $legacyTaskName -ErrorAction SilentlyContinue
 Unregister-ScheduledTask -TaskName $legacyTaskName -Confirm:$false -ErrorAction SilentlyContinue
@@ -93,6 +109,11 @@ New-ItemProperty `
 if ($LASTEXITCODE -ne 0) {
   throw "O primeiro heartbeat do coletor falhou."
 }
+Write-InstallLog "Primeiro heartbeat concluido."
 
-Start-ScheduledTask -TaskName $taskName
+& $taskScheduler /Run /TN $taskName | Out-Null
+if ($LASTEXITCODE -ne 0) {
+  throw "Nao foi possivel iniciar a tarefa do coletor (codigo $LASTEXITCODE)."
+}
 Start-Process -FilePath $collectorPath -ArgumentList @("--tray", "--config", "`"$configPath`"")
+Write-InstallLog "Instalacao finalizada com sucesso."

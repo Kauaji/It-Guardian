@@ -35,6 +35,7 @@ FinishedLabel=O IT Guardian foi instalado e o primeiro contato do coletor com o 
 
 [Files]
 Source: "ITGuardian.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "ITGuardian-Uninstaller.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "it-guardian.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\agent\windows\diagnose-agent.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "Finalize-CollectorInstall.ps1"; DestDir: "{app}"; Flags: ignoreversion
@@ -45,7 +46,7 @@ Source: "vendor\zabbix_agent2-7.0.29-windows-amd64-openssl.msi"; DestDir: "{app}
 
 [Icons]
 Name: "{commondesktop}\Abrir chamado - IT Guardian"; Filename: "{code:GetSupportUrl}"; WorkingDir: "{app}"; IconFilename: "{app}\ITGuardian.exe"
-Name: "{commonprograms}\IT Guardian\Desinstalar IT Guardian"; Filename: "{uninstallexe}"; IconFilename: "{app}\ITGuardian.exe"
+Name: "{commonprograms}\IT Guardian\Desinstalar IT Guardian"; Filename: "{app}\ITGuardian-Uninstaller.exe"; IconFilename: "{app}\ITGuardian-Uninstaller.exe"
 
 [UninstallRun]
 Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\Uninstall-Collector.ps1"""; Flags: runhidden waituntilterminated; RunOnceId: "ITGuardianCleanup"
@@ -310,7 +311,8 @@ begin
     ResultCode
   ) or (ResultCode <> 0) then
     RaiseException(
-      'Nao foi possivel concluir a instalacao do coletor. Consulte o log do instalador.'
+      'Nao foi possivel concluir a instalacao do coletor. Consulte ' +
+      ExpandConstant('{app}\logs\install-finalize.log') + '.'
     );
 
   { A chave nunca e gravada. Remova tambem as copias mantidas na memoria do assistente. }

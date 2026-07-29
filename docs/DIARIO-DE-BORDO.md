@@ -4,6 +4,16 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-07-29 - Finalizacao robusta e desinstalador executavel
+
+### Escopo
+
+- registro da inicializacao do coletor migrado para `schtasks.exe`;
+- finalizacao passou a registrar diagnostico em
+  `C:\ProgramData\ITGuardian\logs\install-finalize.log`;
+- adicionado `ITGuardian-Uninstaller.exe` com icone e elevacao controlada para
+  iniciar o desinstalador oficial do pacote.
+
 ## 2026-07-28 - Correcao dos argumentos opcionais do instalador Windows
 
 ### Escopo

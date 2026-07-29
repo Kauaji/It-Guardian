@@ -56,9 +56,9 @@ test("instalador cloud nao persiste nem repassa a chave de produto", async () =>
     /if\s+\(OcsServerUrl <> ''\) and\s+\(ZabbixServer <> ''\) and\s+\(ZabbixServerActive <> ''\)/
   );
 
-  assert.match(postInstall, /New-ScheduledTaskPrincipal/);
-  assert.match(postInstall, /-UserId "SYSTEM"/);
-  assert.match(postInstall, /New-ScheduledTaskTrigger -AtStartup/);
+  assert.match(postInstall, /System32\\schtasks\.exe/);
+  assert.match(postInstall, /\/RU SYSTEM/);
+  assert.match(postInstall, /\/SC ONSTART/);
   assert.match(postInstall, /ITGuardian\.exe/);
   assert.match(postInstall, /--collector/);
   assert.match(postInstall, /--once/);
@@ -70,7 +70,8 @@ test("instalador cloud nao persiste nem repassa a chave de produto", async () =>
   assert.match(setup, /UninstallDisplayIcon=\{app\}\\ITGuardian\.exe/);
   assert.match(setup, /Uninstallable=yes/);
   assert.match(setup, /Desinstalar IT Guardian/);
-  assert.match(setup, /Filename: "\{uninstallexe\}"/);
+  assert.match(setup, /ITGuardian-Uninstaller\.exe/);
+  assert.match(postInstall, /install-finalize\.log/);
   assert.match(uninstall, /Unregister-ScheduledTask/);
   assert.match(uninstall, /Stop-Process -Name "ITGuardian"/);
   assert.match(setup, /OCS-Windows-Agent-Setup-x64\.exe/);
