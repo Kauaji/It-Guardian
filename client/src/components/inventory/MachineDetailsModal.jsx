@@ -1,4 +1,20 @@
-import { Archive, Clock3, Cpu, HardDrive, KeyRound, MemoryStick, Network, RefreshCw, Trash2, Wrench, X } from "lucide-react";
+import {
+  Archive,
+  Battery,
+  CircuitBoard,
+  Clock3,
+  Cpu,
+  HardDrive,
+  KeyRound,
+  Laptop,
+  MemoryStick,
+  Monitor,
+  Network,
+  RefreshCw,
+  Trash2,
+  Wrench,
+  X
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import AssetTypeIcon from "./AssetTypeIcon.jsx";
 import { assetTypeLabel, assetTypeOptions } from "./assetTypes.js";
@@ -14,6 +30,7 @@ import {
   getMachineSourceLabel,
   isAgentMachine
 } from "./agentPresentation.js";
+import { formatHardwareValue } from "./hardwarePresentation.js";
 
 const tabs = [
   { id: "general", label: "Geral" },
@@ -30,8 +47,20 @@ function DetailItem({ label, value }) {
   return (
     <div className="detail-item">
       <span>{label}</span>
-      <strong>{value || "Não disponível"}</strong>
+      <strong>{formatHardwareValue(value)}</strong>
     </div>
+  );
+}
+
+function HardwareSection({ icon: Icon, title, children }) {
+  return (
+    <section className="hardware-detail-section">
+      <header>
+        <Icon size={18} aria-hidden="true" />
+        <h3>{title}</h3>
+      </header>
+      {children}
+    </section>
   );
 }
 
@@ -280,6 +309,13 @@ export default function MachineDetailsModal({
   const isManualAsset = machine?.source === "manual";
   const isAgentAsset = isAgentMachine(machine);
   const agent = machine?.agent;
+  const memoryModules = Array.isArray(hardware.memoryModules)
+    ? hardware.memoryModules
+    : Array.isArray(hardware.memoryHealth?.moduleDetails)
+      ? hardware.memoryHealth.moduleDetails
+      : [];
+  const graphicsAdapters = Array.isArray(hardware.graphics) ? hardware.graphics : [];
+  const disks = Array.isArray(hardware.disks) ? hardware.disks : [];
   const inMaintenance = Boolean(machine?.maintenance) || isMaintenanceSegmentName(machine?.segmentName);
   const backupInUse = machine?.backupStatus === "in_use";
   const latestChange = useMemo(
@@ -296,7 +332,7 @@ export default function MachineDetailsModal({
     [activeAlerts.length, resolvedAlerts.length]
   );
   const softwareRows = useMemo(
-    () => (hardware.software || []).map(normalizeSoftware),
+    () => (Array.isArray(hardware.software) ? hardware.software : []).map(normalizeSoftware),
     [hardware.software]
   );
   const diskHealth = useMemo(() => getDiskHealth(hardware), [hardware]);
@@ -507,78 +543,170 @@ export default function MachineDetailsModal({
           )}
 
           {activeTab === "hardware" && (
-            <section className="asset-tab-content">
-              <div className="detail-grid">
-                <DetailItem label="Hostname" value={machine.name} />
-                <DetailItem label="Sistema operacional" value={hardware.os} />
-                <DetailItem label="Versão do SO" value={hardware.osVersion || hardware.os} />
-                <DetailItem label="Arquitetura" value={hardware.architecture} />
-                <DetailItem label="Fabricante" value={hardware.manufacturer} />
-                <DetailItem label="Modelo" value={hardware.model} />
-                <DetailItem label="Serial number" value={hardware.serialNumber} />
-                <DetailItem label="Processador" value={hardware.cpuModel} />
-                <DetailItem label="Núcleos" value={hardware.cpuCores} />
-                <DetailItem label="Processadores lógicos" value={hardware.cpuDetails?.logicalProcessors} />
-                <DetailItem
-                  label="Clock máximo"
-                  value={hardware.cpuDetails?.maxClockMhz ? `${hardware.cpuDetails.maxClockMhz} MHz` : null}
-                />
-                <DetailItem label="Memória RAM" value={hardware.ramGb ? `${hardware.ramGb} GB` : null} />
-                <DetailItem label="Saúde da memória" value={hardware.memoryHealth?.status || hardware.memoryHealth} />
-                <DetailItem
-                  label="Módulos de memória"
-                  value={hardware.memoryModules?.length
-                    ? hardware.memoryModules
-                      .map((module) => `${module.capacityGb || "?"} GB ${module.speedMhz ? `@ ${module.speedMhz} MHz` : ""}`.trim())
-                      .join(", ")
-                    : null}
-                />
-                <DetailItem
-                  label="Placa de vídeo"
-                  value={hardware.graphics?.map((adapter) => adapter.name).filter(Boolean).join(", ")}
-                />
-                <DetailItem
-                  label="Placa-mãe"
-                  value={[hardware.motherboard?.manufacturer, hardware.motherboard?.product].filter(Boolean).join(" ")}
-                />
-                <DetailItem
-                  label="Bateria"
-                  value={hardware.battery?.chargePercent != null
-                    ? `${hardware.battery.chargePercent}% - ${hardware.battery.status || "status não informado"}`
-                    : null}
-                />
-                <DetailItem label="Licença Windows" value={hardware.licenses?.windowsKey || hardware.windowsKey} />
-                <DetailItem label="Office" value={hardware.licenses?.officeVersion || hardware.officeVersion} />
-                <DetailItem label="Licença Office" value={hardware.licenses?.officeKey || hardware.officeKey} />
-                {isAgentAsset && (
-                  <>
-                    <DetailItem label="RAM total" value={formatBytes(agent?.memoryTotalBytes)} />
-                    <DetailItem label="Disco total" value={formatBytes(agent?.diskTotalBytes)} />
-                    <DetailItem label="Disco livre" value={formatBytes(agent?.diskFreeBytes)} />
-                    <DetailItem label="Uptime" value={formatDuration(agent?.uptimeSeconds)} />
-                    <DetailItem label="Usuario local" value={agent?.loggedUser || "Coleta desativada"} />
-                  </>
-                )}
-              </div>
-              <div className="disk-detail-list">
-                {(hardware.disks || []).map((disk) => (
-                  <article key={disk.label}>
-                    <HardDrive size={16} />
-                    <strong>{disk.label}</strong>
-                    <span>{disk.sizeGb} GB - {disk.type}</span>
-                    <small>SMART: {disk.smartStatus || disk.health || "Não disponível"}</small>
-                    <small>Saúde estimada: {disk.healthEstimate || (disk.healthPercent != null ? `${disk.healthPercent}% (estimativa)` : "Não disponível")}</small>
-                    <small>Temperatura: {disk.temperatureC ? `${disk.temperatureC} C` : "Não disponível"}</small>
-                    <small>Horas ligadas: {disk.powerOnHours || "Não disponível"}</small>
-                    <small>Setores realocados: {disk.reallocatedSectors ?? "Não disponível"}</small>
-                    <small>TB escritos: {disk.tbWritten || "Não disponível"}</small>
-                  </article>
-                ))}
-                {isManualAsset && <p className="empty">Ativo de rede sem coleta automatica de discos ou CPU.</p>}
-              </div>
+            <section className="asset-tab-content hardware-detail-layout">
+              <HardwareSection icon={Laptop} title="Sistema e equipamento">
+                <div className="detail-grid hardware-detail-grid">
+                  <DetailItem label="Hostname" value={machine.name} />
+                  <DetailItem label="Sistema operacional" value={hardware.os} />
+                  <DetailItem label="Versão do SO" value={hardware.osVersion || hardware.os} />
+                  <DetailItem label="Arquitetura" value={hardware.architecture} />
+                  <DetailItem label="Fabricante" value={hardware.manufacturer} />
+                  <DetailItem label="Modelo" value={hardware.model} />
+                  <DetailItem label="Serial number" value={hardware.serialNumber} />
+                  {isAgentAsset && (
+                    <>
+                      <DetailItem label="Uptime" value={formatDuration(agent?.uptimeSeconds)} />
+                      <DetailItem label="Usuário local" value={agent?.loggedUser || "Coleta desativada"} />
+                    </>
+                  )}
+                </div>
+              </HardwareSection>
+
+              <HardwareSection icon={Cpu} title="Processador">
+                <div className="detail-grid hardware-detail-grid">
+                  <DetailItem label="Modelo" value={hardware.cpuModel || hardware.cpuDetails?.name} />
+                  <DetailItem label="Núcleos físicos" value={hardware.cpuCores || hardware.cpuDetails?.cores} />
+                  <DetailItem label="Processadores lógicos" value={hardware.cpuDetails?.logicalProcessors} />
+                  <DetailItem label="Sockets" value={hardware.cpuDetails?.sockets} />
+                  <DetailItem label="Socket" value={hardware.cpuDetails?.socket} />
+                  <DetailItem
+                    label="Clock máximo"
+                    value={hardware.cpuDetails?.maxClockMhz ? `${hardware.cpuDetails.maxClockMhz} MHz` : null}
+                  />
+                  <DetailItem
+                    label="Virtualização"
+                    value={hardware.cpuDetails?.virtualizationEnabled == null
+                      ? null
+                      : hardware.cpuDetails.virtualizationEnabled}
+                  />
+                </div>
+              </HardwareSection>
+
+              <HardwareSection icon={MemoryStick} title="Memória">
+                <div className="detail-grid hardware-detail-grid">
+                  <DetailItem label="Total instalado" value={hardware.ramGb ? `${hardware.ramGb} GB` : null} />
+                  {isAgentAsset && <DetailItem label="Total detectado" value={formatBytes(agent?.memoryTotalBytes)} />}
+                  <DetailItem label="Saúde geral" value={hardware.memoryHealth?.status || hardware.memoryHealth} />
+                  <DetailItem
+                    label="Módulos detectados"
+                    value={memoryModules.length || hardware.memoryHealth?.modules}
+                  />
+                </div>
+                <div className="hardware-component-list">
+                  {memoryModules.map((module, index) => (
+                    <article key={`${module.bank || "memory"}-${module.serialNumber || index}`}>
+                      <header>
+                        <MemoryStick size={16} aria-hidden="true" />
+                        <strong>{module.bank || `Módulo ${index + 1}`}</strong>
+                        <span>{formatHardwareValue(module.status, "Status não informado")}</span>
+                      </header>
+                      <dl>
+                        <div><dt>Capacidade</dt><dd>{formatHardwareValue(module.capacityGb ? `${module.capacityGb} GB` : null)}</dd></div>
+                        <div><dt>Velocidade</dt><dd>{formatHardwareValue(module.speedMhz ? `${module.speedMhz} MHz` : null)}</dd></div>
+                        <div><dt>Fabricante</dt><dd>{formatHardwareValue(module.manufacturer)}</dd></div>
+                        <div><dt>Part number</dt><dd>{formatHardwareValue(module.partNumber)}</dd></div>
+                        <div><dt>Serial</dt><dd>{formatHardwareValue(module.serialNumber)}</dd></div>
+                      </dl>
+                    </article>
+                  ))}
+                  {!memoryModules.length && <p className="empty">Nenhum módulo individual identificado.</p>}
+                </div>
+              </HardwareSection>
+
+              <HardwareSection icon={Monitor} title="Vídeo">
+                <div className="hardware-component-list">
+                  {graphicsAdapters.map((adapter, index) => (
+                    <article key={`${adapter.name || "graphics"}-${index}`}>
+                      <header>
+                        <Monitor size={16} aria-hidden="true" />
+                        <strong>{formatHardwareValue(adapter.name, `Adaptador ${index + 1}`)}</strong>
+                        <span>{formatHardwareValue(adapter.status, "Status não informado")}</span>
+                      </header>
+                      <dl>
+                        <div><dt>Processador gráfico</dt><dd>{formatHardwareValue(adapter.videoProcessor)}</dd></div>
+                        <div><dt>Memória</dt><dd>{formatHardwareValue(adapter.memoryBytes ? formatBytes(adapter.memoryBytes) : null)}</dd></div>
+                        <div><dt>Driver</dt><dd>{formatHardwareValue(adapter.driverVersion)}</dd></div>
+                        <div><dt>Resolução</dt><dd>{formatHardwareValue(adapter.resolution)}</dd></div>
+                      </dl>
+                    </article>
+                  ))}
+                  {!graphicsAdapters.length && <p className="empty">Nenhum adaptador de vídeo identificado.</p>}
+                </div>
+              </HardwareSection>
+
+              <HardwareSection icon={CircuitBoard} title="Placa-mãe">
+                <div className="detail-grid hardware-detail-grid">
+                  <DetailItem label="Fabricante" value={hardware.motherboard?.manufacturer} />
+                  <DetailItem label="Produto" value={hardware.motherboard?.product} />
+                  <DetailItem label="Versão" value={hardware.motherboard?.version} />
+                  <DetailItem label="Serial" value={hardware.motherboard?.serialNumber} />
+                  <DetailItem label="Status" value={hardware.motherboard?.status} />
+                </div>
+              </HardwareSection>
+
+              <HardwareSection icon={HardDrive} title="Armazenamento">
+                <div className="detail-grid hardware-detail-grid">
+                  {isAgentAsset && (
+                    <>
+                      <DetailItem label="Total" value={formatBytes(agent?.diskTotalBytes)} />
+                      <DetailItem label="Livre" value={formatBytes(agent?.diskFreeBytes)} />
+                    </>
+                  )}
+                  <DetailItem label="Saúde geral" value={diskHealth} />
+                  <DetailItem label="Unidades detectadas" value={disks.length} />
+                </div>
+                <div className="disk-detail-list">
+                  {disks.map((disk, index) => (
+                    <article key={`${disk.label || "disk"}-${index}`}>
+                      <HardDrive size={16} aria-hidden="true" />
+                      <strong>{formatHardwareValue(disk.label, `Disco ${index + 1}`)}</strong>
+                      <span>{formatHardwareValue(disk.sizeGb ? `${disk.sizeGb} GB - ${disk.type || "tipo não informado"}` : disk.type)}</span>
+                      <small>SMART: {formatHardwareValue(disk.smartStatus || disk.health)}</small>
+                      <small>Saúde estimada: {formatHardwareValue(disk.healthEstimate || (disk.healthPercent != null ? `${disk.healthPercent}% (estimativa)` : null))}</small>
+                      <small>Temperatura: {formatHardwareValue(disk.temperatureC ? `${disk.temperatureC} C` : null)}</small>
+                      <small>Horas ligadas: {formatHardwareValue(disk.powerOnHours)}</small>
+                      <small>Setores realocados: {formatHardwareValue(disk.reallocatedSectors)}</small>
+                      <small>TB escritos: {formatHardwareValue(disk.tbWritten)}</small>
+                    </article>
+                  ))}
+                  {!disks.length && (
+                    <p className="empty">
+                      {isManualAsset
+                        ? "Ativo de rede sem coleta automática de discos."
+                        : "Nenhuma unidade física identificada."}
+                    </p>
+                  )}
+                </div>
+              </HardwareSection>
+
+              <HardwareSection icon={Battery} title="Energia">
+                <div className="detail-grid hardware-detail-grid">
+                  <DetailItem label="Bateria" value={hardware.battery?.name} />
+                  <DetailItem
+                    label="Carga"
+                    value={hardware.battery?.chargePercent != null ? `${hardware.battery.chargePercent}%` : null}
+                  />
+                  <DetailItem label="Status" value={hardware.battery?.status} />
+                  <DetailItem
+                    label="Autonomia estimada"
+                    value={hardware.battery?.estimatedMinutes
+                      ? `${hardware.battery.estimatedMinutes} min`
+                      : null}
+                  />
+                </div>
+              </HardwareSection>
+
+              <HardwareSection icon={KeyRound} title="Licenciamento">
+                <div className="detail-grid hardware-detail-grid">
+                  <DetailItem label="Licença Windows" value={hardware.licenses?.windowsKey || hardware.windowsKey} />
+                  <DetailItem label="Office" value={hardware.licenses?.officeVersion || hardware.officeVersion} />
+                  <DetailItem label="Licença Office" value={hardware.licenses?.officeKey || hardware.officeKey} />
+                </div>
+              </HardwareSection>
+
               <div className="license-note">
                 <KeyRound size={16} />
-                <span>Licencas e saude fisica aparecem quando alguma fonte complementar disponibiliza esses dados.</span>
+                <span>Licenças e saúde física dependem dos dados disponibilizados pelo Windows e pelas fontes integradas.</span>
               </div>
             </section>
           )}
@@ -590,8 +718,8 @@ export default function MachineDetailsModal({
           {activeTab === "software" && (
             <section className="asset-tab-content">
               <div className="software-table-list">
-                {softwareRows.map((software) => (
-                  <article key={`${software.name}-${software.version || "sem-versao"}`}>
+                {softwareRows.map((software, index) => (
+                  <article key={`${software.name}-${software.version || "sem-versao"}-${index}`}>
                     <strong>{software.name}</strong>
                     <span>Versão: {software.version || "Não disponível"}</span>
                     <span>Fabricante: {software.manufacturer || "Não disponível"}</span>

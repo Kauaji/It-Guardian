@@ -9,6 +9,11 @@ import {
   YAxis
 } from "recharts";
 import { formatDate } from "../../utils/display.js";
+import {
+  formatHardwareValue,
+  formatSoftwareLabel,
+  softwareIdentity
+} from "../inventory/hardwarePresentation.js";
 import MetricBar from "./MetricBar.jsx";
 
 export default function DeviceDetails({ device, statusClass, metricClass }) {
@@ -62,16 +67,18 @@ export default function DeviceDetails({ device, statusClass, metricClass }) {
       )}
 
       <div className="inventory-grid">
-        <div><span>Fabricante</span><strong>{device.hardware?.manufacturer}</strong></div>
-        <div><span>Modelo</span><strong>{device.hardware?.model}</strong></div>
-        <div><span>{isManualAsset ? "Tipo" : "CPU"}</span><strong>{isManualAsset ? device.assetType : device.hardware?.cpuModel}</strong></div>
-        <div><span>{isManualAsset ? "Patrimônio" : "Memória"}</span><strong>{isManualAsset ? device.hardware?.assetTag : `${device.hardware?.ramGb} GB`}</strong></div>
-        <div><span>Uptime</span><strong>{device.uptimeHours} h</strong></div>
+        <div><span>Fabricante</span><strong>{formatHardwareValue(device.hardware?.manufacturer)}</strong></div>
+        <div><span>Modelo</span><strong>{formatHardwareValue(device.hardware?.model)}</strong></div>
+        <div><span>{isManualAsset ? "Tipo" : "CPU"}</span><strong>{formatHardwareValue(isManualAsset ? device.assetType : device.hardware?.cpuModel)}</strong></div>
+        <div><span>{isManualAsset ? "Patrimônio" : "Memória"}</span><strong>{formatHardwareValue(isManualAsset ? device.hardware?.assetTag : device.hardware?.ramGb ? `${device.hardware.ramGb} GB` : null)}</strong></div>
+        <div><span>Uptime</span><strong>{formatHardwareValue(device.uptimeHours != null ? `${device.uptimeHours} h` : null)}</strong></div>
         <div><span>Inventário</span><strong>{formatDate(device.hardware?.lastInventoryAt)}</strong></div>
       </div>
 
       <div className="software-list">
-        {device.hardware?.software.map((software) => <span key={software}>{software}</span>)}
+        {(Array.isArray(device.hardware?.software) ? device.hardware.software : []).map((software, index) => (
+          <span key={softwareIdentity(software, index)}>{formatSoftwareLabel(software)}</span>
+        ))}
       </div>
     </section>
   );

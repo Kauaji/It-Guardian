@@ -6769,6 +6769,127 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
   overflow-wrap: anywhere;
 }
 
+.hardware-detail-layout {
+  gap: 18px;
+}
+
+.hardware-detail-section {
+  display: grid;
+  gap: 12px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.hardware-detail-section:last-of-type {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.hardware-detail-section > header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 28px;
+  color: var(--accent);
+}
+
+.hardware-detail-section > header h3 {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 15px;
+}
+
+.hardware-detail-grid {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.hardware-component-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.hardware-component-list article {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--surface);
+}
+
+.hardware-component-list article > header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.hardware-component-list article > header svg {
+  color: var(--accent);
+}
+
+.hardware-component-list article > header strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hardware-component-list article > header span {
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.hardware-component-list dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+  margin: 0;
+}
+
+.hardware-component-list dl div {
+  min-width: 0;
+}
+
+.hardware-component-list dt,
+.hardware-component-list dd {
+  margin: 0;
+}
+
+.hardware-component-list dt {
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.hardware-component-list dd {
+  margin-top: 3px;
+  color: var(--text-strong);
+  font-size: 12px;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 560px) {
+  .hardware-component-list,
+  .hardware-component-list dl {
+    grid-template-columns: 1fr;
+  }
+
+  .hardware-component-list article > header {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .hardware-component-list article > header span {
+    grid-column: 2;
+  }
+}
+
 .license-note {
   display: inline-flex;
   align-items: center;

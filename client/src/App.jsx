@@ -116,6 +116,7 @@ import PermissionBlocked from "./components/ui/PermissionBlocked.jsx";
 import AuthScreen from "./components/auth/AuthScreen.jsx";
 import AlertList from "./components/dashboard/AlertList.jsx";
 import DeviceDetails from "./components/dashboard/DeviceDetails.jsx";
+import { formatSoftwareLabel } from "./components/inventory/hardwarePresentation.js";
 import DeviceTable from "./components/dashboard/DeviceTable.jsx";
 import { isMaintenanceSegmentName } from "./utils/display.js";
 import { useAppSessionController } from "./hooks/useAppSessionController.js";
@@ -719,7 +720,9 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
       device.hardware?.assetTag,
       device.hardware?.serialNumber,
       device.hardware?.macAddress,
-      device.hardware?.software?.join(" ")
+      (Array.isArray(device.hardware?.software) ? device.hardware.software : [])
+        .map(formatSoftwareLabel)
+        .join(" ")
     ]
       .filter(Boolean)
       .some((value) => String(value).toLowerCase().includes(term));

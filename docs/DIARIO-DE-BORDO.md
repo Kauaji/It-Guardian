@@ -489,3 +489,29 @@ entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 - maquinas instaladas com agente anterior precisam atualizar para 1.4.0 para
   enviar os novos campos.
 
+## 2026-07-29 - Protecao de renderizacao e hardware segmentado
+
+### Incidente
+
+- a tela podia ficar branca ao renderizar registros estruturados de software
+  como filhos React;
+- o erro de producao indicava um objeto com os campos `name`, `version`,
+  `installedAt` e `manufacturer`.
+
+### Correcao
+
+- valores estruturados de inventario agora passam por formatacao segura antes
+  de chegar ao JSX;
+- a lista resumida de softwares usa rotulos legiveis e chaves estaveis;
+- a aba Hardware foi dividida em sistema, processador, memoria, video,
+  placa-mae, armazenamento, energia e licenciamento;
+- modulos de memoria, adaptadores de video e discos possuem detalhamento
+  individual, sem misturar todos os dados em uma unica grade.
+
+### Compatibilidade
+
+- formatos antigos, textos simples e os novos objetos enviados pelo agente sao
+  aceitos simultaneamente;
+- dados ausentes continuam apresentados como indisponiveis, sem interromper a
+  pagina inteira.
+
