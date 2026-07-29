@@ -16,6 +16,23 @@ function isTruthyEnv(value) {
   return ["1", "true", "yes", "sim"].includes(String(value || "").trim().toLowerCase());
 }
 
+export function resolveDatabasePoolConfig({
+  env = process.env,
+  serverless = isVercel
+} = {}) {
+  const configuredMax = Number(env.DB_POOL_MAX);
+  const defaultMax = serverless ? 1 : 10;
+  const requestedMax =
+    Number.isFinite(configuredMax) && configuredMax > 0 ? configuredMax : defaultMax;
+
+  return {
+    max: serverless ? 1 : Math.max(1, requestedMax),
+    connectionTimeoutMillis: Math.max(1000, Number(env.DB_CONNECTION_TIMEOUT_MS || 10000)),
+    idleTimeoutMillis: Math.max(1000, Number(env.DB_IDLE_TIMEOUT_MS || (serverless ? 5000 : 30000))),
+    allowExitOnIdle: serverless
+  };
+}
+
 export function shouldSeedDemoData() {
   const flag = process.env.ENABLE_DEMO_SEED ?? process.env.IT_GUARDIAN_ENABLE_DEMO_SEED;
   return isTruthyEnv(flag);
@@ -96,14 +113,13 @@ export function resolveDatabaseConfig() {
     process.env.DB_SSL === "true" ||
     (process.env.DB_SSL !== "false" &&
       (isProductionLike || /supabase|neon\.tech|pooler/i.test(connectionString)));
+  const poolConfig = resolveDatabasePoolConfig();
 
   return {
     mode: "postgres",
     connectionString,
     ssl: shouldUseSsl ? { rejectUnauthorized: false } : false,
-    max: Math.max(1, Number(process.env.DB_POOL_MAX || 10)),
-    connectionTimeoutMillis: Math.max(1000, Number(process.env.DB_CONNECTION_TIMEOUT_MS || 10000)),
-    idleTimeoutMillis: Math.max(1000, Number(process.env.DB_IDLE_TIMEOUT_MS || 30000))
+    ...poolConfig
   };
 }
 

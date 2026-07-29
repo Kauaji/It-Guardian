@@ -378,3 +378,27 @@ entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 - validar restore e recuperacao de desastre no ambiente definitivo;
 - habilitar OCS ou Zabbix somente em ambiente de homologacao.
 
+## 2026-07-29 - Correcao do limite de conexoes na Vercel
+
+### Incidente
+
+- login e demais rotas da API retornavam `500` em producao;
+- os logs da Vercel confirmaram `EMAXCONN`, com o limite de 200 conexoes do
+  PostgreSQL esgotado.
+
+### Correcao
+
+- pool limitado a uma conexao por instancia serverless, inclusive quando uma
+  configuracao antiga de `DB_POOL_MAX` solicitar um valor maior;
+- conexoes ociosas passam a ser liberadas em cinco segundos na Vercel;
+- `allowExitOnIdle` habilitado em serverless;
+- servidor tradicional preserva o pool padrao de dez conexoes e continua
+  aceitando configuracao explicita.
+
+### Validacoes
+
+- 165 testes do servidor aprovados e 1 ignorado;
+- lint aprovado;
+- build de producao aprovado;
+- `git diff --check` aprovado.
+

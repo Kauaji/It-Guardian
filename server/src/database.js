@@ -18,7 +18,8 @@ async function createPool() {
     ssl: config.ssl,
     max: config.max,
     connectionTimeoutMillis: config.connectionTimeoutMillis,
-    idleTimeoutMillis: config.idleTimeoutMillis
+    idleTimeoutMillis: config.idleTimeoutMillis,
+    allowExitOnIdle: config.allowExitOnIdle
   });
 
   pool.on("error", (error) => {
