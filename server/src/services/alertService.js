@@ -19,6 +19,7 @@ import {
   listServiceOrderSuggestions as listSuggestions,
   markSuggestionAccepted,
   markSuggestionRejected,
+  resolveInactiveAgentAlerts,
   updatePendingSuggestionPrioritiesForAlertType,
   updateAlertSettings,
   updateAlertRule,
@@ -31,14 +32,15 @@ import {
   listServiceOrders
 } from "../repositories/serviceOrderRepository.js";
 import { refreshDueScriptValidations } from "../repositories/maintenanceScriptRepository.js";
+import { listAgentAssets } from "../repositories/agentRepository.js";
 import { listDeviceSegmentMap } from "../repositories/segmentRepository.js";
 import { listSegmentGroups } from "../repositories/segmentGroupRepository.js";
-import { getAlertHistory } from "./zabbixService.js";
 
 const alertTypeLabels = {
   ram_high: "Memória RAM acima do limite",
   cpu_high: "CPU acima do limite",
   disk_high: "Disco acima do limite",
+  disk_full: "Disco praticamente cheio",
   disk_health_low: "Saúde do disco abaixo do limite",
   machine_offline: "Máquina offline",
   network_high: "Alto uso de rede",
@@ -51,6 +53,7 @@ const alertCategoryByType = {
   ram_high: "Desempenho",
   cpu_high: "Desempenho",
   disk_high: "Armazenamento",
+  disk_full: "Armazenamento",
   disk_health_low: "Armazenamento",
   machine_offline: "Disponibilidade",
   network_high: "Segurança",
@@ -63,6 +66,7 @@ const alertOperationalImpact = {
   ram_high: "Pode causar lentidão, travamentos e perda de produtividade.",
   cpu_high: "Pode degradar o desempenho e deixar aplicações sem resposta.",
   disk_high: "Pode impedir gravações, atualizações e funcionamento de serviços.",
+  disk_full: "Pode interromper gravações, atualizações e serviços por falta de espaço.",
   disk_health_low: "Pode indicar risco de falha física e perda de dados.",
   machine_offline: "Pode deixar usuário, setor ou serviço sem acesso ao equipamento.",
   network_high: "Pode indicar saturação, instabilidade ou tráfego incomum.",
@@ -75,6 +79,7 @@ const alertProbableCause = {
   ram_high: "Aplicação com alto consumo, carga acima do normal ou vazamento de memória.",
   cpu_high: "Processo travado, atualização em execução ou uso excessivo de processamento.",
   disk_high: "Logs, arquivos temporários, backup local ou armazenamento insuficiente.",
+  disk_full: "Armazenamento esgotado por arquivos, logs, cache ou backups locais.",
   disk_health_low: "Desgaste do disco, setores instáveis ou falha iminente.",
   machine_offline: "Equipamento desligado, cabo desconectado, queda de rede ou IP indisponível.",
   network_high: "Backup, cópia de arquivos, atualização ou tráfego inesperado.",
@@ -87,6 +92,7 @@ const alertRecommendedAction = {
   ram_high: "Verificar processos com maior consumo e avaliar reinício controlado ou expansão de memória.",
   cpu_high: "Identificar processo com alto consumo e validar se há tarefa travada.",
   disk_high: "Liberar espaço, revisar logs e avaliar limpeza preventiva.",
+  disk_full: "Liberar espaço imediatamente e identificar o crescimento antes de retomar serviços.",
   disk_health_low: "Priorizar backup dos dados e avaliar troca preventiva do disco.",
   machine_offline: "Confirmar energia, rede e disponibilidade do equipamento antes de abrir atendimento.",
   network_high: "Validar tráfego incomum, portas ativas e uso de banda no segmento.",
@@ -113,6 +119,12 @@ const alertChecklist = {
     "Conferir logs acumulados.",
     "Validar backups locais.",
     "Avaliar expansão ou limpeza de disco."
+  ],
+  disk_full: [
+    "Confirmar o volume e o espaço livre.",
+    "Remover somente temporários e dados autorizados.",
+    "Revisar logs, cache e backups locais.",
+    "Avaliar expansão do armazenamento."
   ],
   disk_health_low: [
     "Realizar backup dos dados críticos.",
@@ -159,47 +171,9 @@ function normalizeText(value = "") {
     .toLowerCase();
 }
 
-function classifyAlert(alert = {}) {
-  const text = normalizeText(`${alert.title || ""} ${alert.description || ""}`);
-
-  if (text.includes("memory") || text.includes("memoria") || text.includes("ram")) {
-    return { type: "ram_high", metric: "ram", threshold: 90, value: 94 };
-  }
-  if (text.includes("cpu")) {
-    return { type: "cpu_high", metric: "cpu", threshold: 90, value: 92 };
-  }
-  if (text.includes("disk") || text.includes("disco") || text.includes("storage") || text.includes("armazenamento")) {
-    return { type: "disk_high", metric: "disk", threshold: 90, value: 94 };
-  }
-  if (text.includes("health") || text.includes("saude")) {
-    return { type: "disk_health_low", metric: "disk_health", threshold: 80, value: 72 };
-  }
-  if (text.includes("ping")) {
-    return { type: "ping_failure", metric: "ping", threshold: 0, value: 0 };
-  }
-  if (text.includes("network") || text.includes("rede")) {
-    return { type: "network_high", metric: "network", threshold: 85, value: 88 };
-  }
-  if (text.includes("temperature") || text.includes("temperatura")) {
-    return { type: "temperature_high", metric: "temperature", threshold: 80, value: 84 };
-  }
-  if (text.includes("service") || text.includes("servico")) {
-    return { type: "service_unavailable", metric: "service", threshold: 0, value: 0 };
-  }
-
-  return { type: "machine_offline", metric: "availability", threshold: 0, value: 0 };
-}
-
-function simulatedOccurrences(alert = {}, type) {
-  if (alert.status === "resolved") return 1;
-  if (alert.severity === "critical") return 3;
-  if (type === "ram_high" || type === "disk_high" || type === "machine_offline") return 3;
-  return 2;
-}
-
 function suggestedPriority(alert = {}, rule = null) {
   if (rule?.suggestedPriority) return rule.suggestedPriority;
-  if (alert.type === "disk_health_low" || alert.severity === "critical") return "critical";
+  if (["disk_health_low", "disk_full"].includes(alert.type) || alert.severity === "critical") return "critical";
   if (["ram_high", "cpu_high", "disk_high", "machine_offline", "ping_failure"].includes(alert.type)) return "high";
   return alert.severity === "warning" ? "medium" : "low";
 }
@@ -284,7 +258,7 @@ function buildPriorityReason(alert = {}, relatedOrders = []) {
 
   if (alert.severity === "critical") pieces.push("o aviso está classificado como crítico");
   if (occurrences >= 3) pieces.push(`houve ${occurrences} ocorrências no período configurado`);
-  if (["disk_health_low", "disk_high", "machine_offline", "service_unavailable"].includes(alert.type)) {
+  if (["disk_health_low", "disk_high", "disk_full", "machine_offline", "service_unavailable"].includes(alert.type)) {
     pieces.push(`o tipo "${getAlertTypeLabel(alert)}" tem impacto operacional alto`);
   }
   if (relatedOrders.some((order) => order.status !== "closed" && !order.closedAt)) {
@@ -338,7 +312,7 @@ function buildFalsePositiveInsight(alert = {}, suggestions = []) {
 }
 
 function buildCapacityForecast(alert = {}) {
-  if (!["disk_high", "ram_high", "cpu_high"].includes(alert.type)) {
+  if (!["disk_high", "disk_full", "ram_high", "cpu_high"].includes(alert.type)) {
     return {
       available: false,
       summary: "Sem dados históricos suficientes para previsão de capacidade."
@@ -458,34 +432,97 @@ function buildSuggestionPayload(alert = {}, rule = null) {
   };
 }
 
-function normalizeMonitoringAlert(alert = {}) {
-  const classification = classifyAlert(alert);
-  const occurrencesCount = simulatedOccurrences(alert, classification.type);
-  return {
-    id: alert.id,
-    assetId: alert.hostId,
-    hostId: alert.hostId,
-    hostName: alert.hostName,
-    type: classification.type,
-    metric: classification.metric,
-    title: alertTypeLabels[classification.type] || alert.title || "Aviso de monitoramento",
-    description: alert.description || "",
-    severity: alert.severity || "warning",
-    value: classification.value,
-    threshold: classification.threshold,
-    status: alert.status || "active",
-    firstSeenAt: alert.startedAt || new Date().toISOString(),
-    lastSeenAt: alert.resolvedAt || alert.startedAt || new Date().toISOString(),
-    resolvedAt: alert.resolvedAt || null,
-    occurrencesCount,
-    source: "mock"
-  };
+function percentage(used, total) {
+  if (!Number.isFinite(Number(used)) || !Number.isFinite(Number(total)) || Number(total) <= 0) return null;
+  return Math.round((Number(used) / Number(total)) * 100);
 }
 
-async function syncMockAlerts() {
-  const mockAlerts = await getAlertHistory();
-  for (const alert of mockAlerts.map(normalizeMonitoringAlert)) {
-    await upsertAlert(alert);
+export function buildAgentAlerts(asset, now = new Date()) {
+  const alerts = [];
+  const hostName = asset.machineAlias || asset.hostname || "Maquina monitorada";
+  const lastSeenAt = asset.lastSeenAt ? new Date(asset.lastSeenAt) : null;
+  const intervalSeconds = Math.max(60, Number(asset.intervalSeconds || 300));
+  const offlineAfterSeconds = Math.max(
+    Number(process.env.AGENT_OFFLINE_AFTER_SECONDS || 0),
+    Number(process.env.AGENT_OFFLINE_AFTER_MINUTES || 10) * 60,
+    intervalSeconds * 3
+  );
+  const stale = !lastSeenAt || now.getTime() - lastSeenAt.getTime() > offlineAfterSeconds * 1000;
+  const measuredAt = asset.collectedAt || asset.lastSeenAt || now.toISOString();
+  const addMetricAlert = ({ type, metric, value, threshold = 85 }) => {
+    if (value == null || value < threshold) return;
+    alerts.push({
+      id: `agent:${asset.id}:${type}`,
+      assetId: asset.id,
+      hostId: asset.id,
+      hostName,
+      type,
+      metric,
+      title: alertTypeLabels[type],
+      description: `${hostName} registrou ${value}% em ${metric}.`,
+      severity: value >= 95 ? "critical" : "high",
+      value,
+      threshold,
+      status: "active",
+      firstSeenAt: measuredAt,
+      lastSeenAt: measuredAt,
+      occurrencesCount: 1,
+      source: "agent"
+    });
+  };
+
+  if (stale) {
+    alerts.push({
+      id: `agent:${asset.id}:machine_offline`,
+      assetId: asset.id,
+      hostId: asset.id,
+      hostName,
+      type: "machine_offline",
+      metric: "heartbeat",
+      title: alertTypeLabels.machine_offline,
+      description: `${hostName} nao envia heartbeat dentro do intervalo esperado.`,
+      severity: "critical",
+      value: lastSeenAt ? Math.floor((now.getTime() - lastSeenAt.getTime()) / 1000) : null,
+      threshold: offlineAfterSeconds,
+      status: "active",
+      firstSeenAt: asset.lastSeenAt || now.toISOString(),
+      lastSeenAt: now.toISOString(),
+      occurrencesCount: 1,
+      source: "agent"
+    });
+  } else {
+    addMetricAlert({ type: "cpu_high", metric: "CPU", value: asset.cpuUsagePercent });
+    addMetricAlert({
+      type: "ram_high",
+      metric: "memoria RAM",
+      value: percentage(asset.memoryUsedBytes, asset.memoryTotalBytes)
+    });
+    const diskUsage = percentage(
+      Number(asset.diskTotalBytes) - Number(asset.diskFreeBytes),
+      asset.diskTotalBytes
+    );
+    addMetricAlert({
+      type: diskUsage >= 95 ? "disk_full" : "disk_high",
+      metric: "disco",
+      value: diskUsage,
+      threshold: diskUsage >= 95 ? 95 : 85
+    });
+  }
+
+  return alerts;
+}
+
+async function syncAgentAlerts() {
+  const assets = await listAgentAssets();
+  for (const asset of assets) {
+    const activeAlerts = buildAgentAlerts(asset);
+    for (const alert of activeAlerts) {
+      await upsertAlert(alert);
+    }
+    await resolveInactiveAgentAlerts({
+      assetId: asset.id,
+      activeAlertIds: activeAlerts.map((alert) => alert.id)
+    });
   }
 }
 
@@ -495,19 +532,19 @@ async function attachCurrentAcknowledgements(alerts) {
 }
 
 export async function getActiveAlertsWithAcknowledgements() {
-  await syncMockAlerts();
+  await syncAgentAlerts();
   const alerts = await listAlerts({ status: "active" });
   return enrichAlerts(await attachCurrentAcknowledgements(alerts));
 }
 
 export async function getAlertHistoryWithAcknowledgements() {
-  await syncMockAlerts();
+  await syncAgentAlerts();
   const alerts = await listAlerts();
   return enrichAlerts(await attachCurrentAcknowledgements(alerts));
 }
 
 export async function getHostAlertsWithAcknowledgements(hostId) {
-  await syncMockAlerts();
+  await syncAgentAlerts();
   const alerts = (await listAlerts()).filter((alert) => alert.hostId === hostId || alert.assetId === hostId);
   return enrichAlerts(await attachCurrentAcknowledgements(alerts));
 }
@@ -546,7 +583,7 @@ export async function updateAlertRuleById({ id, payload, user }) {
 }
 
 export async function evaluateAlertsForSuggestions(user = null) {
-  await syncMockAlerts();
+  await syncAgentAlerts();
   const [alerts, rules] = await Promise.all([listAlerts({ status: "active" }), listAlertRules()]);
   const enabledRules = new Map(rules.filter((rule) => rule.enabled).map((rule) => [rule.type, rule]));
   const createdSuggestions = [];
@@ -624,7 +661,7 @@ export async function listServiceOrderSuggestions() {
 }
 
 export async function getAlertCorrelations() {
-  await syncMockAlerts();
+  await syncAgentAlerts();
   const context = await buildAlertEnrichmentContext();
   const alerts = await enrichAlerts(await listAlerts({ status: "active" }), context);
   const groups = new Map();
@@ -668,7 +705,7 @@ export async function getAlertCorrelations() {
 }
 
 export async function getAlertInsights() {
-  await syncMockAlerts();
+  await syncAgentAlerts();
   const alerts = await enrichAlerts(await listAlerts({ status: "active" }));
   return {
     recurrences: alerts.filter((alert) => alert.recurrenceInsight).map((alert) => ({
@@ -851,8 +888,8 @@ export async function rejectServiceOrderSuggestion({ id, reason, user }) {
 }
 
 export async function acknowledgeAlert({ alertId, user, note }) {
-  const alerts = await getAlertHistory();
-  const alert = alerts.find((item) => item.id === alertId);
+  await syncAgentAlerts();
+  const alert = await findAlertById(alertId);
 
   if (!alert) {
     const error = new Error("Alert not found");

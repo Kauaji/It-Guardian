@@ -2,7 +2,11 @@ import { randomUUID } from "node:crypto";
 import { query, withTransaction } from "../database.js";
 import { addAssetHistory } from "./assetHistoryRepository.js";
 import { addLog } from "./logRepository.js";
-import { findMaintenanceScriptById } from "./maintenanceScriptRepository.js";
+import {
+  createScriptSimulationLog,
+  findMaintenanceScriptById
+} from "./maintenanceScriptRepository.js";
+import { queueAgentScriptJob } from "./agentScriptJobRepository.js";
 import { addServiceOrderHistory, createServiceOrder, findServiceOrderById } from "./serviceOrderRepository.js";
 import {
   createPreventiveAutomationPlanRecord,
@@ -299,23 +303,59 @@ export async function createPreventivePlan(payload = {}, user = null) {
     for (const assetId of normalized.assetIds) {
       const log =
         `Preventiva registrada para ${assetId} com as verificações: ${scriptNames}. ` +
-        "Nenhum comando foi executado nesta versão.";
+        (automationEnabled
+          ? "Execução será iniciada pela agenda de automação."
+          : "Scripts enfileirados para execução pelo agente autenticado.");
 
       await db(
         `
           INSERT INTO preventive_plan_assets (
             id, preventive_plan_id, asset_id, status, log, prepared_at
           )
-          VALUES ($1, $2, $3, 'prepared', $4, NOW())
+          VALUES ($1, $2, $3, $4, $5, NOW())
         `,
-        [randomUUID(), planId, assetId, log]
+        [randomUUID(), planId, assetId, automationEnabled ? "prepared" : "waiting_agent", log]
       );
+
+      const jobs = [];
+      if (!automationEnabled) {
+        for (const script of scripts) {
+          const executionLog = await createScriptSimulationLog({
+            scriptId: script.id,
+            assetId,
+            preventivePlanId: planId,
+            mode: "agent",
+            status: "queued",
+            executedBy: user?.id || null,
+            notes: normalized.notes,
+            rawLog: "Verificação preventiva enfileirada e aguardando o agente autenticado.",
+            parsedSummary: `Script '${script.name}' aguardando execução pelo agente.`,
+            errorDetected: false,
+            attentionRequired: false,
+            db
+          });
+          jobs.push(await queueAgentScriptJob({
+            script,
+            assetId,
+            executionLogId: executionLog.id,
+            userId: user?.id || null,
+            db
+          }));
+        }
+      }
 
       await addAssetHistory({
         assetId,
-        eventType: "preventive_plan_prepared",
-        message: `Plano preventivo '${normalized.name}' registrado por ${userName}. Nenhum comando foi executado.`,
-        newValue: log,
+        eventType: automationEnabled ? "preventive_plan_prepared" : "preventive_execution_queued",
+        message: automationEnabled
+          ? `Plano preventivo automatizado '${normalized.name}' registrado por ${userName}.`
+          : `Preventiva '${normalized.name}' enfileirada por ${userName} para execução pelo agente.`,
+        newValue: JSON.stringify({
+          preventivePlanId: planId,
+          scriptNames: scripts.map((script) => script.name),
+          jobIds: jobs.map((job) => job.id),
+          status: automationEnabled ? "scheduled" : "queued"
+        }),
         userId: user?.id || null,
         userName,
         db
@@ -324,7 +364,9 @@ export async function createPreventivePlan(payload = {}, user = null) {
 
     await addLog({
       type: "preventive_plan_created",
-      message: `Plano preventivo registrado: ${normalized.name}. Nenhum comando foi executado.`,
+      message: automationEnabled
+        ? `Plano preventivo automatizado registrado: ${normalized.name}.`
+        : `Preventiva registrada e enfileirada no agente: ${normalized.name}.`,
       userId: user?.id || null,
       meta: {
         preventivePlanId: planId,

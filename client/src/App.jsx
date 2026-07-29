@@ -971,7 +971,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   async function handleUseSuggestionScript(suggestionId, scriptId, payload) {
     try {
       await executeSuggestionScript(token, suggestionId, scriptId, payload);
-      notify("Observação registrada. Nenhum comando foi executado.", "ok");
+      notify("Script enfileirado. Aguardando execução pelo agente da máquina.", "ok");
       await loadData(true);
     } catch (error) {
       notify(error.message, "danger");
@@ -1021,8 +1021,8 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
       ]);
       notify(
         payload.automation?.enabled
-          ? "Plano preventivo automatizado registrado. Nenhum comando foi executado."
-          : "Preventiva registrada. Nenhum comando foi executado.",
+          ? "Plano preventivo automatizado registrado. A execução ocorrerá pela agenda."
+          : "Preventiva registrada e enfileirada no agente da máquina.",
         "ok"
       );
       await loadData(true);

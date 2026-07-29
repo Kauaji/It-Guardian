@@ -21,9 +21,15 @@ $snapshot = @{
   localIp = "192.168.1.20"
   macAddress = "AA:BB:CC:DD:EE:FF"
   cpuModel = "CPU Teste"
+  cpuUsagePercent = 32
   memoryTotalBytes = 8589934592
+  memoryUsedBytes = 4294967296
+  memoryFreeBytes = 4294967296
   diskTotalBytes = 256000000000
   diskFreeBytes = 128000000000
+  deviceManufacturer = "Fabricante Teste"
+  deviceModel = "Modelo Teste"
+  serialNumber = "SERIAL-TESTE"
   uptimeSeconds = 3600
 }
 

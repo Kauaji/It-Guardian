@@ -7,7 +7,6 @@ import PeripheralList from "./PeripheralList.jsx";
 import SelectionCheckbox from "./SelectionCheckbox.jsx";
 import AutomationIndicatorDots from "../AutomationIndicatorDots.jsx";
 import {
-  getAgentHeartbeatState,
   getMachineSourceLabel,
   isAgentMachine
 } from "./agentPresentation.js";
@@ -35,16 +34,6 @@ function metricTone(value) {
   if (value >= 85) return "danger";
   if (value >= 70) return "warning";
   return "ok";
-}
-
-function formatAgentHeartbeat(value) {
-  if (!value) return "Sem comunicacao";
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit"
-  }).format(new Date(value));
 }
 
 function DiskIndicator({ value }) {
@@ -90,7 +79,6 @@ function MachineCardContent({
   const showDetails = true;
   const isManualAsset = machine.source === "manual";
   const isAgentAsset = isAgentMachine(machine);
-  const agentHeartbeat = getAgentHeartbeatState(machine);
   const isBackup = Boolean(machine.isBackup);
   const backupInUse = machine.backupStatus === "in_use";
   const metrics = machine.metrics || {};
@@ -162,7 +150,6 @@ function MachineCardContent({
         )}
         <span className="asset-type-badge">{typeLabel}</span>
         <span className="machine-source-badge">{getMachineSourceLabel(machine)}</span>
-        {isAgentAsset && <span className="agent-origin-badge">Maquina real</span>}
         {isBackup && (
           <span className={`backup-badge ${backupInUse ? "in-use" : "available"}`}>
             {backupInUse ? "Backup em uso" : "Backup disponivel"}
@@ -192,29 +179,19 @@ function MachineCardContent({
             <strong>{lastPing}</strong>
           </div>
         </div>
-      ) : isAgentAsset ? (
-        <div className="agent-card-facts">
-          <div>
-            <span><Clock3 size={13} /> Ultima comunicacao</span>
-            <strong>{formatAgentHeartbeat(agentHeartbeat.lastSeenAt)}</strong>
-          </div>
-          <div>
-            <span>Agente</span>
-            <strong>v{machine.agent?.agentVersion || "Nao informada"}</strong>
-          </div>
-          {agentHeartbeat.status === "offline" && (
-            <p className="agent-heartbeat-warning">Sem heartbeat no intervalo esperado</p>
-          )}
-        </div>
       ) : (
         <div className="machine-metrics">
           <div>
             <span><Cpu size={13} /> CPU</span>
-            <strong className={metricTone(metrics.cpu)}>{metrics.cpu}%</strong>
+            <strong className={metrics.cpu == null ? "" : metricTone(metrics.cpu)}>
+              {metrics.cpu == null ? "--" : `${metrics.cpu}%`}
+            </strong>
           </div>
           <div>
             <span><MemoryStick size={13} /> RAM</span>
-            <strong className={metricTone(metrics.ram)}>{metrics.ram}%</strong>
+            <strong className={metrics.ram == null ? "" : metricTone(metrics.ram)}>
+              {metrics.ram == null ? "--" : `${metrics.ram}%`}
+            </strong>
           </div>
         </div>
       )}

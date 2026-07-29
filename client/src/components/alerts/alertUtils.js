@@ -4,6 +4,7 @@ export const alertTypeLabels = {
   ram_high: "Memória RAM acima do limite",
   cpu_high: "CPU acima do limite",
   disk_high: "Disco acima do limite",
+  disk_full: "Disco praticamente cheio",
   disk_health_low: "Saúde do disco abaixo do limite",
   machine_offline: "Máquina offline",
   network_high: "Alto uso de rede",
@@ -180,7 +181,14 @@ export function formatAlertThreshold(alert) {
   return String(alert.threshold);
 }
 
-const percentThresholdAlertTypes = new Set(["cpu_high", "ram_high", "disk_high", "disk_health_low", "network_high"]);
+const percentThresholdAlertTypes = new Set([
+  "cpu_high",
+  "ram_high",
+  "disk_high",
+  "disk_full",
+  "disk_health_low",
+  "network_high"
+]);
 const thresholdlessAlertTypes = new Set(["machine_offline", "ping_failure", "service_unavailable"]);
 const durationlessAlertTypes = new Set(["disk_health_low", "machine_offline", "ping_failure", "service_unavailable"]);
 
@@ -200,6 +208,7 @@ const alertCategoryByType = {
   ram_high: "Desempenho",
   cpu_high: "Desempenho",
   disk_high: "Armazenamento",
+  disk_full: "Armazenamento",
   disk_health_low: "Armazenamento",
   machine_offline: "Disponibilidade",
   network_high: "Segurança",
@@ -212,6 +221,7 @@ const alertImpactByType = {
   ram_high: "Lentidão, travamentos e risco de parada do atendimento.",
   cpu_high: "Processamento acima do esperado e degradação de desempenho.",
   disk_high: "Risco de indisponibilidade por falta de espaço.",
+  disk_full: "Risco imediato de falha em gravações, atualizações e serviços.",
   disk_health_low: "Risco de perda de dados ou falha física do disco.",
   machine_offline: "Usuário ou serviço pode estar sem acesso ao equipamento.",
   network_high: "Possível instabilidade de comunicação ou saturação de rede.",
@@ -224,6 +234,7 @@ const alertRecommendedActions = {
   ram_high: "Verificar processos em execução, reiniciar serviços pesados e avaliar expansão de memória.",
   cpu_high: "Identificar processo com alto consumo e validar se há tarefa travada.",
   disk_high: "Liberar espaço, mover arquivos temporários e avaliar limpeza preventiva.",
+  disk_full: "Liberar espaço imediatamente e identificar arquivos, logs ou backups em crescimento.",
   disk_health_low: "Priorizar backup dos dados e avaliar troca preventiva do disco.",
   machine_offline: "Confirmar energia, rede e disponibilidade do equipamento antes de abrir atendimento.",
   network_high: "Validar tráfego incomum, portas ativas e uso de banda no segmento.",
@@ -236,6 +247,7 @@ const alertProbableCauses = {
   ram_high: "Aplicação pesada, vazamento de memória ou carga acima do normal.",
   cpu_high: "Processo travado, atualização em execução ou uso indevido de recursos.",
   disk_high: "Arquivos temporários, logs acumulados ou armazenamento insuficiente.",
+  disk_full: "Armazenamento esgotado por arquivos, logs, cache ou backups locais.",
   disk_health_low: "Desgaste do disco, setores instáveis ou falha iminente.",
   machine_offline: "Equipamento desligado, cabo desconectado, queda de rede ou IP indisponível.",
   network_high: "Backup, cópia de arquivos, atualização ou tráfego não esperado.",

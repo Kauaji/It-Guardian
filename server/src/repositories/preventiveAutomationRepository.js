@@ -2,7 +2,12 @@ import { randomUUID } from "node:crypto";
 import { query, withTransaction } from "../database.js";
 import { addAssetHistory } from "./assetHistoryRepository.js";
 import { addLog } from "./logRepository.js";
-import { findMaintenanceScriptById, refreshDueScriptValidations } from "./maintenanceScriptRepository.js";
+import {
+  createScriptSimulationLog,
+  findMaintenanceScriptById,
+  refreshDueScriptValidations
+} from "./maintenanceScriptRepository.js";
+import { queueAgentScriptJob } from "./agentScriptJobRepository.js";
 import { listDevices } from "../services/monitoringService.js";
 import {
   canAccessAutomationAsset,
@@ -2141,16 +2146,16 @@ async function insertPreparedRun({ plan, asset, recurrence, scheduledFor, script
           schedule_slot, recurrence_source, recurrence_interval, preferred_time, next_run_at,
           trigger_type
         )
-        VALUES ($1, $2, $3, $4, $5, NOW(), NOW(), $6, $7, FALSE, $8, $9, $10, $11, $12, $13, $14)
+        VALUES ($1, $2, $3, $4, $5, NOW(), NULL, $6, $7, FALSE, $8, $9, $10, $11, $12, $13, $14)
         RETURNING *
       `,
       [
         runId,
         plan.id,
         asset.id,
-        normalizeRunStatus("prepared"),
+        normalizeRunStatus(scripts.length ? "waiting_agent" : "success"),
         scheduledFor,
-        "prepared",
+        scripts.length ? "queued" : "success",
         logSummary,
         idempotencyKey,
         scheduledFor,
@@ -2162,17 +2167,49 @@ async function insertPreparedRun({ plan, asset, recurrence, scheduledFor, script
       ]
     );
 
+    const run = fromRunRow(result.rows[0]);
+    const jobs = [];
+    for (const script of scripts) {
+      const executionLog = await createScriptSimulationLog({
+        scriptId: script.id,
+        assetId: asset.id,
+        preventivePlanId: plan.preventivePlanId,
+        mode: "agent",
+        status: "queued",
+        executedBy: user?.id || null,
+        notes: plan.notes,
+        rawLog: "Automação preventiva enfileirada e aguardando o agente autenticado.",
+        parsedSummary: `Script '${script.name}' aguardando execução pelo agente.`,
+        errorDetected: false,
+        attentionRequired: false,
+        db
+      });
+      jobs.push(await queueAgentScriptJob({
+        script,
+        assetId: asset.id,
+        executionLogId: executionLog.id,
+        automationRunId: run.id,
+        userId: user?.id || null,
+        db
+      }));
+    }
+
     await addAssetHistory({
       assetId: asset.id,
-      eventType: "preventive_automation_prepared",
-      message: `Automação preventiva '${plan.name}' preparada. Rotina aguardando agente seguro.`,
-      newValue: logSummary,
+      eventType: "preventive_automation_queued",
+      message: `Automação preventiva '${plan.name}' enfileirada e aguardando o agente da máquina.`,
+      newValue: JSON.stringify({
+        automationRunId: run.id,
+        scheduledFor,
+        scriptNames: scripts.map((script) => script.name),
+        jobIds: jobs.map((job) => job.id)
+      }),
       userId: user?.id || null,
       userName: user?.name || user?.email || "Sistema",
       db
     });
 
-    return { run: fromRunRow(result.rows[0]), created: true };
+    return { run, created: true };
   } catch (error) {
     if (error.code === "23505" || /unique/i.test(error.message || "")) {
       const run = await findExistingRun(plan.id, asset.id, scheduledFor, db);

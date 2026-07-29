@@ -995,7 +995,7 @@ export default function AlertCenterV2({
     const scriptUseKey = `${suggestion.id}:${script.id}`;
     if (usingSuggestionScriptKey === scriptUseKey) return;
     const baseConfirmation =
-      "Esta ação apenas registrará o uso do script na sugestão e iniciará a observação. Nenhum comando será executado na máquina ou no servidor.";
+      "O script cadastrado será enviado ao agente autenticado desta máquina e poderá alterar o sistema. Deseja continuar?";
     const highRisk = script.riskLevel === "high" || script.riskLevel === "critical";
 
     if (!window.confirm(baseConfirmation)) return;
@@ -1013,7 +1013,7 @@ export default function AlertCenterV2({
         confirmed: true,
         riskAcknowledged: highRisk,
         validationWindowMinutes: priorityDraft.scriptValidationWindowMinutes,
-        notes: `Script selecionado no card ${formatSuggestionCode(suggestion)}. Nenhum comando foi executado.`
+        notes: `Script solicitado pelo card ${formatSuggestionCode(suggestion)} para execução via agente autenticado.`
       });
       setOpenScriptMenuSuggestionId(null);
     } finally {

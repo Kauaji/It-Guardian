@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  completeJob,
   createManagedEnrollment,
   listManagedEnrollments,
   receive,
@@ -12,6 +13,7 @@ const router = Router();
 router.post("/enroll", receive);
 router.post("/heartbeat", receive);
 router.post("/inventory", receive);
+router.post("/jobs/:id/result", completeJob);
 
 router.use(requireAuth, requireAdmin);
 router.get("/enrollments", listManagedEnrollments);

@@ -1,6 +1,7 @@
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Management;
@@ -14,8 +15,8 @@ using System.Windows.Forms;
 [assembly: System.Reflection.AssemblyDescription("Inventario e presenca do IT Guardian")]
 [assembly: System.Reflection.AssemblyCompany("IT Guardian")]
 [assembly: System.Reflection.AssemblyProduct("IT Guardian")]
-[assembly: System.Reflection.AssemblyVersion("1.2.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.2.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.3.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.3.0.0")]
 
 namespace ITGuardian.Windows
 {
@@ -33,9 +34,37 @@ namespace ITGuardian.Windows
         public bool includeLoggedUser { get; set; }
     }
 
+    internal sealed class AgentHeartbeatResponse
+    {
+        public string assetId { get; set; }
+        public AgentScriptJob job { get; set; }
+    }
+
+    internal sealed class AgentScriptJob
+    {
+        public string id { get; set; }
+        public string scriptId { get; set; }
+        public string name { get; set; }
+        public string type { get; set; }
+        public string content { get; set; }
+        public int timeoutSeconds { get; set; }
+        public bool requiresAdmin { get; set; }
+        public bool requiresLoggedUser { get; set; }
+    }
+
+    internal sealed class AgentScriptResult
+    {
+        public int? exitCode { get; set; }
+        public bool timedOut { get; set; }
+        public string stdout { get; set; }
+        public string stderr { get; set; }
+        public string errorMessage { get; set; }
+    }
+
     internal static class Program
     {
-        private const string AgentVersion = "1.2.0";
+        private const string AgentVersion = "1.3.0";
+        private const int MaximumOutputLength = 65536;
 
         [STAThread]
         private static int Main(string[] args)
@@ -154,14 +183,210 @@ namespace ITGuardian.Windows
             {
                 requestStream.Write(body, 0, body.Length);
             }
+            AgentHeartbeatResponse heartbeat;
             using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
             {
                 if ((int)response.StatusCode < 200 || (int)response.StatusCode >= 300)
                 {
                     throw new InvalidOperationException("Heartbeat recusado pelo servidor.");
                 }
+                using (StreamReader reader = new StreamReader(response.GetResponseStream()))
+                {
+                    heartbeat = new JavaScriptSerializer().Deserialize<AgentHeartbeatResponse>(reader.ReadToEnd());
+                }
             }
             WriteLog("INFO", "Inventario real enviado para " + config.serverUrl + ".");
+            if (heartbeat != null && heartbeat.job != null)
+            {
+                ExecuteAndReportJob(config, heartbeat.job);
+            }
+        }
+
+        private static void ExecuteAndReportJob(AgentConfig config, AgentScriptJob job)
+        {
+            AgentScriptResult result = ExecuteJob(config, job);
+            string endpoint =
+                config.serverUrl.TrimEnd('/') + "/api/agents/jobs/" + Uri.EscapeDataString(job.id) + "/result";
+            byte[] body = Encoding.UTF8.GetBytes(new JavaScriptSerializer().Serialize(result));
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(endpoint);
+            request.Method = "POST";
+            request.ContentType = "application/json";
+            request.Accept = "application/json";
+            request.Headers[HttpRequestHeader.Authorization] = "Bearer " + config.agentToken;
+            request.Timeout = 30000;
+            request.ReadWriteTimeout = 30000;
+            request.ContentLength = body.Length;
+            using (Stream requestStream = request.GetRequestStream())
+            {
+                requestStream.Write(body, 0, body.Length);
+            }
+            using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+            {
+                if ((int)response.StatusCode < 200 || (int)response.StatusCode >= 300)
+                {
+                    throw new InvalidOperationException("O servidor recusou o resultado do script.");
+                }
+            }
+            WriteLog("INFO", "Resultado do trabalho " + job.id + " enviado ao servidor.");
+        }
+
+        private static AgentScriptResult ExecuteJob(AgentConfig config, AgentScriptJob job)
+        {
+            AgentScriptResult result = new AgentScriptResult
+            {
+                stdout = "",
+                stderr = "",
+                errorMessage = ""
+            };
+            string type = (job.type ?? "").Trim().ToLowerInvariant();
+            if (type != "bat" && type != "cmd" && type != "powershell")
+            {
+                result.errorMessage = "Tipo de script nao permitido pelo agente.";
+                return result;
+            }
+            if (job.requiresAdmin && !IsAdministrator())
+            {
+                result.errorMessage = "Este script exige um agente executado como administrador.";
+                return result;
+            }
+            if (job.requiresLoggedUser && !Environment.UserInteractive)
+            {
+                result.errorMessage = "Este script exige uma sessao interativa de usuario.";
+                return result;
+            }
+
+            string extension = type == "powershell" ? ".ps1" : ".cmd";
+            string temporaryPath = Path.Combine(
+                Path.GetTempPath(),
+                "it-guardian-" + Guid.NewGuid().ToString("N") + extension
+            );
+            try
+            {
+                File.WriteAllText(temporaryPath, ExpandScriptVariables(config, job.content), new UTF8Encoding(false));
+                string executable;
+                string arguments;
+                if (type == "powershell")
+                {
+                    executable = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.System),
+                        "WindowsPowerShell",
+                        "v1.0",
+                        "powershell.exe"
+                    );
+                    arguments =
+                        "-NoLogo -NonInteractive -NoProfile -ExecutionPolicy Bypass -File \"" +
+                        temporaryPath +
+                        "\"";
+                }
+                else
+                {
+                    executable = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.System),
+                        "cmd.exe"
+                    );
+                    arguments = "/D /S /C \"\"" + temporaryPath + "\"\"";
+                }
+
+                StringBuilder standardOutput = new StringBuilder();
+                StringBuilder standardError = new StringBuilder();
+                using (Process process = new Process())
+                {
+                    process.StartInfo = new ProcessStartInfo
+                    {
+                        FileName = executable,
+                        Arguments = arguments,
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        CreateNoWindow = true,
+                        WorkingDirectory = Path.GetTempPath()
+                    };
+                    process.OutputDataReceived += delegate(object sender, DataReceivedEventArgs args)
+                    {
+                        if (args.Data != null && standardOutput.Length < MaximumOutputLength)
+                        {
+                            standardOutput.AppendLine(args.Data);
+                        }
+                    };
+                    process.ErrorDataReceived += delegate(object sender, DataReceivedEventArgs args)
+                    {
+                        if (args.Data != null && standardError.Length < MaximumOutputLength)
+                        {
+                            standardError.AppendLine(args.Data);
+                        }
+                    };
+                    if (!process.Start()) throw new InvalidOperationException("O Windows nao iniciou o processo.");
+                    process.BeginOutputReadLine();
+                    process.BeginErrorReadLine();
+                    int timeoutMilliseconds = Math.Max(15, Math.Min(600, job.timeoutSeconds)) * 1000;
+                    if (!process.WaitForExit(timeoutMilliseconds))
+                    {
+                        result.timedOut = true;
+                        try { process.Kill(); } catch { }
+                        process.WaitForExit();
+                    }
+                    else
+                    {
+                        process.WaitForExit();
+                        result.exitCode = process.ExitCode;
+                    }
+                }
+                result.stdout = LimitOutput(standardOutput.ToString());
+                result.stderr = LimitOutput(standardError.ToString());
+            }
+            catch (Exception error)
+            {
+                result.errorMessage = LimitOutput(error.Message);
+            }
+            finally
+            {
+                try
+                {
+                    if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
+                }
+                catch { }
+            }
+            return result;
+        }
+
+        private static bool IsAdministrator()
+        {
+            using (System.Security.Principal.WindowsIdentity identity =
+                System.Security.Principal.WindowsIdentity.GetCurrent())
+            {
+                System.Security.Principal.WindowsPrincipal principal =
+                    new System.Security.Principal.WindowsPrincipal(identity);
+                return principal.IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+            }
+        }
+
+        private static string ExpandScriptVariables(AgentConfig config, string content)
+        {
+            Dictionary<string, string> values = new Dictionary<string, string>
+            {
+                { "CURRENT_USER", Environment.UserName },
+                { "USER_PROFILE", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) },
+                { "TEMP_DIR", Path.GetTempPath().TrimEnd('\\') },
+                { "HOSTNAME", Environment.MachineName },
+                { "ASSET_NAME", config.machineAlias ?? Environment.MachineName },
+                { "ASSET_IP", "" },
+                { "OS_DRIVE", Path.GetPathRoot(Environment.SystemDirectory).TrimEnd('\\') },
+                { "PROGRAM_DATA", Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData) }
+            };
+            string expanded = content ?? "";
+            foreach (KeyValuePair<string, string> item in values)
+            {
+                expanded = expanded.Replace("{{" + item.Key + "}}", item.Value ?? "");
+            }
+            return expanded;
+        }
+
+        private static string LimitOutput(string value)
+        {
+            string normalized = value ?? "";
+            return normalized.Length <= MaximumOutputLength
+                ? normalized
+                : normalized.Substring(0, MaximumOutputLength);
         }
 
         private static Dictionary<string, object> CollectInventory(AgentConfig config)

@@ -5,6 +5,10 @@ import {
   recordAgentInventory,
   revokeAgentEnrollment
 } from "../repositories/agentRepository.js";
+import {
+  claimNextAgentScriptJob,
+  completeAgentScriptJob
+} from "../repositories/agentScriptJobRepository.js";
 
 const acceptedFields = new Set([
   "machineId",
@@ -142,11 +146,42 @@ export async function receiveAgentInventory({ token, body }) {
     enrollment,
     payload: validateAgentPayload(body)
   });
+  const job = await claimNextAgentScriptJob({
+    assetId: asset.id,
+    enrollmentId: enrollment.id
+  });
   return {
     assetId: asset.id,
     acceptedAt: new Date().toISOString(),
-    intervalSeconds: asset.intervalSeconds
+    intervalSeconds: asset.intervalSeconds,
+    job
   };
+}
+
+export async function completeAgentJob({ token, jobId, body }) {
+  const enrollment = await authenticateAgentToken(token);
+  if (!enrollment) {
+    const error = new Error("Token do agente invalido ou revogado.");
+    error.statusCode = 401;
+    error.expose = true;
+    throw error;
+  }
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    throw badRequest("Resultado de execucao invalido.");
+  }
+  const exitCode =
+    body.exitCode == null ? null : integer(body.exitCode, "exitCode", { min: -2147483648, max: 2147483647 });
+  return completeAgentScriptJob({
+    jobId: text(jobId, "jobId", { required: true, max: 180 }),
+    enrollmentId: enrollment.id,
+    result: {
+      exitCode,
+      timedOut: body.timedOut === true,
+      stdout: text(body.stdout, "stdout", { max: 65536 }) || "",
+      stderr: text(body.stderr, "stderr", { max: 65536 }) || "",
+      errorMessage: text(body.errorMessage, "errorMessage", { max: 4000 }) || ""
+    }
+  });
 }
 
 export async function createEnrollment({ name, userId }) {

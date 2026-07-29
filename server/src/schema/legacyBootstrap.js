@@ -150,7 +150,7 @@ export async function initializeDatabase() {
       first_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       occurrences_count INTEGER NOT NULL DEFAULT 1,
-      source TEXT NOT NULL DEFAULT 'mock',
+      source TEXT NOT NULL DEFAULT 'system',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );

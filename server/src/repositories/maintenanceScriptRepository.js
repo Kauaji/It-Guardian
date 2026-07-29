@@ -9,10 +9,11 @@ import {
 } from "./alertRepository.js";
 import { addLog } from "./logRepository.js";
 import { addServiceOrderHistory } from "./serviceOrderRepository.js";
+import { queueAgentScriptJob } from "./agentScriptJobRepository.js";
 
 export const scriptTypes = new Set(["bat", "cmd", "powershell", "shell", "other"]);
 export const riskLevels = new Set(["low", "medium", "high", "critical"]);
-export const simulationModes = new Set(["simulated", "prepared"]);
+export const simulationModes = new Set(["simulated", "prepared", "agent"]);
 export const validationStatuses = new Set([
   "waiting_agent",
   "prepared",
@@ -1444,7 +1445,7 @@ export async function useScriptFromSuggestion({ suggestionId, scriptId, payload 
     throw error;
   }
   if (payload.confirmed !== true) {
-    const error = new Error("Confirme que esta ação apenas registra o uso do script. Nenhum comando será executado.");
+    const error = new Error("Confirme o envio deste script cadastrado para execução pelo agente da máquina.");
     error.statusCode = 400;
     throw error;
   }
@@ -1473,9 +1474,9 @@ export async function useScriptFromSuggestion({ suggestionId, scriptId, payload 
     return { suggestion, script, log: existingLog, validation: existingValidation, reused: true };
   }
   const rawLog = [
-    "Uso preparado a partir de sugestão de OS.",
-    "Nenhum comando foi executado pelo servidor ou navegador.",
-    "Aguardando agente seguro/coleta futura para observação real."
+    "Execução solicitada a partir de sugestão de OS.",
+    "O servidor apenas enfileirou o script cadastrado.",
+    "Aguardando o agente autenticado da máquina executar e devolver o resultado."
   ].join("\n");
 
   return await withTransaction(async (db) => {
@@ -1492,7 +1493,7 @@ export async function useScriptFromSuggestion({ suggestionId, scriptId, payload 
           validation_window_minutes, validation_due_at, result_summary,
           idempotency_key, observation_slot, active_key
         )
-        VALUES ($1, $2, $3, $4, $5, 'observation_pending', $6, $7, $8, $9, $10, $11, $12)
+        VALUES ($1, $2, $3, $4, $5, 'waiting_agent', $6, $7, $8, $9, $10, $11, $12)
         ON CONFLICT (active_key) DO NOTHING
         RETURNING *
       `,
@@ -1505,7 +1506,7 @@ export async function useScriptFromSuggestion({ suggestionId, scriptId, payload 
         user?.id || null,
         validationWindowMinutes,
         validationDue.toISOString(),
-        "Validação preparada. Nenhum comando foi executado nesta versão.",
+        "Script enfileirado e aguardando execução pelo agente autenticado.",
         activeKey,
         observationSlot,
         activeKey
@@ -1523,12 +1524,12 @@ export async function useScriptFromSuggestion({ suggestionId, scriptId, payload 
       assetId,
       alertId: suggestion.alertId,
       suggestionId: suggestion.id,
-      mode: "prepared",
-      status: "observation_pending",
+      mode: "agent",
+      status: "queued",
       executedBy: user?.id || null,
       notes,
       rawLog,
-      parsedSummary: "Observação preparada. O sistema aguardará a janela configurada antes de reavaliar o aviso.",
+      parsedSummary: "Script enfileirado. O agente da máquina enviará o resultado após a execução.",
       errorDetected: false,
       attentionRequired: false,
       db
@@ -1545,16 +1546,31 @@ export async function useScriptFromSuggestion({ suggestionId, scriptId, payload 
       [validationInsert.rows[0].id, log.id]
     );
     const validation = fromValidationRow({ ...validationResult.rows[0], script_name: script.name });
+    const job = await queueAgentScriptJob({
+      script,
+      assetId,
+      executionLogId: log.id,
+      validationId: validation.id,
+      userId: user?.id || null,
+      timeoutSeconds: payload.timeoutSeconds,
+      db
+    });
 
     if (assetId) {
       await addAssetHistory({
         assetId,
-        eventType: "script_validation_started",
+        eventType: "script_execution_queued",
         message:
-          `Script '${script.name}' foi registrado na sugestão ${suggestion.id}. ` +
-          `Validação iniciada por ${userName}. Nenhum comando foi executado nesta versão.`,
+          `Script '${script.name}' foi enfileirado pela sugestão ${suggestion.id}. ` +
+          `Solicitado por ${userName}; aguardando o agente da máquina.`,
         oldValue: null,
-        newValue: `Janela: ${validationWindowMinutes} minuto(s). Validação prevista: ${validationDue.toISOString()}.`,
+        newValue: JSON.stringify({
+          jobId: job.id,
+          scriptId: script.id,
+          scriptName: script.name,
+          status: "queued",
+          validationDueAt: validationDue.toISOString()
+        }),
         userId: user?.id || null,
         userName,
         db
@@ -1562,21 +1578,22 @@ export async function useScriptFromSuggestion({ suggestionId, scriptId, payload 
     }
 
     await addLog({
-      type: "script_validation_started",
-      message: `Validação de script preparada para sugestão de OS: ${script.name}.`,
+      type: "agent_script_execution_queued",
+      message: `Script enfileirado para o agente a partir da sugestão de OS: ${script.name}.`,
       userId: user?.id || null,
       meta: {
         suggestionId: suggestion.id,
         alertId: suggestion.alertId,
         assetId,
         scriptId: script.id,
+        jobId: job.id,
         validationId: validation.id,
         validationWindowMinutes
       },
       db
     });
 
-    return { suggestion, script, log, validation };
+    return { suggestion, script, log, validation, job };
   });
 }
 export async function refreshDueScriptValidations(options = {}) {

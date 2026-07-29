@@ -7,6 +7,8 @@ import { migration004ExternalIntegrations } from "./004-external-integrations.js
 import { migration005CloudProductActivation } from "./005-cloud-product-activation.js";
 import { migration006RemoveDemoInventory } from "./006-remove-demo-inventory.js";
 import { migration007ProductKeyMonitoring } from "./007-product-key-monitoring.js";
+import { migration008AgentScriptExecution } from "./008-agent-script-execution.js";
+import { migration009AgentScriptAutomationLink } from "./009-agent-script-automation-link.js";
 
 export const migrations = [
   migration001RuntimeFoundation,
@@ -15,7 +17,9 @@ export const migrations = [
   migration004ExternalIntegrations,
   migration005CloudProductActivation,
   migration006RemoveDemoInventory,
-  migration007ProductKeyMonitoring
+  migration007ProductKeyMonitoring,
+  migration008AgentScriptExecution,
+  migration009AgentScriptAutomationLink
 ];
 
 export async function runMigrations() {

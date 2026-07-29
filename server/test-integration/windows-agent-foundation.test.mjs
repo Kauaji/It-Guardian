@@ -14,6 +14,8 @@ const {
   listAgentAssets,
   revokeAgentEnrollment
 } = await import("../src/repositories/agentRepository.js");
+const { queueAgentScriptJob } = await import("../src/repositories/agentScriptJobRepository.js");
+const { createScriptSimulationLog } = await import("../src/repositories/maintenanceScriptRepository.js");
 const { listDevices } = await import("../src/services/monitoringService.js");
 
 function listen(app) {
@@ -154,6 +156,98 @@ test("agente autentica, valida, atualiza inventario e respeita revogacao", async
   assert.equal(device.source, "agent");
   assert.equal(device.status, "online");
   assert.equal(device.agent.agentVersion, "1.0.0");
+
+  const script = {
+    id: "agent-roundtrip-script",
+    name: "Teste controlado do agente",
+    type: "powershell",
+    content: "Write-Output 'roundtrip'"
+  };
+  await query(
+    `
+      INSERT INTO maintenance_scripts (id, name, type, content, risk_level, suggested_risk_level)
+      VALUES ($1, $2, $3, $4, 'low', 'low')
+    `,
+    [script.id, script.name, script.type, script.content]
+  );
+  const executionLog = await createScriptSimulationLog({
+    scriptId: script.id,
+    assetId: "machine-guid-agent-test",
+    mode: "agent",
+    status: "queued",
+    rawLog: "Aguardando entrega ao agente.",
+    parsedSummary: "Trabalho enfileirado."
+  });
+  const queuedJob = await queueAgentScriptJob({
+    script,
+    assetId: "machine-guid-agent-test",
+    executionLogId: executionLog.id
+  });
+
+  const claimedResponse = await fetch(`${baseUrl}/api/agents/heartbeat`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${enrollment.token}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(payload())
+  });
+  assert.equal(claimedResponse.status, 202);
+  const claimedBody = await claimedResponse.json();
+  assert.equal(claimedBody.job.id, queuedJob.id);
+  assert.equal(claimedBody.job.scriptId, script.id);
+  assert.equal(claimedBody.job.content, script.content);
+
+  const resultResponse = await fetch(`${baseUrl}/api/agents/jobs/${queuedJob.id}/result`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${enrollment.token}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      exitCode: 0,
+      timedOut: false,
+      stdout: "roundtrip",
+      stderr: "",
+      errorMessage: ""
+    })
+  });
+  assert.equal(resultResponse.status, 200);
+  assert.equal((await resultResponse.json()).status, "succeeded");
+
+  const completedJob = await query(
+    "SELECT status, exit_code, stdout FROM agent_script_jobs WHERE id = $1",
+    [queuedJob.id]
+  );
+  assert.deepEqual(
+    {
+      status: completedJob.rows[0].status,
+      exitCode: completedJob.rows[0].exit_code,
+      stdout: completedJob.rows[0].stdout
+    },
+    { status: "succeeded", exitCode: 0, stdout: "roundtrip" }
+  );
+  const completedLog = await query(
+    "SELECT mode, status, error_detected FROM script_execution_logs WHERE id = $1",
+    [executionLog.id]
+  );
+  assert.deepEqual(
+    {
+      mode: completedLog.rows[0].mode,
+      status: completedLog.rows[0].status,
+      errorDetected: completedLog.rows[0].error_detected
+    },
+    { mode: "agent", status: "succeeded", errorDetected: false }
+  );
+  const history = await query(
+    `
+      SELECT event_type
+      FROM asset_history
+      WHERE asset_id = $1 AND event_type = 'script_execution_succeeded'
+    `,
+    ["machine-guid-agent-test"]
+  );
+  assert.equal(history.rowCount, 1);
 
   await query(
     "UPDATE agent_assets SET last_seen_at = $2 WHERE asset_id = $1",

@@ -30,11 +30,23 @@ export const defaultAlertRules = [
     id: "rule-disk-high",
     type: "disk_high",
     metric: "disk",
-    threshold: 90,
+    threshold: 85,
     durationMinutes: 5,
     recurrenceCount: 3,
     recurrenceWindow: "same_day",
     suggestedPriority: "high",
+    createsSuggestion: true,
+    enabled: true
+  },
+  {
+    id: "rule-disk-full",
+    type: "disk_full",
+    metric: "disk",
+    threshold: 95,
+    durationMinutes: 0,
+    recurrenceCount: 1,
+    recurrenceWindow: "last_24h",
+    suggestedPriority: "critical",
     createsSuggestion: true,
     enabled: true
   },
@@ -490,9 +502,17 @@ export async function upsertAlert(alert) {
         value = EXCLUDED.value,
         threshold = EXCLUDED.threshold,
         status = EXCLUDED.status,
-        first_seen_at = EXCLUDED.first_seen_at,
+        first_seen_at = CASE
+          WHEN alerts.status = 'resolved' AND EXCLUDED.status <> 'resolved'
+            THEN EXCLUDED.first_seen_at
+          ELSE alerts.first_seen_at
+        END,
         last_seen_at = EXCLUDED.last_seen_at,
-        occurrences_count = EXCLUDED.occurrences_count,
+        occurrences_count = CASE
+          WHEN alerts.status = 'resolved' AND EXCLUDED.status <> 'resolved'
+            THEN alerts.occurrences_count + 1
+          ELSE GREATEST(alerts.occurrences_count, EXCLUDED.occurrences_count)
+        END,
         source = EXCLUDED.source,
         updated_at = NOW()
       RETURNING *
@@ -512,7 +532,7 @@ export async function upsertAlert(alert) {
       alert.firstSeenAt || alert.startedAt || new Date().toISOString(),
       alert.lastSeenAt || alert.resolvedAt || alert.startedAt || new Date().toISOString(),
       alert.occurrencesCount || 1,
-      alert.source || "mock"
+      alert.source || "system"
     ]
   );
 
@@ -521,7 +541,7 @@ export async function upsertAlert(alert) {
 
 export async function listAlerts({ status } = {}) {
   const params = [];
-  const where = [];
+  const where = ["source <> 'mock'"];
 
   if (status) {
     params.push(status);
@@ -534,6 +554,30 @@ export async function listAlerts({ status } = {}) {
       FROM alerts
       ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
       ORDER BY last_seen_at DESC, created_at DESC
+    `,
+    params
+  );
+
+  return result.rows.map(fromAlertRow);
+}
+
+export async function resolveInactiveAgentAlerts({ assetId, activeAlertIds = [] }) {
+  const params = [assetId];
+  const exclusions = activeAlertIds.map((id) => {
+    params.push(id);
+    return `$${params.length}`;
+  });
+  const result = await query(
+    `
+      UPDATE alerts
+      SET status = 'resolved',
+          last_seen_at = NOW(),
+          updated_at = NOW()
+      WHERE source = 'agent'
+        AND asset_id = $1
+        AND status = 'active'
+        ${exclusions.length ? `AND id NOT IN (${exclusions.join(", ")})` : ""}
+      RETURNING *
     `,
     params
   );
@@ -597,6 +641,7 @@ export async function listServiceOrderSuggestions() {
            alerts.last_seen_at AS alert_last_seen_at
     FROM service_order_suggestions suggestions
     LEFT JOIN alerts ON alerts.id = suggestions.alert_id
+    WHERE alerts.source <> 'mock'
     ORDER BY suggestions.created_at DESC
   `);
 

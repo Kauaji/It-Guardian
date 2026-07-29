@@ -22,7 +22,6 @@ const tabs = [
   { id: "software", label: "Softwares" },
   { id: "network", label: "Rede" },
   { id: "peripherals", label: "Periféricos" },
-  { id: "agent", label: "Agente IT Guardian" },
   { id: "notes", label: "Observações" },
   { id: "history", label: "Histórico" }
 ];
@@ -121,7 +120,7 @@ function buildActiveAlerts(machine) {
       severity: alert.severity === "critical" ? "Crítico" : "Atenção",
       metric: alert.metric || "Monitoramento",
       value: alert.value || "Ativo",
-      limit: alert.limit || "Regra Zabbix",
+      limit: alert.limit || "Regra de monitoramento",
       status: "Ativo"
     });
   }
@@ -292,10 +291,9 @@ export default function MachineDetailsModal({
   const visibleTabs = useMemo(
     () => tabs.filter((tab) => {
       if (tab.id === "alerts") return activeAlerts.length > 0 || resolvedAlerts.length > 0;
-      if (tab.id === "agent") return isAgentAsset;
       return true;
     }),
-    [activeAlerts.length, isAgentAsset, resolvedAlerts.length]
+    [activeAlerts.length, resolvedAlerts.length]
   );
   const softwareRows = useMemo(
     () => (hardware.software || []).map(normalizeSoftware),
@@ -334,7 +332,7 @@ export default function MachineDetailsModal({
         <header className="asset-modal-header">
           <div>
             <span className="asset-eyebrow">
-              {isAgentAsset ? "Maquina real · Agente IT Guardian" : isManualAsset ? "Ativo de rede manual" : "Inventário OCS"}
+              {isAgentAsset ? "Maquina real" : isManualAsset ? "Ativo de rede manual" : "Inventario integrado"}
             </span>
             <h2>{alias || machine.name}</h2>
             <p>{machine.name} - {machine.ip}</p>
@@ -390,8 +388,8 @@ export default function MachineDetailsModal({
                     </article>
                     <article>
                       <Network size={18} />
-                      <span>Origem</span>
-                      <strong>Agent</strong>
+                      <span>Versao do coletor</span>
+                      <strong>{agent?.agentVersion || "Nao informada"}</strong>
                     </article>
                     <article>
                       <HardDrive size={18} />
@@ -463,17 +461,25 @@ export default function MachineDetailsModal({
               </div>
 
               <div className="detail-grid">
-                <DetailItem label={isAgentAsset ? "Hostname" : isManualAsset ? "Nome cadastrado" : "Hostname OCS"} value={machine.name} />
+                <DetailItem label={isManualAsset ? "Nome cadastrado" : "Hostname"} value={machine.name} />
                 <DetailItem label="Nome fantasia" value={alias || machine.name} />
                 <DetailItem label="Tipo" value={assetTypeLabel(machine.assetType)} />
                 <DetailItem label="Origem" value={getMachineSourceLabel(machine)} />
                 <DetailItem label="IP" value={machine.ip} />
-                <DetailItem label={isManualAsset ? "Hostname" : "Sistema operacional"} value={isManualAsset ? manualAsset?.hostname : hardware.os} />
                 <DetailItem label="Arquitetura" value={hardware.architecture} />
                 <DetailItem label="Patrimônio" value={hardware.assetTag} />
                 <DetailItem label={isManualAsset ? "Localização" : "Usuário logado"} value={isManualAsset ? manualAsset?.location : hardware.loggedUser} />
                 <DetailItem label={isManualAsset ? "Última verificação" : "Último inventário"} value={formatDate(isManualAsset ? machine.lastPingAt : hardware.lastInventoryAt)} />
                 <DetailItem label={isManualAsset ? "MAC Address" : "Uptime"} value={isManualAsset ? hardware.macAddress : `${machine.uptimeHours} h`} />
+                {isAgentAsset && (
+                  <>
+                    <DetailItem label="Intervalo de coleta" value={agent?.intervalSeconds ? `${agent.intervalSeconds} s` : null} />
+                    <DetailItem label="Coletado em" value={formatDate(agent?.collectedAt)} />
+                    <DetailItem label="Ambiente informado" value={agent?.environment} />
+                    <DetailItem label="Grupo informado" value={agent?.group} />
+                    <DetailItem label="Segmento informado" value={agent?.segment} />
+                  </>
+                )}
                 {sourceCollections.map((collection) => (
                   <DetailItem
                     key={collection.source}
@@ -500,43 +506,6 @@ export default function MachineDetailsModal({
             </section>
           )}
 
-          {activeTab === "agent" && isAgentAsset && (
-            <section className="asset-tab-content agent-details-section">
-              <div className={`agent-status-summary ${machine.status === "online" ? "online" : "offline"}`}>
-                <span className="agent-status-pulse" aria-hidden="true" />
-                <div>
-                  <strong>{machine.status === "online" ? "Agente comunicando" : "Sem heartbeat no intervalo esperado"}</strong>
-                  <span>Ultima comunicacao: {formatDate(agent?.lastSeenAt || machine.lastSeenAt)}</span>
-                </div>
-              </div>
-              <div className="detail-grid agent-details-grid">
-                <DetailItem label="Origem" value="Agent" />
-                <DetailItem label="Versao do agente" value={agent?.agentVersion} />
-                <DetailItem label="Hostname" value={agent?.hostname || machine.name} />
-                <DetailItem label="IP local" value={agent?.localIp || machine.ip} />
-                <DetailItem label="MAC Address" value={agent?.macAddress} />
-                <DetailItem label="Sistema operacional" value={agent?.operatingSystem} />
-                <DetailItem label="Versao do Windows" value={agent?.windowsVersion} />
-                <DetailItem label="Arquitetura" value={agent?.osArchitecture} />
-                <DetailItem label="CPU" value={agent?.cpuModel} />
-                <DetailItem label="RAM total" value={formatBytes(agent?.memoryTotalBytes)} />
-                <DetailItem label="Disco total" value={formatBytes(agent?.diskTotalBytes)} />
-                <DetailItem label="Disco livre" value={formatBytes(agent?.diskFreeBytes)} />
-                <DetailItem label="Uptime" value={formatDuration(agent?.uptimeSeconds)} />
-                <DetailItem label="Intervalo" value={agent?.intervalSeconds ? `${agent.intervalSeconds} s` : null} />
-                <DetailItem label="Coletado em" value={formatDate(agent?.collectedAt)} />
-                <DetailItem label="Usuario local" value={agent?.loggedUser || "Coleta desativada"} />
-                <DetailItem label="Ambiente" value={agent?.environment} />
-                <DetailItem label="Grupo informado" value={agent?.group} />
-                <DetailItem label="Segmento informado" value={agent?.segment} />
-              </div>
-              <div className="network-card agent-privacy-note">
-                <KeyRound size={18} />
-                <span>O agente envia somente inventario tecnico permitido. Ele nao executa comandos remotos nem coleta arquivos, senhas ou capturas de tela.</span>
-              </div>
-            </section>
-          )}
-
           {activeTab === "hardware" && (
             <section className="asset-tab-content">
               <div className="detail-grid">
@@ -554,6 +523,15 @@ export default function MachineDetailsModal({
                 <DetailItem label="Licença Windows" value={hardware.licenses?.windowsKey || hardware.windowsKey} />
                 <DetailItem label="Office" value={hardware.licenses?.officeVersion || hardware.officeVersion} />
                 <DetailItem label="Licença Office" value={hardware.licenses?.officeKey || hardware.officeKey} />
+                {isAgentAsset && (
+                  <>
+                    <DetailItem label="RAM total" value={formatBytes(agent?.memoryTotalBytes)} />
+                    <DetailItem label="Disco total" value={formatBytes(agent?.diskTotalBytes)} />
+                    <DetailItem label="Disco livre" value={formatBytes(agent?.diskFreeBytes)} />
+                    <DetailItem label="Uptime" value={formatDuration(agent?.uptimeSeconds)} />
+                    <DetailItem label="Usuario local" value={agent?.loggedUser || "Coleta desativada"} />
+                  </>
+                )}
               </div>
               <div className="disk-detail-list">
                 {(hardware.disks || []).map((disk) => (
@@ -568,11 +546,11 @@ export default function MachineDetailsModal({
                     <small>TB escritos: {disk.tbWritten || "Não disponível"}</small>
                   </article>
                 ))}
-                {isManualAsset && <p className="empty">Ativo de rede sem coleta OCS de discos ou CPU.</p>}
+                {isManualAsset && <p className="empty">Ativo de rede sem coleta automatica de discos ou CPU.</p>}
               </div>
               <div className="license-note">
                 <KeyRound size={16} />
-                <span>Licenças e saúde física são exibidas apenas quando OCS/Zabbix disponibilizam esses dados.</span>
+                <span>Licencas e saude fisica aparecem quando alguma fonte complementar disponibiliza esses dados.</span>
               </div>
             </section>
           )}
@@ -593,7 +571,7 @@ export default function MachineDetailsModal({
                   </article>
                 ))}
               </div>
-              {!softwareRows.length && !isManualAsset && <p className="empty">Nenhum software retornado pelo OCS.</p>}
+              {!softwareRows.length && !isManualAsset && <p className="empty">Nenhum software coletado para esta maquina.</p>}
               {isManualAsset && <p className="empty">Softwares não se aplicam a este ativo manual.</p>}
             </section>
           )}
@@ -602,9 +580,9 @@ export default function MachineDetailsModal({
             <section className="asset-tab-content">
               <div className="detail-grid">
                 <DetailItem label="IP" value={machine.ip} />
-                <DetailItem label="MAC Address" value={hardware.macAddress} />
-                <DetailItem label="Hostname" value={manualAsset?.hostname} />
-                <DetailItem label="Modo de identificação" value={manualAsset?.identificationMode} />
+                <DetailItem label="MAC Address" value={agent?.macAddress || hardware.macAddress} />
+                <DetailItem label="Hostname" value={agent?.hostname || manualAsset?.hostname || machine.name} />
+                {isManualAsset && <DetailItem label="Modo de identificação" value={manualAsset?.identificationMode} />}
                 {!isManualAsset && !isAgentAsset && machine.metrics && (
                   <>
                     <DetailItem label="Entrada" value={`${machine.metrics.networkInMbps} Mbps`} />
@@ -619,7 +597,7 @@ export default function MachineDetailsModal({
                     ? "IP e MAC coletados localmente pelo Agente IT Guardian. Tráfego de rede não é coletado."
                     : isManualAsset
                       ? "Status preparado para ping real; o MVP usa simulação separada no backend."
-                      : "Telemetria em tempo real via Zabbix"}
+                      : "Telemetria fornecida pela fonte de monitoramento configurada"}
                 </span>
               </div>
             </section>

@@ -1,4 +1,5 @@
 import {
+  completeAgentJob,
   createEnrollment,
   listAgentEnrollments,
   receiveAgentInventory,
@@ -8,6 +9,19 @@ import {
 function bearerToken(req) {
   const match = String(req.headers.authorization || "").match(/^Bearer\s+(.+)$/i);
   return match?.[1]?.trim() || "";
+}
+
+export async function completeJob(req, res, next) {
+  try {
+    const result = await completeAgentJob({
+      token: bearerToken(req),
+      jobId: req.params.id,
+      body: req.body
+    });
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
 }
 
 export async function receive(req, res, next) {
