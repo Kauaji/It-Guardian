@@ -12,7 +12,8 @@ const { closeDatabase, query } = await import("../src/database.js");
 const {
   createAgentEnrollment,
   listAgentAssets,
-  revokeAgentEnrollment
+  revokeAgentEnrollment,
+  updateAgentAssetAlias
 } = await import("../src/repositories/agentRepository.js");
 const { queueAgentScriptJob } = await import("../src/repositories/agentScriptJobRepository.js");
 const { createScriptSimulationLog } = await import("../src/repositories/maintenanceScriptRepository.js");
@@ -44,6 +45,24 @@ function payload(overrides = {}) {
     environment: "Laboratorio",
     group: "Suporte",
     segment: "Windows",
+    inventoryDetails: {
+      cpuCores: 8,
+      memoryHealth: { status: "Sem falhas reportadas", modules: 2 },
+      licenses: {
+        windowsKey: "Ativada - final ABCDE",
+        officeKey: "Ativada - final VWXYZ"
+      },
+      office: { name: "Microsoft 365 Apps", version: "16.0.12345" },
+      disks: [{
+        label: "SSD Teste",
+        sizeGb: 476.9,
+        type: "SSD",
+        smartStatus: "OK",
+        healthPercent: 96,
+        healthEstimate: "96% (estimativa SMART)"
+      }],
+      software: [{ name: "Aplicativo Teste", version: "1.2.3" }]
+    },
     ...overrides
   };
 }
@@ -137,7 +156,23 @@ test("agente autentica, valida, atualiza inventario e respeita revogacao", async
   const assets = await listAgentAssets();
   assert.equal(assets.length, 1);
   assert.equal(assets[0].localIp, "192.168.10.22");
+  assert.equal(assets[0].inventoryDetails.cpuCores, 8);
   assert.ok(new Date(assets[0].lastSeenAt).getTime() >= new Date(beforeUpdate).getTime());
+
+  await updateAgentAssetAlias({
+    assetId: "machine-guid-agent-test",
+    alias: "Computador da bancada"
+  });
+  const heartbeatWithoutAlias = await fetch(`${baseUrl}/api/agents/heartbeat`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${enrollment.token}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(payload({ machineAlias: null }))
+  });
+  assert.equal(heartbeatWithoutAlias.status, 202);
+  assert.equal((await listAgentAssets())[0].machineAlias, "Computador da bancada");
 
   const enrollmentRows = await query(
     "SELECT token_hash, token_prefix FROM agent_enrollments WHERE id = $1",
@@ -156,6 +191,10 @@ test("agente autentica, valida, atualiza inventario e respeita revogacao", async
   assert.equal(device.source, "agent");
   assert.equal(device.status, "online");
   assert.equal(device.agent.agentVersion, "1.0.0");
+  assert.equal(device.name, "Computador da bancada");
+  assert.equal(device.hardware.cpuCores, 8);
+  assert.equal(device.hardware.disks[0].healthPercent, 96);
+  assert.equal(device.hardware.software[0].name, "Aplicativo Teste");
 
   const script = {
     id: "agent-roundtrip-script",

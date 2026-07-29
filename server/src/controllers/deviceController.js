@@ -3,6 +3,7 @@ import { addAssetHistory } from "../repositories/assetHistoryRepository.js";
 import { markDeviceRemoved, updateDeviceBackup, updateDeviceType } from "../repositories/deviceMetadataRepository.js";
 import { createManualAsset, deleteManualAsset, refreshManualAssetPing, updateManualAsset } from "../repositories/manualAssetRepository.js";
 import { updateDeviceSegment } from "../repositories/segmentRepository.js";
+import { updateAgentAssetAlias } from "../repositories/agentRepository.js";
 import { getDashboardSummary, getDeviceDetails, listDevices } from "../services/monitoringService.js";
 import { broadcastSnapshot } from "../services/realtimeService.js";
 
@@ -205,6 +206,37 @@ export async function changeDeviceType(req, res, next) {
       console.error("Realtime broadcast failed after device type update", error);
     });
 
+    return res.json({ device: await getDeviceDetails(device.id) });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function changeDeviceAlias(req, res, next) {
+  try {
+    const device = await getDeviceDetails(req.params.id);
+    if (!device) return res.status(404).json({ message: "Device not found" });
+    if (device.source !== "agent") {
+      return res.status(400).json({ message: "Nome fantasia persistente disponivel para ativos do agente." });
+    }
+
+    const alias = String(req.body.alias || "").trim();
+    if (alias.length > 180) {
+      return res.status(400).json({ message: "Nome fantasia excede 180 caracteres." });
+    }
+    await updateAgentAssetAlias({ assetId: device.id, alias });
+    await addAssetHistory({
+      assetId: device.id,
+      eventType: "alias",
+      message: alias ? "Nome fantasia atualizado" : "Nome fantasia removido",
+      oldValue: device.name,
+      newValue: alias || device.agent?.hostname || device.name,
+      userId: req.user.id,
+      userName: req.user.name
+    });
+    broadcastSnapshot().catch((error) => {
+      console.error("Realtime broadcast failed after device alias update", error);
+    });
     return res.json({ device: await getDeviceDetails(device.id) });
   } catch (error) {
     next(error);

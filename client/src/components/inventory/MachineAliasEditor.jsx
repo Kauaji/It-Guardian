@@ -4,10 +4,16 @@ import { useState } from "react";
 export default function MachineAliasEditor({ alias, originalName, onSave }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(alias || "");
+  const [saving, setSaving] = useState(false);
 
-  function save() {
-    onSave(value.trim());
-    setEditing(false);
+  async function save() {
+    setSaving(true);
+    try {
+      await onSave(value.trim());
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (editing) {
@@ -19,10 +25,10 @@ export default function MachineAliasEditor({ alias, originalName, onSave }) {
           placeholder="Nome fantasia"
           autoFocus
         />
-        <button type="button" onClick={save} title="Salvar nome fantasia">
+        <button type="button" onClick={save} title="Salvar nome fantasia" disabled={saving}>
           <Save size={14} />
         </button>
-        <button type="button" onClick={() => { setValue(alias || ""); setEditing(false); }} title="Cancelar">
+        <button type="button" onClick={() => { setValue(alias || ""); setEditing(false); }} title="Cancelar" disabled={saving}>
           <X size={14} />
         </button>
       </div>

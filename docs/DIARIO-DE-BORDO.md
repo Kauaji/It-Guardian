@@ -402,3 +402,53 @@ entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 - build de producao aprovado;
 - `git diff --check` aprovado.
 
+## 2026-07-29 - Inventario real ampliado e nomes fantasia persistentes
+
+### Entrega
+
+- agente Windows 1.4.0 passou a coletar arquitetura, nucleos fisicos, usuario
+  local consentido, saude dos modulos de memoria, Office, licencas parciais,
+  softwares instalados e detalhes dos discos;
+- discos agora usam `MSFT_StorageReliabilityCounter` e SMART legado como
+  fallback para temperatura, horas ligadas, setores realocados, desgaste e
+  estimativa de saude, respeitando o que cada fabricante disponibiliza;
+- detalhes ampliados do agente sao validados, limitados a 1 MB e persistidos
+  em `agent_assets.inventory_details`;
+- nome fantasia de ativos do agente passou a ser salvo no servidor e
+  preservado nos heartbeats posteriores;
+- cards, diagnosticos e historico de avisos usam o nome fantasia sem perder o
+  hostname tecnico usado na correlacao;
+- inventario abre sempre no Quadro quando acessado pela navegacao principal;
+- objetos claros do editor 2D, especialmente PCs sobre mesas, recebem uma cor
+  de contraste por tipo para nao desaparecerem;
+- titulo da planta recebeu espaco adicional controlado para nomes de ambiente;
+- instalador e desinstalador Windows foram recompilados na versao 1.4.0.
+
+### Execucao de scripts
+
+- o fluxo autenticado de BAT, CMD e PowerShell permanece restrito ao agente
+  Windows instalado;
+- o servidor cria a tarefa, o agente a retira por heartbeat, executa em
+  processo controlado, devolve resultado e registra log e historico do ativo;
+- nenhuma execucao ocorre dentro da Vercel ou do navegador.
+
+### Validacoes
+
+- 165 testes do servidor aprovados, 1 ignorado por exigir PostgreSQL real e
+  nenhuma falha;
+- teste de integracao do agente confirmou inventario ampliado, persistencia do
+  nome fantasia, retirada de tarefa, resultado e historico;
+- teste PowerShell do agente aprovado;
+- lint e `git diff --check` aprovados;
+- build de producao aprovado com 2.353 modulos transformados;
+- Inno Setup 6.7.3 compilou com sucesso o instalador Windows 1.4.0.
+
+### Limitacoes conhecidas
+
+- SMART, temperatura, vida util e dados de licenca dependem do suporte do
+  hardware, driver, fabricante e edicao do Windows;
+- a saude do disco e exibida como estimativa quando calculada por desgaste ou
+  atributos SMART, sem prometer precisao que o dispositivo nao fornece;
+- maquinas instaladas com agente anterior precisam atualizar para 1.4.0 para
+  enviar os novos campos.
+

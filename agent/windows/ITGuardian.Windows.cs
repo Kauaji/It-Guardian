@@ -15,8 +15,8 @@ using System.Windows.Forms;
 [assembly: System.Reflection.AssemblyDescription("Inventario e presenca do IT Guardian")]
 [assembly: System.Reflection.AssemblyCompany("IT Guardian")]
 [assembly: System.Reflection.AssemblyProduct("IT Guardian")]
-[assembly: System.Reflection.AssemblyVersion("1.3.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.3.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.4.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.4.0.0")]
 
 namespace ITGuardian.Windows
 {
@@ -63,7 +63,7 @@ namespace ITGuardian.Windows
 
     internal static class Program
     {
-        private const string AgentVersion = "1.3.0";
+        private const string AgentVersion = "1.4.0";
         private const int MaximumOutputLength = 65536;
 
         [STAThread]
@@ -440,8 +440,406 @@ namespace ITGuardian.Windows
             payload["environment"] = config.environment ?? "";
             payload["group"] = config.group ?? "";
             payload["segment"] = config.segment ?? "";
-            if (config.includeLoggedUser) payload["loggedUser"] = Environment.UserName;
+            string loggedUser = Text(computer, "UserName");
+            if (string.IsNullOrWhiteSpace(loggedUser)) loggedUser = Environment.UserDomainName + "\\" + Environment.UserName;
+            if (config.includeLoggedUser) payload["loggedUser"] = loggedUser;
+
+            Dictionary<string, object> inventoryDetails = new Dictionary<string, object>();
+            inventoryDetails["cpuCores"] = CollectCpuCoreCount();
+            inventoryDetails["loggedUser"] = config.includeLoggedUser ? loggedUser : "";
+            inventoryDetails["memoryHealth"] = CollectMemoryHealth();
+            inventoryDetails["licenses"] = CollectLicenses();
+            inventoryDetails["office"] = CollectOffice();
+            inventoryDetails["disks"] = CollectPhysicalDisks(
+                ToLong(Value(disk, "Size")),
+                ToLong(Value(disk, "FreeSpace"))
+            );
+            inventoryDetails["software"] = CollectInstalledSoftware();
+            payload["inventoryDetails"] = inventoryDetails;
             return payload;
+        }
+
+        private static Dictionary<string, object> CollectMemoryHealth()
+        {
+            Dictionary<string, object> result = new Dictionary<string, object>();
+            List<string> warnings = new List<string>();
+            int modules = 0;
+            try
+            {
+                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher(
+                    "SELECT Status FROM Win32_PhysicalMemory"
+                ))
+                using (ManagementObjectCollection rows = searcher.Get())
+                {
+                    foreach (ManagementObject row in rows)
+                    {
+                        modules++;
+                        string status = Text(row, "Status");
+                        if (!string.IsNullOrWhiteSpace(status) &&
+                            !string.Equals(status, "OK", StringComparison.OrdinalIgnoreCase))
+                        {
+                            warnings.Add(status);
+                        }
+                    }
+                }
+            }
+            catch { }
+            result["status"] = modules == 0
+                ? "Nao disponibilizada pelo Windows"
+                : warnings.Count == 0
+                    ? "Sem falhas reportadas"
+                    : string.Join(", ", warnings.ToArray());
+            result["modules"] = modules;
+            return result;
+        }
+
+        private static int CollectCpuCoreCount()
+        {
+            int cores = 0;
+            try
+            {
+                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher(
+                    "SELECT NumberOfCores FROM Win32_Processor"
+                ))
+                using (ManagementObjectCollection rows = searcher.Get())
+                {
+                    foreach (ManagementObject row in rows)
+                    {
+                        cores += Math.Max(0, ToInt(Value(row, "NumberOfCores")));
+                    }
+                }
+            }
+            catch { }
+            return cores > 0 ? cores : Math.Max(1, Environment.ProcessorCount);
+        }
+
+        private static Dictionary<string, object> CollectLicenses()
+        {
+            Dictionary<string, object> licenses = new Dictionary<string, object>();
+            licenses["windowsKey"] = "Nao disponibilizada";
+            licenses["officeKey"] = "Nao disponibilizada";
+            try
+            {
+                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher(
+                    "SELECT Name, LicenseStatus, PartialProductKey FROM SoftwareLicensingProduct WHERE PartialProductKey IS NOT NULL"
+                ))
+                using (ManagementObjectCollection rows = searcher.Get())
+                {
+                    foreach (ManagementObject row in rows)
+                    {
+                        string name = Text(row, "Name");
+                        string partialKey = Text(row, "PartialProductKey");
+                        string status = LicenseStatusLabel(ToInt(Value(row, "LicenseStatus")));
+                        string summary = status;
+                        if (!string.IsNullOrWhiteSpace(partialKey)) summary += " - final " + partialKey;
+                        if (name.IndexOf("Windows", StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            licenses["windowsKey"] = summary;
+                        }
+                        else if (name.IndexOf("Office", StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            licenses["officeKey"] = summary;
+                        }
+                    }
+                }
+            }
+            catch { }
+            return licenses;
+        }
+
+        private static string LicenseStatusLabel(int status)
+        {
+            switch (status)
+            {
+                case 1: return "Ativada";
+                case 2: return "Periodo inicial";
+                case 3: return "Periodo adicional";
+                case 4: return "Nao genuina";
+                case 5: return "Notificacao";
+                case 6: return "Periodo estendido";
+                default: return "Status desconhecido";
+            }
+        }
+
+        private static Dictionary<string, object> CollectOffice()
+        {
+            Dictionary<string, object> office = new Dictionary<string, object>();
+            try
+            {
+                object products = Registry.GetValue(
+                    @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Office\ClickToRun\Configuration",
+                    "ProductReleaseIds",
+                    null
+                );
+                object version = Registry.GetValue(
+                    @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Office\ClickToRun\Configuration",
+                    "VersionToReport",
+                    null
+                );
+                object platform = Registry.GetValue(
+                    @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Office\ClickToRun\Configuration",
+                    "Platform",
+                    null
+                );
+                office["name"] = Convert.ToString(products) ?? "";
+                office["version"] = Convert.ToString(version) ?? "";
+                office["architecture"] = Convert.ToString(platform) ?? "";
+            }
+            catch { }
+            return office;
+        }
+
+        private static List<Dictionary<string, object>> CollectPhysicalDisks(long systemTotal, long systemFree)
+        {
+            List<Dictionary<string, object>> disks = new List<Dictionary<string, object>>();
+            List<Dictionary<string, object>> reliability = CollectStorageReliability();
+            List<Dictionary<string, object>> legacySmart = CollectLegacySmartData();
+            try
+            {
+                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher(
+                    "SELECT Model, SerialNumber, Size, Status, MediaType, InterfaceType FROM Win32_DiskDrive"
+                ))
+                using (ManagementObjectCollection rows = searcher.Get())
+                {
+                    int index = 0;
+                    foreach (ManagementObject row in rows)
+                    {
+                        long size = ToLong(Value(row, "Size"));
+                        string status = Text(row, "Status");
+                        Dictionary<string, object> disk = new Dictionary<string, object>();
+                        disk["label"] = string.IsNullOrWhiteSpace(Text(row, "Model"))
+                            ? "Disco fisico " + (index + 1)
+                            : Text(row, "Model");
+                        disk["name"] = disk["label"];
+                        disk["model"] = Text(row, "Model");
+                        disk["serialNumber"] = Text(row, "SerialNumber").Trim();
+                        disk["sizeGb"] = Math.Round(size / 1073741824d, 1);
+                        disk["totalBytes"] = size;
+                        disk["freeBytes"] = index == 0 ? systemFree : 0L;
+                        disk["type"] = ResolveDiskType(Text(row, "MediaType"), Text(row, "Model"));
+                        disk["smartStatus"] = string.IsNullOrWhiteSpace(status) ? "Nao disponibilizado" : status;
+                        disk["health"] = string.Equals(status, "OK", StringComparison.OrdinalIgnoreCase)
+                            ? "Saudavel"
+                            : status;
+
+                        if (index < reliability.Count)
+                        {
+                            foreach (KeyValuePair<string, object> item in reliability[index])
+                            {
+                                disk[item.Key] = item.Value;
+                            }
+                        }
+                        if (index < legacySmart.Count)
+                        {
+                            foreach (KeyValuePair<string, object> item in legacySmart[index])
+                            {
+                                if (!disk.ContainsKey(item.Key)) disk[item.Key] = item.Value;
+                            }
+                        }
+                        int healthPercent = disk.ContainsKey("wearPercent")
+                            ? Math.Max(0, 100 - ToInt(disk["wearPercent"]))
+                            : disk.ContainsKey("lifeRemainingPercent")
+                                ? Clamp(ToInt(disk["lifeRemainingPercent"]), 0, 100)
+                            : string.Equals(status, "OK", StringComparison.OrdinalIgnoreCase) ? 100 : 50;
+                        disk["healthPercent"] = healthPercent;
+                        disk["healthEstimate"] = healthPercent + "% (estimativa SMART)";
+                        disks.Add(disk);
+                        index++;
+                    }
+                }
+            }
+            catch { }
+
+            if (disks.Count == 0 && systemTotal > 0)
+            {
+                disks.Add(new Dictionary<string, object>
+                {
+                    { "label", "Disco do sistema" },
+                    { "name", "Disco do sistema" },
+                    { "sizeGb", Math.Round(systemTotal / 1073741824d, 1) },
+                    { "totalBytes", systemTotal },
+                    { "freeBytes", systemFree },
+                    { "type", "Nao identificado" },
+                    { "smartStatus", "Nao disponibilizado" }
+                });
+            }
+            return disks;
+        }
+
+        private static List<Dictionary<string, object>> CollectStorageReliability()
+        {
+            List<Dictionary<string, object>> counters = new List<Dictionary<string, object>>();
+            try
+            {
+                ManagementScope scope = new ManagementScope(@"\\.\root\Microsoft\Windows\Storage");
+                scope.Connect();
+                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher(
+                    scope,
+                    new ObjectQuery("SELECT Temperature, PowerOnHours, Wear, ReadErrorsTotal, WriteErrorsTotal FROM MSFT_StorageReliabilityCounter")
+                ))
+                using (ManagementObjectCollection rows = searcher.Get())
+                {
+                    foreach (ManagementObject row in rows)
+                    {
+                        Dictionary<string, object> counter = new Dictionary<string, object>();
+                        long temperature = ToLong(Value(row, "Temperature"));
+                        long hours = ToLong(Value(row, "PowerOnHours"));
+                        object wearValue = Value(row, "Wear");
+                        long wear = ToLong(wearValue);
+                        if (temperature > 0) counter["temperatureC"] = temperature;
+                        if (hours > 0) counter["powerOnHours"] = hours;
+                        if (wearValue != null && wear >= 0 && wear <= 100) counter["wearPercent"] = wear;
+                        counter["readErrors"] = ToLong(Value(row, "ReadErrorsTotal"));
+                        counter["writeErrors"] = ToLong(Value(row, "WriteErrorsTotal"));
+                        counters.Add(counter);
+                    }
+                }
+            }
+            catch { }
+            return counters;
+        }
+
+        private static List<Dictionary<string, object>> CollectLegacySmartData()
+        {
+            List<Dictionary<string, object>> counters = new List<Dictionary<string, object>>();
+            try
+            {
+                ManagementScope scope = new ManagementScope(@"\\.\root\wmi");
+                scope.Connect();
+                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher(
+                    scope,
+                    new ObjectQuery("SELECT VendorSpecific FROM MSStorageDriver_FailurePredictData")
+                ))
+                using (ManagementObjectCollection rows = searcher.Get())
+                {
+                    foreach (ManagementObject row in rows)
+                    {
+                        byte[] data = Value(row, "VendorSpecific") as byte[];
+                        Dictionary<string, object> counter = new Dictionary<string, object>();
+                        if (data == null || data.Length < 14)
+                        {
+                            counters.Add(counter);
+                            continue;
+                        }
+
+                        for (int offset = 2; offset + 11 < data.Length; offset += 12)
+                        {
+                            int attributeId = data[offset];
+                            if (attributeId == 0) continue;
+                            long raw = 0;
+                            for (int byteIndex = 0; byteIndex < 6; byteIndex++)
+                            {
+                                raw |= ((long)data[offset + 5 + byteIndex]) << (byteIndex * 8);
+                            }
+
+                            if (attributeId == 5) counter["reallocatedSectors"] = raw;
+                            if (attributeId == 9 && !counter.ContainsKey("powerOnHours")) counter["powerOnHours"] = raw;
+                            if (attributeId == 194 && !counter.ContainsKey("temperatureC")) counter["temperatureC"] = raw & 0xff;
+                            if ((attributeId == 202 || attributeId == 231 || attributeId == 233) &&
+                                !counter.ContainsKey("lifeRemainingPercent"))
+                            {
+                                counter["lifeRemainingPercent"] = Clamp(data[offset + 3], 0, 100);
+                            }
+                            if (attributeId == 241)
+                            {
+                                counter["tbWritten"] = Math.Round((raw * 512d) / 1000000000000d, 2);
+                            }
+                        }
+                        counters.Add(counter);
+                    }
+                }
+            }
+            catch { }
+            return counters;
+        }
+
+        private static string ResolveDiskType(string mediaType, string model)
+        {
+            string combined = (mediaType + " " + model).ToLowerInvariant();
+            if (combined.Contains("ssd") || combined.Contains("solid state") || combined.Contains("nvme")) return "SSD";
+            if (combined.Contains("fixed hard disk") || combined.Contains("hdd")) return "HDD";
+            return string.IsNullOrWhiteSpace(mediaType) ? "Nao identificado" : mediaType;
+        }
+
+        private static List<Dictionary<string, object>> CollectInstalledSoftware()
+        {
+            Dictionary<string, Dictionary<string, object>> unique =
+                new Dictionary<string, Dictionary<string, object>>(StringComparer.OrdinalIgnoreCase);
+            CollectSoftwareRegistry(
+                RegistryHive.LocalMachine,
+                RegistryView.Registry64,
+                @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+                unique
+            );
+            CollectSoftwareRegistry(
+                RegistryHive.LocalMachine,
+                RegistryView.Registry32,
+                @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+                unique
+            );
+            CollectSoftwareRegistry(
+                RegistryHive.CurrentUser,
+                RegistryView.Default,
+                @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+                unique
+            );
+            List<Dictionary<string, object>> software = new List<Dictionary<string, object>>(unique.Values);
+            software.Sort(delegate(Dictionary<string, object> left, Dictionary<string, object> right)
+            {
+                return string.Compare(
+                    Convert.ToString(left["name"]),
+                    Convert.ToString(right["name"]),
+                    StringComparison.OrdinalIgnoreCase
+                );
+            });
+            if (software.Count > 500) software.RemoveRange(500, software.Count - 500);
+            return software;
+        }
+
+        private static void CollectSoftwareRegistry(
+            RegistryHive hive,
+            RegistryView view,
+            string path,
+            Dictionary<string, Dictionary<string, object>> target
+        )
+        {
+            try
+            {
+                using (RegistryKey baseKey = RegistryKey.OpenBaseKey(hive, view))
+                using (RegistryKey root = baseKey.OpenSubKey(path))
+                {
+                    if (root == null) return;
+                    foreach (string subKeyName in root.GetSubKeyNames())
+                    {
+                        using (RegistryKey item = root.OpenSubKey(subKeyName))
+                        {
+                            if (item == null) continue;
+                            string name = Convert.ToString(item.GetValue("DisplayName")) ?? "";
+                            if (string.IsNullOrWhiteSpace(name) || Convert.ToInt32(item.GetValue("SystemComponent", 0)) == 1) continue;
+                            Dictionary<string, object> row = new Dictionary<string, object>();
+                            row["name"] = name.Trim();
+                            row["version"] = Convert.ToString(item.GetValue("DisplayVersion")) ?? "";
+                            row["manufacturer"] = Convert.ToString(item.GetValue("Publisher")) ?? "";
+                            row["installedAt"] = NormalizeInstallDate(Convert.ToString(item.GetValue("InstallDate")));
+                            target[name.Trim()] = row;
+                        }
+                    }
+                }
+            }
+            catch { }
+        }
+
+        private static string NormalizeInstallDate(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value) || value.Length != 8) return "";
+            DateTime parsed;
+            return DateTime.TryParseExact(
+                value,
+                "yyyyMMdd",
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None,
+                out parsed
+            ) ? parsed.ToString("o") : "";
         }
 
         private static ManagementObject First(string query)

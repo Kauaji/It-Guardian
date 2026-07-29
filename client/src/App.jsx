@@ -63,6 +63,7 @@ import {
   updateAlertSettings,
   updateServiceOrderStatus,
   updateDeviceBackup,
+  updateDeviceAlias,
   updateSegmentGroup,
   updateDeviceType,
   updateDeviceSegment,
@@ -2298,17 +2299,26 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     setMoveTarget(targetSegmentId);
   }
 
-  function saveMachineAlias(machineId, alias) {
-    saveMachineAliases((current) => {
-      const next = { ...current };
-      if (alias) {
-        next[machineId] = alias;
-      } else {
-        delete next[machineId];
+  async function saveMachineAlias(machineId, alias) {
+    try {
+      const machine = activeAllDevices.find((device) => String(device.id) === String(machineId));
+      if (machine?.source === "agent") {
+        await updateDeviceAlias(token, machineId, alias);
       }
-      return next;
-    });
-    notify(alias ? "Nome fantasia atualizado." : "Nome fantasia removido.", "ok");
+      saveMachineAliases((current) => {
+        const next = { ...current };
+        if (alias) {
+          next[machineId] = alias;
+        } else {
+          delete next[machineId];
+        }
+        return next;
+      });
+      notify(alias ? "Nome fantasia atualizado." : "Nome fantasia removido.", "ok");
+    } catch (error) {
+      notify(error.message || "Não foi possível atualizar o nome fantasia.", "error");
+      throw error;
+    }
   }
 
   function addMachineObservation(machineId, text) {
@@ -2874,7 +2884,17 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
             </button>
           )}
           {canViewInventory && (
-            <button className={activeView === "inventory" ? "nav-active" : ""} onClick={() => setActiveView("inventory")}>
+            <button
+              className={activeView === "inventory" ? "nav-active" : ""}
+              onClick={() => {
+                window.history.replaceState({}, "", "/");
+                setActiveView("inventory");
+                window.dispatchEvent(new CustomEvent("it-guardian:open-inventory-board"));
+                window.setTimeout(() => {
+                  window.dispatchEvent(new CustomEvent("it-guardian:open-inventory-board"));
+                }, 0);
+              }}
+            >
               <Database size={18} /> <span className="nav-label">Inventário</span>
             </button>
           )}

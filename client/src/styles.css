@@ -16002,7 +16002,19 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 }
 
 .floor-plan-editor-shell .floor-plan-editor-topbar {
-  grid-template-columns: minmax(180px, 1fr) auto;
+  grid-template-columns: minmax(220px, 1fr) auto;
+}
+
+.floor-plan-editor-shell .floor-plan-editor-identity {
+  min-width: 0;
+}
+
+.floor-plan-editor-shell .floor-plan-editor-identity strong {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .floor-plan-editor-shell .floor-plan-editor-layout {

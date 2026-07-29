@@ -540,6 +540,7 @@ export default function MachineDetailsModal({
                     <strong>{disk.label}</strong>
                     <span>{disk.sizeGb} GB - {disk.type}</span>
                     <small>SMART: {disk.smartStatus || disk.health || "Não disponível"}</small>
+                    <small>Saúde estimada: {disk.healthEstimate || (disk.healthPercent != null ? `${disk.healthPercent}% (estimativa)` : "Não disponível")}</small>
                     <small>Temperatura: {disk.temperatureC ? `${disk.temperatureC} C` : "Não disponível"}</small>
                     <small>Horas ligadas: {disk.powerOnHours || "Não disponível"}</small>
                     <small>Setores realocados: {disk.reallocatedSectors ?? "Não disponível"}</small>

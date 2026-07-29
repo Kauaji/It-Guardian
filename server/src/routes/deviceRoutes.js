@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   changeDeviceBackup,
+  changeDeviceAlias,
   changeDeviceType,
   createManual,
   details,
@@ -21,6 +22,7 @@ router.get("/", requirePermission("inventory.view"), list);
 router.post("/manual", requirePermission("inventory.create_asset"), createManual);
 router.patch("/:id/manual", requirePermission("inventory.edit_asset"), updateManual);
 router.patch("/:id/type", requirePermission("inventory.edit_asset"), changeDeviceType);
+router.patch("/:id/alias", requirePermission("inventory.edit_asset"), changeDeviceAlias);
 router.patch("/:id/backup", requirePermission("inventory.edit_asset"), changeDeviceBackup);
 router.post("/:id/ping", requirePermission("inventory.edit_asset"), refreshPing);
 router.patch("/:id/segment", requirePermission("inventory.move_assets"), moveToSegment);

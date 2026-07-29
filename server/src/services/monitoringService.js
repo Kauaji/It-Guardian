@@ -179,6 +179,7 @@ function agentStatus(asset) {
 }
 
 function buildAgentDevice(asset, segment, metadata) {
+  const details = asset.inventoryDetails || {};
   const status = agentStatus(asset);
   const ramUsedPercent =
     asset.memoryTotalBytes > 0 && asset.memoryUsedBytes != null
@@ -219,24 +220,36 @@ function buildAgentDevice(asset, segment, metadata) {
       model: asset.deviceModel || asset.cpuModel || "Nao informado",
       assetTag: null,
       serialNumber: asset.serialNumber,
-      loggedUser: asset.loggedUser || "Coleta desativada",
+      loggedUser: asset.loggedUser || details.loggedUser || null,
       macAddress: asset.macAddress,
       os: [asset.operatingSystem, asset.windowsVersion, asset.osArchitecture].filter(Boolean).join(" - "),
+      osVersion: asset.windowsVersion,
+      architecture: asset.osArchitecture,
       cpuModel: asset.cpuModel,
-      cpuCores: null,
+      cpuCores: details.cpuCores ?? null,
       ramGb: asset.memoryTotalBytes == null
         ? null
         : Math.round((asset.memoryTotalBytes / 1024 ** 3) * 10) / 10,
-      disks: asset.diskTotalBytes == null
-        ? []
-        : [{
-            name: "Disco do sistema",
-            totalBytes: asset.diskTotalBytes,
-            freeBytes: asset.diskFreeBytes
-          }],
+      memoryHealth: details.memoryHealth || null,
+      licenses: details.licenses || {},
+      officeVersion: [details.office?.name, details.office?.version, details.office?.architecture]
+        .filter(Boolean)
+        .join(" ") || null,
+      disks: Array.isArray(details.disks) && details.disks.length
+        ? details.disks
+        : asset.diskTotalBytes == null
+          ? []
+          : [{
+              label: "Disco do sistema",
+              name: "Disco do sistema",
+              totalBytes: asset.diskTotalBytes,
+              freeBytes: asset.diskFreeBytes,
+              sizeGb: Math.round((asset.diskTotalBytes / 1024 ** 3) * 10) / 10,
+              type: "Nao identificado"
+            }],
       peripherals: [],
       changeHistory: [],
-      software: [],
+      software: Array.isArray(details.software) ? details.software : [],
       lastInventoryAt: asset.collectedAt
     }
   };
@@ -267,7 +280,9 @@ function mergeAgentDevice(baseDevice, agentDevice) {
       ...baseDevice.hardware,
       ...agentDevice.hardware,
       peripherals: baseDevice.hardware?.peripherals || [],
-      software: baseDevice.hardware?.software || []
+      software: baseDevice.hardware?.software?.length
+        ? baseDevice.hardware.software
+        : agentDevice.hardware?.software || []
     }
   };
 }

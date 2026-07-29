@@ -1,5 +1,5 @@
 #define MyAppName "IT Guardian"
-#define MyAppVersion "1.3.0"
+#define MyAppVersion "1.4.0"
 #define MyAppPublisher "IT Guardian"
 #ifndef ApiBaseUrl
   #define ApiBaseUrl "https://it-guardian-server.vercel.app"
@@ -245,7 +245,7 @@ begin
     '  "environment": "",' + #13#10 +
     '  "group": "",' + #13#10 +
     '  "segment": "",' + #13#10 +
-    '  "includeLoggedUser": false' + #13#10 +
+    '  "includeLoggedUser": true' + #13#10 +
     '}';
   SaveStringToFile(ExpandConstant('{app}\config.json'), ConfigJson, False);
 

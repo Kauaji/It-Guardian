@@ -150,7 +150,19 @@ function DeviceGlyph({ type, width, height, metadata = {} }) {
 
 export default function FloorPlanObjectGlyph({ object, width, height, selected = false, openings = [] }) {
   const type = resolveSceneObjectType(object);
-  const color = object?.color || "#475569";
+  const fallbackColors = {
+    pc: "#2563eb",
+    desktop: "#2563eb",
+    computer: "#2563eb",
+    workstation: "#2563eb",
+    notebook: "#2563eb",
+    laptop: "#2563eb",
+    printer: "#475569",
+    tv: "#1e293b"
+  };
+  const rawColor = String(object?.color || "").trim();
+  const isInvisibleColor = ["#fff", "#ffffff", "white", "rgb(255, 255, 255)"].includes(rawColor.toLowerCase());
+  const color = !rawColor || isInvisibleColor ? (fallbackColors[type] || "#475569") : rawColor;
 
   if (isWallObject(object)) {
     const cuts = openings

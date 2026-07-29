@@ -424,7 +424,27 @@ export default function AlertCenterV2({
   }
 
   function getAlertMachineLabel(alert) {
-    return alert.hostName || findAlertDevice(alert)?.name || alert.assetId || "Máquina não vinculada";
+    return findAlertDevice(alert)?.name || alert.hostName || alert.assetId || "Máquina não vinculada";
+  }
+
+  function getResolvedAlertTitle(alert) {
+    const title = String(alert.title || "");
+    const originalName = String(alert.hostName || "");
+    const resolvedName = String(getAlertMachineLabel(alert) || "");
+    if (!originalName || !resolvedName || originalName === resolvedName) return title;
+    return title.split(originalName).join(resolvedName);
+  }
+
+  function getResolvedSuggestionMachineLabel(suggestion) {
+    return findSuggestionDevice(suggestion)?.name || getSuggestionMachineLabel(suggestion);
+  }
+
+  function getResolvedSuggestionTitle(suggestion) {
+    const title = String(suggestion.title || "");
+    const originalName = String(getSuggestionMachineLabel(suggestion) || "");
+    const resolvedName = String(getResolvedSuggestionMachineLabel(suggestion) || "");
+    if (!originalName || !resolvedName || originalName === resolvedName) return title;
+    return title.split(originalName).join(resolvedName);
   }
 
   function getSuggestionLocation(suggestion) {
@@ -448,9 +468,9 @@ export default function AlertCenterV2({
       threshold: suggestion.alertThreshold,
       severity: suggestion.alertSeverity || (suggestion.suggestedPriority === "critical" ? "critical" : "warning"),
       status: suggestion.status,
-      title: suggestion.title,
+      title: getResolvedSuggestionTitle(suggestion),
       description: suggestion.description,
-      hostName: getSuggestionMachineLabel(suggestion),
+      hostName: getResolvedSuggestionMachineLabel(suggestion),
       occurrencesCount: suggestion.occurrencesCount || 1,
       firstSeenAt: suggestion.alertFirstSeenAt || suggestion.createdAt,
       lastSeenAt: suggestion.alertLastSeenAt || suggestion.updatedAt || suggestion.createdAt,
@@ -489,7 +509,7 @@ export default function AlertCenterV2({
       location,
       priority,
       priorityLabel: priorityLabels[priority] || priorityLabels.medium,
-      machineLabel: getSuggestionMachineLabel(suggestion),
+      machineLabel: getResolvedSuggestionMachineLabel(suggestion),
       comments,
       checklist,
       correlations
@@ -1158,7 +1178,7 @@ export default function AlertCenterV2({
                         <header>
                           <div>
                             <span>{alert.category || getAlertCategory(alert)}</span>
-                            <h3>{alert.title}</h3>
+                            <h3>{getResolvedAlertTitle(alert)}</h3>
                             <small>{machineLabel} · {location.groupName} · {location.segmentName}</small>
                           </div>
                           <span className={`pill ${alert.severity === "critical" ? "danger" : "warning"}`}>
@@ -1267,7 +1287,8 @@ export default function AlertCenterV2({
               </div>
               <div className="alert-board suggestion-board">
                 {visibleSuggestions.map((suggestion, index) => {
-                  const machineLabel = getSuggestionMachineLabel(suggestion);
+                  const machineLabel = getResolvedSuggestionMachineLabel(suggestion);
+                  const suggestionTitle = getResolvedSuggestionTitle(suggestion);
                   const location = suggestion.location || getSuggestionLocation(suggestion);
                   const priority = suggestion.suggestedPriority || "medium";
                   const priorityLabel = priorityLabels[priority] || priorityLabels.medium;
@@ -1294,7 +1315,7 @@ export default function AlertCenterV2({
                         "--service-order-priority-color": priorityColor,
                         "--service-order-priority-bg": `color-mix(in srgb, ${priorityColor} 32%, var(--surface))`
                       }}
-                      title={suggestion.priorityReason || suggestion.title}
+                      title={suggestion.priorityReason || suggestionTitle}
                     >
                       {occurrenceCount > 1 && (
                         <span
@@ -1318,7 +1339,7 @@ export default function AlertCenterV2({
                         </span>
                       )}
                       <span>{formatSuggestionCode(suggestion, index)}</span>
-                      <strong title={suggestion.title}>{suggestion.title}</strong>
+                      <strong title={suggestionTitle}>{suggestionTitle}</strong>
                       <small title={machineLabel}>{machineLabel}</small>
                       <small className="suggestion-card-location" title={locationLabel}>{locationLabel}</small>
                       <div className="suggestion-card-badges">
@@ -1487,8 +1508,8 @@ export default function AlertCenterV2({
                         {alert.severity === "critical" ? "Crítico" : "Atenção"}
                       </span>
                     </div>
-                    <h3>{alert.title}</h3>
-                    <p>{alert.hostName} · {formatAlertValue(alert)}</p>
+                    <h3>{getResolvedAlertTitle(alert)}</h3>
+                    <p>{getAlertMachineLabel(alert)} · {formatAlertValue(alert)}</p>
                     <small>{alertTypeLabels[alert.type] || alert.type || alert.metric}</small>
                   </article>
                 ))}
@@ -1965,7 +1986,7 @@ export default function AlertCenterV2({
                   return (
                     <article key={alert.id} className="alert-history-card">
                       <span className="pill ok">Resolvido</span>
-                      <h3>{alert.title}</h3>
+                      <h3>{getResolvedAlertTitle(alert)}</h3>
                       <p>{machineLabel} · {formatAlertValue(alert)}</p>
                       <small>{formatDate(alert.updatedAt || alert.resolvedAt || alert.startedAt)}</small>
                     </article>
@@ -1976,8 +1997,8 @@ export default function AlertCenterV2({
                     <span className={`pill ${suggestion.status === "accepted" ? "ok" : "danger"}`}>
                       {suggestionStatusLabels[suggestion.status] || suggestion.status}
                     </span>
-                    <h3>{formatSuggestionCode(suggestion, index)} · {suggestion.title}</h3>
-                    <p>{getSuggestionMachineLabel(suggestion)}</p>
+                    <h3>{formatSuggestionCode(suggestion, index)} · {getResolvedSuggestionTitle(suggestion)}</h3>
+                    <p>{getResolvedSuggestionMachineLabel(suggestion)}</p>
                     <small>{suggestion.createdServiceOrderId ? `OS criada: ${suggestion.createdServiceOrderId}` : suggestion.rejectionReason || "Sem observação"}</small>
                   </article>
                 ))}

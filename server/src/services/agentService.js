@@ -36,7 +36,8 @@ const acceptedFields = new Set([
   "intervalSeconds",
   "environment",
   "group",
-  "segment"
+  "segment",
+  "inventoryDetails"
 ]);
 
 function badRequest(message) {
@@ -60,6 +61,23 @@ function integer(value, field, { min = 0, max = Number.MAX_SAFE_INTEGER, fallbac
     throw badRequest(`O campo ${field} possui valor invalido.`);
   }
   return normalized;
+}
+
+function structuredObject(value, field, { maxBytes = 1024 * 1024 } = {}) {
+  if (value == null) return {};
+  if (typeof value !== "object" || Array.isArray(value)) {
+    throw badRequest(`O campo ${field} deve ser um objeto.`);
+  }
+  let serialized;
+  try {
+    serialized = JSON.stringify(value);
+  } catch {
+    throw badRequest(`O campo ${field} nao pode ser serializado.`);
+  }
+  if (Buffer.byteLength(serialized, "utf8") > maxBytes) {
+    throw badRequest(`O campo ${field} excede o tamanho permitido.`);
+  }
+  return JSON.parse(serialized);
 }
 
 export function validateAgentPayload(input) {
@@ -105,7 +123,8 @@ export function validateAgentPayload(input) {
     }),
     environment: text(input.environment, "environment", { max: 120 }),
     group: text(input.group, "group", { max: 120 }),
-    segment: text(input.segment, "segment", { max: 120 })
+    segment: text(input.segment, "segment", { max: 120 }),
+    inventoryDetails: structuredObject(input.inventoryDetails, "inventoryDetails")
   };
 
   if (

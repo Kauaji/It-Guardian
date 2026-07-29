@@ -19,6 +19,10 @@ function enrollmentFromRow(row) {
 }
 
 function assetFromRow(row) {
+  const inventoryDetails =
+    row.inventory_details && typeof row.inventory_details === "object"
+      ? row.inventory_details
+      : {};
   return {
     id: row.asset_id,
     enrollmentId: row.enrollment_id,
@@ -46,6 +50,7 @@ function assetFromRow(row) {
     environment: row.environment_name,
     group: row.group_name,
     segment: row.segment_name,
+    inventoryDetails,
     collectedAt: row.collected_at,
     lastSeenAt: row.last_seen_at,
     createdAt: row.created_at,
@@ -119,17 +124,18 @@ export async function recordAgentInventory({ enrollment, payload }) {
           cpu_usage_percent, memory_total_bytes, memory_used_bytes, memory_free_bytes,
           disk_total_bytes, disk_free_bytes, device_manufacturer, device_model,
           serial_number, uptime_seconds, logged_user, agent_version, interval_seconds,
-          environment_name, group_name, segment_name, collected_at, last_seen_at, updated_at
+          environment_name, group_name, segment_name, inventory_details,
+          collected_at, last_seen_at, updated_at
         )
         VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
           $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-          $21, $22, $23, $24, $25, $26, $27, NOW(), NOW()
+          $21, $22, $23, $24, $25, $26, $27, $28, NOW(), NOW()
         )
         ON CONFLICT (asset_id) DO UPDATE SET
           enrollment_id = EXCLUDED.enrollment_id,
           hostname = EXCLUDED.hostname,
-          machine_alias = EXCLUDED.machine_alias,
+          machine_alias = COALESCE(agent_assets.machine_alias, EXCLUDED.machine_alias),
           operating_system = EXCLUDED.operating_system,
           os_architecture = EXCLUDED.os_architecture,
           windows_version = EXCLUDED.windows_version,
@@ -152,6 +158,7 @@ export async function recordAgentInventory({ enrollment, payload }) {
           environment_name = EXCLUDED.environment_name,
           group_name = EXCLUDED.group_name,
           segment_name = EXCLUDED.segment_name,
+          inventory_details = EXCLUDED.inventory_details,
           collected_at = EXCLUDED.collected_at,
           last_seen_at = NOW(),
           updated_at = NOW()
@@ -184,6 +191,7 @@ export async function recordAgentInventory({ enrollment, payload }) {
         payload.environment,
         payload.group,
         payload.segment,
+        payload.inventoryDetails,
         payload.collectedAt
       ]
     );
@@ -254,5 +262,18 @@ export async function listAgentAssets() {
 
 export async function findAgentAssetById(assetId) {
   const result = await query("SELECT * FROM agent_assets WHERE asset_id = $1 LIMIT 1", [assetId]);
+  return result.rows[0] ? assetFromRow(result.rows[0]) : null;
+}
+
+export async function updateAgentAssetAlias({ assetId, alias }) {
+  const result = await query(
+    `
+      UPDATE agent_assets
+      SET machine_alias = $2, updated_at = NOW()
+      WHERE asset_id = $1
+      RETURNING *
+    `,
+    [assetId, alias || null]
+  );
   return result.rows[0] ? assetFromRow(result.rows[0]) : null;
 }

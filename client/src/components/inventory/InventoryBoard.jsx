@@ -198,6 +198,14 @@ export default function InventoryBoard({
   }, []);
 
   useEffect(() => {
+    function openInventoryBoard() {
+      setInventoryViewMode("board");
+    }
+    window.addEventListener("it-guardian:open-inventory-board", openInventoryBoard);
+    return () => window.removeEventListener("it-guardian:open-inventory-board", openInventoryBoard);
+  }, []);
+
+  useEffect(() => {
     setActivePopoverId(null);
     setSelectedSegmentIds(new Set());
   }, [activeTabId, selectedGroupId, selectedSegmentId]);

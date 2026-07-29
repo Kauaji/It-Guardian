@@ -854,6 +854,14 @@ export function deleteSector(token, id) {
   });
 }
 
+export function updateDeviceAlias(token, id, alias) {
+  return apiFetch(`/devices/${id}/alias`, {
+    token,
+    method: "PATCH",
+    body: JSON.stringify({ alias })
+  });
+}
+
 export function fetchProductKeys(token) {
   return apiFetch("/product-keys", { token });
 }

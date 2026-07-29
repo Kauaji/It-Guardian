@@ -10,7 +10,7 @@ $config = [pscustomobject]@{
   environment = "Teste"
   group = "TI"
   segment = "Bancada"
-  includeLoggedUser = $false
+  includeLoggedUser = $true
 }
 $snapshot = @{
   machineId = "ignored"
@@ -36,6 +36,6 @@ $snapshot = @{
 $payload = New-InventoryPayload -Config $config -Snapshot $snapshot
 if ($payload.machineId -ne "machine-test") { throw "machineId nao foi preservado." }
 if ($payload.hostname -ne "PC-TESTE") { throw "hostname nao foi coletado." }
-if ($payload.Contains("loggedUser")) { throw "loggedUser foi coletado sem consentimento." }
+if (-not $payload.Contains("loggedUser")) { throw "loggedUser nao foi coletado com consentimento habilitado." }
 if ($payload.PSObject.Properties.Name -contains "files") { throw "Campo proibido detectado." }
 Write-Host "Testes do agente passaram." -ForegroundColor Green

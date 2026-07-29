@@ -7,7 +7,7 @@ param(
   [string]$Environment = "",
   [string]$Group = "",
   [string]$Segment = "",
-  [switch]$IncludeLoggedUser
+  [bool]$IncludeLoggedUser = $true
 )
 
 $ErrorActionPreference = "Stop"
