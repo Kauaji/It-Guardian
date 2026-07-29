@@ -63,29 +63,18 @@ falhar, confirme email, senha, `/health`, horario do servidor e os logs da API.
 Em um laboratorio descartavel sem acesso administrativo, restaure um backup
 valido ou execute o reset confirmado e crie um novo administrador.
 
-## 4. Criar um token de agente
+## 4. Gerar a chave do coletor
 
-```powershell
-docker compose --env-file .env.local -f docker-compose.local.yml exec server node src/cli/createAgentEnrollment.js --name "Laboratorio Windows"
-```
+Como administrador, abra `Configuracoes gerais > Admin > Cloud e coletores` e
+gere uma chave para a organizacao. A chave completa e exibida uma unica vez.
 
-O token completo aparece uma unica vez. Guarde-o; o banco persiste somente o
-hash e um prefixo de identificacao.
+## 5. Instalar o coletor em outra maquina
 
-## 5. Instalar o agente em outra maquina
+Compile ou obtenha `ITGuardianCollectorSetup.exe`, execute como administrador e
+informe somente a chave. O instalador valida a ativacao, configura o coletor
+nativo como SYSTEM, inicia a bandeja e envia o primeiro heartbeat.
 
-Copie `agent\windows` para a maquina cliente e execute PowerShell como
-administrador:
-
-```powershell
-Set-ExecutionPolicy -Scope Process Bypass
-.\test-heartbeat.ps1 -ServerUrl "http://IP-DO-SERVIDOR" -Token "itg_TOKEN"
-.\Install-Agent.ps1 -ServerUrl "http://IP-DO-SERVIDOR" -AgentToken "itg_TOKEN" -IntervalSeconds 300 -MachineAlias "PC Laboratorio"
-```
-
-O agente coleta apenas inventario basico documentado, envia heartbeat e nao
-executa comandos remotos. A tarefa roda como `SYSTEM`; o processo permanece
-ativo e envia a cada cinco minutos.
+OCS e Zabbix nao sao baixados e nao sao requisitos para esta instalacao.
 
 ## 6. Validar inventario e disponibilidade
 
@@ -155,9 +144,9 @@ O script pede confirmacao antes de remover configuracao e logs.
 
 - a validacao oficial e para laboratorio em LAN ou VPN;
 - HTTP nao deve ser exposto diretamente na internet;
-- o agente PowerShell nao possui atualizacao automatica;
+- o coletor nativo nao possui atualizacao automatica;
 - OCS e Zabbix sao fontes opcionais e ficam desabilitados por padrao;
-- o beta nao executa scripts ou comandos remotamente;
+- scripts de manutencao exigem cadastro, fila autenticada, limites e auditoria;
 - backup cobre o PostgreSQL, nao imagens Docker nem arquivos externos;
 - a migracao idempotente em PostgreSQL real deve ser confirmada no ensaio final;
 - o primeiro teste completo exige um segundo computador Windows real.

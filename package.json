@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "IT Guardian MVP - infrastructure monitoring dashboard with Zabbix and OCS Inventory adapters.",
+  "description": "IT Guardian - infrastructure management with a native Windows collector and optional monitoring adapters.",
   "workspaces": [
     "server",
     "client"

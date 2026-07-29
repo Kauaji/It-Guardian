@@ -1,5 +1,10 @@
 # Fase 3 - Preparacao para Implementacao Real
 
+> Documento historico. A politica atual de execucao esta em
+> `SCRIPTS-MANUTENCAO-SEGURANCA.md`: o navegador e o servidor nao abrem shell,
+> mas o Coletor IT Guardian pode consumir trabalhos cadastrados por uma fila
+> autenticada, limitada e auditada.
+
 ## Estado atual
 
 O IT Guardian ja tem base de backend para Fase 3:

@@ -1,17 +1,10 @@
 # IT Guardian Agent para Windows
 
-## Agentes OCS e Zabbix no instalador
+## Coletor nativo
 
-O instalador 1.3.0 tambem distribui os agentes oficiais OCS Inventory e Zabbix
-Agent 2. Durante a ativacao, a API devolve automaticamente os servidores
-centrais vinculados a chave da organizacao. Os pacotes sao verificados por hash
-e assinatura antes do build e novamente antes da instalacao. Os agentes
-externos somente sao instalados quando a chave possui a configuracao completa;
-o coletor nativo nao depende deles.
-
-O instalador nao cria servidores OCS ou Zabbix dentro do computador monitorado.
-Sem uma infraestrutura central real e acessivel, os agentes nao podem enviar
-inventario ou metricas.
+O instalador comum distribui somente o coletor nativo do IT Guardian. OCS e
+Zabbix sao adaptadores avancados do backend para empresas que ja possuem esses
+servidores. Seus agentes nao sao baixados nem instalados no computador.
 
 O agente coleta inventario basico e envia heartbeat HTTP/JSON ao servidor local.
 Ele e um script PowerShell visivel, instalado em
@@ -38,11 +31,9 @@ lista detalhada de processos ou conteudo pessoal.
 
 Para novos computadores cloud, use o instalador visual descrito em
 [`CLOUD-COLLECTOR-E-LICENCIAMENTO.md`](CLOUD-COLLECTOR-E-LICENCIAMENTO.md).
-Ele pede somente a chave de produto, baixa da API os destinos centrais
-OCS/Zabbix vinculados a ela, cria o enrollment automaticamente e instala o
-executavel nativo `ITGuardian.exe`, a tarefa `IT Guardian Collector`, o
-indicador visual da bandeja e, quando configurados, os dois agentes de
-monitoramento externos.
+Ele pede somente a chave de produto, cria o enrollment automaticamente e
+instala o executavel nativo `ITGuardian.exe`, a tarefa
+`IT Guardian Collector` e o indicador visual da bandeja.
 
 Na instalacao cloud, o executavel aparece como `IT Guardian` no Gerenciador de
 Tarefas, inicia com o Windows e usa o mesmo icone no programa, na bandeja e no
@@ -117,10 +108,9 @@ Use `Configuracoes > Aplicativos > Aplicativos instalados > IT Guardian >
 Desinstalar` ou o atalho `Desinstalar IT Guardian` no menu Iniciar.
 
 O desinstalador para o processo, remove as tarefas, a inicializacao automatica,
-os arquivos e os logs locais. OCS Inventory Agent e Zabbix Agent 2 somente sao
-removidos quando o marcador local comprova que foram instalados pelo IT
-Guardian; instalacoes preexistentes sao preservadas. O historico no servidor
-tambem e preservado.
+os arquivos e os logs locais. Por compatibilidade, ele reconhece marcadores de
+versoes antigas e nunca remove uma instalacao OCS/Zabbix preexistente. O
+historico no servidor e preservado.
 
 ## Configuracao
 
@@ -136,5 +126,6 @@ tambem e preservado.
 - `segment`;
 - `includeLoggedUser`.
 
-O backend rejeita campos adicionais. Nao existe campo para comando, script,
-download ou atualizacao remota.
+O backend rejeita campos adicionais no inventario. Trabalhos de manutencao sao
+obtidos por uma fila autenticada separada; nao existe campo de comando no
+`config.json`, download arbitrario ou atualizacao remota.

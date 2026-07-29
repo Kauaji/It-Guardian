@@ -1,15 +1,11 @@
 # Integracao Zabbix
 
-## Instalacao do agente Windows
+## Papel na beta
 
-O instalador do IT Guardian inclui o Zabbix Agent 2 7.0.29 oficial. Os campos
-`Server` e `ServerActive` sao vinculados a chave pelo administrador e
-devolvidos automaticamente durante a ativacao. O hostname usado pelo agente e
-o nome real do computador Windows. O servico fica automatico.
-
-O host correspondente ainda precisa existir no servidor/proxy Zabbix. O
-adaptador de leitura do backend continua precisando de `ZABBIX_API_URL` e
-`ZABBIX_API_TOKEN` para consultar a API central.
+O Zabbix Agent nao e instalado nos computadores pelo instalador comum do IT
+Guardian. A integracao e avancada e opcional para empresas que ja possuem
+servidor ou proxy Zabbix. O adaptador do backend usa `ZABBIX_API_URL` e
+`ZABBIX_API_TOKEN` em um processo persistente com acesso a essa rede.
 
 ## Objetivo
 

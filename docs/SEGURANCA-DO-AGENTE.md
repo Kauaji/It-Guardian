@@ -18,22 +18,28 @@ pertence a um enrollment e pode ser revogado.
 - logs nao incluem o token;
 - historico registra cadastro e reconexao do agente;
 - desinstalacao remove tarefa, configuracao e logs locais;
-- teste automatico procura primitivas de execucao remota e coleta invasiva.
+- trabalhos de manutencao exigem token do enrollment e vinculo com a maquina;
+- tipos permitidos limitados a BAT, CMD e PowerShell cadastrados;
+- executaveis do Windows sao fixos, sem `shell: true`;
+- timeout entre 15 e 600 segundos e saida limitada a 64 KiB;
+- requisitos de administrador e usuario logado sao validados;
+- resultado, erro, auditoria e historico da maquina sao persistidos;
+- teste automatico procura primitivas perigosas e coleta invasiva.
 
 ## O que nao existe
 
-- shell, PowerShell ou CMD remoto;
-- download e execucao de codigo;
+- shell interativo ou comando arbitrario enviado diretamente pela API;
+- download de codigo para execucao;
 - atualizacao automatica;
 - captura de tela, teclado ou clipboard;
 - coleta de arquivos, senhas ou navegacao;
 - persistencia oculta;
 - geolocalizacao;
-- execucao de scripts de manutencao.
+- execucao sem script previamente cadastrado e trabalho persistido.
 
-O agente usa PowerShell somente como runtime local e APIs CIM de inventario. A
-unica chamada de rede operacional e `Invoke-RestMethod` para o endpoint de
-heartbeat configurado.
+O coletor usa APIs locais de inventario e HTTPS para heartbeat, obtencao de um
+trabalho autenticado e devolucao do resultado. Arquivos temporarios sao
+removidos depois da execucao. A fila nao oferece terminal remoto.
 
 ## Transporte e rotacao
 

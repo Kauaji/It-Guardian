@@ -1,5 +1,8 @@
 # Fase 3 - Checklist de Testes
 
+> Checklist historico da fase de simulacao. Consulte
+> `SCRIPTS-MANUTENCAO-SEGURANCA.md` para o comportamento atual do coletor.
+
 ## Build
 
 - [x] Dependencias ja presentes; `npm install` nao foi necessario nesta rodada.

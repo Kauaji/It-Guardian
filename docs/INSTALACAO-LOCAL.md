@@ -116,6 +116,8 @@ adequado somente para laboratorio LAN controlado.
 
 - O backup inclui o PostgreSQL, nao as imagens Docker.
 - O modo local nao instala atualizacoes automaticamente.
-- O agente nao executa comandos remotos.
+- O agente nao oferece terminal remoto nem aceita comandos arbitrarios. Ele
+  executa somente trabalhos de manutencao previamente cadastrados, entregues
+  pela fila autenticada e auditada do IT Guardian.
 - A associacao de maquinas a grupos, segmentos e mapa continua sendo feita no
   painel.

@@ -1,16 +1,11 @@
 # Integracao OCS Inventory
 
-## Instalacao do agente Windows
+## Papel na beta
 
-O instalador do IT Guardian inclui o OCS Inventory Agent 2.11.0.1 oficial. A
-URL de comunicacao, normalmente terminada em `/ocsinventory`, e vinculada a
-chave pelo administrador e devolvida automaticamente durante a ativacao. O
-agente e instalado como servico automatico e envia o primeiro inventario ao
-servidor configurado.
-
-Isso nao substitui o OCS Communication Server. O adaptador de leitura do
-backend continua precisando de `OCS_BASE_URL`, `OCS_USER` e `OCS_PASSWORD` para
-consultar a API central em um processo com acesso a rede.
+O OCS nao e instalado nos computadores pelo instalador comum do IT Guardian.
+Ele e uma integracao avancada e opcional para empresas que ja possuem um OCS
+Communication Server. O adaptador do backend usa `OCS_BASE_URL`, `OCS_USER` e
+`OCS_PASSWORD` em um processo persistente com acesso a essa rede.
 
 ## Objetivo
 

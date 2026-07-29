@@ -29,18 +29,14 @@ bloqueado em producao.
 ## Fluxo cloud
 
 1. Um administrador gera uma chave de produto.
-2. Opcionalmente, o administrador vincula destinos centrais OCS e Zabbix reais
-   a chave.
-3. O instalador pede somente a chave.
+2. O instalador pede somente a chave.
 4. O instalador envia a chave, o fingerprint e o hostname por HTTPS para
    `POST /api/collector/activate`.
 5. A API valida estado, expiracao e limite de computadores de forma
    transacional.
-6. A API devolve o token derivado e os destinos OCS/Zabbix vinculados a chave.
-   A chave de produto nao e persistida no computador.
-7. O coletor nativo e sempre instalado. OCS Inventory Agent e Zabbix Agent 2
-   somente sao instalados quando os tres destinos externos estiverem
-   configurados.
+6. A API devolve o token derivado e a URL publica de suporte. A chave de
+   produto nao e persistida no computador.
+7. O coletor nativo e instalado sem baixar agentes externos.
 8. O coletor envia inventario e heartbeat para `/api/agents/heartbeat`.
 9. O ativo aparece no Inventario com origem `cloud_collector`/agente e, sem
    organizacao previa, fica em `Nao organizadas`.
@@ -132,8 +128,8 @@ npm run product-key:monitoring -- `
 ```
 
 Administradores tambem podem usar `PUT /api/product-keys/:id/monitoring`.
-Uma chave sem os tres destinos pode ser cadastrada, mas sua ativacao retorna
-`409` antes de reservar vaga, criar token ou persistir uma ativacao parcial.
+Esses metadados existem para integracoes avancadas do backend. Uma chave sem
+destinos externos continua sendo ativada normalmente.
 
 O painel permite listar chaves mascaradas, consultar uso, ver computadores,
 desativar uma ativacao e desativar ou reativar a chave. Desativar a chave revoga
@@ -189,6 +185,7 @@ O instalador:
 - executa um primeiro heartbeat antes de concluir;
 - cria `Abrir chamado - IT Guardian` na area de trabalho com o icone oficial;
 - registra logs locais e oferece desinstalacao.
+- nao baixa nem instala OCS Inventory Agent ou Zabbix Agent.
 
 O indicador da bandeja nao abre menus e nao executa comandos. Ele existe apenas
 para comunicar visualmente que o IT Guardian esta instalado e ativo.
@@ -229,14 +226,16 @@ Get-Content "$env:ProgramData\ITGuardian\logs\agent.log" -Tail 100
 - uptime, versao do coletor e horario da coleta.
 
 Nao sao coletados arquivos, senhas, teclas, tela, geolocalizacao, conteudo
-pessoal ou lista detalhada de processos. O coletor nao recebe comandos, nao
-executa scripts e nao possui mecanismo de atualizacao remota.
+pessoal ou lista detalhada de processos. O coletor pode consumir somente
+trabalhos de manutencao cadastrados e autenticados, com executaveis fixos,
+timeout, limites de saida, auditoria e retorno do resultado. Ele nao possui
+shell interativo nem mecanismo de atualizacao remota.
 
 ## OCS e Zabbix
 
 Os adaptadores de leitura OCS e Zabbix do backend continuam opcionais e
-desabilitados por padrao. O instalador Windows 1.3.0 incorpora os dois agentes
-de endpoint oficiais, mas nao exige seus destinos para ativar o coletor nativo.
+desabilitados por padrao. Seus agentes de endpoint nao fazem parte do instalador
+comum. Consulte `DECISAO-OCS-ZABBIX-BETA.md`.
 
 - OCS importa inventario em modo somente leitura.
 - Zabbix importa hosts, disponibilidade e problemas em modo somente leitura.
@@ -244,10 +243,8 @@ de endpoint oficiais, mas nao exige seus destinos para ativar o coletor nativo.
 - Em um processo persistente com acesso a LAN, a sincronizacao inicial ocorre
   ao iniciar e continua nos intervalos configurados.
 - Credenciais ficam em variaveis de ambiente e nunca sao devolvidas pela API.
-- Quando a chave possui os tres destinos, o instalador instala OCS Inventory
-  Agent e Zabbix Agent 2 como servicos automaticos. Sem essa configuracao, ele
-  instala somente o coletor nativo e conclui normalmente.
-- O instalador nao cria servidores centrais OCS ou Zabbix.
+- O instalador comum nao baixa agentes OCS ou Zabbix e nao cria servidores
+  centrais.
 - Para endpoints internos, rode a API/worker em uma maquina que alcance a LAN.
 - Na Vercel, use apenas endpoints publicamente acessiveis por HTTPS, o que nao e
   recomendado para sistemas internos sem uma camada segura.

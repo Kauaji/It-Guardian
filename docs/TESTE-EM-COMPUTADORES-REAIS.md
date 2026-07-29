@@ -56,7 +56,8 @@ laboratorio e nao um token de producao.
 - Token ausente, invalido ou revogado recebe `401`.
 - Campos desconhecidos ou valores invalidos recebem `400`.
 - Maquina manual sem agente continua abrindo normalmente.
-- Nenhum comando e executado pelo servidor ou pelo agente.
+- Nenhum comando arbitrario e executado; somente trabalhos cadastrados,
+  autenticados e vinculados a maquina podem ser consumidos pelo coletor.
 
 ## Diagnostico
 

@@ -16,8 +16,8 @@ Plano preventivo:
 Plano automatizado:
 - Configuração recorrente vinculada ao fluxo preventivo.
 - Agenda e prepara rotinas futuras.
-- Nesta versão não executa comandos reais.
-- A execução real continua dependente de agente seguro.
+- Pode gerar trabalhos reais somente para o Coletor IT Guardian autenticado.
+- A execução permanece vinculada a scripts cadastrados, auditada e limitada.
 
 OS preventiva:
 - Ordem de Serviço real.
@@ -81,16 +81,13 @@ A UI deve evoluir para mostrar pequenos indicadores coloridos nos cards de máqu
 
 ## Segurança
 
-Nenhum comando BAT, CMD, PowerShell ou Shell é executado pelo navegador ou pelo servidor nesta fase.
+O navegador e o servidor não abrem shell na máquina. Quando um plano produz
+uma execução, o backend cria um trabalho persistente para o Coletor IT Guardian
+autenticado. Somente BAT, CMD e PowerShell cadastrados podem ser entregues; o
+resultado, a auditoria e o histórico da máquina são registrados.
 
-O sistema apenas:
-- registra planos;
-- agenda/prepara rotinas;
-- salva logs;
-- exibe status;
-- mantém rastreabilidade.
-
-Execução real só deve existir futuramente com agente seguro instalado na máquina.
+Não existe terminal interativo, caminho de executável fornecido pelo usuário,
+`shell: true` ou download arbitrário de código.
 
 ## Pendências técnicas
 

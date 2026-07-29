@@ -4,6 +4,75 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-07-29 - Beta centrada no coletor nativo
+
+### Decisao e entrega
+
+- coletor Windows nativo definido como unica dependencia obrigatoria no
+  endpoint;
+- OCS e Zabbix mantidos como adaptadores avancados, opcionais, somente leitura
+  e desabilitados por padrao;
+- instalador comum simplificado para solicitar apenas a chave e instalar o
+  coletor nativo, sem baixar ou empacotar agentes externos;
+- alertas do coletor cobrem heartbeat atrasado, CPU, memoria, disco alto e disco
+  praticamente cheio;
+- documentacao de cloud, beta, seguranca e integracoes alinhada ao
+  comportamento real;
+- decisao e limites registrados em `DECISAO-OCS-ZABBIX-BETA.md`.
+
+### Pendencias conhecidas
+
+- inventario completo de softwares, temperatura e atualizacao automatica foram
+  adiados ate existirem politicas e fontes tecnicas confiaveis;
+- assinatura do instalador e ensaio em maquina virtual limpa continuam
+  requisitos antes da distribuicao publica.
+
+## 2026-07-29 - Inventario real, avisos reais e execucao controlada pelo agente
+
+### Entrega
+
+- cards das maquinas coletadas pelo agente voltaram ao mesmo formato compacto
+  do inventario, sem um bloco visual exclusivo para heartbeat;
+- informacoes do coletor foram distribuidas entre Geral, Hardware e Rede; a aba
+  separada `Agente IT Guardian` foi removida;
+- Central de Avisos deixou de sintetizar dados de demonstracao e agora cria
+  avisos somente a partir de maquinas reais do agente: heartbeat atrasado, CPU,
+  memoria e disco;
+- registros antigos com origem `mock` foram excluidos das consultas de avisos
+  e sugestoes;
+- criada fila persistente `agent_script_jobs`, vinculada ao ativo, enrollment,
+  script cadastrado, log, validacao, preventiva e execucao automatizada;
+- heartbeat autenticado entrega no maximo um trabalho pendente para a propria
+  maquina e a nova rota autenticada recebe seu resultado;
+- agente Windows 1.3.0 executa apenas scripts cadastrados dos tipos BAT, CMD e
+  PowerShell, usando executaveis fixos do Windows, sem `shell: true`, com timeout,
+  limite de saida, validacao de privilegio e remocao do arquivo temporario;
+- sugestoes, preventivas manuais e agendas automatizadas passaram a enfileirar
+  execucao real no agente, mantendo o cadastro e o resultado na mesma transacao;
+- conclusao atualiza logs, validacoes, planos, agendas, auditoria global e o
+  historico da respectiva maquina acessado pelo Inventario.
+
+### Validacoes
+
+- fluxo integrado de fila, entrega pelo heartbeat, retorno de resultado, log e
+  historico da maquina aprovado sem executar um script operacional;
+- suite completa, incluindo o roundtrip: 160 testes aprovados, 1 ignorado por
+  exigir PostgreSQL real e 0 falhas;
+- testes especificos do agente Windows aprovados;
+- build de producao aprovado com 2.353 modulos transformados;
+- lint sem avisos, verificacao arquitetural aprovada em 254 arquivos e
+  `git diff --check` aprovado;
+- compilacao do codigo C# do agente validada.
+
+### Pendencias conhecidas
+
+- reinstalar o coletor atualizado nas maquinas reais para habilitar o consumo
+  da fila;
+- validar em homologacao um script cadastrado de baixo risco antes de liberar
+  rotinas operacionais;
+- o teste automatizado usa resultado sintetico e nao executa BAT, CMD ou
+  PowerShell no computador de desenvolvimento.
+
 ## 2026-07-29 - Finalizacao robusta e desinstalador executavel
 
 ### Escopo

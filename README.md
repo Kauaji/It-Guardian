@@ -23,7 +23,7 @@ O projeto nasceu como Trabalho de Conclusão de Curso e evoluiu para um MVP func
 A arquitetura foi preparada para dois cenários:
 
 - **Demo e apresentação:** frontend e API leve publicados no Vercel, com PostgreSQL externo.
-- **Operação em rede real:** servidor persistente ou VPS com acesso à LAN, agente Windows, ping real e integrações opcionais com OCS Inventory e Zabbix.
+- **Operação real:** coletor Windows nativo conectado por HTTPS; OCS Inventory e Zabbix permanecem adaptadores opcionais para ambientes que ja os possuem.
 
 ## Principais funcionalidades
 
@@ -66,7 +66,7 @@ A arquitetura foi preparada para dois cenários:
 ## Arquitetura
 
 ```text
-Agente Windows / OCS / Zabbix
+Coletor Windows nativo
               |
               v
        API Node.js + Express
@@ -77,6 +77,10 @@ Agente Windows / OCS / Zabbix
               v
      Frontend React + Vite
 ```
+
+OCS e Zabbix podem alimentar a API por adaptadores avancados de leitura, mas
+nao fazem parte do instalador comum nem sao requisitos da beta. Consulte
+[`docs/DECISAO-OCS-ZABBIX-BETA.md`](docs/DECISAO-OCS-ZABBIX-BETA.md).
 
 Estrutura principal:
 

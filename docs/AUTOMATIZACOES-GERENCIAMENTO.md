@@ -30,7 +30,11 @@ usa consultas direcionadas e não carrega toda a tela de gerenciamento.
 
 ## Objetivo
 
-A área **Automatizações**, dentro da Central de Avisos, centraliza a consulta e o gerenciamento dos planos de automação preventiva já cadastrados. Ela não executa comandos e não substitui o fluxo de criação disponível em **Preventivas**.
+A área **Automatizações**, dentro da Central de Avisos, centraliza a consulta e
+o gerenciamento dos planos de automação preventiva já cadastrados. A tela não
+abre shell nem executa diretamente no navegador; planos elegíveis geram
+trabalhos auditados para o Coletor IT Guardian. Ela não substitui o fluxo de
+criação disponível em **Preventivas**.
 
 ## Visibilidade da aba
 
