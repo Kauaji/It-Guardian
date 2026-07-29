@@ -50,6 +50,11 @@ test("instalador cloud nao persiste nem repassa a chave de produto", async () =>
   assert.match(setup, /JsonStringValue\(ResponseBody, 'zabbixServer'\)/);
   assert.match(setup, /JsonStringValue\(ResponseBody, 'zabbixServerActive'\)/);
   assert.doesNotMatch(setup, /configuracao completa do OCS e Zabbix/);
+  assert.match(setup, /FinalizeParameters :=/);
+  assert.match(
+    setup,
+    /if\s+\(OcsServerUrl <> ''\) and\s+\(ZabbixServer <> ''\) and\s+\(ZabbixServerActive <> ''\)/
+  );
 
   assert.match(postInstall, /New-ScheduledTaskPrincipal/);
   assert.match(postInstall, /-UserId "SYSTEM"/);

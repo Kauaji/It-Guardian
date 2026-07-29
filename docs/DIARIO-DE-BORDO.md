@@ -4,6 +4,24 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-07-28 - Correcao dos argumentos opcionais do instalador Windows
+
+### Escopo
+
+- corrigida a falha de pos-instalacao causada pelo repasse de argumentos vazios
+  de OCS/Zabbix ao `powershell.exe`;
+- o instalador agora omite os parametros externos quando a organizacao utiliza
+  somente o coletor nativo do IT Guardian;
+- configuracoes externas parciais continuam bloqueadas para evitar uma
+  instalacao inconsistente.
+
+### Validacoes
+
+- falha reproduzida com o mesmo comando do instalador e confirmada como
+  `MissingArgument` para `OcsServerUrl`;
+- teste de regressao do instalador atualizado;
+- novo instalador recompilado e fluxo sem OCS/Zabbix validado.
+
 ## 2026-07-28 - Ativacao cloud independente de OCS e Zabbix
 
 ### Entrega
@@ -33,7 +51,12 @@ entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 - Inno Setup 6.7.3 compilou o instalador 1.3.0 com sucesso;
 - artefato final `ITGuardian-Collector-Setup.exe` com 24.078.647 bytes e
   SHA-256
-  `0D0A999BE485920C0D0478A54908CBFB64575A2B37D48386FD9CF288081126E2`.
+  `0D0A999BE485920C0D0478A54908CBFB64575A2B37D48386FD9CF288081126E2`;
+- deploy de producao Vercel `dpl_7H7qRHVn5YMzgie1JMjFJs9RJP32`
+  confirmado como `READY` para o commit `bbd01b2`;
+- `/api/health` confirmou API e banco em estado `ok`;
+- chave real da organizacao validada em producao com `201`, token derivado,
+  URL de suporte e ativacao da maquina, mesmo sem destinos OCS/Zabbix.
 
 ### Pendencias conhecidas
 

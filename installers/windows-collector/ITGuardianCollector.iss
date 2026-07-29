@@ -181,6 +181,19 @@ begin
       );
       Exit;
     end;
+    if
+      ((OcsServerUrl <> '') or (ZabbixServer <> '') or (ZabbixServerActive <> '')) and
+      ((OcsServerUrl = '') or (ZabbixServer = '') or (ZabbixServerActive = ''))
+    then
+    begin
+      AgentToken := '';
+      MsgBox(
+        'O servidor retornou uma configuracao externa incompleta. Tente novamente mais tarde.',
+        mbError,
+        MB_OK
+      );
+      Exit;
+    end;
     if SupportUrl = '' then
       SupportUrl := '{#ApiBaseUrl}/abrir-chamado';
 
@@ -253,6 +266,7 @@ end;
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   ConfigJson: string;
+  FinalizeParameters: string;
   ResultCode: Integer;
 begin
   if CurStep <> ssPostInstall then Exit;
@@ -273,14 +287,23 @@ begin
     '}';
   SaveStringToFile(ExpandConstant('{app}\config.json'), ConfigJson, False);
 
+  FinalizeParameters :=
+    '-NoProfile -ExecutionPolicy Bypass -File "' +
+    ExpandConstant('{app}\Finalize-CollectorInstall.ps1') +
+    '" -InstallDirectory "' + ExpandConstant('{app}') + '"';
+  if
+    (OcsServerUrl <> '') and
+    (ZabbixServer <> '') and
+    (ZabbixServerActive <> '')
+  then
+    FinalizeParameters := FinalizeParameters +
+      ' -OcsServerUrl "' + OcsServerUrl +
+      '" -ZabbixServer "' + ZabbixServer +
+      '" -ZabbixServerActive "' + ZabbixServerActive + '"';
+
   if not Exec(
     ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
-    '-NoProfile -ExecutionPolicy Bypass -File "' +
-      ExpandConstant('{app}\Finalize-CollectorInstall.ps1') +
-      '" -InstallDirectory "' + ExpandConstant('{app}') +
-      '" -OcsServerUrl "' + OcsServerUrl +
-      '" -ZabbixServer "' + ZabbixServer +
-      '" -ZabbixServerActive "' + ZabbixServerActive + '"',
+    FinalizeParameters,
     '',
     SW_HIDE,
     ewWaitUntilTerminated,
