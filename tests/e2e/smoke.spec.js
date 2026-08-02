@@ -51,6 +51,6 @@ test("API health confirma o banco", async ({ request }) => {
   expect(response.ok()).toBeTruthy();
   await expect(response.json()).resolves.toMatchObject({
     status: "ok",
-    database: "connected"
+    database: "ok"
   });
 });

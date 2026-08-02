@@ -63,6 +63,8 @@ entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 - o teste integrado reproduziu criacao de OS, vinculacao posterior, entrada em
   manutencao, desvinculacao e saida da manutencao;
 - lint, build de producao, arquitetura e `git diff --check` aprovados;
+- o smoke E2E foi alinhado ao contrato atual de `/api/health`, que informa
+  `database: "ok"` quando a conexao esta saudavel;
 - Inno Setup 6.7.3 compilou o instalador Windows 1.6.1;
 - SHA-256 do instalador:
   `1D8D4C51626D1F4CDE8ED369F717C7CC254FA632D0898BA83912EA7087494C4E`.
