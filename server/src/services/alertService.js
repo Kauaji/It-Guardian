@@ -33,6 +33,7 @@ import {
 } from "../repositories/serviceOrderRepository.js";
 import { refreshDueScriptValidations } from "../repositories/maintenanceScriptRepository.js";
 import { listAgentAssets } from "../repositories/agentRepository.js";
+import { startMaintenanceForAsset } from "../repositories/assetLifecycleRepository.js";
 import { listDeviceSegmentMap } from "../repositories/segmentRepository.js";
 import { listSegmentGroups } from "../repositories/segmentGroupRepository.js";
 
@@ -810,6 +811,19 @@ export async function acceptServiceOrderSuggestion({ id, user }) {
     },
     user
   });
+
+  if (serviceOrder.assetId) {
+    try {
+      await startMaintenanceForAsset({
+        assetId: serviceOrder.assetId,
+        serviceOrderId: serviceOrder.id,
+        notes: "Manutencao iniciada ao aceitar uma sugestao de aviso.",
+        user
+      });
+    } catch (error) {
+      if (error.statusCode !== 409) throw error;
+    }
+  }
 
   await addServiceOrderHistory({
     serviceOrderId: serviceOrder.id,

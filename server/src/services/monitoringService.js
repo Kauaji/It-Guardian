@@ -12,11 +12,22 @@ import {
 import { listAutomationIndicatorsByAssetIds } from "../repositories/automationIndicatorRepository.js";
 import { findAgentAssetById, listAgentAssets } from "../repositories/agentRepository.js";
 
+const ERROR_AFTER_MS = 3 * 24 * 60 * 60 * 1000;
+
+export function deriveContactStatus(status, lastContactAt, now = Date.now()) {
+  if (status === "online") return "online";
+  if (status === "unknown") return "unknown";
+
+  const lastContactTime = Date.parse(lastContactAt);
+  if (!Number.isFinite(lastContactTime)) return status === "problem" ? "problem" : "offline";
+  return now - lastContactTime > ERROR_AFTER_MS ? "problem" : "offline";
+}
+
 function normalizeStatus(status) {
   return {
     online: "Online",
-    offline: "Erro",
-    problem: "Problema",
+    offline: "Offline",
+    problem: "Erro",
     unknown: "Sem dados"
   }[status] || status;
 }
@@ -83,6 +94,8 @@ function buildInventoryOnlyHost(inventory) {
 function enrichDevice(host, inventory, segment, metadata) {
   const assetType = metadata?.assetType || inferAssetType(host, inventory);
   const dataSources = uniqueSources(host?.source || "zabbix", inventory ? "ocs" : null);
+  const lastContactAt = host.lastSeenAt || host.collectedAt || inventory?.lastInventoryAt || inventory?.collectedAt;
+  const status = deriveContactStatus(host.status, lastContactAt);
 
   return {
     id: host.id,
@@ -94,8 +107,8 @@ function enrichDevice(host, inventory, segment, metadata) {
     assetType,
     type: assetType,
     ip: host.ip,
-    status: host.status,
-    statusLabel: normalizeStatus(host.status),
+    status,
+    statusLabel: normalizeStatus(status),
     segmentId: segment?.segmentId || DEFAULT_SEGMENT_ID,
     segmentName: segment?.segmentName || DEFAULT_SEGMENT_NAME,
     segmentGroupId: segment?.segmentGroupId || "",
@@ -108,8 +121,9 @@ function enrichDevice(host, inventory, segment, metadata) {
 }
 
 function buildManualDevice(asset, segment, metadata) {
-  const lastPingAt = asset.lastPingAt || new Date().toISOString();
+  const lastPingAt = asset.lastPingAt || null;
   const assetType = metadata?.assetType || asset.type;
+  const status = deriveContactStatus(asset.status, lastPingAt);
 
   return {
     id: asset.id,
@@ -120,24 +134,24 @@ function buildManualDevice(asset, segment, metadata) {
     assetType,
     type: assetType,
     ip: asset.ip,
-    status: asset.status,
-    statusLabel: normalizeStatus(asset.status),
+    status,
+    statusLabel: normalizeStatus(status),
     segmentId: segment?.segmentId || DEFAULT_SEGMENT_ID,
     segmentName: segment?.segmentName || DEFAULT_SEGMENT_NAME,
     segmentGroupId: segment?.segmentGroupId || "",
     ...backupMetadata(metadata),
-    uptimeHours: asset.status === "online" ? 1 : 0,
+    uptimeHours: status === "online" ? 1 : 0,
     metrics: null,
     lastPingAt,
     pingMessage:
-      asset.status === "online"
+      status === "online"
         ? "Ativo respondeu ao ultimo ping."
         : "Nao respondeu ao ping. Verifique se o IP mudou ou configure reserva DHCP.",
     history: [
-      { time: "08:00", status: asset.status },
-      { time: "09:00", status: asset.status },
-      { time: "10:00", status: asset.status },
-      { time: "11:00", status: asset.status }
+      { time: "08:00", status },
+      { time: "09:00", status },
+      { time: "10:00", status },
+      { time: "11:00", status }
     ],
     manualAsset: asset,
     hardware: {
@@ -173,9 +187,10 @@ function agentStatus(asset) {
     legacySeconds > 0 ? legacySeconds : configuredMinutes * 60
   );
   const thresholdSeconds = Math.max(configuredThreshold, Number(asset.intervalSeconds || 60) * 3);
-  return Date.now() - new Date(asset.lastSeenAt).getTime() <= thresholdSeconds * 1000
+  const connectionStatus = Date.now() - new Date(asset.lastSeenAt).getTime() <= thresholdSeconds * 1000
     ? "online"
     : "offline";
+  return deriveContactStatus(connectionStatus, asset.lastSeenAt);
 }
 
 function buildAgentDevice(asset, segment, metadata) {

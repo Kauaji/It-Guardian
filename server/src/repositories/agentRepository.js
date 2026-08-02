@@ -265,15 +265,44 @@ export async function findAgentAssetById(assetId) {
   return result.rows[0] ? assetFromRow(result.rows[0]) : null;
 }
 
-export async function updateAgentAssetAlias({ assetId, alias }) {
+export async function findAgentAssetByActivationId(activationId) {
   const result = await query(
     `
-      UPDATE agent_assets
-      SET machine_alias = $2, updated_at = NOW()
-      WHERE asset_id = $1
-      RETURNING *
+      SELECT assets.*
+      FROM agent_assets assets
+      INNER JOIN agent_enrollments enrollments ON enrollments.id = assets.enrollment_id
+      WHERE enrollments.activation_id = $1
+      ORDER BY assets.last_seen_at DESC NULLS LAST
+      LIMIT 1
     `,
-    [assetId, alias || null]
+    [activationId]
   );
   return result.rows[0] ? assetFromRow(result.rows[0]) : null;
+}
+
+export async function updateAgentAssetAlias({ assetId, alias }) {
+  return withTransaction(async (db) => {
+    const result = await db(
+      `
+        UPDATE agent_assets
+        SET machine_alias = $2, updated_at = NOW()
+        WHERE asset_id = $1
+        RETURNING *
+      `,
+      [assetId, alias || null]
+    );
+    if (!result.rows[0]) return null;
+
+    const enrollment = await db(
+      "SELECT activation_id FROM agent_enrollments WHERE id = $1 LIMIT 1",
+      [result.rows[0].enrollment_id]
+    );
+    if (enrollment.rows[0]?.activation_id) {
+      await db(
+        "UPDATE device_activations SET alias = $2, updated_at = NOW() WHERE id = $1",
+        [enrollment.rows[0].activation_id, alias || null]
+      );
+    }
+    return assetFromRow(result.rows[0]);
+  });
 }

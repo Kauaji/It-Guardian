@@ -13,8 +13,8 @@ const pingTimeFormatter = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", mi
 function statusLabel(status) {
   return {
     online: "Online",
-    offline: "Erro",
-    problem: "Problema",
+    offline: "Offline",
+    problem: "Erro",
     unknown: "Sem dados"
   }[status] || "Sem dados";
 }
@@ -22,8 +22,8 @@ function statusLabel(status) {
 function statusTone(status) {
   return {
     online: "online",
-    offline: "error",
-    problem: "unknown"
+    offline: "unknown",
+    problem: "error"
   }[status] || "unknown";
 }
 

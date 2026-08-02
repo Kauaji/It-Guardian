@@ -1,6 +1,7 @@
 import {
   completeAgentJob,
   createEnrollment,
+  getAgentSupportLink,
   listAgentEnrollments,
   receiveAgentInventory,
   revokeAgentEnrollment
@@ -9,6 +10,14 @@ import {
 function bearerToken(req) {
   const match = String(req.headers.authorization || "").match(/^Bearer\s+(.+)$/i);
   return match?.[1]?.trim() || "";
+}
+
+export async function supportLink(req, res, next) {
+  try {
+    res.json(await getAgentSupportLink({ token: bearerToken(req) }));
+  } catch (error) {
+    next(error);
+  }
 }
 
 export async function completeJob(req, res, next) {

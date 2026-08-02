@@ -4,6 +4,75 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-02 - Reparo do agente e ciclo real de manutencao
+
+### Instalador e agente 1.6.1
+
+- o instalador detecta a instalacao existente e oferece `Reparar ou atualizar`,
+  preservando chave, token, identificacao e configuracao da maquina;
+- a tarefa do coletor e recriada como `SYSTEM`, com gatilhos no boot e logon,
+  execucao em bateria, inicio assim que possivel e tentativas apos falha;
+- o loop do agente deixou de depender de uma espera longa: recarrega a
+  configuracao e retoma o heartbeat logo depois de suspensao ou hibernacao;
+- a coleta de Office e softwares foi ampliada para registros de maquina e
+  perfis de usuario carregados, sem criar exclusoes de antivirus.
+
+### Auditoria das anotacoes operacionais
+
+- o link `Abrir chamado` instalado no Windows agora recebe uma identificacao
+  assinada e limitada da ativacao; ao escolher `O problema e na minha maquina`,
+  o chamado usa automaticamente a maquina correta sem expor a chave do produto;
+- o modo de reparo renova esse link para instalacoes existentes e recria o
+  atalho publico com a identificacao atual;
+- maquinas sem contato ficam `Offline` durante os primeiros tres dias e passam
+  para `Erro` somente depois desse prazo, com a mesma regra em dashboard,
+  inventario e cards;
+- o nome fantasia passou a substituir o hostname no objeto compartilhado pelo
+  frontend, preservando o hostname apenas como dado tecnico e fallback;
+- plantas podem ser excluidas pelo botao vermelho da barra superior e o zoom
+  por roda/clique so captura a interacao quando a ferramenta de lupa esta ativa;
+- ordens nao finalizadas continuam visiveis nos meses seguintes; ordens
+  finalizadas permanecem visiveis ate o mes em que foram encerradas.
+
+### Ordens de servico e inventario
+
+- a entrada e saida de manutencao passaram a ser persistidas no backend;
+- criacao, vinculacao, troca de maquina, finalizacao e exclusao de OS agora
+  sincronizam o segmento de manutencao e o historico da maquina;
+- chamados publicos, sugestoes aceitas e OS geradas por preventiva usam o mesmo
+  ciclo de manutencao;
+- foram criadas as tabelas `maintenance_records` e `backup_assignments`, com
+  indices por maquina, OS e status;
+- o frontend deixou de simular localmente a manutencao e recarrega o estado
+  canonico do servidor.
+
+### Execucao e limites
+
+- sugestoes, preventivas e automatizacoes continuam usando a fila autenticada
+  de trabalhos do agente, com tipo permitido, timeout e limite de saida;
+- os testes validam enfileiramento, claim, resultado e historico, sem executar
+  um BAT arbitrario no computador de desenvolvimento;
+- o instalador faz upgrade preservando ativacao, mas autoatualizacao silenciosa
+  assinada ainda nao foi implementada;
+- SMART, temperatura, licencas e alguns dados de hardware continuam sujeitos ao
+  suporte de firmware, driver, Windows e politicas da organizacao.
+
+### Validacoes
+
+- 178 testes aprovados e 1 teste dependente de PostgreSQL real ignorado;
+- o teste integrado reproduziu criacao de OS, vinculacao posterior, entrada em
+  manutencao, desvinculacao e saida da manutencao;
+- lint, build de producao, arquitetura e `git diff --check` aprovados;
+- Inno Setup 6.7.3 compilou o instalador Windows 1.6.1;
+- SHA-256 do instalador:
+  `1D8D4C51626D1F4CDE8ED369F717C7CC254FA632D0898BA83912EA7087494C4E`.
+
+### Compatibilidade desta atualizacao
+
+- uma instalacao nova ja recebe o atalho identificado durante a ativacao;
+- uma instalacao anterior deve executar o instalador 1.6.1 e escolher
+  `Reparar ou atualizar` uma vez para renovar o atalho sem perder a ativacao.
+
 ## 2026-07-29 - Alias nos avisos e inventario ampliado do agente 1.5.0
 
 ### Entrega

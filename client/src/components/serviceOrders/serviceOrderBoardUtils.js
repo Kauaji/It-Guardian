@@ -71,6 +71,35 @@ export function getCurrentBrowserMonth() {
   return getMonthValue(new Date());
 }
 
+export function isServiceOrderVisibleInMonth(order, monthValue, finalStatusIds = []) {
+  if (!monthValue) return true;
+  const monthStart = new Date(`${monthValue}-01T00:00:00`);
+  if (Number.isNaN(monthStart.getTime())) return false;
+  const nextMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1);
+  const createdAt = new Date(order?.createdAt);
+  if (Number.isNaN(createdAt.getTime()) || createdAt >= nextMonth) return false;
+
+  const isFinal = finalStatusIds.includes(order?.status);
+  if (!isFinal) return true;
+
+  const closedAt = new Date(order?.closedAt || order?.updatedAt);
+  return !Number.isNaN(closedAt.getTime()) && closedAt >= monthStart;
+}
+
+export function buildServiceOrderMonthValues(orders = [], currentMonth = getCurrentBrowserMonth()) {
+  const values = orders.flatMap((order) => [getMonthValue(order?.createdAt), getMonthValue(order?.closedAt)]).filter(Boolean);
+  if (currentMonth) values.push(currentMonth);
+  if (!values.length) return [];
+  values.sort();
+  const first = new Date(`${values[0]}-01T00:00:00`);
+  const last = new Date(`${values.at(-1)}-01T00:00:00`);
+  const result = [];
+  for (const cursor = new Date(first); cursor <= last; cursor.setMonth(cursor.getMonth() + 1)) {
+    result.push(getMonthValue(cursor));
+  }
+  return result;
+}
+
 export function normalizeSearchText(value) {
   return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 }

@@ -8,6 +8,7 @@ import {
   updateProductKeyMonitoring
 } from "../repositories/productKeyRepository.js";
 import { getFrontendUrl } from "../config/environment.js";
+import { createPublicMachineToken } from "../domain/publicMachineToken.js";
 
 function badRequest(message) {
   const error = new Error(message);
@@ -99,12 +100,13 @@ export function validateActivationRequest(input) {
 export async function activateCollector(input) {
   const result = await activateCollectorRecord(validateActivationRequest(input));
   const publicAppUrl = process.env.PUBLIC_APP_URL?.replace(/\/$/, "") || getFrontendUrl();
+  const publicMachineToken = createPublicMachineToken(result.activation.id);
   return {
     activationId: result.activation.id,
     agentToken: result.token,
     intervalSeconds: 300,
     heartbeatPath: "/api/agents/heartbeat",
-    supportUrl: `${publicAppUrl}/abrir-chamado`,
+    supportUrl: `${publicAppUrl}/abrir-chamado?device=${encodeURIComponent(publicMachineToken)}`,
     monitoring: result.monitoring,
     ocsServerUrl: result.monitoring.ocsServerUrl,
     zabbixServer: result.monitoring.zabbixServer,

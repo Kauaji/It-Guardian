@@ -7,6 +7,7 @@ process.env.JWT_SECRET = "integration-test-secret-with-at-least-32-characters";
 process.env.NODE_ENV = "test";
 
 const { createApp } = await import("../src/app.js");
+const { query } = await import("../src/database.js");
 const { upsertAlert } = await import("../src/repositories/alertRepository.js");
 
 const trustedOrigin = "http://localhost:5173";
@@ -127,6 +128,23 @@ test("sugestão exige decisão humana, cria uma única OS e preserva rastreabili
   assert.equal(firstAccept.serviceOrder.source, "alert_suggestion");
   assert.ok(firstAccept.serviceOrder.id);
 
+  const activeMaintenance = await query(
+    "SELECT * FROM maintenance_records WHERE service_order_id = $1 AND status = 'active'",
+    [firstAccept.serviceOrder.id]
+  );
+  assert.equal(activeMaintenance.rowCount, 1, "aceitar o aviso deve iniciar a manutencao no backend");
+
+  const maintenanceSegment = await query(
+    `
+      SELECT segments.name
+      FROM device_segments devices
+      INNER JOIN inventory_segments segments ON segments.id = devices.segment_id
+      WHERE devices.device_id = $1
+    `,
+    [firstAccept.serviceOrder.assetId]
+  );
+  assert.match(maintenanceSegment.rows[0].name, /manuten/i);
+
   const secondAcceptResponse = await fetch(
     `${baseUrl}/api/service-order-suggestions/${acceptedId}/accept`,
     {
@@ -157,6 +175,91 @@ test("sugestão exige decisão humana, cria uma única OS e preserva rastreabili
       (entry) => entry.eventType === "alert_suggestion_accepted"
     )
   );
+
+  const technicianResponse = await fetch(
+    `${baseUrl}/api/service-orders/${firstAccept.serviceOrder.id}/technician`,
+    {
+      method: "PATCH",
+      headers: requestHeaders(cookie),
+      body: JSON.stringify({ assignedTechnicianName: "Tecnico Integracao" })
+    }
+  );
+  assert.equal(technicianResponse.status, 200);
+
+  const settingsResponse = await fetch(`${baseUrl}/api/service-orders/settings`, {
+    headers: { cookie }
+  });
+  assert.equal(settingsResponse.status, 200);
+  const serviceOrderSettings = (await settingsResponse.json()).settings;
+  const finalStatus = serviceOrderSettings.statuses.find((status) => status.isFinal);
+  assert.ok(finalStatus?.id);
+
+  const finishResponse = await fetch(
+    `${baseUrl}/api/service-orders/${firstAccept.serviceOrder.id}/status`,
+    {
+      method: "PATCH",
+      headers: requestHeaders(cookie),
+      body: JSON.stringify({ status: finalStatus.id })
+    }
+  );
+  assert.equal(finishResponse.status, 200);
+
+  const finishedMaintenance = await query(
+    "SELECT * FROM maintenance_records WHERE service_order_id = $1",
+    [firstAccept.serviceOrder.id]
+  );
+  assert.equal(finishedMaintenance.rows[0].status, "finished");
+  assert.ok(finishedMaintenance.rows[0].finished_at);
+
+  const assetHistory = await query(
+    "SELECT event_type, message FROM asset_history WHERE asset_id = $1 ORDER BY created_at ASC",
+    [firstAccept.serviceOrder.assetId]
+  );
+  assert.ok(assetHistory.rows.some((entry) => entry.event_type === "maintenance"));
+  assert.ok(assetHistory.rows.some((entry) => /retirada da manuten/i.test(entry.message)));
+
+  const createManualOrderResponse = await fetch(`${baseUrl}/api/service-orders`, {
+    method: "POST",
+    headers: requestHeaders(cookie),
+    body: JSON.stringify({ title: "OS para validar vinculacao posterior" })
+  });
+  assert.equal(createManualOrderResponse.status, 201);
+  const manualOrder = (await createManualOrderResponse.json()).serviceOrder;
+  const linkedAssetId = "integration-linked-asset";
+
+  const linkAssetResponse = await fetch(
+    `${baseUrl}/api/service-orders/${manualOrder.id}/asset`,
+    {
+      method: "PATCH",
+      headers: requestHeaders(cookie),
+      body: JSON.stringify({ assetId: linkedAssetId })
+    }
+  );
+  assert.equal(linkAssetResponse.status, 200);
+
+  const linkedMaintenance = await query(
+    "SELECT * FROM maintenance_records WHERE service_order_id = $1 AND status = 'active'",
+    [manualOrder.id]
+  );
+  assert.equal(linkedMaintenance.rowCount, 1, "vincular uma maquina deve iniciar manutencao");
+  assert.equal(linkedMaintenance.rows[0].asset_id, linkedAssetId);
+
+  const unlinkAssetResponse = await fetch(
+    `${baseUrl}/api/service-orders/${manualOrder.id}/asset`,
+    {
+      method: "PATCH",
+      headers: requestHeaders(cookie),
+      body: JSON.stringify({ assetId: null })
+    }
+  );
+  assert.equal(unlinkAssetResponse.status, 200);
+
+  const unlinkedMaintenance = await query(
+    "SELECT * FROM maintenance_records WHERE service_order_id = $1",
+    [manualOrder.id]
+  );
+  assert.equal(unlinkedMaintenance.rows[0].status, "finished");
+  assert.ok(unlinkedMaintenance.rows[0].finished_at);
 
   const rejectedId = pendingSuggestions[1].id;
   const rejectResponse = await fetch(

@@ -14810,6 +14810,21 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
   cursor: grab;
 }
 
+.floor-plan-canvas-wrap.tool-zoom,
+.floor-plan-canvas-wrap.tool-zoom .floor-plan-canvas {
+  cursor: zoom-in;
+}
+
+.floor-plan-delete-plan {
+  border-color: #fecaca;
+  color: #dc2626;
+}
+
+.floor-plan-delete-plan:hover {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
 .floor-plan-alignment-guide {
   pointer-events: none;
   stroke: #e11d8d;

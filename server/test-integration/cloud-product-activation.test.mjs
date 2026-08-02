@@ -200,7 +200,10 @@ test("ativacao cloud controla licencas, reinstalacao, revogacao e heartbeat", as
   assert.equal(first.status, 201);
   const firstBody = await first.json();
   assert.match(firstBody.agentToken, /^itg_/);
-  assert.equal(firstBody.supportUrl, "https://it-guardian-server.vercel.app/abrir-chamado");
+  const supportUrl = new URL(firstBody.supportUrl);
+  assert.equal(supportUrl.origin, "https://it-guardian-server.vercel.app");
+  assert.equal(supportUrl.pathname, "/abrir-chamado");
+  assert.match(supportUrl.searchParams.get("device"), /^[A-Za-z0-9._-]+$/);
   assert.equal(firstBody.organization.organizationName, "Empresa Teste");
   assert.deepEqual(firstBody.monitoring, { configured: true, ...monitoringA });
   assert.equal(firstBody.ocsServerUrl, monitoringA.ocsServerUrl);

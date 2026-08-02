@@ -2,6 +2,11 @@ import { addLog } from "../repositories/logRepository.js";
 import { addAssetHistory } from "../repositories/assetHistoryRepository.js";
 import { hasPermission } from "../permissions.js";
 import {
+  finishMaintenanceForAsset,
+  releaseBackupFromServiceOrder,
+  startMaintenanceForAsset
+} from "../repositories/assetLifecycleRepository.js";
+import {
   addServiceOrderHistory,
   createServiceOrder,
   deleteServiceOrder,
@@ -40,6 +45,50 @@ function validateStatus(status, settings) {
     error.statusCode = 400;
     throw error;
   }
+}
+
+async function startLinkedMaintenance(serviceOrder, user) {
+  if (!serviceOrder?.assetId) return null;
+
+  try {
+    return await startMaintenanceForAsset({
+      assetId: serviceOrder.assetId,
+      serviceOrderId: serviceOrder.id,
+      notes: `Manutencao iniciada pela OS ${serviceOrder.number}.`,
+      user
+    });
+  } catch (error) {
+    if (error.statusCode === 409) return null;
+    throw error;
+  }
+}
+
+async function syncServiceOrderMaintenance({ previous = null, serviceOrder, user, settings = null }) {
+  if (!serviceOrder) return;
+
+  if (previous?.assetId && previous.assetId !== serviceOrder.assetId) {
+    await finishMaintenanceForAsset({
+      serviceOrderId: serviceOrder.id,
+      notes: "Maquina desvinculada ou substituida na OS.",
+      user,
+      allowMissing: true
+    });
+  }
+
+  const resolvedSettings = settings || await getServiceOrderSettings();
+  const isFinal = serviceOrder.status === getFinalStatus(resolvedSettings).id;
+  if (isFinal) {
+    await releaseBackupFromServiceOrder({ serviceOrderId: serviceOrder.id, user, allowMissing: true });
+    await finishMaintenanceForAsset({
+      serviceOrderId: serviceOrder.id,
+      notes: "Manutencao encerrada com a finalizacao da OS.",
+      user,
+      allowMissing: true
+    });
+    return;
+  }
+
+  await startLinkedMaintenance(serviceOrder, user);
 }
 
 export async function list(req, res, next) {
@@ -94,6 +143,7 @@ export async function create(req, res, next) {
     validateCreatePayload(req.body);
 
     const serviceOrder = await createServiceOrder({ payload: req.body, user: req.user });
+    await syncServiceOrderMaintenance({ serviceOrder, user: req.user });
     await addLog({
       type: "service_order_create",
       message: `Service order created: ${serviceOrder.number}`,
@@ -109,6 +159,9 @@ export async function create(req, res, next) {
 
 export async function update(req, res, next) {
   try {
+    const previous = await findServiceOrderById(req.params.id, req.user);
+    if (!previous) return res.status(404).json({ message: "Ordem de servico nao encontrada." });
+
     const hasSectorPayload =
       Object.prototype.hasOwnProperty.call(req.body || {}, "sectorId") ||
       Object.prototype.hasOwnProperty.call(req.body || {}, "sectorName");
@@ -131,6 +184,7 @@ export async function update(req, res, next) {
 
     const serviceOrder = await updateServiceOrder({ id: req.params.id, payload: req.body, user: req.user });
     if (!serviceOrder) return res.status(404).json({ message: "Ordem de servico nao encontrada." });
+    await syncServiceOrderMaintenance({ previous, serviceOrder, user: req.user });
 
     await addLog({
       type: "service_order_update",
@@ -200,6 +254,9 @@ export async function assignTechnician(req, res, next) {
 
 export async function linkAsset(req, res, next) {
   try {
+    const previous = await findServiceOrderById(req.params.id, req.user);
+    if (!previous) return res.status(404).json({ message: "Ordem de servico nao encontrada." });
+
     const payload = {
       assetId: req.body?.assetId ?? req.body?.asset_id ?? null,
       environmentId: req.body?.environmentId ?? req.body?.environment_id,
@@ -211,6 +268,7 @@ export async function linkAsset(req, res, next) {
 
     const serviceOrder = await updateServiceOrder({ id: req.params.id, payload, user: req.user });
     if (!serviceOrder) return res.status(404).json({ message: "Ordem de servico nao encontrada." });
+    await syncServiceOrderMaintenance({ previous, serviceOrder, user: req.user });
 
     await addLog({
       type: "service_order_asset",
@@ -268,6 +326,7 @@ export async function changeStatus(req, res, next) {
     }
 
     const serviceOrder = await updateServiceOrderStatus({ id: req.params.id, status, user: req.user });
+    await syncServiceOrderMaintenance({ previous: current, serviceOrder, user: req.user, settings });
     await addLog({
       type: "service_order_status",
       message: `Service order status changed: ${serviceOrder.number}`,
@@ -326,6 +385,13 @@ export async function remove(req, res, next) {
         message: "Esta OS possui uma maquina Backup em uso. Devolva o Backup ou finalize a OS antes de excluir."
       });
     }
+
+    await finishMaintenanceForAsset({
+      serviceOrderId: current.id,
+      notes: "Manutencao encerrada com a exclusao da OS.",
+      user: req.user,
+      allowMissing: true
+    });
 
     const serviceOrder = await deleteServiceOrder(req.params.id, req.user);
 

@@ -1,5 +1,5 @@
 #define MyAppName "IT Guardian"
-#define MyAppVersion "1.5.0"
+#define MyAppVersion "1.6.1"
 #define MyAppPublisher "IT Guardian"
 #ifndef ApiBaseUrl
   #define ApiBaseUrl "https://it-guardian-server.vercel.app"
@@ -53,12 +53,50 @@ Type: filesandordirs; Name: "{app}"
 
 [Code]
 var
+  RepairModePage: TInputOptionWizardPage;
   ProductKeyPage: TInputQueryWizardPage;
+  ExistingConfig: AnsiString;
+  ExistingConfigAvailable: Boolean;
   ActivatedProductKey: string;
   AgentToken: string;
   SupportUrl: string;
   MachineFingerprint: string;
   IntervalSeconds: Integer;
+
+function JsonConfigStringValue(Json, Name: string): string;
+var
+  Marker: string;
+  Position: Integer;
+  StartPosition: Integer;
+  EndPosition: Integer;
+begin
+  Result := '';
+  Marker := '"' + Name + '"';
+  Position := Pos(Marker, Json);
+  if Position = 0 then Exit;
+  Position := Position + Length(Marker);
+  while (Position <= Length(Json)) and (Json[Position] <> ':') do
+    Position := Position + 1;
+  if Position > Length(Json) then Exit;
+  Position := Position + 1;
+  while (Position <= Length(Json)) and
+    ((Json[Position] = ' ') or (Json[Position] = #9)) do
+    Position := Position + 1;
+  if (Position > Length(Json)) or (Json[Position] <> '"') then Exit;
+  StartPosition := Position + 1;
+  EndPosition := StartPosition;
+  while (EndPosition <= Length(Json)) and (Json[EndPosition] <> '"') do
+    EndPosition := EndPosition + 1;
+  Result := Copy(Json, StartPosition, EndPosition - StartPosition);
+end;
+
+function IsRepairInstall(): Boolean;
+begin
+  if not ExistingConfigAvailable then
+    Result := False
+  else
+    Result := RepairModePage.SelectedValueIndex = 0;
+end;
 
 function JsonEscape(Value: string): string;
 begin
@@ -184,24 +222,54 @@ begin
 end;
 
 procedure InitializeWizard();
+var
+  ProductKeyAfterId: Integer;
+  ExistingConfigPath: string;
 begin
+  ExistingConfigPath := ExpandConstant('{commonappdata}\ITGuardian\config.json');
+  ExistingConfig := '';
+  ExistingConfigAvailable :=
+    LoadStringFromFile(ExistingConfigPath, ExistingConfig) and
+    (JsonConfigStringValue(ExistingConfig, 'agentToken') <> '');
+
+  ProductKeyAfterId := wpWelcome;
+  if ExistingConfigAvailable then
+  begin
+    RepairModePage := CreateInputOptionPage(
+      wpWelcome,
+      'Manutencao do IT Guardian',
+      'Escolha como continuar',
+      'A instalacao atual foi detectada. O reparo atualiza os arquivos, recupera o coletor e preserva a ativacao.',
+      True,
+      False
+    );
+    RepairModePage.Add('Reparar ou atualizar a instalacao existente (recomendado)');
+    RepairModePage.Add('Reativar este computador com uma nova chave');
+    RepairModePage.SelectedValueIndex := 0;
+    ProductKeyAfterId := RepairModePage.ID;
+    SupportUrl := JsonConfigStringValue(ExistingConfig, 'supportUrl');
+  end;
+
   ProductKeyPage := CreateInputQueryPage(
-    wpWelcome,
+    ProductKeyAfterId,
     'Ativar o IT Guardian',
     'Informe a chave de produto',
     'A chave vincula este computador a sua organizacao. Nenhuma outra configuracao e necessaria.'
   );
   ProductKeyPage.Add('Chave de produto:', False);
+  ProductKeyPage.Values[0] := '';
   MachineFingerprint := ReadMachineFingerprint();
   ActivatedProductKey := '';
   AgentToken := '';
-  SupportUrl := '';
+  if not ExistingConfigAvailable then
+    SupportUrl := '';
   IntervalSeconds := 300;
 end;
 
 function ShouldSkipPage(PageID: Integer): Boolean;
 begin
   Result :=
+    ((PageID = ProductKeyPage.ID) and IsRepairInstall()) or
     (PageID = wpSelectDir) or
     (PageID = wpSelectProgramGroup) or
     (PageID = wpSelectTasks);
@@ -234,20 +302,28 @@ begin
   if CurStep <> ssPostInstall then Exit;
 
   ForceDirectories(ExpandConstant('{app}'));
-  ConfigJson :=
-    '{' + #13#10 +
-    '  "serverUrl": "{#ApiBaseUrl}",' + #13#10 +
-    '  "supportUrl": "' + JsonEscape(SupportUrl) + '",' + #13#10 +
-    '  "agentToken": "' + JsonEscape(AgentToken) + '",' + #13#10 +
-    '  "intervalSeconds": ' + IntToStr(IntervalSeconds) + ',' + #13#10 +
-    '  "machineId": "' + JsonEscape(MachineFingerprint) + '",' + #13#10 +
-    '  "machineAlias": "",' + #13#10 +
-    '  "environment": "",' + #13#10 +
-    '  "group": "",' + #13#10 +
-    '  "segment": "",' + #13#10 +
-    '  "includeLoggedUser": true' + #13#10 +
-    '}';
-  SaveStringToFile(ExpandConstant('{app}\config.json'), ConfigJson, False);
+  if IsRepairInstall() then
+  begin
+    if not FileExists(ExpandConstant('{app}\config.json')) then
+      RaiseException('A configuracao existente nao foi encontrada durante o reparo.');
+  end
+  else
+  begin
+    ConfigJson :=
+      '{' + #13#10 +
+      '  "serverUrl": "{#ApiBaseUrl}",' + #13#10 +
+      '  "supportUrl": "' + JsonEscape(SupportUrl) + '",' + #13#10 +
+      '  "agentToken": "' + JsonEscape(AgentToken) + '",' + #13#10 +
+      '  "intervalSeconds": ' + IntToStr(IntervalSeconds) + ',' + #13#10 +
+      '  "machineId": "' + JsonEscape(MachineFingerprint) + '",' + #13#10 +
+      '  "machineAlias": "",' + #13#10 +
+      '  "environment": "",' + #13#10 +
+      '  "group": "",' + #13#10 +
+      '  "segment": "",' + #13#10 +
+      '  "includeLoggedUser": true' + #13#10 +
+      '}';
+    SaveStringToFile(ExpandConstant('{app}\config.json'), ConfigJson, False);
+  end;
 
   FinalizeParameters :=
     '-NoProfile -ExecutionPolicy Bypass -File "' +

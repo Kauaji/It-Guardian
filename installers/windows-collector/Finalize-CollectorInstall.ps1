@@ -36,6 +36,39 @@ if (-not (Test-Path -LiteralPath $configPath)) {
 if (-not (Test-Path -LiteralPath $collectorPath)) {
   throw "Executavel do coletor nao encontrado."
 }
+
+$config = Get-Content -LiteralPath $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
+if (-not $config.serverUrl -or -not $config.agentToken) {
+  throw "A configuracao nao contem servidor e token do agente."
+}
+
+try {
+  $supportResponse = Invoke-RestMethod `
+    -Uri ("{0}/api/agents/support-link" -f $config.serverUrl.TrimEnd('/')) `
+    -Headers @{ Authorization = "Bearer $($config.agentToken)" } `
+    -Method Get `
+    -TimeoutSec 30
+  if (-not $supportResponse.supportUrl) {
+    throw "O servidor nao retornou o link de suporte."
+  }
+  $config.supportUrl = [string]$supportResponse.supportUrl
+  $config | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $configPath -Encoding UTF8
+  Write-InstallLog "Link publico identificado renovado."
+} catch {
+  if (-not $config.supportUrl) {
+    throw "Nao foi possivel obter o link identificado de abertura de chamado: $($_.Exception.Message)"
+  }
+  Write-InstallLog "AVISO: link identificado nao renovado; mantendo configuracao existente. $($_.Exception.Message)"
+}
+
+$shortcutPath = Join-Path ([Environment]::GetFolderPath("CommonDesktopDirectory")) "Abrir chamado - IT Guardian.lnk"
+$shell = New-Object -ComObject WScript.Shell
+$shortcut = $shell.CreateShortcut($shortcutPath)
+$shortcut.TargetPath = [string]$config.supportUrl
+$shortcut.WorkingDirectory = $resolvedDirectory
+$shortcut.IconLocation = "$collectorPath,0"
+$shortcut.Save()
+Write-InstallLog "Atalho publico atualizado com a identidade deste computador."
 Write-InstallLog "Coletor nativo selecionado; integracoes externas nao fazem parte do instalador comum."
 
 $configAcl = New-Object System.Security.AccessControl.FileSecurity
@@ -52,23 +85,52 @@ foreach ($sidValue in @("S-1-5-18", "S-1-5-32-544")) {
 Set-Acl -LiteralPath $configPath -AclObject $configAcl
 Write-InstallLog "ACL da configuracao aplicada."
 
-$taskScheduler = Join-Path $env:WINDIR "System32\schtasks.exe"
-$taskCommand = "`"$collectorPath`" --collector --config `"$configPath`""
-& $taskScheduler `
-  /Create `
-  /TN $taskName `
-  /TR $taskCommand `
-  /SC ONSTART `
-  /RU SYSTEM `
-  /RL HIGHEST `
-  /F | Out-Null
-if ($LASTEXITCODE -ne 0) {
-  throw "Nao foi possivel registrar a tarefa do coletor (codigo $LASTEXITCODE)."
+foreach ($serviceName in @("Schedule", "Winmgmt")) {
+  $service = Get-Service -Name $serviceName -ErrorAction Stop
+  if ($service.Status -ne "Running") {
+    Start-Service -Name $serviceName
+    $service.WaitForStatus("Running", [TimeSpan]::FromSeconds(20))
+  }
+  Write-InstallLog "Servico obrigatorio $serviceName validado."
 }
-Write-InstallLog "Tarefa de inicializacao registrada."
 
+Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
 Stop-ScheduledTask -TaskName $legacyTaskName -ErrorAction SilentlyContinue
 Unregister-ScheduledTask -TaskName $legacyTaskName -Confirm:$false -ErrorAction SilentlyContinue
+
+Get-CimInstance Win32_Process -Filter "Name = 'ITGuardian.exe'" -ErrorAction SilentlyContinue |
+  Where-Object { $_.ExecutablePath -eq $collectorPath } |
+  ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+
+$action = New-ScheduledTaskAction `
+  -Execute $collectorPath `
+  -Argument "--collector --config `"$configPath`""
+$triggers = @(
+  (New-ScheduledTaskTrigger -AtStartup),
+  (New-ScheduledTaskTrigger -AtLogOn)
+)
+$principal = New-ScheduledTaskPrincipal `
+  -UserId "SYSTEM" `
+  -LogonType ServiceAccount `
+  -RunLevel Highest
+$settings = New-ScheduledTaskSettingsSet `
+  -AllowStartIfOnBatteries `
+  -DontStopIfGoingOnBatteries `
+  -StartWhenAvailable `
+  -RestartCount 999 `
+  -RestartInterval ([TimeSpan]::FromMinutes(1)) `
+  -ExecutionTimeLimit ([TimeSpan]::Zero) `
+  -MultipleInstances IgnoreNew
+Register-ScheduledTask `
+  -TaskName $taskName `
+  -Action $action `
+  -Trigger $triggers `
+  -Principal $principal `
+  -Settings $settings `
+  -Description "Mantem o inventario e os trabalhos remotos do IT Guardian ativos." `
+  -Force | Out-Null
+Write-InstallLog "Tarefa resiliente registrada para inicializacao, logon, bateria e reinicio automatico."
 
 New-ItemProperty `
   -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" `
@@ -83,9 +145,6 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-InstallLog "Primeiro heartbeat concluido."
 
-& $taskScheduler /Run /TN $taskName | Out-Null
-if ($LASTEXITCODE -ne 0) {
-  throw "Nao foi possivel iniciar a tarefa do coletor (codigo $LASTEXITCODE)."
-}
+Start-ScheduledTask -TaskName $taskName
 Start-Process -FilePath $collectorPath -ArgumentList @("--tray", "--config", "`"$configPath`"")
 Write-InstallLog "Instalacao finalizada com sucesso."

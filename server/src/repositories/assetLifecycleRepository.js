@@ -455,7 +455,7 @@ export async function assignBackupToServiceOrder({ serviceOrderId, backupAssetId
 export async function releaseBackupFromServiceOrder({ serviceOrderId, user, allowMissing = false }) {
   const order = await findServiceOrderRaw(serviceOrderId);
   const active = await findActiveBackupAssignmentByOrder(serviceOrderId);
-  const backupAssetId = active.backupAssetId || order.backup_asset_id;
+  const backupAssetId = active?.backupAssetId || order?.backup_asset_id;
 
   if (!backupAssetId) {
     if (allowMissing) return null;

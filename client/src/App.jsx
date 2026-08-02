@@ -276,8 +276,8 @@ function metricClass(value) {
 function statusClass(status) {
   return {
     online: "ok",
-    offline: "danger",
-    problem: "warning"
+    offline: "warning",
+    problem: "danger"
   }[status];
 }
 
@@ -584,16 +584,18 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
         const rawSegmentId = device.segmentId;
         const rawSegmentName = device.segmentName;
         const isGlobalUnorganized = !isAvailableBackup && defaultSegmentIds.has(rawSegmentId);
+        const displayName =
+          machineAliases[device.id]?.trim() ||
+          device.machineAlias ||
+          device.agent?.machineAlias ||
+          device.name ||
+          device.hostname ||
+          device.id;
 
         return {
           ...device,
-          displayName:
-            machineAliases[device.id]?.trim() ||
-            device.machineAlias ||
-            device.agent?.machineAlias ||
-            device.name ||
-            device.hostname ||
-            device.id,
+          name: displayName,
+          displayName,
           backupRealSegmentId: device.backupOriginalSegmentId || rawSegmentId,
           backupRealSegmentName: device.backupOriginalSegmentName || rawSegmentName,
           segmentId: isAvailableBackup ? backupSegmentId : rawSegmentId,
@@ -860,19 +862,10 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
 
   async function handleAcceptSuggestion(suggestionId) {
     try {
-      const acceptedSuggestion = serviceOrderSuggestions.find((suggestion) => suggestion.id === suggestionId);
       const result = await acceptServiceOrderSuggestion(token, suggestionId);
       const serviceOrder = result.serviceOrder;
-      const assetId = serviceOrder?.assetId || acceptedSuggestion?.assetId;
-      const linkedMachine = assetId
-        ? allDevices.find((device) => String(device.id) === String(assetId))
-        : null;
 
       setServiceOrderSuggestions((current) => current.filter((suggestion) => suggestion.id !== suggestionId));
-
-      if (linkedMachine && serviceOrder?.id) {
-        await ensureMachineInMaintenanceForServiceOrder(linkedMachine, serviceOrder);
-      }
 
       notify(`OS criada a partir do aviso: ${serviceOrder?.number || "registrada"}.`, "ok");
       await loadData(true);
@@ -1241,11 +1234,8 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     try {
       const response = await createServiceOrder(token, payload);
       setServiceOrders((current) => [response.serviceOrder, ...current]);
-      if (response.serviceOrder.assetId) {
-        const linkedMachine = findDecoratedDevice(response.serviceOrder.assetId);
-        await ensureMachineInMaintenanceForServiceOrder(linkedMachine, response.serviceOrder);
-      }
       notify(`Ordem ${response.serviceOrder.number} criada.`, "ok");
+      await loadData(true);
       return response.serviceOrder;
     } catch (error) {
       notify(error.message, "danger");
@@ -1258,16 +1248,12 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   async function handleUpdateServiceOrder(id, payload) {
     setServiceOrderSaving(true);
     try {
-      const previousOrder = serviceOrders.find((order) => order.id === id);
       const response = await updateServiceOrder(token, id, payload);
       setServiceOrders((current) =>
         current.map((order) => (order.id === id ? response.serviceOrder : order))
       );
-      if (payload.assetId && payload.assetId !== previousOrder?.assetId) {
-        const linkedMachine = findDecoratedDevice(payload.assetId);
-        await ensureMachineInMaintenanceForServiceOrder(linkedMachine, response.serviceOrder);
-      }
       notify("Ordem de Serviço atualizada.", "ok");
+      await loadData(true);
       return response.serviceOrder;
     } catch (error) {
       notify(error.message, "danger");
@@ -3008,7 +2994,8 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
               <section className="summary-grid">
                 <SummaryCard icon={Server} label="Dispositivos" value={summary.totalDevices} />
                 <SummaryCard icon={ShieldCheck} label="Online" value={summary.online} tone="ok" />
-                <SummaryCard icon={WifiOff} label="Erro" value={summary.offline} tone="danger" />
+                <SummaryCard icon={WifiOff} label="Offline" value={summary.offline} tone="warning" />
+                <SummaryCard icon={AlertTriangle} label="Erro" value={summary.problem} tone="danger" />
                 <SummaryCard icon={AlertTriangle} label="Críticos" value={summary.criticalAlerts} tone="danger" />
               </section>
             )}
@@ -3021,8 +3008,8 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
               <select value={status} onChange={(event) => setStatus(event.target.value)}>
                 <option value="">Todos os status</option>
                 <option value="online">Online</option>
-                <option value="problem">Problema</option>
-                <option value="offline">Erro</option>
+                <option value="offline">Offline</option>
+                <option value="problem">Erro</option>
               </select>
             </section>
 

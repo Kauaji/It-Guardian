@@ -28,13 +28,14 @@ import ServiceOrderCard from "./ServiceOrderCard.jsx";
 import SettingsAccordionSection from "../settings/SettingsAccordionSection.jsx";
 import {
   buildServiceOrderNumberPreview,
+  buildServiceOrderMonthValues,
   defaultPriorityColors,
   defaultServiceOrderSettings,
   formatMonthFilterLabel,
   formatShortMonth,
   generalSector,
   getCurrentBrowserMonth,
-  getMonthValue,
+  isServiceOrderVisibleInMonth,
   maxServiceOrderStatuses,
   mergeServiceOrderSettings,
   normalizeSearchText,
@@ -111,12 +112,16 @@ export default function ServiceOrdersBoard({
     () => normalizeStatuses(serviceOrderSettings.statuses),
     [serviceOrderSettings.statuses]
   );
+  const finalStatusIds = useMemo(
+    () => configuredStatuses.filter((status) => status.isFinal).map((status) => status.id),
+    [configuredStatuses]
+  );
   const availableSectors = useMemo(() => normalizeSectorList(sectors), [sectors]);
   const monthFilteredServiceOrders = useMemo(
     () => monthFilter
-      ? serviceOrders.filter((order) => getMonthValue(order.createdAt) === monthFilter)
+      ? serviceOrders.filter((order) => isServiceOrderVisibleInMonth(order, monthFilter, finalStatusIds))
       : serviceOrders,
-    [serviceOrders, monthFilter]
+    [finalStatusIds, serviceOrders, monthFilter]
   );
   const sectorFilteredServiceOrders = useMemo(() => {
     if (sectorFilter === "all" && canViewAllSectors) return monthFilteredServiceOrders;
@@ -188,7 +193,7 @@ export default function ServiceOrdersBoard({
     });
   }, [assetById, catalogFilteredServiceOrders, orderSearch]);
   const availableMonthValues = useMemo(
-    () => [...new Set(serviceOrders.map((order) => getMonthValue(order.createdAt)).filter(Boolean))].sort(),
+    () => buildServiceOrderMonthValues(serviceOrders),
     [serviceOrders]
   );
   const availableYears = useMemo(

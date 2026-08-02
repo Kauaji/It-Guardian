@@ -15,8 +15,8 @@ using System.Windows.Forms;
 [assembly: System.Reflection.AssemblyDescription("Inventario e presenca do IT Guardian")]
 [assembly: System.Reflection.AssemblyCompany("IT Guardian")]
 [assembly: System.Reflection.AssemblyProduct("IT Guardian")]
-[assembly: System.Reflection.AssemblyVersion("1.5.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.5.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.6.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.6.0.0")]
 
 namespace ITGuardian.Windows
 {
@@ -63,7 +63,7 @@ namespace ITGuardian.Windows
 
     internal static class Program
     {
-        private const string AgentVersion = "1.5.0";
+        private const string AgentVersion = "1.6.0";
         private const int MaximumOutputLength = 65536;
 
         [STAThread]
@@ -161,9 +161,24 @@ namespace ITGuardian.Windows
                     if (runOnce) throw;
                 }
 
-                if (!runOnce) Thread.Sleep(TimeSpan.FromSeconds(config.intervalSeconds));
+                if (!runOnce)
+                {
+                    WaitForNextHeartbeat(config.intervalSeconds);
+                    config = ReadConfig(configPath);
+                }
             }
             while (!runOnce);
+        }
+
+        private static void WaitForNextHeartbeat(int intervalSeconds)
+        {
+            DateTime dueAt = DateTime.UtcNow.AddSeconds(intervalSeconds);
+            while (DateTime.UtcNow < dueAt)
+            {
+                TimeSpan remaining = dueAt - DateTime.UtcNow;
+                int waitMilliseconds = (int)Math.Min(5000, Math.Max(250, remaining.TotalMilliseconds));
+                Thread.Sleep(waitMilliseconds);
+            }
         }
 
         private static void SendInventory(AgentConfig config)
@@ -795,7 +810,70 @@ namespace ITGuardian.Windows
                 office["architecture"] = Convert.ToString(platform) ?? "";
             }
             catch { }
+            if (string.IsNullOrWhiteSpace(Convert.ToString(office.ContainsKey("name") ? office["name"] : "")))
+            {
+                CollectOfficeFromUninstallRegistry(office);
+            }
             return office;
+        }
+
+        private static void CollectOfficeFromUninstallRegistry(Dictionary<string, object> office)
+        {
+            RegistryHive[] hives = new RegistryHive[] { RegistryHive.LocalMachine, RegistryHive.Users };
+            RegistryView[] views = new RegistryView[] { RegistryView.Registry64, RegistryView.Registry32 };
+            foreach (RegistryHive hive in hives)
+            {
+                foreach (RegistryView view in views)
+                {
+                    try
+                    {
+                        using (RegistryKey baseKey = RegistryKey.OpenBaseKey(hive, view))
+                        {
+                            List<string> roots = new List<string>();
+                            if (hive == RegistryHive.LocalMachine)
+                            {
+                                roots.Add(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall");
+                            }
+                            else
+                            {
+                                foreach (string sid in baseKey.GetSubKeyNames())
+                                {
+                                    if (sid.StartsWith("S-1-5-", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        roots.Add(sid + @"\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall");
+                                    }
+                                }
+                            }
+
+                            foreach (string rootPath in roots)
+                            {
+                                using (RegistryKey root = baseKey.OpenSubKey(rootPath))
+                                {
+                                    if (root == null) continue;
+                                    foreach (string subKeyName in root.GetSubKeyNames())
+                                    {
+                                        using (RegistryKey item = root.OpenSubKey(subKeyName))
+                                        {
+                                            if (item == null) continue;
+                                            string name = Convert.ToString(item.GetValue("DisplayName")) ?? "";
+                                            if (name.IndexOf("Microsoft 365", StringComparison.OrdinalIgnoreCase) < 0 &&
+                                                name.IndexOf("Microsoft Office", StringComparison.OrdinalIgnoreCase) < 0)
+                                            {
+                                                continue;
+                                            }
+                                            office["name"] = name.Trim();
+                                            office["version"] = Convert.ToString(item.GetValue("DisplayVersion")) ?? "";
+                                            office["architecture"] = view == RegistryView.Registry64 ? "x64" : "x86";
+                                            return;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch { }
+                }
+            }
         }
 
         private static List<Dictionary<string, object>> CollectPhysicalDisks(long systemTotal, long systemFree)
@@ -992,6 +1070,7 @@ namespace ITGuardian.Windows
                 @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
                 unique
             );
+            CollectSoftwareForLoadedUsers(unique);
             List<Dictionary<string, object>> software = new List<Dictionary<string, object>>(unique.Values);
             software.Sort(delegate(Dictionary<string, object> left, Dictionary<string, object> right)
             {
@@ -1003,6 +1082,33 @@ namespace ITGuardian.Windows
             });
             if (software.Count > 500) software.RemoveRange(500, software.Count - 500);
             return software;
+        }
+
+        private static void CollectSoftwareForLoadedUsers(
+            Dictionary<string, Dictionary<string, object>> target
+        )
+        {
+            RegistryView[] views = new RegistryView[] { RegistryView.Registry64, RegistryView.Registry32 };
+            foreach (RegistryView view in views)
+            {
+                try
+                {
+                    using (RegistryKey users = RegistryKey.OpenBaseKey(RegistryHive.Users, view))
+                    {
+                        foreach (string sid in users.GetSubKeyNames())
+                        {
+                            if (!sid.StartsWith("S-1-5-", StringComparison.OrdinalIgnoreCase)) continue;
+                            CollectSoftwareRegistry(
+                                RegistryHive.Users,
+                                view,
+                                sid + @"\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+                                target
+                            );
+                        }
+                    }
+                }
+                catch { }
+            }
         }
 
         private static void CollectSoftwareRegistry(

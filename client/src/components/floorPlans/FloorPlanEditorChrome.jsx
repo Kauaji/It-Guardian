@@ -6,6 +6,7 @@ import {
   Pencil,
   Redo2,
   Save,
+  Search,
   Trash2,
   Undo2,
   Zap
@@ -26,7 +27,11 @@ export function FloorPlanTopbar({
   onToggleGrid,
   isEditing,
   onEdit,
-  canEdit = true
+  canEdit = true,
+  zoomMode = false,
+  onToggleZoom,
+  onDeletePlan,
+  canDelete = false
 }) {
   return (
     <header className="floor-plan-editor-topbar">
@@ -49,6 +54,18 @@ export function FloorPlanTopbar({
           <button className={mode === "2d" ? "active" : ""} type="button" onClick={() => onModeChange("2d")}>2D</button>
           <button className={mode === "3d" ? "active" : ""} type="button" onClick={() => onModeChange("3d")}>3D</button>
         </div>
+
+        {mode === "2d" ? (
+          <button
+            className={`icon-button ${zoomMode ? "active" : ""}`}
+            type="button"
+            onClick={onToggleZoom}
+            title={zoomMode ? "Desativar zoom" : "Ativar zoom"}
+            aria-pressed={zoomMode}
+          >
+            <Search size={17} />
+          </button>
+        ) : null}
 
         {isEditing && <div className="floor-plan-top-tools" aria-label="Ferramentas da planta">
           <button className={selectedTool === "select" ? "active" : ""} type="button" onClick={() => onToolChange("select")} title="Selecionar">
@@ -74,6 +91,16 @@ export function FloorPlanTopbar({
         ) : canEdit ? (
           <button className="icon-button" type="button" onClick={onEdit} title="Editar planta">
             <Pencil size={18} />
+          </button>
+        ) : null}
+        {canDelete ? (
+          <button
+            className="icon-button floor-plan-delete-plan"
+            type="button"
+            onClick={onDeletePlan}
+            title="Excluir planta"
+          >
+            <Trash2 size={18} />
           </button>
         ) : null}
       </div>

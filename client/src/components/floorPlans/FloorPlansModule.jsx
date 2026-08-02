@@ -1377,6 +1377,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
   const [future, setFuture] = useState([]);
   const [error, setError] = useState("");
   const [canvasViewBox, setCanvasViewBox] = useState(null);
+  const [zoomMode, setZoomMode] = useState(false);
   const [spacePressed, setSpacePressed] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
   const [paintDraft, setPaintDraft] = useState(null);
@@ -1653,11 +1654,20 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
     try {
       await deleteFloorPlan(token, plan.id);
       setPlans((current) => current.filter((entry) => entry.id !== plan.id));
+      if (editor?.plan?.id === plan.id) {
+        setEditor(null);
+        setSelected(null);
+        setSelectedObjectIds([]);
+        setPlacement(null);
+        setPaintDraft(null);
+        setZoomMode(false);
+        setView("list");
+      }
       notify?.("Planta removida.", "ok");
     } catch (requestError) {
       notify?.(requestError.message, "danger");
     }
-  }, [notify, token]);
+  }, [editor?.plan?.id, notify, token]);
 
   const removeEntity = useCallback((target) => {
     if (!target) return;
@@ -2099,6 +2109,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
   }, [paintDraft?.cells?.length]);
 
   const handleCanvasWheel = useCallback((event) => {
+    if (!zoomMode) return;
     event.preventDefault();
     const floor = getActiveFloor(editor, activeFloorId);
     if (!floor) return;
@@ -2119,7 +2130,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
       width: nextWidth,
       height: nextHeight
     });
-  }, [activeFloorId, canvasViewBox, editor, getSvgPoint]);
+  }, [activeFloorId, canvasViewBox, editor, getSvgPoint, zoomMode]);
 
   const buildRoomPlacementPreview = useCallback((template, point, rotation = 0) => {
     const floor = getActiveFloor(editor, activeFloorId);
@@ -2370,6 +2381,30 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
       setIsPanning(true);
       return;
     }
+    if (zoomMode && event.button === 0) {
+      event.preventDefault();
+      event.stopPropagation();
+      const floor = getActiveFloor(editor, activeFloorId);
+      if (!floor) return;
+      const floorWidth = Number(floor.width || editor?.plan?.width || DEFAULT_PLAN_SIZE.width);
+      const floorHeight = Number(floor.height || editor?.plan?.height || DEFAULT_PLAN_SIZE.height);
+      const current = canvasViewBox || { x: 0, y: 0, width: floorWidth, height: floorHeight };
+      const pointer = getSvgPoint(event);
+      const factor = event.shiftKey ? 1.22 : 0.82;
+      const nextWidth = clamp(current.width * factor, floorWidth * 0.2, floorWidth * 1.4);
+      const nextHeight = clamp(current.height * factor, floorHeight * 0.2, floorHeight * 1.4);
+      const widthRatio = nextWidth / current.width;
+      const heightRatio = nextHeight / current.height;
+      const paddingX = floorWidth * 0.12;
+      const paddingY = floorHeight * 0.12;
+      setCanvasViewBox({
+        x: clamp(pointer.x - (pointer.x - current.x) * widthRatio, floorWidth - nextWidth - paddingX, paddingX),
+        y: clamp(pointer.y - (pointer.y - current.y) * heightRatio, floorHeight - nextHeight - paddingY, paddingY),
+        width: nextWidth,
+        height: nextHeight
+      });
+      return;
+    }
     if (!isEditing) return;
     if (paintDraft) {
       event.preventDefault();
@@ -2394,7 +2429,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
       setSelected(null);
       setSelectedObjectIds([]);
     }
-  }, [activeFloorId, applyPaintAtPoint, canvasViewBox, confirmRoomPlacement, editor, getSvgPoint, isEditing, paintDraft, placement, selectedTool, spacePressed]);
+  }, [activeFloorId, applyPaintAtPoint, canvasViewBox, confirmRoomPlacement, editor, getSvgPoint, isEditing, paintDraft, placement, selectedTool, spacePressed, zoomMode]);
 
   const beginDrag = useCallback((event, type, id) => {
     if (selectedTool !== "select" || placement || paintDraft) return;
@@ -3164,7 +3199,10 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
         title={`Planta ${activeTab?.name || editor?.plan?.name || "principal"}`}
         onSave={persistEditor}
         mode={mode}
-        onModeChange={setMode}
+        onModeChange={(nextMode) => {
+          setMode(nextMode);
+          if (nextMode !== "2d") setZoomMode(false);
+        }}
         canUndo={past.length > 0}
         canRedo={future.length > 0}
         onUndo={undo}
@@ -3176,6 +3214,10 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
         isEditing={isEditing}
         onEdit={() => setIsEditing(true)}
         canEdit={permissions.update}
+        zoomMode={zoomMode}
+        onToggleZoom={() => setZoomMode((current) => !current)}
+        onDeletePlan={() => removePlan(editor.plan)}
+        canDelete={Boolean(permissions.delete && editor?.plan)}
       />
 
       <div className={`floor-plan-editor-layout ${isEditing ? "editing" : "view-only"}`}>
@@ -3235,7 +3277,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
                 selectedObjectIds={isEditing ? selectedObjectIds : []}
                 selectionBox={isEditing ? selectionBox : null}
                 alignmentGuides={isEditing ? alignmentGuides : []}
-                selectedTool={selectedTool}
+                selectedTool={zoomMode ? "zoom" : selectedTool}
                 onSelect={isEditing ? handleEntitySelect : () => {}}
                 onPointerDown={isEditing ? beginDrag : () => {}}
                 onCanvasPointerDown={handleCanvasPointerDown}

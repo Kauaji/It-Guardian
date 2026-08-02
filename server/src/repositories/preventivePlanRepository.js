@@ -12,6 +12,7 @@ import {
   createPreventiveAutomationPlanRecord,
   findPreventiveAutomationPlanByPreventivePlanId
 } from "./preventiveAutomationRepository.js";
+import { startMaintenanceForAsset } from "./assetLifecycleRepository.js";
 
 const allowedStatuses = new Set(["prepared", "simulated", "completed", "failed", "cancelled"]);
 const highRiskLevels = new Set(["high", "critical"]);
@@ -588,9 +589,23 @@ export async function createServiceOrderFromPreventivePlan(id, user = null) {
 
   if (!result) return null;
 
+  const serviceOrder = await findServiceOrderById(result.serviceOrderId);
+  if (serviceOrder?.assetId) {
+    try {
+      await startMaintenanceForAsset({
+        assetId: serviceOrder.assetId,
+        serviceOrderId: serviceOrder.id,
+        notes: "Manutencao iniciada pela OS do plano preventivo.",
+        user: user || { name: "Sistema" }
+      });
+    } catch (error) {
+      if (error.statusCode !== 409) throw error;
+    }
+  }
+
   return {
     preventivePlan: await findPreventivePlanById(result.preventivePlanId),
-    serviceOrder: await findServiceOrderById(result.serviceOrderId)
+    serviceOrder
   };
 }
 

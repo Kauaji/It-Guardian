@@ -40,7 +40,7 @@ export default function DeviceDetails({ device, statusClass, metricClass }) {
       {isManualAsset ? (
         <div className="network-card">
           <Network size={18} />
-          <span>Status por ping: {device.statusLabel || (device.status === "offline" ? "Erro" : "Online")}</span>
+          <span>Status por ping: {device.statusLabel || (device.status === "offline" ? "Offline" : "Online")}</span>
         </div>
       ) : (
         <>

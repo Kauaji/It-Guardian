@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CheckCircle, Monitor, Send, ShieldCheck } from "lucide-react";
 import {
   createPublicServiceOrder,
+  fetchPublicMachineContext,
   fetchPublicSupportOptions
 } from "../../api.js";
 
@@ -60,6 +61,7 @@ function readMachineContext() {
   };
 
   return {
+    deviceToken: params.get("device") || "",
     assetId: params.get("assetId") || params.get("asset") || stored.assetId,
     machineName: params.get("machine") || params.get("hostname") || stored.machineName,
     assetTag: params.get("patrimonio") || params.get("assetTag") || stored.assetTag,
@@ -93,6 +95,7 @@ export default function PublicSupportRequest() {
     department: "",
     extension: "",
     machineScope: "",
+    deviceToken: machineContext.deviceToken,
     assetId: machineContext.assetId,
     machineName: machineContext.machineName,
     assetTag: machineContext.assetTag,
@@ -103,6 +106,7 @@ export default function PublicSupportRequest() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(null);
+  const [machineContextLoading, setMachineContextLoading] = useState(Boolean(machineContext.deviceToken));
 
   useEffect(() => {
     let active = true;
@@ -135,6 +139,30 @@ export default function PublicSupportRequest() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!machineContext.deviceToken) return;
+    let active = true;
+    fetchPublicMachineContext(machineContext.deviceToken)
+      .then(({ machine }) => {
+        if (!active || !machine) return;
+        setForm((current) => ({
+          ...current,
+          assetId: machine.id,
+          machineName: machine.name || machine.hostname || current.machineName,
+          environmentName: machine.environmentName || current.environmentName
+        }));
+      })
+      .catch(() => {
+        if (active) setError("Nao foi possivel identificar automaticamente esta maquina. Repare o IT Guardian e tente novamente.");
+      })
+      .finally(() => {
+        if (active) setMachineContextLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [machineContext.deviceToken]);
 
   const visibleProblemTypes = options.problemTypes;
 
@@ -363,9 +391,17 @@ export default function PublicSupportRequest() {
                   type="radio"
                   name="machineScope"
                   checked={form.machineScope === "mine"}
-                  onChange={() => updateField("machineScope", "mine")}
+                  onChange={() => {
+                    updateField("machineScope", "mine");
+                    if (!form.assetId && !machineContextLoading) {
+                      setError("Esta maquina ainda nao foi identificada pelo instalador. Use Reparar no instalador.");
+                    }
+                  }}
                 />
                 O problema é na minha máquina
+                {form.machineScope === "mine" && form.assetId ? (
+                  <small>Identificada: {form.machineName}</small>
+                ) : null}
               </label>
               <label className={form.machineScope === "other" ? "selected" : ""}>
                 <input

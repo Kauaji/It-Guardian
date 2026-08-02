@@ -10,6 +10,7 @@ import { migration007ProductKeyMonitoring } from "./007-product-key-monitoring.j
 import { migration008AgentScriptExecution } from "./008-agent-script-execution.js";
 import { migration009AgentScriptAutomationLink } from "./009-agent-script-automation-link.js";
 import { migration010AgentInventoryDetails } from "./010-agent-inventory-details.js";
+import { migration011AssetMaintenanceLifecycle } from "./011-asset-maintenance-lifecycle.js";
 
 export const migrations = [
   migration001RuntimeFoundation,
@@ -21,7 +22,8 @@ export const migrations = [
   migration007ProductKeyMonitoring,
   migration008AgentScriptExecution,
   migration009AgentScriptAutomationLink,
-  migration010AgentInventoryDetails
+  migration010AgentInventoryDetails,
+  migration011AssetMaintenanceLifecycle
 ];
 
 export async function runMigrations() {

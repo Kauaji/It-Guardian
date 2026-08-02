@@ -9,6 +9,8 @@ import {
   claimNextAgentScriptJob,
   completeAgentScriptJob
 } from "../repositories/agentScriptJobRepository.js";
+import { getFrontendUrl } from "../config/environment.js";
+import { createPublicMachineToken } from "../domain/publicMachineToken.js";
 
 const acceptedFields = new Set([
   "machineId",
@@ -201,6 +203,28 @@ export async function completeAgentJob({ token, jobId, body }) {
       errorMessage: text(body.errorMessage, "errorMessage", { max: 4000 }) || ""
     }
   });
+}
+
+export async function getAgentSupportLink({ token }) {
+  const enrollment = await authenticateAgentToken(token);
+  if (!enrollment) {
+    const error = new Error("Token do agente invalido ou revogado.");
+    error.statusCode = 401;
+    error.expose = true;
+    throw error;
+  }
+  if (!enrollment.activationId) {
+    const error = new Error("Este agente nao possui uma ativacao vinculada.");
+    error.statusCode = 409;
+    error.expose = true;
+    throw error;
+  }
+
+  const publicAppUrl = process.env.PUBLIC_APP_URL?.replace(/\/$/, "") || getFrontendUrl();
+  const deviceToken = createPublicMachineToken(enrollment.activationId);
+  return {
+    supportUrl: `${publicAppUrl}/abrir-chamado?device=${encodeURIComponent(deviceToken)}`
+  };
 }
 
 export async function createEnrollment({ name, userId }) {

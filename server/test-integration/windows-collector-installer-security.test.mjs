@@ -43,11 +43,20 @@ test("instalador cloud usa apenas a chave e instala o coletor nativo", async () 
   assert.doesNotMatch(setup, /Informe os servidores OCS e Zabbix/);
   assert.doesNotMatch(setup, /ocsServerUrl|zabbixServer|OcsServerUrl|ZabbixServer/);
   assert.match(setup, /FinalizeParameters :=/);
+  assert.match(setup, /Reparar ou atualizar a instalacao existente/);
+  assert.match(setup, /IsRepairInstall/);
+  assert.match(setup, /JsonConfigStringValue\(ExistingConfig, 'agentToken'\)/);
+  assert.match(setup, /if IsRepairInstall\(\) then/);
   assert.doesNotMatch(setup, /Install-MonitoringAgents|monitoring-agents\.json/);
 
-  assert.match(postInstall, /System32\\schtasks\.exe/);
-  assert.match(postInstall, /\/RU SYSTEM/);
-  assert.match(postInstall, /\/SC ONSTART/);
+  assert.match(postInstall, /New-ScheduledTaskTrigger -AtStartup/);
+  assert.match(postInstall, /New-ScheduledTaskTrigger -AtLogOn/);
+  assert.match(postInstall, /New-ScheduledTaskPrincipal/);
+  assert.match(postInstall, /-UserId "SYSTEM"/);
+  assert.match(postInstall, /-AllowStartIfOnBatteries/);
+  assert.match(postInstall, /-DontStopIfGoingOnBatteries/);
+  assert.match(postInstall, /-StartWhenAvailable/);
+  assert.match(postInstall, /-RestartCount 999/);
   assert.match(postInstall, /ITGuardian\.exe/);
   assert.match(postInstall, /--collector/);
   assert.match(postInstall, /--once/);
@@ -126,4 +135,10 @@ test("agente nativo executa somente trabalhos autenticados e controlados", async
   assert.match(nativeCollector, /AssemblyProduct\("IT Guardian"\)/);
   assert.match(nativeCollector, /NotifyIcon/);
   assert.match(nativeCollector, /Text = "IT Guardian ativo"/);
+  assert.match(nativeCollector, /WaitForNextHeartbeat/);
+  assert.match(nativeCollector, /DateTime\.UtcNow/);
+  assert.match(nativeCollector, /config = ReadConfig\(configPath\)/);
+  assert.match(nativeCollector, /CollectOfficeFromUninstallRegistry/);
+  assert.match(nativeCollector, /RegistryHive\.Users/);
+  assert.match(nativeCollector, /Microsoft 365|Microsoft Office/);
 });

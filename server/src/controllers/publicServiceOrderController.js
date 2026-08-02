@@ -4,6 +4,9 @@ import {
 } from "../repositories/serviceOrderRepository.js";
 import { listSettingsRecords } from "../repositories/settingsRepository.js";
 import { getSystemSettings } from "../repositories/systemSettingsRepository.js";
+import { startMaintenanceForAsset } from "../repositories/assetLifecycleRepository.js";
+import { findAgentAssetByActivationId } from "../repositories/agentRepository.js";
+import { verifyPublicMachineToken } from "../domain/publicMachineToken.js";
 
 const defaultCategories = [
   "Computador",
@@ -121,6 +124,31 @@ export async function supportOptions(_req, res, next) {
   }
 }
 
+async function resolveMachineFromToken(token) {
+  const activationId = verifyPublicMachineToken(trim(token));
+  if (!activationId) return null;
+  return findAgentAssetByActivationId(activationId);
+}
+
+export async function publicMachineContext(req, res, next) {
+  try {
+    const asset = await resolveMachineFromToken(req.query.device);
+    if (!asset) {
+      return res.status(404).json({ message: "Maquina do instalador nao identificada." });
+    }
+    return res.json({
+      machine: {
+        id: asset.id,
+        name: asset.machineAlias || asset.hostname,
+        hostname: asset.hostname,
+        environmentName: asset.environment || "Nao identificado"
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function createPublicServiceOrder(req, res, next) {
   try {
     const title = trim(req.body.title);
@@ -157,8 +185,14 @@ export async function createPublicServiceOrder(req, res, next) {
       return res.status(400).json({ message: "Informe um contato para abrir o chamado." });
     }
 
-    const environmentName = trim(req.body.environmentName) || "Não identificado";
     const machineScope = trim(req.body.machineScope) || "mine";
+    const installedMachine = machineScope === "mine"
+      ? await resolveMachineFromToken(req.body.deviceToken)
+      : null;
+    if (machineScope === "mine" && trim(req.body.deviceToken) && !installedMachine) {
+      return res.status(400).json({ message: "Nao foi possivel identificar esta maquina pelo instalador." });
+    }
+    const environmentName = installedMachine?.environment || trim(req.body.environmentName) || "Não identificado";
     const relatedAssetText = trim(req.body.relatedAssetText);
     const accessInfo = [
       trim(req.body.machineName) ? `AnyDesk: ${trim(req.body.machineName)}` : "",
@@ -183,7 +217,7 @@ export async function createPublicServiceOrder(req, res, next) {
         priority,
         category,
         problemType,
-        assetId: trim(req.body.assetId) || null,
+        assetId: installedMachine?.id || (machineScope === "other" ? trim(req.body.assetId) : null) || null,
         environmentName,
         requesterName,
         contactInfo: contactInfo || null,
@@ -197,6 +231,19 @@ export async function createPublicServiceOrder(req, res, next) {
       },
       user: { name: "Formulário público" }
     });
+
+    if (serviceOrder.assetId) {
+      try {
+        await startMaintenanceForAsset({
+          assetId: serviceOrder.assetId,
+          serviceOrderId: serviceOrder.id,
+          notes: "Manutencao iniciada por chamado publico vinculado a maquina.",
+          user: { name: "Formulário público" }
+        });
+      } catch (error) {
+        if (error.statusCode !== 409) throw error;
+      }
+    }
 
     res.status(201).json({
       serviceOrder: {

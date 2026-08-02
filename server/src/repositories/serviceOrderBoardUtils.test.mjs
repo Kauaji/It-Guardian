@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  buildServiceOrderMonthValues,
   buildServiceOrderNumberPreview,
   getMonthValue,
+  isServiceOrderVisibleInMonth,
   mergeServiceOrderSettings,
   normalizeSearchText,
   normalizeStatuses,
@@ -52,5 +54,30 @@ test("preview de numero da OS inclui prefixo e sequencia", () => {
   assert.match(
     buildServiceOrderNumberPreview({ numberFormat: { prefix: "os", nextNumber: 42 } }),
     /^OS-0042$/
+  );
+});
+
+test("OS nao finalizada continua visivel nos meses seguintes", () => {
+  const order = { createdAt: "2026-05-20T12:00:00.000Z", status: "in_progress" };
+  assert.equal(isServiceOrderVisibleInMonth(order, "2026-05", ["closed"]), true);
+  assert.equal(isServiceOrderVisibleInMonth(order, "2026-08", ["closed"]), true);
+  assert.equal(isServiceOrderVisibleInMonth(order, "2026-04", ["closed"]), false);
+});
+
+test("OS finalizada aparece ate o mes de encerramento", () => {
+  const order = {
+    createdAt: "2026-05-20T12:00:00.000Z",
+    closedAt: "2026-07-03T12:00:00.000Z",
+    status: "closed"
+  };
+  assert.equal(isServiceOrderVisibleInMonth(order, "2026-06", ["closed"]), true);
+  assert.equal(isServiceOrderVisibleInMonth(order, "2026-07", ["closed"]), true);
+  assert.equal(isServiceOrderVisibleInMonth(order, "2026-08", ["closed"]), false);
+});
+
+test("seletor mensal inclui meses intermediarios sem novas OS", () => {
+  assert.deepEqual(
+    buildServiceOrderMonthValues([{ createdAt: "2026-05-10T10:00:00.000Z" }], "2026-08"),
+    ["2026-05", "2026-06", "2026-07", "2026-08"]
   );
 });
