@@ -6,6 +6,7 @@ import {
   defaultInventoryTab,
   inventoryTabMetaKey,
   inventoryTabsKey,
+  manualPeripheralsKey,
   maintenanceRecordsKey,
   normalizeInventoryTabMeta,
   normalizeInventoryTabs,
@@ -38,6 +39,9 @@ export function useInventoryPersistence(token) {
   const [peripheralHistory, setPeripheralHistory] = useState(() =>
     readStoredObject(peripheralHistoryKey)
   );
+  const [manualPeripherals, setManualPeripherals] = useState(() =>
+    readStoredObject(manualPeripheralsKey)
+  );
   const [maintenanceRecords, setMaintenanceRecords] = useState(() =>
     readStoredJson(maintenanceRecordsKey, {})
   );
@@ -62,6 +66,7 @@ export function useInventoryPersistence(token) {
         setMachineObservations(value.observations || {});
         setRemovedPeripherals(value.removedPeripherals || {});
         setPeripheralHistory(value.peripheralHistory || {});
+        setManualPeripherals(value.manualPeripherals || {});
         setMaintenanceRecords(value.maintenanceRecords || {});
       })
       .catch(() => {
@@ -85,6 +90,7 @@ export function useInventoryPersistence(token) {
         observations: machineObservations,
         removedPeripherals,
         peripheralHistory,
+        manualPeripherals,
         maintenanceRecords
       }).catch(() => {});
     }, 500);
@@ -94,6 +100,7 @@ export function useInventoryPersistence(token) {
     machineAliases,
     machineObservations,
     maintenanceRecords,
+    manualPeripherals,
     peripheralHistory,
     removedPeripherals,
     token
@@ -113,6 +120,10 @@ export function useInventoryPersistence(token) {
 
   const savePeripheralHistory = useCallback((updater) => {
     persistState(setPeripheralHistory, peripheralHistoryKey, updater);
+  }, []);
+
+  const saveManualPeripherals = useCallback((updater) => {
+    persistState(setManualPeripherals, manualPeripheralsKey, updater);
   }, []);
 
   const saveInventoryTabs = useCallback((updater) => {
@@ -143,6 +154,7 @@ export function useInventoryPersistence(token) {
     machineAliases,
     machineObservations,
     maintenanceRecords,
+    manualPeripherals,
     peripheralHistory,
     removedPeripherals,
     saveInventoryTabMeta,
@@ -150,6 +162,7 @@ export function useInventoryPersistence(token) {
     saveMachineAliases,
     saveMachineObservations,
     saveMaintenanceRecords,
+    saveManualPeripherals,
     savePeripheralHistory,
     saveRemovedPeripherals,
     setActiveInventoryTabId

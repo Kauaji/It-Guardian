@@ -6,10 +6,7 @@ import { assetTypeLabel } from "./assetTypes.js";
 import PeripheralList from "./PeripheralList.jsx";
 import SelectionCheckbox from "./SelectionCheckbox.jsx";
 import AutomationIndicatorDots from "../AutomationIndicatorDots.jsx";
-import {
-  getMachineSourceLabel,
-  isAgentMachine
-} from "./agentPresentation.js";
+import { getMachineSourceLabel } from "./agentPresentation.js";
 
 const pingTimeFormatter = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
@@ -62,6 +59,7 @@ function MachineCardContent({
   onRefreshPing = () => {},
   onSelect = () => {},
   onToggleSelection = () => {},
+  onAddPeripheral = () => {},
   onRemovePeripheral = () => {},
   activePopoverId = null,
   setActivePopoverId = () => {},
@@ -78,7 +76,6 @@ function MachineCardContent({
   const showMoveMenu = availableSegments.length > 0;
   const showDetails = true;
   const isManualAsset = machine.source === "manual";
-  const isAgentAsset = isAgentMachine(machine);
   const isBackup = Boolean(machine.isBackup);
   const backupInUse = machine.backupStatus === "in_use";
   const metrics = machine.metrics || {};
@@ -229,7 +226,8 @@ function MachineCardContent({
                     peripherals={machine.hardware?.peripherals || []}
                     segmentColor={segmentColor}
                     canManage={canManage}
-                    allowAdd={!isAgentAsset}
+                    allowAdd={canManage}
+                    onAdd={(peripheral) => onAddPeripheral(machine.id, peripheral)}
                     onRemove={(peripheral) => onRemovePeripheral(machine.id, peripheral)}
                   />
                 )}
@@ -301,6 +299,7 @@ export default function MachineCard({
   onRefreshPing,
   onSelect,
   onToggleSelection,
+  onAddPeripheral,
   onRemovePeripheral,
   activePopoverId,
   setActivePopoverId
@@ -329,6 +328,7 @@ export default function MachineCard({
       onRefreshPing={onRefreshPing}
       onSelect={onSelect}
       onToggleSelection={onToggleSelection}
+      onAddPeripheral={onAddPeripheral}
       onRemovePeripheral={onRemovePeripheral}
       activePopoverId={activePopoverId}
       setActivePopoverId={setActivePopoverId}

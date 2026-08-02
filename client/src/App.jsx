@@ -309,6 +309,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     machineAliases,
     machineObservations,
     maintenanceRecords,
+    manualPeripherals,
     peripheralHistory,
     removedPeripherals,
     saveInventoryTabMeta,
@@ -316,8 +317,8 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     saveMachineAliases,
     saveMachineObservations,
     saveMaintenanceRecords,
+    saveManualPeripherals,
     savePeripheralHistory,
-    saveRemovedPeripherals,
     setActiveInventoryTabId
   } = useInventoryPersistence(token);
   const [moveModal, setMoveModal] = useState(null);
@@ -402,6 +403,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     initialSystemMode: readSystemMode,
     logout: onLogout,
     maintenanceRecords,
+    manualPeripherals,
     notify,
     onMaintenanceRecordsChange: saveMaintenanceRecords,
     peripheralHistory,
@@ -585,6 +587,13 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
 
         return {
           ...device,
+          displayName:
+            machineAliases[device.id]?.trim() ||
+            device.machineAlias ||
+            device.agent?.machineAlias ||
+            device.name ||
+            device.hostname ||
+            device.id,
           backupRealSegmentId: device.backupOriginalSegmentId || rawSegmentId,
           backupRealSegmentName: device.backupOriginalSegmentName || rawSegmentName,
           segmentId: isAvailableBackup ? backupSegmentId : rawSegmentId,
@@ -599,7 +608,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
           order: itemOrder("devices", device.id, index)
         };
       }),
-    [allDevices, defaultSegmentIds, fallbackInventoryTabId, inventoryTabMeta]
+    [allDevices, defaultSegmentIds, fallbackInventoryTabId, inventoryTabMeta, machineAliases]
   );
   const activeAllDevices = useMemo(
     () => decoratedAllDevices.filter((device) => device.isGlobalBackup || device.isGlobalUnorganized || device.tabId === activeInventoryTab.id),
@@ -2359,11 +2368,9 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
       newValue: "Removido"
     };
 
-    saveRemovedPeripherals((current) => {
-      const next = {
-        ...current,
-        [machineId]: Array.from(new Set([...(current[machineId] || []), removedKey]))
-      };
+    saveManualPeripherals((current) => {
+      const next = { ...current };
+      next[machineId] = (current[machineId] || []).filter((item) => peripheralKey(item) !== removedKey);
       return next;
     });
 
@@ -2392,6 +2399,50 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     setSelectedDevice((current) => (current?.id === machineId ? update(current) : current));
     notify("Periferico removido e registrado no historico.", "ok");
     return event;
+  }
+
+  function addMachinePeripheral(machineId, peripheral) {
+    const item = {
+      ...peripheral,
+      id: peripheral.id || `${machineId}-peripheral-${Date.now()}`
+    };
+    const event = {
+      id: `${machineId}-peripheral-added-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      user: user.name,
+      change: `Periferico adicionado: ${item.type}`,
+      message: `${item.type} - ${item.brand || "Sem marca"} - ${item.assetTag || "Sem patrimonio"}`,
+      field: "peripherals",
+      oldValue: "Nao cadastrado",
+      newValue: `${item.type} ${item.brand || ""} ${item.assetTag || ""}`.trim()
+    };
+
+    saveManualPeripherals((current) => ({
+      ...current,
+      [machineId]: [...(current[machineId] || []), item]
+    }));
+    savePeripheralHistory((current) => ({
+      ...current,
+      [machineId]: [event, ...(current[machineId] || [])]
+    }));
+
+    const update = (device) =>
+      device.id === machineId
+        ? {
+            ...device,
+            assetHistory: [event, ...(device.assetHistory || [])],
+            hardware: {
+              ...device.hardware,
+              peripherals: [...(device.hardware?.peripherals || []), item]
+            }
+          }
+        : device;
+
+    setAllDevices((current) => current.map(update));
+    setDevices((current) => current.map(update));
+    setSelectedDevice((current) => (current?.id === machineId ? update(current) : current));
+    notify("Periferico adicionado e registrado no historico.", "ok");
+    return { peripheral: item, event };
   }
 
   function saveSegmentGroups(nextGroups) {
@@ -3040,7 +3091,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
             preventiveAutomationManagement={preventiveAutomationManagement}
             preventiveAutomationManagementError={preventiveAutomationManagementError}
             preventiveAutomationManagementLoading={loading}
-            devices={allDevices}
+            devices={decoratedAllDevices}
             segments={decoratedSegments}
             segmentGroups={decoratedSegmentGroups}
             inventoryTabs={inventoryTabs}
@@ -3164,6 +3215,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
             onRenameTab={renameInventoryTab}
             onDeleteTab={deleteInventoryTab}
             onChangeTabColor={changeInventoryTabColor}
+            onAddPeripheral={addMachinePeripheral}
             onRemovePeripheral={removeMachinePeripheral}
             onCreateManualAsset={() => setManualAssetFormOpen(true)}
             onRefreshPing={handleRefreshPing}

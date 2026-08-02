@@ -25,6 +25,7 @@ export default function SegmentCard({
   canMoveSegmentDown,
   selected = false,
   onSelectSegment,
+  onAddPeripheral,
   onRemovePeripheral,
   activePopoverId,
   setActivePopoverId
@@ -225,6 +226,7 @@ export default function SegmentCard({
               onRefreshPing={onRefreshPing}
               onSelect={onSelectAsset}
               onToggleSelection={onToggleSelection}
+              onAddPeripheral={onAddPeripheral}
               onRemovePeripheral={onRemovePeripheral}
               activePopoverId={activePopoverId}
               setActivePopoverId={setActivePopoverId}

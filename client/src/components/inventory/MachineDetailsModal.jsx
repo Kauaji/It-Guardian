@@ -300,7 +300,9 @@ export default function MachineDetailsModal({
   onPutMaintenance,
   onToggleBackup,
   onRemoveMachine,
+  onAddPeripheral,
   onRemovePeripheral,
+  canManage = false,
   onClose
 }) {
   const [activeTab, setActiveTab] = useState("general");
@@ -774,8 +776,9 @@ export default function MachineDetailsModal({
                 <PeripheralList
                   peripherals={hardware.peripherals || []}
                   segmentColor={segmentColor}
-                  canManage={!isAgentAsset}
-                  allowAdd={!isAgentAsset}
+                  canManage={canManage}
+                  allowAdd={canManage}
+                  onAdd={onAddPeripheral}
                   onRemove={onRemovePeripheral}
                 />
               )}

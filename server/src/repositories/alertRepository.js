@@ -135,6 +135,7 @@ const defaultAlertPriorityColors = {
 const defaultAlertSettings = {
   rejectedAlertSilenceHours: 24,
   recurrenceCounterResetHours: 24,
+  inactiveAlertAutoResolveHours: 48,
   preventiveDueDays: 180,
   scriptValidationWindowMinutes: 30,
   autoPriority: {
@@ -179,6 +180,10 @@ function normalizeAlertSettings(value = {}) {
     1,
     toNumber(value.recurrenceCounterResetHours ?? value.recurrenceCounterWindow, defaultAlertSettings.recurrenceCounterResetHours)
   );
+  const inactiveAlertAutoResolveHours = Math.max(
+    1,
+    toNumber(value.inactiveAlertAutoResolveHours, defaultAlertSettings.inactiveAlertAutoResolveHours)
+  );
   const preventiveDueDays = Math.max(
     1,
     toNumber(value.preventiveDueDays, defaultAlertSettings.preventiveDueDays)
@@ -194,6 +199,7 @@ function normalizeAlertSettings(value = {}) {
   return {
     rejectedAlertSilenceHours,
     recurrenceCounterResetHours,
+    inactiveAlertAutoResolveHours,
     preventiveDueDays,
     scriptValidationWindowMinutes,
     autoPriority: {
@@ -437,6 +443,8 @@ export async function updateAlertSettings(payload = {}) {
       payload.rejectedAlertSilenceHours ?? current.rejectedAlertSilenceHours,
     recurrenceCounterResetHours:
       payload.recurrenceCounterResetHours ?? current.recurrenceCounterResetHours,
+    inactiveAlertAutoResolveHours:
+      payload.inactiveAlertAutoResolveHours ?? current.inactiveAlertAutoResolveHours,
     preventiveDueDays:
       payload.preventiveDueDays ?? current.preventiveDueDays,
     scriptValidationWindowMinutes:
@@ -561,26 +569,49 @@ export async function listAlerts({ status } = {}) {
   return result.rows.map(fromAlertRow);
 }
 
-export async function resolveInactiveAgentAlerts({ assetId, activeAlertIds = [] }) {
+export async function resolveInactiveAgentAlerts({
+  assetId,
+  activeAlertIds = [],
+  inactiveHours = defaultAlertSettings.inactiveAlertAutoResolveHours
+}) {
   const params = [assetId];
   const exclusions = activeAlertIds.map((id) => {
     params.push(id);
     return `$${params.length}`;
   });
+  params.push(Math.max(1, toNumber(inactiveHours, defaultAlertSettings.inactiveAlertAutoResolveHours)));
+  const inactivityParam = `$${params.length}`;
   const result = await query(
     `
       UPDATE alerts
       SET status = 'resolved',
-          last_seen_at = NOW(),
           updated_at = NOW()
       WHERE source = 'agent'
         AND asset_id = $1
         AND status = 'active'
         ${exclusions.length ? `AND id NOT IN (${exclusions.join(", ")})` : ""}
+        AND last_seen_at <= NOW() - (${inactivityParam}::double precision * INTERVAL '1 hour')
       RETURNING *
     `,
     params
   );
+
+  const resolvedAlertIds = result.rows.map((row) => row.id);
+  if (resolvedAlertIds.length) {
+    await query(
+      `
+        UPDATE service_order_suggestions
+        SET status = 'resolved',
+            observation_status = COALESCE(observation_status, 'observed_resolved'),
+            observation_result = COALESCE(observation_result, 'Aviso encerrado automaticamente por inatividade.'),
+            last_observation_at = NOW(),
+            updated_at = NOW()
+        WHERE alert_id = ANY($1::text[])
+          AND status = 'pending'
+      `,
+      [resolvedAlertIds]
+    );
+  }
 
   return result.rows.map(fromAlertRow);
 }
@@ -881,8 +912,9 @@ export async function markSuggestionValidated({
   validationId = null,
   db = query
 }) {
-  const current = await db("SELECT status FROM service_order_suggestions WHERE id = $1", [id]);
+  const current = await db("SELECT status, alert_id FROM service_order_suggestions WHERE id = $1", [id]);
   const currentStatus = current.rows[0]?.status || "pending";
+  const alertId = current.rows[0]?.alert_id;
   const nextStatus = normalizeSuggestionStatusAfterObservation(currentStatus, status);
   const result = await db(
     `
@@ -898,6 +930,19 @@ export async function markSuggestionValidated({
     `,
     [id, nextStatus, status, resultSummary || null, validationId || null]
   );
+
+  if (status === "observed_resolved" && alertId) {
+    await db(
+      `
+        UPDATE alerts
+        SET status = 'resolved',
+            updated_at = NOW()
+        WHERE id = $1
+          AND status = 'active'
+      `,
+      [alertId]
+    );
+  }
 
   return result.rows[0] ? fromSuggestionRow(result.rows[0]) : null;
 }

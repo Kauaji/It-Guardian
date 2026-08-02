@@ -78,6 +78,7 @@ export default function InventoryBoard({
   onRenameTab,
   onDeleteTab,
   onChangeTabColor,
+  onAddPeripheral,
   onRemovePeripheral,
   onCreateManualAsset,
   onRefreshPing,
@@ -534,6 +535,7 @@ export default function InventoryBoard({
                   canMoveSegmentDown={segmentIndex < group.segments.length - 1}
                   selected={selectedSegmentIds.has(segment.id)}
                   onSelectSegment={handleSelectSegment}
+                  onAddPeripheral={onAddPeripheral}
                   onRemovePeripheral={onRemovePeripheral}
                   activePopoverId={activePopoverId}
                   setActivePopoverId={setActivePopoverId}
@@ -583,6 +585,7 @@ export default function InventoryBoard({
                 canMoveSegmentDown={segmentIndex < regularUngroupedSegments.length - 1}
                 selected={selectedSegmentIds.has(segment.id)}
                 onSelectSegment={handleSelectSegment}
+                onAddPeripheral={onAddPeripheral}
                 onRemovePeripheral={onRemovePeripheral}
                 activePopoverId={activePopoverId}
                 setActivePopoverId={setActivePopoverId}
@@ -616,6 +619,7 @@ export default function InventoryBoard({
             hideGroupSelect
             selected={selectedSegmentIds.has(segment.id)}
             onSelectSegment={handleSelectSegment}
+            onAddPeripheral={onAddPeripheral}
             onRemovePeripheral={onRemovePeripheral}
             activePopoverId={activePopoverId}
             setActivePopoverId={setActivePopoverId}
@@ -660,6 +664,23 @@ export default function InventoryBoard({
         onRemoveMachine={async () => {
           const removed = await onRemoveMachine?.(selectedMachine);
           if (removed) setSelectedMachine(null);
+        }}
+        canManage={canManage}
+        onAddPeripheral={(peripheral) => {
+          const result = onAddPeripheral(selectedMachine.id, peripheral);
+          const savedPeripheral = result?.peripheral || peripheral;
+          const event = result?.event;
+          if (result) {
+            setSelectedMachine((current) => ({
+              ...current,
+              assetHistory: event ? [event, ...(current.assetHistory || [])] : current.assetHistory,
+              hardware: {
+                ...current.hardware,
+                peripherals: [...(current.hardware?.peripherals || []), savedPeripheral]
+              }
+            }));
+          }
+          return result;
         }}
         onRemovePeripheral={(peripheral) => {
           const event = onRemovePeripheral(selectedMachine.id, peripheral);

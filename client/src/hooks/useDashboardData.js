@@ -42,6 +42,7 @@ export function useDashboardData({
   initialSystemMode,
   logout,
   maintenanceRecords,
+  manualPeripherals,
   notify,
   onMaintenanceRecordsChange,
   peripheralHistory,
@@ -146,13 +147,15 @@ export function useDashboardData({
           deviceData.devices,
           removedPeripherals,
           peripheralHistory,
-          activeMaintenanceRecords
+          activeMaintenanceRecords,
+          manualPeripherals
         );
         const nextAllDevices = applyInventoryLocalState(
           allDeviceData.devices,
           removedPeripherals,
           peripheralHistory,
-          activeMaintenanceRecords
+          activeMaintenanceRecords,
+          manualPeripherals
         );
         const nextGroups = groupData.groups || [];
         const nextSegments = applySegmentGroups(segmentData.segments, nextGroups);
@@ -229,6 +232,7 @@ export function useDashboardData({
       canViewScripts,
       canViewServiceOrders,
       maintenanceRecords,
+      manualPeripherals,
       notify,
       onMaintenanceRecordsChange,
       peripheralHistory,

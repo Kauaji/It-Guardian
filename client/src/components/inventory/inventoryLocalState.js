@@ -5,6 +5,7 @@ export const aliasKey = "it_guardian_machine_aliases";
 export const observationsKey = "it_guardian_machine_observations";
 export const peripheralRemovalsKey = "it_guardian_removed_peripherals";
 export const peripheralHistoryKey = "it_guardian_peripheral_history";
+export const manualPeripheralsKey = "it_guardian_manual_peripherals";
 export const inventoryTabsKey = "it_guardian_inventory_tabs";
 export const activeInventoryTabKey = "it_guardian_active_inventory_tab";
 export const inventoryTabMetaKey = "it_guardian_inventory_tab_meta";
@@ -118,10 +119,17 @@ export function peripheralKey(peripheral) {
   return peripheral?.id || `${peripheral?.type || "item"}-${peripheral?.brand || ""}-${peripheral?.assetTag || ""}`;
 }
 
-export function applyInventoryLocalState(devices, removedPeripherals, peripheralHistory, maintenanceRecords = {}) {
+export function applyInventoryLocalState(
+  devices,
+  removedPeripherals,
+  peripheralHistory,
+  maintenanceRecords = {},
+  manualPeripherals = {}
+) {
   return devices.map((device) => {
     const removed = new Set(removedPeripherals[device.id] || []);
-    const peripherals = device.hardware?.peripherals || [];
+    const collectedPeripherals = device.hardware?.peripherals || [];
+    const peripherals = manualPeripherals[device.id] || [];
     const maintenanceRecord = maintenanceRecords[device.id];
 
     return {
@@ -131,6 +139,7 @@ export function applyInventoryLocalState(devices, removedPeripherals, peripheral
       assetHistory: [...(peripheralHistory[device.id] || []), ...(device.assetHistory || [])],
       hardware: {
         ...device.hardware,
+        collectedPeripherals,
         peripherals: peripherals.filter((peripheral) => !removed.has(peripheralKey(peripheral)))
       }
     };

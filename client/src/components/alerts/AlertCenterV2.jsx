@@ -34,7 +34,9 @@ import {
   canCreateServiceOrderFromSuggestion,
   canRejectSuggestion,
   canUseScriptOnSuggestion,
+  consolidateSuggestionsByMachine,
   defaultPriorityColors,
+  findSuggestionDevice as findSuggestionDeviceInList,
   formatAlertThreshold,
   formatAlertValue,
   formatCompactSuggestionTitle,
@@ -45,6 +47,7 @@ import {
   getAlertProbableCause,
   getAlertRecommendedAction,
   getAlertTrend,
+  getDeviceDisplayName,
   getScriptValidationTooltip,
   getSuggestionMachineLabel,
   isDurationDisabled,
@@ -265,12 +268,10 @@ export default function AlertCenterV2({
 
     return severityMatches && statusMatches;
   });
-  const visibleSuggestions = suggestions
+  const actionableSuggestions = suggestions
     .filter(canCreateServiceOrderFromSuggestion)
-    .filter((suggestion) => {
-      if (suggestionStatusFilter === "all") return true;
-      return suggestion.status === suggestionStatusFilter;
-    })
+    .filter((suggestion) => suggestionStatusFilter === "all" || suggestion.status === suggestionStatusFilter);
+  const visibleSuggestions = consolidateSuggestionsByMachine(actionableSuggestions, devices)
     .sort((left, right) => {
       const priorityWeight = { critical: 60, high: 45, medium: 25, low: 10 };
       const leftWeight =
@@ -288,17 +289,31 @@ export default function AlertCenterV2({
   const selectedSuggestionIndex = selectedSuggestionVisibleIndex >= 0
     ? selectedSuggestionVisibleIndex
     : Math.max(0, suggestions.findIndex((suggestion) => suggestion.id === selectedSuggestionInfoId));
-  const criticalAlerts = alerts.filter((alert) => alert.severity === "critical").length;
-  const pendingSuggestions = suggestions.filter(canCreateServiceOrderFromSuggestion).length;
-  const acceptedSuggestions = suggestions.filter((suggestion) => suggestion.status === "accepted").length;
-  const recurringAlerts = alerts.filter((alert) => (alert.occurrencesCount || 0) >= 3).length;
-  const machinesAtRisk = new Set(
+  const alertMachineGroups = Array.from(
     alerts
       .filter((alert) => alert.status !== "resolved")
-      .map((alert) => alert.assetId || alert.hostId || alert.hostName)
-      .filter(Boolean)
-      .map(String)
-  ).size;
+      .reduce((groups, alert) => {
+        const device = findAlertDevice(alert);
+        const key = String(device?.id || alert.assetId || alert.hostId || alert.hostName || alert.id);
+        const group = groups.get(key) || [];
+        group.push(alert);
+        groups.set(key, group);
+        return groups;
+      }, new Map())
+      .values()
+  );
+  const criticalAlerts = alertMachineGroups.filter((group) =>
+    group.some((alert) => alert.severity === "critical")
+  ).length;
+  const pendingSuggestions = consolidateSuggestionsByMachine(
+    suggestions.filter(canCreateServiceOrderFromSuggestion),
+    devices
+  ).length;
+  const acceptedSuggestions = suggestions.filter((suggestion) => suggestion.status === "accepted").length;
+  const recurringAlerts = alertMachineGroups.filter((group) =>
+    group.some((alert) => (alert.occurrencesCount || 0) >= 3)
+  ).length;
+  const machinesAtRisk = alertMachineGroups.length;
   const resolvedAlerts = history.filter((alert) => alert.status === "resolved");
   const handledSuggestions = suggestions.filter((suggestion) => suggestion.status === "accepted" || suggestion.status === "rejected");
   const activeScripts = useMemo(
@@ -387,15 +402,7 @@ export default function AlertCenterV2({
   }, [activeScripts, token, selectedPreventiveAssetKey]);
 
   function findSuggestionDevice(suggestion) {
-    if (suggestion.assetId && deviceById.has(String(suggestion.assetId))) {
-      return deviceById.get(String(suggestion.assetId));
-    }
-
-    const machineLabel = getSuggestionMachineLabel(suggestion).toLowerCase();
-    return devices.find((device) => {
-      const names = [device.name, device.id, device.manualAsset?.hostname].filter(Boolean).map((value) => String(value).toLowerCase());
-      return names.includes(machineLabel);
-    }) || null;
+    return findSuggestionDeviceInList(suggestion, devices);
   }
 
   function findAlertDevice(alert) {
@@ -405,9 +412,19 @@ export default function AlertCenterV2({
       if (deviceById.has(id)) return deviceById.get(id);
     }
 
-    const hostLabel = String(alert.hostName || "").toLowerCase();
+    const hostLabel = normalizeText(alert.hostName || "");
     return devices.find((device) => {
-      const names = [device.name, device.id, device.manualAsset?.hostname].filter(Boolean).map((value) => String(value).toLowerCase());
+      const names = [
+        device.id,
+        device.displayName,
+        device.machineAlias,
+        device.agent?.machineAlias,
+        device.name,
+        device.hostname,
+        device.agent?.hostname,
+        device.manualAsset?.hostname,
+        device.hardware?.hostname
+      ].filter(Boolean).map(normalizeText);
       return names.includes(hostLabel);
     }) || null;
   }
@@ -425,7 +442,8 @@ export default function AlertCenterV2({
   }
 
   function getAlertMachineLabel(alert) {
-    return findAlertDevice(alert)?.name || alert.hostName || alert.assetId || "Máquina não vinculada";
+    const device = findAlertDevice(alert);
+    return device ? getDeviceDisplayName(device) : alert.hostName || alert.assetId || "Máquina não vinculada";
   }
 
   function getResolvedAlertTitle(alert) {
@@ -437,7 +455,8 @@ export default function AlertCenterV2({
   }
 
   function getResolvedSuggestionMachineLabel(suggestion) {
-    return suggestion.machineAlias || findSuggestionDevice(suggestion)?.name || getSuggestionMachineLabel(suggestion);
+    const device = findSuggestionDevice(suggestion);
+    return device ? getDeviceDisplayName(device) : suggestion.machineAlias || getSuggestionMachineLabel(suggestion);
   }
 
   function getResolvedSuggestionTitle(suggestion) {
@@ -709,7 +728,7 @@ export default function AlertCenterV2({
 
     if (relatedAlerts.length) {
       badges.push({
-        label: `${relatedAlerts.length} aviso(s)`,
+        label: "1 aviso",
         tone: criticalAlerts ? "danger" : "warning"
       });
     }
@@ -1055,7 +1074,7 @@ export default function AlertCenterV2({
           {canViewAlerts && alertActiveTab === "suggestions" && (
             <div className="alerts-view-header">
               <section className="summary-grid compact-summary alerts-summary">
-                <SummaryCard icon={Bell} label="Avisos ativos" value={alerts.length} tone="warning" />
+                <SummaryCard icon={Bell} label="Avisos ativos" value={alertMachineGroups.length} tone="warning" />
                 <SummaryCard icon={AlertTriangle} label="Críticos" value={criticalAlerts} tone="danger" />
                 <SummaryCard icon={ClipboardList} label="Sugestões pendentes" value={pendingSuggestions} tone="warning" />
                 <SummaryCard icon={CheckCircle} label="OS criadas por aviso" value={acceptedSuggestions} tone="ok" />
@@ -1307,7 +1326,7 @@ export default function AlertCenterV2({
 
                   return (
                     <article
-                      key={suggestion.id}
+                      key={suggestion.aggregationKey || suggestion.id}
                       className="service-order-card suggestion-card"
                       style={{
                         "--service-order-priority-color": priorityColor,
@@ -1656,7 +1675,7 @@ export default function AlertCenterV2({
                                     {isSelected ? "✓" : ""}
                                   </span>
                                   <span>
-                                    <strong>{device.name || device.id}</strong>
+                                    <strong>{getDeviceDisplayName(device)}</strong>
                                     <small>{device.type || device.assetType || "Ativo"} • {device.statusLabel || device.status || "Sem status"}</small>
                                   </span>
                                   <em>
@@ -1912,7 +1931,7 @@ export default function AlertCenterV2({
                     <strong>{selectedPreventiveDevices.length} máquina(s)</strong>
                     <ul>
                       {selectedPreventiveDevices.slice(0, 6).map((device) => (
-                        <li key={device.id}>{device.name || device.id}</li>
+                        <li key={device.id}>{getDeviceDisplayName(device)}</li>
                       ))}
                       {selectedPreventiveDevices.length > 6 && (
                         <li>+ {selectedPreventiveDevices.length - 6} máquina(s)</li>
@@ -2454,6 +2473,19 @@ export default function AlertCenterV2({
                             onChange={(event) => updateAlertOperationalDraft("preventiveDueDays", event.target.value)}
                           />
                           <em>D</em>
+                        </span>
+                      </label>
+                      <label>
+                        Remover aviso inativo após (horas)
+                        <span className="input-with-unit">
+                          <input
+                            type="number"
+                            min="1"
+                            value={priorityDraft.inactiveAlertAutoResolveHours}
+                            disabled={!canConfigureAlerts}
+                            onChange={(event) => updateAlertOperationalDraft("inactiveAlertAutoResolveHours", event.target.value)}
+                          />
+                          <em>H</em>
                         </span>
                       </label>
                       <label>

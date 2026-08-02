@@ -526,7 +526,7 @@ export function buildAgentAlerts(asset, now = new Date()) {
 }
 
 async function syncAgentAlerts() {
-  const assets = await listAgentAssets();
+  const [assets, settings] = await Promise.all([listAgentAssets(), getAlertSettings()]);
   for (const asset of assets) {
     const activeAlerts = buildAgentAlerts(asset);
     for (const alert of activeAlerts) {
@@ -534,7 +534,8 @@ async function syncAgentAlerts() {
     }
     await resolveInactiveAgentAlerts({
       assetId: asset.id,
-      activeAlertIds: activeAlerts.map((alert) => alert.id)
+      activeAlertIds: activeAlerts.map((alert) => alert.id),
+      inactiveHours: settings.inactiveAlertAutoResolveHours
     });
   }
 }

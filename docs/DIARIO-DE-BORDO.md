@@ -515,3 +515,34 @@ entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 - dados ausentes continuam apresentados como indisponiveis, sem interromper a
   pagina inteira.
 
+## 2026-07-29 - Avisos consolidados e perifericos manuais
+
+### Avisos e nomes
+
+- alertas e preventivas passam a usar o nome fantasia da maquina, mantendo o
+  hostname como fallback;
+- sugestoes ativas da mesma maquina aparecem em um unico card, com problemas
+  resumidos, ocorrencias acumuladas e prioridade recalculada;
+- quando a validacao de um BAT confirma a resolucao, o problema vinculado deixa
+  o agrupamento; sem problemas ativos, o card desaparece;
+- avisos sem nova ocorrencia sao encerrados automaticamente apos 48 horas por
+  padrao, com o prazo editavel nas configuracoes de Avisos.
+
+### Perifericos
+
+- a lista exibida no card e nos detalhes da maquina agora contem somente os
+  perifericos cadastrados manualmente pelo tecnico;
+- inclusoes e remocoes sao persistidas por usuario e registradas no historico
+  da maquina;
+- dados eventualmente coletados pelo agente permanecem separados e nao
+  preenchem a lista manual.
+
+### Validacoes
+
+- build de producao aprovado;
+- 171 testes aprovados e 1 ignorado por exigir PostgreSQL real;
+- testes novos cobrem nome fantasia, fallback, consolidacao, escalonamento de
+  prioridade, remocao progressiva de problemas, prazo configuravel e separacao
+  entre perifericos coletados e cadastrados manualmente;
+- lint e `git diff --check` aprovados.
+

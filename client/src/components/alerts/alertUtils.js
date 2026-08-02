@@ -50,6 +50,7 @@ const defaultAutoPriority = {
 const defaultAlertOperationalSettings = {
   rejectedAlertSilenceHours: 24,
   recurrenceCounterResetHours: 24,
+  inactiveAlertAutoResolveHours: 48,
   preventiveDueDays: 180,
   scriptValidationWindowMinutes: 30
 };
@@ -63,6 +64,10 @@ export function normalizePrioritySettings(settings = {}) {
     recurrenceCounterResetHours: Math.max(
       1,
       Number(settings.recurrenceCounterResetHours || defaultAlertOperationalSettings.recurrenceCounterResetHours)
+    ),
+    inactiveAlertAutoResolveHours: Math.max(
+      1,
+      Number(settings.inactiveAlertAutoResolveHours || defaultAlertOperationalSettings.inactiveAlertAutoResolveHours)
     ),
     preventiveDueDays: Math.max(
       1,
@@ -188,7 +193,153 @@ export function getSuggestionMachineLabel(suggestion) {
   return match?.[1] || "Máquina não vinculada";
 }
 
+export function getDeviceDisplayName(device) {
+  return (
+    device?.displayName ||
+    device?.machineAlias ||
+    device?.agent?.machineAlias ||
+    device?.name ||
+    device?.hostname ||
+    device?.agent?.hostname ||
+    device?.manualAsset?.hostname ||
+    device?.hardware?.hostname ||
+    device?.id ||
+    "Máquina não vinculada"
+  );
+}
+
+export function getDeviceIdentityValues(device) {
+  return [
+    device?.id,
+    device?.displayName,
+    device?.machineAlias,
+    device?.agent?.machineAlias,
+    device?.name,
+    device?.hostname,
+    device?.agent?.hostname,
+    device?.manualAsset?.hostname,
+    device?.hardware?.hostname
+  ]
+    .filter(Boolean)
+    .map((value) => normalizeText(value));
+}
+
+export function findSuggestionDevice(suggestion, devices = []) {
+  const identifiers = [
+    suggestion?.assetId,
+    suggestion?.hostId,
+    suggestion?.hostName,
+    suggestion?.assetName,
+    suggestion?.machineAlias,
+    getSuggestionMachineLabel(suggestion)
+  ]
+    .filter(Boolean)
+    .map((value) => normalizeText(value));
+
+  return devices.find((device) => {
+    const deviceIdentifiers = getDeviceIdentityValues(device);
+    return identifiers.some((identifier) => deviceIdentifiers.includes(identifier));
+  }) || null;
+}
+
+export function getCompactAlertProblemLabel(suggestion) {
+  const type = suggestion?.alertType || suggestion?.suggestedProblemTypeId;
+  if (compactAlertTypeLabels[type]) return compactAlertTypeLabels[type];
+
+  return String(suggestion?.title || "Aviso preventivo")
+    .replace(/^Verifica\S+\s+preventiva:\s*/i, "")
+    .replace(/\s+acima do limite\b/gi, " alta")
+    .replace(/\s+em\s+[A-Z0-9._-]+$/i, "")
+    .trim();
+}
+
+export function consolidateSuggestionsByMachine(suggestions = [], devices = []) {
+  const priorityRank = { low: 0, medium: 1, high: 2, critical: 3 };
+  const priorities = ["low", "medium", "high", "critical"];
+  const grouped = new Map();
+
+  suggestions.forEach((suggestion) => {
+    const device = findSuggestionDevice(suggestion, devices);
+    const fallbackLabel = getSuggestionMachineLabel(suggestion);
+    const machineLabel = device ? getDeviceDisplayName(device) : fallbackLabel;
+    const machineKey = normalizeText(
+      device?.id ||
+      suggestion?.assetId ||
+      suggestion?.hostId ||
+      suggestion?.hostName ||
+      fallbackLabel
+    );
+    const group = grouped.get(machineKey) || {
+      machineKey,
+      machineLabel,
+      device,
+      members: []
+    };
+
+    group.members.push(suggestion);
+    grouped.set(machineKey, group);
+  });
+
+  return Array.from(grouped.values()).map((group) => {
+    const members = [...group.members].sort((left, right) => {
+      const priorityDifference =
+        (priorityRank[right.suggestedPriority] ?? 1) - (priorityRank[left.suggestedPriority] ?? 1);
+      if (priorityDifference) return priorityDifference;
+      return new Date(right.updatedAt || right.createdAt || 0) - new Date(left.updatedAt || left.createdAt || 0);
+    });
+    const representative = members[0];
+    const problemLabels = Array.from(new Set(members.map(getCompactAlertProblemLabel).filter(Boolean)));
+    const occurrencesCount = members.reduce(
+      (total, suggestion) => total + Math.max(1, Number(suggestion.occurrencesCount || 1)),
+      0
+    );
+    const baseRank = members.reduce(
+      (highest, suggestion) => Math.max(highest, priorityRank[suggestion.suggestedPriority] ?? 1),
+      0
+    );
+    const recurrencePressure = occurrencesCount >= 3 ? 1 : 0;
+    const escalatedRank = Math.min(3, baseRank + Math.max(0, problemLabels.length - 1) + recurrencePressure);
+    const visibleProblems = problemLabels.slice(0, 3);
+    const hiddenProblemCount = Math.max(0, problemLabels.length - visibleProblems.length);
+    const summary = [
+      visibleProblems.join(" + "),
+      hiddenProblemCount ? `+${hiddenProblemCount}` : ""
+    ].filter(Boolean).join(" ");
+    const scriptValidations = members
+      .flatMap((suggestion) => suggestion.scriptValidations || suggestion.validations || [])
+      .filter(Boolean);
+
+    return {
+      ...representative,
+      aggregationKey: group.machineKey,
+      machineAlias: group.machineLabel,
+      title: `${summary || "Aviso preventivo"} em ${group.machineLabel}`,
+      suggestedPriority: priorities[escalatedRank],
+      occurrencesCount,
+      problemCount: problemLabels.length,
+      problemLabels,
+      memberSuggestionIds: members.map((suggestion) => suggestion.id),
+      memberSuggestions: members,
+      scriptValidations,
+      createdAt: members.reduce((oldest, suggestion) => {
+        const date = suggestion.createdAt || oldest;
+        return !oldest || new Date(date) < new Date(oldest) ? date : oldest;
+      }, ""),
+      updatedAt: members.reduce((newest, suggestion) => {
+        const date = suggestion.updatedAt || suggestion.createdAt || newest;
+        return !newest || new Date(date) > new Date(newest) ? date : newest;
+      }, "")
+    };
+  });
+}
+
 export function formatCompactSuggestionTitle(suggestion, machineLabel) {
+  if (Array.isArray(suggestion.problemLabels) && suggestion.problemLabels.length) {
+    const visibleProblems = suggestion.problemLabels.slice(0, 3);
+    const hiddenProblemCount = Math.max(0, suggestion.problemLabels.length - visibleProblems.length);
+    return `${visibleProblems.join(" + ")}${hiddenProblemCount ? ` +${hiddenProblemCount}` : ""} em ${machineLabel}`;
+  }
+
   const type = suggestion.alertType || suggestion.suggestedProblemTypeId;
   const compactLabel = compactAlertTypeLabels[type];
   if (compactLabel) return `${compactLabel} em ${machineLabel}`;

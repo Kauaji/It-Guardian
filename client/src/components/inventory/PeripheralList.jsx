@@ -20,6 +20,7 @@ export default function PeripheralList({
   segmentColor,
   canManage = false,
   allowAdd = true,
+  onAdd = () => {},
   onRemove = () => {}
 }) {
   const [items, setItems] = useState(peripherals);
@@ -34,20 +35,22 @@ export default function PeripheralList({
     setItems(peripherals);
   }, [peripherals]);
 
-  function addPeripheral(event) {
+  async function addPeripheral(event) {
     event.preventDefault();
     const type = draft.type === "Outro" ? draft.customType.trim() : draft.type;
     if (!type) return;
 
-    setItems((current) => [
-      ...current,
-      {
-        id: `${type}-${draft.brand}-${draft.assetTag}-${Date.now()}`,
-        type,
-        brand: draft.brand.trim(),
-        assetTag: draft.assetTag.trim()
-      }
-    ]);
+    const peripheral = {
+      id: `${type}-${draft.brand}-${draft.assetTag}-${Date.now()}`,
+      type,
+      brand: draft.brand.trim(),
+      assetTag: draft.assetTag.trim()
+    };
+    const result = await onAdd(peripheral);
+    if (result === false || result === null) return;
+    const savedPeripheral = result?.peripheral || result || peripheral;
+
+    setItems((current) => [...current, savedPeripheral]);
     setDraft({ type: "Monitor", customType: "", brand: "", assetTag: "" });
   }
 
