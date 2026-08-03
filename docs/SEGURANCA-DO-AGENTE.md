@@ -1,5 +1,12 @@
 # Seguranca do IT Guardian Agent
 
+## Estado seguro da beta
+
+A execucao remota real fica desabilitada por padrao. O servidor somente cria e
+entrega jobs quando `ENABLE_REMOTE_SCRIPT_EXECUTION=true`; o coletor ainda exige
+`enableRemoteScriptExecution=true` em sua configuracao local. O instalador
+comum grava `false`, portanto habilitar apenas um dos lados nao executa nada.
+
 ## Modelo de confianca
 
 O agente e destinado a computadores administrados em uma LAN ou VPN. Ele envia
@@ -15,10 +22,12 @@ pertence a um enrollment e pode ser revogado.
 - payload com lista fechada de campos;
 - limites de tamanho e validacao de numeros, data e intervalo;
 - enrollment inativo ou revogado recebe `401`;
+- rotas do coletor tem rate limit por hash do token, sem guardar o token no limiter;
+- coletor e servidor recusam inventario acima do limite de 1 MB;
 - logs nao incluem o token;
 - historico registra cadastro e reconexao do agente;
 - desinstalacao remove tarefa, configuracao e logs locais;
-- trabalhos de manutencao exigem token do enrollment e vinculo com a maquina;
+- trabalhos de manutencao permanecem bloqueados na beta por padrao;
 - tipos permitidos limitados a BAT, CMD e PowerShell cadastrados;
 - executaveis do Windows sao fixos, sem `shell: true`;
 - timeout entre 15 e 600 segundos e saida limitada a 64 KiB;
@@ -37,9 +46,9 @@ pertence a um enrollment e pode ser revogado.
 - geolocalizacao;
 - execucao sem script previamente cadastrado e trabalho persistido.
 
-O coletor usa APIs locais de inventario e HTTPS para heartbeat, obtencao de um
-trabalho autenticado e devolucao do resultado. Arquivos temporarios sao
-removidos depois da execucao. A fila nao oferece terminal remoto.
+O coletor usa APIs locais de inventario e HTTPS para heartbeat. O codigo de
+compatibilidade da fila nao oferece terminal remoto e somente pode operar com
+as duas flags explicitas, alem das validacoes de cadastro, token e ativo.
 
 ## Transporte e rotacao
 

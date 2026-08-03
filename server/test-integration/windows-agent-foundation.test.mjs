@@ -3,6 +3,7 @@ import test from "node:test";
 
 process.env.DATABASE_URL = "memory";
 process.env.ENABLE_DEMO_SEED = "false";
+process.env.ENABLE_REMOTE_SCRIPT_EXECUTION = "true";
 process.env.JWT_SECRET = "agent-integration-test-secret-with-32-characters";
 process.env.NODE_ENV = "test";
 

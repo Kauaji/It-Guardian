@@ -82,6 +82,11 @@ OCS e Zabbix podem alimentar a API por adaptadores avancados de leitura, mas
 nao fazem parte do instalador comum nem sao requisitos da beta. Consulte
 [`docs/DECISAO-OCS-ZABBIX-BETA.md`](docs/DECISAO-OCS-ZABBIX-BETA.md).
 
+Por seguranca, a execucao remota de BAT, CMD ou PowerShell fica desabilitada por
+padrao (`ENABLE_REMOTE_SCRIPT_EXECUTION=false`). Sugestoes, preventivas e
+automacoes nao enviam comandos ao coletor nessa configuracao. A auditoria atual
+esta em [`docs/AUDITORIA-BETA-PROFISSIONAL.md`](docs/AUDITORIA-BETA-PROFISSIONAL.md).
+
 Estrutura principal:
 
 ```text

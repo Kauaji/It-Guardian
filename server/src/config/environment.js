@@ -16,6 +16,10 @@ function isTruthyEnv(value) {
   return ["1", "true", "yes", "sim"].includes(String(value || "").trim().toLowerCase());
 }
 
+export function isRemoteScriptExecutionEnabled(env = process.env) {
+  return isTruthyEnv(env.ENABLE_REMOTE_SCRIPT_EXECUTION);
+}
+
 export function resolveDatabasePoolConfig({
   env = process.env,
   serverless = isVercel

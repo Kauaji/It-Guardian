@@ -89,6 +89,7 @@ import { useInventoryDragAndDrop } from "./components/inventory/useInventoryDrag
 import GeneralSettingsModal from "./components/settings/GeneralSettingsModal.jsx";
 import PublicSupportRequest from "./components/public/PublicSupportRequest.jsx";
 import { hasPermission } from "./permissions.js";
+import { remoteScriptExecutionEnabled } from "./config/features.js";
 import {
   assignSegmentToGroup,
   getSegmentGroupId,
@@ -436,7 +437,8 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     hasPermission(user, "service_orders.create_from_alert");
   const canManageScripts = hasPermission(user, "scripts.manage");
   const canRegisterScriptSimulation = hasPermission(user, "scripts.register_simulation");
-  const canUseScriptsFromAlerts = hasPermission(user, "scripts.use_from_alert");
+  const canUseScriptsFromAlerts =
+    remoteScriptExecutionEnabled && hasPermission(user, "scripts.use_from_alert");
   const canViewScriptLogs = hasPermission(user, "script_logs.view");
   const canResolveScriptLogs = hasPermission(user, "script_logs.resolve");
   const canCreatePreventivePlans =
@@ -975,6 +977,10 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
   }
 
   async function handleUseSuggestionScript(suggestionId, scriptId, payload) {
+    if (!remoteScriptExecutionEnabled) {
+      notify("Execucao remota desabilitada. Use o registro em modo de simulacao.", "warning");
+      return;
+    }
     try {
       await executeSuggestionScript(token, suggestionId, scriptId, payload);
       notify("Script enfileirado. Aguardando execução pelo agente da máquina.", "ok");
@@ -3101,6 +3107,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
             canManageScripts={canManageScripts}
             canRegisterScriptSimulation={canRegisterScriptSimulation}
             canUseScriptsFromAlerts={canUseScriptsFromAlerts}
+            remoteScriptExecutionEnabled={remoteScriptExecutionEnabled}
             canViewScriptLogs={canViewScriptLogs}
             canResolveScriptLogs={canResolveScriptLogs}
             canViewPreventivePlans={canViewPreventivePlans}

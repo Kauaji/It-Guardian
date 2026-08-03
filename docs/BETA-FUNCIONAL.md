@@ -75,6 +75,7 @@ informe somente a chave. O instalador valida a ativacao, configura o coletor
 nativo como SYSTEM, inicia a bandeja e envia o primeiro heartbeat.
 
 OCS e Zabbix nao sao baixados e nao sao requisitos para esta instalacao.
+O instalador tambem mantem `includeLoggedUser` e a execucao remota desligados.
 
 ## 6. Validar inventario e disponibilidade
 
@@ -146,7 +147,8 @@ O script pede confirmacao antes de remover configuracao e logs.
 - HTTP nao deve ser exposto diretamente na internet;
 - o coletor nativo nao possui atualizacao automatica;
 - OCS e Zabbix sao fontes opcionais e ficam desabilitados por padrao;
-- scripts de manutencao exigem cadastro, fila autenticada, limites e auditoria;
+- scripts de manutencao operam em simulacao/registro por padrao; a execucao
+  real fica bloqueada por `ENABLE_REMOTE_SCRIPT_EXECUTION=false`;
 - backup cobre o PostgreSQL, nao imagens Docker nem arquivos externos;
 - a migracao idempotente em PostgreSQL real deve ser confirmada no ensaio final;
 - o primeiro teste completo exige um segundo computador Windows real.

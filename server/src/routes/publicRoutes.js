@@ -4,11 +4,22 @@ import {
   publicMachineContext,
   supportOptions
 } from "../controllers/publicServiceOrderController.js";
+import { createRateLimiter } from "../middleware/rateLimitMiddleware.js";
 
 const router = Router();
 
-router.get("/support-options", supportOptions);
-router.get("/machine-context", publicMachineContext);
-router.post("/service-orders", createPublicServiceOrder);
+const publicReadRateLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 120
+});
+const publicWriteRateLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: "Muitos chamados foram enviados desta conexao. Aguarde alguns minutos e tente novamente."
+});
+
+router.get("/support-options", publicReadRateLimiter, supportOptions);
+router.get("/machine-context", publicReadRateLimiter, publicMachineContext);
+router.post("/service-orders", publicWriteRateLimiter, createPublicServiceOrder);
 
 export default router;

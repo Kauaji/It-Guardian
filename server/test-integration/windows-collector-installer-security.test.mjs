@@ -106,7 +106,7 @@ test("coletor PowerShell permanece restrito a inventario", async () => {
 
 });
 
-test("agente nativo executa somente trabalhos autenticados e controlados", async () => {
+test("agente nativo mantem trabalhos remotos bloqueados por padrao e controlados", async () => {
   const nativeCollector = await readProjectFile(
     "agent",
     "windows",
@@ -130,6 +130,9 @@ test("agente nativo executa somente trabalhos autenticados e controlados", async
   assert.match(nativeCollector, /UseShellExecute\s*=\s*false/);
   assert.match(nativeCollector, /Math\.Max\(15,\s*Math\.Min\(600,\s*job\.timeoutSeconds\)\)/);
   assert.match(nativeCollector, /MaximumOutputLength\s*=\s*65536/);
+  assert.match(nativeCollector, /MaxInventoryPayloadBytes\s*=\s*1024 \* 1024/);
+  assert.match(nativeCollector, /body\.Length > MaxInventoryPayloadBytes/);
+  assert.match(nativeCollector, /remoteScriptExecutionEnabled && config\.enableRemoteScriptExecution/);
   assert.match(nativeCollector, /requiresAdmin[\s\S]*IsAdministrator/);
   assert.match(nativeCollector, /requiresLoggedUser[\s\S]*Environment\.UserInteractive/);
   assert.match(nativeCollector, /AssemblyProduct\("IT Guardian"\)/);
@@ -141,4 +144,5 @@ test("agente nativo executa somente trabalhos autenticados e controlados", async
   assert.match(nativeCollector, /CollectOfficeFromUninstallRegistry/);
   assert.match(nativeCollector, /RegistryHive\.Users/);
   assert.match(nativeCollector, /Microsoft 365|Microsoft Office/);
+  assert.match(nativeCollector, /AgentVersion = "1\.6\.1"/);
 });

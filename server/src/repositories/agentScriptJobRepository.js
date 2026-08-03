@@ -2,10 +2,22 @@ import { randomUUID } from "node:crypto";
 import { query, withTransaction } from "../database.js";
 import { addAssetHistory } from "./assetHistoryRepository.js";
 import { addLog } from "./logRepository.js";
+import { isRemoteScriptExecutionEnabled } from "../config/environment.js";
 
 const executableTypes = new Set(["bat", "cmd", "powershell"]);
 const terminalStatuses = new Set(["succeeded", "failed", "timed_out"]);
 const maxOutputLength = 65536;
+
+function assertRemoteScriptExecutionEnabled() {
+  if (isRemoteScriptExecutionEnabled()) return;
+  const error = new Error(
+    "A execucao remota esta desabilitada nesta instalacao. O registro pode ser mantido em modo de simulacao."
+  );
+  error.statusCode = 503;
+  error.expose = true;
+  error.code = "REMOTE_SCRIPT_EXECUTION_DISABLED";
+  throw error;
+}
 
 function clampTimeout(value) {
   return Math.min(600, Math.max(15, Math.round(Number(value || 120))));
@@ -39,6 +51,7 @@ export async function queueAgentScriptJob({
   timeoutSeconds = 120,
   db = query
 }) {
+  assertRemoteScriptExecutionEnabled();
   if (!script || !executableTypes.has(String(script.type || "").toLowerCase())) {
     const error = new Error("Somente scripts BAT, CMD e PowerShell podem ser enviados ao agente.");
     error.statusCode = 400;
@@ -95,6 +108,7 @@ export async function queueAgentScriptJob({
 }
 
 export async function claimNextAgentScriptJob({ assetId, enrollmentId }) {
+  if (!isRemoteScriptExecutionEnabled()) return null;
   return withTransaction(async (db) => {
     const pending = await db(
       `

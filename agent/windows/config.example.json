@@ -7,5 +7,6 @@
   "environment": "",
   "group": "",
   "segment": "",
-  "includeLoggedUser": true
+  "includeLoggedUser": false,
+  "enableRemoteScriptExecution": false
 }

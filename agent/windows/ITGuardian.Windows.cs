@@ -15,8 +15,8 @@ using System.Windows.Forms;
 [assembly: System.Reflection.AssemblyDescription("Inventario e presenca do IT Guardian")]
 [assembly: System.Reflection.AssemblyCompany("IT Guardian")]
 [assembly: System.Reflection.AssemblyProduct("IT Guardian")]
-[assembly: System.Reflection.AssemblyVersion("1.6.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.6.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.6.1.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.6.1.0")]
 
 namespace ITGuardian.Windows
 {
@@ -32,11 +32,13 @@ namespace ITGuardian.Windows
         public string group { get; set; }
         public string segment { get; set; }
         public bool includeLoggedUser { get; set; }
+        public bool enableRemoteScriptExecution { get; set; }
     }
 
     internal sealed class AgentHeartbeatResponse
     {
         public string assetId { get; set; }
+        public bool remoteScriptExecutionEnabled { get; set; }
         public AgentScriptJob job { get; set; }
     }
 
@@ -63,7 +65,8 @@ namespace ITGuardian.Windows
 
     internal static class Program
     {
-        private const string AgentVersion = "1.6.0";
+        private const string AgentVersion = "1.6.1";
+        private const int MaxInventoryPayloadBytes = 1024 * 1024;
         private const int MaximumOutputLength = 65536;
 
         [STAThread]
@@ -186,6 +189,10 @@ namespace ITGuardian.Windows
             Dictionary<string, object> payload = CollectInventory(config);
             string endpoint = config.serverUrl.TrimEnd('/') + "/api/agents/heartbeat";
             byte[] body = Encoding.UTF8.GetBytes(new JavaScriptSerializer().Serialize(payload));
+            if (body.Length > MaxInventoryPayloadBytes)
+            {
+                throw new InvalidOperationException("Inventario excede o limite seguro de 1 MB.");
+            }
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(endpoint);
             request.Method = "POST";
             request.ContentType = "application/json";
@@ -211,9 +218,14 @@ namespace ITGuardian.Windows
                 }
             }
             WriteLog("INFO", "Inventario real enviado para " + config.serverUrl + ".");
-            if (heartbeat != null && heartbeat.job != null)
+            if (heartbeat != null && heartbeat.job != null &&
+                heartbeat.remoteScriptExecutionEnabled && config.enableRemoteScriptExecution)
             {
                 ExecuteAndReportJob(config, heartbeat.job);
+            }
+            else if (heartbeat != null && heartbeat.job != null)
+            {
+                WriteLog("WARN", "Trabalho remoto recusado: execucao nao habilitada no servidor e no coletor.");
             }
         }
 

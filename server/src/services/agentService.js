@@ -9,7 +9,7 @@ import {
   claimNextAgentScriptJob,
   completeAgentScriptJob
 } from "../repositories/agentScriptJobRepository.js";
-import { getFrontendUrl } from "../config/environment.js";
+import { getFrontendUrl, isRemoteScriptExecutionEnabled } from "../config/environment.js";
 import { createPublicMachineToken } from "../domain/publicMachineToken.js";
 
 const acceptedFields = new Set([
@@ -175,6 +175,7 @@ export async function receiveAgentInventory({ token, body }) {
     assetId: asset.id,
     acceptedAt: new Date().toISOString(),
     intervalSeconds: asset.intervalSeconds,
+    remoteScriptExecutionEnabled: isRemoteScriptExecutionEnabled(),
     job
   };
 }

@@ -4,6 +4,36 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-02 - Hardening profissional e recuperacao da tela branca
+
+### Estabilidade do frontend e Vercel
+
+- identificada a causa da tela branca: HTML/main bundle antigo referenciando um
+  chunk lazy removido por um deploy mais novo;
+- navegacoes SPA passaram a usar `no-store` e assets com hash mantem cache
+  imutavel;
+- falha de import dinamico faz uma unica recarga com cache busting, sem loop;
+- um Error Boundary exibe recuperacao profissional em vez de deixar `#root`
+  vazio quando ocorre uma falha de renderizacao.
+
+### Seguranca e coletor 1.6.1
+
+- `ENABLE_REMOTE_SCRIPT_EXECUTION=false` tornou-se o padrao documentado;
+- API recusa criar jobs, heartbeat nao entrega jobs e coletor exige uma segunda
+  flag local antes de executar qualquer comando;
+- frontend informa o modo de simulacao/registro e nao oferece execucao real;
+- rotas publicas e do coletor receberam limites dedicados;
+- payload do coletor passou a ter limite local de 1 MB;
+- tarefa agendada descreve apenas inventario e heartbeat;
+- usuario logado segue opcional e desligado por padrao.
+
+### Auditoria e pendencias
+
+- criada `docs/AUDITORIA-BETA-PROFISSIONAL.md` com arquitetura, privacidade,
+  matriz de riscos e controles;
+- assinatura de codigo, atualizacao automatica assinada e homologacao em VM
+  limpa continuam pendentes antes de uso em cliente real.
+
 ## 2026-08-02 - Reparo do agente e ciclo real de manutencao
 
 ### Instalador e agente 1.6.1

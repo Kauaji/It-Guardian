@@ -17057,3 +17057,37 @@ body:not(.modal-open):not(.alert-modal-open):not(.machine-details-open) {
     flex: 0 0 auto;
   }
 }
+/* Last-resort shell used when a deployment invalidates a lazy-loaded bundle. */
+.app-runtime-fallback {
+  min-height: 100vh;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 14px;
+  padding: 32px;
+  text-align: center;
+  color: #142033;
+  background: #eef3f9;
+}
+
+.app-runtime-fallback h1,
+.app-runtime-fallback p {
+  margin: 0;
+}
+
+.app-runtime-fallback p {
+  max-width: 520px;
+  color: #5d6b82;
+}
+
+.app-runtime-fallback button {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 6px;
+  color: #fff;
+  background: #16785f;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}

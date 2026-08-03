@@ -128,7 +128,7 @@ Register-ScheduledTask `
   -Trigger $triggers `
   -Principal $principal `
   -Settings $settings `
-  -Description "Mantem o inventario e os trabalhos remotos do IT Guardian ativos." `
+  -Description "Mantem o inventario e o heartbeat do IT Guardian ativos." `
   -Force | Out-Null
 Write-InstallLog "Tarefa resiliente registrada para inicializacao, logon, bateria e reinicio automatico."
 

@@ -97,6 +97,7 @@ export default function AlertCenterV2({
   canManageScripts,
   canRegisterScriptSimulation,
   canUseScriptsFromAlerts,
+  remoteScriptExecutionEnabled = false,
   canViewScriptLogs,
   canResolveScriptLogs,
   canViewPreventivePlans,
@@ -1440,6 +1441,9 @@ export default function AlertCenterV2({
                               {openScriptMenuSuggestionId === suggestion.id && (
                                 <div className="suggestion-script-popover">
                                   <strong>Scripts disponíveis</strong>
+                                  {!remoteScriptExecutionEnabled && (
+                                    <p>Execução real desabilitada. Somente simulação e registro estão disponíveis.</p>
+                                  )}
                                   {recommendationLoading && <p>Carregando scripts...</p>}
                                   {recommendationError && <p>{recommendationError}</p>}
                                   {!!recommendedScripts.length && (

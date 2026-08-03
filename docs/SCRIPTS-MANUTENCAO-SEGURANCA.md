@@ -1,16 +1,21 @@
 # Scripts de manutencao: seguranca e escopo
 
+> Estado da beta: execucao real desligada. O padrao e simulacao, registro e
+> auditoria. `ENABLE_REMOTE_SCRIPT_EXECUTION=false` impede criar e entregar jobs.
+
 ## Objetivo
 
 O IT Guardian cadastra, analisa, recomenda, agenda e audita scripts de
-manutencao. A execucao ocorre somente no coletor Windows vinculado a maquina,
-por uma fila autenticada. O navegador e o servidor nao abrem shell no endpoint.
+manutencao. Nesta beta essas operacoes nao executam comandos. O codigo de fila
+permanece para compatibilidade futura, protegido por flags no servidor e no
+coletor. O navegador e o servidor nao abrem shell no endpoint.
 
 ## Tipos e fluxo
 
 - tipos executaveis no coletor: BAT, CMD e PowerShell;
 - Shell e Outro podem permanecer cadastrados, mas nao sao entregues ao Windows;
-- sugestoes, preventivas e automatizacoes criam um trabalho persistente;
+- sugestoes, preventivas e automatizacoes mantem registro/simulacao quando a
+  execucao real esta desabilitada;
 - o heartbeat autenticado entrega no maximo um trabalho pendente para a propria
   maquina;
 - o coletor devolve status, saida limitada e erro;
@@ -52,6 +57,7 @@ aceitam comando arbitrario nem caminho de executavel.
 
 ## Checklist
 
+- [x] Execucao real desabilitada por padrao no backend, frontend e coletor.
 - [x] Fila persistente e idempotente.
 - [x] Trabalho vinculado a maquina e enrollment.
 - [x] Tipos executaveis em lista fechada.

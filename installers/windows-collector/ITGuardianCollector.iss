@@ -320,7 +320,8 @@ begin
       '  "environment": "",' + #13#10 +
       '  "group": "",' + #13#10 +
       '  "segment": "",' + #13#10 +
-      '  "includeLoggedUser": true' + #13#10 +
+      '  "includeLoggedUser": false,' + #13#10 +
+      '  "enableRemoteScriptExecution": false' + #13#10 +
       '}';
     SaveStringToFile(ExpandConstant('{app}\config.json'), ConfigJson, False);
   end;
