@@ -12,15 +12,20 @@ $configPath = Join-Path $resolvedDirectory "config.json"
 $collectorPath = Join-Path $resolvedDirectory "ITGuardian.exe"
 $logDirectory = Join-Path $resolvedDirectory "logs"
 $installLogPath = Join-Path $logDirectory "install-finalize.log"
+$durableInstallLogPath = Join-Path $env:ProgramData "ITGuardian-install-finalize.log"
 
 New-Item -ItemType Directory -Path $logDirectory -Force | Out-Null
 
 function Write-InstallLog {
   param([Parameter(Mandatory = $true)][string]$Message)
-  Add-Content `
-    -LiteralPath $installLogPath `
-    -Value ("{0:o} {1}" -f [DateTime]::UtcNow, $Message) `
-    -Encoding UTF8
+  $entry = "{0:o} {1}" -f [DateTime]::UtcNow, $Message
+  foreach ($path in @($installLogPath, $durableInstallLogPath)) {
+    try {
+      Add-Content -LiteralPath $path -Value $entry -Encoding UTF8
+    } catch {
+      # A copia externa ao diretorio do aplicativo sobrevive ao rollback do Inno Setup.
+    }
+  }
 }
 
 trap {
@@ -139,12 +144,29 @@ New-ItemProperty `
   -Value "`"$collectorPath`" --tray --config `"$configPath`"" `
   -Force | Out-Null
 
-& $collectorPath --collector --config $configPath --once
-if ($LASTEXITCODE -ne 0) {
-  throw "O primeiro heartbeat do coletor falhou."
+$heartbeatSucceeded = $false
+for ($attempt = 1; $attempt -le 3; $attempt++) {
+  & $collectorPath --collector --config $configPath --once
+  if ($LASTEXITCODE -eq 0) {
+    $heartbeatSucceeded = $true
+    Write-InstallLog "Primeiro heartbeat concluido na tentativa $attempt."
+    break
+  }
+
+  Write-InstallLog "AVISO: heartbeat inicial falhou na tentativa $attempt com codigo $LASTEXITCODE."
+  if ($attempt -lt 3) {
+    Start-Sleep -Seconds 3
+  }
 }
-Write-InstallLog "Primeiro heartbeat concluido."
+
+if (-not $heartbeatSucceeded) {
+  Write-InstallLog "AVISO: o contato inicial nao foi concluido. A tarefa resiliente continuara tentando sem cancelar a instalacao."
+}
 
 Start-ScheduledTask -TaskName $taskName
-Start-Process -FilePath $collectorPath -ArgumentList @("--tray", "--config", "`"$configPath`"")
+try {
+  Start-Process -FilePath $collectorPath -ArgumentList @("--tray", "--config", "`"$configPath`"")
+} catch {
+  Write-InstallLog "AVISO: o icone de bandeja nao iniciou nesta sessao; ele sera iniciado no proximo logon. $($_.Exception.Message)"
+}
 Write-InstallLog "Instalacao finalizada com sucesso."

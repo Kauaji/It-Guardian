@@ -77,7 +77,8 @@ export default function CloudProductAdminPanel({ token, notify }) {
   const [loading, setLoading] = useState(true);
   const [busyAction, setBusyAction] = useState("");
 
-  const installerUrl = import.meta.env.VITE_COLLECTOR_INSTALLER_URL || "";
+  const installerUrl = import.meta.env.VITE_COLLECTOR_INSTALLER_URL
+    || "https://github.com/Kauaji/It-Guardian/releases/download/collector-v1.6.2/ITGuardian-Collector-Setup.exe";
   const selectedKey = useMemo(
     () => productKeys.find((item) => item.id === selectedKeyId) || null,
     [productKeys, selectedKeyId]

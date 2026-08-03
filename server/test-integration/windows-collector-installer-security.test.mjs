@@ -43,10 +43,12 @@ test("instalador cloud usa apenas a chave e instala o coletor nativo", async () 
   assert.doesNotMatch(setup, /Informe os servidores OCS e Zabbix/);
   assert.doesNotMatch(setup, /ocsServerUrl|zabbixServer|OcsServerUrl|ZabbixServer/);
   assert.match(setup, /FinalizeParameters :=/);
-  assert.match(setup, /Reparar ou atualizar a instalacao existente/);
+  assert.match(setup, /Instalar ou reparar o IT Guardian/);
   assert.match(setup, /IsRepairInstall/);
+  assert.match(setup, /ExistingInstallDetected/);
+  assert.match(setup, /ITGuardian-install-finalize\.log/);
   assert.match(setup, /JsonConfigStringValue\(ExistingConfig, 'agentToken'\)/);
-  assert.match(setup, /if IsRepairInstall\(\) then/);
+  assert.match(setup, /if IsRepairInstall\(\) and ExistingConfigAvailable then/);
   assert.doesNotMatch(setup, /Install-MonitoringAgents|monitoring-agents\.json/);
 
   assert.match(postInstall, /New-ScheduledTaskTrigger -AtStartup/);
@@ -70,6 +72,10 @@ test("instalador cloud usa apenas a chave e instala o coletor nativo", async () 
   assert.match(setup, /Desinstalar IT Guardian/);
   assert.match(setup, /ITGuardian-Uninstaller\.exe/);
   assert.match(postInstall, /install-finalize\.log/);
+  assert.match(postInstall, /durableInstallLogPath/);
+  assert.match(postInstall, /for \(\$attempt = 1; \$attempt -le 3; \$attempt\+\+\)/);
+  assert.match(postInstall, /A tarefa resiliente continuara tentando sem cancelar a instalacao/);
+  assert.doesNotMatch(postInstall, /throw "O primeiro heartbeat do coletor falhou\."/);
   assert.match(uninstall, /Unregister-ScheduledTask/);
   assert.match(uninstall, /Stop-Process -Name "ITGuardian"/);
   assert.doesNotMatch(setup, /OCS-Windows-Agent|zabbix_agent|vendor\\ocs|vendor\\zabbix/);
@@ -144,5 +150,5 @@ test("agente nativo mantem trabalhos remotos bloqueados por padrao e controlados
   assert.match(nativeCollector, /CollectOfficeFromUninstallRegistry/);
   assert.match(nativeCollector, /RegistryHive\.Users/);
   assert.match(nativeCollector, /Microsoft 365|Microsoft Office/);
-  assert.match(nativeCollector, /AgentVersion = "1\.6\.1"/);
+  assert.match(nativeCollector, /AgentVersion = "1\.6\.2"/);
 });

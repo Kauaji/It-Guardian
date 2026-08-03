@@ -15,8 +15,8 @@ using System.Windows.Forms;
 [assembly: System.Reflection.AssemblyDescription("Inventario e presenca do IT Guardian")]
 [assembly: System.Reflection.AssemblyCompany("IT Guardian")]
 [assembly: System.Reflection.AssemblyProduct("IT Guardian")]
-[assembly: System.Reflection.AssemblyVersion("1.6.1.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.6.1.0")]
+[assembly: System.Reflection.AssemblyVersion("1.6.2.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.6.2.0")]
 
 namespace ITGuardian.Windows
 {
@@ -65,7 +65,7 @@ namespace ITGuardian.Windows
 
     internal static class Program
     {
-        private const string AgentVersion = "1.6.1";
+        private const string AgentVersion = "1.6.2";
         private const int MaxInventoryPayloadBytes = 1024 * 1024;
         private const int MaximumOutputLength = 65536;
 

@@ -1,5 +1,5 @@
 #define MyAppName "IT Guardian"
-#define MyAppVersion "1.6.1"
+#define MyAppVersion "1.6.2"
 #define MyAppPublisher "IT Guardian"
 #ifndef ApiBaseUrl
   #define ApiBaseUrl "https://it-guardian-server.vercel.app"
@@ -31,7 +31,7 @@ DisableReadyPage=yes
 WelcomeLabel1=Bem-vindo a Instalacao do IT Guardian
 WelcomeLabel2=Este assistente instalara o IT Guardian neste computador.%n%nO aplicativo coleta inventario real em segundo plano e exibe a presenca do IT Guardian na bandeja do Windows.
 FinishedHeadingLabel=Instalacao do IT Guardian concluida
-FinishedLabel=O IT Guardian foi instalado e o primeiro contato do coletor com o servidor foi validado.
+FinishedLabel=O IT Guardian foi instalado. O coletor continuara tentando contato automaticamente se o servidor estiver temporariamente indisponivel.
 
 [Files]
 Source: "ITGuardian.exe"; DestDir: "{app}"; Flags: ignoreversion
@@ -57,6 +57,7 @@ var
   ProductKeyPage: TInputQueryWizardPage;
   ExistingConfig: AnsiString;
   ExistingConfigAvailable: Boolean;
+  ExistingInstallDetected: Boolean;
   ActivatedProductKey: string;
   AgentToken: string;
   SupportUrl: string;
@@ -92,10 +93,7 @@ end;
 
 function IsRepairInstall(): Boolean;
 begin
-  if not ExistingConfigAvailable then
-    Result := False
-  else
-    Result := RepairModePage.SelectedValueIndex = 0;
+  Result := ExistingInstallDetected and (RepairModePage.SelectedValueIndex = 0);
 end;
 
 function JsonEscape(Value: string): string;
@@ -231,22 +229,28 @@ begin
   ExistingConfigAvailable :=
     LoadStringFromFile(ExistingConfigPath, ExistingConfig) and
     (JsonConfigStringValue(ExistingConfig, 'agentToken') <> '');
+  ExistingInstallDetected :=
+    DirExists(ExpandConstant('{commonappdata}\ITGuardian')) or
+    FileExists(ExpandConstant('{commonappdata}\ITGuardian-install-finalize.log'));
 
-  ProductKeyAfterId := wpWelcome;
+  RepairModePage := CreateInputOptionPage(
+    wpWelcome,
+    'Instalar ou reparar o IT Guardian',
+    'Escolha como continuar',
+    'O reparo reinstala os arquivos, recupera o coletor e preserva a ativacao sempre que ela estiver disponivel.',
+    True,
+    False
+  );
+  RepairModePage.Add('Instalar ou reparar o IT Guardian (recomendado)');
+  if ExistingInstallDetected then
+  begin
+    RepairModePage.Add('Reativar este computador com uma nova chave');
+  end;
+  RepairModePage.SelectedValueIndex := 0;
+  ProductKeyAfterId := RepairModePage.ID;
+
   if ExistingConfigAvailable then
   begin
-    RepairModePage := CreateInputOptionPage(
-      wpWelcome,
-      'Manutencao do IT Guardian',
-      'Escolha como continuar',
-      'A instalacao atual foi detectada. O reparo atualiza os arquivos, recupera o coletor e preserva a ativacao.',
-      True,
-      False
-    );
-    RepairModePage.Add('Reparar ou atualizar a instalacao existente (recomendado)');
-    RepairModePage.Add('Reativar este computador com uma nova chave');
-    RepairModePage.SelectedValueIndex := 0;
-    ProductKeyAfterId := RepairModePage.ID;
     SupportUrl := JsonConfigStringValue(ExistingConfig, 'supportUrl');
   end;
 
@@ -269,7 +273,7 @@ end;
 function ShouldSkipPage(PageID: Integer): Boolean;
 begin
   Result :=
-    ((PageID = ProductKeyPage.ID) and IsRepairInstall()) or
+    ((PageID = ProductKeyPage.ID) and IsRepairInstall() and ExistingConfigAvailable) or
     (PageID = wpSelectDir) or
     (PageID = wpSelectProgramGroup) or
     (PageID = wpSelectTasks);
@@ -302,7 +306,7 @@ begin
   if CurStep <> ssPostInstall then Exit;
 
   ForceDirectories(ExpandConstant('{app}'));
-  if IsRepairInstall() then
+  if IsRepairInstall() and ExistingConfigAvailable then
   begin
     if not FileExists(ExpandConstant('{app}\config.json')) then
       RaiseException('A configuracao existente nao foi encontrada durante o reparo.');
@@ -341,7 +345,7 @@ begin
   ) or (ResultCode <> 0) then
     RaiseException(
       'Nao foi possivel concluir a instalacao do coletor. Consulte ' +
-      ExpandConstant('{app}\logs\install-finalize.log') + '.'
+      ExpandConstant('{commonappdata}\ITGuardian-install-finalize.log') + '.'
     );
 
   { A chave nunca e gravada. Remova tambem as copias mantidas na memoria do assistente. }

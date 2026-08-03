@@ -4,6 +4,36 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-03 - Instalador 1.6.2, reparo visivel e download confiavel
+
+### Correcao da finalizacao
+
+- o modo `Instalar ou reparar o IT Guardian` passou a ser exibido antes da
+  ativacao e tambem reconhece residuos de uma instalacao interrompida;
+- uma configuracao valida continua sendo preservada no reparo; instalacoes
+  parciais solicitam a chave novamente e reconstroem a configuracao;
+- o heartbeat inicial ganhou tres tentativas e deixou de cancelar uma
+  instalacao estruturalmente valida por indisponibilidade momentanea da rede;
+- a tarefa resiliente do Windows permanece responsavel pelas novas tentativas;
+- o log de diagnostico agora tambem e preservado em
+  `C:\ProgramData\ITGuardian-install-finalize.log`, fora da pasta removida pelo
+  rollback do instalador.
+
+### Publicacao e validacao
+
+- coletor e instalador alinhados na versao `1.6.2`;
+- artefato `ITGuardian-Collector-Setup.exe` gerado com 2.099.090 bytes e
+  SHA-256 `ED07BDD7B7356B8876A72F7EC50ABC61B664FA232310B4A5168AB29C74C47876`;
+- testes de seguranca do instalador: 3/3 aprovados;
+- `npm run lint`, `npm run build` e `git diff --check` aprovados;
+- a interface aponta para o release versionado do instalador quando nenhuma
+  URL externa for configurada.
+
+### Pendencia conhecida
+
+- o executavel ainda nao possui assinatura Authenticode; a assinatura de
+  codigo continua obrigatoria antes de uma distribuicao comercial ampla.
+
 ## 2026-08-02 - Hardening profissional e recuperacao da tela branca
 
 ### Estabilidade do frontend e Vercel
