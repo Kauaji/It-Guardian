@@ -123,6 +123,29 @@ test("agente autentica, valida, atualiza inventario e respeita revogacao", async
   assert.equal(accepted.status, 202);
   assert.equal((await accepted.json()).assetId, "machine-guid-agent-test");
 
+  const acceptedWithNulCharacters = await fetch(`${baseUrl}/api/agents/heartbeat`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${enrollment.token}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(payload({
+      hostname: "LAB-PC\u0000-01",
+      machineAlias: "Computador\u0000 temporario",
+      inventoryDetails: {
+        ...payload().inventoryDetails,
+        software: [{ name: "Aplicativo\u0000 Teste", version: "1.2.3" }],
+        "nul\u0000key": "valor\u0000"
+      }
+    }))
+  });
+  assert.equal(acceptedWithNulCharacters.status, 202);
+  const [sanitizedAsset] = await listAgentAssets();
+  assert.equal(sanitizedAsset.hostname, "LAB-PC-01");
+  assert.equal(sanitizedAsset.machineAlias, "Computador temporario");
+  assert.equal(sanitizedAsset.inventoryDetails.software[0].name, "Aplicativo Teste");
+  assert.equal(sanitizedAsset.inventoryDetails.nulkey, "valor");
+
   const unknownField = await fetch(`${baseUrl}/api/agents/inventory`, {
     method: "POST",
     headers: {

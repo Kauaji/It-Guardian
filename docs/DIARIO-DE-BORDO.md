@@ -709,3 +709,30 @@ entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
   entre perifericos coletados e cadastrados manualmente;
 - lint e `git diff --check` aprovados.
 
+## 2026-08-03 - Heartbeat resiliente a caracteres NUL
+
+### Incidente
+
+- o coletor 1.6.3 iniciava e tentava comunicar a cada cinco minutos, mas os
+  heartbeats de uma maquina especifica recebiam HTTP 500;
+- os logs de producao identificaram o PostgreSQL `22P05`, causado por caractere
+  NUL vindo de um valor de Registro ou WMI dentro do inventario coletado;
+- como o heartbeat inteiro era rejeitado, a maquina mantinha o ultimo estado
+  conhecido e aparecia incorretamente como erro.
+
+### Correcao
+
+- campos textuais e toda a arvore de `inventoryDetails` agora removem somente
+  caracteres NUL antes da validacao e persistencia;
+- chaves de objetos aninhados tambem sao higienizadas para proteger colunas
+  JSONB do PostgreSQL;
+- o tratamento ocorre no servidor, portanto coletores 1.6.3 ja instalados se
+  recuperam no heartbeat seguinte sem reinstalacao.
+
+### Cobertura
+
+- o teste de integracao do agente envia NUL em hostname, nome fantasia, nome de
+  software, chave e valor estruturados;
+- o teste exige aceite HTTP 202 e confirma os dados persistidos sem o caractere
+  invalido.
+

@@ -49,8 +49,25 @@ function badRequest(message) {
   return error;
 }
 
+function removeNulFromText(value) {
+  return value.split("\u0000").join("");
+}
+
+function removeNulCharacters(value) {
+  if (typeof value === "string") return removeNulFromText(value);
+  if (Array.isArray(value)) return value.map(removeNulCharacters);
+  if (!value || typeof value !== "object") return value;
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, nestedValue]) => [
+      removeNulFromText(key),
+      removeNulCharacters(nestedValue)
+    ])
+  );
+}
+
 function text(value, field, { required = false, max = 255 } = {}) {
-  const normalized = String(value ?? "").trim();
+  const normalized = removeNulFromText(String(value ?? "")).trim();
   if (required && !normalized) throw badRequest(`O campo ${field} e obrigatorio.`);
   if (normalized.length > max) throw badRequest(`O campo ${field} excede ${max} caracteres.`);
   return normalized || null;
@@ -72,7 +89,7 @@ function structuredObject(value, field, { maxBytes = 1024 * 1024 } = {}) {
   }
   let serialized;
   try {
-    serialized = JSON.stringify(value);
+    serialized = JSON.stringify(removeNulCharacters(value));
   } catch {
     throw badRequest(`O campo ${field} nao pode ser serializado.`);
   }
