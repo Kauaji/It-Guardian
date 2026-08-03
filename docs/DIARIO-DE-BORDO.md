@@ -4,6 +4,38 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-03 - Instalador 1.6.3 e finalizacao deterministica
+
+### Causa raiz e correcao
+
+- o erro de instalacao `45:2724` foi reproduzido e localizado no uso de
+  `$LASTEXITCODE` depois da abertura do executavel Windows sem console;
+- o heartbeat inicial agora usa `Start-Process -Wait -PassThru` e avalia o
+  `ExitCode` do processo real, inclusive quando o servidor estiver
+  temporariamente indisponivel;
+- a partida imediata da tarefa agendada deixou de cancelar a instalacao quando
+  o Windows ja registrou a tarefa e pode inicia-la no proximo ciclo;
+- a pasta de logs permite escrita pelo coletor em segundo plano e pelo icone de
+  bandeja, sem ampliar o acesso ao `config.json` protegido;
+- uma falha de escrita de log nao encerra mais o agente nem mascara o erro
+  operacional original.
+
+### Artefato e validacao
+
+- coletor e instalador alinhados na versao `1.6.3`;
+- artefato `ITGuardian-Collector-Setup.exe` gerado com 2.099.315 bytes e
+  SHA-256 `EA93DD6A2F483F9BA29405DE939F4A7CED8961F94AC599DCF4C94A424607DAC7`;
+- parser PowerShell e testes direcionados do instalador aprovados;
+- o coletor recompilado foi executado com `--once` e retornou um codigo de
+  processo controlado, sem a excecao CLR que derrubava a versao anterior.
+- `npm run lint`, `npm run check:architecture`, `npm run build` e
+  `git diff --check` aprovados;
+- testes do servidor: 184 executados, com 183 aprovados e 1 ignorado.
+
+### Pendencia conhecida
+
+- o executavel ainda nao possui assinatura Authenticode.
+
 ## 2026-08-03 - Instalador 1.6.2, reparo visivel e download confiavel
 
 ### Correcao da finalizacao

@@ -1,5 +1,5 @@
 #define MyAppName "IT Guardian"
-#define MyAppVersion "1.6.2"
+#define MyAppVersion "1.6.3"
 #define MyAppPublisher "IT Guardian"
 #ifndef ApiBaseUrl
   #define ApiBaseUrl "https://it-guardian-server.vercel.app"

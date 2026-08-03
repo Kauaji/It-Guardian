@@ -65,7 +65,7 @@ namespace ITGuardian.Windows
 
     internal static class Program
     {
-        private const string AgentVersion = "1.6.2";
+        private const string AgentVersion = "1.6.3";
         private const int MaxInventoryPayloadBytes = 1024 * 1024;
         private const int MaximumOutputLength = 65536;
 
@@ -1223,18 +1223,25 @@ namespace ITGuardian.Windows
 
         internal static void WriteLog(string level, string message)
         {
-            string logDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
-            Directory.CreateDirectory(logDirectory);
-            string logPath = Path.Combine(logDirectory, "agent.log");
-            if (File.Exists(logPath) && new FileInfo(logPath).Length > 2 * 1024 * 1024)
+            try
             {
-                File.Copy(logPath, Path.Combine(logDirectory, "agent.previous.log"), true);
-                File.Delete(logPath);
+                string logDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
+                Directory.CreateDirectory(logDirectory);
+                string logPath = Path.Combine(logDirectory, "agent.log");
+                if (File.Exists(logPath) && new FileInfo(logPath).Length > 2 * 1024 * 1024)
+                {
+                    File.Copy(logPath, Path.Combine(logDirectory, "agent.previous.log"), true);
+                    File.Delete(logPath);
+                }
+                File.AppendAllText(
+                    logPath,
+                    DateTime.UtcNow.ToString("o") + " [" + level + "] " + message + Environment.NewLine
+                );
             }
-            File.AppendAllText(
-                logPath,
-                DateTime.UtcNow.ToString("o") + " [" + level + "] " + message + Environment.NewLine
-            );
+            catch
+            {
+                // Falhas de telemetria local nunca podem encerrar o coletor ou a bandeja.
+            }
         }
     }
 

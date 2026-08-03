@@ -16,6 +16,18 @@ $durableInstallLogPath = Join-Path $env:ProgramData "ITGuardian-install-finalize
 
 New-Item -ItemType Directory -Path $logDirectory -Force | Out-Null
 
+$logAcl = Get-Acl -LiteralPath $logDirectory
+$logUsersSid = New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-545")
+$logRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+  $logUsersSid,
+  "Modify",
+  "ContainerInherit,ObjectInherit",
+  "None",
+  "Allow"
+)
+$logAcl.SetAccessRule($logRule)
+Set-Acl -LiteralPath $logDirectory -AclObject $logAcl
+
 function Write-InstallLog {
   param([Parameter(Mandatory = $true)][string]$Message)
   $entry = "{0:o} {1}" -f [DateTime]::UtcNow, $Message
@@ -34,6 +46,7 @@ trap {
 }
 
 Write-InstallLog "Iniciando finalizacao da instalacao."
+Write-InstallLog "Permissoes de log preparadas para o coletor e para o icone de bandeja."
 
 if (-not (Test-Path -LiteralPath $configPath)) {
   throw "Configuracao do coletor nao encontrada."
@@ -146,14 +159,26 @@ New-ItemProperty `
 
 $heartbeatSucceeded = $false
 for ($attempt = 1; $attempt -le 3; $attempt++) {
-  & $collectorPath --collector --config $configPath --once
-  if ($LASTEXITCODE -eq 0) {
+  $heartbeatExitCode = -1
+  try {
+    $heartbeatProcess = Start-Process `
+      -FilePath $collectorPath `
+      -ArgumentList @("--collector", "--config", "`"$configPath`"", "--once") `
+      -WindowStyle Hidden `
+      -Wait `
+      -PassThru
+    $heartbeatExitCode = $heartbeatProcess.ExitCode
+  } catch {
+    Write-InstallLog "AVISO: nao foi possivel iniciar o heartbeat na tentativa $attempt. $($_.Exception.Message)"
+  }
+
+  if ($heartbeatExitCode -eq 0) {
     $heartbeatSucceeded = $true
     Write-InstallLog "Primeiro heartbeat concluido na tentativa $attempt."
     break
   }
 
-  Write-InstallLog "AVISO: heartbeat inicial falhou na tentativa $attempt com codigo $LASTEXITCODE."
+  Write-InstallLog "AVISO: heartbeat inicial falhou na tentativa $attempt com codigo $heartbeatExitCode."
   if ($attempt -lt 3) {
     Start-Sleep -Seconds 3
   }
@@ -163,7 +188,11 @@ if (-not $heartbeatSucceeded) {
   Write-InstallLog "AVISO: o contato inicial nao foi concluido. A tarefa resiliente continuara tentando sem cancelar a instalacao."
 }
 
-Start-ScheduledTask -TaskName $taskName
+try {
+  Start-ScheduledTask -TaskName $taskName
+} catch {
+  Write-InstallLog "AVISO: a tarefa foi registrada, mas nao iniciou imediatamente; o Windows tentara novamente. $($_.Exception.Message)"
+}
 try {
   Start-Process -FilePath $collectorPath -ArgumentList @("--tray", "--config", "`"$configPath`"")
 } catch {

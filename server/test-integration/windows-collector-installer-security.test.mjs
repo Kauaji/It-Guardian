@@ -74,6 +74,11 @@ test("instalador cloud usa apenas a chave e instala o coletor nativo", async () 
   assert.match(postInstall, /install-finalize\.log/);
   assert.match(postInstall, /durableInstallLogPath/);
   assert.match(postInstall, /for \(\$attempt = 1; \$attempt -le 3; \$attempt\+\+\)/);
+  assert.match(postInstall, /Start-Process[\s\S]*-Wait[\s\S]*-PassThru/);
+  assert.match(postInstall, /\$heartbeatProcess\.ExitCode/);
+  assert.doesNotMatch(postInstall, /if \(\$LASTEXITCODE -eq 0\)/);
+  assert.match(postInstall, /S-1-5-32-545/);
+  assert.match(postInstall, /ContainerInherit,ObjectInherit/);
   assert.match(postInstall, /A tarefa resiliente continuara tentando sem cancelar a instalacao/);
   assert.doesNotMatch(postInstall, /throw "O primeiro heartbeat do coletor falhou\."/);
   assert.match(uninstall, /Unregister-ScheduledTask/);
@@ -150,5 +155,6 @@ test("agente nativo mantem trabalhos remotos bloqueados por padrao e controlados
   assert.match(nativeCollector, /CollectOfficeFromUninstallRegistry/);
   assert.match(nativeCollector, /RegistryHive\.Users/);
   assert.match(nativeCollector, /Microsoft 365|Microsoft Office/);
-  assert.match(nativeCollector, /AgentVersion = "1\.6\.2"/);
+  assert.match(nativeCollector, /AgentVersion = "1\.6\.3"/);
+  assert.match(nativeCollector, /Falhas de telemetria local nunca podem encerrar o coletor/);
 });
