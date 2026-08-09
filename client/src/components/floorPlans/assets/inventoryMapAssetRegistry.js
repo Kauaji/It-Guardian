@@ -1,3 +1,5 @@
+import { FLOOR_PLAN_LIBRARY_BY_ID } from "./floorPlanLibrary.js";
+
 export const MODEL_QUALITY_SIMPLE = "simple";
 export const MODEL_QUALITY_DETAILED = "detailed";
 
@@ -63,7 +65,16 @@ export const INVENTORY_MAP_ASSET_REGISTRY = Object.freeze({
 });
 
 export function getInventoryMapAssetDefinition(type) {
-  return INVENTORY_MAP_ASSET_REGISTRY[type] || { label: type || "Objeto", modelUrl: null, fallback: "box" };
+  const legacy = INVENTORY_MAP_ASSET_REGISTRY[type];
+  const library = FLOOR_PLAN_LIBRARY_BY_ID[type];
+  if (legacy) return legacy;
+  if (library) {
+    return {
+      ...library,
+      modelUrl: library.modelPath?.replace(`${MODEL_BASE}/`, "") || null
+    };
+  }
+  return { label: type || "Objeto", modelUrl: null, fallback: "box" };
 }
 
 export function resolveInventoryMapAssetMode(type, quality = MODEL_QUALITY_SIMPLE) {
