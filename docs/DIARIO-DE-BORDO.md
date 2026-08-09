@@ -792,3 +792,25 @@ entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 - o teste exige aceite HTTP 202 e confirma os dados persistidos sem o caractere
   invalido.
 
+## 2026-08-09 - Biblioteca profissional do editor de plantas
+
+### Evolucao
+
+- criada uma biblioteca versionada para objetos 2D/3D com manifesto, autoria,
+  origem, licenca, dimensoes, escala, tags e capacidade de vinculo ao inventario;
+- preservados os modelos CC0 de Kenney e Quaternius e os caminhos legados usados
+  por plantas existentes;
+- adicionadas categorias e objetos para escritorio, TI, rede e ambiente hospitalar;
+- o resolvedor 3D agora consulta a biblioteca central antes de recorrer ao fallback;
+- glifos de planta baixa foram ampliados para leito, maca, carrinho medico, balcao
+  e sofa;
+- documentados o pipeline legal de OBJ/DAE/SH3F para GLB, limites de desempenho,
+  compatibilidade e inclusao futura de ativos.
+
+### Garantias
+
+- nenhuma parte proprietaria do Sweet Home 3D foi copiada ou extraida;
+- ativos sem modelo detalhado continuam funcionais por geometria procedural;
+- teste automatizado bloqueia IDs duplicados, metadados legais incompletos,
+  dimensoes invalidas e caminhos de modelo inexistentes.
+
