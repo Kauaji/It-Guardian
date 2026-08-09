@@ -4,6 +4,8 @@ import test from "node:test";
 import {
   consolidateSuggestionsByMachine,
   findSuggestionDevice,
+  formatCompactSuggestionTitle,
+  formatDisplayText,
   getDeviceDisplayName,
   normalizePrioritySettings
 } from "../../client/src/components/alerts/alertUtils.js";
@@ -35,6 +37,37 @@ function suggestion(overrides = {}) {
 test("uses the fantasy name and falls back to the hostname", () => {
   assert.equal(getDeviceDisplayName(device), "Computador do Kauã");
   assert.equal(getDeviceDisplayName({ hostname: "PC-01" }), "PC-01");
+});
+
+test("formats structured alert data before rendering", () => {
+  assert.equal(
+    formatDisplayText({
+      name: "Microsoft 365",
+      version: "2021",
+      installedAt: "2026-07-29T12:00:00.000Z",
+      manufacturer: "Microsoft"
+    }),
+    "Microsoft 365 2021"
+  );
+  assert.equal(
+    getDeviceDisplayName({
+      displayName: { name: "Notebook Financeiro", version: "v2" },
+      hostname: "NB-FIN-01"
+    }),
+    "Notebook Financeiro v2"
+  );
+  assert.equal(
+    formatCompactSuggestionTitle(
+      {
+        problemLabels: [
+          { name: "RAM alta" },
+          { summary: "Disco alto" }
+        ]
+      },
+      { name: "Computador do Kaua" }
+    ),
+    "RAM alta + Disco alto em Computador do Kaua"
+  );
 });
 
 test("matches a suggestion to its device by stable identity", () => {

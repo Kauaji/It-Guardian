@@ -98,6 +98,54 @@ export function normalizeText(value = "") {
     .toLowerCase();
 }
 
+export function formatDisplayText(value, fallback = "Não informado") {
+  if (value === null || value === undefined || value === "") return fallback;
+
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value);
+  }
+
+  if (typeof value === "boolean") {
+    return value ? "Sim" : "Não";
+  }
+
+  if (Array.isArray(value)) {
+    const items = value
+      .map((item) => formatDisplayText(item, ""))
+      .filter(Boolean);
+    return items.length ? items.join(", ") : fallback;
+  }
+
+  if (typeof value === "object") {
+    const preferred = [
+      value.summary,
+      value.message,
+      value.title,
+      value.label,
+      value.name,
+      value.description,
+      value.status,
+      value.type,
+      value.metric
+    ].find((item) => item !== null && item !== undefined && item !== "");
+
+    if (preferred !== undefined) {
+      const version = value.version ? ` ${value.version}` : "";
+      return `${formatDisplayText(preferred, fallback)}${version}`;
+    }
+
+    const facts = Object.entries(value)
+      .filter(([, item]) => item !== null && item !== undefined && item !== "" && typeof item !== "object")
+      .slice(0, 4)
+      .map(([key, item]) => `${key}: ${formatDisplayText(item, "")}`)
+      .filter((item) => !item.endsWith(": "));
+
+    return facts.length ? facts.join(" · ") : fallback;
+  }
+
+  return String(value);
+}
+
 export const suggestionStatusLabels = {
   pending: "Pendente",
   accepted: "OS criada",
@@ -185,27 +233,28 @@ export function formatSuggestionCode(suggestion, index) {
 }
 
 export function getSuggestionMachineLabel(suggestion) {
-  if (suggestion.machineAlias) return suggestion.machineAlias;
-  if (suggestion.hostName) return suggestion.hostName;
-  if (suggestion.assetName) return suggestion.assetName;
-  if (suggestion.assetId) return suggestion.assetId;
+  if (suggestion.machineAlias) return formatDisplayText(suggestion.machineAlias);
+  if (suggestion.hostName) return formatDisplayText(suggestion.hostName);
+  if (suggestion.assetName) return formatDisplayText(suggestion.assetName);
+  if (suggestion.assetId) return formatDisplayText(suggestion.assetId);
   const match = String(suggestion.title || "").match(/\bem\s+([A-Z0-9._-]+)$/i);
   return match?.[1] || "Máquina não vinculada";
 }
 
 export function getDeviceDisplayName(device) {
-  return (
-    device?.displayName ||
-    device?.machineAlias ||
-    device?.agent?.machineAlias ||
-    device?.name ||
-    device?.hostname ||
-    device?.agent?.hostname ||
-    device?.manualAsset?.hostname ||
-    device?.hardware?.hostname ||
-    device?.id ||
-    "Máquina não vinculada"
-  );
+  const displayName = [
+    device?.displayName,
+    device?.machineAlias,
+    device?.agent?.machineAlias,
+    device?.name,
+    device?.hostname,
+    device?.agent?.hostname,
+    device?.manualAsset?.hostname,
+    device?.hardware?.hostname,
+    device?.id
+  ].find((value) => value !== null && value !== undefined && value !== "");
+
+  return formatDisplayText(displayName, "Máquina não vinculada");
 }
 
 export function getDeviceIdentityValues(device) {
@@ -246,7 +295,7 @@ export function getCompactAlertProblemLabel(suggestion) {
   const type = suggestion?.alertType || suggestion?.suggestedProblemTypeId;
   if (compactAlertTypeLabels[type]) return compactAlertTypeLabels[type];
 
-  return String(suggestion?.title || "Aviso preventivo")
+  return formatDisplayText(suggestion?.title, "Aviso preventivo")
     .replace(/^Verifica\S+\s+preventiva:\s*/i, "")
     .replace(/\s+acima do limite\b/gi, " alta")
     .replace(/\s+em\s+[A-Z0-9._-]+$/i, "")
@@ -334,22 +383,24 @@ export function consolidateSuggestionsByMachine(suggestions = [], devices = []) 
 }
 
 export function formatCompactSuggestionTitle(suggestion, machineLabel) {
+  const displayMachineLabel = formatDisplayText(machineLabel, "Máquina não vinculada");
+
   if (Array.isArray(suggestion.problemLabels) && suggestion.problemLabels.length) {
-    const visibleProblems = suggestion.problemLabels.slice(0, 3);
+    const visibleProblems = suggestion.problemLabels.slice(0, 3).map((problem) => formatDisplayText(problem, "Aviso"));
     const hiddenProblemCount = Math.max(0, suggestion.problemLabels.length - visibleProblems.length);
-    return `${visibleProblems.join(" + ")}${hiddenProblemCount ? ` +${hiddenProblemCount}` : ""} em ${machineLabel}`;
+    return `${visibleProblems.join(" + ")}${hiddenProblemCount ? ` +${hiddenProblemCount}` : ""} em ${displayMachineLabel}`;
   }
 
   const type = suggestion.alertType || suggestion.suggestedProblemTypeId;
   const compactLabel = compactAlertTypeLabels[type];
-  if (compactLabel) return `${compactLabel} em ${machineLabel}`;
+  if (compactLabel) return `${compactLabel} em ${displayMachineLabel}`;
 
-  const title = String(suggestion.title || "Aviso preventivo")
+  const title = formatDisplayText(suggestion.title, "Aviso preventivo")
     .replace(/^Verifica\S+\s+preventiva:\s*/i, "")
     .replace(/\s+acima do limite\b/gi, " alta");
   const originalName = String(suggestion.hostName || "");
-  return originalName && originalName !== machineLabel
-    ? title.split(originalName).join(machineLabel)
+  return originalName && originalName !== displayMachineLabel
+    ? title.split(originalName).join(displayMachineLabel)
     : title;
 }
 

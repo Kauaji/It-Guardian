@@ -4,6 +4,25 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-09 - Recuperacao da tela de avisos em producao
+
+### Causa raiz e correcao
+
+- a tela de avisos podia receber objetos estruturados do agente/API em campos
+  exibidos diretamente no JSX, como detalhes de software, correlacoes e logs;
+- esses objetos disparavam o erro minificado do React #31 e derrubavam a tela
+  para o fallback de runtime em producao;
+- a central de avisos passou a normalizar valores estruturados antes de
+  renderizar titulos, nomes, correlacoes, comentarios, checklist e logs;
+- o nome fantasia continua priorizado, com fallback seguro para hostname/id.
+
+### Validacao
+
+- adicionado teste direcionado para impedir regressao quando o dado vier como
+  objeto com `name`, `version`, `installedAt` e `manufacturer`;
+- validacoes executadas nesta entrega: teste direcionado de alertas, lint,
+  build e `git diff --check`.
+
 ## 2026-08-03 - Instalador 1.6.3 e finalizacao deterministica
 
 ### Causa raiz e correcao

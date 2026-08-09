@@ -40,6 +40,7 @@ import {
   formatAlertThreshold,
   formatAlertValue,
   formatCompactSuggestionTitle,
+  formatDisplayText,
   formatSuggestionCode,
   getAlertCategory,
   getAlertConfidence,
@@ -437,14 +438,16 @@ export default function AlertCenterV2({
     const group = groupId ? groupById.get(String(groupId)) : null;
 
     return {
-      segmentName: segment?.name || device?.segmentName || "Não organizadas",
-      groupName: group?.name || "Sem grupo"
+      segmentName: formatDisplayText(segment?.name || device?.segmentName, "Não organizadas"),
+      groupName: formatDisplayText(group?.name, "Sem grupo")
     };
   }
 
   function getAlertMachineLabel(alert) {
     const device = findAlertDevice(alert);
-    return device ? getDeviceDisplayName(device) : alert.hostName || alert.assetId || "Máquina não vinculada";
+    return device
+      ? getDeviceDisplayName(device)
+      : formatDisplayText(alert.hostName || alert.assetId, "Máquina não vinculada");
   }
 
   function getResolvedAlertTitle(alert) {
@@ -457,12 +460,26 @@ export default function AlertCenterV2({
 
   function getResolvedSuggestionMachineLabel(suggestion) {
     const device = findSuggestionDevice(suggestion);
-    return device ? getDeviceDisplayName(device) : suggestion.machineAlias || getSuggestionMachineLabel(suggestion);
+    return device
+      ? getDeviceDisplayName(device)
+      : formatDisplayText(suggestion.machineAlias || getSuggestionMachineLabel(suggestion), "Máquina não vinculada");
   }
 
   function getResolvedSuggestionTitle(suggestion) {
     const resolvedName = String(getResolvedSuggestionMachineLabel(suggestion) || "");
-    return formatCompactSuggestionTitle(suggestion, resolvedName);
+    return formatDisplayText(formatCompactSuggestionTitle(suggestion, resolvedName), "Aviso preventivo");
+  }
+
+  function getSafeCommentMessage(comment) {
+    return formatDisplayText(comment?.message || comment?.text || comment, "Comentário sem mensagem.");
+  }
+
+  function getSafeSummary(value, fallback = "Não informado") {
+    return formatDisplayText(value?.summary ?? value, fallback);
+  }
+
+  function getSafeListItem(item, fallback = "Item sem descrição") {
+    return formatDisplayText(item, fallback);
   }
 
   function getSuggestionLocation(suggestion) {
@@ -472,8 +489,8 @@ export default function AlertCenterV2({
     const group = groupId ? groupById.get(String(groupId)) : null;
 
     return {
-      segmentName: segment?.name || device?.segmentName || "Não organizadas",
-      groupName: group?.name || "Sem grupo"
+      segmentName: formatDisplayText(segment?.name || device?.segmentName, "Não organizadas"),
+      groupName: formatDisplayText(group?.name, "Sem grupo")
     };
   }
 
@@ -1174,9 +1191,9 @@ export default function AlertCenterV2({
                   <div className="alert-correlations-grid">
                     {alertCorrelations.slice(0, 4).map((correlation) => (
                       <article key={correlation.correlationId || correlation.id} className={`alert-correlation-card ${correlation.impactLevel === "critical" ? "critical" : "warning"}`}>
-                        <span>{correlation.confidenceLevel || "Média"} confiança</span>
-                        <strong>{correlation.correlationSummary}</strong>
-                        <small>{(correlation.relatedHosts || []).join(", ")}</small>
+                        <span>{formatDisplayText(correlation.confidenceLevel, "Média")} confiança</span>
+                        <strong>{formatDisplayText(correlation.correlationSummary, "Aviso correlacionado")}</strong>
+                        <small>{formatDisplayText(correlation.relatedHosts, "Sem máquinas relacionadas")}</small>
                       </article>
                     ))}
                   </div>
@@ -1229,25 +1246,25 @@ export default function AlertCenterV2({
                             <dd>{Math.round(alert.recurrenceScore || 0) || "N/D"}</dd>
                           </div>
                         </dl>
-                        <p><strong>Motivo da prioridade:</strong> {alert.priorityReason || "Prioridade definida pela regra atual do aviso."}</p>
-                        <p><strong>Impacto:</strong> {alert.operationalImpact || getAlertImpact(alert)}</p>
-                        <p><strong>Causa provável:</strong> {alert.probableCause || getAlertProbableCause(alert)}</p>
-                        <p><strong>Ação recomendada:</strong> {alert.recommendedAction || getAlertRecommendedAction(alert)}</p>
+                        <p><strong>Motivo da prioridade:</strong> {formatDisplayText(alert.priorityReason, "Prioridade definida pela regra atual do aviso.")}</p>
+                        <p><strong>Impacto:</strong> {formatDisplayText(alert.operationalImpact, getAlertImpact(alert))}</p>
+                        <p><strong>Causa provável:</strong> {formatDisplayText(alert.probableCause, getAlertProbableCause(alert))}</p>
+                        <p><strong>Ação recomendada:</strong> {formatDisplayText(alert.recommendedAction, getAlertRecommendedAction(alert))}</p>
                         {alert.recurrenceInsight && (
-                          <p><strong>Reincidência:</strong> {alert.recurrenceInsight.summary}</p>
+                          <p><strong>Reincidência:</strong> {getSafeSummary(alert.recurrenceInsight)}</p>
                         )}
                         {alert.falsePositiveInsight && (
-                          <p><strong>Possível falso positivo:</strong> {alert.falsePositiveInsight.summary}</p>
+                          <p><strong>Possível falso positivo:</strong> {getSafeSummary(alert.falsePositiveInsight)}</p>
                         )}
                         {alert.capacityForecast?.summary && (
-                          <p><strong>Capacidade:</strong> {alert.capacityForecast.summary}</p>
+                          <p><strong>Capacidade:</strong> {getSafeSummary(alert.capacityForecast)}</p>
                         )}
                         {!!checklist.length && (
                           <div className="alert-checklist">
                             <strong>Checklist sugerido</strong>
                             <ul>
-                              {checklist.slice(0, 4).map((item) => (
-                                <li key={item}>{item}</li>
+                              {checklist.slice(0, 4).map((item, itemIndex) => (
+                                <li key={`${itemIndex}-${getSafeListItem(item)}`}>{getSafeListItem(item)}</li>
                               ))}
                             </ul>
                           </div>
@@ -1257,7 +1274,7 @@ export default function AlertCenterV2({
                           {comments.slice(-2).map((comment) => (
                             <p key={comment.id}>
                               <span>{comment.userName || "Usuário"} · {formatDate(comment.createdAt)}</span>
-                              {comment.message}
+                              {getSafeCommentMessage(comment)}
                             </p>
                           ))}
                           {!comments.length && <small>Nenhum comentário registrado.</small>}
@@ -1333,7 +1350,7 @@ export default function AlertCenterV2({
                         "--service-order-priority-color": priorityColor,
                         "--service-order-priority-bg": `color-mix(in srgb, ${priorityColor} 32%, var(--surface))`
                       }}
-                      title={suggestion.priorityReason || suggestionTitle}
+                      title={formatDisplayText(suggestion.priorityReason || suggestionTitle, suggestionTitle)}
                     >
                       {occurrenceCount > 1 && (
                         <span
@@ -2047,18 +2064,18 @@ export default function AlertCenterV2({
             <header className="suggestion-info-header">
               <div>
                 <span>{formatSuggestionCode(selectedSuggestionInfo, selectedSuggestionIndex)}</span>
-                <h2 id="suggestion-info-title">{selectedSuggestionInfo.title}</h2>
+                <h2 id="suggestion-info-title">{getResolvedSuggestionTitle(selectedSuggestionInfo)}</h2>
                 <p>
                   {selectedSuggestionInfoModel.machineLabel} - {selectedSuggestionInfoModel.location.groupName} - {selectedSuggestionInfoModel.location.segmentName}
                 </p>
                 <div className="suggestion-info-badges">
                   <span className={`pill ${selectedSuggestionInfo.status === "accepted" ? "ok" : selectedSuggestionInfo.status === "rejected" ? "danger" : "warning"}`}>
-                    {suggestionStatusLabels[selectedSuggestionInfo.status] || selectedSuggestionInfo.status}
+                    {suggestionStatusLabels[selectedSuggestionInfo.status] || formatDisplayText(selectedSuggestionInfo.status, "Pendente")}
                   </span>
                   <span className={`pill ${selectedSuggestionInfoModel.priority === "critical" ? "danger" : "warning"}`}>
                     {selectedSuggestionInfoModel.priorityLabel}
                   </span>
-                  <span className="pill">{selectedSuggestionInfo.category || getAlertCategory(selectedSuggestionInfoModel.alert)}</span>
+                  <span className="pill">{formatDisplayText(selectedSuggestionInfo.category, getAlertCategory(selectedSuggestionInfoModel.alert))}</span>
                 </div>
               </div>
               <button
@@ -2082,19 +2099,19 @@ export default function AlertCenterV2({
                   </div>
                   <div className="suggestion-info-item">
                     <span>Tipo do ativo</span>
-                    <strong>{selectedSuggestionInfoModel.device?.type || selectedSuggestionInfoModel.device?.manualAsset?.type || selectedSuggestionInfo.category || "Não informado"}</strong>
+                    <strong>{formatDisplayText(selectedSuggestionInfoModel.device?.type || selectedSuggestionInfoModel.device?.manualAsset?.type || selectedSuggestionInfo.category, "Não informado")}</strong>
                   </div>
                   <div className="suggestion-info-item">
                     <span>IP</span>
-                    <strong>{selectedSuggestionInfoModel.device?.ip || selectedSuggestionInfoModel.device?.manualAsset?.ip || "Não informado"}</strong>
+                    <strong>{formatDisplayText(selectedSuggestionInfoModel.device?.ip || selectedSuggestionInfoModel.device?.manualAsset?.ip, "Não informado")}</strong>
                   </div>
                   <div className="suggestion-info-item">
                     <span>Sistema operacional</span>
-                    <strong>{selectedSuggestionInfoModel.device?.os || selectedSuggestionInfoModel.device?.manualAsset?.os || "Não informado"}</strong>
+                    <strong>{formatDisplayText(selectedSuggestionInfoModel.device?.os || selectedSuggestionInfoModel.device?.manualAsset?.os, "Não informado")}</strong>
                   </div>
                   <div className="suggestion-info-item">
                     <span>Aba/Ambiente</span>
-                    <strong>{selectedSuggestionInfoModel.device?.tabName || selectedSuggestionInfoModel.device?.environment || "Não informado"}</strong>
+                    <strong>{formatDisplayText(selectedSuggestionInfoModel.device?.tabName || selectedSuggestionInfoModel.device?.environment, "Não informado")}</strong>
                   </div>
                   <div className="suggestion-info-item">
                     <span>Grupo</span>
@@ -2120,15 +2137,15 @@ export default function AlertCenterV2({
                 <div className="suggestion-info-grid">
                   <div className="suggestion-info-item">
                     <span>Tipo</span>
-                    <strong>{alertTypeLabels[selectedSuggestionInfoModel.alert.type] || selectedSuggestionInfoModel.alert.type || "Aviso preventivo"}</strong>
+                    <strong>{alertTypeLabels[selectedSuggestionInfoModel.alert.type] || formatDisplayText(selectedSuggestionInfoModel.alert.type, "Aviso preventivo")}</strong>
                   </div>
                   <div className="suggestion-info-item">
                     <span>Categoria</span>
-                    <strong>{selectedSuggestionInfo.category || getAlertCategory(selectedSuggestionInfoModel.alert)}</strong>
+                    <strong>{formatDisplayText(selectedSuggestionInfo.category, getAlertCategory(selectedSuggestionInfoModel.alert))}</strong>
                   </div>
                   <div className="suggestion-info-item">
                     <span>Métrica</span>
-                    <strong>{selectedSuggestionInfoModel.alert.metric || "Não informada"}</strong>
+                    <strong>{formatDisplayText(selectedSuggestionInfoModel.alert.metric, "Não informada")}</strong>
                   </div>
                   <div className="suggestion-info-item">
                     <span>Valor atual</span>
@@ -2152,11 +2169,11 @@ export default function AlertCenterV2({
                   </div>
                   <div className="suggestion-info-item">
                     <span>Confiança</span>
-                    <strong>{selectedSuggestionInfo.confidenceLevel || getAlertConfidence(selectedSuggestionInfoModel.alert)}</strong>
+                    <strong>{formatDisplayText(selectedSuggestionInfo.confidenceLevel, getAlertConfidence(selectedSuggestionInfoModel.alert))}</strong>
                   </div>
                   <div className="suggestion-info-item">
                     <span>Tendência</span>
-                    <strong>{selectedSuggestionInfo.trend || getAlertTrend(selectedSuggestionInfoModel.alert)}</strong>
+                    <strong>{formatDisplayText(selectedSuggestionInfo.trend, getAlertTrend(selectedSuggestionInfoModel.alert))}</strong>
                   </div>
                   <div className="suggestion-info-item">
                     <span>Score/Risco</span>
@@ -2172,18 +2189,18 @@ export default function AlertCenterV2({
               <section className="suggestion-info-section">
                 <h3>Explicações técnicas</h3>
                 <div className="suggestion-info-text-list">
-                  <p><strong>Motivo da prioridade:</strong> {selectedSuggestionInfo.priorityReason || "Prioridade definida pela regra atual do aviso."}</p>
-                  <p><strong>Impacto operacional:</strong> {selectedSuggestionInfo.operationalImpact || getAlertImpact(selectedSuggestionInfoModel.alert)}</p>
-                  <p><strong>Causa provável:</strong> {selectedSuggestionInfo.probableCause || getAlertProbableCause(selectedSuggestionInfoModel.alert)}</p>
-                  <p><strong>Ação recomendada:</strong> {selectedSuggestionInfo.recommendedAction || getAlertRecommendedAction(selectedSuggestionInfoModel.alert)}</p>
+                  <p><strong>Motivo da prioridade:</strong> {formatDisplayText(selectedSuggestionInfo.priorityReason, "Prioridade definida pela regra atual do aviso.")}</p>
+                  <p><strong>Impacto operacional:</strong> {formatDisplayText(selectedSuggestionInfo.operationalImpact, getAlertImpact(selectedSuggestionInfoModel.alert))}</p>
+                  <p><strong>Causa provável:</strong> {formatDisplayText(selectedSuggestionInfo.probableCause, getAlertProbableCause(selectedSuggestionInfoModel.alert))}</p>
+                  <p><strong>Ação recomendada:</strong> {formatDisplayText(selectedSuggestionInfo.recommendedAction, getAlertRecommendedAction(selectedSuggestionInfoModel.alert))}</p>
                   {selectedSuggestionInfo.recurrenceInsight?.summary && (
-                    <p><strong>Reincidência:</strong> {selectedSuggestionInfo.recurrenceInsight.summary}</p>
+                    <p><strong>Reincidência:</strong> {getSafeSummary(selectedSuggestionInfo.recurrenceInsight)}</p>
                   )}
                   {selectedSuggestionInfo.falsePositiveInsight?.summary && (
-                    <p><strong>Possível falso positivo:</strong> {selectedSuggestionInfo.falsePositiveInsight.summary}</p>
+                    <p><strong>Possível falso positivo:</strong> {getSafeSummary(selectedSuggestionInfo.falsePositiveInsight)}</p>
                   )}
                   {selectedSuggestionInfo.capacityForecast?.summary && (
-                    <p><strong>Capacidade/previsão:</strong> {selectedSuggestionInfo.capacityForecast.summary}</p>
+                    <p><strong>Capacidade/previsão:</strong> {getSafeSummary(selectedSuggestionInfo.capacityForecast)}</p>
                   )}
                 </div>
               </section>
@@ -2192,8 +2209,8 @@ export default function AlertCenterV2({
                 <h3>Checklist sugerido</h3>
                 {selectedSuggestionInfoModel.checklist.length > 0 ? (
                   <ul className="suggestion-info-checklist">
-                    {selectedSuggestionInfoModel.checklist.map((item) => (
-                      <li key={item}>{item}</li>
+                    {selectedSuggestionInfoModel.checklist.map((item, itemIndex) => (
+                      <li key={`${itemIndex}-${getSafeListItem(item)}`}>{getSafeListItem(item)}</li>
                     ))}
                   </ul>
                 ) : (
@@ -2207,9 +2224,9 @@ export default function AlertCenterV2({
                   <div className="suggestion-info-correlations">
                     {selectedSuggestionInfoModel.correlations.map((correlation) => (
                       <article key={correlation.correlationId || correlation.id}>
-                        <span>{correlation.confidenceLevel || "Média"} confiança</span>
-                        <strong>{correlation.correlationSummary || "Aviso correlacionado"}</strong>
-                        <small>{(correlation.relatedHosts || []).join(", ") || "Sem máquinas relacionadas"}</small>
+                        <span>{formatDisplayText(correlation.confidenceLevel, "Média")} confiança</span>
+                        <strong>{formatDisplayText(correlation.correlationSummary, "Aviso correlacionado")}</strong>
+                        <small>{formatDisplayText(correlation.relatedHosts, "Sem máquinas relacionadas")}</small>
                       </article>
                     ))}
                   </div>
@@ -2224,7 +2241,7 @@ export default function AlertCenterV2({
                   {selectedSuggestionInfoModel.comments.map((comment) => (
                     <p key={comment.id}>
                       <span>{comment.userName || "Usuário"} - {formatDate(comment.createdAt)}</span>
-                      {comment.message}
+                      {getSafeCommentMessage(comment)}
                     </p>
                   ))}
                   {!selectedSuggestionInfoModel.comments.length && <small>Nenhum comentário registrado.</small>}
@@ -2283,8 +2300,8 @@ export default function AlertCenterV2({
             <header>
               <div>
                 <span>LOG DE SCRIPT</span>
-                <h2>{selectedScriptLog.scriptName || "Registro de script"}</h2>
-                <p>{selectedScriptLog.parsedSummary || "Registro preparado para observação segura."}</p>
+                <h2>{formatDisplayText(selectedScriptLog.scriptName, "Registro de script")}</h2>
+                <p>{formatDisplayText(selectedScriptLog.parsedSummary, "Registro preparado para observação segura.")}</p>
               </div>
               <button type="button" className="icon-button" onClick={() => setSelectedScriptLog(null)} aria-label="Fechar log">
                 <XCircle size={18} />
@@ -2294,7 +2311,7 @@ export default function AlertCenterV2({
               <section className="script-log-summary">
                 <div>
                   <span>Status</span>
-                  <strong>{scriptValidationLabels[selectedScriptLog.validationStatus] || selectedScriptLog.status || "Registrado"}</strong>
+                  <strong>{scriptValidationLabels[selectedScriptLog.validationStatus] || formatDisplayText(selectedScriptLog.status, "Registrado")}</strong>
                 </div>
                 <div>
                   <span>Erro detectado</span>
@@ -2302,15 +2319,15 @@ export default function AlertCenterV2({
                 </div>
                 <div>
                   <span>Tipo de erro</span>
-                  <strong>{selectedScriptLog.errorType || "Não informado"}</strong>
+                  <strong>{formatDisplayText(selectedScriptLog.errorType, "Não informado")}</strong>
                 </div>
                 <div>
                   <span>Categoria</span>
-                  <strong>{selectedScriptLog.errorCategory || "Não informada"}</strong>
+                  <strong>{formatDisplayText(selectedScriptLog.errorCategory, "Não informada")}</strong>
                 </div>
                 <div>
                   <span>Severidade</span>
-                  <strong>{selectedScriptLog.errorSeverity || "Não informada"}</strong>
+                  <strong>{formatDisplayText(selectedScriptLog.errorSeverity, "Não informada")}</strong>
                 </div>
                 <div>
                   <span>Reconhecido</span>
@@ -2319,16 +2336,16 @@ export default function AlertCenterV2({
               </section>
               <section>
                 <h3>Causa provavel</h3>
-                <p>{selectedScriptLog.probableCause || "Nenhuma causa específica foi identificada."}</p>
+                <p>{formatDisplayText(selectedScriptLog.probableCause, "Nenhuma causa específica foi identificada.")}</p>
               </section>
               <section>
                 <h3>Solução sugerida</h3>
-                <p>{selectedScriptLog.suggestedSolution || "Revise o script, o acesso ao ativo e as permissões antes de qualquer execução futura."}</p>
+                <p>{formatDisplayText(selectedScriptLog.suggestedSolution, "Revise o script, o acesso ao ativo e as permissões antes de qualquer execução futura.")}</p>
               </section>
               <section>
                 <details className="script-log-details">
                   <summary>Log técnico</summary>
-                  <pre className="script-log-raw">{selectedScriptLog.rawLog || "Nenhum log de script disponível."}</pre>
+                  <pre className="script-log-raw">{formatDisplayText(selectedScriptLog.rawLog, "Nenhum log de script disponível.")}</pre>
                 </details>
               </section>
               {canResolveScriptLogs && !selectedScriptLog.previewOnly && (
