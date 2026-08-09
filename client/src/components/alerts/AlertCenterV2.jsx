@@ -451,9 +451,9 @@ export default function AlertCenterV2({
   }
 
   function getResolvedAlertTitle(alert) {
-    const title = String(alert.title || "");
-    const originalName = String(alert.hostName || "");
-    const resolvedName = String(getAlertMachineLabel(alert) || "");
+    const title = formatDisplayText(alert.title, "Aviso");
+    const originalName = formatDisplayText(alert.hostName, "");
+    const resolvedName = formatDisplayText(getAlertMachineLabel(alert), "");
     if (!originalName || !resolvedName || originalName === resolvedName) return title;
     return title.split(originalName).join(resolvedName);
   }
@@ -520,7 +520,7 @@ export default function AlertCenterV2({
       severity: suggestion.alertSeverity || (suggestion.suggestedPriority === "critical" ? "critical" : "warning"),
       status: suggestion.status,
       title: getResolvedSuggestionTitle(suggestion),
-      description: suggestion.description,
+      description: formatDisplayText(suggestion.description, "Aviso preventivo"),
       hostName: getResolvedSuggestionMachineLabel(suggestion),
       occurrencesCount: suggestion.occurrencesCount || 1,
       firstSeenAt: suggestion.alertFirstSeenAt || suggestion.createdAt,

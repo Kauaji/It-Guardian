@@ -4,6 +4,25 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-09 - Blindagem adicional da tela de avisos
+
+### Causa raiz e correcao
+
+- a tela de avisos ainda podia cair em producao quando campos de alerta
+  chegavam como objetos estruturados em componentes legados ou pelo streaming;
+- o hook central de dados agora normaliza alertas, historico e sugestoes assim
+  que a API ou o WebSocket entregam os payloads;
+- listas antigas, historico do dashboard, detalhes de sugestao e modal da
+  maquina passaram a formatar valores estruturados antes de renderizar;
+- a correcao reduz o risco de erro React #31 quando o agente envia objetos de
+  software, hardware ou diagnostico em campos de texto.
+
+### Validacao
+
+- validacoes executadas nesta entrega: lint, build, teste direcionado de
+  alertas e `git diff --check`;
+- apos aprovacao, publicar na `main` e validar o deploy de producao no Vercel.
+
 ## 2026-08-09 - Recuperacao da tela de avisos em producao
 
 ### Causa raiz e correcao

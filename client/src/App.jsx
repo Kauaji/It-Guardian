@@ -74,7 +74,7 @@ import {
   updateSystemSettings,
   useSuggestionScript as executeSuggestionScript
 } from "./api.js";
-import { normalizePrioritySettings } from "./components/alerts/alertUtils.js";
+import { formatDisplayText, normalizePrioritySettings } from "./components/alerts/alertUtils.js";
 import AlertCenterV2 from "./components/alerts/AlertCenterV2.jsx";
 import AssetPublicView from "./components/inventory/AssetPublicView.jsx";
 import AssetDragCompactOverlay from "./components/inventory/AssetDragCompactOverlay.jsx";
@@ -3061,8 +3061,8 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
                   {history.map((alert) => (
                     <div key={alert.id}>
                       <span className={`dot ${alert.severity}`} />
-                      <strong>{alert.hostName}</strong>
-                      <span>{alert.title}{alert.acknowledgement ? " - resolvido" : ""}</span>
+                      <strong>{formatDisplayText(alert.hostName || alert.assetName, "Máquina não vinculada")}</strong>
+                      <span>{formatDisplayText(alert.title, "Aviso")}{alert.acknowledgement ? " - resolvido" : ""}</span>
                     </div>
                   ))}
                 </div>

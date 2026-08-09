@@ -1,4 +1,5 @@
 import { AlertTriangle, Bell, CheckCircle } from "lucide-react";
+import { formatDisplayText } from "../alerts/alertUtils.js";
 import { formatDate } from "../../utils/display.js";
 
 export default function AlertList({ alerts }) {
@@ -13,9 +14,9 @@ export default function AlertList({ alerts }) {
           <article key={alert.id} className={`alert-item ${alert.severity}`}>
             <AlertTriangle size={18} />
             <div>
-              <strong>{alert.title}</strong>
-              <span>{alert.hostName} - {formatDate(alert.startedAt)}</span>
-              <p>{alert.description}</p>
+              <strong>{formatDisplayText(alert.title, "Aviso ativo")}</strong>
+              <span>{formatDisplayText(alert.hostName || alert.assetName, "Máquina não vinculada")} - {formatDate(alert.startedAt)}</span>
+              <p>{formatDisplayText(alert.description, "Sem descrição informada.")}</p>
               {alert.acknowledgement && (
                 <small className="inline-resolved">
                   <CheckCircle size={13} />

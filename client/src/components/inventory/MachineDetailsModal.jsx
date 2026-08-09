@@ -143,13 +143,13 @@ function buildActiveAlerts(machine) {
     if (alert.status !== "active") continue;
     alerts.push({
       id: alert.id,
-      description: alert.description || alert.title || "Alerta ativo no monitoramento",
+      description: formatHardwareValue(alert.description || alert.title, "Alerta ativo no monitoramento"),
       detectedAt: alert.startedAt,
-      type: alert.title || "Alerta ativo",
+      type: formatHardwareValue(alert.title, "Alerta ativo"),
       severity: alert.severity === "critical" ? "Crítico" : "Atenção",
-      metric: alert.metric || "Monitoramento",
-      value: alert.value || "Ativo",
-      limit: alert.limit || "Regra de monitoramento",
+      metric: formatHardwareValue(alert.metric, "Monitoramento"),
+      value: formatHardwareValue(alert.value, "Ativo"),
+      limit: formatHardwareValue(alert.limit, "Regra de monitoramento"),
       status: "Ativo"
     });
   }
@@ -248,16 +248,16 @@ function ErrorAlertList({ alerts, resolvedAlerts }) {
           {alerts.map((alert) => (
             <article key={alert.id} className={`error-alert-card ${alert.severity === "Crítico" ? "critical" : "warning"}`}>
               <header>
-                <strong>{alert.description}</strong>
-                <span>{alert.status}</span>
+                <strong>{formatHardwareValue(alert.description, "Alerta ativo")}</strong>
+                <span>{formatHardwareValue(alert.status, "Ativo")}</span>
               </header>
               <dl>
                 <div><dt>Detectado</dt><dd>{formatDate(alert.detectedAt)}</dd></div>
-                <div><dt>Tipo</dt><dd>{alert.type}</dd></div>
-                <div><dt>Severidade</dt><dd>{alert.severity}</dd></div>
-                <div><dt>Métrica</dt><dd>{alert.metric}</dd></div>
-                <div><dt>Valor atual</dt><dd>{alert.value}</dd></div>
-                <div><dt>Limite</dt><dd>{alert.limit}</dd></div>
+                <div><dt>Tipo</dt><dd>{formatHardwareValue(alert.type)}</dd></div>
+                <div><dt>Severidade</dt><dd>{formatHardwareValue(alert.severity)}</dd></div>
+                <div><dt>Métrica</dt><dd>{formatHardwareValue(alert.metric)}</dd></div>
+                <div><dt>Valor atual</dt><dd>{formatHardwareValue(alert.value)}</dd></div>
+                <div><dt>Limite</dt><dd>{formatHardwareValue(alert.limit)}</dd></div>
               </dl>
             </article>
           ))}
@@ -274,10 +274,10 @@ function ErrorAlertList({ alerts, resolvedAlerts }) {
           {resolvedAlerts.map((alert) => (
             <article key={alert.id} className="error-alert-card resolved">
               <header>
-                <strong>{alert.description}</strong>
-                <span>{alert.status}</span>
+                <strong>{formatHardwareValue(alert.description, "Alerta resolvido")}</strong>
+                <span>{formatHardwareValue(alert.status, "Resolvido")}</span>
               </header>
-              <p>{alert.metric}: {alert.limit} para {alert.value} em {formatDate(alert.detectedAt)}</p>
+              <p>{formatHardwareValue(alert.metric)}: {formatHardwareValue(alert.limit)} para {formatHardwareValue(alert.value)} em {formatDate(alert.detectedAt)}</p>
             </article>
           ))}
           {!resolvedAlerts.length && <p className="empty">Nenhum erro resolvido registrado ainda.</p>}
@@ -805,10 +805,10 @@ export default function MachineDetailsModal({
                     {resolvedAlerts.map((alert) => (
                       <article key={alert.id} className="error-alert-card resolved">
                         <header>
-                          <strong>{alert.description}</strong>
-                          <span>{alert.status}</span>
+                          <strong>{formatHardwareValue(alert.description, "Alerta resolvido")}</strong>
+                          <span>{formatHardwareValue(alert.status, "Resolvido")}</span>
                         </header>
-                        <p>{alert.metric}: {alert.limit} para {alert.value} em {formatDate(alert.detectedAt)}</p>
+                        <p>{formatHardwareValue(alert.metric)}: {formatHardwareValue(alert.limit)} para {formatHardwareValue(alert.value)} em {formatDate(alert.detectedAt)}</p>
                       </article>
                     ))}
                   </div>
