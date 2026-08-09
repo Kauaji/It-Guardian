@@ -261,6 +261,30 @@ export default function AlertCenterV2({
     return () => window.removeEventListener("keydown", handleAlertDialogKeydown);
   }, [settingsOpen, preventiveReviewOpen, selectedSuggestionInfoId, selectedScriptLog]);
 
+  const priorityColorById = useMemo(
+    () => ({
+      ...defaultPriorityColors,
+      ...(alertPriorityColors || {})
+    }),
+    [alertPriorityColors]
+  );
+  const deviceById = useMemo(
+    () => new Map(devices.map((device) => [String(device.id), device])),
+    [devices]
+  );
+  const segmentById = useMemo(
+    () => new Map(segments.map((segment) => [String(segment.id), segment])),
+    [segments]
+  );
+  const groupById = useMemo(
+    () => new Map(segmentGroups.map((group) => [String(group.id), group])),
+    [segmentGroups]
+  );
+  const tabById = useMemo(
+    () => new Map(inventoryTabs.map((tab) => [String(tab.id), tab])),
+    [inventoryTabs]
+  );
+
   const visibleAlerts = history.filter((alert) => {
     const severityMatches = severityFilter === "all" || alert.severity === severityFilter;
     const statusMatches =
@@ -328,29 +352,6 @@ export default function AlertCenterV2({
   );
   const selectedPreventiveAssetKey = selectedPreventiveAssetIds.join("|");
   const canOpenSettings = canConfigureAlerts || canManageScripts;
-  const priorityColorById = useMemo(
-    () => ({
-      ...defaultPriorityColors,
-      ...(alertPriorityColors || {})
-    }),
-    [alertPriorityColors]
-  );
-  const deviceById = useMemo(
-    () => new Map(devices.map((device) => [String(device.id), device])),
-    [devices]
-  );
-  const segmentById = useMemo(
-    () => new Map(segments.map((segment) => [String(segment.id), segment])),
-    [segments]
-  );
-  const groupById = useMemo(
-    () => new Map(segmentGroups.map((group) => [String(group.id), group])),
-    [segmentGroups]
-  );
-  const tabById = useMemo(
-    () => new Map(inventoryTabs.map((tab) => [String(tab.id), tab])),
-    [inventoryTabs]
-  );
 
   useEffect(() => {
     if (!token || !selectedPreventiveAssetIds.length) {

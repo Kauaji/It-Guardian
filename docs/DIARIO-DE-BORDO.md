@@ -4,6 +4,22 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-09 - Correcao do erro de inicializacao da tela de avisos
+
+### Causa raiz e correcao
+
+- a tela de avisos ainda podia falhar em producao com `Cannot access before
+  initialization`;
+- o agrupamento de alertas era calculado antes dos mapas auxiliares de
+  dispositivos, segmentos, grupos e abas existirem no ciclo de renderizacao;
+- os mapas foram declarados antes de qualquer calculo que dependa deles,
+  removendo o risco de TDZ no bundle minificado de producao.
+
+### Validacao
+
+- validacoes executadas nesta entrega: teste direcionado de alertas, lint e
+  build de producao.
+
 ## 2026-08-09 - Blindagem adicional da tela de avisos
 
 ### Causa raiz e correcao
