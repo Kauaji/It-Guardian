@@ -145,6 +145,14 @@ function DeviceGlyph({ type, width, height, metadata = {} }) {
     return <><Rect x={inset} y={height * 0.28} width={width - inset * 2} height={height * 0.44} rx={5} />{[0.3, 0.5, 0.7].map((ratio) => <circle key={ratio} cx={width * ratio} cy={cy} r="3" />)}<path d={`M ${width - inset} ${cy} Q ${width + 7} ${cy} ${width - 2} ${height - 3}`} /></>;
   }
 
+  if (["hospital_bed", "stretcher"].includes(normalized)) {
+    return <><Rect x={inset} y={inset} width={width - inset * 2} height={height - inset * 2} rx={6} /><Rect x={inset + 5} y={inset + 5} width={width - inset * 2 - 10} height={Math.max(12, height * 0.22)} rx={5} /><line x1={inset - 2} y1={height * 0.25} x2={inset - 2} y2={height * 0.75} /><line x1={width - inset + 2} y1={height * 0.25} x2={width - inset + 2} y2={height * 0.75} />{normalized === "stretcher" ? <><circle cx={inset + 3} cy={height - 3} r="3" /><circle cx={width - inset - 3} cy={height - 3} r="3" /></> : null}</>;
+  }
+
+  if (["medical_cart", "reception_counter", "counter", "sofa"].includes(normalized)) {
+    return <><Rect x={inset} y={inset} width={width - inset * 2} height={height - inset * 2} rx={normalized === "sofa" ? 10 : 3} /><line x1={inset + 5} y1={cy} x2={width - inset - 5} y2={cy} />{normalized === "medical_cart" ? <><circle cx={inset + 5} cy={height - 3} r="3" /><circle cx={width - inset - 5} cy={height - 3} r="3" /></> : null}</>;
+  }
+
   return <><Rect x={inset} y={inset} width={width - inset * 2} height={height - inset * 2} rx={5} /><line x1={inset + 5} y1={cy} x2={width - inset - 5} y2={cy} /></>;
 }
 
