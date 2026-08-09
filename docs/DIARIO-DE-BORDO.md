@@ -14,6 +14,8 @@ entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
   para o fallback de runtime em producao;
 - a central de avisos passou a normalizar valores estruturados antes de
   renderizar titulos, nomes, correlacoes, comentarios, checklist e logs;
+- a renderizacao de valor atual, scripts, status, localizacao e comentarios foi
+  endurecida para aceitar payloads mistos do agente/API sem derrubar a view;
 - o nome fantasia continua priorizado, com fallback seguro para hostname/id.
 
 ### Validacao

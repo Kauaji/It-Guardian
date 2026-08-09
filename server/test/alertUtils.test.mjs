@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   consolidateSuggestionsByMachine,
   findSuggestionDevice,
+  formatAlertValue,
   formatCompactSuggestionTitle,
   formatDisplayText,
   getDeviceDisplayName,
@@ -67,6 +68,18 @@ test("formats structured alert data before rendering", () => {
       { name: "Computador do Kaua" }
     ),
     "RAM alta + Disco alto em Computador do Kaua"
+  );
+  assert.equal(
+    formatAlertValue({
+      metric: "software",
+      value: {
+        name: "Microsoft 365",
+        version: "2021",
+        installedAt: "2026-07-29T12:00:00.000Z",
+        manufacturer: "Microsoft"
+      }
+    }),
+    "Microsoft 365 2021"
   );
 });
 

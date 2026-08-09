@@ -482,6 +482,22 @@ export default function AlertCenterV2({
     return formatDisplayText(item, fallback);
   }
 
+  function getSafeStatusLabel(status, fallback = "Pendente") {
+    const normalizedStatus = typeof status === "string" ? status : formatDisplayText(status, "");
+    return suggestionStatusLabels[normalizedStatus] || formatDisplayText(status, fallback);
+  }
+
+  function getSafeScriptLabel(script, fallback = "Script cadastrado") {
+    return formatDisplayText(script?.name || script?.label || script?.title || script, fallback);
+  }
+
+  function normalizeAlertLocation(location = {}) {
+    return {
+      segmentName: formatDisplayText(location.segmentName || location.segment, "Nao organizadas"),
+      groupName: formatDisplayText(location.groupName || location.group, "Sem grupo")
+    };
+  }
+
   function getSuggestionLocation(suggestion) {
     const device = findSuggestionDevice(suggestion);
     const segment = device?.segmentId ? segmentById.get(String(device.segmentId)) : null;
@@ -532,7 +548,7 @@ export default function AlertCenterV2({
 
     const alert = getSuggestionAlertShape(suggestion);
     const device = findSuggestionDevice(suggestion);
-    const location = suggestion.location || getSuggestionLocation(suggestion);
+    const location = normalizeAlertLocation(suggestion.location || getSuggestionLocation(suggestion));
     const priority = suggestion.suggestedPriority || "medium";
     const comments = Array.isArray(suggestion.comments) ? suggestion.comments : [];
     const checklist = Array.isArray(suggestion.checklist) ? suggestion.checklist : [];
@@ -1203,7 +1219,7 @@ export default function AlertCenterV2({
                 {visibleAlerts
                   .filter((alert) => alert.status !== "resolved")
                   .map((alert) => {
-                    const location = alert.location || getAlertLocation(alert);
+                    const location = normalizeAlertLocation(alert.location || getAlertLocation(alert));
                     const machineLabel = getAlertMachineLabel(alert);
                     const comments = Array.isArray(alert.comments) ? alert.comments : [];
                     const checklist = Array.isArray(alert.checklist) ? alert.checklist : [];
@@ -1212,7 +1228,7 @@ export default function AlertCenterV2({
                       <article key={alert.id} className={`alert-diagnostic-card ${alert.severity}`}>
                         <header>
                           <div>
-                            <span>{alert.category || getAlertCategory(alert)}</span>
+                            <span>{formatDisplayText(alert.category, getAlertCategory(alert))}</span>
                             <h3>{getResolvedAlertTitle(alert)}</h3>
                             <small>{machineLabel} · {location.groupName} · {location.segmentName}</small>
                           </div>
@@ -1235,11 +1251,11 @@ export default function AlertCenterV2({
                           </div>
                           <div>
                             <dt>Confiança</dt>
-                            <dd>{alert.confidenceLevel || getAlertConfidence(alert)}</dd>
+                            <dd>{formatDisplayText(alert.confidenceLevel, getAlertConfidence(alert))}</dd>
                           </div>
                           <div>
                             <dt>Tendência</dt>
-                            <dd>{alert.trend || getAlertTrend(alert)}</dd>
+                            <dd>{formatDisplayText(alert.trend, getAlertTrend(alert))}</dd>
                           </div>
                           <div>
                             <dt>Score</dt>
@@ -1273,7 +1289,7 @@ export default function AlertCenterV2({
                           <strong>Comentários internos</strong>
                           {comments.slice(-2).map((comment) => (
                             <p key={comment.id}>
-                              <span>{comment.userName || "Usuário"} · {formatDate(comment.createdAt)}</span>
+                              <span>{formatDisplayText(comment.userName, "Usuario")} · {formatDate(comment.createdAt)}</span>
                               {getSafeCommentMessage(comment)}
                             </p>
                           ))}
@@ -1324,7 +1340,7 @@ export default function AlertCenterV2({
                 {visibleSuggestions.map((suggestion, index) => {
                   const machineLabel = getResolvedSuggestionMachineLabel(suggestion);
                   const suggestionTitle = getResolvedSuggestionTitle(suggestion);
-                  const location = suggestion.location || getSuggestionLocation(suggestion);
+                  const location = normalizeAlertLocation(suggestion.location || getSuggestionLocation(suggestion));
                   const priority = suggestion.suggestedPriority || "medium";
                   const priorityLabel = priorityLabels[priority] || priorityLabels.medium;
                   const priorityColor = priorityColorById[priority] || priorityColorById.medium;
@@ -1473,8 +1489,8 @@ export default function AlertCenterV2({
                                           disabled={!canUseScriptsFromAlerts || usingSuggestionScriptKey === `${suggestion.id}:${script.id}`}
                                           onClick={() => handleUseSuggestionScript(suggestion, script)}
                                         >
-                                          <span>{script.name}</span>
-                                          <small>{script.recommendationReason || script.estimatedSummary || "Registro manual"}</small>
+                                          <span>{getSafeScriptLabel(script, "Script recomendado")}</span>
+                                          <small>{formatDisplayText(script.recommendationReason || script.estimatedSummary, "Registro manual")}</small>
                                         </button>
                                       ))}
                                     </section>
@@ -1489,8 +1505,8 @@ export default function AlertCenterV2({
                                           disabled={!canUseScriptsFromAlerts || usingSuggestionScriptKey === `${suggestion.id}:${script.id}`}
                                           onClick={() => handleUseSuggestionScript(suggestion, script)}
                                         >
-                                          <span>{script.name}</span>
-                                          <small>{script.estimatedSummary || script.category || "Registro manual"}</small>
+                                          <span>{getSafeScriptLabel(script, "Script disponivel")}</span>
+                                          <small>{formatDisplayText(script.estimatedSummary || script.category, "Registro manual")}</small>
                                         </button>
                                       ))}
                                     </section>
@@ -1697,7 +1713,10 @@ export default function AlertCenterV2({
                                   </span>
                                   <span>
                                     <strong>{getDeviceDisplayName(device)}</strong>
-                                    <small>{device.type || device.assetType || "Ativo"} • {device.statusLabel || device.status || "Sem status"}</small>
+                                    <small>
+                                      {formatDisplayText(device.type || device.assetType, "Ativo")} •{" "}
+                                      {formatDisplayText(device.statusLabel || device.status, "Sem status")}
+                                    </small>
                                   </span>
                                   <em>
                                     {lastPreventive ? `Última preventiva: ${formatDate(lastPreventive.preparedAt || lastPreventive.createdAt)}` : "Sem preventiva registrada"}
@@ -1783,10 +1802,10 @@ export default function AlertCenterV2({
                               {selected ? "✓" : ""}
                             </span>
                             <span>
-                              <strong>{script.name}</strong>
-                              <small>{script.recommendationReason || script.estimatedSummary || script.category || "Script cadastrado"}</small>
+                              <strong>{getSafeScriptLabel(script)}</strong>
+                              <small>{formatDisplayText(script.recommendationReason || script.estimatedSummary || script.category, "Script cadastrado")}</small>
                             </span>
-                            <em>{script.riskLevel || "médio"}</em>
+                            <em>{formatDisplayText(script.riskLevel, "medio")}</em>
                           </button>
                           <button
                             type="button"
@@ -1966,8 +1985,8 @@ export default function AlertCenterV2({
                     <ul>
                       {selectedPreventiveScriptList.map((script) => (
                         <li key={script.id}>
-                          {script.name}
-                          <span>{script.riskLevel || "médio"}</span>
+                          {getSafeScriptLabel(script)}
+                          <span>{formatDisplayText(script.riskLevel, "medio")}</span>
                         </li>
                       ))}
                     </ul>
@@ -1978,7 +1997,7 @@ export default function AlertCenterV2({
                     {selectedPreventiveRiskList.length ? (
                       <ul>
                         {selectedPreventiveRiskList.map((script) => (
-                          <li key={script.id}>{script.name} — {script.riskLevel}</li>
+                          <li key={script.id}>{getSafeScriptLabel(script)} — {formatDisplayText(script.riskLevel, "medio")}</li>
                         ))}
                       </ul>
                     ) : (
@@ -2033,11 +2052,15 @@ export default function AlertCenterV2({
                 {handledSuggestions.map((suggestion, index) => (
                   <article key={suggestion.id} className="alert-history-card">
                     <span className={`pill ${suggestion.status === "accepted" ? "ok" : "danger"}`}>
-                      {suggestionStatusLabels[suggestion.status] || suggestion.status}
+                      {getSafeStatusLabel(suggestion.status)}
                     </span>
                     <h3>{formatSuggestionCode(suggestion, index)} · {getResolvedSuggestionTitle(suggestion)}</h3>
                     <p>{getResolvedSuggestionMachineLabel(suggestion)}</p>
-                    <small>{suggestion.createdServiceOrderId ? `OS criada: ${suggestion.createdServiceOrderId}` : suggestion.rejectionReason || "Sem observação"}</small>
+                    <small>
+                      {suggestion.createdServiceOrderId
+                        ? `OS criada: ${formatDisplayText(suggestion.createdServiceOrderId)}`
+                        : formatDisplayText(suggestion.rejectionReason, "Sem observacao")}
+                    </small>
                   </article>
                 ))}
                 {!resolvedAlerts.length && !handledSuggestions.length && (
@@ -2070,7 +2093,7 @@ export default function AlertCenterV2({
                 </p>
                 <div className="suggestion-info-badges">
                   <span className={`pill ${selectedSuggestionInfo.status === "accepted" ? "ok" : selectedSuggestionInfo.status === "rejected" ? "danger" : "warning"}`}>
-                    {suggestionStatusLabels[selectedSuggestionInfo.status] || formatDisplayText(selectedSuggestionInfo.status, "Pendente")}
+                    {getSafeStatusLabel(selectedSuggestionInfo.status)}
                   </span>
                   <span className={`pill ${selectedSuggestionInfoModel.priority === "critical" ? "danger" : "warning"}`}>
                     {selectedSuggestionInfoModel.priorityLabel}
@@ -2240,7 +2263,7 @@ export default function AlertCenterV2({
                 <div className="alert-comments suggestion-info-comments">
                   {selectedSuggestionInfoModel.comments.map((comment) => (
                     <p key={comment.id}>
-                      <span>{comment.userName || "Usuário"} - {formatDate(comment.createdAt)}</span>
+                      <span>{formatDisplayText(comment.userName, "Usuario")} - {formatDate(comment.createdAt)}</span>
                       {getSafeCommentMessage(comment)}
                     </p>
                   ))}

@@ -218,12 +218,13 @@ export function getScriptValidationTooltip(validation = {}) {
 
 export function formatAlertValue(alert) {
   if (alert.value === null || alert.value === undefined) return "Não informado";
-  if (["ram", "cpu", "disk", "disk_health", "network"].includes(alert.metric)) return `${alert.value}%`;
-  if (alert.metric === "temperature") return `${alert.value} °C`;
+  const value = formatDisplayText(alert.value, "Não informado");
+  if (["ram", "cpu", "disk", "disk_health", "network"].includes(alert.metric)) return `${value}%`;
+  if (alert.metric === "temperature") return `${value} °C`;
   if (alert.metric === "availability" || alert.metric === "ping" || alert.metric === "service") {
-    return alert.value === 0 ? "Indisponível" : String(alert.value);
+    return alert.value === 0 ? "Indisponível" : value;
   }
-  return String(alert.value);
+  return value;
 }
 
 export function formatSuggestionCode(suggestion, index) {
