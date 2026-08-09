@@ -60,6 +60,8 @@ export const FLOOR_PLAN_CATALOG = [
       { id: "desk", label: "Mesa", icon: LampDesk, category: "furniture", objectType: "desk", width: 96, height: 54, color: "#b08968" },
       { id: "meeting-table", label: "Mesa de reuniao", icon: LampDesk, category: "furniture", objectType: "meeting_table", width: 150, height: 78, color: "#a16207" },
       { id: "chair", label: "Cadeira", icon: Armchair, category: "furniture", objectType: "chair", width: 42, height: 42, color: "#64748b" },
+      { id: "sofa", label: "Sofa", icon: Armchair, category: "furniture", objectType: "sofa", width: 126, height: 62, color: "#64748b" },
+      { id: "counter", label: "Balcao", icon: PanelTop, category: "furniture", objectType: "counter", width: 132, height: 54, color: "#8b5e34" },
       { id: "rack-furniture", label: "Armario", icon: Box, category: "furniture", objectType: "cabinet", width: 82, height: 52, color: "#8b5e34" },
       { id: "shelf", label: "Estante", icon: Box, category: "furniture", objectType: "shelf", width: 96, height: 40, color: "#92400e" }
     ]
@@ -69,6 +71,7 @@ export const FLOOR_PLAN_CATALOG = [
     label: "Ativos TI",
     items: [
       { id: "pc", label: "PC", icon: Monitor, category: "asset", objectType: "pc", width: 82, height: 58, color: "#2563eb" },
+      { id: "monitor", label: "Monitor", icon: Monitor, category: "asset", objectType: "monitor", width: 58, height: 28, color: "#2563eb" },
       { id: "notebook", label: "Notebook", icon: Laptop, category: "asset", objectType: "notebook", width: 56, height: 36, color: "#2563eb" },
       { id: "printer", label: "Impressora", icon: Printer, category: "asset", objectType: "printer", width: 58, height: 40, color: "#475569" },
       { id: "switch", label: "Switch", icon: Network, category: "asset", objectType: "switch", width: 96, height: 36, color: "#334155" },
@@ -77,7 +80,20 @@ export const FLOOR_PLAN_CATALOG = [
       { id: "server", label: "Servidor", icon: Server, category: "asset", objectType: "server", width: 78, height: 88, color: "#111827" },
       { id: "router", label: "Roteador", icon: Router, category: "asset", objectType: "router", width: 78, height: 44, color: "#0f766e" },
       { id: "tv", label: "TV", icon: Tv, category: "asset", objectType: "tv", width: 76, height: 34, color: "#334155" },
-      { id: "camera", label: "Camera", icon: Cctv, category: "asset", objectType: "camera", width: 54, height: 42, color: "#334155" }
+      { id: "camera", label: "Camera", icon: Cctv, category: "asset", objectType: "camera", width: 54, height: 42, color: "#334155" },
+      { id: "patch-panel", label: "Patch panel", icon: Network, category: "asset", objectType: "patch_panel", width: 96, height: 28, color: "#334155" },
+      { id: "ups", label: "Nobreak", icon: Zap, category: "asset", objectType: "ups", width: 58, height: 54, color: "#1f2937" }
+    ]
+  },
+  {
+    id: "hospital",
+    label: "Hospitalar",
+    items: [
+      { id: "hospital-bed", label: "Leito hospitalar", icon: Box, category: "hospital", objectType: "hospital_bed", width: 96, height: 210, color: "#e2e8f0" },
+      { id: "stretcher", label: "Maca", icon: Box, category: "hospital", objectType: "stretcher", width: 76, height: 190, color: "#cbd5e1" },
+      { id: "medical-cart", label: "Carrinho medico", icon: Box, category: "hospital", objectType: "medical_cart", width: 62, height: 46, color: "#f8fafc" },
+      { id: "reception-counter", label: "Balcao de recepcao", icon: PanelTop, category: "hospital", objectType: "reception_counter", width: 150, height: 60, color: "#94a3b8" },
+      { id: "waiting-chair", label: "Cadeira de espera", icon: Armchair, category: "hospital", objectType: "chair", width: 46, height: 46, color: "#0f766e" }
     ]
   },
   {
