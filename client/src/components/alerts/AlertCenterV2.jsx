@@ -1548,7 +1548,7 @@ export default function AlertCenterV2({
                     </div>
                     <h3>{getResolvedAlertTitle(alert)}</h3>
                     <p>{getAlertMachineLabel(alert)} · {formatAlertValue(alert)}</p>
-                    <small>{alertTypeLabels[alert.type] || alert.type || alert.metric}</small>
+                    <small>{alertTypeLabels[alert.type] || formatDisplayText(alert.type || alert.metric, "Aviso")}</small>
                   </article>
                 ))}
                 {!visibleAlerts.length && <p className="empty">Nenhum aviso encontrado para os filtros atuais.</p>}
