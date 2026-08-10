@@ -1,10 +1,33 @@
-const TABLE_OBJECT_TYPES = new Set(["desk", "table", "meeting_table", "meeting-table"]);
-const SUPPORTED_OBJECT_TYPES = new Set(["pc", "notebook", "printer"]);
+import { getRoomInterior, isRoomZone } from "./roomGeometry.js";
+
+const TABLE_OBJECT_TYPES = new Set([
+  "counter",
+  "coffee_table",
+  "desk",
+  "desk_corner",
+  "meeting_table",
+  "meeting-table",
+  "reception_counter",
+  "round_table",
+  "side_table",
+  "table"
+]);
+const SUPPORTED_OBJECT_TYPES = new Set([
+  "microwave",
+  "monitor",
+  "notebook",
+  "pc",
+  "printer",
+  "radio",
+  "speaker"
+]);
 const NORMALIZED_TELEVISION_LABEL = /^(tv|tela|televisao)\b/i;
 const TELEVISION_LABEL = /^(tv|tela|televis[aã]o)\b/i;
 
 const SUPPORT_EDGE_TOLERANCE = 8;
 const SUPPORT_SURFACE_GAP = 2;
+export const BASE_FLOOR_SURFACE_ELEVATION = 5;
+export const ROOM_FLOOR_SURFACE_ELEVATION = 10;
 
 function normalizeType(value) {
   return String(value || "").trim().toLowerCase();
@@ -110,4 +133,21 @@ export function getSceneBaseElevation(object, objects = []) {
   const support = findSupportingFurniture(object, objects);
   if (!support) return 0;
   return Math.max(0, Number(support.height3d || 46)) + SUPPORT_SURFACE_GAP;
+}
+
+export function getSceneFloorElevation(object, zones = []) {
+  const objectCenter = centerOf(object);
+  const parentRoomId = object?.metadata?.parentRoomId;
+  const room = zones.find((zone) => {
+    if (!isRoomZone(zone)) return false;
+    if (parentRoomId && zone.id === parentRoomId) return true;
+    const interior = getRoomInterior(zone);
+    return (
+      objectCenter.x >= interior.x
+      && objectCenter.x <= interior.x + interior.width
+      && objectCenter.y >= interior.y
+      && objectCenter.y <= interior.y + interior.height
+    );
+  });
+  return room ? ROOM_FLOOR_SURFACE_ELEVATION : BASE_FLOOR_SURFACE_ELEVATION;
 }

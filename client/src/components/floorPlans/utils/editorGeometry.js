@@ -64,6 +64,43 @@ export function buildEditorPayload(editor) {
   };
 }
 
+export function duplicateEditorObject(object, { id, offset = FINE_OBJECT_SNAP_SIZE } = {}) {
+  if (!object || !id) return null;
+  return {
+    ...cloneEditor(object),
+    id,
+    x: Number(object.x || 0) + Number(offset || 0),
+    y: Number(object.y || 0) + Number(offset || 0),
+    label: object.label ? `${object.label} copia` : object.label,
+    linkedAssetId: null,
+    metadata: {
+      ...(object.metadata || {}),
+      anchorObjectId: null,
+      duplicatedFromId: object.id,
+      locked: false
+    }
+  };
+}
+
+export function isEditorObjectLocked(object) {
+  return Boolean(object?.metadata?.locked);
+}
+
+export function rotateEditorObject(object, delta = 90) {
+  if (!object) return object;
+  const rotation = ((Number(object.rotation || 0) + Number(delta || 0)) % 360 + 360) % 360;
+  return { ...object, rotation };
+}
+
+export function getInventoryLinkPatch(device, label) {
+  return {
+    linkedAssetId: device?.id || null,
+    label: device ? label : undefined,
+    groupId: device?.groupId || null,
+    segmentId: device?.segmentId || null
+  };
+}
+
 export function getObjectSize(object) {
   return {
     width: Number(object?.width || 80),

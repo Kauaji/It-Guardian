@@ -6,7 +6,11 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { getRoomGeometry, getRoomInterior, isRoomZone } from "./utils/roomGeometry.js";
 import { isWallObject, syncAnchoredOpenings } from "./utils/wallGeometry.js";
 import { getPaintCellSize, getPaintCells, getPaintRuns, isPaintAreaZone } from "./utils/paintAreaGeometry.js";
-import { getSceneBaseElevation, resolveSceneObjectType } from "./utils/sceneObjectPlacement.js";
+import {
+  getSceneBaseElevation,
+  getSceneFloorElevation,
+  resolveSceneObjectType
+} from "./utils/sceneObjectPlacement.js";
 import {
   MODEL_QUALITY_DETAILED,
   resolveInventoryMapAssetMode
@@ -398,9 +402,10 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
       const neutral = "#f8fafc";
       const group = new THREE.Group();
       const baseElevation = getSceneBaseElevation(object, activeObjects);
+      const floorElevation = getSceneFloorElevation(object, activeZones);
       group.position.set(
         Number(object.x || 0) + objectWidth / 2 - offsetX,
-        5 + baseElevation,
+        floorElevation + baseElevation,
         Number(object.y || 0) + objectDepth / 2 - offsetY
       );
       group.rotation.y = THREE.MathUtils.degToRad(Number(object.rotation || 0));
@@ -735,13 +740,22 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
           };
           const targetHeight = Math.max(
             8,
-            Number(object.height3d || defaultModelHeights[type] || 70)
+            Number(
+              object.height3d
+              || assetMode.definition?.dimensions?.height
+              || defaultModelHeights[type]
+              || 70
+            )
           );
           const model = fitModelToTarget(sourceScene, {
             width: objectWidth,
             depth: objectDepth,
             height: targetHeight,
-            rotationY: Number(assetMode.definition.defaultRotationY || 0),
+            rotationY: Number(
+              assetMode.definition.defaultRotationY
+              ?? assetMode.definition.defaultRotation
+              ?? 0
+            ),
             objectId: object.id
           });
           model.traverse((child) => {
@@ -890,6 +904,11 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
       const object = activeObjects.find((entry) => entry.id === objectId);
       const root = objectGroups.get(objectId);
       if (!object || !root) return;
+      onSelect?.({ type: "object", id: object.id });
+      if (object.metadata?.locked) {
+        event.preventDefault();
+        return;
+      }
       const groundPoint = new THREE.Vector3();
       if (!raycaster.ray.intersectPlane(groundPlane, groundPoint)) return;
       dragState = {

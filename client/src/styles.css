@@ -16371,14 +16371,14 @@ body:not(.modal-open):not(.alert-modal-open):not(.machine-details-open) {
 .floor-plan-editor-shell .floor-plan-catalog-item-shell {
   align-items: stretch;
   display: grid;
-  min-width: 94px;
+  min-width: 108px;
   position: relative;
 }
 
 .floor-plan-editor-shell .floor-plan-catalog-items .floor-plan-catalog-item {
   align-items: center;
-  background: transparent;
-  border: 0;
+  background: #ffffff;
+  border: 1px solid #dfe6ef;
   border-radius: 6px;
   color: #172033;
   display: flex;
@@ -16387,8 +16387,8 @@ body:not(.modal-open):not(.alert-modal-open):not(.machine-details-open) {
   font-weight: 800;
   gap: 5px;
   justify-content: center;
-  min-height: 76px;
-  padding: 6px 8px;
+  min-height: 90px;
+  padding: 8px;
   width: 100%;
 }
 
@@ -16396,7 +16396,25 @@ body:not(.modal-open):not(.alert-modal-open):not(.machine-details-open) {
 .floor-plan-editor-shell .floor-plan-catalog-item-shell:focus-within .floor-plan-catalog-item,
 .floor-plan-editor-shell .floor-plan-catalog-item-shell.placement-active .floor-plan-catalog-item {
   background: #eef7f4;
+  border-color: #8fc8b8;
   color: var(--plan-green);
+}
+
+.floor-plan-editor-shell .floor-plan-catalog-object-preview {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  box-sizing: border-box;
+  height: 46px;
+  padding: 5px;
+  width: 72px;
+}
+
+.floor-plan-editor-shell .floor-plan-catalog-item small {
+  color: #718096;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .floor-plan-editor-shell .floor-plan-catalog-items .floor-plan-catalog-favorite {
@@ -16923,6 +16941,23 @@ body:not(.modal-open):not(.alert-modal-open):not(.machine-details-open) {
 .floor-plan-selection-dock button:disabled {
   cursor: not-allowed;
   opacity: 0.34;
+}
+
+.floor-plan-selection-dock button.active {
+  background: rgba(209, 250, 229, 0.18);
+  color: #a7f3d0;
+}
+
+.floor-plan-object.locked {
+  cursor: default;
+}
+
+.floor-plan-object.locked .floor-plan-object-hit-target {
+  cursor: default;
+}
+
+.floor-plan-object.locked .floor-plan-object-selection-outline {
+  stroke-dasharray: 3 3;
 }
 
 .floor-plan-canvas.layers-hide-labels text {

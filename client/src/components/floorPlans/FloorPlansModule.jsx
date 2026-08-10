@@ -7,6 +7,7 @@ import {
   Info,
   Layers3,
   Link2,
+  Lock,
   Loader2,
   Maximize2,
   Minus,
@@ -18,6 +19,7 @@ import {
   Star,
   SlidersVertical,
   Trash2,
+  Unlock,
   Eraser,
   Monitor,
   X
@@ -33,6 +35,7 @@ import {
   updateFloorPlan
 } from "../../api.js";
 import { FLOOR_PLAN_CATALOG, getCatalogItem } from "./floorPlanCatalog.js";
+import { normalizeCatalogSearch, searchCatalogItems } from "./utils/catalogSearch.js";
 import {
   FloorPlanQuickActions,
   FloorPlanTopbar
@@ -62,20 +65,24 @@ import {
   clamp,
   cloneEditor,
   constrainObjectToBounds,
+  duplicateEditorObject,
   findNearestDesktop,
   findObjectsInSelectionRect,
   findNearestTable,
   getActiveFloor,
   getFineSnapSize,
+  getInventoryLinkPatch,
   getObjectCenter,
   getObjectSize,
   getRoomForObject,
   isDesktopObject,
+  isEditorObjectLocked,
   isPowerAccessoryObject,
   isTableObject,
   normalizeSelectionRect,
   normalizeResponsePlan,
   resizeObjectGeometry,
+  rotateEditorObject,
   snapObjectToAlignment,
   snap
 } from "./utils/editorGeometry.js";
@@ -150,7 +157,7 @@ function formatDate(value) {
 }
 
 function deviceLabel(device) {
-  return device?.hostname || device?.name || device?.label || device?.id || "Ativo";
+  return device?.displayName || device?.name || device?.label || device?.hostname || device?.id || "Ativo";
 }
 
 function getObjectIcon(objectType) {
@@ -278,10 +285,13 @@ function FloorPlanCatalog({ activeSection, onActiveSectionChange, onAddItem, onS
   });
   const catalogSections = [{ id: "rooms", label: "Comodos" }, ...FLOOR_PLAN_CATALOG];
   const section = FLOOR_PLAN_CATALOG.find((entry) => entry.id === activeSection) || FLOOR_PLAN_CATALOG[0];
-  const normalizedQuery = query.trim().toLocaleLowerCase("pt-BR");
-  const visibleItems = (section.items || [])
-    .filter((item) => !normalizedQuery || item.label.toLocaleLowerCase("pt-BR").includes(normalizedQuery))
-    .sort((left, right) => Number(favoriteIds.includes(right.id)) - Number(favoriteIds.includes(left.id)));
+  const normalizedQuery = normalizeCatalogSearch(query);
+  const searchableItems = normalizedQuery
+    ? searchCatalogItems(FLOOR_PLAN_CATALOG, query)
+    : (section.items || []).map((item) => ({ ...item, sectionLabel: section.label }));
+  const visibleItems = searchableItems.sort(
+    (left, right) => Number(favoriteIds.includes(right.id)) - Number(favoriteIds.includes(left.id))
+  );
 
   const toggleFavorite = (itemId) => {
     setFavoriteIds((current) => {
@@ -302,18 +312,16 @@ function FloorPlanCatalog({ activeSection, onActiveSectionChange, onAddItem, onS
           ))}
         </nav>
         <div className="floor-plan-catalog-controls">
-          {activeSection !== "rooms" ? (
-            <label className="floor-plan-catalog-search">
-              <Search size={16} aria-hidden="true" />
-              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar item" aria-label="Buscar item no catalogo" />
-            </label>
-          ) : null}
+          <label className="floor-plan-catalog-search">
+            <Search size={16} aria-hidden="true" />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar em todo o catalogo" aria-label="Buscar item em todo o catalogo" />
+          </label>
           <button className="icon-button" type="button" onClick={() => setCollapsed((value) => !value)} title={collapsed ? "Expandir catalogo" : "Recolher catalogo"} aria-label={collapsed ? "Expandir catalogo" : "Recolher catalogo"}>
             {collapsed ? <ChevronUp size={17} /> : <ChevronDown size={17} />}
           </button>
         </div>
       </header>
-      {!collapsed && (activeSection === "rooms" ? (
+      {!collapsed && (activeSection === "rooms" && !normalizedQuery ? (
         <RoomCatalog onSelectTemplate={onSelectRoomTemplate} onAddItem={onAddItem} />
       ) : (
         <div className="floor-plan-catalog-items">
@@ -333,6 +341,7 @@ function FloorPlanCatalog({ activeSection, onActiveSectionChange, onAddItem, onS
                     <Icon size={22} />
                   )}
                   <span>{item.label}</span>
+                  {normalizedQuery ? <small>{item.sectionLabel}</small> : null}
                 </button>
                 <button className={`floor-plan-catalog-favorite${isFavorite ? " active" : ""}`} type="button" onClick={() => toggleFavorite(item.id)} title={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"} aria-label={isFavorite ? `Remover ${item.label} dos favoritos` : `Adicionar ${item.label} aos favoritos`}>
                   <Star size={14} fill={isFavorite ? "currentColor" : "none"} />
@@ -351,7 +360,7 @@ function FloorPlanCatalog({ activeSection, onActiveSectionChange, onAddItem, onS
               ? "Marque o inicio e o fim"
               : placement.kind === "opening"
                 ? "Selecione uma parede"
-                : `Clique na planta para posicionar ${placement.item?.label || "o item"} · Esc cancela`}
+                : `Clique na planta para posicionar ${placement.item?.label || "o item"}. Esc cancela`}
         </div>
       ) : null}
     </section>
@@ -408,9 +417,14 @@ function FloorPlanViewerControls({
 function FloorPlanSelectionDock({
   count,
   canDuplicate,
+  canRotate,
+  canDelete,
+  canLock,
+  locked,
   onDuplicate,
   onRotate,
   onDelete,
+  onToggleLock,
   onClear
 }) {
   return (
@@ -420,15 +434,26 @@ function FloorPlanSelectionDock({
         type="button"
         onClick={onDuplicate}
         disabled={!canDuplicate}
-        title={canDuplicate ? "Duplicar comodo" : "Duplicacao disponivel para comodos"}
+        title={canDuplicate ? "Duplicar selecao" : "Este item nao pode ser duplicado"}
         aria-label="Duplicar selecao"
       >
         <Copy size={16} aria-hidden="true" />
       </button>
-      <button type="button" onClick={onRotate} title="Girar 90 graus" aria-label="Girar selecao 90 graus">
+      <button type="button" onClick={onRotate} disabled={!canRotate} title="Girar 90 graus" aria-label="Girar selecao 90 graus">
         <RotateCw size={16} aria-hidden="true" />
       </button>
-      <button className="danger" type="button" onClick={onDelete} title="Excluir selecao" aria-label="Excluir selecao">
+      <button
+        type="button"
+        onClick={onToggleLock}
+        disabled={!canLock}
+        className={locked ? "active" : ""}
+        title={locked ? "Destravar objeto" : "Travar objeto"}
+        aria-label={locked ? "Destravar selecao" : "Travar selecao"}
+        aria-pressed={locked}
+      >
+        {locked ? <Unlock size={16} aria-hidden="true" /> : <Lock size={16} aria-hidden="true" />}
+      </button>
+      <button className="danger" type="button" onClick={onDelete} disabled={!canDelete} title="Excluir selecao" aria-label="Excluir selecao">
         <Trash2 size={16} aria-hidden="true" />
       </button>
       <button type="button" onClick={onClear} title="Limpar selecao" aria-label="Limpar selecao">
@@ -440,6 +465,7 @@ function FloorPlanSelectionDock({
 
 function ObjectSelectionOverlay({ object, onResizeStart }) {
   if (!object) return null;
+  if (isEditorObjectLocked(object)) return null;
   if (isWallObject(object)) {
     const segment = getWallSegment(object);
     return (
@@ -875,7 +901,7 @@ function FloorPlanCanvas({
           return (
             <g
               key={object.id}
-              className={`floor-plan-object ${objectSelected ? "selected" : ""}`}
+              className={`floor-plan-object${objectSelected ? " selected" : ""}${isEditorObjectLocked(object) ? " locked" : ""}`}
               transform={`translate(${object.x || 0} ${object.y || 0})`}
               onPointerDown={(event) => onPointerDown(event, "object", object.id)}
               onClick={(event) => {
@@ -1671,6 +1697,13 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
 
   const removeEntity = useCallback((target) => {
     if (!target) return;
+    if (target.type === "object") {
+      const targetObject = (editor?.objects || []).find((object) => object.id === target.id);
+      if (isEditorObjectLocked(targetObject)) {
+        notify?.("Destrave o objeto antes de exclui-lo.", "warning");
+        return;
+      }
+    }
     commitEditor((draft) => {
       const collectionKey = target.type === "object"
         ? "objects"
@@ -1695,7 +1728,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
     if (target.type === "object") {
       setSelectedObjectIds((current) => current.filter((id) => id !== target.id));
     }
-  }, [commitEditor]);
+  }, [commitEditor, editor?.objects, notify]);
 
   const updateSelectedEntity = useCallback((patch) => {
     if (!selected) return;
@@ -2442,6 +2475,10 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
         ? editor.zones.find((entry) => entry.id === id)
         : editor.connectionPoints.find((entry) => entry.id === id);
     if (!entity) return;
+    if (type === "object" && isEditorObjectLocked(entity)) {
+      handleEntitySelect({ type, id }, event);
+      return;
+    }
     if (type === "object" && (event.shiftKey || event.ctrlKey || event.metaKey)) {
       handleEntitySelect({ type, id }, event);
       return;
@@ -2461,7 +2498,9 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
       originY: origin.y || 0,
       originObject: type === "object" ? { ...entity } : null,
       selectedObjectOrigins: type === "object"
-        ? (editor.objects || []).filter((object) => objectIds.includes(object.id)).map((object) => ({ ...object }))
+        ? (editor.objects || [])
+          .filter((object) => objectIds.includes(object.id) && !isEditorObjectLocked(object))
+          .map((object) => ({ ...object }))
         : [],
       originGeometry: type === "zone" ? getRoomGeometry(entity) : null,
       childObjects: type === "zone" && isRoomZone(entity)
@@ -2730,7 +2769,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
     event.stopPropagation();
     const point = getSvgPoint(event);
     const object = (editor.objects || []).find((entry) => entry.id === objectId);
-    if (!object) return;
+    if (!object || isEditorObjectLocked(object)) return;
     dragRef.current = {
       id: objectId,
       type: "object-resize",
@@ -2749,21 +2788,32 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
 
   const deleteSelectedEntity = useCallback(() => {
     if (selectedObjectIds.length > 1) {
+      const removableIds = selectedObjectIds.filter((objectId) => {
+        const object = (editor?.objects || []).find((entry) => entry.id === objectId);
+        return object && !isEditorObjectLocked(object);
+      });
+      if (removableIds.length === 0) {
+        notify?.("Destrave a selecao antes de exclui-la.", "warning");
+        return;
+      }
       commitEditor((draft) => {
         let objects = draft.objects || [];
-        for (const objectId of selectedObjectIds) objects = removeObjectCascade(objects, objectId);
+        for (const objectId of removableIds) objects = removeObjectCascade(objects, objectId);
         draft.objects = objects;
         return draft;
       });
-      setSelected(null);
-      setSelectedObjectIds([]);
+      const remainingIds = selectedObjectIds.filter((objectId) => !removableIds.includes(objectId));
+      setSelected(remainingIds[0] ? { type: "object", id: remainingIds[0] } : null);
+      setSelectedObjectIds(remainingIds);
       return;
     }
     if (!selected) return;
     updateSelectedEntity({ remove: true });
-  }, [commitEditor, selected, selectedObjectIds, updateSelectedEntity]);
+  }, [commitEditor, editor?.objects, notify, selected, selectedObjectIds, updateSelectedEntity]);
 
   const moveObjectFrom3D = useCallback((objectId, position) => {
+    const sourceObject = (editor?.objects || []).find((object) => object.id === objectId);
+    if (isEditorObjectLocked(sourceObject)) return;
     commitEditor((draft) => {
       const draftFloor = getActiveFloor(draft, activeFloorId);
       let movedTable = null;
@@ -2786,9 +2836,30 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
       draft.objects = syncAnchoredOpenings(draft.objects);
       return draft;
     });
-  }, [activeFloorId, commitEditor]);
+  }, [activeFloorId, commitEditor, editor?.objects]);
 
   const duplicateSelectedRoom = useCallback(() => {
+    if (selected?.type === "object") {
+      const object = (editor?.objects || []).find((entry) => entry.id === selected.id);
+      if (!object || isAnchoredOpening(object)) return;
+      const nextObjectId = createId("object");
+      commitEditor((draft) => {
+        const floor = getActiveFloor(draft, activeFloorId);
+        const copy = duplicateEditorObject(object, {
+          id: nextObjectId,
+          offset: getFineSnapSize(draft)
+        });
+        if (!copy) return draft;
+        draft.objects = [
+          ...(draft.objects || []),
+          constrainObjectToBounds(copy, draft, floor)
+        ];
+        return draft;
+      });
+      setSelected({ type: "object", id: nextObjectId });
+      setSelectedObjectIds([nextObjectId]);
+      return;
+    }
     if (selected?.type !== "zone") return;
     const zone = (editor?.zones || []).find((entry) => entry.id === selected.id);
     if (!zone || !isRoomZone(zone)) return;
@@ -2866,11 +2937,20 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
 
   const rotateSelectedRoom = useCallback(() => {
     if (selected?.type === "object") {
+      const targetIds = selectedObjectIds.length > 1 ? selectedObjectIds : [selected.id];
+      const unlockedIds = targetIds.filter((objectId) => {
+        const object = (editor?.objects || []).find((entry) => entry.id === objectId);
+        return object && !isEditorObjectLocked(object);
+      });
+      if (unlockedIds.length === 0) {
+        notify?.("Destrave a selecao antes de gira-la.", "warning");
+        return;
+      }
       commitEditor((draft) => {
         const draftFloor = getActiveFloor(draft, activeFloorId);
-        let rotatedTable = null;
+        const rotatedTables = [];
         draft.objects = (draft.objects || []).map((object) => {
-          if (object.id !== selected.id) return object;
+          if (!unlockedIds.includes(object.id)) return object;
           const isDoor = object.objectType === "door";
           const isSlidingDoor = isDoor && ["sliding", "pocket"].includes(object.metadata?.doorType);
           const toggledDoorMetadata = isSlidingDoor
@@ -2888,17 +2968,16 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
               : object;
           }
           const rotatedObject = constrainObjectToBounds({
-            ...object,
-            rotation: (Number(object.rotation || 0) + 90) % 360,
+            ...rotateEditorObject(object),
             metadata: {
               ...(object.metadata || {}),
               ...(isDoor ? toggledDoorMetadata : {})
             }
           }, draft, draftFloor);
-          if (isTableObject(rotatedObject)) rotatedTable = rotatedObject;
+          if (isTableObject(rotatedObject)) rotatedTables.push(rotatedObject);
           return rotatedObject;
         });
-        if (rotatedTable) {
+        for (const rotatedTable of rotatedTables) {
           draft.objects = centerLinkedAssetsOnTable(draft.objects, rotatedTable);
         }
         draft.objects = syncAnchoredOpenings(draft.objects);
@@ -2956,7 +3035,32 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
       ));
       return draft;
     });
-  }, [activeFloorId, commitEditor, editor, notify, placement, selected]);
+  }, [activeFloorId, commitEditor, editor, notify, placement, selected, selectedObjectIds]);
+
+  const toggleSelectedObjectLock = useCallback(() => {
+    const targetIds = selectedObjectIds.length > 0
+      ? selectedObjectIds
+      : selected?.type === "object"
+        ? [selected.id]
+        : [];
+    if (targetIds.length === 0) return;
+    const targetObjects = (editor?.objects || []).filter((object) => targetIds.includes(object.id));
+    if (targetObjects.length === 0) return;
+    const nextLocked = !targetObjects.every(isEditorObjectLocked);
+    commitEditor((draft) => {
+      draft.objects = (draft.objects || []).map((object) => targetIds.includes(object.id)
+        ? {
+          ...object,
+          metadata: {
+            ...(object.metadata || {}),
+            locked: nextLocked
+          }
+        }
+        : object);
+      return draft;
+    });
+    notify?.(nextLocked ? "Selecao travada no mapa." : "Selecao destravada.", "success");
+  }, [commitEditor, editor?.objects, notify, selected, selectedObjectIds]);
 
   const handleCanvasPointerMove = useCallback((event) => {
     if (dragRef.current?.type === "pan") {
@@ -3152,19 +3256,15 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
 
   const linkObject = useCallback(async (objectId, assetId) => {
     const device = devices.find((entry) => entry.id === assetId);
-    updateSelectedEntity({
-      linkedAssetId: assetId || null,
-      label: device ? deviceLabel(device) : undefined,
-      groupId: device?.groupId || null,
-      segmentId: device?.segmentId || null
-    });
+    const patch = getInventoryLinkPatch(device, device ? deviceLabel(device) : undefined);
+    updateSelectedEntity(patch);
     if (!permissions.linkInventory || !objectId) return;
     try {
       await linkFloorPlanObjectToAsset(token, objectId, {
-        assetId: assetId || null,
-        label: device ? deviceLabel(device) : undefined,
-        groupId: device?.groupId || null,
-        segmentId: device?.segmentId || null
+        assetId: patch.linkedAssetId,
+        label: patch.label,
+        groupId: patch.groupId,
+        segmentId: patch.segmentId
       });
       notify?.("Vinculo atualizado.", "ok");
     } catch (requestError) {
@@ -3192,6 +3292,20 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
   }
 
   const floor = getActiveFloor(editor, activeFloorId);
+  const actionObjectIds = selectedObjectIds.length > 0
+    ? selectedObjectIds
+    : selected?.type === "object"
+      ? [selected.id]
+      : [];
+  const actionObjects = (editor?.objects || []).filter((object) => actionObjectIds.includes(object.id));
+  const objectSelectionActive = selected?.type === "object" && actionObjects.length > 0;
+  const allActionObjectsLocked = objectSelectionActive && actionObjects.every(isEditorObjectLocked);
+  const hasUnlockedActionObject = objectSelectionActive && actionObjects.some((object) => !isEditorObjectLocked(object));
+  const singleActionObject = actionObjects.length === 1 ? actionObjects[0] : null;
+  const canDuplicateSelection = selected?.type === "zone"
+    || Boolean(singleActionObject && !isAnchoredOpening(singleActionObject));
+  const canRotateSelection = selected?.type === "zone" || hasUnlockedActionObject;
+  const canDeleteSelection = selected?.type !== "object" || hasUnlockedActionObject;
 
   return (
     <section className="floor-plan-editor-shell">
@@ -3314,10 +3428,15 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
             {isEditing && mode === "2d" && !paintDraft && (selected || selectedObjectIds.length > 0) ? (
               <FloorPlanSelectionDock
                 count={Math.max(1, selectedObjectIds.length)}
-                canDuplicate={selected?.type === "zone"}
+                canDuplicate={canDuplicateSelection}
+                canRotate={canRotateSelection}
+                canDelete={canDeleteSelection}
+                canLock={objectSelectionActive}
+                locked={allActionObjectsLocked}
                 onDuplicate={duplicateSelectedRoom}
                 onRotate={rotateSelectedRoom}
                 onDelete={deleteSelectedEntity}
+                onToggleLock={toggleSelectedObjectLock}
                 onClear={() => {
                   setSelected(null);
                   setSelectedObjectIds([]);

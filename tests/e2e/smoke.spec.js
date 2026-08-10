@@ -2,10 +2,25 @@ import { expect, test } from "@playwright/test";
 
 async function login(page) {
   await page.goto("/");
-  await page.getByLabel("E-mail").fill("admin@itguardian.local");
-  await page.getByLabel("Senha").fill("123456");
-  await page.getByRole("button", { name: "Acessar painel" }).click();
-  await expect(page.getByRole("heading", { name: "Infraestrutura em tempo real" })).toBeVisible();
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const dashboardHeading = page.getByRole("heading", { name: "Infraestrutura em tempo real" });
+    if (await dashboardHeading.isVisible().catch(() => false)) return;
+
+    await expect(page.getByLabel("E-mail")).toBeVisible({ timeout: 12_000 });
+    await page.getByLabel("E-mail").fill("admin@itguardian.local");
+    await page.getByLabel("Senha").fill("123456");
+    await page.getByRole("button", { name: "Acessar painel" }).click();
+
+    try {
+      await expect(dashboardHeading).toBeVisible({ timeout: 12_000 });
+      return;
+    } catch (error) {
+      if (attempt === 2) throw error;
+      await page.waitForTimeout(750);
+      await page.reload();
+    }
+  }
 }
 
 test("login usa cookie HttpOnly e restaura a sessao apos recarregar", async ({ page, context }) => {

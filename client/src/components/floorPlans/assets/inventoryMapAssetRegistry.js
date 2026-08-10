@@ -3,7 +3,7 @@ import { FLOOR_PLAN_LIBRARY_BY_ID } from "./floorPlanLibrary.js";
 export const MODEL_QUALITY_SIMPLE = "simple";
 export const MODEL_QUALITY_DETAILED = "detailed";
 
-const MODEL_BASE = "/assets/inventory-map-3d/models";
+const MODEL_BASE = "/assets/3d-library/models";
 const QUATERNIUS_SOURCE = "Quaternius Ultimate Furniture Pack";
 const KENNEY_SOURCE = "Kenney Furniture Kit";
 
@@ -27,7 +27,8 @@ export const INVENTORY_MAP_ASSET_REGISTRY = Object.freeze({
     modelParts: [
       { url: "kenney/computerScreen.glb", width: 0.56, depth: 0.28, height: 0.72, x: -0.12, z: -0.14 },
       { url: "kenney/computerKeyboard.glb", width: 0.5, depth: 0.3, height: 0.12, x: -0.1, z: 0.24 },
-      { url: "kenney/computerMouse.glb", width: 0.12, depth: 0.2, height: 0.1, x: 0.27, z: 0.24 }
+      { url: "kenney/computerMouse.glb", width: 0.12, depth: 0.2, height: 0.1, x: 0.27, z: 0.24 },
+      { url: "kenney/speaker.glb", width: 0.24, depth: 0.32, height: 0.68, x: 0.42, z: 0.04 }
     ]
   },
   notebook: {
@@ -67,13 +68,16 @@ export const INVENTORY_MAP_ASSET_REGISTRY = Object.freeze({
 export function getInventoryMapAssetDefinition(type) {
   const legacy = INVENTORY_MAP_ASSET_REGISTRY[type];
   const library = FLOOR_PLAN_LIBRARY_BY_ID[type];
-  if (legacy) return legacy;
-  if (library) {
+  if (legacy?.modelParts?.length) return legacy;
+  if (library?.modelPath) {
     return {
+      ...legacy,
       ...library,
       modelUrl: library.modelPath?.replace(`${MODEL_BASE}/`, "") || null
     };
   }
+  if (legacy) return legacy;
+  if (library) return { ...library, modelUrl: null };
   return { label: type || "Objeto", modelUrl: null, fallback: "box" };
 }
 

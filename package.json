@@ -19,6 +19,8 @@
     "agent:enroll": "npm run agent:enroll --workspace server --",
     "product-key:create": "npm run product-key:create --workspace server --",
     "product-key:monitoring": "npm run product-key:monitoring --workspace server --",
+    "floorplans:manifest": "node scripts/floor-plans/sync-3d-library-manifest.mjs",
+    "floorplans:inspect-sh3f": "node scripts/floor-plans/inspect-sh3f.mjs",
     "installer:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File installers/windows-collector/build-installer.ps1",
     "test": "npm run test --workspace server",
     "test:coverage": "npm run test:coverage --workspace server",
