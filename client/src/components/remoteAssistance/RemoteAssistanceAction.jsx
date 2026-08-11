@@ -31,6 +31,7 @@ import {
   formatRemoteMonitor,
   getRemoteAssetDisplayName,
   getRemoteAssetLastSeenAt,
+  hasRemoteAssistanceAgent,
   isRemoteAssistanceAssetFresh,
   isRemoteAssistanceFrontendEnabled,
   isRemoteAssistanceTerminal,
@@ -109,6 +110,16 @@ export default function RemoteAssistanceAction({
     eligible,
     backendEnabled: config?.enabled
   });
+  const renderCompactSlot = Boolean(compact && asset?.id && hasRemoteAssistanceAgent(asset));
+  const unavailableTitle = !frontendEnabled
+    ? "Atendimento remoto nao habilitado"
+    : !canView || !canStart
+      ? "Sem permissao para atendimento remoto"
+      : !eligible
+        ? "Agente offline ou sem contato recente"
+        : config?.enabled === false
+          ? "Atendimento remoto indisponivel"
+          : "Verificando atendimento remoto";
   const displayName = getRemoteAssetDisplayName(asset, alias);
   const monitors = Array.isArray(session?.monitors) ? session.monitors : [];
   const terminal = isRemoteAssistanceTerminal(session?.status);
@@ -346,7 +357,7 @@ export default function RemoteAssistanceAction({
     }
   }
 
-  if (!visible) return null;
+  if (!visible && !renderCompactSlot) return null;
 
   const dialog = open ? (
     <div className="modal-backdrop remote-assistance-backdrop" role="presentation">
@@ -520,11 +531,13 @@ export default function RemoteAssistanceAction({
       <button
         type="button"
         className={compact ? "icon-button" : "ghost-action remote-assistance-trigger"}
+        disabled={!visible}
         onClick={(event) => {
           if (compact) event.stopPropagation();
+          if (!visible) return;
           setOpen(true);
         }}
-        title={serviceOrder ? "Acessar maquina" : "Atendimento remoto"}
+        title={visible ? (serviceOrder ? "Acessar maquina" : "Atendimento remoto") : unavailableTitle}
         aria-label={serviceOrder ? "Acessar maquina" : "Atendimento remoto"}
       >
         <MonitorUp size={compact ? 18 : 15} />

@@ -814,3 +814,19 @@ entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 - teste automatizado bloqueia IDs duplicados, metadados legais incompletos,
   dimensoes invalidas e caminhos de modelo inexistentes.
 
+## 2026-08-11 - Acesso remoto no card da maquina
+
+### Interface
+
+- o botao de acesso remoto foi reposicionado no rodape do card, entre o
+  indicador de disco e a seta de perifericos;
+- maquinas gerenciadas pelo agente mantem o icone de monitor visivel nesse
+  local mesmo quando o recurso esta indisponivel;
+- quando desabilitado, o botao informa o motivo no tooltip sem alterar o
+  alinhamento das demais acoes do card.
+
+### Validacoes
+
+- lint e build de producao aprovados;
+- `git diff --check` aprovado.
+

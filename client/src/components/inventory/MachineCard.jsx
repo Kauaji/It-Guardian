@@ -200,6 +200,14 @@ function MachineCardContent({
       {showDetails && (
         <div className="machine-card-actions">
           {!isManualAsset && metrics?.disk != null && <DiskIndicator value={metrics.disk} />}
+          <RemoteAssistanceAction
+            asset={machine}
+            alias={alias}
+            token={token}
+            user={user}
+            notify={notify}
+            compact
+          />
           <div className="details-menu">
             <button
               type="button"
@@ -238,14 +246,6 @@ function MachineCardContent({
               </div>
             )}
           </div>
-          <RemoteAssistanceAction
-            asset={machine}
-            alias={alias}
-            token={token}
-            user={user}
-            notify={notify}
-            compact
-          />
           <button
             type="button"
             onClick={(event) => {
