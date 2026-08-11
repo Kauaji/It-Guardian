@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Archive, ChevronDown, Clock3, Monitor, Plus, Printer, RotateCcw, Search, Trash2, X } from "lucide-react";
 import { fetchDevice, fetchProducts, fetchServices, fetchTechnicians } from "../../api.js";
 import { assetTypeLabel } from "../inventory/assetTypes.js";
+import RemoteAssistanceAction from "../remoteAssistance/RemoteAssistanceAction.jsx";
 
 const fallbackStatusLabels = {
   open: "Aberta",
@@ -113,6 +114,7 @@ export default function ServiceOrderDetailsModal({
   groups = [],
   tabs: inventoryTabs = [],
   token,
+  user,
   notify,
   systemMode = "local",
   statuses = [],
@@ -626,6 +628,15 @@ export default function ServiceOrderDetailsModal({
             <p>{statusLabelMap[serviceOrder.status] || serviceOrder.status} - Prioridade {priorityLabels[serviceOrder.priority]}</p>
           </div>
           <div className="asset-modal-header-actions">
+            <RemoteAssistanceAction
+              asset={asset}
+              alias={asset?.alias}
+              serviceOrder={serviceOrder}
+              token={token}
+              user={user}
+              notify={notify}
+              compact
+            />
             <select
               className="service-order-status-select"
               value={serviceOrder.status}

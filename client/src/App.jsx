@@ -3155,6 +3155,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
             devices={decoratedAllDevices}
             token={token}
             notify={notify}
+            user={user}
             segments={inventoryViewSegments}
             machinesBySegment={machinesBySegment}
             search={inventorySearch}

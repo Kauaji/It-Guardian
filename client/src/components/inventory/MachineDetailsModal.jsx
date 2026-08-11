@@ -25,6 +25,7 @@ import ObservationTimeline from "./ObservationTimeline.jsx";
 import PeripheralList from "./PeripheralList.jsx";
 import QRCodePrint from "./QRCodePrint.jsx";
 import AutomationIndicatorDots from "../AutomationIndicatorDots.jsx";
+import RemoteAssistanceAction from "../remoteAssistance/RemoteAssistanceAction.jsx";
 import {
   getMachineSourceCollections,
   getMachineSourceLabel,
@@ -289,6 +290,9 @@ function ErrorAlertList({ alerts, resolvedAlerts }) {
 
 export default function MachineDetailsModal({
   machine,
+  token,
+  user,
+  notify,
   alias,
   observations,
   segmentColor,
@@ -353,7 +357,7 @@ export default function MachineDetailsModal({
     if (!machine) return undefined;
 
     function handleKeydown(event) {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && !document.querySelector(".remote-assistance-modal")) {
         onClose();
       }
     }
@@ -377,6 +381,13 @@ export default function MachineDetailsModal({
             <AutomationIndicatorDots indicators={machine.automationIndicators} maxVisible={4} />
           </div>
           <div className="asset-modal-header-actions">
+            <RemoteAssistanceAction
+              asset={machine}
+              alias={alias}
+              token={token}
+              user={user}
+              notify={notify}
+            />
             <button
               type="button"
               className={`ghost-action maintenance-action ${inMaintenance ? "active" : ""}`}

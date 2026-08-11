@@ -265,6 +265,7 @@ export default function ServiceOrdersBoard({
 
     function handleDialogKeydown(event) {
       if (event.key !== "Escape") return;
+      if (document.querySelector(".remote-assistance-modal")) return;
 
       if (selectedOrderCurrent) {
         setSelectedOrder(null);
@@ -1206,6 +1207,7 @@ export default function ServiceOrdersBoard({
         tabs={tabs}
         activeTab={activeTab}
         token={token}
+        user={user}
         notify={notify}
         systemMode={systemMode}
         serviceOrderSettings={serviceOrderSettings}

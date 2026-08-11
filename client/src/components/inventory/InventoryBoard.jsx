@@ -29,8 +29,8 @@ export default function InventoryBoard({
   devices: _devices = [],
   segments,
   machinesBySegment,
-  token: _token,
-  notify: _notify,
+  token,
+  notify,
   search,
   setSearch,
   selectedGroupId = "all",
@@ -40,6 +40,7 @@ export default function InventoryBoard({
   bulkMoveTarget,
   aliases = {},
   observations = {},
+  user,
   userName,
   canManage,
   moveModal,
@@ -645,6 +646,9 @@ export default function InventoryBoard({
       />
       <MachineDetailsModal
         machine={selectedMachine}
+        token={token}
+        user={user}
+        notify={notify}
         alias={selectedMachine ? aliases[selectedMachine.id] : ""}
         observations={selectedMachine ? observations[selectedMachine.id] || [] : []}
         segmentColor={segments.find((segment) => segment.id === selectedMachine?.segmentId)?.color}
