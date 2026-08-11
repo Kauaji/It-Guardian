@@ -10,6 +10,14 @@ import {
 } from "../controllers/agentController.js";
 import { requireAdmin, requireAuth } from "../middleware/authMiddleware.js";
 import { createRateLimiter } from "../middleware/rateLimitMiddleware.js";
+import { protectRemoteAssistanceResponse } from "../middleware/remoteAssistanceSecurityMiddleware.js";
+import {
+  agentCommands,
+  agentConsent,
+  agentEnd,
+  agentFrame,
+  agentPending
+} from "../controllers/remoteAssistanceController.js";
 
 const router = Router();
 
@@ -29,6 +37,11 @@ router.post("/heartbeat", agentRateLimiter, receive);
 router.post("/inventory", agentRateLimiter, receive);
 router.post("/jobs/:id/result", agentRateLimiter, completeJob);
 router.get("/support-link", agentRateLimiter, supportLink);
+router.get("/remote-assistance/pending", protectRemoteAssistanceResponse, agentRateLimiter, agentPending);
+router.post("/remote-assistance/sessions/:id/consent", protectRemoteAssistanceResponse, agentRateLimiter, agentConsent);
+router.post("/remote-assistance/sessions/:id/frame", protectRemoteAssistanceResponse, agentRateLimiter, agentFrame);
+router.get("/remote-assistance/sessions/:id/commands", protectRemoteAssistanceResponse, agentRateLimiter, agentCommands);
+router.post("/remote-assistance/sessions/:id/end", protectRemoteAssistanceResponse, agentRateLimiter, agentEnd);
 
 router.use(requireAuth, requireAdmin);
 router.get("/enrollments", listManagedEnrollments);

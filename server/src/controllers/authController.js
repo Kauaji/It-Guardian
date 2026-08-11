@@ -4,6 +4,7 @@ import { getJwtSecret } from "../config/environment.js";
 import { addLog } from "../repositories/logRepository.js";
 import { countActiveAdminsExcluding, createUser, findUserByEmail, toPublicUser } from "../repositories/userRepository.js";
 import { clearSessionCookie, setSessionCookie } from "../security/sessionCookie.js";
+import { endRemoteAssistanceSessionsOnLogout } from "../services/remoteAssistanceService.js";
 
 function signToken(user) {
   return jwt.sign(
@@ -68,7 +69,12 @@ export function me(req, res) {
   res.json({ user: req.user, token });
 }
 
-export function logout(_req, res) {
-  clearSessionCookie(res);
-  res.status(204).end();
+export async function logout(req, res, next) {
+  try {
+    await endRemoteAssistanceSessionsOnLogout(req.user);
+    clearSessionCookie(res);
+    res.status(204).end();
+  } catch (error) {
+    next(error);
+  }
 }

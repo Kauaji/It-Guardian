@@ -37,6 +37,8 @@ import agentRoutes from "./routes/agentRoutes.js";
 import integrationRoutes from "./routes/integrationRoutes.js";
 import productKeyRoutes from "./routes/productKeyRoutes.js";
 import collectorActivationRoutes from "./routes/collectorActivationRoutes.js";
+import securityRoutes from "./routes/securityRoutes.js";
+import remoteAssistanceRoutes from "./routes/remoteAssistanceRoutes.js";
 import { initializeRuntime } from "./bootstrap.js";
 import { getCorsOrigins, isAllowedVercelOrigin } from "./config/environment.js";
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
@@ -125,6 +127,8 @@ export function createApp({ initializeOnRequest = false } = {}) {
   app.use("/api/integrations", integrationRoutes);
   app.use("/api/product-keys", productKeyRoutes);
   app.use("/api/collector", collectorActivationRoutes);
+  app.use("/api/security", securityRoutes);
+  app.use("/api/remote-assistance", remoteAssistanceRoutes);
   app.use("/api/devices", deviceRoutes);
   app.use("/api/alerts", alertRoutes);
   app.use("/api/logs", logRoutes);

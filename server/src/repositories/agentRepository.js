@@ -265,6 +265,19 @@ export async function findAgentAssetById(assetId) {
   return result.rows[0] ? assetFromRow(result.rows[0]) : null;
 }
 
+export async function findAgentAssetByEnrollmentId(enrollmentId) {
+  const result = await query(
+    `
+      SELECT * FROM agent_assets
+      WHERE enrollment_id = $1
+      ORDER BY last_seen_at DESC
+      LIMIT 1
+    `,
+    [enrollmentId]
+  );
+  return result.rows[0] ? assetFromRow(result.rows[0]) : null;
+}
+
 export async function findAgentAssetByActivationId(activationId) {
   const result = await query(
     `
