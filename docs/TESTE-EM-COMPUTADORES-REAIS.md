@@ -38,6 +38,38 @@ laboratorio e nao um token de producao.
 22. Criar backup do servidor.
 23. Restaurar o backup em ambiente limpo, se possivel.
 
+## Assistencia remota em laboratorio
+
+Execute esta secao somente com as duas maquinas proprias ou formalmente
+autorizadas. Antes do teste, leia
+[`ASSISTENCIA-REMOTA.md`](ASSISTENCIA-REMOTA.md) e habilite apenas as flags de
+laboratorio. Mantenha auto consentimento, modo privacidade e acoes admin
+desligados.
+
+1. Atualize o agente da Maquina B e confirme heartbeat recente.
+2. Conceda ao tecnico as permissoes de visualizar, iniciar, controlar e encerrar.
+3. Abra a Maquina B no Inventario e clique em `Atendimento remoto`.
+4. Informe motivo e confirme a senha do tecnico.
+5. Verifique a janela de consentimento local na Maquina B.
+6. Negue a primeira tentativa e confira sessao, auditoria e historicos.
+7. Repita, autorize e confirme o indicador permanente na Maquina B.
+8. Troque o monitor quando a maquina tiver duas telas.
+9. Solicite controle e valide somente mouse, cliques, scroll e teclas comuns.
+10. Encerre pelo botao local e confirme que a captura parou imediatamente.
+11. Repita por uma OS vinculada e encerre pelo viewer.
+12. Confira eventos no historico da maquina e da OS.
+13. Confirme no banco que nao ha frame, senha ou token completo persistido.
+14. Inicie outra sessao, saia da conta do tecnico e confirme encerramento.
+
+Evidencias adicionais:
+
+- captura da solicitacao de consentimento;
+- captura do indicador local durante a sessao;
+- evento de troca de monitor;
+- eventos de controle habilitado e liberado;
+- registros de encerramento nos tres historicos;
+- consulta demonstrando ausencia de frames persistidos.
+
 ## Evidencias esperadas
 
 - captura do inventario com origem `Agent`;

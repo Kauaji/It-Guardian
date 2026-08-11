@@ -35,16 +35,32 @@ pertence a um enrollment e pode ser revogado.
 - resultado, erro, auditoria e historico da maquina sao persistidos;
 - teste automatico procura primitivas perigosas e coleta invasiva.
 
+## Assistencia remota em laboratorio
+
+O agente possui um modulo separado de assistencia remota, mas ele permanece
+desabilitado por padrao. A ativacao exige flags nos dois lados, ambiente
+permitido, permissoes do tecnico, reautenticacao recente e consentimento local.
+Enquanto a sessao estiver ativa, a maquina exibe um indicador permanente e um
+botao local de encerramento.
+
+O modo atual usa snapshots JPEG limitados a 1 FPS. Frames e comandos ficam
+somente no relay efemero em memoria; nao sao gravados no banco nem no historico.
+Viewer e agente usam tokens curtos, separados do JWT e do enrollment. Consulte
+[`ASSISTENCIA-REMOTA.md`](ASSISTENCIA-REMOTA.md) para o modelo completo.
+
 ## O que nao existe
 
 - shell interativo ou comando arbitrario enviado diretamente pela API;
 - download de codigo para execucao;
 - atualizacao automatica;
-- captura de tela, teclado ou clipboard;
+- captura de tela ou teclado fora de uma sessao remota visivel, autenticada e
+  autorizada;
+- clipboard remoto, gravacao ou transferencia de arquivos;
 - coleta de arquivos, senhas ou navegacao;
 - persistencia oculta;
 - geolocalizacao;
 - execucao sem script previamente cadastrado e trabalho persistido.
+- acesso silencioso, bypass de UAC, tela preta ou bloqueio oculto de input.
 
 O coletor usa APIs locais de inventario e HTTPS para heartbeat. O codigo de
 compatibilidade da fila nao oferece terminal remoto e somente pode operar com

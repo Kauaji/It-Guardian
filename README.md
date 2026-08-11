@@ -87,6 +87,11 @@ padrao (`ENABLE_REMOTE_SCRIPT_EXECUTION=false`). Sugestoes, preventivas e
 automacoes nao enviam comandos ao coletor nessa configuracao. A auditoria atual
 esta em [`docs/AUDITORIA-BETA-PROFISSIONAL.md`](docs/AUDITORIA-BETA-PROFISSIONAL.md).
 
+A Assistencia Remota e um modulo separado, desabilitado por padrao e destinado
+somente a laboratorio/homologacao nesta versao. Ela exige permissao,
+reautenticacao do tecnico e consentimento visivel na maquina atendida. Consulte
+[`docs/ASSISTENCIA-REMOTA.md`](docs/ASSISTENCIA-REMOTA.md).
+
 Estrutura principal:
 
 ```text
@@ -230,6 +235,7 @@ npm run docker:down  # Encerra o ambiente Docker
 
 - [Agente Windows](docs/AGENTE-WINDOWS.md)
 - [Segurança do agente](docs/SEGURANCA-DO-AGENTE.md)
+- [Assistencia remota em laboratorio](docs/ASSISTENCIA-REMOTA.md)
 - [Cloud, coletor e licenciamento](docs/CLOUD-COLLECTOR-E-LICENCIAMENTO.md)
 - [Integração OCS Inventory](docs/INTEGRACAO-OCS.md)
 - [Integração Zabbix](docs/INTEGRACAO-ZABBIX.md)
