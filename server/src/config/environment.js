@@ -16,6 +16,66 @@ function isTruthyEnv(value) {
   return ["1", "true", "yes", "sim"].includes(String(value || "").trim().toLowerCase());
 }
 
+function boundedInteger(value, fallback, min, max) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(min, Math.min(max, Math.trunc(parsed)));
+}
+
+export function getRemoteAssistanceConfig(env = process.env) {
+  const environment = String(
+    env.REMOTE_ASSISTANCE_ENV ||
+      env.REMOTE_ASSISTANCE_ENVIRONMENT ||
+      env.IT_GUARDIAN_ENVIRONMENT ||
+      env.NODE_ENV ||
+      "disabled"
+  ).trim().toLowerCase();
+  const allowedEnvironments = new Set([
+    "lab",
+    "laboratory",
+    "laboratorio",
+    "homologation",
+    "homologacao",
+    "internal",
+    "interno",
+    "test"
+  ]);
+  const publicDeployment = env.VERCEL === "1" || env.VERCEL_ENV === "production";
+  const environmentAllowed = allowedEnvironments.has(environment);
+  const enabled = isTruthyEnv(env.ENABLE_REMOTE_ASSISTANCE) && environmentAllowed;
+  const controlEnabled = enabled && isTruthyEnv(
+    env.ENABLE_REMOTE_CONTROL ?? env.ENABLE_REMOTE_ASSISTANCE_CONTROL
+  );
+
+  return {
+    enabled,
+    environment,
+    publicDeployment,
+    disabledReason: enabled
+      ? null
+      : !environmentAllowed
+          ? "environment_not_allowed"
+          : "feature_disabled",
+    captureEnabled: enabled,
+    controlEnabled,
+    privacyModeEnabled: enabled && isTruthyEnv(env.ENABLE_REMOTE_PRIVACY_MODE),
+    adminActionsEnabled: enabled && isTruthyEnv(env.ENABLE_REMOTE_ADMIN_ACTIONS),
+    autoConsentEnabled:
+      enabled &&
+      !publicDeployment &&
+      isTruthyEnv(
+        env.REMOTE_ASSISTANCE_LAB_AUTO_CONSENT ??
+          env.ENABLE_REMOTE_ASSISTANCE_AUTO_CONSENT
+      ),
+    sessionTtlMinutes: boundedInteger(env.REMOTE_ASSISTANCE_SESSION_TTL_MINUTES, 20, 5, 60),
+    reauthTtlMinutes: 5,
+    maxFrameBytes: boundedInteger(env.REMOTE_ASSISTANCE_MAX_FRAME_BYTES, 700000, 100000, 900000),
+    maxFramesPerSecond: boundedInteger(env.REMOTE_ASSISTANCE_MAX_FPS, 1, 1, 1),
+    maxQueuedCommands: boundedInteger(env.REMOTE_ASSISTANCE_MAX_QUEUED_COMMANDS, 100, 10, 250),
+    agentTimeoutSeconds: boundedInteger(env.REMOTE_ASSISTANCE_AGENT_TIMEOUT_SECONDS, 45, 15, 300)
+  };
+}
+
 export function isRemoteScriptExecutionEnabled(env = process.env) {
   return isTruthyEnv(env.ENABLE_REMOTE_SCRIPT_EXECUTION);
 }

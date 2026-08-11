@@ -11,6 +11,7 @@ import { migration008AgentScriptExecution } from "./008-agent-script-execution.j
 import { migration009AgentScriptAutomationLink } from "./009-agent-script-automation-link.js";
 import { migration010AgentInventoryDetails } from "./010-agent-inventory-details.js";
 import { migration011AssetMaintenanceLifecycle } from "./011-asset-maintenance-lifecycle.js";
+import { migration012RemoteAssistanceLab } from "./012-remote-assistance-lab.js";
 
 export const migrations = [
   migration001RuntimeFoundation,
@@ -23,7 +24,8 @@ export const migrations = [
   migration008AgentScriptExecution,
   migration009AgentScriptAutomationLink,
   migration010AgentInventoryDetails,
-  migration011AssetMaintenanceLifecycle
+  migration011AssetMaintenanceLifecycle,
+  migration012RemoteAssistanceLab
 ];
 
 export async function runMigrations() {

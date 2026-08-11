@@ -107,6 +107,20 @@ export const permissionGroups = [
     ]
   },
   {
+    id: "remote_assistance",
+    label: "Assistencia remota",
+    permissions: [
+      { id: "remote_assistance.view", label: "Visualizar assistencia remota" },
+      { id: "remote_assistance.start", label: "Iniciar assistencia remota" },
+      { id: "remote_assistance.control", label: "Controlar maquina remotamente" },
+      { id: "remote_assistance.end", label: "Encerrar assistencia remota" },
+      { id: "remote_assistance.manage", label: "Gerenciar assistencias remotas" },
+      { id: "remote_assistance.privacy_mode", label: "Solicitar modo de privacidade" },
+      { id: "remote_assistance.admin_actions", label: "Executar acoes administrativas remotas" },
+      { id: "security.reauthenticate", label: "Reautenticar para acoes sensiveis" }
+    ]
+  },
+  {
     id: "admin",
     label: "Admin",
     permissions: [
