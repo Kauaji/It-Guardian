@@ -830,3 +830,21 @@ entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 - lint e build de producao aprovados;
 - `git diff --check` aprovado.
 
+## 2026-08-11 - Dimensionamento dos cards e acoes do inventario
+
+### Interface
+
+- a largura minima dos cards de maquina passou de 184 para 220 pixels para
+  preservar o rodape mesmo quando todas as acoes estao disponiveis;
+- os botoes de acesso remoto, perifericos e informacoes agora compartilham a
+  mesma caixa de 26 por 26 pixels;
+- o icone de acesso remoto foi reduzido para acompanhar a escala visual dos
+  demais controles do card.
+
+### Validacoes
+
+- lint e build de producao aprovados;
+- teste E2E aprovado em viewport de 948 por 746 pixels, verificando largura
+  minima, ausencia de overflow e igualdade entre os botoes do rodape;
+- `git diff --check` aprovado.
+

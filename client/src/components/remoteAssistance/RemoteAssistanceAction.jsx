@@ -540,7 +540,7 @@ export default function RemoteAssistanceAction({
         title={visible ? (serviceOrder ? "Acessar maquina" : "Atendimento remoto") : unavailableTitle}
         aria-label={serviceOrder ? "Acessar maquina" : "Atendimento remoto"}
       >
-        <MonitorUp size={compact ? 18 : 15} />
+        <MonitorUp size={15} />
         {!compact && (serviceOrder ? "Acessar maquina" : "Atendimento remoto")}
       </button>
       {dialog && createPortal(dialog, document.body)}

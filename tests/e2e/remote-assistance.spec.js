@@ -57,6 +57,7 @@ async function connectLabAgent(page) {
 }
 
 test("Inventario abre o fluxo visual seguro de assistencia remota", async ({ page }) => {
+  await page.setViewportSize({ width: 948, height: 746 });
   await login(page);
   await connectLabAgent(page);
   await page.reload();
@@ -66,6 +67,32 @@ test("Inventario abre o fluxo visual seguro de assistencia remota", async ({ pag
   await expect(machineCard).toBeVisible();
   const remoteButton = machineCard.getByRole("button", { name: "Atendimento remoto" });
   await expect(remoteButton).toBeVisible();
+
+  const cardLayout = await machineCard.evaluate((card) => {
+    const actions = card.querySelector(".machine-card-actions");
+    const buttons = actions
+      ? actions.querySelectorAll(":scope > button, :scope > .details-menu > button, :scope > .move-menu > button")
+      : [];
+
+    return {
+      width: card.getBoundingClientRect().width,
+      actionsClientWidth: actions?.clientWidth || 0,
+      actionsScrollWidth: actions?.scrollWidth || 0,
+      buttonSizes: Array.from(buttons, (button) => {
+        const bounds = button.getBoundingClientRect();
+        return { width: bounds.width, height: bounds.height };
+      })
+    };
+  });
+
+  expect(cardLayout.width).toBeGreaterThanOrEqual(220);
+  expect(cardLayout.actionsScrollWidth).toBeLessThanOrEqual(cardLayout.actionsClientWidth + 1);
+  expect(cardLayout.buttonSizes.length).toBeGreaterThanOrEqual(3);
+  cardLayout.buttonSizes.forEach(({ width, height }) => {
+    expect(width).toBeCloseTo(26, 0);
+    expect(height).toBeCloseTo(26, 0);
+  });
+
   await remoteButton.click();
 
   const remoteDialog = page.getByRole("dialog", { name: "Assistencia remota" });

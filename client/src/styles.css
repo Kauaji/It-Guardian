@@ -5647,7 +5647,7 @@ tbody tr.selected {
 
 .segment-machine-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(184px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 9px;
   min-width: 0;
   padding: 10px;
@@ -6228,8 +6228,11 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
 .machine-card-actions > button,
 .machine-card-actions .details-menu > button,
 .machine-card-actions .move-menu > button {
+  width: 26px;
   min-width: 26px;
+  height: 26px;
   min-height: 26px;
+  flex: 0 0 26px;
   border: 1px solid var(--border-strong);
   border-radius: 6px;
   background: var(--surface);
