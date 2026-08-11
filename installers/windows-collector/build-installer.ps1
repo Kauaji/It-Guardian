@@ -15,6 +15,7 @@ $iconPath = Join-Path $PSScriptRoot "it-guardian.ico"
 $executablePath = Join-Path $PSScriptRoot "ITGuardian.exe"
 $uninstallerExecutablePath = Join-Path $PSScriptRoot "ITGuardian-Uninstaller.exe"
 $sourcePath = Join-Path $PSScriptRoot "..\..\agent\windows\ITGuardian.Windows.cs"
+$remoteAssistanceSourcePath = Join-Path $PSScriptRoot "..\..\agent\windows\ITGuardian.RemoteAssistance.cs"
 $uninstallerSourcePath = Join-Path $PSScriptRoot "ITGuardian.Uninstaller.cs"
 $iconScriptPath = Join-Path $PSScriptRoot "New-ITGuardianIcon.ps1"
 $frameworkDirectory = Join-Path $env:WINDIR "Microsoft.NET\Framework64\v4.0.30319"
@@ -25,6 +26,9 @@ if (-not (Test-Path -LiteralPath $csharpCompiler)) {
 }
 if (-not (Test-Path -LiteralPath $sourcePath)) {
   throw "Codigo-fonte do aplicativo Windows nao encontrado."
+}
+if (-not (Test-Path -LiteralPath $remoteAssistanceSourcePath)) {
+  throw "Codigo-fonte da assistencia remota nao encontrado."
 }
 if (-not (Test-Path -LiteralPath $uninstallerSourcePath)) {
   throw "Codigo-fonte do desinstalador Windows nao encontrado."
@@ -38,11 +42,13 @@ if (-not (Test-Path -LiteralPath $uninstallerSourcePath)) {
   "/win32icon:$iconPath" `
   "/out:$executablePath" `
   "/reference:$(Join-Path $frameworkDirectory 'System.dll')" `
+  "/reference:$(Join-Path $frameworkDirectory 'System.Core.dll')" `
   "/reference:$(Join-Path $frameworkDirectory 'System.Drawing.dll')" `
   "/reference:$(Join-Path $frameworkDirectory 'System.Management.dll')" `
   "/reference:$(Join-Path $frameworkDirectory 'System.Web.Extensions.dll')" `
   "/reference:$(Join-Path $frameworkDirectory 'System.Windows.Forms.dll')" `
-  $sourcePath
+  $sourcePath `
+  $remoteAssistanceSourcePath
 if ($LASTEXITCODE -ne 0) {
   throw "A compilacao do ITGuardian.exe falhou com codigo $LASTEXITCODE."
 }

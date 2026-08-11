@@ -8,7 +8,8 @@ param(
   [string]$Group = "",
   [string]$Segment = "",
   [bool]$IncludeLoggedUser = $false,
-  [bool]$EnableRemoteScriptExecution = $false
+  [bool]$EnableRemoteScriptExecution = $false,
+  [bool]$EnableRemoteAssistance = $false
 )
 
 $ErrorActionPreference = "Stop"
@@ -41,6 +42,7 @@ Copy-Item -LiteralPath (Join-Path $PSScriptRoot "test-heartbeat.ps1") -Destinati
   segment = $Segment
   includeLoggedUser = [bool]$IncludeLoggedUser
   enableRemoteScriptExecution = [bool]$EnableRemoteScriptExecution
+  enableRemoteAssistance = [bool]$EnableRemoteAssistance
 } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $installDirectory "config.json") -Encoding UTF8
 
 $configPath = Join-Path $installDirectory "config.json"

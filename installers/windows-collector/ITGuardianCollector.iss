@@ -325,7 +325,8 @@ begin
       '  "group": "",' + #13#10 +
       '  "segment": "",' + #13#10 +
       '  "includeLoggedUser": false,' + #13#10 +
-      '  "enableRemoteScriptExecution": false' + #13#10 +
+      '  "enableRemoteScriptExecution": false,' + #13#10 +
+      '  "enableRemoteAssistance": false' + #13#10 +
       '}';
     SaveStringToFile(ExpandConstant('{app}\config.json'), ConfigJson, False);
   end;

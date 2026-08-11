@@ -11,7 +11,7 @@ const quaterniusModel = ({ label, file, fallback, category = "furniture", defaul
   label,
   modelUrl: `quaternius/${file}`,
   source: QUATERNIUS_SOURCE,
-  license: "CC0",
+  license: "CC0-1.0",
   fallback,
   category,
   defaultRotationY
@@ -22,7 +22,7 @@ export const INVENTORY_MAP_ASSET_REGISTRY = Object.freeze({
     label: "PC",
     modelUrl: null,
     source: KENNEY_SOURCE,
-    license: "CC0",
+    license: "CC0-1.0",
     fallback: "pc",
     modelParts: [
       { url: "kenney/computerScreen.glb", width: 0.56, depth: 0.28, height: 0.72, x: -0.12, z: -0.14 },
@@ -35,14 +35,14 @@ export const INVENTORY_MAP_ASSET_REGISTRY = Object.freeze({
     label: "Notebook",
     modelUrl: "kenney/laptop.glb",
     source: KENNEY_SOURCE,
-    license: "CC0",
+    license: "CC0-1.0",
     fallback: "notebook"
   },
   tv: {
     label: "TV",
     modelUrl: "kenney/televisionModern.glb",
     source: KENNEY_SOURCE,
-    license: "CC0",
+    license: "CC0-1.0",
     fallback: "tv"
   },
   printer: { label: "Impressora", modelUrl: null, fallback: "printer" },

@@ -8,5 +8,6 @@
   "group": "",
   "segment": "",
   "includeLoggedUser": false,
-  "enableRemoteScriptExecution": false
+  "enableRemoteScriptExecution": false,
+  "enableRemoteAssistance": false
 }

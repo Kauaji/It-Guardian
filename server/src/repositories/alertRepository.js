@@ -579,8 +579,12 @@ export async function resolveInactiveAgentAlerts({
     params.push(id);
     return `$${params.length}`;
   });
-  params.push(Math.max(1, toNumber(inactiveHours, defaultAlertSettings.inactiveAlertAutoResolveHours)));
-  const inactivityParam = `$${params.length}`;
+  const normalizedInactiveHours = Math.max(
+    1,
+    toNumber(inactiveHours, defaultAlertSettings.inactiveAlertAutoResolveHours)
+  );
+  params.push(new Date(Date.now() - normalizedInactiveHours * 60 * 60 * 1000).toISOString());
+  const inactiveBeforeParam = `$${params.length}`;
   const result = await query(
     `
       UPDATE alerts
@@ -590,7 +594,7 @@ export async function resolveInactiveAgentAlerts({
         AND asset_id = $1
         AND status = 'active'
         ${exclusions.length ? `AND id NOT IN (${exclusions.join(", ")})` : ""}
-        AND last_seen_at <= NOW() - (${inactivityParam}::double precision * INTERVAL '1 hour')
+        AND last_seen_at <= ${inactiveBeforeParam}
       RETURNING *
     `,
     params

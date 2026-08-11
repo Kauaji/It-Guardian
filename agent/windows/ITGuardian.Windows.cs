@@ -15,8 +15,8 @@ using System.Windows.Forms;
 [assembly: System.Reflection.AssemblyDescription("Inventario e presenca do IT Guardian")]
 [assembly: System.Reflection.AssemblyCompany("IT Guardian")]
 [assembly: System.Reflection.AssemblyProduct("IT Guardian")]
-[assembly: System.Reflection.AssemblyVersion("1.6.2.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.6.2.0")]
+[assembly: System.Reflection.AssemblyVersion("1.6.3.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.6.3.0")]
 
 namespace ITGuardian.Windows
 {
@@ -33,6 +33,7 @@ namespace ITGuardian.Windows
         public string segment { get; set; }
         public bool includeLoggedUser { get; set; }
         public bool enableRemoteScriptExecution { get; set; }
+        public bool enableRemoteAssistance { get; set; }
     }
 
     internal sealed class AgentHeartbeatResponse
@@ -152,25 +153,42 @@ namespace ITGuardian.Windows
             }
 
             WriteLog("INFO", "Coletor IT Guardian " + AgentVersion + " iniciado.");
-            do
+            RemoteAssistanceBroker remoteAssistanceBroker = null;
+            if (!runOnce && RemoteAssistanceEnvironment.IsAllowed(config))
             {
-                try
-                {
-                    SendInventory(config);
-                }
-                catch (Exception error)
-                {
-                    WriteLog("ERROR", error.Message);
-                    if (runOnce) throw;
-                }
+                remoteAssistanceBroker = new RemoteAssistanceBroker(config);
+                remoteAssistanceBroker.Start();
+            }
 
-                if (!runOnce)
+            try
+            {
+                do
                 {
-                    WaitForNextHeartbeat(config.intervalSeconds);
-                    config = ReadConfig(configPath);
+                    try
+                    {
+                        SendInventory(config);
+                    }
+                    catch (Exception error)
+                    {
+                        WriteLog("ERROR", error.Message);
+                        if (runOnce) throw;
+                    }
+
+                    if (!runOnce)
+                    {
+                        WaitForNextHeartbeat(config.intervalSeconds);
+                        config = ReadConfig(configPath);
+                    }
+                }
+                while (!runOnce);
+            }
+            finally
+            {
+                if (remoteAssistanceBroker != null)
+                {
+                    remoteAssistanceBroker.Dispose();
                 }
             }
-            while (!runOnce);
         }
 
         private static void WaitForNextHeartbeat(int intervalSeconds)
@@ -1248,6 +1266,7 @@ namespace ITGuardian.Windows
     internal sealed class TrayApplicationContext : ApplicationContext
     {
         private readonly NotifyIcon trayIcon;
+        private readonly RemoteAssistanceTrayController remoteAssistance;
 
         internal TrayApplicationContext(string configPath)
         {
@@ -1270,10 +1289,12 @@ namespace ITGuardian.Windows
                 Text = "IT Guardian ativo",
                 Visible = true
             };
+            remoteAssistance = new RemoteAssistanceTrayController(trayIcon);
         }
 
         protected override void ExitThreadCore()
         {
+            remoteAssistance.Dispose();
             trayIcon.Visible = false;
             trayIcon.Dispose();
             base.ExitThreadCore();
