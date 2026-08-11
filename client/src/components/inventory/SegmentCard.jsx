@@ -28,7 +28,10 @@ export default function SegmentCard({
   onAddPeripheral,
   onRemovePeripheral,
   activePopoverId,
-  setActivePopoverId
+  setActivePopoverId,
+  token,
+  user,
+  notify
 }) {
   const { isOver, setNodeRef: setDropNodeRef } = useDroppable({
     id: `segment-drop-${segment.id}`,
@@ -230,6 +233,9 @@ export default function SegmentCard({
               onRemovePeripheral={onRemovePeripheral}
               activePopoverId={activePopoverId}
               setActivePopoverId={setActivePopoverId}
+              token={token}
+              user={user}
+              notify={notify}
             />
           ))}
           {!machines.length && (

@@ -7,6 +7,7 @@ import PeripheralList from "./PeripheralList.jsx";
 import SelectionCheckbox from "./SelectionCheckbox.jsx";
 import AutomationIndicatorDots from "../AutomationIndicatorDots.jsx";
 import { getMachineSourceLabel } from "./agentPresentation.js";
+import RemoteAssistanceAction from "../remoteAssistance/RemoteAssistanceAction.jsx";
 
 const pingTimeFormatter = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
@@ -63,6 +64,9 @@ function MachineCardContent({
   onRemovePeripheral = () => {},
   activePopoverId = null,
   setActivePopoverId = () => {},
+  token,
+  user,
+  notify,
   setNodeRef,
   style
 }) {
@@ -234,6 +238,14 @@ function MachineCardContent({
               </div>
             )}
           </div>
+          <RemoteAssistanceAction
+            asset={machine}
+            alias={alias}
+            token={token}
+            user={user}
+            notify={notify}
+            compact
+          />
           <button
             type="button"
             onClick={(event) => {
@@ -302,7 +314,10 @@ export default function MachineCard({
   onAddPeripheral,
   onRemovePeripheral,
   activePopoverId,
-  setActivePopoverId
+  setActivePopoverId,
+  token,
+  user,
+  notify
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: machine.id,
@@ -332,6 +347,9 @@ export default function MachineCard({
       onRemovePeripheral={onRemovePeripheral}
       activePopoverId={activePopoverId}
       setActivePopoverId={setActivePopoverId}
+      token={token}
+      user={user}
+      notify={notify}
       dragHandleProps={{ ...attributes, ...listeners }}
       isDragging={isDragging}
       setNodeRef={setNodeRef}

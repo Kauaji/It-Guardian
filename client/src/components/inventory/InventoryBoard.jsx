@@ -540,6 +540,9 @@ export default function InventoryBoard({
                   onRemovePeripheral={onRemovePeripheral}
                   activePopoverId={activePopoverId}
                   setActivePopoverId={setActivePopoverId}
+                  token={token}
+                  user={user}
+                  notify={notify}
                 />
               )) : (
                 <div className="segment-group-empty">
@@ -590,6 +593,9 @@ export default function InventoryBoard({
                 onRemovePeripheral={onRemovePeripheral}
                 activePopoverId={activePopoverId}
                 setActivePopoverId={setActivePopoverId}
+                token={token}
+                user={user}
+                notify={notify}
               />
             ))}
           </SegmentGroupContainer>
@@ -624,6 +630,9 @@ export default function InventoryBoard({
             onRemovePeripheral={onRemovePeripheral}
             activePopoverId={activePopoverId}
             setActivePopoverId={setActivePopoverId}
+            token={token}
+            user={user}
+            notify={notify}
           />
         ))}
         {!visibleSegments.length && (

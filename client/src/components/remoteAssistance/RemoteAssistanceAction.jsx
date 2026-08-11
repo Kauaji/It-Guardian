@@ -520,8 +520,12 @@ export default function RemoteAssistanceAction({
       <button
         type="button"
         className={compact ? "icon-button" : "ghost-action remote-assistance-trigger"}
-        onClick={() => setOpen(true)}
+        onClick={(event) => {
+          if (compact) event.stopPropagation();
+          setOpen(true);
+        }}
         title={serviceOrder ? "Acessar maquina" : "Atendimento remoto"}
+        aria-label={serviceOrder ? "Acessar maquina" : "Atendimento remoto"}
       >
         <MonitorUp size={compact ? 18 : 15} />
         {!compact && (serviceOrder ? "Acessar maquina" : "Atendimento remoto")}
