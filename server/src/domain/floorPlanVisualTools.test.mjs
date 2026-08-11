@@ -124,7 +124,7 @@ describe("local 3D asset registry", () => {
   it("uses procedural fallback in simple mode and a Kenney composite PC in detailed mode", () => {
     assert.equal(resolveInventoryMapAssetMode("pc", MODEL_QUALITY_SIMPLE).mode, "fallback");
     assert.equal(resolveInventoryMapAssetMode("pc", MODEL_QUALITY_DETAILED).mode, "composite");
-    assert.equal(resolveInventoryMapAssetMode("pc", MODEL_QUALITY_DETAILED).parts.length, 3);
+    assert.equal(resolveInventoryMapAssetMode("pc", MODEL_QUALITY_DETAILED).parts.length, 4);
   });
 
   it("provides a safe fallback for unknown object types", () => {
@@ -148,7 +148,7 @@ describe("local 3D asset registry", () => {
       assert.equal(detailed.mode, "model");
       assert.equal(simple.mode, "fallback");
       assert.equal(definition.source, "Quaternius Ultimate Furniture Pack");
-      assert.equal(definition.license, "CC0");
+      assert.equal(definition.license, "CC0-1.0");
       assert.ok(modelStat.size > 0 && modelStat.size <= 5_000_000);
     }
   });
@@ -160,7 +160,7 @@ describe("local 3D asset registry", () => {
     const modelUrls = [...detailedPc.parts.map((part) => part.url), detailedNotebook.url];
 
     assert.equal(detailedNotebook.definition.source, "Kenney Furniture Kit");
-    assert.equal(detailedNotebook.definition.license, "CC0");
+    assert.equal(detailedNotebook.definition.license, "CC0-1.0");
     for (const modelUrl of modelUrls) {
       const modelPath = path.join(repoRoot, "client/public", modelUrl.replace(/^\//, ""));
       const modelStat = await stat(modelPath);
@@ -176,7 +176,7 @@ describe("local 3D asset registry", () => {
 
     assert.equal(detailedTv.mode, "model");
     assert.equal(detailedTv.definition.source, "Kenney Furniture Kit");
-    assert.equal(detailedTv.definition.license, "CC0");
+    assert.equal(detailedTv.definition.license, "CC0-1.0");
     assert.equal(resolveSceneObjectType({ objectType: "camera", label: "TV" }), "tv");
     assert.equal(resolveSceneObjectType({ objectType: "camera", label: "Televisao da sala" }), "tv");
     assert.equal(resolveSceneObjectType({ objectType: "desktop", label: "PC legado" }), "pc");
