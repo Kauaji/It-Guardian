@@ -16,10 +16,25 @@ function isTruthyEnv(value) {
   return ["1", "true", "yes", "sim"].includes(String(value || "").trim().toLowerCase());
 }
 
+function isTruthyEnvWithDefault(value, defaultValue) {
+  if (value === undefined || value === null || String(value).trim() === "") return defaultValue;
+  return isTruthyEnv(value);
+}
+
 function boundedInteger(value, fallback, min, max) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return fallback;
   return Math.max(min, Math.min(max, Math.trunc(parsed)));
+}
+
+function parseIceUrls(value, { maxEntries = 4, maxLength = 200, schemes } = {}) {
+  return String(value || "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .filter((entry) => entry.length <= maxLength)
+    .filter((entry) => schemes.some((scheme) => entry.toLowerCase().startsWith(scheme)))
+    .slice(0, maxEntries);
 }
 
 export function getRemoteAssistanceConfig(env = process.env) {
@@ -47,6 +62,50 @@ export function getRemoteAssistanceConfig(env = process.env) {
     env.ENABLE_REMOTE_CONTROL ?? env.ENABLE_REMOTE_ASSISTANCE_CONTROL
   );
 
+  // Limite rigido de FPS: nunca aceitar quadros mais rapido do que o servidor
+  // consegue validar/descartar com seguranca. targetFps e o valor "desejado"
+  // repassado ao agente, sempre limitado pelo teto de maxFramesPerSecond.
+  const maxFramesPerSecond = boundedInteger(env.REMOTE_ASSISTANCE_MAX_FPS, 3, 1, 5);
+  const targetFps = Math.min(
+    maxFramesPerSecond,
+    boundedInteger(env.REMOTE_ASSISTANCE_TARGET_FPS, maxFramesPerSecond, 1, 5)
+  );
+  const minJpegQuality = boundedInteger(env.REMOTE_ASSISTANCE_MIN_JPEG_QUALITY, 35, 10, 90);
+  const maxJpegQuality = Math.max(
+    minJpegQuality,
+    boundedInteger(env.REMOTE_ASSISTANCE_MAX_JPEG_QUALITY, 80, 20, 95)
+  );
+  const jpegQuality = Math.min(
+    maxJpegQuality,
+    Math.max(minJpegQuality, boundedInteger(env.REMOTE_ASSISTANCE_JPEG_QUALITY, 65, 10, 95))
+  );
+  const agentTimeoutSeconds = boundedInteger(env.REMOTE_ASSISTANCE_AGENT_TIMEOUT_SECONDS, 45, 15, 300);
+  const idleTimeoutSeconds = Math.min(
+    boundedInteger(env.REMOTE_ASSISTANCE_IDLE_TIMEOUT_SECONDS, 60, 20, 300),
+    Math.max(10, agentTimeoutSeconds - 5)
+  );
+  const serverMinFrameIntervalMs = Math.ceil(1000 / maxFramesPerSecond);
+  const agentCaptureMs = Math.max(
+    serverMinFrameIntervalMs,
+    boundedInteger(
+      env.REMOTE_ASSISTANCE_AGENT_CAPTURE_MS,
+      Math.ceil(1000 / targetFps),
+      150,
+      2000
+    )
+  );
+  const viewerPollMs = Math.max(
+    150,
+    boundedInteger(env.REMOTE_ASSISTANCE_VIEWER_POLL_MS, agentCaptureMs, 150, 2000)
+  );
+
+  const requestedTransport = String(env.REMOTE_ASSISTANCE_TRANSPORT || "snapshot_polling")
+    .trim()
+    .toLowerCase();
+  const webrtcEnabled = enabled && isTruthyEnv(env.REMOTE_ASSISTANCE_WEBRTC_ENABLED);
+  const transportRequestedWebrtc = requestedTransport === "webrtc";
+  const transport = transportRequestedWebrtc && webrtcEnabled ? "webrtc" : "snapshot_polling";
+
   return {
     enabled,
     environment,
@@ -70,9 +129,28 @@ export function getRemoteAssistanceConfig(env = process.env) {
     sessionTtlMinutes: boundedInteger(env.REMOTE_ASSISTANCE_SESSION_TTL_MINUTES, 20, 5, 60),
     reauthTtlMinutes: 5,
     maxFrameBytes: boundedInteger(env.REMOTE_ASSISTANCE_MAX_FRAME_BYTES, 700000, 100000, 900000),
-    maxFramesPerSecond: boundedInteger(env.REMOTE_ASSISTANCE_MAX_FPS, 1, 1, 1),
+    maxFramesPerSecond,
+    targetFps,
+    maxWidth: boundedInteger(env.REMOTE_ASSISTANCE_MAX_WIDTH, 1280, 320, 1920),
+    maxHeight: boundedInteger(env.REMOTE_ASSISTANCE_MAX_HEIGHT, 720, 240, 1080),
+    jpegQuality,
+    minJpegQuality,
+    maxJpegQuality,
+    adaptiveQuality: isTruthyEnvWithDefault(env.REMOTE_ASSISTANCE_ADAPTIVE_QUALITY, true),
+    agentCaptureMs,
+    viewerPollMs,
+    idleTimeoutSeconds,
+    reconnectGraceSeconds: boundedInteger(env.REMOTE_ASSISTANCE_RECONNECT_GRACE_SECONDS, 30, 10, 120),
     maxQueuedCommands: boundedInteger(env.REMOTE_ASSISTANCE_MAX_QUEUED_COMMANDS, 100, 10, 250),
-    agentTimeoutSeconds: boundedInteger(env.REMOTE_ASSISTANCE_AGENT_TIMEOUT_SECONDS, 45, 15, 300)
+    agentTimeoutSeconds,
+    transport,
+    transportFallback: transportRequestedWebrtc && !webrtcEnabled,
+    webrtc: {
+      enabled: webrtcEnabled,
+      stunUrls: parseIceUrls(env.REMOTE_ASSISTANCE_STUN_URLS, { schemes: ["stun:", "stuns:"] }),
+      hasTurn: parseIceUrls(env.REMOTE_ASSISTANCE_TURN_URL, { maxEntries: 1, schemes: ["turn:", "turns:"] }).length > 0,
+      maxBitrateKbps: boundedInteger(env.REMOTE_ASSISTANCE_MAX_BITRATE_KBPS, 2500, 500, 6000)
+    }
   };
 }
 

@@ -3,9 +3,14 @@ import { getRemoteAssistanceConfig } from "../config/environment.js";
 import { withTransaction } from "../database.js";
 import {
   assertRemoteAssistanceEnabled,
+  assertWebrtcEnabled,
   canRelayInput,
+  deriveConnectionState,
   isAgentFresh,
-  normalizeRequestedMode
+  isSessionActive,
+  normalizeRequestedMode,
+  sanitizeSdp,
+  stepAdaptiveQuality
 } from "../domain/remoteAssistancePolicy.js";
 import { hasPermission } from "../permissions.js";
 import {
@@ -38,13 +43,19 @@ import {
 } from "../repositories/serviceOrderRepository.js";
 import {
   clearRelay,
+  computeRelayMetrics,
   drainRelayCommands,
   enqueueRelayCommand,
   getRelay,
   initializeRelay,
+  setRelayAdaptiveQuality,
   setRelayAgentState,
   setRelayControlEngaged,
-  setRelayFrame
+  setRelayFrame,
+  setRelayViewerPaused,
+  setRelayWebrtcAnswer,
+  setRelayWebrtcOffer,
+  touchRelayFrame
 } from "./remoteAssistanceRelay.js";
 import {
   hashSecurityToken,
@@ -93,15 +104,30 @@ function normalizeMonitors(monitors) {
   }));
 }
 
-function safeSession(session, relay = getRelay(session?.id)) {
+function safeSession(session, relay = getRelay(session?.id), config = getRemoteAssistanceConfig()) {
   if (!session) return null;
+  const metrics = computeRelayMetrics(relay);
   return {
     ...session,
     monitors: relay?.monitors || [],
     selectedMonitorId: relay?.selectedMonitorId || session.selectedMonitorId,
     frameReceivedAt: relay?.frameReceivedAt || null,
     hasFrame: Boolean(relay?.latestFrame),
-    controlEngaged: Boolean(relay?.controlEngaged)
+    controlEngaged: Boolean(relay?.controlEngaged),
+    connectionState: deriveConnectionState({ session, relay, config }),
+    transport: config.transport,
+    paused: Boolean(relay?.viewerPaused),
+    metrics: metrics
+      ? {
+          fps: metrics.fps,
+          bytesPerSecond: metrics.bytesPerSecond,
+          lastFrameBytes: metrics.lastFrameBytes,
+          frameAgeMs: metrics.frameAgeMs,
+          quality: metrics.quality,
+          width: metrics.width,
+          height: metrics.height
+        }
+      : null
   };
 }
 
@@ -243,7 +269,21 @@ export function getRemoteAssistancePublicConfig() {
     consentRequired: !config.autoConsentEnabled,
     privacyModeEnabled: config.privacyModeEnabled,
     adminActionsEnabled: config.adminActionsEnabled,
-    connectionMode: "snapshot_polling"
+    connectionMode: config.transport,
+    transport: config.transport,
+    transportFallback: config.transportFallback,
+    targetFps: config.targetFps,
+    maxFramesPerSecond: config.maxFramesPerSecond,
+    maxWidth: config.maxWidth,
+    maxHeight: config.maxHeight,
+    jpegQuality: config.jpegQuality,
+    minJpegQuality: config.minJpegQuality,
+    maxJpegQuality: config.maxJpegQuality,
+    adaptiveQuality: config.adaptiveQuality,
+    viewerPollMs: config.viewerPollMs,
+    idleTimeoutSeconds: config.idleTimeoutSeconds,
+    reconnectGraceSeconds: config.reconnectGraceSeconds,
+    webrtcEnabled: config.webrtc.enabled
   };
 }
 
@@ -352,8 +392,14 @@ export async function startRemoteAssistanceSession({
     }
   });
 
-  initializeRelay(session.id, { agentToken, viewerToken });
-  return { session: safeSession(session), viewerToken };
+  initializeRelay(session.id, {
+    agentToken,
+    viewerToken,
+    quality: config.jpegQuality,
+    width: config.maxWidth,
+    height: config.maxHeight
+  });
+  return { session: safeSession(session, undefined, config), viewerToken };
 }
 
 export async function getRemoteAssistanceSession({ user, sessionId }) {
@@ -366,13 +412,19 @@ export async function getRemoteAssistanceEvents({ user, sessionId }) {
 }
 
 export async function getRemoteAssistanceFrame({ user, sessionId, viewerToken }) {
+  const config = getRemoteAssistanceConfig();
   const session = await assertManagedSession(user, sessionId);
   await assertViewerToken(session, viewerToken);
   const relay = getRelay(session.id);
+  const metrics = computeRelayMetrics(relay);
   return {
     frame: relay?.latestFrame || null,
     receivedAt: relay?.frameReceivedAt || null,
-    selectedMonitorId: relay?.selectedMonitorId || session.selectedMonitorId
+    selectedMonitorId: relay?.selectedMonitorId || session.selectedMonitorId,
+    connectionState: deriveConnectionState({ session, relay, config }),
+    transport: config.transport,
+    paused: Boolean(relay?.viewerPaused),
+    metrics
   };
 }
 
@@ -597,7 +649,8 @@ function decodeFrame(dataUrl, maxFrameBytes) {
   if (!bytes || bytes > maxFrameBytes) {
     throw publicError("O quadro de tela excede o limite permitido.", 413);
   }
-  return String(dataUrl);
+  const hash = createHash("sha1").update(match[1]).digest("hex");
+  return { dataUrl: String(dataUrl), bytes, hash };
 }
 
 export async function receiveRemoteAssistanceFrame({
@@ -605,6 +658,7 @@ export async function receiveRemoteAssistanceFrame({
   sessionId,
   sessionToken,
   frame,
+  unchanged,
   monitors,
   selectedMonitorId
 }) {
@@ -622,7 +676,23 @@ export async function receiveRemoteAssistanceFrame({
   if (normalizedMonitors.length) {
     setRelayAgentState(session.id, { monitors: normalizedMonitors, selectedMonitorId });
   }
-  setRelayFrame(session.id, decodeFrame(frame, config.maxFrameBytes));
+  if (unchanged === true && !frame) {
+    touchRelayFrame(session.id);
+    await touchRemoteAssistanceSession(session.id);
+    return { accepted: true, unchanged: true };
+  }
+  const decoded = decodeFrame(frame, config.maxFrameBytes);
+  setRelayFrame(session.id, decoded.dataUrl, { bytes: decoded.bytes, hash: decoded.hash });
+  const nextQuality = stepAdaptiveQuality({
+    quality: relay.quality,
+    width: relay.width,
+    height: relay.height,
+    lastFrameBytes: decoded.bytes,
+    config
+  });
+  if (nextQuality.changed) {
+    setRelayAdaptiveQuality(session.id, nextQuality);
+  }
   await touchRemoteAssistanceSession(session.id);
   return { accepted: true };
 }
@@ -632,6 +702,7 @@ export async function getRemoteAssistanceCommandsForAgent({
   sessionId,
   sessionToken
 }) {
+  const config = getRemoteAssistanceConfig();
   const { session } = await authenticateAgentForSession({ bearerToken, sessionId, sessionToken });
   if (session.status !== "active") return { commands: [], ended: true };
   const relay = getRelay(session.id);
@@ -640,8 +711,78 @@ export async function getRemoteAssistanceCommandsForAgent({
     commands: drainRelayCommands(session.id),
     selectedMonitorId: relay?.selectedMonitorId || session.selectedMonitorId,
     controlEnabled: Boolean(session.remoteControlEnabled),
+    capturePaused: Boolean(relay?.viewerPaused),
+    qualityHint: {
+      width: relay?.width || config.maxWidth,
+      height: relay?.height || config.maxHeight,
+      jpegQuality: relay?.quality || config.jpegQuality,
+      captureIntervalMs: config.agentCaptureMs
+    },
     ended: false
   };
+}
+
+export async function updateRemoteAssistanceCapture({ user, sessionId, viewerToken, paused }) {
+  const session = await assertManagedSession(user, sessionId);
+  await assertViewerToken(session, viewerToken);
+  if (!isSessionActive(session.status)) {
+    throw publicError("A sessao remota nao esta mais ativa.", 409);
+  }
+  setRelayViewerPaused(session.id, Boolean(paused));
+  await addAudit({
+    session,
+    eventType: paused ? "viewer_paused" : "viewer_resumed",
+    message: paused ? "Tecnico pausou a visualizacao remota." : "Tecnico retomou a visualizacao remota.",
+    actorType: "technician",
+    user,
+    metadata: { paused: Boolean(paused) }
+  });
+  return safeSession(session);
+}
+
+// --- Sinalizacao WebRTC (contrato preparado, inativo enquanto a flag estiver
+// desligada). Nenhum viewer ou agente real negocia por este caminho ainda:
+// existe para uma futura evolucao do transporte sem redesenhar a API.
+
+export async function submitRemoteAssistanceWebrtcOffer({ user, sessionId, viewerToken, sdp }) {
+  const config = getRemoteAssistanceConfig();
+  assertWebrtcEnabled(config);
+  const session = await assertManagedSession(user, sessionId);
+  await assertViewerToken(session, viewerToken);
+  if (!isSessionActive(session.status)) {
+    throw publicError("A sessao remota nao esta mais ativa.", 409);
+  }
+  const sanitized = sanitizeSdp(sdp);
+  if (!sanitized) throw publicError("Oferta SDP invalida.", 400);
+  setRelayWebrtcOffer(session.id, sanitized);
+  return { accepted: true };
+}
+
+export async function getRemoteAssistanceWebrtcOfferForAgent({ bearerToken, sessionId, sessionToken }) {
+  const config = getRemoteAssistanceConfig();
+  assertWebrtcEnabled(config);
+  const { session } = await authenticateAgentForSession({ bearerToken, sessionId, sessionToken });
+  const relay = getRelay(session.id);
+  return { offer: relay?.webrtcOffer || null };
+}
+
+export async function submitRemoteAssistanceWebrtcAnswer({ bearerToken, sessionId, sessionToken, sdp }) {
+  const config = getRemoteAssistanceConfig();
+  assertWebrtcEnabled(config);
+  const { session } = await authenticateAgentForSession({ bearerToken, sessionId, sessionToken });
+  const sanitized = sanitizeSdp(sdp);
+  if (!sanitized) throw publicError("Resposta SDP invalida.", 400);
+  setRelayWebrtcAnswer(session.id, sanitized);
+  return { accepted: true };
+}
+
+export async function getRemoteAssistanceWebrtcAnswer({ user, sessionId, viewerToken }) {
+  const config = getRemoteAssistanceConfig();
+  assertWebrtcEnabled(config);
+  const session = await assertManagedSession(user, sessionId);
+  await assertViewerToken(session, viewerToken);
+  const relay = getRelay(session.id);
+  return { answer: relay?.webrtcAnswer || null };
 }
 
 export async function endRemoteAssistanceByAgent({ bearerToken, sessionId, sessionToken }) {

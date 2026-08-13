@@ -16,7 +16,9 @@ import {
   agentConsent,
   agentEnd,
   agentFrame,
-  agentPending
+  agentPending,
+  agentWebrtcAnswer,
+  agentWebrtcOffer
 } from "../controllers/remoteAssistanceController.js";
 
 const router = Router();
@@ -41,6 +43,8 @@ router.get("/remote-assistance/pending", protectRemoteAssistanceResponse, agentR
 router.post("/remote-assistance/sessions/:id/consent", protectRemoteAssistanceResponse, agentRateLimiter, agentConsent);
 router.post("/remote-assistance/sessions/:id/frame", protectRemoteAssistanceResponse, agentRateLimiter, agentFrame);
 router.get("/remote-assistance/sessions/:id/commands", protectRemoteAssistanceResponse, agentRateLimiter, agentCommands);
+router.get("/remote-assistance/sessions/:id/webrtc/offer", protectRemoteAssistanceResponse, agentRateLimiter, agentWebrtcOffer);
+router.post("/remote-assistance/sessions/:id/webrtc/answer", protectRemoteAssistanceResponse, agentRateLimiter, agentWebrtcAnswer);
 router.post("/remote-assistance/sessions/:id/end", protectRemoteAssistanceResponse, agentRateLimiter, agentEnd);
 
 router.use(requireAuth, requireAdmin);

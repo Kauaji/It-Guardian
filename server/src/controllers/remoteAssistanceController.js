@@ -7,11 +7,16 @@ import {
   getRemoteAssistanceFrame,
   getRemoteAssistancePublicConfig,
   getRemoteAssistanceSession,
+  getRemoteAssistanceWebrtcAnswer,
+  getRemoteAssistanceWebrtcOfferForAgent,
   receiveRemoteAssistanceFrame,
   respondToRemoteAssistanceConsent,
   selectRemoteAssistanceMonitor,
   sendRemoteAssistanceInput,
   startRemoteAssistanceSession,
+  submitRemoteAssistanceWebrtcAnswer,
+  submitRemoteAssistanceWebrtcOffer,
+  updateRemoteAssistanceCapture,
   updateRemoteAssistanceControl
 } from "../services/remoteAssistanceService.js";
 
@@ -101,6 +106,17 @@ export async function control(req, res, next) {
   } catch (error) { next(error); }
 }
 
+export async function pause(req, res, next) {
+  try {
+    res.json({ session: await updateRemoteAssistanceCapture({
+      user: req.user,
+      sessionId: req.params.id,
+      viewerToken: viewerToken(req),
+      paused: req.body?.paused
+    }) });
+  } catch (error) { next(error); }
+}
+
 export async function end(req, res, next) {
   try {
     res.json({ session: await endRemoteAssistanceByTechnician({
@@ -137,6 +153,7 @@ export async function agentFrame(req, res, next) {
       sessionId: req.params.id,
       sessionToken: sessionToken(req),
       frame: req.body?.frame,
+      unchanged: req.body?.unchanged,
       monitors: req.body?.monitors,
       selectedMonitorId: req.body?.selectedMonitorId
     }));
@@ -159,6 +176,48 @@ export async function agentEnd(req, res, next) {
       bearerToken: bearerToken(req),
       sessionId: req.params.id,
       sessionToken: sessionToken(req)
+    }));
+  } catch (error) { next(error); }
+}
+
+export async function webrtcOffer(req, res, next) {
+  try {
+    res.status(202).json(await submitRemoteAssistanceWebrtcOffer({
+      user: req.user,
+      sessionId: req.params.id,
+      viewerToken: viewerToken(req),
+      sdp: req.body?.sdp
+    }));
+  } catch (error) { next(error); }
+}
+
+export async function webrtcAnswer(req, res, next) {
+  try {
+    res.json(await getRemoteAssistanceWebrtcAnswer({
+      user: req.user,
+      sessionId: req.params.id,
+      viewerToken: viewerToken(req)
+    }));
+  } catch (error) { next(error); }
+}
+
+export async function agentWebrtcOffer(req, res, next) {
+  try {
+    res.json(await getRemoteAssistanceWebrtcOfferForAgent({
+      bearerToken: bearerToken(req),
+      sessionId: req.params.id,
+      sessionToken: sessionToken(req)
+    }));
+  } catch (error) { next(error); }
+}
+
+export async function agentWebrtcAnswer(req, res, next) {
+  try {
+    res.status(202).json(await submitRemoteAssistanceWebrtcAnswer({
+      bearerToken: bearerToken(req),
+      sessionId: req.params.id,
+      sessionToken: sessionToken(req),
+      sdp: req.body?.sdp
     }));
   } catch (error) { next(error); }
 }
