@@ -5,6 +5,8 @@ import {
   KeyRound,
   MonitorUp,
   MousePointer2,
+  Pause,
+  Play,
   Power,
   RefreshCw,
   ShieldCheck,
@@ -23,22 +25,27 @@ import {
   reauthenticateRemoteAssistance,
   selectRemoteAssistanceMonitor,
   sendRemoteAssistanceInput,
+  updateRemoteAssistanceCapture,
   updateRemoteAssistanceControl
 } from "../../api.js";
 import { hasPermission } from "../../permissions.js";
 import {
   canShowRemoteAssistanceAction,
+  formatBytesPerSecond,
+  formatFrameSize,
   formatRemoteMonitor,
   getRemoteAssetDisplayName,
   getRemoteAssetLastSeenAt,
   hasRemoteAssistanceAgent,
   isRemoteAssistanceAssetFresh,
+  isRemoteAssistanceFrameStale,
   isRemoteAssistanceFrontendEnabled,
   isRemoteAssistanceTerminal,
-  remoteAssistanceStatusLabel
+  remoteAssistanceStatusLabel,
+  remoteAssistanceTransportLabel
 } from "./remoteAssistanceModel.js";
 
-const viewerPollMs = 1000;
+const defaultViewerPollMs = 1000;
 
 function formatDateTime(value) {
   if (!value) return "Nao informado";
@@ -57,13 +64,15 @@ function notifyResult(notify, message, type = "ok") {
 }
 
 function RemoteStatus({ session }) {
-  const denied = session?.status === "consent_denied";
-  const active = session?.status === "active";
-  const Icon = denied ? WifiOff : active ? CheckCircle2 : Clock3;
+  const displayState = session?.connectionState || session?.status;
+  const denied = session?.status === "consent_denied" || session?.status === "failed";
+  const unstable = displayState === "reconnecting" || displayState === "agent_offline";
+  const settled = displayState === "active";
+  const Icon = denied ? WifiOff : unstable ? RefreshCw : settled ? CheckCircle2 : Clock3;
   return (
-    <span className={`remote-assistance-status status-${session?.status || "idle"}`}>
-      <Icon size={15} />
-      {remoteAssistanceStatusLabel(session?.status)}
+    <span className={`remote-assistance-status status-${displayState || "idle"}`}>
+      <Icon size={15} className={unstable ? "spin" : undefined} />
+      {remoteAssistanceStatusLabel(displayState)}
     </span>
   );
 }
@@ -93,6 +102,7 @@ export default function RemoteAssistanceAction({
   const [events, setEvents] = useState([]);
   const [frame, setFrame] = useState(null);
   const [latency, setLatency] = useState(null);
+  const [metrics, setMetrics] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [changingMonitor, setChangingMonitor] = useState(false);
   const [error, setError] = useState("");
@@ -130,6 +140,17 @@ export default function RemoteAssistanceAction({
       session?.controlConsentGranted &&
       requestedMode === "control"
   );
+  const viewerPollMs = config?.viewerPollMs || defaultViewerPollMs;
+  const paused = Boolean(session?.paused);
+  const connectionState = session?.connectionState || session?.status;
+  const frameStale = Boolean(
+    session?.status === "active" && !paused && isRemoteAssistanceFrameStale(metrics, viewerPollMs)
+  );
+  const canReconnect = Boolean(
+    session?.id &&
+      !terminal &&
+      (connectionState === "reconnecting" || connectionState === "agent_offline" || Boolean(error))
+  );
 
   useEffect(() => {
     if (!frontendEnabled || !canView || !canStart || !eligible || !token) return undefined;
@@ -154,6 +175,7 @@ export default function RemoteAssistanceAction({
         fetchRemoteAssistanceEvents({ token, sessionId: session.id })
       ]);
       setSession(sessionResult.session);
+      if (sessionResult.session?.metrics) setMetrics(sessionResult.session.metrics);
       setEvents(Array.isArray(eventResult.events) ? eventResult.events : []);
       setError("");
     } catch (refreshError) {
@@ -162,7 +184,7 @@ export default function RemoteAssistanceAction({
   }, [session?.id, token]);
 
   const refreshFrame = useCallback(async () => {
-    if (!session?.id || !viewerToken || session.status !== "active") return;
+    if (!session?.id || !viewerToken || session.status !== "active" || session.paused) return;
     try {
       const startedAt = performance.now();
       const result = await fetchRemoteAssistanceFrame({
@@ -171,6 +193,7 @@ export default function RemoteAssistanceAction({
         viewerToken
       });
       setLatency(Math.max(0, Math.round(performance.now() - startedAt)));
+      if (result.metrics) setMetrics(result.metrics);
       if (result.frame) {
         setFrame(
           result.frame.startsWith("data:image/")
@@ -181,7 +204,7 @@ export default function RemoteAssistanceAction({
     } catch (frameError) {
       setError(frameError.message);
     }
-  }, [session?.id, session?.status, token, viewerToken]);
+  }, [session?.id, session?.paused, session?.status, token, viewerToken]);
 
   useEffect(() => {
     if (!open || !session?.id || terminal) return undefined;
@@ -191,11 +214,11 @@ export default function RemoteAssistanceAction({
   }, [open, refreshSession, session?.id, terminal]);
 
   useEffect(() => {
-    if (!open || session?.status !== "active") return undefined;
+    if (!open || session?.status !== "active" || session?.paused) return undefined;
     refreshFrame();
     const frameTimer = window.setInterval(refreshFrame, viewerPollMs);
     return () => window.clearInterval(frameTimer);
-  }, [open, refreshFrame, session?.status]);
+  }, [open, refreshFrame, session?.paused, session?.status, viewerPollMs]);
 
   useEffect(() => {
     if (!session?.id || terminal) return undefined;
@@ -272,6 +295,7 @@ export default function RemoteAssistanceAction({
     setViewerToken("");
     setEvents([]);
     setFrame(null);
+    setMetrics(null);
     setError("");
     setReason("");
     setPassword("");
@@ -294,6 +318,29 @@ export default function RemoteAssistanceAction({
     } finally {
       setChangingMonitor(false);
     }
+  }
+
+  async function togglePause() {
+    setSubmitting(true);
+    try {
+      const result = await updateRemoteAssistanceCapture({
+        token,
+        sessionId: session.id,
+        viewerToken,
+        paused: !paused
+      });
+      setSession(result.session);
+    } catch (pauseError) {
+      setError(pauseError.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function reconnect() {
+    setError("");
+    await refreshSession();
+    await refreshFrame();
   }
 
   async function toggleControl() {
@@ -442,7 +489,7 @@ export default function RemoteAssistanceAction({
           <div className="remote-assistance-viewer">
             <div className="remote-assistance-toolbar">
               <RemoteStatus session={session} />
-              {monitors.length > 0 && (
+              {monitors.length > 1 ? (
                 <label>
                   <span className="sr-only">Trocar monitor</span>
                   <select
@@ -455,6 +502,33 @@ export default function RemoteAssistanceAction({
                     ))}
                   </select>
                 </label>
+              ) : monitors.length === 1 ? (
+                <span className="remote-assistance-single-monitor">
+                  {formatRemoteMonitor(monitors[0], 0)} (unico monitor)
+                </span>
+              ) : null}
+              {session.status === "active" && (
+                <button
+                  type="button"
+                  className="secondary-action"
+                  onClick={togglePause}
+                  disabled={submitting || terminal}
+                  title={paused ? "Retomar visualizacao" : "Pausar visualizacao"}
+                >
+                  {paused ? <Play size={16} /> : <Pause size={16} />}
+                  {paused ? "Retomar" : "Pausar"}
+                </button>
+              )}
+              {canReconnect && (
+                <button
+                  type="button"
+                  className="secondary-action"
+                  onClick={reconnect}
+                  disabled={submitting}
+                  title="Forcar nova tentativa de conexao"
+                >
+                  <RefreshCw size={16} /> Reconectar
+                </button>
               )}
               {frontendControlEnabled && session.status === "active" && requestedMode === "control" && canControl && (
                 <button
@@ -497,16 +571,24 @@ export default function RemoteAssistanceAction({
               {frame ? <img src={frame} alt={`Tela remota de ${displayName}`} draggable="false" /> : (
                 <div className="remote-assistance-waiting">
                   {session.status === "active" ? <RefreshCw size={24} className="spin" /> : <ShieldCheck size={28} />}
-                  <strong>{remoteAssistanceStatusLabel(session.status)}</strong>
+                  <strong>{remoteAssistanceStatusLabel(connectionState)}</strong>
                   <span>{session.status === "waiting_consent" ? "Aguardando resposta na maquina." : "A imagem aparecera quando o agente iniciar a transmissao."}</span>
                 </div>
               )}
               {changingMonitor && <span className="remote-assistance-loading">Trocando monitor...</span>}
+              {paused && !changingMonitor && <span className="remote-assistance-loading">Visualizacao pausada</span>}
+              {frameStale && !changingMonitor && !paused && (
+                <span className="remote-assistance-loading">Quadro atrasado - tentando atualizar...</span>
+              )}
             </div>
 
             <footer className="remote-assistance-footer">
-              <span>Modo: snapshot seguro - max. 1 FPS</span>
+              <span>Transporte: {remoteAssistanceTransportLabel(session.transport)}</span>
+              <span>FPS real: {metrics?.fps ? metrics.fps.toFixed(1) : "--"}</span>
               <span>Latencia HTTP: {latency == null ? "--" : `${latency} ms`}</span>
+              <span>Banda: {metrics ? formatBytesPerSecond(metrics.bytesPerSecond) : "--"}</span>
+              <span>Qualidade: {metrics?.quality ? `${metrics.quality}%` : "--"}</span>
+              <span>Ultimo quadro: {metrics?.lastFrameBytes ? formatFrameSize(metrics.lastFrameBytes) : "--"}</span>
               <span>Controle: {controlActive ? "ativo" : "inativo"}</span>
             </footer>
 
