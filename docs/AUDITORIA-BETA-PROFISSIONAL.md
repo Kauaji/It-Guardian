@@ -39,7 +39,13 @@ adaptadores opcionais de leitura e nao fazem parte do instalador comum.
 - assistencia remota exige permissao granular, senha recente e agente ativo;
 - somente uma sessao remota aberta por ativo e aceita;
 - logout, timeout, encerramento local e perda de heartbeat encerram a sessao;
-- cada transicao remota e registrada na sessao, maquina e OS vinculada;
+- cada transicao remota e registrada na sessao, maquina e OS vinculada,
+  incluindo pausa e retomada da visualizacao;
+- FPS, resolucao, qualidade JPEG e tamanho maximo de quadro tem tetos
+  aplicados no servidor, independentemente do que o agente ou o ambiente
+  peçam;
+- a sinalizacao WebRTC preparada exige a mesma flag, tokens e autenticacao do
+  transporte atual, e responde `409` enquanto desligada (padrao);
 - modo privacidade e acoes administrativas permanecem bloqueados.
 
 ## Dados e privacidade
@@ -65,7 +71,9 @@ precisa.
    driver e politicas do Windows.
 6. E obrigatoria uma homologacao em VM Windows limpa e outra maquina real antes
    de uso em cliente.
-7. O transporte de assistencia atual usa snapshots de laboratorio e deve migrar
-   para WebRTC com STUN/TURN homologado antes de uma oferta publica.
+7. O transporte de assistencia atual usa snapshots melhorados (FPS/qualidade
+   adaptativos) e deve migrar para WebRTC com STUN/TURN homologado antes de
+   uma oferta publica; a sinalizacao SDP ja existe no backend, mas nenhum
+   peer real (navegador ou agente) foi implementado ainda.
 8. O modulo remoto nao deve ser habilitado em producao antes de assinatura de
    codigo, revisao independente e teste de invasao.

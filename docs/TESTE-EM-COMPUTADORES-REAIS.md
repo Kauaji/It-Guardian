@@ -46,27 +46,40 @@ autorizadas. Antes do teste, leia
 laboratorio. Mantenha auto consentimento, modo privacidade e acoes admin
 desligados.
 
-1. Atualize o agente da Maquina B e confirme heartbeat recente.
+1. Atualize o agente da Maquina B (versao com captura adaptativa) e confirme
+   heartbeat recente.
 2. Conceda ao tecnico as permissoes de visualizar, iniciar, controlar e encerrar.
 3. Abra a Maquina B no Inventario e clique em `Atendimento remoto`.
 4. Informe motivo e confirme a senha do tecnico.
 5. Verifique a janela de consentimento local na Maquina B.
 6. Negue a primeira tentativa e confira sessao, auditoria e historicos.
 7. Repita, autorize e confirme o indicador permanente na Maquina B.
-8. Troque o monitor quando a maquina tiver duas telas.
-9. Solicite controle e valide somente mouse, cliques, scroll e teclas comuns.
-10. Encerre pelo botao local e confirme que a captura parou imediatamente.
-11. Repita por uma OS vinculada e encerre pelo viewer.
-12. Confira eventos no historico da maquina e da OS.
-13. Confirme no banco que nao ha frame, senha ou token completo persistido.
-14. Inicie outra sessao, saia da conta do tecnico e confirme encerramento.
+8. Troque o monitor quando a maquina tiver duas telas; confirme que o
+   seletor some quando so ha uma tela.
+9. Acompanhe o rodape do viewer por um minuto: FPS real, banda, qualidade e
+   tamanho do ultimo quadro devem variar de forma coerente com o que
+   acontece na tela da Maquina B (abra um video, mova uma janela grande).
+10. Pause a visualizacao, confirme que o rodape para de atualizar e que a
+    Maquina B reduz a frequencia de captura; retome e confirme a volta ao
+    normal.
+11. Desconecte a rede da Maquina B por 15-20 segundos: confirme que o viewer
+    mostra "reconectando" e depois "agente sem resposta" se a rede nao
+    voltar; reconecte a rede e use `Reconectar` se necessario.
+12. Solicite controle e valide somente mouse, cliques, scroll e teclas comuns.
+13. Encerre pelo botao local e confirme que a captura parou imediatamente.
+14. Repita por uma OS vinculada e encerre pelo viewer.
+15. Confira eventos no historico da maquina e da OS, incluindo
+    `viewer_paused`/`viewer_resumed`.
+16. Confirme no banco que nao ha frame, senha ou token completo persistido.
+17. Inicie outra sessao, saia da conta do tecnico e confirme encerramento.
 
 Evidencias adicionais:
 
 - captura da solicitacao de consentimento;
 - captura do indicador local durante a sessao;
+- captura do rodape do viewer com FPS, banda e qualidade preenchidos;
 - evento de troca de monitor;
-- eventos de controle habilitado e liberado;
+- eventos de pausa/retomada e de controle habilitado/liberado;
 - registros de encerramento nos tres historicos;
 - consulta demonstrando ausencia de frames persistidos.
 

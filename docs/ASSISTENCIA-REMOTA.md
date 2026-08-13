@@ -13,14 +13,23 @@ O fluxo permite:
 - iniciar atendimento pelo Inventario ou por uma Ordem de Servico vinculada;
 - exigir a senha do tecnico antes de criar a sessao;
 - apresentar consentimento local na maquina atendida;
-- visualizar um monitor por vez e trocar o monitor selecionado;
+- visualizar um monitor por vez e trocar o monitor selecionado, com aviso
+  quando so existe um monitor disponivel;
+- pausar e retomar a visualizacao sem encerrar a sessao;
 - solicitar e liberar controle basico de mouse e teclado;
+- acompanhar FPS real, banda estimada, qualidade e tamanho do ultimo quadro
+  no proprio viewer;
+- reconectar manualmente quando o agente parar de responder por um tempo;
 - encerrar pelo navegador ou pela maquina atendida;
 - registrar os eventos no historico da maquina, da OS e da sessao.
 
-Esta versao usa `snapshot_polling` como transporte de laboratorio. Os frames
-JPEG trafegam com token curto, ficam somente em memoria e nunca sao gravados no
-banco ou no historico. A taxa maxima e de 1 FPS.
+Esta versao usa `snapshot_polling` como transporte principal, agora com FPS,
+resolucao e qualidade JPEG configuraveis dentro de limites seguros, ajuste
+automatico de qualidade e deduplicacao de quadros identicos. Os frames JPEG
+trafegam com token curto, ficam somente em memoria e nunca sao gravados no
+banco ou no historico. Um transporte `webrtc` esta preparado (sinalizacao
+autenticada no backend) mas permanece desligado por padrao — veja
+"Transporte WebRTC" abaixo.
 
 ## Estado seguro padrao
 
@@ -40,6 +49,12 @@ VITE_ENABLE_REMOTE_CONTROL=false
 VITE_ENABLE_REMOTE_PRIVACY_MODE=false
 VITE_ENABLE_REMOTE_ADMIN_ACTIONS=false
 ```
+
+Nos arquivos de exemplo, o transporte tambem ja vem com valores conservadores
+mesmo com o recurso desligado (`REMOTE_ASSISTANCE_TRANSPORT=snapshot_polling`,
+`REMOTE_ASSISTANCE_TARGET_FPS=3`, `REMOTE_ASSISTANCE_WEBRTC_ENABLED=false`),
+para que ativar `ENABLE_REMOTE_ASSISTANCE` sozinho ja resulte num
+comportamento seguro sem exigir ajuste fino imediato.
 
 Em `NODE_ENV=production`, o backend recusa novas sessoes quando
 `REMOTE_ASSISTANCE_ENV` nao for explicitamente `lab`, `homologation` ou
@@ -67,11 +82,55 @@ Reinicie API, frontend e agente depois da alteracao. O consentimento automatico
 existe exclusivamente para laboratorio isolado e deliberado. Ele e bloqueado
 em implantacao publica e deve continuar `false` no teste humano.
 
+## Ajustar fluidez do transporte snapshot polling
+
+Todos os limites abaixo sao aplicados no servidor
+(`server/src/config/environment.js`) mesmo que o valor pedido seja maior —
+o objetivo e permitir ajuste fino sem abrir brecha para configuracao
+perigosa:
+
+```env
+REMOTE_ASSISTANCE_TRANSPORT=snapshot_polling
+REMOTE_ASSISTANCE_TARGET_FPS=3        # 1 a 5, nunca acima do teto abaixo
+REMOTE_ASSISTANCE_MAX_FPS=3           # teto rigido, 1 a 5
+REMOTE_ASSISTANCE_MAX_WIDTH=1280      # 320 a 1920
+REMOTE_ASSISTANCE_MAX_HEIGHT=720      # 240 a 1080
+REMOTE_ASSISTANCE_JPEG_QUALITY=65     # ponto de partida, 10 a 95
+REMOTE_ASSISTANCE_MIN_JPEG_QUALITY=35 # piso do ajuste automatico
+REMOTE_ASSISTANCE_MAX_JPEG_QUALITY=80 # teto do ajuste automatico
+REMOTE_ASSISTANCE_MAX_FRAME_BYTES=700000
+REMOTE_ASSISTANCE_ADAPTIVE_QUALITY=true
+REMOTE_ASSISTANCE_VIEWER_POLL_MS=350
+REMOTE_ASSISTANCE_AGENT_CAPTURE_MS=350
+REMOTE_ASSISTANCE_IDLE_TIMEOUT_SECONDS=60
+REMOTE_ASSISTANCE_RECONNECT_GRACE_SECONDS=30
+```
+
+Comportamento resultante:
+
+- `REMOTE_ASSISTANCE_AGENT_CAPTURE_MS` nunca fica abaixo do intervalo minimo
+  implicito por `REMOTE_ASSISTANCE_MAX_FPS` — o servidor corrige o valor
+  automaticamente para nao pedir ao agente uma cadencia que ele proprio
+  recusaria por excesso de taxa;
+- com `REMOTE_ASSISTANCE_ADAPTIVE_QUALITY=true`, o servidor reduz qualidade e,
+  se necessario, resolucao quando um quadro aceito fica proximo do limite de
+  bytes, e recupera qualidade aos poucos quando os quadros ficam
+  confortavelmente pequenos; o agente aplica o `qualityHint` recebido a cada
+  poll de comandos, sempre reforcando os mesmos limites localmente;
+- o agente calcula um hash do quadro capturado e, se for identico ao
+  anterior, envia um aviso leve (`unchanged: true`) em vez do JPEG completo —
+  a sessao continua "fresca" para o viewer sem gastar banda com telas
+  paradas;
+- `REMOTE_ASSISTANCE_IDLE_TIMEOUT_SECONDS` define quando o viewer passa a
+  mostrar "reconectando"; `REMOTE_ASSISTANCE_AGENT_TIMEOUT_SECONDS` (ja
+  existente) continua sendo o prazo apos o qual a sessao e encerrada por
+  perda de comunicacao.
+
 ## Permissoes
 
 | Permissao | Finalidade |
 |---|---|
-| `remote_assistance.view` | Consultar sessao, eventos e frame atual |
+| `remote_assistance.view` | Consultar sessao, eventos, frame atual, trocar monitor e pausar/retomar a visualizacao |
 | `remote_assistance.start` | Solicitar uma nova sessao |
 | `remote_assistance.control` | Solicitar controle basico apos consentimento |
 | `remote_assistance.end` | Encerrar a sessao |
@@ -91,10 +150,15 @@ as permissoes necessarias e o agente possui heartbeat recente.
 4. Informe um motivo operacional claro.
 5. Digite a senha do proprio login.
 6. Aguarde o usuario autorizar localmente.
-7. Selecione o monitor desejado.
-8. Quando necessario, solicite o controle de mouse e teclado.
-9. Encerre a sessao ao concluir o atendimento.
-10. Confira os eventos no historico da maquina e da OS.
+7. Selecione o monitor desejado (o seletor fica oculto quando so existe um).
+8. Acompanhe FPS real, banda, qualidade e tamanho do ultimo quadro no rodape.
+9. Pause a visualizacao quando nao precisar acompanhar a tela em tempo real e
+   retome quando precisar novamente.
+10. Se o indicador mostrar "reconectando" ou "agente sem resposta", use o
+    botao `Reconectar` para forcar uma nova tentativa antes de encerrar.
+11. Quando necessario, solicite o controle de mouse e teclado.
+12. Encerre a sessao ao concluir o atendimento.
+13. Confira os eventos no historico da maquina e da OS.
 
 A reautenticacao gera um token aleatorio, vinculado ao tecnico, ativo, OS e
 acao solicitada. Ele expira em cinco minutos, e consumido uma unica vez e nao
@@ -114,16 +178,30 @@ O botao `Encerrar atendimento` para a captura, limpa os recursos locais e avisa
 o servidor. Fechar o viewer, sair da conta, perder heartbeat ou atingir o
 timeout tambem encerra ou expira a sessao.
 
-## Monitores e controle
+## Monitores, pausa e controle
 
 O agente envia somente metadados dos monitores: identificador, nome, resolucao
-e indicador de principal. O viewer captura um monitor por vez. Ao trocar:
+e indicador de principal. O viewer captura um monitor por vez. Quando so
+existe um monitor, o seletor fica oculto e um texto informa "unico monitor
+detectado". Ao trocar:
 
 1. o backend valida a sessao e o monitor;
 2. registra `monitor_changed`;
 3. envia um comando efemero ao agente;
-4. o agente muda a origem da proxima captura;
+4. o agente muda a origem da proxima captura e reseta a deduplicacao de
+   quadros (o primeiro quadro do novo monitor sempre e enviado por completo);
 5. o viewer exibe carregamento ate receber o novo frame.
+
+O botao `Pausar` interrompe a busca de novos quadros no viewer e sinaliza o
+agente (`capturePaused`) para reduzir a cadencia de captura, preservando CPU e
+banda quando o tecnico so precisa manter a sessao aberta sem olhar a tela.
+`Retomar` volta ao ritmo normal. Pausar e retomar geram os eventos
+`viewer_paused`/`viewer_resumed` na auditoria.
+
+Se o agente parar de enviar quadros, o viewer passa por
+"reconectando" (sem novidade por `REMOTE_ASSISTANCE_IDLE_TIMEOUT_SECONDS`) e,
+se persistir, "agente sem resposta" — em ambos os casos o botao `Reconectar`
+forca uma nova consulta de sessao e quadro sem exigir reabrir o dialogo.
 
 Mouse e teclado exigem, ao mesmo tempo, flag global, permissao do tecnico,
 reautenticacao, sessao ativa e consentimento local para controle. A lista de
@@ -159,7 +237,10 @@ As respostas de frame usam `Cache-Control: private, no-store, max-age=0`.
 - `GET /api/remote-assistance/sessions/:sessionId/frame`
 - `POST /api/remote-assistance/sessions/:sessionId/input`
 - `POST /api/remote-assistance/sessions/:sessionId/monitor`
+- `POST /api/remote-assistance/sessions/:sessionId/pause`
 - `POST /api/remote-assistance/sessions/:sessionId/control`
+- `POST /api/remote-assistance/sessions/:sessionId/webrtc/offer` (inativo por padrao)
+- `GET /api/remote-assistance/sessions/:sessionId/webrtc/answer` (inativo por padrao)
 - `POST /api/remote-assistance/sessions/:sessionId/end`
 
 ### Agente autenticado
@@ -168,10 +249,45 @@ As respostas de frame usam `Cache-Control: private, no-store, max-age=0`.
 - `POST /api/agents/remote-assistance/sessions/:sessionId/consent`
 - `POST /api/agents/remote-assistance/sessions/:sessionId/frame`
 - `GET /api/agents/remote-assistance/sessions/:sessionId/commands`
+- `GET /api/agents/remote-assistance/sessions/:sessionId/webrtc/offer` (inativo por padrao)
+- `POST /api/agents/remote-assistance/sessions/:sessionId/webrtc/answer` (inativo por padrao)
 - `POST /api/agents/remote-assistance/sessions/:sessionId/end`
 
 Viewer e agente recebem credenciais curtas e distintas. O token de enrollment
-nao e exposto ao navegador e o JWT do tecnico nao vira token de transporte.
+nao e exposto ao navegador e o JWT do tecnico nao vira token de transporte. Os
+quatro endpoints `webrtc/*` respondem `409` enquanto
+`REMOTE_ASSISTANCE_WEBRTC_ENABLED` estiver `false` (o padrao).
+
+## Transporte WebRTC (preparado, inativo por padrao)
+
+O backend ja expoe uma sinalizacao autenticada de oferta/resposta SDP para um
+futuro transporte WebRTC, seguindo o mesmo modelo de tokens curtos e
+separados do snapshot polling. Isso permite evoluir o transporte sem redesenhar
+a API de sessao, consentimento e auditoria.
+
+O que existe hoje:
+
+- flags `REMOTE_ASSISTANCE_WEBRTC_ENABLED`, `REMOTE_ASSISTANCE_STUN_URLS`,
+  `REMOTE_ASSISTANCE_TURN_URL`, `REMOTE_ASSISTANCE_TURN_USERNAME`,
+  `REMOTE_ASSISTANCE_TURN_PASSWORD` e `REMOTE_ASSISTANCE_MAX_BITRATE_KBPS`,
+  todas desligadas/vazias por padrao;
+- validacao de forma da oferta/resposta SDP (tamanho maximo, prefixo `v=0`);
+- relay efemero de oferta e resposta por sessao, nunca persistido;
+- testes de contrato cobrindo bloqueio quando desligado e o relay completo
+  quando ligado (`server/test-integration/remote-assistance-webrtc-signaling.test.mjs`).
+
+O que **nao** existe ainda, de proposito:
+
+- nenhum `RTCPeerConnection` no navegador — o viewer continua 100% em
+  `snapshot_polling` enquanto isso nao for implementado;
+- nenhum peer WebRTC nativo no agente Windows (exigiria uma biblioteca WebRTC
+  nativa em C#, hoje ausente do projeto);
+- STUN/TURN reais nao foram testados em rede alguma.
+
+Ou seja: a fiacao de seguranca (autenticacao, tokens, auditoria) esta pronta e
+testada, mas video/dados via WebRTC em si e trabalho futuro. Ativar
+`REMOTE_ASSISTANCE_WEBRTC_ENABLED=true` hoje so libera a troca de SDP pela API
+— nenhuma tela adicional passa a trafegar por esse caminho.
 
 ## Teste com duas maquinas reais
 
@@ -186,24 +302,54 @@ nao e exposto ao navegador e o JWT do tecnico nao vira token de transporte.
 9. Negue uma primeira tentativa e confira os tres historicos.
 10. Crie outra sessao e autorize.
 11. Confirme o indicador local durante todo o atendimento.
-12. Troque de monitor, quando houver mais de um.
-13. Solicite controle e valide mouse, clique, scroll e tecla comum.
-14. Encerre primeiro pelo usuario e depois repita encerrando pelo tecnico.
-15. Confirme que nao ha frames nas tabelas ou logs.
-16. Saia da conta durante uma sessao e confirme o encerramento automatico.
+12. Troque de monitor, quando houver mais de um; confirme que o seletor fica
+    oculto quando so ha um monitor.
+13. Observe o rodape do viewer: FPS real deve ficar proximo do configurado,
+    a banda deve variar com o conteudo da tela e a qualidade deve cair se
+    voce abrir algo com muito movimento na maquina atendida.
+14. Pause a visualizacao, confirme o aviso "Visualizacao pausada" e que o
+    rodape para de atualizar; retome e confirme que volta a atualizar.
+15. Desconecte a rede da maquina atendida por alguns segundos e confirme que
+    o viewer mostra "reconectando"; ao reconectar a rede, use o botao
+    `Reconectar` se o estado nao se recuperar sozinho.
+16. Solicite controle e valide mouse, clique, scroll e tecla comum.
+17. Encerre primeiro pelo usuario e depois repita encerrando pelo tecnico.
+18. Confirme que nao ha frames nas tabelas ou logs.
+19. Saia da conta durante uma sessao e confirme o encerramento automatico.
+
+## Como medir FPS, banda e latencia
+
+O rodape do viewer calcula FPS real e banda a partir da janela recente de
+quadros aceitos pelo servidor (nao conta quadros identicos ao anterior). A
+latencia HTTP e medida no navegador, entre o disparo do pedido de quadro e a
+resposta — reflete a rede entre o tecnico e o servidor, nao entre o servidor e
+o agente. Para depurar lentidao:
+
+1. banda alta com FPS baixo geralmente indica quadros grandes — considere
+   reduzir `REMOTE_ASSISTANCE_MAX_WIDTH`/`MAX_HEIGHT` ou a qualidade maxima;
+2. FPS preso no minimo com qualidade ja no piso indica rede ou CPU do lado do
+   agente como gargalo, nao configuracao do servidor;
+3. quadro "atrasado" no viewer com FPS normal indica problema pontual de rede
+   entre o navegador e o servidor (nao entre agente e servidor).
 
 ## Limitacoes e riscos
 
-- `snapshot_polling` nao oferece fluidez de uma solucao WebRTC.
-- A taxa de 1 FPS e adequada apenas para validacao funcional.
+- `snapshot_polling` melhorado (3 a 5 FPS tipico em LAN) ainda nao oferece a
+  fluidez de uma solucao WebRTC nativa.
 - A captura usa recursos do desktop interativo e pode falhar em tela bloqueada,
-  desktop seguro ou sessao sem usuario.
+  desktop seguro ou sessao sem usuario; a falha e absorvida localmente (o
+  agente pula o quadro daquele ciclo) e nao derruba a sessao.
 - UAC e `Ctrl+Alt+Del` nao sao controlados.
 - O transporte precisa de HTTPS fora de uma LAN isolada.
-- STUN/TURN e sinalizacao WebRTC ainda nao foram implementados.
+- A sinalizacao WebRTC (oferta/resposta SDP) esta pronta e testada, mas
+  nenhum peer real (navegador ou agente) a utiliza ainda — STUN/TURN nunca
+  foram exercitados em rede real.
 - Modo privacidade e acoes administrativas permanecem placeholders bloqueados.
 - O agente e o instalador ainda precisam de assinatura de codigo antes de uso
   em clientes.
+- O ajuste adaptativo de qualidade reage ao tamanho do quadro aceito, nao a
+  uma medida direta de latencia de rede — em conexoes com perda de pacotes
+  mas quadros pequenos, o ajuste pode demorar a reagir.
 
 ## O que nao foi implementado
 
@@ -213,14 +359,32 @@ nao e exposto ao navegador e o JWT do tecnico nao vira token de transporte.
 - shell remoto livre ou captura global fora da sessao;
 - tela preta, bloqueio de input local ou modo privacidade;
 - persistencia de frames;
-- WebRTC, STUN ou TURN.
+- video/dados WebRTC de fato (o transporte continua `snapshot_polling`); a
+  sinalizacao SDP existe, mas sem peer real dos dois lados;
+- STUN/TURN homologados em rede real.
+
+## Por que nao ha acesso invisivel nem acoes administrativas silenciosas
+
+Cada sessao exige reautenticacao do tecnico e consentimento explicito do
+usuario local antes de qualquer captura comecar; o indicador
+`IT Guardian - Atendimento remoto em andamento` permanece visivel durante toda
+a sessao e o usuario pode encerrar a qualquer momento pela propria maquina.
+Nao existe caminho de codigo que inicie captura, controle ou elevacao sem
+passar por essas duas confirmacoes — inclusive as melhorias desta versao
+(pausa, qualidade adaptativa, WebRTC preparado) respeitam a mesma sessao
+autenticada e auditada, sem novo canal paralelo. Acoes administrativas e modo
+privacidade continuam bloqueados por flag (`ENABLE_REMOTE_ADMIN_ACTIONS`,
+`ENABLE_REMOTE_PRIVACY_MODE`) porque nenhuma implementacao real existe ainda
+para essas permissoes — elas so aparecem reservadas na tabela de permissoes.
 
 ## Roadmap
 
-1. Substituir snapshots por WebRTC com signaling autenticado.
+1. Implementar `RTCPeerConnection` no viewer e um peer WebRTC nativo no
+   agente Windows, usando a sinalizacao ja pronta no backend.
 2. Homologar STUN/TURN e reconexao em redes reais.
 3. Assinar agente e instalador.
 4. Executar revisao de seguranca independente e teste de invasao.
-5. Adicionar metricas de qualidade sem armazenar conteudo da tela.
+5. Medir latencia real de rede (nao apenas tamanho de quadro) para alimentar
+   o ajuste adaptativo de qualidade.
 6. Avaliar recursos administrativos apenas com consentimento e elevacao
    legitima do Windows, sem bypass de UAC.

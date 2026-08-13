@@ -43,8 +43,16 @@ permitido, permissoes do tecnico, reautenticacao recente e consentimento local.
 Enquanto a sessao estiver ativa, a maquina exibe um indicador permanente e um
 botao local de encerramento.
 
-O modo atual usa snapshots JPEG limitados a 1 FPS. Frames e comandos ficam
-somente no relay efemero em memoria; nao sao gravados no banco nem no historico.
+O modo atual usa snapshots JPEG com FPS, resolucao e qualidade configuraveis
+dentro de limites seguros aplicados no servidor (1 a 5 FPS, no maximo
+1920x1080, qualidade entre 10 e 95), com reducao automatica de qualidade
+quando o quadro fica grande e deduplicacao de quadros identicos para poupar
+banda. Uma sinalizacao WebRTC (oferta/resposta SDP) existe no backend para uma
+evolucao futura do transporte, mas permanece desligada por padrao
+(`REMOTE_ASSISTANCE_WEBRTC_ENABLED=false`) e sem nenhum peer real do lado do
+navegador ou do agente — nenhuma tela adicional passa a trafegar por WebRTC
+so por essa flag existir. Frames, comandos e a sinalizacao ficam somente no
+relay efemero em memoria; nada disso e gravado no banco nem no historico.
 Viewer e agente usam tokens curtos, separados do JWT e do enrollment. Consulte
 [`ASSISTENCIA-REMOTA.md`](ASSISTENCIA-REMOTA.md) para o modelo completo.
 

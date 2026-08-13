@@ -4,6 +4,172 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-13 - Assistencia remota V2: transporte funcional e inteligente
+
+### Auditoria inicial
+
+- a implementacao anterior tinha `REMOTE_ASSISTANCE_MAX_FPS` travado entre 1
+  e 1 em `server/src/config/environment.js` — nenhum valor de ambiente
+  conseguia elevar a taxa de quadros;
+- o agente Windows capturava com qualidade JPEG e resolucao fixas
+  (`50L`, largura maxima `1280`), reenviava todo quadro mesmo quando a tela
+  nao mudava e usava intervalo fixo de 1000 ms sem nenhuma adaptacao;
+- o viewer nao exibia FPS real, banda estimada, qualidade em uso ou tamanho
+  do ultimo quadro, nao tinha como pausar a visualizacao e nao oferecia
+  reconexao manual quando o agente parava de responder;
+- a troca de monitor sempre mostrava o seletor, mesmo com uma unica tela.
+
+### Decisao de arquitetura
+
+- o transporte `snapshot_polling` foi mantido como principal e recebeu todas
+  as melhorias desta entrega (fluidez, adaptacao, metricas, pausa);
+- um transporte `webrtc` foi preparado no backend (sinalizacao SDP
+  autenticada, tokens curtos, auditoria) mas permanece **desligado por
+  padrao** e sem nenhum peer real — nao existe `RTCPeerConnection` no
+  navegador nem biblioteca WebRTC nativa no agente C#; ativar a flag so
+  libera a troca de SDP pela API, nenhuma tela adicional passa a trafegar
+  por WebRTC nesta entrega.
+
+### Backend
+
+- `server/src/config/environment.js`: novos campos com limites seguros —
+  `targetFps`/`maxFramesPerSecond` (1 a 5), `maxWidth`/`maxHeight`,
+  `jpegQuality`/`minJpegQuality`/`maxJpegQuality`, `adaptiveQuality`,
+  `agentCaptureMs`/`viewerPollMs` (o intervalo do agente nunca fica abaixo do
+  que o teto de FPS permite), `idleTimeoutSeconds` (sempre menor que
+  `agentTimeoutSeconds`), `reconnectGraceSeconds`, `transport` com fallback
+  automatico para `snapshot_polling` quando `webrtc` e pedido sem a flag
+  `REMOTE_ASSISTANCE_WEBRTC_ENABLED`, e bloco `webrtc` com STUN/TURN
+  filtrados por esquema e limitados em quantidade;
+- `server/src/domain/remoteAssistancePolicy.js`: `deriveConnectionState`
+  (funcao pura que deriva `connecting`/`active`/`reconnecting`/
+  `agent_offline` a partir do tempo desde o ultimo frame, sem persistir nada
+  novo), `stepAdaptiveQuality` (reduz qualidade/resolucao perto do limite de
+  bytes, recupera aos poucos com folga), `assertWebrtcEnabled` e
+  `sanitizeSdp`;
+- `server/src/services/remoteAssistanceRelay.js`: janela de metricas (FPS
+  real, bytes/s, tamanho do ultimo quadro, quadros duplicados descartados),
+  estado de qualidade adaptativa por sessao, flag de pausa do viewer e caixa
+  efemera de sinalizacao WebRTC — tudo em memoria, nunca persistido;
+- `server/src/services/remoteAssistanceService.js`: quadros passam a aceitar
+  um aviso leve `{ unchanged: true }` quando identicos ao anterior (o agente
+  calcula o hash antes de enviar), mantendo a sessao "fresca" sem gastar
+  banda; a resposta de comandos para o agente ganhou `qualityHint`
+  (largura/altura/qualidade/intervalo) e `capturePaused`; novo endpoint de
+  pausar/retomar (`POST /sessions/:id/pause`); quatro endpoints de
+  sinalizacao WebRTC (`webrtc/offer` e `webrtc/answer`, lado tecnico e lado
+  agente), todos recusando com `409` enquanto a flag estiver desligada.
+
+### Agente Windows
+
+- `agent/windows/ITGuardian.RemoteAssistance.cs`: captura respeita o
+  `qualityHint` recebido do servidor (largura, qualidade JPEG e intervalo de
+  captura), sempre reforcando limites locais seguros como defesa adicional;
+  calcula hash MD5 do quadro codificado e envia `unchanged: true` quando
+  identico ao anterior; respeita `capturePaused` (para de capturar e dobra o
+  intervalo de poll de comandos); falha de captura (tela bloqueada, monitor
+  removido, erro de GDI) e isolada num `try/catch` proprio e nunca conta
+  para o contador de falhas de rede que encerraria a sessao;
+  `lastFrameHash` e resetado a cada troca de monitor para garantir que o
+  primeiro quadro da nova tela sempre seja enviado por completo;
+- validado compilando com `csc.exe` (.NET Framework 4.0 x64, mesmas
+  referencias do instalador) — sem acesso a hardware Windows real neste
+  ambiente para validar a captura de tela em execucao.
+
+### Viewer (frontend)
+
+- `client/src/components/remoteAssistance/RemoteAssistanceAction.jsx`:
+  rodape agora mostra transporte, FPS real, latencia HTTP, banda, qualidade
+  e tamanho do ultimo quadro; botao `Pausar`/`Retomar`; botao `Reconectar`
+  quando o estado e `reconnecting`/`agent_offline` ou ha erro; seletor de
+  monitor some quando ha apenas uma tela (mostra o nome dela em texto);
+  indicador visual de quadro atrasado; `viewerPollMs` passou a vir da
+  configuracao do backend em vez de fixo em 1000 ms;
+- `remoteAssistanceModel.js`: novos rotulos para os estados derivados de
+  conexao e formatadores de bytes/s, tamanho de quadro e transporte.
+
+### Auditoria e seguranca (inalteradas por design)
+
+- reautenticacao, consentimento local, indicador permanente, botao local de
+  encerramento, tokens curtos e separados, flags por ambiente e bloqueio de
+  modo privacidade/acoes administrativas continuam exatamente como antes;
+- nenhum frame, senha ou token completo e persistido — os novos campos
+  (`unchanged`, `qualityHint`, sinalizacao SDP) seguem a mesma regra;
+- novos eventos de auditoria: `viewer_paused`, `viewer_resumed`.
+
+### Validacoes
+
+- `node --test` nos arquivos de dominio/relay alterados: 25 + 7 = 32 testes
+  aprovados (config, `deriveConnectionState`, `stepAdaptiveQuality`, relay,
+  metricas, dedupe, pausa);
+- `npm run test --workspace server`: suite completa aprovada;
+- `npm run test:integration --workspace server`: inclui novo arquivo
+  `remote-assistance-webrtc-signaling.test.mjs` (bloqueio com a flag
+  desligada e relay completo de oferta/resposta com a flag ligada) e cobertura
+  adicional de metricas, pausa e ping de tela inalterada em
+  `remote-assistance-lab.test.mjs`;
+- `npx playwright test tests/e2e/remote-assistance.spec.js`: teste existente
+  mantido e um novo teste cobrindo sessao ativa, metricas visiveis, aviso de
+  monitor unico, pausar/retomar e encerramento;
+- `npm run lint`, `npm run build` e `git diff --check` aprovados.
+
+### Pendencias reais
+
+- WebRTC nao tem peer real em nenhum lado — apenas a sinalizacao backend
+  esta pronta; implementar `RTCPeerConnection` no viewer e um peer nativo no
+  agente C# (exige biblioteca WebRTC nativa, hoje ausente do projeto) fica
+  para uma proxima entrega;
+- STUN/TURN nunca foram exercitados contra um servidor real;
+- a captura de tela do agente e a compilacao C# foram validadas apenas por
+  compilacao estatica (`csc.exe`), sem hardware Windows real disponivel
+  nesta sessao para medir FPS/qualidade em condicoes de rede reais;
+- o ajuste adaptativo de qualidade reage ao tamanho do quadro aceito, nao a
+  uma medida direta de latencia/perda de pacotes de rede;
+- assinatura de codigo do agente/instalador continua pendente, como ja
+  registrado em entradas anteriores.
+
+## 2026-08-13 - Deteccao do agente na assistencia remota considera dataSources
+
+### Causa raiz e correcao
+
+- `hasRemoteAssistanceAgent(asset)` reconhecia o agente apenas por
+  `asset.source === "agent"` ou pelos campos diretos `agent`, `agentVersion` e
+  `agentEnrollmentId`;
+- uma maquina monitorada representada com `source` diferente de `agent` mas
+  com `agent` presente em `asset.dataSources` (padrao ja usado por
+  `getMachineSourceLabel` no inventario) deixava de exibir o icone de
+  atendimento remoto no card compacto e podia ser tratada como inelegivel por
+  `isRemoteAssistanceAssetFresh`, que depende dessa mesma funcao;
+- `hasRemoteAssistanceAgent` passou a considerar tambem
+  `Array.isArray(asset.dataSources) && asset.dataSources.includes("agent")`,
+  seguindo o mesmo padrao ja usado em
+  `client/src/components/inventory/agentPresentation.js`;
+- nenhuma outra funcionalidade ou protecao de seguranca da assistencia remota
+  foi alterada: flags desligadas por padrao, reautenticacao, consentimento
+  local, auditoria e limites de FPS permanecem inalterados.
+
+### Cobertura
+
+- adicionado teste em `server/src/domain/remoteAssistancePolicy.test.mjs`
+  cobrindo um ativo com `source` diferente de `agent` e `dataSources`
+  contendo `agent`, um ativo somente `manual`, `asset` nulo e
+  `dataSources` com formato invalido (nao array).
+
+### Validacoes
+
+- `npm run test --workspace server`: 203 testes aprovados e 1 ignorado por
+  exigir PostgreSQL real, 0 falhas;
+- `npm run lint`, `npm run check:architecture`, `npm run build` e
+  `git diff --check` aprovados.
+
+### Pendencias conhecidas
+
+- indicadores visuais de FPS real e bytes por segundo do roadmap de
+  Assistencia Remota V2 ainda nao foram implementados; o rodape do viewer
+  continua exibindo apenas latencia HTTP e o limite fixo de FPS;
+- migracao para WebRTC e assinatura do agente/instalador seguem pendentes,
+  conforme `docs/ASSISTENCIA-REMOTA.md`.
+
 ## 2026-08-09 - Correcao do erro de inicializacao da tela de avisos
 
 ### Causa raiz e correcao
