@@ -22,17 +22,20 @@ const router = Router();
 const startLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000,
   max: 10,
-  keyGenerator: (req) => req.user?.id || req.ip
+  keyGenerator: (req) => req.user?.id || req.ip,
+  name: "remote-assistance-start"
 });
 const inputLimiter = createRateLimiter({
   windowMs: 10 * 1000,
   max: 500,
-  keyGenerator: (req) => `${req.user?.id || req.ip}:${req.params.id}`
+  keyGenerator: (req) => `${req.user?.id || req.ip}:${req.params.id}`,
+  name: "remote-assistance-input"
 });
 const chatLimiter = createRateLimiter({
   windowMs: 60 * 1000,
   max: 30,
-  keyGenerator: (req) => `${req.user?.id || req.ip}:${req.params.id}`
+  keyGenerator: (req) => `${req.user?.id || req.ip}:${req.params.id}`,
+  name: "remote-assistance-chat"
 });
 
 router.use(requireAuth, protectRemoteAssistanceResponse);

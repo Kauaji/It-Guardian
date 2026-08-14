@@ -1,4 +1,4 @@
-import { Redis } from "@upstash/redis";
+import { getSharedRedisClient } from "../lib/redisClient.js";
 
 const FRAME_WINDOW_SIZE = 8;
 const RELAY_TTL_SECONDS = 1800;
@@ -157,16 +157,10 @@ export function createRedisStore(redisClient) {
   };
 }
 
-function detectRedisConfig(env = process.env) {
-  const url = env.UPSTASH_REDIS_REST_URL || env.KV_REST_API_URL;
-  const token = env.UPSTASH_REDIS_REST_TOKEN || env.KV_REST_API_TOKEN;
-  return url && token ? { url, token } : null;
-}
-
 function createDefaultStore() {
-  const redisConfig = detectRedisConfig();
-  if (!redisConfig) return createMemoryStore();
-  return createRedisStore(new Redis({ url: redisConfig.url, token: redisConfig.token }));
+  const redisClient = getSharedRedisClient();
+  if (!redisClient) return createMemoryStore();
+  return createRedisStore(redisClient);
 }
 
 const store = createDefaultStore();

@@ -32,7 +32,8 @@ const agentRateLimiter = createRateLimiter({
     const identity = authorization || req.ip || "unknown";
     return createHash("sha256").update(identity).digest("hex");
   },
-  message: "Limite temporario de comunicacoes do coletor atingido. Tente novamente em alguns minutos."
+  message: "Limite temporario de comunicacoes do coletor atingido. Tente novamente em alguns minutos.",
+  name: "agent"
 });
 
 router.post("/enroll", agentRateLimiter, receive);
