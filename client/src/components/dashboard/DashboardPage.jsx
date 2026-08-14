@@ -27,6 +27,7 @@ import {
 } from "recharts";
 import { formatDisplayText } from "../alerts/alertUtils.js";
 import { useDashboardSummary } from "../../hooks/useDashboardSummary.js";
+import { useSettledWidthKey } from "../../hooks/useSettledWidthKey.js";
 import SummaryCard from "../ui/SummaryCard.jsx";
 import AlertList from "./AlertList.jsx";
 import DeviceDetails from "./DeviceDetails.jsx";
@@ -87,6 +88,7 @@ export default function DashboardPage({
   const { report, loading: reportLoading, error: reportError, period, setPeriod, reload } =
     useDashboardSummary({ token, canView: true, notify });
   const alertTrend = useMemo(() => buildAlertTrend(history), [history]);
+  const settledWidthKey = useSettledWidthKey();
 
   const overview = report?.overview || null;
   const assets = report?.assets || null;
@@ -211,7 +213,7 @@ export default function DashboardPage({
             <Network size={18} />
           </div>
           <div className="chart-box compact-chart">
-            <ResponsiveContainer width="100%" height={170}>
+            <ResponsiveContainer key={settledWidthKey} width="100%" height={170}>
               <AreaChart data={alertTrend}>
                 <XAxis dataKey="label" stroke="#69758a" />
                 <YAxis allowDecimals={false} stroke="#69758a" />

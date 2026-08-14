@@ -14,9 +14,12 @@ import {
   formatSoftwareLabel,
   softwareIdentity
 } from "../inventory/hardwarePresentation.js";
+import { useSettledWidthKey } from "../../hooks/useSettledWidthKey.js";
 import MetricBar from "./MetricBar.jsx";
 
 export default function DeviceDetails({ device, statusClass, metricClass }) {
+  const settledWidthKey = useSettledWidthKey();
+
   if (!device) {
     return (
       <section className="panel details-empty">
@@ -51,7 +54,7 @@ export default function DeviceDetails({ device, statusClass, metricClass }) {
           </div>
 
           <div className="chart-box">
-            <ResponsiveContainer width="100%" height={220}>
+            <ResponsiveContainer key={settledWidthKey} width="100%" height={220}>
               <LineChart data={device.history}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#d7dde9" />
                 <XAxis dataKey="time" stroke="#69758a" />
