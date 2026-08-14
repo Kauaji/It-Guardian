@@ -111,7 +111,7 @@ test("sessao ativa mostra metricas, pausa a visualizacao e reconecta pelo viewer
   const enrollment = await connectLabAgent(page);
   await page.reload();
 
-  await page.getByRole("button", { name: /Invent.rio/ }).click();
+  await page.getByRole("navigation").getByRole("button", { name: /Invent.rio/ }).click();
   const machineCard = page.locator(".machine-card").filter({ hasText: "Notebook remoto E2E" });
   await expect(machineCard).toBeVisible();
   const remoteButton = machineCard.getByRole("button", { name: "Atendimento remoto" });
