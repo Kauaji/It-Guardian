@@ -4,6 +4,78 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-13 - Relay da assistencia remota funciona em deploy serverless
+
+### Causa raiz
+
+- o relay efemero da assistencia remota (ultimo quadro, fila de comandos,
+  pausa, sinalizacao WebRTC) vivia inteiramente na memoria do processo Node
+  (`Map`), o que funciona bem em `npm run dev:server` e no perfil Docker
+  (processo unico e persistente), mas nao em deploy serverless: cada chamada
+  a API no Vercel pode cair numa instancia de funcao diferente, sem memoria
+  compartilhada, entao um quadro enviado pelo agente podia nunca chegar ao
+  tecnico;
+- durante a auditoria do banco no Supabase (usado como `DATABASE_URL` em
+  producao), o assistente automatico do Supabase acusou Row Level Security
+  desligado em todas as 70 tabelas — achado critico registrado mas nao
+  corrigido nesta entrega (decisao do usuario, exige revisao tabela a tabela
+  antes de ligar RLS sem quebrar o app); por causa disso, descartou-se
+  qualquer solucao que exigisse expor a chave anonima do Supabase no
+  navegador.
+
+### Correcao
+
+- `server/src/services/remoteAssistanceRelay.js` foi reescrito com um backend
+  plugavel: sem `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN`
+  configurados, continua usando o `Map` em memoria de sempre (nenhuma mudanca
+  de comportamento local/Docker); com essas variaveis, passa a usar um Redis
+  (Upstash) como armazenamento compartilhado entre instancias serverless;
+- todas as funcoes do relay passaram a ser assincronas; `remoteAssistanceService.js`
+  foi ajustado ponta a ponta para aguardar essas chamadas e para buscar o
+  relay explicitamente antes de montar a resposta da sessao (a antiga
+  mutacao direta do objeto em memoria, usada em `selectRemoteAssistanceMonitor`,
+  foi substituida por uma chamada explicita ao setter, ja que isso deixou de
+  funcionar por referencia com um backend externo);
+- a fila de comandos de mouse/teclado usa `RPUSH`/`LPOP` atomico do Redis, em
+  vez de leitura-modificacao-escrita de um blob JSON, para nao perder um
+  clique sob chamadas concorrentes; o restante do estado do relay usa uma
+  unica chave JSON com TTL de 30 minutos como rede de seguranca, alem da
+  limpeza explicita ja existente ao encerrar/expirar/negar a sessao;
+- o quadro de tela, quando passa pelo Redis, continua nunca sendo gravado no
+  PostgreSQL/Supabase — a garantia de "nenhum frame persistido em banco"
+  permanece intacta, o Redis cumpre o mesmo papel que a memoria do processo
+  cumpria localmente.
+
+### Validacoes
+
+- `node --test server/src/services/remoteAssistanceRelay.test.mjs`: 12
+  testes aprovados, incluindo o backend em memoria (comportamento preservado)
+  e o backend Redis validado com um cliente falso injetado (`createRedisStore`
+  exportado para teste), cobrindo JSON round-trip, TTL, mutacoes sucessivas e
+  drenagem atomica da fila;
+- `npm run test --workspace server`: 231 aprovados, 1 ignorado por exigir
+  PostgreSQL real, 0 falhas — inclui os testes de integracao e de contrato
+  WebRTC ja existentes, confirmando que o comportamento observavel pela API
+  nao mudou;
+- `npm run test:integration --workspace server`: 12 aprovados, 1 ignorado,
+  0 falhas;
+- `npm run lint`, `npm run check:architecture` (284 arquivos) e
+  `npm run build` aprovados.
+
+### Pendencias reais
+
+- ainda nao testado contra um Upstash real (o ambiente de desenvolvimento
+  nao tem acesso a rede para um Redis externo); a proxima validacao real
+  acontece quando as variaveis forem adicionadas no Vercel e uma sessao for
+  aberta contra o deploy;
+- Row Level Security desligado em todas as tabelas do Supabase continua
+  pendente — nao bloqueia a assistencia remota (que nao usa a API publica do
+  Supabase), mas e um risco separado que precisa de decisao e execucao
+  futuras;
+- a leitura-modificacao-escrita do estado geral do relay no Redis nao e
+  atomica (apenas a fila de comandos e); baixo risco na pratica (um agente e
+  um tecnico por sessao), mas nao formalmente livre de corrida.
+
 ## 2026-08-13 - Assistencia remota V2: transporte funcional e inteligente
 
 ### Auditoria inicial

@@ -126,6 +126,56 @@ Comportamento resultante:
   existente) continua sendo o prazo apos o qual a sessao e encerrada por
   perda de comunicacao.
 
+## Relay em deploy serverless (Vercel)
+
+O "relay" e a memoria efemera onde ficam o ultimo quadro, a fila de comandos,
+o estado de pausa e a sinalizacao WebRTC de uma sessao ativa — nunca o banco
+de dados. Em desenvolvimento local e no perfil Docker, esse relay vive na
+memoria do proprio processo Node, que roda continuamente. Isso **nao
+funciona em deploy serverless** (Vercel): cada chamada a API pode cair numa
+instancia de funcao diferente, sem memoria compartilhada com a instancia
+anterior — um frame enviado pelo agente podia simplesmente nao aparecer para
+o tecnico.
+
+Para resolver isso sem abrir mao da garantia de "nenhum frame persistido em
+banco", o relay pode usar um Redis externo (Upstash) como armazenamento
+compartilhado entre instancias, em vez de memoria local:
+
+```env
+UPSTASH_REDIS_REST_URL=https://SEU-BANCO.upstash.io
+UPSTASH_REDIS_REST_TOKEN=***
+```
+
+Comportamento:
+
+- **sem essas variaveis**, o relay continua em memoria — funciona
+  normalmente em `npm run dev:server` e no perfil Docker (processo unico e
+  persistente), mas fica sujeito a se comportar mal em multiplas instancias
+  serverless;
+- **com essas variaveis**, o relay usa o Redis automaticamente, sem nenhuma
+  outra mudanca de configuracao — a deteccao e feita uma vez, na inicializacao
+  do processo;
+- o conteudo do relay (inclusive o quadro de tela) fica com TTL de 30 minutos
+  no Redis como rede de seguranca, mas continua sendo apagado explicitamente
+  ao encerrar, expirar ou negar a sessao — igual ao comportamento em memoria;
+- a fila de comandos de mouse/teclado usa operacoes atomicas do Redis
+  (`RPUSH`/`LPOP`), para nao perder um clique por causa de duas chamadas
+  simultaneas.
+
+### Como criar o Redis
+
+1. No painel do Vercel, va em `Storage` (ou `Marketplace`) e adicione um
+   banco Upstash Redis ao projeto — ou crie diretamente em
+   [upstash.com](https://upstash.com) (tem plano gratuito suficiente para
+   este uso).
+2. Copie a "REST URL" e o "REST Token" do banco.
+3. Adicione como variaveis de ambiente do projeto no Vercel
+   (`UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`) e faca um novo
+   deploy para elas entrarem em vigor.
+4. Nenhuma alteracao e necessaria no agente Windows nem no navegador — os
+   dois continuam falando HTTP com a mesma API de sempre; o Redis e um
+   detalhe interno do servidor.
+
 ## Permissoes
 
 | Permissao | Finalidade |
@@ -222,8 +272,16 @@ metadados operacionais. Solicitar, autorizar, negar, iniciar, trocar monitor,
 habilitar controle, liberar controle, falhar e encerrar tambem geram entradas
 no historico global da maquina e, quando aplicavel, da OS.
 
-Nenhuma senha, token completo, frame ou evento bruto de teclado e persistido.
-As respostas de frame usam `Cache-Control: private, no-store, max-age=0`.
+Nenhuma senha, token completo, frame ou evento bruto de teclado e persistido
+**no banco de dados**. As respostas de frame usam
+`Cache-Control: private, no-store, max-age=0`.
+
+Quando o relay usa Redis (veja "Relay em deploy serverless"), o quadro atual
+fica temporariamente nesse armazenamento externo com TTL de 30 minutos e e
+apagado explicitamente ao fim da sessao — nunca chega a ir para o
+PostgreSQL/Supabase nem para qualquer tabela consultavel pelo restante do
+sistema. E o mesmo papel que a memoria do processo cumpre localmente, apenas
+compartilhado entre instancias serverless.
 
 ## Endpoints
 
@@ -347,6 +405,14 @@ o agente. Para depurar lentidao:
 - Modo privacidade e acoes administrativas permanecem placeholders bloqueados.
 - O agente e o instalador ainda precisam de assinatura de codigo antes de uso
   em clientes.
+- Em deploy serverless (Vercel), o recurso so funciona corretamente com
+  `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` configurados; sem essas
+  variaveis, o relay fica preso na memoria de uma instancia so e o quadro pode
+  nao chegar ao tecnico. Veja "Relay em deploy serverless" acima.
+- O relay via Redis usa leitura-e-escrita simples (nao totalmente atomica)
+  para o estado geral da sessao; a fila de comandos de mouse/teclado, essa
+  sim, e atomica. Em uso normal (um agente e um tecnico por sessao) o risco de
+  corrida e baixo, mas nao e formalmente zero.
 - O ajuste adaptativo de qualidade reage ao tamanho do quadro aceito, nao a
   uma medida direta de latencia de rede — em conexoes com perda de pacotes
   mas quadros pequenos, o ajuste pode demorar a reagir.
