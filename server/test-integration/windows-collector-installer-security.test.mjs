@@ -123,6 +123,18 @@ test("coletor PowerShell permanece restrito a inventario", async () => {
 
 });
 
+test("pipe local da assistencia remota nao aceita qualquer usuario autenticado da maquina", async () => {
+  const remoteAssistance = await readProjectFile(
+    "agent",
+    "windows",
+    "ITGuardian.RemoteAssistance.cs"
+  );
+  assert.doesNotMatch(remoteAssistance, /WellKnownSidType\.AuthenticatedUserSid/);
+  assert.match(remoteAssistance, /WellKnownSidType\.InteractiveSid/);
+  assert.match(remoteAssistance, /WellKnownSidType\.LocalSystemSid,\s*null\),\s*\n\s*PipeAccessRights\.FullControl/);
+  assert.match(remoteAssistance, /WellKnownSidType\.BuiltinAdministratorsSid,\s*null\),\s*\n\s*PipeAccessRights\.FullControl/);
+});
+
 test("agente nativo mantem trabalhos remotos bloqueados por padrao e controlados", async () => {
   const nativeCollector = await readProjectFile(
     "agent",

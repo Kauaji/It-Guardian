@@ -198,8 +198,19 @@ namespace ITGuardian.Windows
                 new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null),
                 PipeAccessRights.FullControl,
                 AccessControlType.Allow));
+            // Restrito a usuarios com logon interativo (console/RDP), nao a
+            // qualquer "Usuario autenticado" do Windows: um logon de rede,
+            // de servico ou anonimo nao deve conseguir responder ao
+            // consentimento local, injetar chat ou encerrar a sessao no
+            // lugar de quem esta de fato na tela. Em uma maquina com mais de
+            // uma sessao interativa simultanea (ex.: Terminal Services com
+            // varios usuarios logados ao mesmo tempo), este ACL ainda
+            // permite qualquer uma dessas sessoes acessar o pipe — restringir
+            // exclusivamente ao SID da sessao de console ativa exigiria
+            // rastrear o token de logon via WTS/LSA, fora do escopo desta
+            // correcao.
             security.AddAccessRule(new PipeAccessRule(
-                new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null),
+                new SecurityIdentifier(WellKnownSidType.InteractiveSid, null),
                 PipeAccessRights.ReadWrite,
                 AccessControlType.Allow));
             return new NamedPipeServerStream(

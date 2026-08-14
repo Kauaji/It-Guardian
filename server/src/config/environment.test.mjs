@@ -1,7 +1,31 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { isAllowedVercelOrigin, resolveDatabasePoolConfig } from "./environment.js";
+import { getRemoteAssistanceConfig, isAllowedVercelOrigin, resolveDatabasePoolConfig } from "./environment.js";
+
+function labEnv(overrides = {}) {
+  return {
+    ENABLE_REMOTE_ASSISTANCE: "true",
+    REMOTE_ASSISTANCE_ENV: "lab",
+    ...overrides
+  };
+}
+
+test("assistencia remota fica pausada em deploy publico (Vercel), mesmo com as flags ligadas", () => {
+  const onVercel = getRemoteAssistanceConfig(labEnv({ VERCEL: "1" }));
+  assert.equal(onVercel.enabled, false);
+  assert.equal(onVercel.disabledReason, "security_pause");
+
+  const vercelProduction = getRemoteAssistanceConfig(labEnv({ VERCEL_ENV: "production" }));
+  assert.equal(vercelProduction.enabled, false);
+  assert.equal(vercelProduction.disabledReason, "security_pause");
+});
+
+test("assistencia remota continua habilitavel fora de deploy publico com as flags de laboratorio", () => {
+  const local = getRemoteAssistanceConfig(labEnv());
+  assert.equal(local.enabled, true);
+  assert.equal(local.disabledReason, null);
+});
 
 test("uses a single short-lived database connection in serverless environments", () => {
   assert.deepEqual(
