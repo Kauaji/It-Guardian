@@ -206,10 +206,28 @@ export function getCorsOrigins() {
   );
 }
 
-export function isAllowedVercelOrigin(origin) {
+/**
+ * Antes, qualquer origem terminando em ".vercel.app" era aceita — como esse
+ * dominio e publico e compartilhado (qualquer conta pode publicar um projeto
+ * ali com o nome que quiser, inclusive um nome forjado para *terminar* com o
+ * nosso sufixo de time), isso permitia que um site hospedado por terceiros
+ * passasse pelo CORS e pela verificacao de origem do CSRF usando cookies do
+ * usuario. Nao existe padrao de sufixo/prefixo seguro nesse dominio
+ * compartilhado: qualquer heuristica de string pode ser reproduzida por um
+ * nome de projeto escolhido de proposito. A unica comparacao realmente
+ * infalsificavel e a igualdade exata com o dominio de producao do proprio
+ * projeto, que a Vercel garante ser unico globalmente e informa via
+ * `VERCEL_PROJECT_PRODUCTION_URL`.
+ */
+export function isAllowedVercelOrigin(origin, env = process.env) {
+  if (env.VERCEL !== "1") return false;
+
+  const productionUrl = String(env.VERCEL_PROJECT_PRODUCTION_URL || "").replace(/\/$/, "");
+  if (!productionUrl) return false;
+
   try {
     const url = new URL(origin);
-    return isVercel && url.protocol === "https:" && url.hostname.endsWith(".vercel.app");
+    return url.protocol === "https:" && url.hostname === productionUrl;
   } catch (_error) {
     return false;
   }
