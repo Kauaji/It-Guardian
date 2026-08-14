@@ -197,9 +197,14 @@ function getAlertTypeLabel(alert = {}) {
   return alertTypeLabels[type] || alert.title || "Aviso de monitoramento";
 }
 
-function getAlertCategory(alert = {}) {
+export function getAlertCategory(alert = {}) {
   const type = alert.type || alert.alertType || alert.suggestedProblemTypeId;
   return alertCategoryByType[type] || "Operacional";
+}
+
+export function getAlertCompactLabel(alert = {}) {
+  const type = alert.type || alert.alertType || alert.suggestedProblemTypeId;
+  return compactAlertTypeLabels[type] || getAlertTypeLabel(alert);
 }
 
 function getAlertImpact(alert = {}) {
