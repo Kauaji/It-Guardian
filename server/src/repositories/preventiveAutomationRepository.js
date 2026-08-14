@@ -9,6 +9,7 @@ import {
 } from "./maintenanceScriptRepository.js";
 import { queueAgentScriptJob } from "./agentScriptJobRepository.js";
 import { listDevices } from "../services/monitoringService.js";
+import { syncAutoPriorities } from "./serviceOrderRepository.js";
 import {
   canAccessAutomationAsset,
   canAccessAutomationPlan,
@@ -2453,10 +2454,12 @@ export async function processScheduledMaintenanceTasks(user = null) {
   const backfill = await backfillPreventiveAutomationAssetSchedules({ user });
   const preventiveAutomation = await processDuePreventiveAutomationPlans(user);
   const scriptValidations = await refreshDueScriptValidations({ summary: true });
+  const serviceOrderAutoPriority = await syncAutoPriorities();
 
   return {
     backfill,
     preventiveAutomation,
-    scriptValidations
+    scriptValidations,
+    serviceOrderAutoPriority
   };
 }

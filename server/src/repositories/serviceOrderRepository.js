@@ -487,7 +487,18 @@ function getTimedPriority(row, settings) {
   return priorityRank[target] > priorityRank[row.priority] ? target : row.priority;
 }
 
-async function applyAutoPriority(row, settings) {
+/**
+ * Aplica a prioridade calculada por tempo apenas para exibicao, sem gravar
+ * no banco. Uma simples listagem/leitura de OS nao deve ter efeito colateral
+ * de escrita -- a persistencia real acontece em `persistAutoPriority`,
+ * chamada apenas pelo job agendado (`syncAutoPriorities`).
+ */
+function withDisplayPriority(row, settings) {
+  const nextPriority = getTimedPriority(row, settings);
+  return nextPriority === row.priority ? row : { ...row, priority: nextPriority };
+}
+
+async function persistAutoPriority(row, settings) {
   const nextPriority = getTimedPriority(row, settings);
   if (nextPriority === row.priority) return row;
 
@@ -520,6 +531,36 @@ async function applyAutoPriority(row, settings) {
   });
 
   return result.rows[0] || row;
+}
+
+/**
+ * Persiste a prioridade automatica de todas as OS elegiveis de uma vez --
+ * chamada exclusivamente pelo job diario agendado
+ * (`processScheduledMaintenanceTasks`), nunca por um caminho de leitura.
+ */
+export async function syncAutoPriorities() {
+  const settings = await getServiceOrderSettings();
+  if (!settings.autoPriority.enabled) return { checked: 0, updated: 0 };
+
+  const finalStatusId = getFinalStatus(settings).id;
+  const result = await query(
+    `
+      SELECT *
+      FROM service_orders
+      WHERE auto_priority_enabled = true
+        AND status != $1
+    `,
+    [finalStatusId]
+  );
+
+  let updated = 0;
+  for (const row of result.rows) {
+    const before = row.priority;
+    const after = await persistAutoPriority(row, settings);
+    if (after.priority !== before) updated += 1;
+  }
+
+  return { checked: result.rows.length, updated };
 }
 
 function fromItemRow(row) {
@@ -856,10 +897,7 @@ export async function listServiceOrders(user = null) {
 
   const itemsByOrder = await listServiceOrderItemsByOrderIds(result.rows.map((row) => row.id));
 
-  const rows = [];
-  for (const row of result.rows) {
-    rows.push(await applyAutoPriority(row, settings));
-  }
+  const rows = result.rows.map((row) => withDisplayPriority(row, settings));
 
   return rows
     .map((row) => fromOrderRow(row, historyByOrder.get(row.id) || [], itemsByOrder.get(row.id) || []))
@@ -869,7 +907,7 @@ export async function listServiceOrders(user = null) {
 export async function findServiceOrderById(id, user = null) {
   const settings = await getServiceOrderSettings();
   const result = await query("SELECT * FROM service_orders WHERE id = $1", [id]);
-  const row = result.rows[0] ? await applyAutoPriority(result.rows[0], settings) : null;
+  const row = result.rows[0] ? withDisplayPriority(result.rows[0], settings) : null;
   if (!row) return null;
 
   const history = await listServiceOrderHistory(id);

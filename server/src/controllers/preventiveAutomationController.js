@@ -280,6 +280,7 @@ export async function processDueCron(req, res, next) {
       finishedAt: finishedAt.toISOString(),
       preventivePlans: result.preventiveAutomation,
       scriptValidations: result.scriptValidations,
+      serviceOrderAutoPriority: result.serviceOrderAutoPriority,
       errors: [
         ...(result.backfill?.plans || [])
           .filter((plan) => plan.status === "failed")
