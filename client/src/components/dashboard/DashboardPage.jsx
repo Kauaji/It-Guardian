@@ -35,6 +35,7 @@ import DashboardChartCard from "./DashboardChartCard.jsx";
 import DashboardFilters from "./DashboardFilters.jsx";
 import DashboardHealthScore from "./DashboardHealthScore.jsx";
 import DashboardKpiCard from "./DashboardKpiCard.jsx";
+import DashboardQuickActions from "./DashboardQuickActions.jsx";
 import DashboardRankingList from "./DashboardRankingList.jsx";
 import { metricClass, statusClass } from "./dashboardFormatters.js";
 import { buildAlertTrend } from "./dashboardModel.js";
@@ -80,7 +81,8 @@ export default function DashboardPage({
   history,
   onNavigateInventory,
   onNavigateAlerts,
-  onNavigateServiceOrders
+  onNavigateServiceOrders,
+  onOpenSettings
 }) {
   const { report, loading: reportLoading, error: reportError, period, setPeriod, reload } =
     useDashboardSummary({ token, canView: true, notify });
@@ -109,6 +111,13 @@ export default function DashboardPage({
   return (
     <>
       <DashboardFilters period={period} onChangePeriod={setPeriod} onRefresh={reload} refreshing={reportLoading} />
+
+      <DashboardQuickActions
+        onNavigateInventory={onNavigateInventory}
+        onNavigateAlerts={onNavigateAlerts}
+        onNavigateServiceOrders={onNavigateServiceOrders}
+        onOpenSettings={onOpenSettings}
+      />
 
       {reportError && (
         <p className="form-error dashboard-report-error" role="alert">
@@ -146,6 +155,7 @@ export default function DashboardPage({
           title="Alertas resolvidos hoje"
           value={overview ? overview.resolvedAlertsToday : "--"}
           subtitle="Contagem do dia corrente"
+          tone="ok"
           loading={reportPending}
         />
       </section>

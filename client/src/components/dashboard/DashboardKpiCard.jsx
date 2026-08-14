@@ -12,7 +12,11 @@ export default function DashboardKpiCard({ icon: Icon, title, value, subtitle, t
   return (
     <article className={`dashboard-kpi-card ${tone}`}>
       <div className="dashboard-kpi-card-header">
-        {Icon && <Icon size={18} />}
+        {Icon && (
+          <span className="dashboard-kpi-icon-badge">
+            <Icon size={16} />
+          </span>
+        )}
         <span>{title}</span>
       </div>
       <strong>{value}</strong>

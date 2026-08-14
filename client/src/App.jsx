@@ -2979,6 +2979,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
               onNavigateInventory={() => setActiveView("inventory")}
               onNavigateAlerts={() => setActiveView("alerts")}
               onNavigateServiceOrders={() => setActiveView("service-orders")}
+              onOpenSettings={() => setGeneralSettingsOpen(true)}
             />
           </ViewErrorBoundary>
         )}
