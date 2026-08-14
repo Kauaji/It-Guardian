@@ -7005,6 +7005,17 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
   background: #fff0ef;
 }
 
+.remote-assistance-status.status-reconnecting,
+.remote-assistance-status.status-agent_offline {
+  color: #92400e;
+  background: color-mix(in srgb, #f59e0b 16%, var(--surface));
+}
+
+.remote-assistance-single-monitor {
+  color: var(--text-soft);
+  font-size: 0.8rem;
+}
+
 .remote-assistance-screen {
   position: relative;
   display: grid;

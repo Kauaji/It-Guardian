@@ -3,9 +3,14 @@ import { getRemoteAssistanceConfig } from "../config/environment.js";
 import { withTransaction } from "../database.js";
 import {
   assertRemoteAssistanceEnabled,
+  assertWebrtcEnabled,
   canRelayInput,
+  deriveConnectionState,
   isAgentFresh,
-  normalizeRequestedMode
+  isSessionActive,
+  normalizeRequestedMode,
+  sanitizeSdp,
+  stepAdaptiveQuality
 } from "../domain/remoteAssistancePolicy.js";
 import { hasPermission } from "../permissions.js";
 import {
@@ -38,13 +43,19 @@ import {
 } from "../repositories/serviceOrderRepository.js";
 import {
   clearRelay,
+  computeRelayMetrics,
   drainRelayCommands,
   enqueueRelayCommand,
   getRelay,
   initializeRelay,
+  setRelayAdaptiveQuality,
   setRelayAgentState,
   setRelayControlEngaged,
-  setRelayFrame
+  setRelayFrame,
+  setRelayViewerPaused,
+  setRelayWebrtcAnswer,
+  setRelayWebrtcOffer,
+  touchRelayFrame
 } from "./remoteAssistanceRelay.js";
 import {
   hashSecurityToken,
@@ -93,15 +104,30 @@ function normalizeMonitors(monitors) {
   }));
 }
 
-function safeSession(session, relay = getRelay(session?.id)) {
+function safeSession(session, relay = null, config = getRemoteAssistanceConfig()) {
   if (!session) return null;
+  const metrics = computeRelayMetrics(relay);
   return {
     ...session,
     monitors: relay?.monitors || [],
     selectedMonitorId: relay?.selectedMonitorId || session.selectedMonitorId,
     frameReceivedAt: relay?.frameReceivedAt || null,
     hasFrame: Boolean(relay?.latestFrame),
-    controlEngaged: Boolean(relay?.controlEngaged)
+    controlEngaged: Boolean(relay?.controlEngaged),
+    connectionState: deriveConnectionState({ session, relay, config }),
+    transport: config.transport,
+    paused: Boolean(relay?.viewerPaused),
+    metrics: metrics
+      ? {
+          fps: metrics.fps,
+          bytesPerSecond: metrics.bytesPerSecond,
+          lastFrameBytes: metrics.lastFrameBytes,
+          frameAgeMs: metrics.frameAgeMs,
+          quality: metrics.quality,
+          width: metrics.width,
+          height: metrics.height
+        }
+      : null
   };
 }
 
@@ -132,7 +158,7 @@ async function auditAutomaticallyClosedSessions(sessions, message, eventType = "
       actorType: "system",
       metadata: { endReason: session.endReason, status: session.status }
     });
-    clearRelay(session.id);
+    await clearRelay(session.id);
   }
 }
 
@@ -243,7 +269,21 @@ export function getRemoteAssistancePublicConfig() {
     consentRequired: !config.autoConsentEnabled,
     privacyModeEnabled: config.privacyModeEnabled,
     adminActionsEnabled: config.adminActionsEnabled,
-    connectionMode: "snapshot_polling"
+    connectionMode: config.transport,
+    transport: config.transport,
+    transportFallback: config.transportFallback,
+    targetFps: config.targetFps,
+    maxFramesPerSecond: config.maxFramesPerSecond,
+    maxWidth: config.maxWidth,
+    maxHeight: config.maxHeight,
+    jpegQuality: config.jpegQuality,
+    minJpegQuality: config.minJpegQuality,
+    maxJpegQuality: config.maxJpegQuality,
+    adaptiveQuality: config.adaptiveQuality,
+    viewerPollMs: config.viewerPollMs,
+    idleTimeoutSeconds: config.idleTimeoutSeconds,
+    reconnectGraceSeconds: config.reconnectGraceSeconds,
+    webrtcEnabled: config.webrtc.enabled
   };
 }
 
@@ -352,12 +392,20 @@ export async function startRemoteAssistanceSession({
     }
   });
 
-  initializeRelay(session.id, { agentToken, viewerToken });
-  return { session: safeSession(session), viewerToken };
+  const relay = await initializeRelay(session.id, {
+    agentToken,
+    viewerToken,
+    quality: config.jpegQuality,
+    width: config.maxWidth,
+    height: config.maxHeight
+  });
+  return { session: safeSession(session, relay, config), viewerToken };
 }
 
 export async function getRemoteAssistanceSession({ user, sessionId }) {
-  return safeSession(await assertManagedSession(user, sessionId));
+  const session = await assertManagedSession(user, sessionId);
+  const relay = await getRelay(session.id);
+  return safeSession(session, relay);
 }
 
 export async function getRemoteAssistanceEvents({ user, sessionId }) {
@@ -366,13 +414,19 @@ export async function getRemoteAssistanceEvents({ user, sessionId }) {
 }
 
 export async function getRemoteAssistanceFrame({ user, sessionId, viewerToken }) {
+  const config = getRemoteAssistanceConfig();
   const session = await assertManagedSession(user, sessionId);
   await assertViewerToken(session, viewerToken);
-  const relay = getRelay(session.id);
+  const relay = await getRelay(session.id);
+  const metrics = computeRelayMetrics(relay);
   return {
     frame: relay?.latestFrame || null,
     receivedAt: relay?.frameReceivedAt || null,
-    selectedMonitorId: relay?.selectedMonitorId || session.selectedMonitorId
+    selectedMonitorId: relay?.selectedMonitorId || session.selectedMonitorId,
+    connectionState: deriveConnectionState({ session, relay, config }),
+    transport: config.transport,
+    paused: Boolean(relay?.viewerPaused),
+    metrics
   };
 }
 
@@ -419,21 +473,24 @@ export async function sendRemoteAssistanceInput({ user, sessionId, viewerToken, 
   }
   const sanitized = sanitizeInputCommand(command);
   if (!sanitized) throw publicError("Comando de entrada nao permitido.");
-  const relay = getRelay(session.id);
+  const relay = await getRelay(session.id);
   if (!relay) throw publicError("Canal efemero da sessao indisponivel.", 409);
-  enqueueRelayCommand(session.id, { id: randomUUID(), ...sanitized }, config.maxQueuedCommands);
-  setRelayControlEngaged(session.id, true);
+  await enqueueRelayCommand(session.id, { id: randomUUID(), ...sanitized }, config.maxQueuedCommands);
+  await setRelayControlEngaged(session.id, true);
   return { accepted: true };
 }
 
 export async function selectRemoteAssistanceMonitor({ user, sessionId, viewerToken, monitorId }) {
   const session = await assertManagedSession(user, sessionId);
   await assertViewerToken(session, viewerToken);
-  const relay = getRelay(session.id);
+  const relay = await getRelay(session.id);
   const selected = relay?.monitors.find((monitor) => monitor.id === String(monitorId || ""));
   if (!selected) throw publicError("Monitor nao encontrado nesta sessao.", 404);
-  relay.selectedMonitorId = selected.id;
-  enqueueRelayCommand(
+  const updatedRelay = await setRelayAgentState(session.id, {
+    monitors: relay.monitors,
+    selectedMonitorId: selected.id
+  });
+  await enqueueRelayCommand(
     session.id,
     { id: randomUUID(), type: "select_monitor", monitorId: selected.id },
     getRemoteAssistanceConfig().maxQueuedCommands
@@ -448,7 +505,7 @@ export async function selectRemoteAssistanceMonitor({ user, sessionId, viewerTok
     user,
     metadata: { monitorId: selected.id, monitorName: selected.name }
   });
-  return safeSession(updated);
+  return safeSession(updated, updatedRelay);
 }
 
 export async function updateRemoteAssistanceControl({ user, sessionId, viewerToken, enabled }) {
@@ -467,7 +524,7 @@ export async function updateRemoteAssistanceControl({ user, sessionId, viewerTok
   }
   const updated = await setRemoteAssistanceControl(session.id, Boolean(enabled));
   if (!updated) throw publicError("A sessao remota nao esta mais ativa.", 409);
-  setRelayControlEngaged(session.id, Boolean(enabled));
+  const relay = await setRelayControlEngaged(session.id, Boolean(enabled));
   await addAudit({
     session: updated,
     eventType: enabled ? "control_enabled" : "control_disabled",
@@ -476,7 +533,7 @@ export async function updateRemoteAssistanceControl({ user, sessionId, viewerTok
     user,
     metadata: { enabled: Boolean(enabled) }
   });
-  return safeSession(updated);
+  return safeSession(updated, relay);
 }
 
 export async function endRemoteAssistanceByTechnician({ user, sessionId, viewerToken }) {
@@ -492,7 +549,7 @@ export async function endRemoteAssistanceByTechnician({ user, sessionId, viewerT
     user,
     metadata: { endReason: "technician_ended" }
   });
-  clearRelay(ended.id);
+  await clearRelay(ended.id);
   return safeSession(ended, null);
 }
 
@@ -506,7 +563,7 @@ export async function getPendingRemoteAssistanceForAgent({ bearerToken }) {
   if (!asset) return { session: null };
   const session = await findPendingRemoteAssistanceSessionForAsset(asset.id);
   if (!session) return { session: null };
-  const relay = getRelay(session.id);
+  const relay = await getRelay(session.id);
   if (!relay?.agentToken) return { session: null };
   return {
     session: {
@@ -548,7 +605,7 @@ export async function respondToRemoteAssistanceConsent({
       session.requestedMode === "control" &&
       config.controlEnabled
   );
-  setRelayAgentState(session.id, {
+  await setRelayAgentState(session.id, {
     monitors: normalizedMonitors,
     selectedMonitorId: selected?.id || null
   });
@@ -586,8 +643,9 @@ export async function respondToRemoteAssistanceConsent({
       }
     });
   }
-  if (!granted) clearRelay(updated.id);
-  return { session: safeSession(updated) };
+  if (!granted) await clearRelay(updated.id);
+  const relay = granted ? await getRelay(updated.id) : null;
+  return { session: safeSession(updated, relay) };
 }
 
 function decodeFrame(dataUrl, maxFrameBytes) {
@@ -597,7 +655,8 @@ function decodeFrame(dataUrl, maxFrameBytes) {
   if (!bytes || bytes > maxFrameBytes) {
     throw publicError("O quadro de tela excede o limite permitido.", 413);
   }
-  return String(dataUrl);
+  const hash = createHash("sha1").update(match[1]).digest("hex");
+  return { dataUrl: String(dataUrl), bytes, hash };
 }
 
 export async function receiveRemoteAssistanceFrame({
@@ -605,6 +664,7 @@ export async function receiveRemoteAssistanceFrame({
   sessionId,
   sessionToken,
   frame,
+  unchanged,
   monitors,
   selectedMonitorId
 }) {
@@ -612,7 +672,7 @@ export async function receiveRemoteAssistanceFrame({
   assertRemoteAssistanceEnabled(config);
   const { session } = await authenticateAgentForSession({ bearerToken, sessionId, sessionToken });
   if (session.status !== "active") throw publicError("A sessao remota nao esta ativa.", 409);
-  const relay = getRelay(session.id);
+  const relay = await getRelay(session.id);
   if (!relay) throw publicError("Canal efemero da sessao indisponivel.", 409);
   const minimumInterval = Math.floor(1000 / config.maxFramesPerSecond);
   if (Date.now() - relay.lastFrameAt < minimumInterval) {
@@ -620,9 +680,25 @@ export async function receiveRemoteAssistanceFrame({
   }
   const normalizedMonitors = normalizeMonitors(monitors);
   if (normalizedMonitors.length) {
-    setRelayAgentState(session.id, { monitors: normalizedMonitors, selectedMonitorId });
+    await setRelayAgentState(session.id, { monitors: normalizedMonitors, selectedMonitorId });
   }
-  setRelayFrame(session.id, decodeFrame(frame, config.maxFrameBytes));
+  if (unchanged === true && !frame) {
+    await touchRelayFrame(session.id);
+    await touchRemoteAssistanceSession(session.id);
+    return { accepted: true, unchanged: true };
+  }
+  const decoded = decodeFrame(frame, config.maxFrameBytes);
+  await setRelayFrame(session.id, decoded.dataUrl, { bytes: decoded.bytes, hash: decoded.hash });
+  const nextQuality = stepAdaptiveQuality({
+    quality: relay.quality,
+    width: relay.width,
+    height: relay.height,
+    lastFrameBytes: decoded.bytes,
+    config
+  });
+  if (nextQuality.changed) {
+    await setRelayAdaptiveQuality(session.id, nextQuality);
+  }
   await touchRemoteAssistanceSession(session.id);
   return { accepted: true };
 }
@@ -632,16 +708,87 @@ export async function getRemoteAssistanceCommandsForAgent({
   sessionId,
   sessionToken
 }) {
+  const config = getRemoteAssistanceConfig();
   const { session } = await authenticateAgentForSession({ bearerToken, sessionId, sessionToken });
   if (session.status !== "active") return { commands: [], ended: true };
-  const relay = getRelay(session.id);
+  const relay = await getRelay(session.id);
   await touchRemoteAssistanceSession(session.id);
   return {
-    commands: drainRelayCommands(session.id),
+    commands: await drainRelayCommands(session.id),
     selectedMonitorId: relay?.selectedMonitorId || session.selectedMonitorId,
     controlEnabled: Boolean(session.remoteControlEnabled),
+    capturePaused: Boolean(relay?.viewerPaused),
+    qualityHint: {
+      width: relay?.width || config.maxWidth,
+      height: relay?.height || config.maxHeight,
+      jpegQuality: relay?.quality || config.jpegQuality,
+      captureIntervalMs: config.agentCaptureMs
+    },
     ended: false
   };
+}
+
+export async function updateRemoteAssistanceCapture({ user, sessionId, viewerToken, paused }) {
+  const session = await assertManagedSession(user, sessionId);
+  await assertViewerToken(session, viewerToken);
+  if (!isSessionActive(session.status)) {
+    throw publicError("A sessao remota nao esta mais ativa.", 409);
+  }
+  const relay = await setRelayViewerPaused(session.id, Boolean(paused));
+  await addAudit({
+    session,
+    eventType: paused ? "viewer_paused" : "viewer_resumed",
+    message: paused ? "Tecnico pausou a visualizacao remota." : "Tecnico retomou a visualizacao remota.",
+    actorType: "technician",
+    user,
+    metadata: { paused: Boolean(paused) }
+  });
+  return safeSession(session, relay);
+}
+
+// --- Sinalizacao WebRTC (contrato preparado, inativo enquanto a flag estiver
+// desligada). Nenhum viewer ou agente real negocia por este caminho ainda:
+// existe para uma futura evolucao do transporte sem redesenhar a API.
+
+export async function submitRemoteAssistanceWebrtcOffer({ user, sessionId, viewerToken, sdp }) {
+  const config = getRemoteAssistanceConfig();
+  assertWebrtcEnabled(config);
+  const session = await assertManagedSession(user, sessionId);
+  await assertViewerToken(session, viewerToken);
+  if (!isSessionActive(session.status)) {
+    throw publicError("A sessao remota nao esta mais ativa.", 409);
+  }
+  const sanitized = sanitizeSdp(sdp);
+  if (!sanitized) throw publicError("Oferta SDP invalida.", 400);
+  await setRelayWebrtcOffer(session.id, sanitized);
+  return { accepted: true };
+}
+
+export async function getRemoteAssistanceWebrtcOfferForAgent({ bearerToken, sessionId, sessionToken }) {
+  const config = getRemoteAssistanceConfig();
+  assertWebrtcEnabled(config);
+  const { session } = await authenticateAgentForSession({ bearerToken, sessionId, sessionToken });
+  const relay = await getRelay(session.id);
+  return { offer: relay?.webrtcOffer || null };
+}
+
+export async function submitRemoteAssistanceWebrtcAnswer({ bearerToken, sessionId, sessionToken, sdp }) {
+  const config = getRemoteAssistanceConfig();
+  assertWebrtcEnabled(config);
+  const { session } = await authenticateAgentForSession({ bearerToken, sessionId, sessionToken });
+  const sanitized = sanitizeSdp(sdp);
+  if (!sanitized) throw publicError("Resposta SDP invalida.", 400);
+  await setRelayWebrtcAnswer(session.id, sanitized);
+  return { accepted: true };
+}
+
+export async function getRemoteAssistanceWebrtcAnswer({ user, sessionId, viewerToken }) {
+  const config = getRemoteAssistanceConfig();
+  assertWebrtcEnabled(config);
+  const session = await assertManagedSession(user, sessionId);
+  await assertViewerToken(session, viewerToken);
+  const relay = await getRelay(session.id);
+  return { answer: relay?.webrtcAnswer || null };
 }
 
 export async function endRemoteAssistanceByAgent({ bearerToken, sessionId, sessionToken }) {
@@ -655,7 +802,7 @@ export async function endRemoteAssistanceByAgent({ bearerToken, sessionId, sessi
       actorType: "agent",
       metadata: { endReason: "local_user_ended" }
     });
-    clearRelay(ended.id);
+    await clearRelay(ended.id);
   }
   return { session: safeSession(ended || session, null) };
 }

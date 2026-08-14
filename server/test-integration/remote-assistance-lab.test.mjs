@@ -184,7 +184,21 @@ test("assistencia remota exige autorizacao, consentimento e mantem frames efemer
     consentRequired: true,
     privacyModeEnabled: false,
     adminActionsEnabled: false,
-    connectionMode: "snapshot_polling"
+    connectionMode: "snapshot_polling",
+    transport: "snapshot_polling",
+    transportFallback: false,
+    targetFps: 1,
+    maxFramesPerSecond: 1,
+    maxWidth: 1280,
+    maxHeight: 720,
+    jpegQuality: 65,
+    minJpegQuality: 35,
+    maxJpegQuality: 80,
+    adaptiveQuality: true,
+    viewerPollMs: 1000,
+    idleTimeoutSeconds: 40,
+    reconnectGraceSeconds: 30,
+    webrtcEnabled: false
   });
 
   const orderResponse = await fetch(`${baseUrl}/api/service-orders`, {
@@ -310,6 +324,11 @@ test("assistencia remota exige autorizacao, consentimento e mantem frames efemer
   assert.equal(commandsResponse.status, 200);
   const commands = await commandsResponse.json();
   assert.equal(commands.controlEnabled, true);
+  assert.equal(commands.capturePaused, false);
+  assert.equal(commands.qualityHint.width, 1280);
+  assert.equal(commands.qualityHint.height, 720);
+  assert.equal(commands.qualityHint.jpegQuality, 65);
+  assert.ok(commands.qualityHint.captureIntervalMs >= 1000);
   assert.ok(commands.commands.some((command) => command.type === "select_monitor"));
   assert.ok(commands.commands.some((command) => command.type === "mouse_move"));
 
@@ -353,7 +372,72 @@ test("assistencia remota exige autorizacao, consentimento e mantem frames efemer
   );
   assert.equal(viewerFrame.status, 200);
   assert.equal(viewerFrame.headers.get("cache-control"), "private, no-store, max-age=0");
-  assert.equal((await viewerFrame.json()).frame, frame);
+  const viewerFrameBody = await viewerFrame.json();
+  assert.equal(viewerFrameBody.frame, frame);
+  assert.equal(viewerFrameBody.connectionState, "active");
+  assert.equal(viewerFrameBody.transport, "snapshot_polling");
+  assert.equal(viewerFrameBody.paused, false);
+  assert.equal(viewerFrameBody.metrics.framesTotal, 1);
+  assert.ok(viewerFrameBody.metrics.lastFrameBytes > 0);
+  assert.equal(viewerFrameBody.metrics.duplicateFramesSkipped, 0);
+
+  const pauseResponse = await fetch(
+    `${baseUrl}/api/remote-assistance/sessions/${active.id}/pause`,
+    {
+      method: "POST",
+      headers: browserHeaders(adminCookie, { "x-remote-viewer-token": started.viewerToken }),
+      body: JSON.stringify({ paused: true })
+    }
+  );
+  assert.equal(pauseResponse.status, 200);
+  assert.equal((await pauseResponse.json()).session.paused, true);
+
+  const commandsWhilePaused = await fetch(
+    `${baseUrl}/api/agents/remote-assistance/sessions/${active.id}/commands`,
+    {
+      headers: {
+        authorization: `Bearer ${enrollment.token}`,
+        "x-remote-session-token": agentPending.sessionToken
+      }
+    }
+  );
+  assert.equal((await commandsWhilePaused.json()).capturePaused, true);
+
+  const resumeResponse = await fetch(
+    `${baseUrl}/api/remote-assistance/sessions/${active.id}/pause`,
+    {
+      method: "POST",
+      headers: browserHeaders(adminCookie, { "x-remote-viewer-token": started.viewerToken }),
+      body: JSON.stringify({ paused: false })
+    }
+  );
+  assert.equal(resumeResponse.status, 200);
+  assert.equal((await resumeResponse.json()).session.paused, false);
+
+  await new Promise((resolve) => setTimeout(resolve, 1100));
+  const unchangedPing = await fetch(
+    `${baseUrl}/api/agents/remote-assistance/sessions/${active.id}/frame`,
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${enrollment.token}`,
+        "x-remote-session-token": agentPending.sessionToken,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({ unchanged: true })
+    }
+  );
+  assert.equal(unchangedPing.status, 202);
+  assert.equal((await unchangedPing.json()).unchanged, true);
+  const viewerFrameAfterUnchanged = await fetch(
+    `${baseUrl}/api/remote-assistance/sessions/${active.id}/frame`,
+    { headers: { cookie: adminCookie, "x-remote-viewer-token": started.viewerToken } }
+  );
+  const unchangedBody = await viewerFrameAfterUnchanged.json();
+  assert.equal(unchangedBody.frame, frame);
+  assert.equal(unchangedBody.metrics.framesTotal, 1);
+  assert.equal(unchangedBody.metrics.unchangedPings, 1);
+  assert.ok(unchangedBody.metrics.frameAgeMs < 1000);
 
   const eventsResponse = await fetch(
     `${baseUrl}/api/remote-assistance/sessions/${active.id}/events`,

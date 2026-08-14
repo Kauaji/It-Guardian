@@ -52,7 +52,8 @@ async function connectLabAgent(page) {
       })
     });
     if (!heartbeatResponse.ok) throw new Error(await heartbeatResponse.text());
-    return heartbeatResponse.json();
+    const heartbeat = await heartbeatResponse.json();
+    return { heartbeat, enrollmentToken: enrollment.token };
   }, { baseUrl: apiUrl });
 }
 
@@ -102,4 +103,80 @@ test("Inventario abre o fluxo visual seguro de assistencia remota", async ({ pag
   await expect(remoteDialog.getByLabel("Confirme sua senha")).toBeVisible();
   await expect(remoteDialog).toContainText("O usuario precisa autorizar localmente");
   await expect(remoteDialog).toContainText("Modo privacidade e acoes administrativas permanecem indisponiveis");
+});
+
+test("sessao ativa mostra metricas, pausa a visualizacao e reconecta pelo viewer", async ({ page }) => {
+  await page.setViewportSize({ width: 948, height: 746 });
+  await login(page);
+  const enrollment = await connectLabAgent(page);
+  await page.reload();
+
+  await page.getByRole("button", { name: /Invent.rio/ }).click();
+  const machineCard = page.locator(".machine-card").filter({ hasText: "Notebook remoto E2E" });
+  await expect(machineCard).toBeVisible();
+  const remoteButton = machineCard.getByRole("button", { name: "Atendimento remoto" });
+  await expect(remoteButton).toBeEnabled({ timeout: 10_000 });
+  await remoteButton.click();
+
+  const remoteDialog = page.getByRole("dialog", { name: "Assistencia remota" });
+  await remoteDialog.getByLabel("Motivo do atendimento").fill("Verificacao de metricas em laboratorio");
+  await remoteDialog.getByLabel("Confirme sua senha").fill("123456");
+  await remoteDialog.getByRole("button", { name: "Solicitar atendimento" }).click();
+
+  await expect(remoteDialog).toContainText("Aguardando");
+
+  await page.evaluate(async ({ baseUrl, agentToken }) => {
+    const pendingResponse = await fetch(`${baseUrl}/api/agents/remote-assistance/pending`, {
+      headers: { authorization: `Bearer ${agentToken}` }
+    });
+    const { session: pending } = await pendingResponse.json();
+    const consentResponse = await fetch(
+      `${baseUrl}/api/agents/remote-assistance/sessions/${pending.id}/consent`,
+      {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${agentToken}`,
+          "x-remote-session-token": pending.sessionToken,
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          granted: true,
+          controlAllowed: false,
+          monitors: [{ id: "display-1", name: "Tela unica", primary: true, width: 1920, height: 1080 }],
+          selectedMonitorId: "display-1"
+        })
+      }
+    );
+    await consentResponse.json();
+    const sendFrame = (frame) => fetch(`${baseUrl}/api/agents/remote-assistance/sessions/${pending.id}/frame`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${agentToken}`,
+        "x-remote-session-token": pending.sessionToken,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({ frame })
+    });
+    await sendFrame("data:image/jpeg;base64,/9j/2Q==");
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    await sendFrame("data:image/jpeg;base64,/9j/2Qab==");
+    return pending.id;
+  }, { baseUrl: apiUrl, agentToken: enrollment.enrollmentToken });
+
+  await expect(remoteDialog).toContainText("Atendimento em andamento", { timeout: 10_000 });
+  await expect(remoteDialog).toContainText("unico monitor");
+  await expect(remoteDialog.locator("img")).toBeVisible();
+  await expect(remoteDialog).toContainText(/FPS real: \d/, { timeout: 10_000 });
+
+  const pauseButton = remoteDialog.getByRole("button", { name: "Pausar" });
+  await expect(pauseButton).toBeVisible();
+  await pauseButton.click();
+  await expect(remoteDialog.getByRole("button", { name: "Retomar" })).toBeVisible();
+  await expect(remoteDialog).toContainText("Visualizacao pausada");
+
+  await remoteDialog.getByRole("button", { name: "Retomar" }).click();
+  await expect(remoteDialog.getByRole("button", { name: "Pausar" })).toBeVisible();
+
+  await remoteDialog.getByRole("button", { name: "Encerrar" }).click();
+  await expect(remoteDialog).toContainText("Atendimento encerrado");
 });

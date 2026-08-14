@@ -89,8 +89,12 @@ esta em [`docs/AUDITORIA-BETA-PROFISSIONAL.md`](docs/AUDITORIA-BETA-PROFISSIONAL
 
 A Assistencia Remota e um modulo separado, desabilitado por padrao e destinado
 somente a laboratorio/homologacao nesta versao. Ela exige permissao,
-reautenticacao do tecnico e consentimento visivel na maquina atendida. Consulte
-[`docs/ASSISTENCIA-REMOTA.md`](docs/ASSISTENCIA-REMOTA.md).
+reautenticacao do tecnico e consentimento visivel na maquina atendida. O
+transporte `snapshot_polling` agora tem FPS, resolucao e qualidade JPEG
+ajustaveis com limites seguros, ajuste automatico de qualidade, pausa da
+visualizacao e reconexao manual; uma sinalizacao WebRTC ja existe no backend
+como base para uma evolucao futura, mas permanece desligada por padrao.
+Consulte [`docs/ASSISTENCIA-REMOTA.md`](docs/ASSISTENCIA-REMOTA.md).
 
 Estrutura principal:
 

@@ -7,6 +7,7 @@ using System.IO.Pipes;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Security.AccessControl;
+using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Text;
 using System.Threading;
@@ -56,8 +57,17 @@ namespace ITGuardian.Windows
     internal sealed class RemoteAssistanceFramePayload
     {
         public string frame { get; set; }
+        public bool unchanged { get; set; }
         public List<RemoteAssistanceMonitor> monitors { get; set; }
         public string selectedMonitorId { get; set; }
+    }
+
+    internal sealed class RemoteAssistanceQualityHint
+    {
+        public int width { get; set; }
+        public int height { get; set; }
+        public int jpegQuality { get; set; }
+        public int captureIntervalMs { get; set; }
     }
 
     internal sealed class RemoteAssistanceCommandResponse
@@ -65,6 +75,8 @@ namespace ITGuardian.Windows
         public List<RemoteAssistanceCommand> commands { get; set; }
         public string selectedMonitorId { get; set; }
         public bool controlEnabled { get; set; }
+        public bool capturePaused { get; set; }
+        public RemoteAssistanceQualityHint qualityHint { get; set; }
         public bool ended { get; set; }
     }
 
@@ -475,13 +487,25 @@ namespace ITGuardian.Windows
 
     internal sealed class RemoteAssistanceTrayController : IDisposable
     {
+        private const int MinCaptureIntervalMs = 150;
+        private const int MaxCaptureIntervalMs = 3000;
+        private const int MinJpegQualityValue = 10;
+        private const int MaxJpegQualityValue = 95;
+        private const int MinCaptureWidth = 320;
+        private const int MaxCaptureWidth = 1920;
+        private const int DefaultCaptureIntervalMs = 1000;
+        private const int DefaultJpegQuality = 55;
+
         private readonly NotifyIcon trayIcon;
         private readonly SynchronizationContext uiContext;
         private readonly System.Windows.Forms.Timer pendingTimer;
         private volatile bool polling;
         private volatile bool streaming;
+        private volatile bool capturePaused;
         private string activeSessionId;
         private string selectedMonitorId;
+        private string lastFrameHash;
+        private RemoteAssistanceQualityHint qualityHint;
         private Thread streamingThread;
         private RemoteAssistanceIndicatorForm indicator;
 
@@ -573,6 +597,9 @@ namespace ITGuardian.Windows
 
         private void StartStreaming()
         {
+            lastFrameHash = null;
+            qualityHint = null;
+            capturePaused = false;
             streaming = true;
             streamingThread = new Thread(StreamLoop);
             streamingThread.IsBackground = true;
@@ -580,11 +607,19 @@ namespace ITGuardian.Windows
             streamingThread.Start();
         }
 
+        private static int Clamp(int value, int min, int max)
+        {
+            if (value < min) return min;
+            if (value > max) return max;
+            return value;
+        }
+
         private void StreamLoop()
         {
             int consecutiveFailures = 0;
             while (streaming && !string.IsNullOrWhiteSpace(activeSessionId))
             {
+                int sleepMs = DefaultCaptureIntervalMs;
                 try
                 {
                     RemoteAssistanceCommandResponse commands =
@@ -595,19 +630,20 @@ namespace ITGuardian.Windows
                         StopOnUiThread();
                         return;
                     }
+                    string previousMonitorId = selectedMonitorId;
                     if (!string.IsNullOrWhiteSpace(commands.selectedMonitorId))
                         selectedMonitorId = commands.selectedMonitorId;
                     ApplyCommands(commands);
-                    string frame = CaptureSelectedMonitor(selectedMonitorId);
-                    if (!string.IsNullOrWhiteSpace(frame))
-                    {
-                        LocalRemoteAssistanceClient.Call<object>("frame", activeSessionId, new RemoteAssistanceFramePayload
-                        {
-                            frame = frame,
-                            monitors = ScreenMonitors(),
-                            selectedMonitorId = selectedMonitorId
-                        });
-                    }
+                    if (selectedMonitorId != previousMonitorId) lastFrameHash = null;
+
+                    qualityHint = commands.qualityHint;
+                    capturePaused = commands.capturePaused;
+                    sleepMs = Clamp(
+                        qualityHint != null ? qualityHint.captureIntervalMs : DefaultCaptureIntervalMs,
+                        MinCaptureIntervalMs,
+                        MaxCaptureIntervalMs);
+
+                    if (!capturePaused) CaptureAndSendFrame();
                     consecutiveFailures = 0;
                 }
                 catch
@@ -619,7 +655,56 @@ namespace ITGuardian.Windows
                         return;
                     }
                 }
-                Thread.Sleep(1000);
+                Thread.Sleep(capturePaused ? Math.Min(sleepMs * 2, MaxCaptureIntervalMs) : sleepMs);
+            }
+        }
+
+        /// <summary>
+        /// Falha de captura (tela bloqueada, monitor removido, erro de GDI) nunca
+        /// deve encerrar a sessao: apenas pula o quadro desta rodada.
+        /// </summary>
+        private void CaptureAndSendFrame()
+        {
+            int targetWidth = MaxCaptureWidth;
+            int jpegQuality = DefaultJpegQuality;
+            if (qualityHint != null)
+            {
+                targetWidth = Clamp(qualityHint.width, MinCaptureWidth, MaxCaptureWidth);
+                jpegQuality = Clamp(qualityHint.jpegQuality, MinJpegQualityValue, MaxJpegQualityValue);
+            }
+
+            string frame;
+            try
+            {
+                frame = CaptureSelectedMonitor(selectedMonitorId, targetWidth, jpegQuality);
+            }
+            catch (Exception captureError)
+            {
+                Program.WriteLog("WARN", "Falha ao capturar tela para assistencia remota: " + captureError.Message);
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(frame)) return;
+
+            string hash = ComputeFrameHash(frame);
+            bool unchanged = lastFrameHash != null && hash == lastFrameHash;
+            LocalRemoteAssistanceClient.Call<object>("frame", activeSessionId, new RemoteAssistanceFramePayload
+            {
+                frame = unchanged ? null : frame,
+                unchanged = unchanged,
+                monitors = ScreenMonitors(),
+                selectedMonitorId = selectedMonitorId
+            });
+            lastFrameHash = hash;
+        }
+
+        private static string ComputeFrameHash(string frame)
+        {
+            using (MD5 md5 = MD5.Create())
+            {
+                byte[] hash = md5.ComputeHash(Encoding.UTF8.GetBytes(frame));
+                StringBuilder builder = new StringBuilder(hash.Length * 2);
+                for (int i = 0; i < hash.Length; i++) builder.Append(hash[i].ToString("x2"));
+                return builder.ToString();
             }
         }
 
@@ -662,6 +747,9 @@ namespace ITGuardian.Windows
         {
             activeSessionId = null;
             selectedMonitorId = null;
+            lastFrameHash = null;
+            qualityHint = null;
+            capturePaused = false;
             trayIcon.Text = "IT Guardian ativo";
             if (indicator != null)
             {
@@ -703,12 +791,12 @@ namespace ITGuardian.Windows
             return Screen.PrimaryScreen;
         }
 
-        private static string CaptureSelectedMonitor(string monitorId)
+        private static string CaptureSelectedMonitor(string monitorId, int maxWidth, int jpegQuality)
         {
             Screen screen = FindScreen(monitorId);
             if (screen == null) return null;
             Rectangle bounds = screen.Bounds;
-            int targetWidth = Math.Min(1280, bounds.Width);
+            int targetWidth = Math.Min(maxWidth, bounds.Width);
             int targetHeight = Math.Max(1, (int)Math.Round(bounds.Height * (targetWidth / (double)bounds.Width)));
             using (Bitmap source = new Bitmap(bounds.Width, bounds.Height, PixelFormat.Format24bppRgb))
             using (Graphics sourceGraphics = Graphics.FromImage(source))
@@ -720,7 +808,7 @@ namespace ITGuardian.Windows
                 targetGraphics.DrawImage(source, new Rectangle(0, 0, targetWidth, targetHeight));
                 ImageCodecInfo codec = FindJpegCodec();
                 EncoderParameters parameters = new EncoderParameters(1);
-                parameters.Param[0] = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, 50L);
+                parameters.Param[0] = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, (long)jpegQuality);
                 target.Save(stream, codec, parameters);
                 return "data:image/jpeg;base64," + Convert.ToBase64String(stream.ToArray());
             }

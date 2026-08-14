@@ -150,6 +150,15 @@ export function updateRemoteAssistanceControl({ token, sessionId, viewerToken, e
   });
 }
 
+export function updateRemoteAssistanceCapture({ token, sessionId, viewerToken, paused }) {
+  return apiFetch(`/remote-assistance/sessions/${encodeURIComponent(sessionId)}/pause`, {
+    token,
+    method: "POST",
+    headers: { "x-remote-viewer-token": viewerToken },
+    body: JSON.stringify({ paused })
+  });
+}
+
 export function sendRemoteAssistanceInput({ token, sessionId, viewerToken, command }) {
   return apiFetch(`/remote-assistance/sessions/${encodeURIComponent(sessionId)}/input`, {
     token,

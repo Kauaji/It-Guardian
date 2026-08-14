@@ -39,6 +39,7 @@ import productKeyRoutes from "./routes/productKeyRoutes.js";
 import collectorActivationRoutes from "./routes/collectorActivationRoutes.js";
 import securityRoutes from "./routes/securityRoutes.js";
 import remoteAssistanceRoutes from "./routes/remoteAssistanceRoutes.js";
+import { getRelayBackendName } from "./services/remoteAssistanceRelay.js";
 import { initializeRuntime } from "./bootstrap.js";
 import { getCorsOrigins, isAllowedVercelOrigin } from "./config/environment.js";
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
@@ -56,7 +57,8 @@ async function healthCheck(_req, res) {
       status: "ok",
       service: "it-guardian-api",
       timestamp: checkedAt,
-      database: "ok"
+      database: "ok",
+      remoteAssistanceRelay: getRelayBackendName()
     });
   } catch (_error) {
     res.status(503).json({
