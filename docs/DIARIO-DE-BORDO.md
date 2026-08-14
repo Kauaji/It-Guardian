@@ -1149,3 +1149,66 @@ entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
   520px;
 - `git diff --check` aprovado.
 
+## 2026-08-14 - Isolamento de falhas por modulo, polish do dashboard e auditoria de codigo
+
+### Investigacao: Inventario e Ordens de Servico "nao abrindo"
+
+- reproduzido exaustivamente sem sucesso: local, preview e producao,
+  conta admin e duas contas de demonstracao com permissoes limitadas,
+  abertura de ficha de maquina e de OS — tudo funcionou em todo teste;
+- causa mais provavel: efeito colateral transitorio de multiplos deploys
+  consecutivos no mesmo branch durante a mesma janela de teste (um chunk
+  lazy-load pode ficar temporariamente invalido entre um deploy e outro);
+  ja existe recuperacao automatica para esse caso (`runtimeRecovery.js`);
+- reforco de qualquer forma: cada modulo principal (Dashboard, Avisos,
+  Inventario, Ordens de Servico) ganhou seu proprio `ViewErrorBoundary` em
+  vez de depender so do `AppErrorBoundary` global — uma falha de
+  renderizacao num modulo nao derruba mais o app inteiro.
+
+### Polish visual do dashboard
+
+- gauge circular (SVG) na saude da infraestrutura, com cor por
+  classificacao, no lugar do numero solto;
+- cards de KPI com borda de destaque e badge de icone por tom
+  (ok/warning/danger/muted), elevacao sutil no hover;
+- painel de acoes rapidas (Nova OS, Ver Inventario, Ver Avisos,
+  Configuracoes gerais), item pendente desde a entrega anterior do
+  dashboard.
+
+### Auditoria de codigo
+
+- varredura dedicada em seguranca, qualidade e cobertura de testes
+  (detalhes em `docs/AUDITORIA-BETA-PROFISSIONAL.md`);
+- corrigido: `isAllowedVercelOrigin()` confiava em qualquer origem
+  terminando em `.vercel.app` (dominio publico e compartilhado) tanto para
+  CORS quanto para a verificacao de origem do CSRF — um site de terceiros
+  em outro projeto Vercel conseguia passar pelas duas checagens e usar o
+  cookie de sessao do usuario; agora exige igualdade exata com o dominio de
+  producao do proprio projeto;
+- removido componente morto `InventoryVisualMapView.jsx` (1176 linhas, sem
+  nenhuma referencia);
+- registrado sem corrigir (fora do escopo desta entrega): rate limit em
+  memoria e mais fraco em deploy serverless do que os testes locais
+  sugerem; duas queries N+1 em `preventiveAutomationRepository.js`; rotas de
+  dado de referencia sem permissao especifica na leitura; falta teste de
+  integracao direto para `/api/service-orders`.
+
+### Consolidacao e deploy
+
+- push do trabalho pendente de `feature/remote-assistance-functional-v2`
+  (relay Redis) e `feature/dashboard-professional-overview`, ambos
+  mesclados em `main` (merge limpo, um unico conflito trivial em texto de
+  documentacao);
+- adicionado `remoteAssistanceRelay` no corpo de `/api/health` (`"memory"`
+  ou `"redis"`) para confirmar em producao, sem acesso a logs do processo,
+  se o relay esta usando o backend compartilhado necessario no Vercel.
+
+### Validacoes
+
+- `npm run lint`, `npm run check:architecture` (299 arquivos),
+  `npm run test --workspace server` (248 aprovados, 1 ignorado),
+  `npm run test:integration --workspace server` (16 aprovados, 1 ignorado),
+  `npm run build` e `npx playwright test` (9 aprovados) — todos verdes apos
+  o merge e apos cada correcao subsequente;
+- `git diff --check` aprovado.
+

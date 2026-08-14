@@ -66,6 +66,40 @@ O coletor nao captura senhas, arquivos pessoais, documentos, tela, teclado,
 clipboard, historico de navegador, conversas, dados bancarios ou geolocalizacao
 precisa.
 
+## Auditoria de codigo — 2026-08-14
+
+Varredura dedicada em seguranca, qualidade e cobertura de testes sobre todo
+o codebase (servidor, cliente, agente). Achados corrigidos nesta entrega:
+
+| Prioridade | Risco | Tratamento |
+|---|---|---|
+| Alta | `isAllowedVercelOrigin()` confiava em qualquer origem terminando em `.vercel.app` — dominio publico e compartilhado onde qualquer conta pode publicar um projeto — para o CORS **e** para a verificacao de origem do CSRF (`requireTrustedCookieOrigin`), permitindo que um site de terceiros hospedado em outro projeto Vercel enviasse requisicoes autenticadas usando o cookie de sessao do usuario | passa a exigir igualdade exata com `VERCEL_PROJECT_PRODUCTION_URL` (dominio de producao do proprio projeto, garantido unico pela Vercel); uma primeira tentativa com sufixo de time tambem se mostrou falsificavel (um projeto pode ser nomeado para terminar com o mesmo sufixo) e foi descartada — testes cobrem os dois cenarios |
+| Baixa | Componente `InventoryVisualMapView.jsx` (1176 linhas) sem nenhuma referencia no app ou nos testes, substituido por `InventoryVisualMapScene.jsx` e os paineis de conexao atuais | removido |
+
+Achados registrados, ainda nao corrigidos (ver riscos residuais abaixo):
+
+- o rate limit por IP/token roda em memoria por instancia de funcao
+  serverless — no Vercel, cada instancia tem seu proprio contador e um
+  cold start zera o estado, entao o limite e bem mais fraco em producao do
+  que os testes locais sugerem;
+- `validateScripts` (`preventiveAutomationRepository.js`) busca um script de
+  manutencao por vez dentro de um loop em vez de uma unica consulta com
+  `WHERE id IN (...)` — o mesmo arquivo ja tem esse padrao em outro lugar;
+  `syncAssetSchedulesForPlan` grava um `INSERT ... ON CONFLICT` por ativo em
+  vez de um upsert em lote — ambos viram gargalo real conforme o numero de
+  ativos por plano automatizado cresce;
+- rotas de dados de referencia (`clientRoutes`, `productRoutes`,
+  `serviceRoutes`, `technicianRoutes`, `priorityRuleRoutes`,
+  `problemTypeRoutes`, `sectorRoutes`) exigem apenas login para leitura
+  (`GET`), sem uma permissao especifica — pode ser intencional (dado de
+  referencia, nao operacional), mas e inconsistente com `inventory.view` e
+  `service_orders.view`, usados em todo o resto do sistema; precisa de uma
+  decisao explicita, nao foi alterado sem confirmacao;
+- `server/src/controllers/serviceOrderController.js` e
+  `serviceOrderRepository.js` — o objeto de dominio central do sistema — nao
+  tem teste de integracao proprio batendo em `/api/service-orders`; a
+  cobertura hoje vem indiretamente de outros fluxos (sugestoes, dashboard).
+
 ## Riscos residuais antes de cliente real
 
 1. O instalador e o coletor ainda precisam de assinatura de codigo confiavel.
