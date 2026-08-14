@@ -188,6 +188,11 @@ export function fetchDevices(token, params = {}) {
   return apiFetch(`/devices${search ? `?${search}` : ""}`, { token });
 }
 
+export function fetchDashboardSummary(token, { period = "30d" } = {}) {
+  const search = new URLSearchParams({ period }).toString();
+  return apiFetch(`/dashboard/summary?${search}`, { token });
+}
+
 export function fetchDevice(token, id) {
   return apiFetch(`/devices/${id}`, { token });
 }

@@ -6,25 +6,13 @@ import {
   Database,
   LogOut,
   Moon,
-  Network,
   PanelLeftClose,
   ClipboardList,
   RefreshCw,
-  Search,
-  Server,
   Settings as SettingsIcon,
   ShieldCheck,
   Sun,
-  WifiOff,
 } from "lucide-react";
-import {
-  Area,
-  AreaChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis
-} from "recharts";
 import {
   acceptServiceOrderSuggestion,
   acknowledgeScriptLog,
@@ -74,7 +62,7 @@ import {
   updateSystemSettings,
   useSuggestionScript as executeSuggestionScript
 } from "./api.js";
-import { formatDisplayText, normalizePrioritySettings } from "./components/alerts/alertUtils.js";
+import { normalizePrioritySettings } from "./components/alerts/alertUtils.js";
 import AlertCenterV2 from "./components/alerts/AlertCenterV2.jsx";
 import AssetPublicView from "./components/inventory/AssetPublicView.jsx";
 import AssetDragCompactOverlay from "./components/inventory/AssetDragCompactOverlay.jsx";
@@ -111,14 +99,11 @@ import {
   pickUnusedPaletteColor
 } from "./components/inventory/inventoryLocalState.js";
 import ViewLoadingState from "./components/ui/ViewLoadingState.jsx";
-import SummaryCard from "./components/ui/SummaryCard.jsx";
 import Toast from "./components/ui/Toast.jsx";
 import PermissionBlocked from "./components/ui/PermissionBlocked.jsx";
 import AuthScreen from "./components/auth/AuthScreen.jsx";
-import AlertList from "./components/dashboard/AlertList.jsx";
-import DeviceDetails from "./components/dashboard/DeviceDetails.jsx";
+import DashboardPage from "./components/dashboard/DashboardPage.jsx";
 import { formatSoftwareLabel } from "./components/inventory/hardwarePresentation.js";
-import DeviceTable from "./components/dashboard/DeviceTable.jsx";
 import { isMaintenanceSegmentName } from "./utils/display.js";
 import { useAppSessionController } from "./hooks/useAppSessionController.js";
 import { useDashboardData } from "./hooks/useDashboardData.js";
@@ -266,20 +251,6 @@ function inventoryCollisionDetection(args) {
   }
 
   return closestCenter({ ...args, droppableContainers: machineContainers });
-}
-
-function metricClass(value) {
-  if (value >= 85) return "danger";
-  if (value >= 70) return "warning";
-  return "ok";
-}
-
-function statusClass(status) {
-  return {
-    online: "ok",
-    offline: "warning",
-    problem: "danger"
-  }[status];
 }
 
 function formatTime(value) {
@@ -539,13 +510,6 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
     });
   }
 
-  const alertTrend = useMemo(() => {
-    return history.slice(0, 6).reverse().map((alert, index) => ({
-      label: `#${index + 1}`,
-      critical: alert.severity === "critical" ? 1 : 0,
-      warning: alert.severity === "warning" ? 1 : 0
-    }));
-  }, [history]);
   const fallbackInventoryTabId = inventoryTabs[0]?.id || defaultInventoryTab.id;
   const activeInventoryTab = inventoryTabs.find((tab) => tab.id === activeInventoryTabId) || inventoryTabs[0] || defaultInventoryTab;
   const itemTabId = (kind, id) => inventoryTabMeta[kind]?.[id]?.tabId || fallbackInventoryTabId;
@@ -2995,80 +2959,25 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
         {activeView === "blocked" && <PermissionBlocked />}
 
         {activeView === "dashboard" && canViewDashboard && (
-          <>
-            {summary && (
-              <section className="summary-grid">
-                <SummaryCard icon={Server} label="Dispositivos" value={summary.totalDevices} />
-                <SummaryCard icon={ShieldCheck} label="Online" value={summary.online} tone="ok" />
-                <SummaryCard icon={WifiOff} label="Offline" value={summary.offline} tone="warning" />
-                <SummaryCard icon={AlertTriangle} label="Erro" value={summary.problem} tone="danger" />
-                <SummaryCard icon={AlertTriangle} label="Críticos" value={summary.criticalAlerts} tone="danger" />
-              </section>
-            )}
-
-            <section className="toolbar">
-              <div className="search-box">
-                <Search size={18} />
-                <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nome, IP ou status" />
-              </div>
-              <select value={status} onChange={(event) => setStatus(event.target.value)}>
-                <option value="">Todos os status</option>
-                <option value="online">Online</option>
-                <option value="offline">Offline</option>
-                <option value="problem">Erro</option>
-              </select>
-            </section>
-
-            <section className="content-grid">
-              <section className="panel devices-panel">
-                <div className="panel-heading">
-                  <h2>Máquinas monitoradas</h2>
-                  {loading && <span className="loading">Carregando...</span>}
-                </div>
-                <DeviceTable
-                  devices={devices}
-                  selectedId={selectedId}
-                  onSelect={selectDevice}
-                  statusClass={statusClass}
-                />
-              </section>
-              <AlertList alerts={alerts} />
-            </section>
-
-            <section className="bottom-grid">
-              <DeviceDetails
-                device={selectedDevice}
-                statusClass={statusClass}
-                metricClass={metricClass}
-              />
-              <section className="panel history-panel">
-                <div className="panel-heading">
-                  <h2>Histórico de avisos</h2>
-                  <Network size={18} />
-                </div>
-                <div className="chart-box compact-chart">
-                  <ResponsiveContainer width="100%" height={170}>
-                    <AreaChart data={alertTrend}>
-                      <XAxis dataKey="label" stroke="#69758a" />
-                      <YAxis allowDecimals={false} stroke="#69758a" />
-                      <Tooltip />
-                      <Area dataKey="critical" stackId="1" stroke="#d64545" fill="#d64545" />
-                      <Area dataKey="warning" stackId="1" stroke="#d6a21f" fill="#d6a21f" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="history-list">
-                  {history.map((alert) => (
-                    <div key={alert.id}>
-                      <span className={`dot ${alert.severity}`} />
-                      <strong>{formatDisplayText(alert.hostName || alert.assetName, "Máquina não vinculada")}</strong>
-                      <span>{formatDisplayText(alert.title, "Aviso")}{alert.acknowledgement ? " - resolvido" : ""}</span>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            </section>
-          </>
+          <DashboardPage
+            token={token}
+            notify={notify}
+            summary={summary}
+            search={search}
+            setSearch={setSearch}
+            status={status}
+            setStatus={setStatus}
+            loading={loading}
+            devices={devices}
+            selectedId={selectedId}
+            selectedDevice={selectedDevice}
+            selectDevice={selectDevice}
+            alerts={alerts}
+            history={history}
+            onNavigateInventory={() => setActiveView("inventory")}
+            onNavigateAlerts={() => setActiveView("alerts")}
+            onNavigateServiceOrders={() => setActiveView("service-orders")}
+          />
         )}
 
         {activeView === "alerts" && (canViewAlerts || canViewScripts || canViewPreventivePlans || canViewPreventiveAutomation) && (
