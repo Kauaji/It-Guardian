@@ -1,9 +1,21 @@
 # Instalador Windows do IT Guardian
 
-O instalador visual solicita somente a chave de produto. A URL da API do
-IT Guardian e incorporada durante o build, e a chave e enviada diretamente ao
-endpoint HTTPS de ativacao sem ser gravada em arquivo ou log. O instalador
-configura somente o coletor nativo e nao baixa agentes externos.
+Ao abrir o instalador, o usuario ve uma tela unica com 4 opcoes claras:
+
+1. **Instalar o IT Guardian** — primeiro uso neste computador; pede a chave de
+   produto e ativa.
+2. **Reparar o IT Guardian** — reinstala os arquivos e a tarefa agendada
+   preservando a ativacao existente; nao pede chave.
+3. **Trocar a chave de produto** — reativa este computador com uma chave
+   diferente (por exemplo, apos mudar de organizacao).
+4. **Desinstalar o IT Guardian** — confirma e aciona o desinstalador existente
+   (`unins000.exe`), depois fecha o instalador.
+
+As opcoes 2 a 4 exigem uma instalacao existente; se nenhuma for encontrada, o
+instalador avisa e pede para escolher "Instalar". A URL da API do IT Guardian
+e incorporada durante o build, e a chave e enviada diretamente ao endpoint
+HTTPS de ativacao sem ser gravada em arquivo ou log. O instalador configura
+somente o coletor nativo e nao baixa agentes externos.
 
 ## Compilar
 

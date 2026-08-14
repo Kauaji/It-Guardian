@@ -52,6 +52,12 @@ Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile
 Type: filesandordirs; Name: "{app}"
 
 [Code]
+const
+  ModeInstall = 0;
+  ModeRepair = 1;
+  ModeChangeKey = 2;
+  ModeUninstall = 3;
+
 var
   RepairModePage: TInputOptionWizardPage;
   ProductKeyPage: TInputQueryWizardPage;
@@ -91,9 +97,19 @@ begin
   Result := Copy(Json, StartPosition, EndPosition - StartPosition);
 end;
 
+function SelectedMode(): Integer;
+begin
+  Result := RepairModePage.SelectedValueIndex;
+end;
+
 function IsRepairInstall(): Boolean;
 begin
-  Result := ExistingInstallDetected and (RepairModePage.SelectedValueIndex = 0);
+  Result := ExistingInstallDetected and (SelectedMode() = ModeRepair);
+end;
+
+function IsUninstallMode(): Boolean;
+begin
+  Result := ExistingInstallDetected and (SelectedMode() = ModeUninstall);
 end;
 
 function JsonEscape(Value: string): string;
@@ -235,18 +251,21 @@ begin
 
   RepairModePage := CreateInputOptionPage(
     wpWelcome,
-    'Instalar ou reparar o IT Guardian',
-    'Escolha como continuar',
-    'O reparo reinstala os arquivos, recupera o coletor e preserva a ativacao sempre que ela estiver disponivel.',
+    'O que voce deseja fazer?',
+    'Escolha uma opcao para continuar',
+    'Se este e o primeiro uso do IT Guardian neste computador, escolha "Instalar". ' +
+    'As demais opcoes exigem uma instalacao existente.',
     True,
     False
   );
-  RepairModePage.Add('Instalar ou reparar o IT Guardian (recomendado)');
+  RepairModePage.Add('Instalar o IT Guardian');
+  RepairModePage.Add('Reparar o IT Guardian (reinstala os arquivos e mantem a ativacao)');
+  RepairModePage.Add('Trocar a chave de produto (reativa este computador)');
+  RepairModePage.Add('Desinstalar o IT Guardian');
   if ExistingInstallDetected then
-  begin
-    RepairModePage.Add('Reativar este computador com uma nova chave');
-  end;
-  RepairModePage.SelectedValueIndex := 0;
+    RepairModePage.SelectedValueIndex := ModeRepair
+  else
+    RepairModePage.SelectedValueIndex := ModeInstall;
   ProductKeyAfterId := RepairModePage.ID;
 
   if ExistingConfigAvailable then
@@ -273,10 +292,43 @@ end;
 function ShouldSkipPage(PageID: Integer): Boolean;
 begin
   Result :=
-    ((PageID = ProductKeyPage.ID) and IsRepairInstall() and ExistingConfigAvailable) or
+    ((PageID = ProductKeyPage.ID) and
+      ((IsRepairInstall() and ExistingConfigAvailable) or IsUninstallMode())) or
     (PageID = wpSelectDir) or
     (PageID = wpSelectProgramGroup) or
     (PageID = wpSelectTasks);
+end;
+
+function LaunchExistingUninstaller(): Boolean;
+var
+  UninstallerPath: string;
+  ResultCode: Integer;
+begin
+  Result := False;
+  UninstallerPath := ExpandConstant('{commonappdata}\ITGuardian\unins000.exe');
+  if not FileExists(UninstallerPath) then
+  begin
+    MsgBox(
+      'O desinstalador do IT Guardian nao foi encontrado neste computador. ' +
+      'Use "Aplicativos instalados" do Windows para remover o IT Guardian.',
+      mbError,
+      MB_OK
+    );
+    Exit;
+  end;
+
+  if MsgBox(
+    'Isso vai remover o IT Guardian deste computador, incluindo o coletor e a ativacao. Deseja continuar?',
+    mbConfirmation,
+    MB_YESNO
+  ) <> IDYES then Exit;
+
+  if not Exec(UninstallerPath, '/SILENT', '', SW_SHOW, ewNoWait, ResultCode) then
+  begin
+    MsgBox('Nao foi possivel iniciar a desinstalacao.', mbError, MB_OK);
+    Exit;
+  end;
+  Result := True;
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
@@ -284,6 +336,30 @@ var
   ProductKey: string;
 begin
   Result := True;
+
+  if CurPageID = RepairModePage.ID then
+  begin
+    if (SelectedMode() <> ModeInstall) and (not ExistingInstallDetected) then
+    begin
+      MsgBox(
+        'Nenhuma instalacao existente foi encontrada neste computador. ' +
+        'Escolha "Instalar o IT Guardian" para continuar.',
+        mbError,
+        MB_OK
+      );
+      Result := False;
+      Exit;
+    end;
+    if IsUninstallMode() then
+    begin
+      if LaunchExistingUninstaller() then
+        Abort
+      else
+        Result := False;
+    end;
+    Exit;
+  end;
+
   if CurPageID <> ProductKeyPage.ID then Exit;
 
   ProductKey := Uppercase(Trim(ProductKeyPage.Values[0]));
