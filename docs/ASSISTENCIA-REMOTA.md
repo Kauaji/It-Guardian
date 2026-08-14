@@ -408,7 +408,10 @@ o agente. Para depurar lentidao:
 - Em deploy serverless (Vercel), o recurso so funciona corretamente com
   `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` configurados; sem essas
   variaveis, o relay fica preso na memoria de uma instancia so e o quadro pode
-  nao chegar ao tecnico. Veja "Relay em deploy serverless" acima.
+  nao chegar ao tecnico. Veja "Relay em deploy serverless" acima. Em producao
+  (2026-08-14), o Redis (Upstash) foi conectado via integracao nativa da
+  Vercel e confirmado ativo em `GET /api/health` (`remoteAssistanceRelay:
+  "redis"`).
 - O relay via Redis usa leitura-e-escrita simples (nao totalmente atomica)
   para o estado geral da sessao; a fila de comandos de mouse/teclado, essa
   sim, e atomica. Em uso normal (um agente e um tecnico por sessao) o risco de

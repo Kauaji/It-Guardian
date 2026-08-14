@@ -1210,5 +1210,22 @@ entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
   `npm run test:integration --workspace server` (16 aprovados, 1 ignorado),
   `npm run build` e `npx playwright test` (9 aprovados) — todos verdes apos
   o merge e apos cada correcao subsequente;
-- `git diff --check` aprovado.
+- `git diff --check` aprovado;
+- corrigida tambem uma vulnerabilidade alta em dependencia transitiva
+  (`nanoid` via vite/postcss) com `npm audit fix`, sem mudanca de major
+  version.
+
+### Redis conectado em producao
+
+- apos o deploy, o usuario criou e conectou um banco Upstash Redis ao
+  projeto pela integracao nativa da Vercel (Storage);
+- variaveis de ambiente novas de uma integracao so sao vistas por funcoes
+  serverless a partir do proximo deploy — foi necessario um deploy adicional
+  (commit vazio) para a API passar a enxergar `UPSTASH_REDIS_REST_URL`/
+  `TOKEN`;
+- confirmado via `GET /api/health`: `remoteAssistanceRelay` mudou de
+  `"memory"` para `"redis"` em producao, sem nenhum erro ou aviso nos logs
+  de runtime da Vercel nos 10 minutos seguintes ao deploy. A assistencia
+  remota agora tem o backend compartilhado necessario para funcionar entre
+  instancias serverless distintas.
 
