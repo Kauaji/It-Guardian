@@ -17490,6 +17490,39 @@ body:not(.modal-open):not(.alert-modal-open):not(.machine-details-open) {
   cursor: pointer;
 }
 
+.view-error-fallback {
+  min-height: 320px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 12px;
+  padding: 32px;
+  text-align: center;
+  color: var(--text-strong);
+}
+
+.view-error-fallback h2,
+.view-error-fallback p {
+  margin: 0;
+}
+
+.view-error-fallback p {
+  max-width: 480px;
+  color: var(--text-muted);
+}
+
+.view-error-fallback button {
+  min-height: 40px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--radius-md);
+  color: #fff;
+  background: var(--accent);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 /* Utilitarios de acessibilidade reaproveitados por varias telas (Assistencia
    Remota, Dashboard). Ausentes ate aqui: o marcador "sr-only" nao escondia
    nada visualmente e a classe "spin" nao girava nenhum icone. */

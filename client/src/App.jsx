@@ -99,6 +99,7 @@ import {
   pickUnusedPaletteColor
 } from "./components/inventory/inventoryLocalState.js";
 import ViewLoadingState from "./components/ui/ViewLoadingState.jsx";
+import ViewErrorBoundary from "./components/ui/ViewErrorBoundary.jsx";
 import Toast from "./components/ui/Toast.jsx";
 import PermissionBlocked from "./components/ui/PermissionBlocked.jsx";
 import AuthScreen from "./components/auth/AuthScreen.jsx";
@@ -2959,28 +2960,31 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
         {activeView === "blocked" && <PermissionBlocked />}
 
         {activeView === "dashboard" && canViewDashboard && (
-          <DashboardPage
-            token={token}
-            notify={notify}
-            summary={summary}
-            search={search}
-            setSearch={setSearch}
-            status={status}
-            setStatus={setStatus}
-            loading={loading}
-            devices={devices}
-            selectedId={selectedId}
-            selectedDevice={selectedDevice}
-            selectDevice={selectDevice}
-            alerts={alerts}
-            history={history}
-            onNavigateInventory={() => setActiveView("inventory")}
-            onNavigateAlerts={() => setActiveView("alerts")}
-            onNavigateServiceOrders={() => setActiveView("service-orders")}
-          />
+          <ViewErrorBoundary label="o Dashboard" resetKey={activeView}>
+            <DashboardPage
+              token={token}
+              notify={notify}
+              summary={summary}
+              search={search}
+              setSearch={setSearch}
+              status={status}
+              setStatus={setStatus}
+              loading={loading}
+              devices={devices}
+              selectedId={selectedId}
+              selectedDevice={selectedDevice}
+              selectDevice={selectDevice}
+              alerts={alerts}
+              history={history}
+              onNavigateInventory={() => setActiveView("inventory")}
+              onNavigateAlerts={() => setActiveView("alerts")}
+              onNavigateServiceOrders={() => setActiveView("service-orders")}
+            />
+          </ViewErrorBoundary>
         )}
 
         {activeView === "alerts" && (canViewAlerts || canViewScripts || canViewPreventivePlans || canViewPreventiveAutomation) && (
+          <ViewErrorBoundary label="Avisos" resetKey={activeView}>
           <AlertCenterV2
             token={token}
             alerts={alerts}
@@ -3056,9 +3060,11 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
             onApplyScriptLogSuggestedSolution={handleApplyScriptLogSuggestedSolution}
             onCancelScriptValidation={handleCancelScriptValidation}
           />
+          </ViewErrorBoundary>
         )}
 
         {activeView === "inventory" && canViewInventory && (
+          <ViewErrorBoundary label="o Inventário" resetKey={activeView}>
           <Suspense fallback={<ViewLoadingState />}>
             <InventoryBoard
             devices={decoratedAllDevices}
@@ -3147,9 +3153,11 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
             ) : null}
             />
           </Suspense>
+          </ViewErrorBoundary>
         )}
 
         {activeView === "service-orders" && canViewServiceOrders && (
+          <ViewErrorBoundary label="Ordens de Serviço" resetKey={activeView}>
           <Suspense fallback={<ViewLoadingState />}>
             <ServiceOrdersBoard
             serviceOrders={serviceOrders}
@@ -3184,6 +3192,7 @@ function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
             }}
             />
           </Suspense>
+          </ViewErrorBoundary>
         )}
 
       </section>
