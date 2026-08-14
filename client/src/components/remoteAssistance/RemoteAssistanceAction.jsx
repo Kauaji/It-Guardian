@@ -100,6 +100,7 @@ export default function RemoteAssistanceAction({
   const canView = hasPermission(user, "remote_assistance.view");
   const canStart = hasPermission(user, "remote_assistance.start");
   const canControl = hasPermission(user, "remote_assistance.control");
+  const canChat = hasPermission(user, "remote_assistance.chat");
   const canEnd = hasPermission(user, "remote_assistance.end");
   const [config, setConfig] = useState(null);
   const [open, setOpen] = useState(false);
@@ -657,25 +658,29 @@ export default function RemoteAssistanceAction({
                 ))}
                 {!chatMessages.length && <p className="remote-assistance-chat-empty">Nenhuma mensagem ainda.</p>}
               </div>
-              <form className="remote-assistance-chat-form" onSubmit={sendChatMessage}>
-                <input
-                  type="text"
-                  value={chatDraft}
-                  onChange={(event) => setChatDraft(event.target.value)}
-                  placeholder="Escreva uma mensagem..."
-                  maxLength={2000}
-                  disabled={session.status !== "active" || sendingChat}
-                  aria-label="Mensagem de chat"
-                />
-                <button
-                  type="submit"
-                  className="icon-button"
-                  disabled={session.status !== "active" || sendingChat || !chatDraft.trim()}
-                  title="Enviar mensagem"
-                >
-                  <SendHorizontal size={16} />
-                </button>
-              </form>
+              {canChat ? (
+                <form className="remote-assistance-chat-form" onSubmit={sendChatMessage}>
+                  <input
+                    type="text"
+                    value={chatDraft}
+                    onChange={(event) => setChatDraft(event.target.value)}
+                    placeholder="Escreva uma mensagem..."
+                    maxLength={2000}
+                    disabled={session.status !== "active" || sendingChat}
+                    aria-label="Mensagem de chat"
+                  />
+                  <button
+                    type="submit"
+                    className="icon-button"
+                    disabled={session.status !== "active" || sendingChat || !chatDraft.trim()}
+                    title="Enviar mensagem"
+                  >
+                    <SendHorizontal size={16} />
+                  </button>
+                </form>
+              ) : (
+                <p className="remote-assistance-chat-empty">Voce nao tem permissao para enviar mensagens.</p>
+              )}
             </section>
             {error && <p className="form-error" role="alert">{error}</p>}
           </div>

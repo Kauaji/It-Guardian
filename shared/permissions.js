@@ -111,6 +111,7 @@ export const permissionGroups = [
     label: "Assistencia remota",
     permissions: [
       { id: "remote_assistance.view", label: "Visualizar assistencia remota" },
+      { id: "remote_assistance.chat", label: "Enviar mensagens no chat da assistencia remota" },
       { id: "remote_assistance.start", label: "Iniciar assistencia remota" },
       { id: "remote_assistance.control", label: "Controlar maquina remotamente" },
       { id: "remote_assistance.end", label: "Encerrar assistencia remota" },

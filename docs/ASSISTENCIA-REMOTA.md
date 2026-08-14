@@ -182,6 +182,7 @@ Comportamento:
 | Permissao | Finalidade |
 |---|---|
 | `remote_assistance.view` | Consultar sessao, eventos, frame atual, trocar monitor e pausar/retomar a visualizacao |
+| `remote_assistance.chat` | Enviar mensagens no chat da sessao (separada de `.view`: quem so acompanha a tela nao envia mensagem por padrao) |
 | `remote_assistance.start` | Solicitar uma nova sessao |
 | `remote_assistance.control` | Solicitar controle basico apos consentimento |
 | `remote_assistance.end` | Encerrar a sessao |
@@ -276,9 +277,12 @@ Funcionamento:
   `text` (ate 2000 caracteres, aparado e validado contra texto vazio) e
   `createdAt`;
 - o tecnico envia por `POST /api/remote-assistance/sessions/:id/chat`
-  (permissao `remote_assistance.view`, limite de 30 mensagens por minuto por
-  sessao) e le junto do poll de quadro (`GET .../frame`), que agora tambem
-  devolve `chatMessages`;
+  (permissao dedicada `remote_assistance.chat`, separada de `.view` porque
+  chat e um canal de comunicacao direta com o usuario local — engenharia
+  social, nao so leitura de tela — e nao deveria ser liberado so por quem
+  tem permissao de assistir; limite de 30 mensagens por minuto por sessao)
+  e le junto do poll de quadro (`GET .../frame`), que agora tambem devolve
+  `chatMessages`;
 - o agente envia por `POST /api/agents/remote-assistance/sessions/:id/chat` e
   le junto do poll de comandos (`GET .../commands`), que tambem devolve
   `chatMessages` — nenhum poll adicional foi criado nos dois lados;
