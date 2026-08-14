@@ -12,6 +12,8 @@ import {
   receiveRemoteAssistanceFrame,
   respondToRemoteAssistanceConsent,
   selectRemoteAssistanceMonitor,
+  sendRemoteAssistanceChatMessage,
+  sendRemoteAssistanceChatMessageFromAgent,
   sendRemoteAssistanceInput,
   startRemoteAssistanceSession,
   submitRemoteAssistanceWebrtcAnswer,
@@ -80,6 +82,17 @@ export async function input(req, res, next) {
       sessionId: req.params.id,
       viewerToken: viewerToken(req),
       command: req.body
+    }));
+  } catch (error) { next(error); }
+}
+
+export async function chat(req, res, next) {
+  try {
+    res.status(201).json(await sendRemoteAssistanceChatMessage({
+      user: req.user,
+      sessionId: req.params.id,
+      viewerToken: viewerToken(req),
+      text: req.body?.text
     }));
   } catch (error) { next(error); }
 }
@@ -166,6 +179,17 @@ export async function agentCommands(req, res, next) {
       bearerToken: bearerToken(req),
       sessionId: req.params.id,
       sessionToken: sessionToken(req)
+    }));
+  } catch (error) { next(error); }
+}
+
+export async function agentChat(req, res, next) {
+  try {
+    res.status(201).json(await sendRemoteAssistanceChatMessageFromAgent({
+      bearerToken: bearerToken(req),
+      sessionId: req.params.id,
+      sessionToken: sessionToken(req),
+      text: req.body?.text
     }));
   } catch (error) { next(error); }
 }

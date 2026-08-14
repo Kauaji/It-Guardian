@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { randomUUID } from "node:crypto";
 import {
+  appendRelayChatMessage,
   clearRelay,
   computeRelayMetrics,
   createRedisStore,
@@ -9,6 +10,7 @@ import {
   enqueueRelayCommand,
   getRelay,
   getRelayBackendName,
+  getRelayChatMessages,
   initializeRelay,
   setRelayAdaptiveQuality,
   setRelayFrame,
@@ -109,6 +111,38 @@ test("hint de qualidade adaptativa fica disponivel para o proximo poll do agente
   await clearRelay(sessionId);
 });
 
+test("mensagens de chat ficam disponiveis para leitura nao-destrutiva e respeitam o limite", async () => {
+  const sessionId = freshSessionId();
+  await initializeRelay(sessionId, { agentToken: "a", viewerToken: "v" });
+
+  await appendRelayChatMessage(sessionId, { id: "1", sender: "technician", text: "Oi" });
+  await appendRelayChatMessage(sessionId, { id: "2", sender: "agent", text: "Ola" });
+
+  assert.deepEqual(
+    (await getRelayChatMessages(sessionId)).map((message) => message.id),
+    ["1", "2"]
+  );
+  // Leitura nao consome: uma segunda chamada ve as mesmas mensagens.
+  assert.equal((await getRelayChatMessages(sessionId)).length, 2);
+
+  for (let i = 3; i <= 205; i += 1) {
+    await appendRelayChatMessage(sessionId, { id: String(i), sender: "agent", text: "msg" });
+  }
+  const messages = await getRelayChatMessages(sessionId);
+  assert.equal(messages.length, 200);
+  assert.equal(messages[0].id, "6");
+  assert.equal(messages[messages.length - 1].id, "205");
+  await clearRelay(sessionId);
+});
+
+test("limpar a sessao tambem remove o historico de chat", async () => {
+  const sessionId = freshSessionId();
+  await initializeRelay(sessionId, { agentToken: "a", viewerToken: "v" });
+  await appendRelayChatMessage(sessionId, { id: "1", sender: "technician", text: "Oi" });
+  await clearRelay(sessionId);
+  assert.deepEqual(await getRelayChatMessages(sessionId), []);
+});
+
 // --- Backend Redis (Upstash), validado com um cliente falso -----------------
 // Sem depender de um Redis real: confere que o modulo fala com o cliente Redis
 // da forma certa (chaves, JSON, TTL e drenagem atomica da fila de comandos),
@@ -149,6 +183,10 @@ function createFakeRedisClient() {
       const trimmed = start < 0 && stop === -1 ? list.slice(start) : list.slice(start, stop + 1);
       lists.set(key, trimmed);
       return "OK";
+    },
+    async lrange(key, start, stop) {
+      const list = lists.get(key) || [];
+      return start === 0 && stop === -1 ? list.slice() : list.slice(start, stop + 1);
     },
     async expire() {
       return 1;
@@ -219,4 +257,22 @@ test("store Redis: fila de comandos usa RPUSH/LPOP atomico e respeita o limite",
   const drained = await redisStore.drainCommands(sessionId);
   assert.deepEqual(drained.map((command) => command.id), ["2", "3", "4"]);
   assert.deepEqual(await redisStore.drainCommands(sessionId), []);
+});
+
+test("store Redis: chat usa RPUSH/LTRIM e leitura via LRANGE nao destroi a lista", async () => {
+  const client = createFakeRedisClient();
+  const redisStore = createRedisStore(client);
+  const sessionId = freshSessionId();
+
+  await redisStore.appendChatMessage(sessionId, { id: "1", text: "Oi" });
+  await redisStore.appendChatMessage(sessionId, { id: "2", text: "Ola" });
+
+  assert.deepEqual(
+    (await redisStore.getChatMessages(sessionId)).map((message) => message.id),
+    ["1", "2"]
+  );
+  assert.equal((await redisStore.getChatMessages(sessionId)).length, 2);
+
+  await redisStore.clear(sessionId);
+  assert.deepEqual(await redisStore.getChatMessages(sessionId), []);
 });

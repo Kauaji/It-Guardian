@@ -381,6 +381,70 @@ test("assistencia remota exige autorizacao, consentimento e mantem frames efemer
   assert.ok(viewerFrameBody.metrics.lastFrameBytes > 0);
   assert.equal(viewerFrameBody.metrics.duplicateFramesSkipped, 0);
 
+  const chatFromTechnician = await fetch(
+    `${baseUrl}/api/remote-assistance/sessions/${active.id}/chat`,
+    {
+      method: "POST",
+      headers: browserHeaders(adminCookie, { "x-remote-viewer-token": started.viewerToken }),
+      body: JSON.stringify({ text: "  Ola, pode descrever o problema? IT-GUARDIAN-CHAT-MARKER  " })
+    }
+  );
+  assert.equal(chatFromTechnician.status, 201);
+  const technicianMessage = (await chatFromTechnician.json()).message;
+  assert.equal(technicianMessage.sender, "technician");
+  assert.equal(technicianMessage.text, "Ola, pode descrever o problema? IT-GUARDIAN-CHAT-MARKER");
+
+  const emptyChat = await fetch(
+    `${baseUrl}/api/remote-assistance/sessions/${active.id}/chat`,
+    {
+      method: "POST",
+      headers: browserHeaders(adminCookie, { "x-remote-viewer-token": started.viewerToken }),
+      body: JSON.stringify({ text: "   " })
+    }
+  );
+  assert.equal(emptyChat.status, 400);
+
+  const chatFromAgent = await fetch(
+    `${baseUrl}/api/agents/remote-assistance/sessions/${active.id}/chat`,
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${enrollment.token}`,
+        "x-remote-session-token": agentPending.sessionToken,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({ text: "A impressora nao liga" })
+    }
+  );
+  assert.equal(chatFromAgent.status, 201);
+  const agentMessage = (await chatFromAgent.json()).message;
+  assert.equal(agentMessage.sender, "agent");
+
+  const commandsWithChat = await fetch(
+    `${baseUrl}/api/agents/remote-assistance/sessions/${active.id}/commands`,
+    {
+      headers: {
+        authorization: `Bearer ${enrollment.token}`,
+        "x-remote-session-token": agentPending.sessionToken
+      }
+    }
+  );
+  const commandsWithChatBody = await commandsWithChat.json();
+  assert.deepEqual(
+    commandsWithChatBody.chatMessages.map((message) => message.id),
+    [technicianMessage.id, agentMessage.id]
+  );
+
+  const viewerFrameWithChat = await fetch(
+    `${baseUrl}/api/remote-assistance/sessions/${active.id}/frame`,
+    { headers: { cookie: adminCookie, "x-remote-viewer-token": started.viewerToken } }
+  );
+  const viewerFrameWithChatBody = await viewerFrameWithChat.json();
+  assert.deepEqual(
+    viewerFrameWithChatBody.chatMessages.map((message) => message.id),
+    [technicianMessage.id, agentMessage.id]
+  );
+
   const pauseResponse = await fetch(
     `${baseUrl}/api/remote-assistance/sessions/${active.id}/pause`,
     {
@@ -468,6 +532,7 @@ test("assistencia remota exige autorizacao, consentimento e mantem frames efemer
   assert.ok(persistedBeforeEnd[2].rowCount >= 7);
   assert.ok(persistedBeforeEnd[3].rowCount >= 7);
   assert.doesNotMatch(JSON.stringify(persistedBeforeEnd), /data:image\/jpeg/i);
+  assert.doesNotMatch(JSON.stringify(persistedBeforeEnd), /IT-GUARDIAN-CHAT-MARKER/);
 
   const endResponse = await fetch(
     `${baseUrl}/api/remote-assistance/sessions/${active.id}/end`,

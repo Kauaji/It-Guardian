@@ -42,11 +42,13 @@ import {
   findServiceOrderById
 } from "../repositories/serviceOrderRepository.js";
 import {
+  appendRelayChatMessage,
   clearRelay,
   computeRelayMetrics,
   drainRelayCommands,
   enqueueRelayCommand,
   getRelay,
+  getRelayChatMessages,
   initializeRelay,
   setRelayAdaptiveQuality,
   setRelayAgentState,
@@ -91,6 +93,14 @@ function normalizeReason(value) {
     throw publicError("Descreva brevemente o motivo da assistencia remota.");
   }
   return reason;
+}
+
+const MAX_CHAT_MESSAGE_LENGTH = 2000;
+
+function normalizeChatMessageText(value) {
+  const text = String(value || "").trim().slice(0, MAX_CHAT_MESSAGE_LENGTH);
+  if (!text) throw publicError("Mensagem vazia.");
+  return text;
 }
 
 function normalizeMonitors(monitors) {
@@ -426,8 +436,28 @@ export async function getRemoteAssistanceFrame({ user, sessionId, viewerToken })
     connectionState: deriveConnectionState({ session, relay, config }),
     transport: config.transport,
     paused: Boolean(relay?.viewerPaused),
-    metrics
+    metrics,
+    chatMessages: await getRelayChatMessages(session.id)
   };
+}
+
+export async function sendRemoteAssistanceChatMessage({ user, sessionId, viewerToken, text }) {
+  const config = getRemoteAssistanceConfig();
+  assertRemoteAssistanceEnabled(config);
+  const session = await assertManagedSession(user, sessionId);
+  await assertViewerToken(session, viewerToken);
+  if (!isSessionActive(session.status)) {
+    throw publicError("A sessao remota nao esta mais ativa.", 409);
+  }
+  const message = {
+    id: randomUUID(),
+    sender: "technician",
+    senderName: user.name || "Tecnico",
+    text: normalizeChatMessageText(text),
+    createdAt: new Date().toISOString()
+  };
+  await appendRelayChatMessage(session.id, message);
+  return { message };
 }
 
 function sanitizeInputCommand(value) {
@@ -724,8 +754,25 @@ export async function getRemoteAssistanceCommandsForAgent({
       jpegQuality: relay?.quality || config.jpegQuality,
       captureIntervalMs: config.agentCaptureMs
     },
+    chatMessages: await getRelayChatMessages(session.id),
     ended: false
   };
+}
+
+export async function sendRemoteAssistanceChatMessageFromAgent({ bearerToken, sessionId, sessionToken, text }) {
+  const config = getRemoteAssistanceConfig();
+  assertRemoteAssistanceEnabled(config);
+  const { session } = await authenticateAgentForSession({ bearerToken, sessionId, sessionToken });
+  if (session.status !== "active") throw publicError("A sessao remota nao esta ativa.", 409);
+  const message = {
+    id: randomUUID(),
+    sender: "agent",
+    senderName: "Usuario local",
+    text: normalizeChatMessageText(text),
+    createdAt: new Date().toISOString()
+  };
+  await appendRelayChatMessage(session.id, message);
+  return { message };
 }
 
 export async function updateRemoteAssistanceCapture({ user, sessionId, viewerToken, paused }) {

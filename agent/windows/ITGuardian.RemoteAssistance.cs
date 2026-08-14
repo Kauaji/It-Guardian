@@ -77,7 +77,27 @@ namespace ITGuardian.Windows
         public bool controlEnabled { get; set; }
         public bool capturePaused { get; set; }
         public RemoteAssistanceQualityHint qualityHint { get; set; }
+        public List<RemoteAssistanceChatMessage> chatMessages { get; set; }
         public bool ended { get; set; }
+    }
+
+    internal sealed class RemoteAssistanceChatMessage
+    {
+        public string id { get; set; }
+        public string sender { get; set; }
+        public string senderName { get; set; }
+        public string text { get; set; }
+        public string createdAt { get; set; }
+    }
+
+    internal sealed class RemoteAssistanceChatPayload
+    {
+        public string text { get; set; }
+    }
+
+    internal sealed class RemoteAssistanceChatSendResponse
+    {
+        public RemoteAssistanceChatMessage message { get; set; }
     }
 
     internal sealed class RemoteAssistanceCommand
@@ -227,6 +247,8 @@ namespace ITGuardian.Windows
                 return PostForSession(request.sessionId, "frame", ConvertPayload<RemoteAssistanceFramePayload>(request.payload, serializer));
             if (action == "commands")
                 return GetForSession<RemoteAssistanceCommandResponse>(request.sessionId, "commands");
+            if (action == "chat")
+                return PostForSession(request.sessionId, "chat", ConvertPayload<RemoteAssistanceChatPayload>(request.payload, serializer));
             if (action == "end")
             {
                 object result = PostForSession(request.sessionId, "end", new Dictionary<string, object>());
@@ -444,11 +466,12 @@ namespace ITGuardian.Windows
     internal sealed class RemoteAssistanceIndicatorForm : Form
     {
         internal event EventHandler EndRequested;
+        internal event EventHandler ChatRequested;
 
         internal RemoteAssistanceIndicatorForm(string technicianName, bool controlRequested)
         {
             Text = "IT Guardian";
-            Width = 380;
+            Width = 460;
             Height = 92;
             FormBorderStyle = FormBorderStyle.FixedToolWindow;
             StartPosition = FormStartPosition.Manual;
@@ -465,10 +488,21 @@ namespace ITGuardian.Windows
             label.Font = new Font(Font, FontStyle.Bold);
             Controls.Add(label);
 
+            Button chat = new Button();
+            chat.Text = "Chat";
+            chat.AutoSize = true;
+            chat.Location = new Point(278, 13);
+            chat.Click += delegate(object sender, EventArgs args)
+            {
+                EventHandler handler = ChatRequested;
+                if (handler != null) handler(this, EventArgs.Empty);
+            };
+            Controls.Add(chat);
+
             Button end = new Button();
             end.Text = "Encerrar";
             end.AutoSize = true;
-            end.Location = new Point(278, 13);
+            end.Location = new Point(358, 13);
             end.Click += delegate(object sender, EventArgs args)
             {
                 EventHandler handler = EndRequested;
@@ -482,6 +516,110 @@ namespace ITGuardian.Windows
             base.OnShown(e);
             Rectangle area = Screen.PrimaryScreen.WorkingArea;
             Location = new Point(area.Right - Width - 16, area.Top + 16);
+        }
+    }
+
+    internal delegate void ChatMessageSubmittedHandler(string text);
+
+    /// <summary>
+    /// Janela de chat local da sessao. Mensagens existem apenas enquanto a
+    /// sessao dura (mesmo canal efemero do relay no servidor) - nada e salvo
+    /// em disco pelo agente.
+    /// </summary>
+    internal sealed class RemoteAssistanceChatForm : Form
+    {
+        internal event ChatMessageSubmittedHandler MessageSubmitted;
+        private readonly TextBox log;
+        private readonly TextBox input;
+
+        internal RemoteAssistanceChatForm(string technicianName)
+        {
+            Text = "Chat - IT Guardian";
+            Width = 380;
+            Height = 420;
+            StartPosition = FormStartPosition.CenterScreen;
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox = false;
+            MinimizeBox = true;
+            TopMost = true;
+            ShowInTaskbar = true;
+
+            TableLayoutPanel layout = new TableLayoutPanel();
+            layout.Dock = DockStyle.Fill;
+            layout.Padding = new Padding(12);
+            layout.ColumnCount = 1;
+            layout.RowCount = 3;
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            Controls.Add(layout);
+
+            log = new TextBox();
+            log.Multiline = true;
+            log.ReadOnly = true;
+            log.ScrollBars = ScrollBars.Vertical;
+            log.Dock = DockStyle.Fill;
+            log.BackColor = Color.White;
+            layout.Controls.Add(log);
+
+            FlowLayoutPanel inputRow = new FlowLayoutPanel();
+            inputRow.Dock = DockStyle.Fill;
+            inputRow.WrapContents = false;
+            input = new TextBox();
+            input.Width = 240;
+            input.MaxLength = 2000;
+            input.KeyDown += delegate(object sender, KeyEventArgs args)
+            {
+                if (args.KeyCode == Keys.Enter)
+                {
+                    args.SuppressKeyPress = true;
+                    Submit();
+                }
+            };
+            Button send = new Button();
+            send.Text = "Enviar";
+            send.AutoSize = true;
+            send.Click += delegate { Submit(); };
+            inputRow.Controls.Add(input);
+            inputRow.Controls.Add(send);
+            layout.Controls.Add(inputRow);
+
+            Label hint = new Label();
+            hint.Text = "Visivel apenas durante esta sessao, com " + (technicianName ?? "o tecnico") + ".";
+            hint.AutoSize = true;
+            hint.ForeColor = Color.Gray;
+            layout.Controls.Add(hint);
+        }
+
+        private void Submit()
+        {
+            string text = input.Text.Trim();
+            if (text.Length == 0) return;
+            input.Text = "";
+            ChatMessageSubmittedHandler handler = MessageSubmitted;
+            if (handler != null) handler(text);
+        }
+
+        internal void SeedMessages(IEnumerable<RemoteAssistanceChatMessage> messages)
+        {
+            foreach (RemoteAssistanceChatMessage message in messages) AppendLine(message);
+        }
+
+        internal void AppendMessages(IEnumerable<RemoteAssistanceChatMessage> messages)
+        {
+            foreach (RemoteAssistanceChatMessage message in messages) AppendLine(message);
+        }
+
+        internal void ShowError(string message)
+        {
+            log.AppendText("[erro] " + message + Environment.NewLine);
+        }
+
+        private void AppendLine(RemoteAssistanceChatMessage message)
+        {
+            if (message == null) return;
+            string who = message.sender == "technician" ? (message.senderName ?? "Tecnico") : "Voce";
+            log.AppendText(who + ": " + message.text + Environment.NewLine);
         }
     }
 
@@ -504,10 +642,15 @@ namespace ITGuardian.Windows
         private volatile bool capturePaused;
         private string activeSessionId;
         private string selectedMonitorId;
+        private string technicianName;
         private string lastFrameHash;
         private RemoteAssistanceQualityHint qualityHint;
         private Thread streamingThread;
         private RemoteAssistanceIndicatorForm indicator;
+        private RemoteAssistanceChatForm chatForm;
+        private readonly object chatLock = new object();
+        private readonly HashSet<string> seenChatMessageIds = new HashSet<string>();
+        private readonly List<RemoteAssistanceChatMessage> chatHistory = new List<RemoteAssistanceChatMessage>();
 
         internal RemoteAssistanceTrayController(NotifyIcon trayIcon)
         {
@@ -583,6 +726,7 @@ namespace ITGuardian.Windows
             if (!granted) return;
             activeSessionId = session.id;
             selectedMonitorId = primary;
+            technicianName = session.technicianName;
             ShowIndicator(session.technicianName, controlAllowed);
             StartStreaming();
         }
@@ -592,7 +736,75 @@ namespace ITGuardian.Windows
             trayIcon.Text = "IT Guardian - assistencia remota ativa";
             indicator = new RemoteAssistanceIndicatorForm(technicianName, controlAllowed);
             indicator.EndRequested += delegate { EndLocally(); };
+            indicator.ChatRequested += delegate { ToggleChatWindow(); };
             indicator.Show();
+        }
+
+        private void ToggleChatWindow()
+        {
+            if (chatForm != null)
+            {
+                if (!chatForm.Visible) chatForm.Show();
+                chatForm.Activate();
+                return;
+            }
+            chatForm = new RemoteAssistanceChatForm(technicianName);
+            chatForm.MessageSubmitted += delegate(string text) { SendChatMessage(text); };
+            chatForm.FormClosed += delegate { chatForm = null; };
+            lock (chatLock) { chatForm.SeedMessages(new List<RemoteAssistanceChatMessage>(chatHistory)); }
+            chatForm.Show();
+        }
+
+        private void SendChatMessage(string text)
+        {
+            string sessionId = activeSessionId;
+            if (string.IsNullOrWhiteSpace(sessionId) || string.IsNullOrWhiteSpace(text)) return;
+            ThreadPool.QueueUserWorkItem(delegate
+            {
+                try
+                {
+                    RemoteAssistanceChatSendResponse response = LocalRemoteAssistanceClient.Call<RemoteAssistanceChatSendResponse>(
+                        "chat", sessionId, new RemoteAssistanceChatPayload { text = text });
+                    if (response != null && response.message != null)
+                    {
+                        List<RemoteAssistanceChatMessage> single = new List<RemoteAssistanceChatMessage> { response.message };
+                        uiContext.Post(delegate { AppendChatMessages(single); }, null);
+                    }
+                }
+                catch
+                {
+                    uiContext.Post(delegate
+                    {
+                        if (chatForm != null) chatForm.ShowError("Nao foi possivel enviar a mensagem.");
+                    }, null);
+                }
+            });
+        }
+
+        private void ProcessChatMessages(List<RemoteAssistanceChatMessage> messages)
+        {
+            if (messages == null || messages.Count == 0) return;
+            List<RemoteAssistanceChatMessage> fresh = new List<RemoteAssistanceChatMessage>();
+            lock (chatLock)
+            {
+                foreach (RemoteAssistanceChatMessage message in messages)
+                {
+                    if (message == null || string.IsNullOrEmpty(message.id)) continue;
+                    if (seenChatMessageIds.Add(message.id)) fresh.Add(message);
+                }
+            }
+            if (fresh.Count == 0) return;
+            uiContext.Post(delegate { AppendChatMessages(fresh); }, null);
+        }
+
+        private void AppendChatMessages(List<RemoteAssistanceChatMessage> fresh)
+        {
+            lock (chatLock)
+            {
+                chatHistory.AddRange(fresh);
+                if (chatHistory.Count > 200) chatHistory.RemoveRange(0, chatHistory.Count - 200);
+            }
+            if (chatForm != null) chatForm.AppendMessages(fresh);
         }
 
         private void StartStreaming()
@@ -638,6 +850,7 @@ namespace ITGuardian.Windows
 
                     qualityHint = commands.qualityHint;
                     capturePaused = commands.capturePaused;
+                    ProcessChatMessages(commands.chatMessages);
                     sleepMs = Clamp(
                         qualityHint != null ? qualityHint.captureIntervalMs : DefaultCaptureIntervalMs,
                         MinCaptureIntervalMs,
@@ -747,6 +960,7 @@ namespace ITGuardian.Windows
         {
             activeSessionId = null;
             selectedMonitorId = null;
+            technicianName = null;
             lastFrameHash = null;
             qualityHint = null;
             capturePaused = false;
@@ -756,6 +970,18 @@ namespace ITGuardian.Windows
                 indicator.Close();
                 indicator.Dispose();
                 indicator = null;
+            }
+            if (chatForm != null)
+            {
+                RemoteAssistanceChatForm form = chatForm;
+                chatForm = null;
+                form.Close();
+                form.Dispose();
+            }
+            lock (chatLock)
+            {
+                seenChatMessageIds.Clear();
+                chatHistory.Clear();
             }
         }
 

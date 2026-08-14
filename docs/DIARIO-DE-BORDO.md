@@ -1229,3 +1229,65 @@ entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
   remota agora tem o backend compartilhado necessario para funcionar entre
   instancias serverless distintas.
 
+## 2026-08-14 - Instalador com 4 opcoes claras e chat na assistencia remota
+
+### Instalador Windows
+
+- reestruturado `installers/windows-collector/ITGuardianCollector.iss` para
+  mostrar uma unica tela com 4 opcoes explicitas ao abrir (Instalar, Reparar,
+  Trocar chave, Desinstalar), substituindo o fluxo anterior que so
+  distinguia instalar/reparar implicitamente pela presenca de configuracao
+  existente;
+- opcao Desinstalar aciona o `unins000.exe` ja gerado pelo proprio Inno
+  Setup (com confirmacao antes) e fecha o instalador (`Abort`), sem duplicar
+  nenhuma logica do desinstalador existente;
+- Reparar e Trocar chave reaproveitam 100% da logica de instalacao/ativacao
+  ja testada — a mudanca ficou inteiramente no roteamento do assistente
+  (Pascal Script), nenhum script de finalizacao ou desinstalacao precisou
+  mudar;
+- validado com compilacao real via `ISCC.exe` antes do commit.
+
+### Chat na assistencia remota
+
+- pedido do usuario: alem do instalador, adicionar um chat de texto entre
+  tecnico e usuario local durante a sessao de assistencia remota;
+- decisao de arquitetura: o chat usa o mesmo relay efemero do quadro de
+  tela e da fila de comandos (nunca o banco) — `RPUSH`/`LTRIM` atomico para
+  escrita (ate 200 mensagens), leitura nao-destrutiva via `LRANGE` (ao
+  contrario dos comandos de input, uma mensagem de chat precisa continuar
+  visivel para os dois lados, nao ser consumida uma unica vez);
+- decisao deliberada de nao usar cursor por posicao para o poll incremental:
+  como o `LTRIM` desloca indices ao podar o historico, cada poll devolve a
+  lista completa (ja limitada a 200) e o cliente deduplica pelo `id` de cada
+  mensagem — mais simples e correto do que manter um cursor que ficaria
+  invalido apos o corte;
+- decisao de nao criar novos ciclos de poll: as mensagens chegam junto do
+  poll que ja existia em cada lado (`GET .../frame` no tecnico, a cada
+  `viewerPollMs`; `GET .../commands` no agente, a cada `captureIntervalMs`)
+  — evita adicionar uma segunda chamada HTTP periodica ao loop de captura
+  do agente C#;
+- enviar mensagem exige sessao `active` nos dois lados; permissao usada no
+  tecnico e `remote_assistance.view` (chat tratado como comunicacao passiva,
+  nao como controle do dispositivo);
+- agente Windows: janela de chat propria (`RemoteAssistanceChatForm`),
+  aberta pelo botao `Chat` do indicador flutuante existente, alimentada
+  pelo mesmo loop de streaming que ja fazia poll de comandos;
+- viewer React: painel de chat dentro do modal de assistencia, com balao
+  diferenciado por remetente, reaproveitando o polling de frame ja
+  existente;
+- encerrar/expirar/negar a sessao limpa o historico de chat junto com o
+  resto do relay, igual ao quadro de tela — nenhuma mensagem sobrevive ao
+  fim da sessao nem chega a tocar o banco.
+
+### Validacoes
+
+- `node --test` em `remoteAssistanceRelay.test.mjs` (15 testes, incluindo
+  os novos casos de chat em memoria e Redis simulado) e no teste de
+  integracao completo `remote-assistance-lab.test.mjs` (chat nos dois
+  sentidos, mensagem vazia rejeitada, historico ausente do banco);
+- `npx eslint` limpo nos arquivos de servidor e cliente tocados;
+- compilacao real do agente Windows via `csc.exe` (mesmos parametros do
+  `build-installer.ps1`) para validar as classes e o formulario novos antes
+  do commit;
+- `npm run build` do cliente concluido sem erros.
+

@@ -3,12 +3,14 @@ import {
   Clock3,
   Eye,
   KeyRound,
+  MessageCircle,
   MonitorUp,
   MousePointer2,
   Pause,
   Play,
   Power,
   RefreshCw,
+  SendHorizontal,
   ShieldCheck,
   WifiOff,
   X
@@ -24,6 +26,7 @@ import {
   fetchRemoteAssistanceSession,
   reauthenticateRemoteAssistance,
   selectRemoteAssistanceMonitor,
+  sendRemoteAssistanceChatMessage,
   sendRemoteAssistanceInput,
   updateRemoteAssistanceCapture,
   updateRemoteAssistanceControl
@@ -57,6 +60,12 @@ function formatDateTime(value) {
     hour: "2-digit",
     minute: "2-digit"
   }).format(date);
+}
+
+function formatChatTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(date);
 }
 
 function notifyResult(notify, message, type = "ok") {
@@ -106,8 +115,12 @@ export default function RemoteAssistanceAction({
   const [submitting, setSubmitting] = useState(false);
   const [changingMonitor, setChangingMonitor] = useState(false);
   const [error, setError] = useState("");
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatDraft, setChatDraft] = useState("");
+  const [sendingChat, setSendingChat] = useState(false);
   const imageRef = useRef(null);
   const lastMouseMoveRef = useRef(0);
+  const chatLogRef = useRef(null);
 
   const eligible = useMemo(
     () => Boolean(asset?.id && isRemoteAssistanceAssetFresh(asset)),
@@ -194,6 +207,7 @@ export default function RemoteAssistanceAction({
       });
       setLatency(Math.max(0, Math.round(performance.now() - startedAt)));
       if (result.metrics) setMetrics(result.metrics);
+      if (Array.isArray(result.chatMessages)) setChatMessages(result.chatMessages);
       if (result.frame) {
         setFrame(
           result.frame.startsWith("data:image/")
@@ -219,6 +233,10 @@ export default function RemoteAssistanceAction({
     const frameTimer = window.setInterval(refreshFrame, viewerPollMs);
     return () => window.clearInterval(frameTimer);
   }, [open, refreshFrame, session?.paused, session?.status, viewerPollMs]);
+
+  useEffect(() => {
+    if (chatLogRef.current) chatLogRef.current.scrollTop = chatLogRef.current.scrollHeight;
+  }, [chatMessages]);
 
   useEffect(() => {
     if (!session?.id || terminal) return undefined;
@@ -300,6 +318,28 @@ export default function RemoteAssistanceAction({
     setReason("");
     setPassword("");
     setRequestedMode("view");
+    setChatMessages([]);
+    setChatDraft("");
+  }
+
+  async function sendChatMessage(event) {
+    event.preventDefault();
+    const text = chatDraft.trim();
+    if (!text || sendingChat) return;
+    setSendingChat(true);
+    try {
+      const result = await sendRemoteAssistanceChatMessage({ token, sessionId: session.id, viewerToken, text });
+      setChatDraft("");
+      if (result.message) {
+        setChatMessages((previous) =>
+          previous.some((item) => item.id === result.message.id) ? previous : [...previous, result.message]
+        );
+      }
+    } catch (chatError) {
+      setError(chatError.message);
+    } finally {
+      setSendingChat(false);
+    }
   }
 
   async function changeMonitor(monitorId) {
@@ -600,6 +640,42 @@ export default function RemoteAssistanceAction({
                 ))}
                 {!events.length && <p>Nenhum evento recebido ainda.</p>}
               </div>
+            </section>
+
+            <section className="remote-assistance-chat" aria-label="Chat com o usuario local">
+              <h3><MessageCircle size={16} /> Chat com o usuario local</h3>
+              <div className="remote-assistance-chat-log" ref={chatLogRef}>
+                {chatMessages.map((message) => (
+                  <p key={message.id} className={`chat-bubble chat-${message.sender}`}>
+                    <span className="chat-bubble-meta">
+                      {message.sender === "technician" ? "Voce" : (message.senderName || "Usuario local")}
+                      {" - "}
+                      {formatChatTime(message.createdAt)}
+                    </span>
+                    {message.text}
+                  </p>
+                ))}
+                {!chatMessages.length && <p className="remote-assistance-chat-empty">Nenhuma mensagem ainda.</p>}
+              </div>
+              <form className="remote-assistance-chat-form" onSubmit={sendChatMessage}>
+                <input
+                  type="text"
+                  value={chatDraft}
+                  onChange={(event) => setChatDraft(event.target.value)}
+                  placeholder="Escreva uma mensagem..."
+                  maxLength={2000}
+                  disabled={session.status !== "active" || sendingChat}
+                  aria-label="Mensagem de chat"
+                />
+                <button
+                  type="submit"
+                  className="icon-button"
+                  disabled={session.status !== "active" || sendingChat || !chatDraft.trim()}
+                  title="Enviar mensagem"
+                >
+                  <SendHorizontal size={16} />
+                </button>
+              </form>
             </section>
             {error && <p className="form-error" role="alert">{error}</p>}
           </div>

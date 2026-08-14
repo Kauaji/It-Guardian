@@ -20,6 +20,7 @@ O fluxo permite:
 - acompanhar FPS real, banda estimada, qualidade e tamanho do ultimo quadro
   no proprio viewer;
 - reconectar manualmente quando o agente parar de responder por um tempo;
+- trocar mensagens de texto com o usuario local durante a sessao ativa;
 - encerrar pelo navegador ou pela maquina atendida;
 - registrar os eventos no historico da maquina, da OS e da sessao.
 
@@ -207,8 +208,10 @@ as permissoes necessarias e o agente possui heartbeat recente.
 10. Se o indicador mostrar "reconectando" ou "agente sem resposta", use o
     botao `Reconectar` para forcar uma nova tentativa antes de encerrar.
 11. Quando necessario, solicite o controle de mouse e teclado.
-12. Encerre a sessao ao concluir o atendimento.
-13. Confira os eventos no historico da maquina e da OS.
+12. Use o painel de chat para trocar mensagens rapidas com o usuario local,
+    sem precisar de telefone ou outro canal.
+13. Encerre a sessao ao concluir o atendimento.
+14. Confira os eventos no historico da maquina e da OS.
 
 A reautenticacao gera um token aleatorio, vinculado ao tecnico, ativo, OS e
 acao solicitada. Ele expira em cinco minutos, e consumido uma unica vez e nao
@@ -223,6 +226,9 @@ autorizacao.
 Durante a sessao, o agente exibe permanentemente:
 
 `IT Guardian - Atendimento remoto em andamento`
+
+O botao `Chat` no indicador abre uma janela local para trocar mensagens com o
+tecnico enquanto a sessao dura.
 
 O botao `Encerrar atendimento` para a captura, limpa os recursos locais e avisa
 o servidor. Fechar o viewer, sair da conta, perder heartbeat ou atingir o
@@ -258,6 +264,34 @@ reautenticacao, sessao ativa e consentimento local para controle. A lista de
 eventos aceitos e fechada: movimento, cliques, duplo clique, scroll e teclas
 comuns enquanto o viewer esta focado.
 
+## Chat da sessao
+
+Tecnico e usuario local podem trocar mensagens de texto curtas enquanto a
+sessao estiver `active`. O chat usa o mesmo relay efemero do quadro de tela e
+da fila de comandos — nao existe tabela nem coluna para mensagens de chat.
+
+Funcionamento:
+
+- cada mensagem tem `id`, `sender` (`technician` ou `agent`), `senderName`,
+  `text` (ate 2000 caracteres, aparado e validado contra texto vazio) e
+  `createdAt`;
+- o tecnico envia por `POST /api/remote-assistance/sessions/:id/chat`
+  (permissao `remote_assistance.view`, limite de 30 mensagens por minuto por
+  sessao) e le junto do poll de quadro (`GET .../frame`), que agora tambem
+  devolve `chatMessages`;
+- o agente envia por `POST /api/agents/remote-assistance/sessions/:id/chat` e
+  le junto do poll de comandos (`GET .../commands`), que tambem devolve
+  `chatMessages` — nenhum poll adicional foi criado nos dois lados;
+- a cada poll o servidor devolve a lista completa (ate 200 mensagens mais
+  recentes, guardadas com `RPUSH`/`LTRIM` atomico); o cliente deduplica pelo
+  `id` de cada mensagem em vez de um cursor por posicao, porque o corte do
+  historico desloca indices;
+- encerrar, expirar ou negar a sessao limpa o historico de chat junto com o
+  restante do relay — nenhuma mensagem sobrevive ao fim da sessao;
+- no agente Windows, a janela de chat abre pelo botao `Chat` no indicador
+  flutuante e mostra o historico recebido enquanto a janela estava fechada
+  assim que e aberta.
+
 ## Persistencia e auditoria
 
 A migration cria:
@@ -272,8 +306,8 @@ metadados operacionais. Solicitar, autorizar, negar, iniciar, trocar monitor,
 habilitar controle, liberar controle, falhar e encerrar tambem geram entradas
 no historico global da maquina e, quando aplicavel, da OS.
 
-Nenhuma senha, token completo, frame ou evento bruto de teclado e persistido
-**no banco de dados**. As respostas de frame usam
+Nenhuma senha, token completo, frame, mensagem de chat ou evento bruto de
+teclado e persistido **no banco de dados**. As respostas de frame usam
 `Cache-Control: private, no-store, max-age=0`.
 
 Quando o relay usa Redis (veja "Relay em deploy serverless"), o quadro atual
@@ -294,6 +328,7 @@ compartilhado entre instancias serverless.
 - `GET /api/remote-assistance/sessions/:sessionId/events`
 - `GET /api/remote-assistance/sessions/:sessionId/frame`
 - `POST /api/remote-assistance/sessions/:sessionId/input`
+- `POST /api/remote-assistance/sessions/:sessionId/chat`
 - `POST /api/remote-assistance/sessions/:sessionId/monitor`
 - `POST /api/remote-assistance/sessions/:sessionId/pause`
 - `POST /api/remote-assistance/sessions/:sessionId/control`
@@ -307,6 +342,7 @@ compartilhado entre instancias serverless.
 - `POST /api/agents/remote-assistance/sessions/:sessionId/consent`
 - `POST /api/agents/remote-assistance/sessions/:sessionId/frame`
 - `GET /api/agents/remote-assistance/sessions/:sessionId/commands`
+- `POST /api/agents/remote-assistance/sessions/:sessionId/chat`
 - `GET /api/agents/remote-assistance/sessions/:sessionId/webrtc/offer` (inativo por padrao)
 - `POST /api/agents/remote-assistance/sessions/:sessionId/webrtc/answer` (inativo por padrao)
 - `POST /api/agents/remote-assistance/sessions/:sessionId/end`
@@ -371,9 +407,14 @@ testada, mas video/dados via WebRTC em si e trabalho futuro. Ativar
     o viewer mostra "reconectando"; ao reconectar a rede, use o botao
     `Reconectar` se o estado nao se recuperar sozinho.
 16. Solicite controle e valide mouse, clique, scroll e tecla comum.
-17. Encerre primeiro pelo usuario e depois repita encerrando pelo tecnico.
-18. Confirme que nao ha frames nas tabelas ou logs.
-19. Saia da conta durante uma sessao e confirme o encerramento automatico.
+17. Troque mensagens de chat nos dois sentidos (painel do viewer e botao
+    `Chat` do indicador local) e confirme que aparecem nos dois lados em
+    poucos segundos.
+18. Encerre primeiro pelo usuario e depois repita encerrando pelo tecnico.
+19. Abra uma nova sessao e confirme que o historico de chat da sessao
+    anterior nao aparece.
+20. Confirme que nao ha frames nem mensagens de chat nas tabelas ou logs.
+21. Saia da conta durante uma sessao e confirme o encerramento automatico.
 
 ## Como medir FPS, banda e latencia
 

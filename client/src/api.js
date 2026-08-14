@@ -168,6 +168,15 @@ export function sendRemoteAssistanceInput({ token, sessionId, viewerToken, comma
   });
 }
 
+export function sendRemoteAssistanceChatMessage({ token, sessionId, viewerToken, text }) {
+  return apiFetch(`/remote-assistance/sessions/${encodeURIComponent(sessionId)}/chat`, {
+    token,
+    method: "POST",
+    headers: { "x-remote-viewer-token": viewerToken },
+    body: JSON.stringify({ text })
+  });
+}
+
 export function endRemoteAssistanceSession({ token, sessionId, viewerToken }) {
   return apiFetch(`/remote-assistance/sessions/${encodeURIComponent(sessionId)}/end`, {
     token,

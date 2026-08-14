@@ -7105,6 +7105,85 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
   color: var(--text-soft);
 }
 
+.remote-assistance-chat {
+  display: grid;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+  overflow: hidden;
+}
+
+.remote-assistance-chat h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-soft);
+  font-size: 0.86rem;
+}
+
+.remote-assistance-chat-log {
+  display: grid;
+  gap: 8px;
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 10px 12px;
+}
+
+.remote-assistance-chat-empty {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.chat-bubble {
+  display: grid;
+  gap: 2px;
+  max-width: 82%;
+  margin: 0;
+  padding: 7px 10px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chat-bubble-meta {
+  font-size: 0.68rem;
+  color: var(--text-soft);
+}
+
+.chat-bubble.chat-technician {
+  justify-self: end;
+  background: var(--accent);
+  color: #fff;
+}
+
+.chat-bubble.chat-technician .chat-bubble-meta {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.chat-bubble.chat-agent {
+  justify-self: start;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  color: var(--text-strong);
+}
+
+.remote-assistance-chat-form {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.remote-assistance-chat-form input {
+  flex: 1;
+  min-width: 0;
+}
+
 @media (max-width: 760px) {
   .remote-assistance-backdrop {
     align-items: end;

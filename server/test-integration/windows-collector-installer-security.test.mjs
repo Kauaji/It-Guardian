@@ -43,8 +43,14 @@ test("instalador cloud usa apenas a chave e instala o coletor nativo", async () 
   assert.doesNotMatch(setup, /Informe os servidores OCS e Zabbix/);
   assert.doesNotMatch(setup, /ocsServerUrl|zabbixServer|OcsServerUrl|ZabbixServer/);
   assert.match(setup, /FinalizeParameters :=/);
-  assert.match(setup, /Instalar ou reparar o IT Guardian/);
+  assert.match(setup, /O que voce deseja fazer\?/);
+  assert.match(setup, /RepairModePage\.Add\('Instalar o IT Guardian'\)/);
+  assert.match(setup, /RepairModePage\.Add\('Reparar o IT Guardian/);
+  assert.match(setup, /RepairModePage\.Add\('Trocar a chave de produto/);
+  assert.match(setup, /RepairModePage\.Add\('Desinstalar o IT Guardian'\)/);
   assert.match(setup, /IsRepairInstall/);
+  assert.match(setup, /IsUninstallMode/);
+  assert.match(setup, /LaunchExistingUninstaller/);
   assert.match(setup, /ExistingInstallDetected/);
   assert.match(setup, /ITGuardian-install-finalize\.log/);
   assert.match(setup, /JsonConfigStringValue\(ExistingConfig, 'agentToken'\)/);

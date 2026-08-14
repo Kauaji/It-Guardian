@@ -12,6 +12,7 @@ import { requireAdmin, requireAuth } from "../middleware/authMiddleware.js";
 import { createRateLimiter } from "../middleware/rateLimitMiddleware.js";
 import { protectRemoteAssistanceResponse } from "../middleware/remoteAssistanceSecurityMiddleware.js";
 import {
+  agentChat,
   agentCommands,
   agentConsent,
   agentEnd,
@@ -43,6 +44,7 @@ router.get("/remote-assistance/pending", protectRemoteAssistanceResponse, agentR
 router.post("/remote-assistance/sessions/:id/consent", protectRemoteAssistanceResponse, agentRateLimiter, agentConsent);
 router.post("/remote-assistance/sessions/:id/frame", protectRemoteAssistanceResponse, agentRateLimiter, agentFrame);
 router.get("/remote-assistance/sessions/:id/commands", protectRemoteAssistanceResponse, agentRateLimiter, agentCommands);
+router.post("/remote-assistance/sessions/:id/chat", protectRemoteAssistanceResponse, agentRateLimiter, agentChat);
 router.get("/remote-assistance/sessions/:id/webrtc/offer", protectRemoteAssistanceResponse, agentRateLimiter, agentWebrtcOffer);
 router.post("/remote-assistance/sessions/:id/webrtc/answer", protectRemoteAssistanceResponse, agentRateLimiter, agentWebrtcAnswer);
 router.post("/remote-assistance/sessions/:id/end", protectRemoteAssistanceResponse, agentRateLimiter, agentEnd);

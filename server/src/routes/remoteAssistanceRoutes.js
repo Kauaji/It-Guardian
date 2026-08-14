@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  chat,
   config,
   control,
   end,
@@ -28,6 +29,11 @@ const inputLimiter = createRateLimiter({
   max: 500,
   keyGenerator: (req) => `${req.user?.id || req.ip}:${req.params.id}`
 });
+const chatLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: 30,
+  keyGenerator: (req) => `${req.user?.id || req.ip}:${req.params.id}`
+});
 
 router.use(requireAuth, protectRemoteAssistanceResponse);
 router.get("/config", requirePermission("remote_assistance.view"), config);
@@ -36,6 +42,7 @@ router.get("/sessions/:id", requirePermission("remote_assistance.view"), read);
 router.get("/sessions/:id/events", requirePermission("remote_assistance.view"), events);
 router.get("/sessions/:id/frame", requirePermission("remote_assistance.view"), frame);
 router.post("/sessions/:id/input", requirePermission("remote_assistance.control"), inputLimiter, input);
+router.post("/sessions/:id/chat", requirePermission("remote_assistance.view"), chatLimiter, chat);
 router.post("/sessions/:id/monitor", requirePermission("remote_assistance.view"), monitor);
 router.post("/sessions/:id/pause", requirePermission("remote_assistance.view"), pause);
 router.post("/sessions/:id/control", requirePermission("remote_assistance.control"), control);

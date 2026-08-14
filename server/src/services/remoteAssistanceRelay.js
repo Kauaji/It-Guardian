@@ -4,6 +4,8 @@ const FRAME_WINDOW_SIZE = 8;
 const RELAY_TTL_SECONDS = 1800;
 const RELAY_KEY_PREFIX = "remote-assistance:relay:";
 const COMMANDS_KEY_SUFFIX = ":cmds";
+const CHAT_KEY_SUFFIX = ":chat";
+const MAX_CHAT_MESSAGES = 200;
 
 function emptyRelay() {
   return {
@@ -42,6 +44,7 @@ function emptyRelay() {
 export function createMemoryStore() {
   const relays = new Map();
   const commandQueues = new Map();
+  const chatLogs = new Map();
 
   return {
     name: "memory",
@@ -57,6 +60,7 @@ export function createMemoryStore() {
     async clear(sessionId) {
       relays.delete(sessionId);
       commandQueues.delete(sessionId);
+      chatLogs.delete(sessionId);
     },
     async enqueueCommand(sessionId, command, maxQueuedCommands) {
       const queue = commandQueues.get(sessionId) || [];
@@ -70,6 +74,17 @@ export function createMemoryStore() {
       const queue = commandQueues.get(sessionId) || [];
       commandQueues.delete(sessionId);
       return queue;
+    },
+    async appendChatMessage(sessionId, message) {
+      const log = chatLogs.get(sessionId) || [];
+      log.push(message);
+      if (log.length > MAX_CHAT_MESSAGES) {
+        log.splice(0, log.length - MAX_CHAT_MESSAGES);
+      }
+      chatLogs.set(sessionId, log);
+    },
+    async getChatMessages(sessionId) {
+      return (chatLogs.get(sessionId) || []).slice();
     }
   };
 }
@@ -88,13 +103,14 @@ export function createMemoryStore() {
 export function createRedisStore(redisClient) {
   const key = (sessionId) => `${RELAY_KEY_PREFIX}${sessionId}`;
   const commandsKey = (sessionId) => `${RELAY_KEY_PREFIX}${sessionId}${COMMANDS_KEY_SUFFIX}`;
+  const chatKey = (sessionId) => `${RELAY_KEY_PREFIX}${sessionId}${CHAT_KEY_SUFFIX}`;
 
   function parseRelay(raw) {
     if (!raw) return null;
     return typeof raw === "string" ? JSON.parse(raw) : raw;
   }
 
-  function parseCommand(raw) {
+  function parseListItem(raw) {
     return typeof raw === "string" ? JSON.parse(raw) : raw;
   }
 
@@ -112,7 +128,8 @@ export function createRedisStore(redisClient) {
     async clear(sessionId) {
       await Promise.all([
         redisClient.del(key(sessionId)),
-        redisClient.del(commandsKey(sessionId))
+        redisClient.del(commandsKey(sessionId)),
+        redisClient.del(chatKey(sessionId))
       ]);
     },
     async enqueueCommand(sessionId, command, maxQueuedCommands) {
@@ -124,7 +141,18 @@ export function createRedisStore(redisClient) {
     async drainCommands(sessionId) {
       const items = await redisClient.lpop(commandsKey(sessionId), 1000);
       if (!items) return [];
-      return items.map(parseCommand);
+      return items.map(parseListItem);
+    },
+    async appendChatMessage(sessionId, message) {
+      const k = chatKey(sessionId);
+      await redisClient.rpush(k, JSON.stringify(message));
+      await redisClient.ltrim(k, -MAX_CHAT_MESSAGES, -1);
+      await redisClient.expire(k, RELAY_TTL_SECONDS);
+    },
+    async getChatMessages(sessionId) {
+      const items = await redisClient.lrange(chatKey(sessionId), 0, -1);
+      if (!items) return [];
+      return items.map(parseListItem);
     }
   };
 }
@@ -269,6 +297,22 @@ export async function enqueueRelayCommand(sessionId, command, maxQueuedCommands)
 
 export async function drainRelayCommands(sessionId) {
   return store.drainCommands(sessionId);
+}
+
+/**
+ * Mensagens de chat da sessao: mesma fila atomica RPUSH/LTRIM dos comandos de
+ * entrada, mas de leitura nao-destrutiva (LRANGE) - ao contrario de um
+ * comando, uma mensagem precisa continuar visivel para os dois lados
+ * enquanto a sessao durar. O cliente deduplica pelo id de cada mensagem em
+ * vez de um cursor por posicao, ja que o LTRIM desloca indices ao podar o
+ * historico.
+ */
+export async function appendRelayChatMessage(sessionId, message) {
+  await store.appendChatMessage(sessionId, message);
+}
+
+export async function getRelayChatMessages(sessionId) {
+  return store.getChatMessages(sessionId);
 }
 
 /**
