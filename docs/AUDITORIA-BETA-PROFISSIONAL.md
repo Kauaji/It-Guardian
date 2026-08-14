@@ -40,7 +40,11 @@ adaptadores opcionais de leitura e nao fazem parte do instalador comum.
 - somente uma sessao remota aberta por ativo e aceita;
 - logout, timeout, encerramento local e perda de heartbeat encerram a sessao;
 - cada transicao remota e registrada na sessao, maquina e OS vinculada;
-- modo privacidade e acoes administrativas permanecem bloqueados.
+- modo privacidade e acoes administrativas permanecem bloqueados;
+- o resumo gerencial do dashboard (`GET /api/dashboard/summary`) exige a
+  permissao `dashboard.view`, reaproveita apenas servicos ja existentes (sem
+  nova consulta a dados sensiveis) e nunca simula OS vencidas nem dados de
+  cliente sem base real.
 
 ## Dados e privacidade
 
