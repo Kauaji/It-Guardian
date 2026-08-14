@@ -4,9 +4,11 @@ import { randomUUID } from "node:crypto";
 import {
   clearRelay,
   computeRelayMetrics,
+  createRedisStore,
   drainRelayCommands,
   enqueueRelayCommand,
   getRelay,
+  getRelayBackendName,
   initializeRelay,
   setRelayAdaptiveQuality,
   setRelayFrame,
@@ -18,23 +20,27 @@ function freshSessionId() {
   return `relay-test-${randomUUID()}`;
 }
 
-test("relay comeca vazio e e limpo por completo ao encerrar a sessao", () => {
-  const sessionId = freshSessionId();
-  initializeRelay(sessionId, { agentToken: "agent-token", viewerToken: "viewer-token" });
-  assert.ok(getRelay(sessionId));
-  clearRelay(sessionId);
-  assert.equal(getRelay(sessionId), null);
+test("sem credenciais de Redis no ambiente, o relay usa o backend em memoria", () => {
+  assert.equal(getRelayBackendName(), "memory");
 });
 
-test("frames identicos (mesmo hash) nao contam para a janela de FPS/bytes", () => {
+test("relay comeca vazio e e limpo por completo ao encerrar a sessao", async () => {
   const sessionId = freshSessionId();
-  initializeRelay(sessionId, { agentToken: "a", viewerToken: "v" });
+  await initializeRelay(sessionId, { agentToken: "agent-token", viewerToken: "viewer-token" });
+  assert.ok(await getRelay(sessionId));
+  await clearRelay(sessionId);
+  assert.equal(await getRelay(sessionId), null);
+});
 
-  setRelayFrame(sessionId, "data:image/jpeg;base64,AAA=", { bytes: 1000, hash: "hash-1", now: 1000 });
-  setRelayFrame(sessionId, "data:image/jpeg;base64,AAA=", { bytes: 1000, hash: "hash-1", now: 1300 });
-  setRelayFrame(sessionId, "data:image/jpeg;base64,BBB=", { bytes: 1200, hash: "hash-2", now: 1600 });
+test("frames identicos (mesmo hash) nao contam para a janela de FPS/bytes", async () => {
+  const sessionId = freshSessionId();
+  await initializeRelay(sessionId, { agentToken: "a", viewerToken: "v" });
 
-  const relay = getRelay(sessionId);
+  await setRelayFrame(sessionId, "data:image/jpeg;base64,AAA=", { bytes: 1000, hash: "hash-1", now: 1000 });
+  await setRelayFrame(sessionId, "data:image/jpeg;base64,AAA=", { bytes: 1000, hash: "hash-1", now: 1300 });
+  await setRelayFrame(sessionId, "data:image/jpeg;base64,BBB=", { bytes: 1200, hash: "hash-2", now: 1600 });
+
+  const relay = await getRelay(sessionId);
   assert.equal(relay.framesTotal, 3);
   assert.equal(relay.duplicateFramesSkipped, 1);
 
@@ -43,43 +49,43 @@ test("frames identicos (mesmo hash) nao contam para a janela de FPS/bytes", () =
   assert.equal(metrics.duplicateFramesSkipped, 1);
   assert.equal(metrics.lastFrameBytes, 1200);
   assert.ok(metrics.fps > 0);
-  clearRelay(sessionId);
+  await clearRelay(sessionId);
 });
 
 test("metricas refletem null quando o relay nao existe mais", () => {
   assert.equal(computeRelayMetrics(null), null);
 });
 
-test("comandos sao drenados uma unica vez e respeitam o limite de fila", () => {
+test("comandos sao drenados uma unica vez e respeitam o limite de fila", async () => {
   const sessionId = freshSessionId();
-  initializeRelay(sessionId, { agentToken: "a", viewerToken: "v" });
+  await initializeRelay(sessionId, { agentToken: "a", viewerToken: "v" });
   for (let i = 0; i < 5; i += 1) {
-    enqueueRelayCommand(sessionId, { id: String(i), type: "mouse_move", x: 0, y: 0 }, 3);
+    await enqueueRelayCommand(sessionId, { id: String(i), type: "mouse_move", x: 0, y: 0 }, 3);
   }
-  const drained = drainRelayCommands(sessionId);
+  const drained = await drainRelayCommands(sessionId);
   assert.equal(drained.length, 3);
   assert.deepEqual(drained.map((command) => command.id), ["2", "3", "4"]);
-  assert.deepEqual(drainRelayCommands(sessionId), []);
-  clearRelay(sessionId);
+  assert.deepEqual(await drainRelayCommands(sessionId), []);
+  await clearRelay(sessionId);
 });
 
-test("pausa do viewer fica visivel nas metricas do relay", () => {
+test("pausa do viewer fica visivel nas metricas do relay", async () => {
   const sessionId = freshSessionId();
-  initializeRelay(sessionId, { agentToken: "a", viewerToken: "v" });
-  setRelayViewerPaused(sessionId, true);
-  const metrics = computeRelayMetrics(getRelay(sessionId));
+  await initializeRelay(sessionId, { agentToken: "a", viewerToken: "v" });
+  await setRelayViewerPaused(sessionId, true);
+  const metrics = computeRelayMetrics(await getRelay(sessionId));
   assert.equal(metrics.paused, true);
-  clearRelay(sessionId);
+  await clearRelay(sessionId);
 });
 
-test("ping de tela inalterada renova o relay sem contar como novo frame", () => {
+test("ping de tela inalterada renova o relay sem contar como novo frame", async () => {
   const sessionId = freshSessionId();
-  initializeRelay(sessionId, { agentToken: "a", viewerToken: "v" });
-  setRelayFrame(sessionId, "data:image/jpeg;base64,AAA=", { bytes: 900, hash: "hash-1", now: 1000 });
+  await initializeRelay(sessionId, { agentToken: "a", viewerToken: "v" });
+  await setRelayFrame(sessionId, "data:image/jpeg;base64,AAA=", { bytes: 900, hash: "hash-1", now: 1000 });
 
-  touchRelayFrame(sessionId, 2000);
+  await touchRelayFrame(sessionId, 2000);
 
-  const relay = getRelay(sessionId);
+  const relay = await getRelay(sessionId);
   assert.equal(relay.framesTotal, 1);
   assert.equal(relay.unchangedPings, 1);
   assert.equal(relay.lastFrameAt, 2000);
@@ -89,16 +95,128 @@ test("ping de tela inalterada renova o relay sem contar como novo frame", () => 
   assert.equal(metrics.framesTotal, 1);
   assert.equal(metrics.unchangedPings, 1);
   assert.equal(metrics.frameAgeMs, 0);
-  clearRelay(sessionId);
+  await clearRelay(sessionId);
 });
 
-test("hint de qualidade adaptativa fica disponivel para o proximo poll do agente", () => {
+test("hint de qualidade adaptativa fica disponivel para o proximo poll do agente", async () => {
   const sessionId = freshSessionId();
-  initializeRelay(sessionId, { agentToken: "a", viewerToken: "v", quality: 65, width: 1280, height: 720 });
-  setRelayAdaptiveQuality(sessionId, { quality: 50, width: 1024, height: 576 });
-  const metrics = computeRelayMetrics(getRelay(sessionId));
+  await initializeRelay(sessionId, { agentToken: "a", viewerToken: "v", quality: 65, width: 1280, height: 720 });
+  await setRelayAdaptiveQuality(sessionId, { quality: 50, width: 1024, height: 576 });
+  const metrics = computeRelayMetrics(await getRelay(sessionId));
   assert.equal(metrics.quality, 50);
   assert.equal(metrics.width, 1024);
   assert.equal(metrics.height, 576);
-  clearRelay(sessionId);
+  await clearRelay(sessionId);
+});
+
+// --- Backend Redis (Upstash), validado com um cliente falso -----------------
+// Sem depender de um Redis real: confere que o modulo fala com o cliente Redis
+// da forma certa (chaves, JSON, TTL e drenagem atomica da fila de comandos),
+// o que e exatamente o que muda entre rodar local e rodar no Vercel.
+
+function createFakeRedisClient() {
+  const values = new Map();
+  const lists = new Map();
+  const ttlCalls = [];
+  return {
+    async get(key) {
+      return values.has(key) ? values.get(key) : null;
+    },
+    async set(key, value, opts) {
+      values.set(key, value);
+      if (opts?.ex) ttlCalls.push({ key, ex: opts.ex });
+      return "OK";
+    },
+    async del(key) {
+      const existed = values.delete(key) || lists.delete(key);
+      return existed ? 1 : 0;
+    },
+    async rpush(key, value) {
+      const list = lists.get(key) || [];
+      list.push(value);
+      lists.set(key, list);
+      return list.length;
+    },
+    async lpop(key, count = 1) {
+      const list = lists.get(key) || [];
+      if (!list.length) return null;
+      const popped = list.splice(0, count);
+      lists.set(key, list);
+      return popped;
+    },
+    async ltrim(key, start, stop) {
+      const list = lists.get(key) || [];
+      const trimmed = start < 0 && stop === -1 ? list.slice(start) : list.slice(start, stop + 1);
+      lists.set(key, trimmed);
+      return "OK";
+    },
+    async expire() {
+      return 1;
+    },
+    _ttlCalls: ttlCalls,
+    _rawValue: (key) => values.get(key),
+    _rawList: (key) => lists.get(key) || []
+  };
+}
+
+test("store Redis: guarda e devolve o relay via JSON, com TTL aplicado", async () => {
+  const client = createFakeRedisClient();
+  const redisStore = createRedisStore(client);
+  const sessionId = freshSessionId();
+
+  assert.equal(await redisStore.get(sessionId), null);
+
+  const { relay } = await redisStore.mutate(sessionId, (relay) => {
+    relay.agentToken = "agent-x";
+    relay.quality = 60;
+  });
+  assert.equal(relay.agentToken, "agent-x");
+
+  const fetched = await redisStore.get(sessionId);
+  assert.equal(fetched.agentToken, "agent-x");
+  assert.equal(fetched.quality, 60);
+  assert.ok(Array.isArray(fetched.frameWindow));
+  assert.ok(client._ttlCalls.some((call) => call.ex === 1800));
+});
+
+test("store Redis: mutacoes sucessivas leem o estado mais recente (nao perdem escrita anterior)", async () => {
+  const client = createFakeRedisClient();
+  const redisStore = createRedisStore(client);
+  const sessionId = freshSessionId();
+
+  await redisStore.mutate(sessionId, (relay) => { relay.monitors = [{ id: "d1" }]; });
+  await redisStore.mutate(sessionId, (relay) => { relay.viewerPaused = true; });
+
+  const relay = await redisStore.get(sessionId);
+  assert.deepEqual(relay.monitors, [{ id: "d1" }]);
+  assert.equal(relay.viewerPaused, true);
+});
+
+test("store Redis: clear remove tanto o estado quanto a fila de comandos", async () => {
+  const client = createFakeRedisClient();
+  const redisStore = createRedisStore(client);
+  const sessionId = freshSessionId();
+
+  await redisStore.mutate(sessionId, (relay) => { relay.agentToken = "a"; });
+  await redisStore.enqueueCommand(sessionId, { type: "mouse_move" }, 10);
+
+  await redisStore.clear(sessionId);
+
+  assert.equal(await redisStore.get(sessionId), null);
+  assert.deepEqual(await redisStore.drainCommands(sessionId), []);
+});
+
+test("store Redis: fila de comandos usa RPUSH/LPOP atomico e respeita o limite", async () => {
+  const client = createFakeRedisClient();
+  const redisStore = createRedisStore(client);
+  const sessionId = freshSessionId();
+
+  for (let i = 0; i < 5; i += 1) {
+    await redisStore.enqueueCommand(sessionId, { id: String(i) }, 3);
+  }
+  assert.equal(client._rawList(`remote-assistance:relay:${sessionId}:cmds`).length, 3);
+
+  const drained = await redisStore.drainCommands(sessionId);
+  assert.deepEqual(drained.map((command) => command.id), ["2", "3", "4"]);
+  assert.deepEqual(await redisStore.drainCommands(sessionId), []);
 });
