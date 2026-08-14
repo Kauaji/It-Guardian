@@ -46,6 +46,14 @@ A arquitetura foi preparada para dois cenários:
 - Criação automática de OS ao enviar um ativo para manutenção.
 - Cadastros de clientes, produtos, serviços, técnicos e tipos de problema.
 
+### Dashboard gerencial
+
+- Resumo operacional consolidado em um único endpoint (`GET /api/dashboard/summary`).
+- Nota de saúde da infraestrutura (0 a 100) calculada a partir de sinais reais, nunca de dados ausentes.
+- KPIs, gráficos de distribuição/tendência e rankings operacionais (máquinas problemáticas, OS mais antigas, técnicos com mais OS resolvidas).
+- Filtro de período recalculado no backend; visão Business separada da visão local, sem simular clientes.
+- Métricas sem dado persistido (como OS vencidas) aparecem como indisponíveis de forma explícita. Consulte [`docs/DASHBOARD.md`](docs/DASHBOARD.md).
+
 ### Monitoramento e integrações
 
 - Heartbeat e telemetria enviados pelo agente Windows.

@@ -1086,3 +1086,66 @@ entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
   minima, ausencia de overflow e igualdade entre os botoes do rodape;
 - `git diff --check` aprovado.
 
+## 2026-08-13 - Resumo gerencial do dashboard
+
+### Backend
+
+- criado `infrastructureHealth.js`, funcao pura que calcula uma nota de 0 a
+  100 a partir de sinais reais (ativos offline, alertas criticos, OS
+  vencidas, disco/CPU/memoria criticos, ativos sem contato recente,
+  reincidencia), com teto de deducao por fator e classificacao em quatro
+  faixas;
+- criado `dashboardService.js`, que reaproveita `monitoringService`,
+  `alertService` e `serviceOrderService` para montar visao geral, ativos,
+  ordens de servico e visao Business em um unico resumo;
+- novo endpoint `GET /api/dashboard/summary?period=...`, protegido por
+  `dashboard.view`, com `period` validado contra allowlist e fallback seguro;
+- a metrica de OS vencidas permanece explicitamente indisponivel (nunca
+  zerada nem oculta) porque o schema ainda nao persiste prazo/SLA — a nota de
+  saude tambem nunca penaliza esse fator ausente;
+- a visao Business so aparece com o sistema em modo Business e com OS
+  vinculadas a um ambiente; sem isso, a API devolve uma mensagem explicita em
+  vez de simular clientes.
+
+### Interface
+
+- a view do dashboard foi extraida de `App.jsx` para
+  `components/dashboard/DashboardPage.jsx`, preservando o bloco original
+  (cards, busca, tabela, historico) sem alteracao visual;
+- adicionados KPIs de saude, graficos de distribuicao e tendencia, rankings
+  operacionais (maquinas problematicas, sem contato, OS mais antigas,
+  tecnicos com mais OS resolvidas) e cartao de visao Business, todos com
+  estados de carregamento, vazio e erro;
+- filtro de periodo (`hoje`, `7d`, `15d`, `30d`, `90d`) recalcula o resumo no
+  backend; atualizacao automatica a cada 60s pausa quando a aba fica em
+  segundo plano;
+- corrigidos dois bugs visuais preexistentes descobertos durante o trabalho:
+  a classe `.sr-only` nunca tinha sido definida (textos para leitor de tela
+  ficavam visiveis) e `.spin`/`@keyframes spin` so existiam dentro de
+  `.cloud-admin-panel` (icones de atualizacao em outras telas nunca giravam).
+
+### Correcao: graficos do dashboard renderizando em branco
+
+- os graficos de OS por status, OS por prioridade e tendencia de OS abertas
+  apareciam como uma area em branco (sem erro, sem `recharts-wrapper`, sem
+  SVG), apesar do `ResponsiveContainer` medir corretamente o container;
+- causa: `ResponsiveContainer` clona o filho direto e injeta `width`/`height`
+  medidos nele; os componentes auxiliares `SimpleBarChart`/`SimpleTrendChart`
+  nao repassavam essas props para o `BarChart`/`AreaChart` real, que ficava
+  sem tamanho valido e nao renderizava nada;
+- corrigido repassando `...responsiveProps` do wrapper para o componente do
+  recharts; validado no build de producao (`vite preview`), nao apenas no
+  servidor de desenvolvimento.
+
+### Validacoes
+
+- `npm run lint`, `npm run check:architecture`, `npm run test --workspace
+  server` (213 testes), `npm run test:integration --workspace server`
+  (14 testes, incluindo o novo endpoint), `npm run build` e
+  `npx playwright test` (8 testes, incluindo 3 novos para o dashboard)
+  aprovados;
+- verificacao visual manual no build de producao, incluindo layout mobile
+  (375px), confirmando que os cards de KPI empilham em uma coluna abaixo de
+  520px;
+- `git diff --check` aprovado.
+

@@ -63,7 +63,7 @@ test("Inventario abre o fluxo visual seguro de assistencia remota", async ({ pag
   await connectLabAgent(page);
   await page.reload();
 
-  await page.getByRole("button", { name: /Invent.rio/ }).click();
+  await page.getByRole("navigation").getByRole("button", { name: /Invent.rio/ }).click();
   const machineCard = page.locator(".machine-card").filter({ hasText: "Notebook remoto E2E" });
   await expect(machineCard).toBeVisible();
   const remoteButton = machineCard.getByRole("button", { name: "Atendimento remoto" });

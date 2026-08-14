@@ -46,7 +46,14 @@ adaptadores opcionais de leitura e nao fazem parte do instalador comum.
   peçam;
 - a sinalizacao WebRTC preparada exige a mesma flag, tokens e autenticacao do
   transporte atual, e responde `409` enquanto desligada (padrao);
-- modo privacidade e acoes administrativas permanecem bloqueados.
+- o relay passa a ter backend plugavel (memoria local ou Redis via Upstash),
+  necessario para funcionar em deploy serverless; o quadro de tela nunca e
+  gravado no Postgres/Supabase em nenhum dos dois backends;
+- modo privacidade e acoes administrativas permanecem bloqueados;
+- o resumo gerencial do dashboard (`GET /api/dashboard/summary`) exige a
+  permissao `dashboard.view`, reaproveita apenas servicos ja existentes (sem
+  nova consulta a dados sensiveis) e nunca simula OS vencidas nem dados de
+  cliente sem base real.
 
 ## Dados e privacidade
 
