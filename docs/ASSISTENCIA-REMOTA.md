@@ -310,6 +310,13 @@ metadados operacionais. Solicitar, autorizar, negar, iniciar, trocar monitor,
 habilitar controle, liberar controle, falhar e encerrar tambem geram entradas
 no historico global da maquina e, quando aplicavel, da OS.
 
+Excluir um ativo ou uma sessao com historico associado falha em vez de apagar
+o historico em cascata (`ON DELETE RESTRICT`, migration
+`013-remote-assistance-audit-integrity`) — nenhuma rota hoje apaga essas
+linhas de verdade, mas isso impede que uma futura feature de "excluir ativo
+definitivamente" apague silenciosamente a trilha de auditoria da assistencia
+remota daquele ativo.
+
 Nenhuma senha, token completo, frame, mensagem de chat ou evento bruto de
 teclado e persistido **no banco de dados**. As respostas de frame usam
 `Cache-Control: private, no-store, max-age=0`.
