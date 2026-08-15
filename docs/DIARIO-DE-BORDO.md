@@ -76,6 +76,42 @@ entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
   auth/permissoes/notificacoes como o "estado global" a extrair, nao o
   estado de UI especifico de cada tela.
 
+## 2026-08-15 - Alerta ativo quando o deploy serverless nao tem Redis compartilhado
+
+### Causa raiz
+
+- a auditoria original apontou que a ausencia de Redis num deploy
+  serverless (Vercel) degradava o rate limiter e o relay da assistencia
+  remota silenciosamente, so diagnosticavel manualmente via `/api/health`
+  — nenhum log ou alerta avisava no momento em que o problema realmente
+  comeca (a inicializacao do processo sem as variaveis configuradas).
+
+### Correcao
+
+- `initializeRuntime()` (`server/src/bootstrap.js`) agora emite um log
+  estruturado `serverless_without_shared_redis` assim que o processo sobe,
+  se `isVercel` for verdadeiro e `detectRedisConfig()` nao encontrar
+  `UPSTASH_REDIS_REST_URL`/`TOKEN` (ou as variaveis equivalentes do Vercel
+  KV) — aparece nos logs de runtime da Vercel a cada cold start, nao so
+  quando alguem lembra de checar `/api/health` manualmente;
+- a decisao (`shouldWarnAboutMissingRedis`) foi extraida como funcao pura
+  e exportada para ser testada isoladamente, sem precisar orquestrar
+  `process.env.VERCEL` e reimportar modulos.
+
+### Validacoes
+
+- novo `server/src/bootstrap.test.mjs` cobre as 4 combinacoes de
+  serverless × Redis configurado;
+- `npm run test --workspace server`: 261 aprovados, 2 ignorados por exigir
+  PostgreSQL real, 0 falhas;
+- `npm run lint` e `npm run check:architecture` (314 arquivos) aprovados.
+
+### Pendencias reais
+
+- continua sendo um log, nao um alerta ativo de verdade (e-mail, Slack,
+  PagerDuty) — depende de alguem observar os logs de runtime da Vercel;
+  integrar com um canal de alerta real fica para uma proxima rodada.
+
 ## 2026-08-15 - Cadeia de hash na trilha de auditoria da assistencia remota
 
 ### Causa raiz
