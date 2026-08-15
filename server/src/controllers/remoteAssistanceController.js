@@ -3,6 +3,7 @@ import {
   endRemoteAssistanceByTechnician,
   getPendingRemoteAssistanceForAgent,
   getRemoteAssistanceCommandsForAgent,
+  getRemoteAssistanceEventIntegrity,
   getRemoteAssistanceEvents,
   getRemoteAssistanceFrame,
   getRemoteAssistancePublicConfig,
@@ -61,6 +62,12 @@ export async function read(req, res, next) {
 export async function events(req, res, next) {
   try {
     res.json({ events: await getRemoteAssistanceEvents({ user: req.user, sessionId: req.params.id }) });
+  } catch (error) { next(error); }
+}
+
+export async function eventIntegrity(req, res, next) {
+  try {
+    res.json(await getRemoteAssistanceEventIntegrity({ user: req.user, sessionId: req.params.id }));
   } catch (error) { next(error); }
 }
 

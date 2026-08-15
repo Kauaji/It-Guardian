@@ -30,6 +30,7 @@ import {
   findPendingRemoteAssistanceSessionForAsset,
   findRemoteAssistanceSessionById,
   listRemoteAssistanceEvents,
+  verifyRemoteAssistanceEventChain,
   setRemoteAssistanceConsent,
   setRemoteAssistanceControl,
   setRemoteAssistanceMonitor,
@@ -421,6 +422,11 @@ export async function getRemoteAssistanceSession({ user, sessionId }) {
 export async function getRemoteAssistanceEvents({ user, sessionId }) {
   await assertManagedSession(user, sessionId);
   return listRemoteAssistanceEvents(sessionId);
+}
+
+export async function getRemoteAssistanceEventIntegrity({ user, sessionId }) {
+  await assertManagedSession(user, sessionId);
+  return verifyRemoteAssistanceEventChain(sessionId);
 }
 
 export async function getRemoteAssistanceFrame({ user, sessionId, viewerToken }) {

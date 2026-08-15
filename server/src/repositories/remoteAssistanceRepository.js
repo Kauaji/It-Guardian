@@ -1,7 +1,49 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { query } from "../database.js";
 
 const openStatuses = ["requested", "waiting_consent", "connecting", "active"];
+
+function canonicalize(value) {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value && typeof value === "object") {
+    return Object.keys(value)
+      .sort()
+      .reduce((acc, key) => {
+        acc[key] = canonicalize(value[key]);
+        return acc;
+      }, {});
+  }
+  return value;
+}
+
+function computeEventHash({
+  previousHash,
+  sessionId,
+  assetId,
+  serviceOrderId,
+  actorType,
+  actorUserId,
+  actorName,
+  eventType,
+  message,
+  metadata
+}) {
+  const payload = JSON.stringify(
+    canonicalize({
+      previousHash: previousHash || "",
+      sessionId,
+      assetId,
+      serviceOrderId: serviceOrderId || null,
+      actorType,
+      actorUserId: actorUserId || null,
+      actorName: actorName || null,
+      eventType,
+      message,
+      metadata: metadata || {}
+    })
+  );
+  return createHash("sha256").update(payload, "utf8").digest("hex");
+}
 
 function sessionFromRow(row) {
   if (!row) return null;
@@ -51,6 +93,8 @@ function eventFromRow(row) {
     eventType: row.event_type,
     message: row.message,
     metadata,
+    eventHash: row.event_hash || null,
+    previousEventHash: row.previous_event_hash || null,
     createdAt: row.created_at
   };
 }
@@ -296,13 +340,36 @@ export async function addRemoteAssistanceEvent({
   metadata = {},
   db = query
 }) {
+  const previous = await db(
+    `
+      SELECT event_hash FROM remote_assistance_events
+      WHERE session_id = $1
+      ORDER BY created_at DESC, id DESC
+      LIMIT 1
+    `,
+    [sessionId]
+  );
+  const previousHash = previous.rows[0]?.event_hash || null;
+  const eventHash = computeEventHash({
+    previousHash,
+    sessionId,
+    assetId,
+    serviceOrderId,
+    actorType,
+    actorUserId,
+    actorName,
+    eventType,
+    message,
+    metadata
+  });
+
   const result = await db(
     `
       INSERT INTO remote_assistance_events (
         id, session_id, asset_id, service_order_id, actor_type, actor_user_id,
-        actor_name, event_type, message, metadata
+        actor_name, event_type, message, metadata, event_hash, previous_event_hash
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, $12)
       RETURNING *
     `,
     [
@@ -315,7 +382,9 @@ export async function addRemoteAssistanceEvent({
       actorName,
       eventType,
       message,
-      JSON.stringify(metadata || {})
+      JSON.stringify(metadata || {}),
+      eventHash,
+      previousHash
     ]
   );
   return eventFromRow(result.rows[0]);
@@ -331,6 +400,39 @@ export async function listRemoteAssistanceEvents(sessionId, db = query) {
     [sessionId]
   );
   return result.rows.map(eventFromRow);
+}
+
+export async function verifyRemoteAssistanceEventChain(sessionId, db = query) {
+  const events = await listRemoteAssistanceEvents(sessionId, db);
+  let previousHash = null;
+
+  for (const event of events) {
+    const expectedHash = computeEventHash({
+      previousHash,
+      sessionId,
+      assetId: event.assetId,
+      serviceOrderId: event.serviceOrderId,
+      actorType: event.actorType,
+      actorUserId: event.actorUserId,
+      actorName: event.actorName,
+      eventType: event.eventType,
+      message: event.message,
+      metadata: event.metadata
+    });
+
+    if (event.previousEventHash !== previousHash || event.eventHash !== expectedHash) {
+      return {
+        valid: false,
+        totalEvents: events.length,
+        brokenAtEventId: event.id,
+        brokenAtIndex: events.indexOf(event)
+      };
+    }
+
+    previousHash = event.eventHash;
+  }
+
+  return { valid: true, totalEvents: events.length, brokenAtEventId: null, brokenAtIndex: null };
 }
 
 export async function validateRemoteTokenHash({ id, field, tokenHash, db = query }) {

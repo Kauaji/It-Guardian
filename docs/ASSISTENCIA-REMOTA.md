@@ -317,6 +317,19 @@ linhas de verdade, mas isso impede que uma futura feature de "excluir ativo
 definitivamente" apague silenciosamente a trilha de auditoria da assistencia
 remota daquele ativo.
 
+Desde a migration `017-remote-assistance-event-hash-chain`, cada linha de
+`remote_assistance_events` tambem carrega `event_hash`/`previous_event_hash`:
+o hash de cada evento inclui o hash do evento anterior da mesma sessao, numa
+cadeia continua. Isso torna a garantia "insert-only" verificavel, nao so uma
+convencao de codigo — uma alteracao ou remocao de qualquer linha historica
+(inclusive por acesso direto ao banco, fora da aplicacao) quebra a cadeia de
+forma detectavel. `GET /api/remote-assistance/sessions/:id/events/integrity`
+(mesma permissao de `.../events`) recalcula a cadeia inteira sob demanda e
+devolve `{ valid, totalEvents, brokenAtEventId, brokenAtIndex }`. Isto e
+deteccao, nao prevencao: nao ha trigger de banco bloqueando `UPDATE`/`DELETE`
+(nao suportado no pg-mem usado nos testes locais); quem detecta uma cadeia
+quebrada precisa investigar manualmente a causa.
+
 Nenhuma senha, token completo, frame, mensagem de chat ou evento bruto de
 teclado e persistido **no banco de dados**. As respostas de frame usam
 `Cache-Control: private, no-store, max-age=0`.

@@ -76,6 +76,52 @@ entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
   auth/permissoes/notificacoes como o "estado global" a extrair, nao o
   estado de UI especifico de cada tela.
 
+## 2026-08-15 - Cadeia de hash na trilha de auditoria da assistencia remota
+
+### Causa raiz
+
+- a re-auditoria de 15/08 apontou que `remote_assistance_events` era
+  "insert-only apenas por convencao de codigo": nenhum controle a nivel de
+  banco detectava se uma linha historica fosse alterada ou removida por
+  acesso direto ao banco (fora da aplicacao). A correcao anterior
+  (`ON DELETE RESTRICT`, migration 013) protege contra exclusao em cascata
+  pela API, mas nao contra adulteracao direta.
+
+### Correcao
+
+- migration `017` adiciona `event_hash`/`previous_event_hash` a
+  `remote_assistance_events`, com backfill do historico existente calculado
+  em ordem cronologica por sessao;
+- `addRemoteAssistanceEvent` agora busca o hash do ultimo evento da sessao,
+  calcula o proprio hash a partir de uma serializacao canonica (chaves
+  ordenadas, para nao depender de como o Postgres reordena JSONB) incluindo
+  o hash anterior, e grava os dois campos na mesma insercao;
+- nova `verifyRemoteAssistanceEventChain(sessionId)` recalcula a cadeia
+  inteira do zero e aponta o primeiro evento onde o hash gravado diverge do
+  recalculado;
+- novo endpoint `GET /api/remote-assistance/sessions/:id/events/integrity`
+  (mesma permissao de `.../events`) expoe essa verificacao sob demanda.
+
+### Validacoes
+
+- novo `server/test-integration/remote-assistance-event-hash-chain.test.mjs`:
+  cria uma sessao real com 3 eventos, confirma cadeia valida, adultera o
+  `message` do terceiro evento via `UPDATE` direto (simulando acesso fora da
+  aplicacao) e confirma que a verificacao aponta exatamente aquele evento
+  como o ponto de quebra;
+- `npm run test --workspace server`: 260 aprovados, 2 ignorados por exigir
+  PostgreSQL real, 0 falhas;
+- `npm run lint` e `npm run check:architecture` (313 arquivos) aprovados.
+
+### Pendencias reais
+
+- isto e deteccao, nao prevencao: nao ha trigger de banco bloqueando
+  `UPDATE`/`DELETE` nessas linhas (pg-mem, usado nos testes locais, nao
+  suporta `CREATE TRIGGER` — confirmado experimentalmente em rodadas
+  anteriores desta sessao). Uma cadeia quebrada precisa de investigacao
+  manual; o sistema nao se autocorrige nem bloqueia a operacao que já
+  ocorreu.
+
 ## 2026-08-15 - Controle duplo para execucao de scripts de risco alto/critico
 
 ### Causa raiz

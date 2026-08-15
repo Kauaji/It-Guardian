@@ -4,6 +4,7 @@ import {
   config,
   control,
   end,
+  eventIntegrity,
   events,
   frame,
   input,
@@ -43,6 +44,7 @@ router.get("/config", requirePermission("remote_assistance.view"), config);
 router.post("/assets/:assetId/sessions", requirePermission("remote_assistance.start"), startLimiter, start);
 router.get("/sessions/:id", requirePermission("remote_assistance.view"), read);
 router.get("/sessions/:id/events", requirePermission("remote_assistance.view"), events);
+router.get("/sessions/:id/events/integrity", requirePermission("remote_assistance.view"), eventIntegrity);
 router.get("/sessions/:id/frame", requirePermission("remote_assistance.view"), frame);
 router.post("/sessions/:id/input", requirePermission("remote_assistance.control"), inputLimiter, input);
 router.post("/sessions/:id/chat", requirePermission("remote_assistance.chat"), chatLimiter, chat);
