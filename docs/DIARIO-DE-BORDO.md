@@ -4,6 +4,80 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-15 - Integridade de conteudo nos trabalhos de script do agente
+
+### Causa raiz
+
+- a auditoria de codigo de 2026-08-14 apontou que a execucao remota de
+  scripts restringia apenas por **tipo** de interpretador (BAT/CMD/
+  PowerShell em lista fechada), mas nunca reconferia o **conteudo**
+  efetivamente entregue ao agente contra o script cadastrado e aprovado;
+- em `queueAgentScriptJob`, o conteudo do script e copiado para
+  `agent_script_jobs.script_content` no momento do enfileiramento; a
+  entrega pelo heartbeat (`claimNextAgentScriptJob`) devolvia esse valor
+  congelado sem nunca verificar se o cadastro em `maintenance_scripts`
+  ainda dizia a mesma coisa — um script editado ou desativado depois de
+  enfileirado, mas antes do proximo heartbeat da maquina, ainda seria
+  entregue com o conteudo antigo (ou, em tese, qualquer divergencia entre
+  a copia congelada e o cadastro aprovado passaria despercebida).
+
+### Correcao
+
+- migracao `015-agent-script-job-content-integrity` adiciona
+  `agent_script_jobs.content_hash` (SHA-256 do conteudo, calculado no
+  enfileiramento) e faz backfill dos trabalhos ja `queued` antes do deploy;
+- `claimNextAgentScriptJob` agora faz `JOIN` com o script atual em
+  `maintenance_scripts` e so entrega o trabalho se
+  `sha256(conteudo atual) === content_hash` **e** o script continua ativo;
+  em caso de divergencia, o trabalho e marcado `failed` (nunca chega a ser
+  entregue ao agente), o log de execucao e a validacao vinculada (quando
+  existe) sao encerrados como falha, e um evento
+  `script_execution_blocked_content_mismatch` fica registrado no historico
+  do ativo e no log geral — nada falha silenciosamente;
+- a lista fechada de tipos executaveis (BAT/CMD/PowerShell) e os demais
+  limites (timeout, tamanho de saida, `UseShellExecute=false` etc.)
+  permanecem inalterados; esta correcao fecha o gap especifico de
+  integridade de conteudo, nao substitui os demais controles.
+
+### Bug pre-existente corrigido no caminho
+
+- `updateMaintenanceScript` (`maintenanceScriptRepository.js`) gravava
+  `active_key = NULL` no `UPDATE maintenance_scripts` — uma coluna que
+  nunca existiu nessa tabela (pertence a `script_validation_runs`); qualquer
+  edicao de script cadastrado quebraria com `column "active_key" does not
+  exist` tambem em PostgreSQL real, nao so em pg-mem. O bug so foi
+  descoberto porque este e o primeiro teste automatizado a chamar
+  `updateMaintenanceScript` contra um banco de verdade; corrigido removendo
+  a coluna inexistente da instrucao.
+
+### Validacoes
+
+- novo `server/test-integration/agent-script-job-content-integrity.test.mjs`
+  cobre os tres cenarios: conteudo inalterado (entrega normal), script
+  editado apos enfileirar (recusado) e script desativado apos enfileirar
+  (recusado), verificando status do trabalho, do log de execucao e o
+  evento no historico do ativo;
+- `npm run test --workspace server`: 258 aprovados, 2 ignorados por exigir
+  PostgreSQL real, 0 falhas;
+- `npm run test:integration --workspace server`: 20 aprovados, 2 ignorados,
+  0 falhas;
+- `npm run lint` e `npm run check:architecture` (310 arquivos) aprovados.
+
+### Pendencias reais
+
+- a divergencia de conteudo so e detectada no momento da entrega (proximo
+  heartbeat), nao no instante em que o script e editado — aceitavel porque
+  o pior caso e um trabalho recusado (fail-closed), nunca uma entrega com
+  conteudo desatualizado;
+- trabalhos vinculados a uma automacao (`automation_run_id`) ou plano
+  preventivo nao tem o cascade completo de falha propagado quando recusados
+  por esta verificacao (ficam pendentes ate expirar/ser revisados
+  manualmente) — cenario raro, pois exige editar o script cadastrado no
+  intervalo entre o enfileiramento automatico e o heartbeat da maquina;
+- assinatura criptografica de scripts para distribuicao publica (item
+  separado do checklist de `SCRIPTS-MANUTENCAO-SEGURANCA.md`) continua
+  pendente.
+
 ## 2026-08-15 - Vitest e Testing Library no client
 
 ### Causa raiz

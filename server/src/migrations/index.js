@@ -14,6 +14,7 @@ import { migration011AssetMaintenanceLifecycle } from "./011-asset-maintenance-l
 import { migration012RemoteAssistanceLab } from "./012-remote-assistance-lab.js";
 import { migration013RemoteAssistanceAuditIntegrity } from "./013-remote-assistance-audit-integrity.js";
 import { migration014EnableRowLevelSecurity } from "./014-enable-row-level-security.js";
+import { migration015AgentScriptJobContentIntegrity } from "./015-agent-script-job-content-integrity.js";
 
 export const migrations = [
   migration001RuntimeFoundation,
@@ -29,7 +30,8 @@ export const migrations = [
   migration011AssetMaintenanceLifecycle,
   migration012RemoteAssistanceLab,
   migration013RemoteAssistanceAuditIntegrity,
-  migration014EnableRowLevelSecurity
+  migration014EnableRowLevelSecurity,
+  migration015AgentScriptJobContentIntegrity
 ];
 
 export async function runMigrations() {

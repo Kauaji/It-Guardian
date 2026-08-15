@@ -1,10 +1,14 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { query, withTransaction } from "../database.js";
 import { addAssetHistory } from "./assetHistoryRepository.js";
 import { addLog } from "./logRepository.js";
 import { isRemoteScriptExecutionEnabled } from "../config/environment.js";
 
 const executableTypes = new Set(["bat", "cmd", "powershell"]);
+
+function hashScriptContent(content) {
+  return createHash("sha256").update(String(content || ""), "utf8").digest("hex");
+}
 const terminalStatuses = new Set(["succeeded", "failed", "timed_out"]);
 const maxOutputLength = 65536;
 
@@ -85,9 +89,9 @@ export async function queueAgentScriptJob({
     `
       INSERT INTO agent_script_jobs (
         id, asset_id, enrollment_id, script_id, execution_log_id, validation_id,
-        automation_run_id, script_type, script_content, timeout_seconds, requested_by
+        automation_run_id, script_type, script_content, content_hash, timeout_seconds, requested_by
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *
     `,
     [
@@ -100,6 +104,7 @@ export async function queueAgentScriptJob({
       automationRunId,
       String(script.type).toLowerCase(),
       script.content,
+      hashScriptContent(script.content),
       clampTimeout(timeoutSeconds),
       userId
     ]
@@ -107,13 +112,64 @@ export async function queueAgentScriptJob({
   return publicJob(result.rows[0]);
 }
 
+async function rejectTamperedJob(db, job) {
+  const summary =
+    "Execucao recusada: o conteudo do script cadastrado mudou (ou foi desativado) " +
+    "depois que este trabalho foi enfileirado. Nenhum comando foi enviado ao agente.";
+
+  await db(
+    `
+      UPDATE agent_script_jobs
+      SET status = 'failed', completed_at = NOW(), error_message = $2, updated_at = NOW()
+      WHERE id = $1
+    `,
+    [job.id, summary]
+  );
+  await db(
+    `
+      UPDATE script_execution_logs
+      SET mode = 'agent', status = 'failed', executed_at = NOW(),
+          parsed_summary = $2, error_detected = TRUE, attention_required = TRUE
+      WHERE id = $1
+    `,
+    [job.execution_log_id, summary]
+  );
+  if (job.validation_id) {
+    await db(
+      `
+        UPDATE script_validation_runs
+        SET status = 'execution_failed', finished_at = NOW(), result_summary = $2,
+            active_key = NULL, updated_at = NOW()
+        WHERE id = $1
+      `,
+      [job.validation_id, summary]
+    );
+  }
+  await addAssetHistory({
+    assetId: job.asset_id,
+    eventType: "script_execution_blocked_content_mismatch",
+    message: summary,
+    newValue: JSON.stringify({ jobId: job.id, scriptId: job.script_id, scriptName: job.script_name }),
+    userId: job.requested_by,
+    userName: "Sistema",
+    db
+  });
+  await addLog({
+    type: "agent_script_execution_content_mismatch",
+    message: summary,
+    userId: job.requested_by,
+    meta: { jobId: job.id, assetId: job.asset_id, scriptId: job.script_id },
+    db
+  });
+}
+
 export async function claimNextAgentScriptJob({ assetId, enrollmentId }) {
   if (!isRemoteScriptExecutionEnabled()) return null;
   return withTransaction(async (db) => {
     const pending = await db(
       `
-        SELECT jobs.*, scripts.name AS script_name,
-               scripts.requires_admin, scripts.requires_logged_user
+        SELECT jobs.*, scripts.name AS script_name, scripts.content AS current_script_content,
+               scripts.active AS script_active, scripts.requires_admin, scripts.requires_logged_user
         FROM agent_script_jobs jobs
         INNER JOIN maintenance_scripts scripts ON scripts.id = jobs.script_id
         WHERE jobs.asset_id = $1
@@ -124,7 +180,17 @@ export async function claimNextAgentScriptJob({ assetId, enrollmentId }) {
       `,
       [assetId, enrollmentId]
     );
-    if (!pending.rows[0]) return null;
+    const job = pending.rows[0];
+    if (!job) return null;
+
+    // O conteudo cadastrado e a lista fechada de scripts aprovados: um trabalho so pode
+    // ser entregue se o hash gravado no enfileiramento ainda bate com o script vigente.
+    const contentStillMatches =
+      job.script_active === true && hashScriptContent(job.current_script_content) === job.content_hash;
+    if (!contentStillMatches) {
+      await rejectTamperedJob(db, job);
+      return null;
+    }
 
     const claimed = await db(
       `
@@ -133,9 +199,9 @@ export async function claimNextAgentScriptJob({ assetId, enrollmentId }) {
         WHERE id = $1 AND status = 'queued'
         RETURNING *
       `,
-      [pending.rows[0].id]
+      [job.id]
     );
-    return claimed.rows[0] ? publicJob({ ...pending.rows[0], ...claimed.rows[0] }) : null;
+    return claimed.rows[0] ? publicJob({ ...job, ...claimed.rows[0] }) : null;
   });
 }
 

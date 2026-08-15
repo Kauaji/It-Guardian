@@ -1100,7 +1100,6 @@ export async function updateMaintenanceScript(id, payload = {}) {
           requires_admin = $20,
           safe_preview = $21,
           variable_validation_status = $22,
-          active_key = NULL,
           updated_at = NOW()
       WHERE id = $1
       RETURNING *

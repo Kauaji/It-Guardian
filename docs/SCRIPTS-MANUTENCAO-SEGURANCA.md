@@ -24,6 +24,14 @@ coletor. O navegador e o servidor nao abrem shell no endpoint.
 ## Limites de seguranca
 
 - script precisa existir no cadastro e estar vinculado ao trabalho;
+- **conteudo do trabalho e pinado por hash SHA-256 no momento do
+  enfileiramento**: ao entregar o trabalho pelo heartbeat, o servidor
+  recalcula o hash do conteudo atual em `maintenance_scripts` e recusa a
+  entrega (marca o trabalho como falho, sem enviar nada ao agente) se o
+  script foi editado ou desativado nesse intervalo — o tipo (BAT/CMD/
+  PowerShell) sempre foi restrito a uma lista fechada, mas ate esta entrega
+  o conteudo entregue nao era reconferido contra o cadastro aprovado no
+  momento da entrega;
 - token Bearer identifica enrollment e maquina;
 - executaveis do Windows sao definidos pelo coletor;
 - `UseShellExecute=false`;
@@ -65,5 +73,7 @@ aceitam comando arbitrario nem caminho de executavel.
 - [x] Timeout e limite de saida.
 - [x] Resultado, auditoria e historico.
 - [x] Testes sem executar BAT, CMD ou PowerShell operacional.
+- [x] Conteudo do trabalho pinado por hash contra o cadastro aprovado; edicao
+      ou desativacao entre o enfileiramento e a entrega bloqueia o trabalho.
 - [ ] Assinatura criptografica de scripts antes de distribuicao publica.
 - [ ] Homologacao em maquina virtual limpa com um script de baixo risco.
