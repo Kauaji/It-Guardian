@@ -4,6 +4,78 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-15 - Estado de sessao (auth/permissoes/notificacoes) extraido para Context
+
+### Causa raiz
+
+- a auditoria de codigo de 2026-08-14 apontou `App.jsx` (3326 linhas) como
+  ponto unico de estado global do frontend: `useAppSessionController` ja
+  centralizava a logica (token, user, notify/toast, tema, login/logout),
+  mas o resultado so chegava a `Dashboard` — a funcao interna que renderiza
+  o app inteiro apos o login — via props explicitas. `user` sozinho e usado
+  51 vezes dentro de `Dashboard` (a maioria em `hasPermission(user, "...")`),
+  `notify` 130 vezes e `token` 70 vezes; qualquer componente novo que
+  precisasse de auth/permissao teria que receber esses tres valores por
+  props desde `App`, atravessando manualmente cada nivel intermediario.
+
+### Correcao
+
+- novo `client/src/context/AppSessionContext.jsx`: `AppSessionProvider`
+  (recebe o `value` ja calculado por `useAppSessionController` e disponibiliza
+  via Context, mais um helper derivado `can(permissionId)` sobre
+  `hasPermission`) e `useAppSession()` para leitura em qualquer profundidade;
+- `App()` passou a envolver `<Dashboard />` e `<Toast />` em
+  `<AppSessionProvider value={sessionState}>` em vez de passar
+  `token`/`user`/`theme`/`notify`/`onToggleTheme`/`onLogout` como props;
+- `Dashboard` passou a ler esses mesmos valores de `useAppSession()`
+  (com alias `toggleTheme: onToggleTheme` e `logout: onLogout` para manter
+  os nomes internos identicos) em vez de recebe-los como parametros —
+  diff minimo: so a assinatura da funcao mudou, as 3000 linhas do corpo
+  que ja usavam `user`/`token`/`notify`/`onToggleTheme`/`onLogout` como
+  variaveis locais continuam identicas, porque essas variaveis continuam
+  existindo com o mesmo nome, só que vindas do contexto;
+- `AuthScreen` (renderizada quando ainda nao ha sessao) continua recebendo
+  `notify`/`onAuth` como props simples, sem mudanca — nao faz sentido puxar
+  contexto de sessao autenticada numa tela que existe justamente para criar
+  essa sessao;
+- escopo deliberadamente contido: os 51 `hasPermission(user, "...")` dentro
+  de `Dashboard` nao foram migrados para o helper `can()` do contexto nesta
+  entrega (continuam funcionando identicos, via a mesma variavel `user`
+  agora vinda do contexto) — trocar todos os call sites de uma vez so
+  aumentaria o diff sem mudar comportamento; o helper `can()` fica disponivel
+  para uso gradual daqui pra frente, inclusive por componentes que hoje nao
+  tem acesso a `user` nenhum.
+
+### Validacoes
+
+- `npm run build`: 2380 modulos, sem erro; chunk do `InventoryBoard`
+  manteve o mesmo tamanho (59.77 kB), confirmando que o lazy-load do Mapa
+  3D nao foi afetado;
+- `npm run lint`, `npm run check:architecture` (311 arquivos) e
+  `npm run test:client` (30 testes) aprovados;
+- validacao interativa real no navegador (servidor local com
+  `DATABASE_URL=memory` e seed de demonstracao): login como
+  `admin@itguardian.local` renderizou o dashboard completo; alternancia de
+  tema (`toggleTheme` via contexto) mudou `document.documentElement.dataset.theme`
+  de `dark` para `light` de verdade; navegacao para Inventario (com abas
+  Quadro/Plantas/Mapa 3D, segmentos e grupos) e Ordens de Servico renderizou
+  sem nenhum erro novo no console; logout (`onLogout` via contexto) voltou
+  para a tela de login corretamente — todo o ciclo de sessao passando pelo
+  Context, nao mais por props vindas de `App`.
+
+### Pendencias reais
+
+- migrar os 51 `hasPermission(user, ...)` de `Dashboard` para `can()` do
+  contexto, e estender o Context a outros pontos de entrada (ex.:
+  `AssetPublicView`, se algum dia precisar de sessao) ficam para uma
+  proxima rodada incremental — nao ha urgencia, o comportamento atual e
+  identico ao anterior;
+- o restante do estado local de `App.jsx`/`Dashboard` (drag-and-drop de
+  inventario, segmentos, filtros de OS etc.) continua fora do escopo desta
+  entrega, propositalmente — a auditoria original apontou especificamente
+  auth/permissoes/notificacoes como o "estado global" a extrair, nao o
+  estado de UI especifico de cada tela.
+
 ## 2026-08-15 - Integridade de conteudo nos trabalhos de script do agente
 
 ### Causa raiz

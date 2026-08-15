@@ -107,6 +107,7 @@ import DashboardPage from "./components/dashboard/DashboardPage.jsx";
 import { formatSoftwareLabel } from "./components/inventory/hardwarePresentation.js";
 import { isMaintenanceSegmentName } from "./utils/display.js";
 import { useAppSessionController } from "./hooks/useAppSessionController.js";
+import { AppSessionProvider, useAppSession } from "./context/AppSessionContext.jsx";
 import { useDashboardData } from "./hooks/useDashboardData.js";
 import { useInventoryPersistence } from "./hooks/useInventoryPersistence.js";
 
@@ -263,7 +264,8 @@ function formatTime(value) {
   }).format(new Date(value));
 }
 
-function Dashboard({ token, user, theme, onToggleTheme, onLogout, notify }) {
+function Dashboard() {
+  const { token, user, theme, toggleTheme: onToggleTheme, logout: onLogout, notify } = useAppSession();
   const [selectedId, setSelectedId] = useState(null);
   const [selectedDevice, setSelectedDevice] = useState(null);
   const [activeView, setActiveView] = useState(readInitialActiveView);
@@ -3273,18 +3275,8 @@ export default function App() {
   const assetId = pathAssetId
     ? decodeURIComponent(pathAssetId)
     : new URLSearchParams(window.location.search).get("asset");
-  const {
-    authLoading,
-    clearToast,
-    handleAuth,
-    logout,
-    notify,
-    theme,
-    toast,
-    token,
-    toggleTheme,
-    user
-  } = useAppSessionController({ isPublicSupportPath, assetId });
+  const sessionState = useAppSessionController({ isPublicSupportPath, assetId });
+  const { authLoading, clearToast, handleAuth, notify, toast, token, user } = sessionState;
 
   if (isPublicSupportPath) {
     return <PublicSupportRequest />;
@@ -3311,16 +3303,9 @@ export default function App() {
   }
 
   return (
-    <>
-      <Dashboard
-        token={token}
-        user={user}
-        theme={theme}
-        notify={notify}
-        onToggleTheme={toggleTheme}
-        onLogout={logout}
-      />
+    <AppSessionProvider value={sessionState}>
+      <Dashboard />
       <Toast message={toast.message} tone={toast.tone} onClose={clearToast} />
-    </>
+    </AppSessionProvider>
   );
 }
