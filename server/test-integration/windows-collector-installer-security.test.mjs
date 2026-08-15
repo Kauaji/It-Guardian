@@ -57,6 +57,19 @@ test("instalador cloud usa apenas a chave e instala o coletor nativo", async () 
   assert.match(setup, /if IsRepairInstall\(\) and ExistingConfigAvailable then/);
   assert.doesNotMatch(setup, /Install-MonitoringAgents|monitoring-agents\.json/);
 
+  // "Trocar a chave de produto" reativa o token, mas nao pode reescrever config.json do
+  // zero por cima de customizacoes locais (alias, ambiente, grupo, segmento, flags).
+  assert.match(setup, /PreserveCustomization := \(SelectedMode\(\) = ModeChangeKey\) and ExistingConfigAvailable/);
+  assert.match(setup, /JsonConfigStringValue\(ExistingConfig, 'machineAlias'\)/);
+  assert.match(setup, /JsonConfigStringValue\(ExistingConfig, 'environment'\)/);
+  assert.match(setup, /JsonConfigStringValue\(ExistingConfig, 'group'\)/);
+  assert.match(setup, /JsonConfigStringValue\(ExistingConfig, 'segment'\)/);
+  assert.match(setup, /JsonConfigBooleanValue\(ExistingConfig, 'includeLoggedUser', False\)/);
+  assert.match(setup, /JsonConfigBooleanValue\(ExistingConfig, 'enableRemoteScriptExecution', False\)/);
+  assert.match(setup, /JsonConfigBooleanValue\(ExistingConfig, 'enableRemoteAssistance', False\)/);
+  assert.doesNotMatch(configSection, /"machineAlias": "",/);
+  assert.doesNotMatch(configSection, /"includeLoggedUser": false,/);
+
   assert.match(postInstall, /New-ScheduledTaskTrigger -AtStartup/);
   assert.match(postInstall, /New-ScheduledTaskTrigger -AtLogOn/);
   assert.match(postInstall, /New-ScheduledTaskPrincipal/);

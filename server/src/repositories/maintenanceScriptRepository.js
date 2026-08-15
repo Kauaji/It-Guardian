@@ -664,6 +664,7 @@ function fromScriptRow(row) {
     safePreview: row.safe_preview || row.content || "",
     variableValidationStatus: row.variable_validation_status || "valid",
     createdBy: row.created_by,
+    contentUpdatedBy: row.content_updated_by || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };
@@ -1033,11 +1034,12 @@ export async function createMaintenanceScript(payload = {}, user = null) {
         risk_level, suggested_risk_level, requires_confirmation, active,
         alert_type, problem_type, tags, supported_variables, related_alert_types,
         related_problem_types, recommended_for_categories, requires_logged_user,
-        requires_admin, safe_preview, variable_validation_status, created_by
+        requires_admin, safe_preview, variable_validation_status, created_by,
+        content_updated_by
       )
       VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-        $14, $15, $16, $17, $18, $19, $20, $21, $22, $23
+        $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24
       )
       RETURNING *
     `,
@@ -1064,6 +1066,7 @@ export async function createMaintenanceScript(payload = {}, user = null) {
       normalized.requiresAdmin,
       normalized.safePreview,
       normalized.variableValidationStatus,
+      user?.id || null,
       user?.id || null
     ]
   );
@@ -1071,7 +1074,7 @@ export async function createMaintenanceScript(payload = {}, user = null) {
   return fromScriptRow(result.rows[0]);
 }
 
-export async function updateMaintenanceScript(id, payload = {}) {
+export async function updateMaintenanceScript(id, payload = {}, user = null) {
   const current = await findMaintenanceScriptById(id);
   if (!current) return null;
   const normalized = normalizeScriptPayload(payload, current);
@@ -1100,6 +1103,7 @@ export async function updateMaintenanceScript(id, payload = {}) {
           requires_admin = $20,
           safe_preview = $21,
           variable_validation_status = $22,
+          content_updated_by = $23,
           updated_at = NOW()
       WHERE id = $1
       RETURNING *
@@ -1126,7 +1130,8 @@ export async function updateMaintenanceScript(id, payload = {}) {
       normalized.requiresLoggedUser,
       normalized.requiresAdmin,
       normalized.safePreview,
-      normalized.variableValidationStatus
+      normalized.variableValidationStatus,
+      user?.id || current.contentUpdatedBy || null
     ]
   );
 

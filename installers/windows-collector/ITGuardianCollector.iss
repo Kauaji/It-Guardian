@@ -138,6 +138,34 @@ begin
   Result := Copy(Json, StartPosition, EndPosition - StartPosition);
 end;
 
+function JsonConfigBooleanValue(Json, Name: string; DefaultValue: Boolean): Boolean;
+var
+  Marker: string;
+  Position: Integer;
+begin
+  Result := DefaultValue;
+  Marker := '"' + Name + '"';
+  Position := Pos(Marker, Json);
+  if Position = 0 then Exit;
+  Position := Position + Length(Marker);
+  while (Position <= Length(Json)) and (Json[Position] <> ':') do
+    Position := Position + 1;
+  if Position > Length(Json) then Exit;
+  Position := Position + 1;
+  while (Position <= Length(Json)) and
+    ((Json[Position] = ' ') or (Json[Position] = #9)) do
+    Position := Position + 1;
+  Result := Copy(Json, Position, 4) = 'true';
+end;
+
+function BoolToJson(Value: Boolean): string;
+begin
+  if Value then
+    Result := 'true'
+  else
+    Result := 'false';
+end;
+
 function JsonIntegerValue(Json, Name: string; DefaultValue: Integer): Integer;
 var
   Marker: string;
@@ -378,6 +406,14 @@ var
   ConfigJson: string;
   FinalizeParameters: string;
   ResultCode: Integer;
+  PreserveCustomization: Boolean;
+  PreservedMachineAlias: string;
+  PreservedEnvironment: string;
+  PreservedGroup: string;
+  PreservedSegment: string;
+  PreservedIncludeLoggedUser: Boolean;
+  PreservedEnableRemoteScriptExecution: Boolean;
+  PreservedEnableRemoteAssistance: Boolean;
 begin
   if CurStep <> ssPostInstall then Exit;
 
@@ -389,6 +425,32 @@ begin
   end
   else
   begin
+    { "Trocar a chave de produto" reativa o computador, mas nao deve descartar
+      customizacoes locais (alias, ambiente, grupo, segmento, flags) feitas
+      apos a instalacao original -- so os dados ligados a ativacao em si
+      (servidor, token, suporte, intervalo) sao de fato renovados. }
+    PreserveCustomization := (SelectedMode() = ModeChangeKey) and ExistingConfigAvailable;
+    if PreserveCustomization then
+    begin
+      PreservedMachineAlias := JsonConfigStringValue(ExistingConfig, 'machineAlias');
+      PreservedEnvironment := JsonConfigStringValue(ExistingConfig, 'environment');
+      PreservedGroup := JsonConfigStringValue(ExistingConfig, 'group');
+      PreservedSegment := JsonConfigStringValue(ExistingConfig, 'segment');
+      PreservedIncludeLoggedUser := JsonConfigBooleanValue(ExistingConfig, 'includeLoggedUser', False);
+      PreservedEnableRemoteScriptExecution := JsonConfigBooleanValue(ExistingConfig, 'enableRemoteScriptExecution', False);
+      PreservedEnableRemoteAssistance := JsonConfigBooleanValue(ExistingConfig, 'enableRemoteAssistance', False);
+    end
+    else
+    begin
+      PreservedMachineAlias := '';
+      PreservedEnvironment := '';
+      PreservedGroup := '';
+      PreservedSegment := '';
+      PreservedIncludeLoggedUser := False;
+      PreservedEnableRemoteScriptExecution := False;
+      PreservedEnableRemoteAssistance := False;
+    end;
+
     ConfigJson :=
       '{' + #13#10 +
       '  "serverUrl": "{#ApiBaseUrl}",' + #13#10 +
@@ -396,13 +458,13 @@ begin
       '  "agentToken": "' + JsonEscape(AgentToken) + '",' + #13#10 +
       '  "intervalSeconds": ' + IntToStr(IntervalSeconds) + ',' + #13#10 +
       '  "machineId": "' + JsonEscape(MachineFingerprint) + '",' + #13#10 +
-      '  "machineAlias": "",' + #13#10 +
-      '  "environment": "",' + #13#10 +
-      '  "group": "",' + #13#10 +
-      '  "segment": "",' + #13#10 +
-      '  "includeLoggedUser": false,' + #13#10 +
-      '  "enableRemoteScriptExecution": false,' + #13#10 +
-      '  "enableRemoteAssistance": false' + #13#10 +
+      '  "machineAlias": "' + JsonEscape(PreservedMachineAlias) + '",' + #13#10 +
+      '  "environment": "' + JsonEscape(PreservedEnvironment) + '",' + #13#10 +
+      '  "group": "' + JsonEscape(PreservedGroup) + '",' + #13#10 +
+      '  "segment": "' + JsonEscape(PreservedSegment) + '",' + #13#10 +
+      '  "includeLoggedUser": ' + BoolToJson(PreservedIncludeLoggedUser) + ',' + #13#10 +
+      '  "enableRemoteScriptExecution": ' + BoolToJson(PreservedEnableRemoteScriptExecution) + ',' + #13#10 +
+      '  "enableRemoteAssistance": ' + BoolToJson(PreservedEnableRemoteAssistance) + #13#10 +
       '}';
     SaveStringToFile(ExpandConstant('{app}\config.json'), ConfigJson, False);
   end;

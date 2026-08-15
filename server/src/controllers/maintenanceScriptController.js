@@ -44,7 +44,7 @@ export async function create(req, res, next) {
 
 export async function update(req, res, next) {
   try {
-    const script = await updateMaintenanceScript(req.params.id, req.body || {});
+    const script = await updateMaintenanceScript(req.params.id, req.body || {}, req.user);
 
     if (!script) {
       return res.status(404).json({ message: "Script de manutenção não encontrado." });

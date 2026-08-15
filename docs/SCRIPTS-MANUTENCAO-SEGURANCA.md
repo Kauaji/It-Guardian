@@ -32,6 +32,13 @@ coletor. O navegador e o servidor nao abrem shell no endpoint.
   PowerShell) sempre foi restrito a uma lista fechada, mas ate esta entrega
   o conteudo entregue nao era reconferido contra o cadastro aprovado no
   momento da entrega;
+- **controle duplo para scripts de risco alto/critico**: quem enfileira a
+  execucao de um script `high`/`critical` nao pode ser a mesma pessoa que
+  cadastrou ou editou o conteudo por ultimo (`content_updated_by`); a
+  requisicao e recusada com `403 SCRIPT_EXECUTION_REQUIRES_SECOND_REVIEWER`.
+  Isso reduz o dano de uma unica conta administrativa comprometida: ela
+  ainda pode cadastrar um script malicioso, mas nao pode tambem ser quem o
+  envia para execucao — precisa de uma segunda conta;
 - token Bearer identifica enrollment e maquina;
 - executaveis do Windows sao definidos pelo coletor;
 - `UseShellExecute=false`;

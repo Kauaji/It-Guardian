@@ -5,9 +5,25 @@ import { addLog } from "./logRepository.js";
 import { isRemoteScriptExecutionEnabled } from "../config/environment.js";
 
 const executableTypes = new Set(["bat", "cmd", "powershell"]);
+const dualControlRiskLevels = new Set(["high", "critical"]);
 
 function hashScriptContent(content) {
   return createHash("sha256").update(String(content || ""), "utf8").digest("hex");
+}
+
+function assertSecondReviewer(script, userId) {
+  if (!userId || !script.contentUpdatedBy) return;
+  if (!dualControlRiskLevels.has(String(script.riskLevel || "").toLowerCase())) return;
+  if (userId !== script.contentUpdatedBy) return;
+
+  const error = new Error(
+    "Scripts de risco alto ou critico nao podem ser enfileirados pela mesma pessoa que cadastrou " +
+      "ou editou o conteudo por ultimo. Peca para outro usuario com permissao revisar e enviar."
+  );
+  error.statusCode = 403;
+  error.expose = true;
+  error.code = "SCRIPT_EXECUTION_REQUIRES_SECOND_REVIEWER";
+  throw error;
 }
 const terminalStatuses = new Set(["succeeded", "failed", "timed_out"]);
 const maxOutputLength = 65536;
@@ -66,6 +82,7 @@ export async function queueAgentScriptJob({
     error.statusCode = 400;
     throw error;
   }
+  assertSecondReviewer(script, userId);
 
   const assetResult = await db(
     `

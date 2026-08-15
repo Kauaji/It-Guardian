@@ -76,6 +76,59 @@ entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
   auth/permissoes/notificacoes como o "estado global" a extrair, nao o
   estado de UI especifico de cada tela.
 
+## 2026-08-15 - Controle duplo para execucao de scripts de risco alto/critico
+
+### Causa raiz
+
+- a re-auditoria de 15/08 apontou que a pinagem por hash (entrega anterior)
+  fecha a janela de adulteracao entre enfileiramento e entrega, mas nao
+  resolve o cenario descrito no achado critico original: uma conta
+  administrativa comprometida ainda pode cadastrar um script malicioso e
+  enfileirar a propria execucao, porque nada impede a mesma pessoa de fazer
+  as duas coisas.
+
+### Correcao
+
+- migracao `016` adiciona `maintenance_scripts.content_updated_by`
+  (quem cadastrou ou editou o conteudo por ultimo, com backfill a partir de
+  `created_by` para scripts existentes);
+- `createMaintenanceScript`/`updateMaintenanceScript` passam a gravar
+  `content_updated_by` a cada escrita; o controller de update agora repassa
+  `req.user`, que antes nao chegava ao repositorio;
+- `queueAgentScriptJob` (o unico ponto de entrada usado pelos tres
+  caminhos que enfileiram trabalhos — sugestao de OS, automacao preventiva
+  e plano preventivo) recusa com `403 SCRIPT_EXECUTION_REQUIRES_SECOND_REVIEWER`
+  quando o script e `high`/`critical` **e** quem esta enfileirando e a
+  mesma pessoa que aparece em `content_updated_by`. Sem duas contas
+  distintas, um script de risco alto nunca sai do cadastro para a fila;
+- frontend nao precisou de nenhuma mudanca: o erro chega como
+  `error.message` e ja e exibido via toast pelo tratamento genérico
+  existente em `handleUseScriptFromSuggestion`.
+
+### Validacoes
+
+- novo `server/test-integration/agent-script-job-dual-control.test.mjs`
+  cobre quatro cenarios: risco baixo enfileirado pelo proprio autor sem
+  bloqueio; risco critico recusado quando o autor tenta enfileirar sozinho;
+  um segundo usuario consegue enfileirar o mesmo script critico; e depois
+  que esse segundo usuario edita o conteudo, ele proprio passa a ser
+  bloqueado como novo "autor";
+- `npm run test --workspace server`: 259 aprovados, 2 ignorados por exigir
+  PostgreSQL real, 0 falhas;
+- `npm run lint` e `npm run check:architecture` (312 arquivos) aprovados.
+
+### Pendencias reais
+
+- o controle compara "quem enfileira" com "quem editou o conteudo", nao com
+  "quem aprovou o plano automatizado"; para os caminhos de automacao
+  preventiva/plano preventivo, se a mesma pessoa configurou o plano E
+  cadastrou o script, o controle duplo ainda se aplica (bloqueia), mas o
+  cenario de uma automacao rodando sem nenhuma segunda revisao humana em
+  nenhum momento do ciclo de vida continua sendo uma superficie diferente,
+  nao coberta por esta correcao;
+- isto reduz o dano de uma unica conta comprometida; nao substitui
+  assinatura de scripts nem uma revisao de seguranca independente.
+
 ## 2026-08-15 - Integridade de conteudo nos trabalhos de script do agente
 
 ### Causa raiz
