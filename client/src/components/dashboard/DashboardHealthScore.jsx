@@ -1,5 +1,6 @@
 import { HeartPulse } from "lucide-react";
 import { healthClassificationTone } from "./dashboardFormatters.js";
+import { useCountUp } from "../../hooks/useCountUp.js";
 
 const toneColors = {
   ok: "#1f7a61",
@@ -15,6 +16,7 @@ const GAUGE_CIRCUMFERENCE = 2 * Math.PI * GAUGE_RADIUS;
 function HealthGauge({ score, tone }) {
   const color = toneColors[tone] || toneColors.warning;
   const offset = GAUGE_CIRCUMFERENCE * (1 - Math.max(0, Math.min(100, score)) / 100);
+  const displayScore = useCountUp(score);
 
   return (
     <svg
@@ -46,8 +48,8 @@ function HealthGauge({ score, tone }) {
         transform={`rotate(-90 ${GAUGE_SIZE / 2} ${GAUGE_SIZE / 2})`}
         className="dashboard-health-gauge-value"
       />
-      <text x="50%" y="52%" textAnchor="middle" dominantBaseline="middle" className="dashboard-health-gauge-text">
-        {score}
+      <text x="50%" y="52%" textAnchor="middle" dominantBaseline="middle" className="dashboard-health-gauge-text tabular-nums">
+        {displayScore}
       </text>
     </svg>
   );

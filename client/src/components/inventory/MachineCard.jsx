@@ -8,6 +8,7 @@ import SelectionCheckbox from "./SelectionCheckbox.jsx";
 import AutomationIndicatorDots from "../AutomationIndicatorDots.jsx";
 import { getMachineSourceLabel } from "./agentPresentation.js";
 import RemoteAssistanceAction from "../remoteAssistance/RemoteAssistanceAction.jsx";
+import PulseDot from "../ui/PulseDot.jsx";
 
 const pingTimeFormatter = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
@@ -26,6 +27,14 @@ function statusTone(status) {
     offline: "unknown",
     problem: "error"
   }[status] || "unknown";
+}
+
+function pulseTone(status) {
+  return {
+    online: "ok",
+    offline: "offline",
+    problem: "danger"
+  }[status] || "offline";
 }
 
 function metricTone(value) {
@@ -132,6 +141,7 @@ function MachineCardContent({
         </div>
       </div>
       <div className="machine-badge-row">
+        <PulseDot tone={pulseTone(machine.status)} title={statusLabel(machine.status)} />
         {isManualAsset ? (
           <button
             type="button"

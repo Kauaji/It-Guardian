@@ -1,4 +1,13 @@
 import { Server } from "lucide-react";
+import PulseDot from "../ui/PulseDot.jsx";
+
+function pulseTone(status) {
+  return {
+    online: "ok",
+    offline: "offline",
+    problem: "danger"
+  }[status] || "offline";
+}
 
 export default function DeviceTable({ devices, selectedId, onSelect, statusClass }) {
   return (
@@ -24,15 +33,16 @@ export default function DeviceTable({ devices, selectedId, onSelect, statusClass
             >
               <td>
                 <div className="device-name">
+                  <PulseDot tone={pulseTone(device.status)} title={device.statusLabel} />
                   <Server size={16} />
                   <strong>{device.name}</strong>
                 </div>
               </td>
-              <td>{device.ip}</td>
+              <td className="tabular-nums">{device.ip}</td>
               <td><span className={`pill ${statusClass(device.status)}`}>{device.statusLabel}</span></td>
-              <td>{device.metrics?.cpu ?? "-"}{device.metrics ? "%" : ""}</td>
-              <td>{device.metrics?.ram ?? "-"}{device.metrics ? "%" : ""}</td>
-              <td>{device.metrics?.disk ?? "-"}{device.metrics ? "%" : ""}</td>
+              <td className="tabular-nums">{device.metrics?.cpu ?? "-"}{device.metrics ? "%" : ""}</td>
+              <td className="tabular-nums">{device.metrics?.ram ?? "-"}{device.metrics ? "%" : ""}</td>
+              <td className="tabular-nums">{device.metrics?.disk ?? "-"}{device.metrics ? "%" : ""}</td>
               <td>{device.hardware?.model || "Sem inventario"}</td>
             </tr>
           ))}

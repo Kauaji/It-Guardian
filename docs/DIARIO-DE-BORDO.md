@@ -4,6 +4,113 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-15 - Dashboard redesenhado: faixa de KPI, LEDs de pulso e numeros animados
+
+### Causa raiz / motivacao
+
+- um conceito visual (mockup estatico, nao versionado no repo) foi validado
+  com o usuario; a parte do Dashboard foi aprovada explicitamente, junto com
+  um pedido para levar as animacoes/fluidez do conceito ao sistema real,
+  mantendo compatibilidade com os presets de tema existentes (Aurora,
+  Nebulosa, Oceano, Sunset, Esmeralda, Cyber Blue, Midnight, Personalizado em
+  `GeneralSettingsModal.jsx`), que sobrescrevem variaveis CSS via
+  `document.documentElement.style.setProperty`.
+
+### Correcao
+
+- dois primitivos novos e reutilizaveis em `client/src/components/ui/`:
+  `AnimatedNumber.jsx` (rolagem tipo odometro por digito quando o valor muda,
+  com fallback instantaneo sob `prefers-reduced-motion`, mais alternativa
+  textual em `.sr-only` para leitor de tela) e `PulseDot.jsx` (LED com anel
+  pulsante cuja cadencia varia por `tone`: `ok` rapido/regular, `warning`
+  lento/irregular, `danger` rapido, tone desconhecido = estatico);
+- `DashboardKpiCard.jsx` removido; substituido por `DashboardKpiStrip.jsx` —
+  uma unica faixa dividida por ticks (bordas finas) em vez de 4 cartoes
+  separados com barra de acento lateral colorida;
+- `DashboardPage.jsx` reestruturado: a faixa de KPI ocupa a largura total,
+  seguida por `.dashboard-instrument-row` pareando o gauge de Saude da
+  infraestrutura com um novo painel "Ativos monitorados" agrupando os
+  `SummaryCard`s existentes — mesma logica de dados (`overview`/`summary`/
+  `reportPending`), so a apresentacao mudou;
+- `DeviceTable.jsx` (Dashboard) e `MachineCard.jsx` (Inventario) ganharam
+  `PulseDot` ao lado do nome/badge de status existente, mais
+  `font-variant-numeric: tabular-nums` nas colunas numericas via nova classe
+  utilitaria `.tabular-nums`;
+- `DashboardHealthScore.jsx`: numero central do gauge agora usa um novo hook
+  `useCountUp` (interpolacao suave via `requestAnimationFrame`, tambem com
+  fallback instantaneo sob reduced motion) em vez de saltar direto pro valor;
+- `SummaryCard.jsx` (compartilhado com `AlertCenterV2.jsx`, em Avisos) passou
+  a envolver o valor em `AnimatedNumber` — unica mudanca desta entrega que
+  atravessa a fronteira do Dashboard;
+- `styles.css`: todo o CSS novo usa os tokens de tema existentes
+  (`var(--surface)`, `var(--border)`, `var(--text-*)`, mais `--font-mono`
+  novo) em vez de cor hardcoded, exceto as cores de severidade ok/warning do
+  pulse-dot e da celula "ok" da faixa, que seguem o mesmo padrao ja usado em
+  `.dashboard-kpi-card` antes desta mudanca (nao redefinidas por tema — nao e
+  uma inconsistencia nova); as regras de `.pulse-dot-ring` e
+  `.animated-number-digit-track` foram acrescentadas dentro do bloco
+  `@media (prefers-reduced-motion: reduce)` ja existente, sem duplica-lo;
+  CSS morto de `.dashboard-kpi-grid`/`.dashboard-kpi-card`/
+  `.dashboard-kpi-icon-badge`/`.dashboard-kpi-skeleton-icon` removido junto
+  com o componente que os usava.
+
+### Validacoes
+
+- `npx eslint` nos arquivos alterados: sem erros nem warnings;
+- `npm run test:client`: 49/49 testes (`SummaryCard.test.jsx` ajustado para
+  nao depender de `getByText` com resultado unico, ja que o valor agora
+  aparece duas vezes no DOM — visual `aria-hidden` e alternativa em
+  `.sr-only`);
+- `npm run build --workspace client`: build de producao sem erros;
+- verificacao interativa real (`DATABASE_URL=memory` +
+  `ENABLE_DEMO_SEED=true`, login `admin@itguardian.local`, nunca usado assim
+  em producao — o proprio `resolveDatabaseConfig` recusa `DATABASE_URL=memory`
+  quando `isProductionLike`): Dashboard renderizou a faixa de KPI, o gauge e
+  o painel de Ativos monitorados com dados reais vindos da API, fonte mono
+  aplicada, sem erro novo no console;
+- verificacao do CSS compilado (`dist/assets/*.css`) confirmando ausencia de
+  qualquer referencia residual as classes removidas e presenca correta das
+  novas classes dentro do bloco de reduced-motion existente;
+- revisao adversarial via workflow multi-agente (correcao, regressao em
+  `AlertCenterV2`/`MachineCard`/resto de `styles.css`, acessibilidade e
+  compatibilidade com presets de tema) antes do deploy — encontrou 2 bugs
+  reais de correcao e 1 problema real de contraste, todos corrigidos nesta
+  mesma entrega:
+  1. `DeviceTable.jsx` passava `statusClass(device.status)` (mapeado para
+     badge: offline -> "warning") direto como `tone` do `PulseDot`, fazendo
+     maquinas offline pulsarem em ambar continuamente em vez de mostrar o
+     LED estatico — corrigido com um `pulseTone()` proprio (mesmo padrao ja
+     usado em `MachineCard.jsx`: offline -> "offline");
+  2. `AnimatedNumber.jsx` chaveava cada digito pelo indice da esquerda para a
+     direita; ao mudar a quantidade de digitos (ex.: 9 -> 10, 99 -> 100) a
+     animacao rolava o digito errado. Corrigido chaveando por distancia do
+     final da string (valor posicional) em vez do inicio, preservando a
+     ordem visual de leitura mas alinhando corretamente unidade/dezena/etc.
+     entre renderizacoes;
+  3. `.pulse-dot.ok` e `.dashboard-kpi-strip-cell.ok` usavam o mesmo verde
+     `#1f7a61` do tema claro tambem no escuro, sem o ajuste de contraste que
+     `.machine-metrics strong.ok` ja aplica (`#65e59b` no escuro) — abaixo
+     de 4.5:1 AA contra `--surface` escuro (~3.4:1). Corrigido replicando o
+     mesmo trio de cores ja usado em `.machine-metrics` (`#65e59b`/
+     `#fbbf24`/`#fb7185`) para as tres tonalidades do `pulse-dot` no tema
+     escuro.
+  Tambem consolidado um `@media (prefers-reduced-motion: reduce)` duplicado
+  que a propria implementacao inicial criou para
+  `.dashboard-kpi-strip-value-skeleton` em vez de reaproveitar o bloco ja
+  existente.
+- lint, `test:client` (49/49) e `build` re-executados apos as correcoes,
+  todos verdes; CSS compilado reinspecionado confirmando as novas regras de
+  contraste escuro e a ausencia do bloco de reduced-motion duplicado.
+
+### Pendencias conhecidas
+
+- verificacao visual ao vivo do `PulseDot` dentro de `MachineCard`
+  (Inventario) nao foi concluida interativamente — o seed de demonstracao
+  nao inclui maquinas reais e a criacao manual de ativo nao completou a
+  tempo; a integracao foi validada via revisao de codigo, teste do CSS
+  compilado isolado (mesmas classes, mesmo componente ja confirmado
+  funcionando em `DeviceTable`) e a revisao adversarial do workflow.
+
 ## 2026-08-15 - Estado de sessao (auth/permissoes/notificacoes) extraido para Context
 
 ### Causa raiz

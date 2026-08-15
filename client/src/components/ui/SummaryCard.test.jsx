@@ -5,10 +5,10 @@ import SummaryCard from "./SummaryCard.jsx";
 
 describe("SummaryCard", () => {
   it("renderiza icone, label e valor recebidos por props", () => {
-    render(<SummaryCard icon={AlertTriangle} label="Alertas criticos" value={7} tone="danger" />);
+    const { container } = render(<SummaryCard icon={AlertTriangle} label="Alertas criticos" value={7} tone="danger" />);
 
     expect(screen.getByText("Alertas criticos")).toBeInTheDocument();
-    expect(screen.getByText("7")).toBeInTheDocument();
+    expect(container.querySelector("strong")).toHaveTextContent("7");
   });
 
   it("aplica a classe de tone recebida ao container", () => {

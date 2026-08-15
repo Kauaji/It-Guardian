@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import {
   AlertTriangle,
   Building2,
-  CheckCircle2,
   Clock3,
   ClipboardList,
   Network,
@@ -11,8 +10,7 @@ import {
   ShieldCheck,
   TrendingUp,
   Users,
-  WifiOff,
-  Wrench
+  WifiOff
 } from "lucide-react";
 import {
   Area,
@@ -35,7 +33,7 @@ import DeviceTable from "./DeviceTable.jsx";
 import DashboardChartCard from "./DashboardChartCard.jsx";
 import DashboardFilters from "./DashboardFilters.jsx";
 import DashboardHealthScore from "./DashboardHealthScore.jsx";
-import DashboardKpiCard from "./DashboardKpiCard.jsx";
+import DashboardKpiStrip from "./DashboardKpiStrip.jsx";
 import DashboardQuickActions from "./DashboardQuickActions.jsx";
 import DashboardRankingList from "./DashboardRankingList.jsx";
 import { metricClass, statusClass } from "./dashboardFormatters.js";
@@ -128,49 +126,51 @@ export default function DashboardPage({
         </p>
       )}
 
-      <section className="dashboard-kpi-grid">
-        <DashboardHealthScore health={overview?.infrastructureHealth} loading={reportPending} />
-        <DashboardKpiCard
-          icon={ClipboardList}
-          title="OS abertas"
-          value={overview ? overview.openServiceOrders : "--"}
-          subtitle="Ordens de servico ainda nao finalizadas"
-          loading={reportPending}
-        />
-        <DashboardKpiCard
-          icon={Clock3}
-          title="OS vencidas"
-          value={overview?.overdueServiceOrdersAvailable ? overview.overdueServiceOrders : "Indisponivel"}
-          subtitle="Depende de prazo/SLA persistido (ainda nao implementado)"
-          tone={overview?.overdueServiceOrdersAvailable ? "" : "muted"}
-          loading={reportPending}
-        />
-        <DashboardKpiCard
-          icon={Wrench}
-          title="Em manutencao"
-          value={overview ? overview.inMaintenanceAssets : "--"}
-          subtitle="Ativos com manutencao ativa no momento"
-          loading={reportPending}
-        />
-        <DashboardKpiCard
-          icon={CheckCircle2}
-          title="Alertas resolvidos hoje"
-          value={overview ? overview.resolvedAlertsToday : "--"}
-          subtitle="Contagem do dia corrente"
-          tone="ok"
-          loading={reportPending}
-        />
-      </section>
+      <DashboardKpiStrip
+        loading={reportPending}
+        items={[
+          {
+            title: "OS abertas",
+            value: overview ? overview.openServiceOrders : "--",
+            subtitle: "Ordens de servico ainda nao finalizadas"
+          },
+          {
+            title: "OS vencidas",
+            value: overview?.overdueServiceOrdersAvailable ? overview.overdueServiceOrders : "Indisponivel",
+            subtitle: "Depende de prazo/SLA persistido (ainda nao implementado)",
+            tone: overview?.overdueServiceOrdersAvailable ? "" : "muted"
+          },
+          {
+            title: "Em manutencao",
+            value: overview ? overview.inMaintenanceAssets : "--",
+            subtitle: "Ativos com manutencao ativa no momento"
+          },
+          {
+            title: "Alertas resolvidos hoje",
+            value: overview ? overview.resolvedAlertsToday : "--",
+            subtitle: "Contagem do dia corrente",
+            tone: "ok"
+          }
+        ]}
+      />
 
-      {summary && (
-        <section className="summary-grid">
-          <SummaryCard icon={Server} label="Dispositivos" value={summary.totalDevices} />
-          <SummaryCard icon={ShieldCheck} label="Online" value={summary.online} tone="ok" />
-          <SummaryCard icon={WifiOff} label="Offline" value={summary.offline} tone="warning" />
-          <SummaryCard icon={AlertTriangle} label="Erro" value={summary.problem} tone="danger" />
-          <SummaryCard icon={AlertTriangle} label="Críticos" value={summary.criticalAlerts} tone="danger" />
-        </section>
-      )}
+      <section className="dashboard-instrument-row">
+        <DashboardHealthScore health={overview?.infrastructureHealth} loading={reportPending} />
+        {summary && (
+          <section className="panel dashboard-assets-card">
+            <div className="panel-heading">
+              <h3>Ativos monitorados</h3>
+            </div>
+            <div className="summary-grid">
+              <SummaryCard icon={Server} label="Dispositivos" value={summary.totalDevices} />
+              <SummaryCard icon={ShieldCheck} label="Online" value={summary.online} tone="ok" />
+              <SummaryCard icon={WifiOff} label="Offline" value={summary.offline} tone="warning" />
+              <SummaryCard icon={AlertTriangle} label="Erro" value={summary.problem} tone="danger" />
+              <SummaryCard icon={AlertTriangle} label="Críticos" value={summary.criticalAlerts} tone="danger" />
+            </div>
+          </section>
+        )}
+      </section>
 
       <section className="toolbar">
         <div className="search-box">
