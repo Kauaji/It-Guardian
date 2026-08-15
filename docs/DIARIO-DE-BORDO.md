@@ -4,6 +4,47 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-15 - Vitest e Testing Library no client
+
+### Causa raiz
+
+- a auditoria de codigo de 2026-08-14 apontou que o frontend nao tinha
+  nenhuma forma de testar componentes React (renderizacao, interacao, DOM);
+  a unica cobertura existente vinha de `node --test`, rodado a partir do
+  workspace do servidor, importando diretamente funcoes puras do cliente
+  (`serviceOrderBoardUtils.js`, utilitarios de automacao) — o que cobre
+  logica pura, mas nunca exercitou JSX de verdade.
+
+### Correcao
+
+- adicionado Vitest como `devDependency` do workspace `client`,
+  reaproveitando o mesmo plugin React do `vite.config.js` de build (sem
+  duplicar configuracao), mais `@testing-library/react`,
+  `@testing-library/jest-dom` e `jsdom` para renderizacao e asserts de DOM;
+- `client/vitest.config.js` (ambiente `jsdom`, setup em
+  `client/src/test/setup.js`) e independente do `vite.config.js` de
+  producao — nenhum arquivo `*.test.js(x)` entra no bundle final;
+- `npm run test:client` na raiz roda a suite; incorporado a `npm run check`;
+- cobertura inicial: os dois modulos puros mais novos ainda sem teste
+  (`dashboardModel.js`, `remoteAssistanceModel.js`) e um teste de
+  componente real (`SummaryCard.jsx`) provando renderizacao e matchers de
+  DOM ponta a ponta.
+
+### Validacoes
+
+- `npm run test --workspace client`: 3 arquivos, 30 testes aprovados;
+- `npm run lint`, `npm run check:architecture` (309 arquivos) e
+  `npm run build` aprovados sem nenhuma mudanca de comportamento.
+
+### Pendencias reais
+
+- a cobertura de componente e apenas o primeiro exemplo (`SummaryCard`);
+  o restante das telas React continua sem teste de renderizacao — indicado
+  para ser expandido de forma incremental, nao de uma vez;
+- a extracao de estado global do `App.jsx` (auth/permissoes/notificacoes)
+  para Context, apontada na mesma auditoria, agora pode se apoiar nessa
+  infraestrutura de teste para reduzir o risco do refactor.
+
 ## 2026-08-13 - Relay da assistencia remota funciona em deploy serverless
 
 ### Causa raiz
