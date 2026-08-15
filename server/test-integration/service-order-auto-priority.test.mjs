@@ -63,6 +63,7 @@ test("prioridade automatica por tempo aparece na leitura sem gravar, e so persis
   assert.equal(createResponse.status, 201);
   const created = (await createResponse.json()).serviceOrder;
   assert.equal(created.priority, "low");
+  assert.equal(created.isDemo, false, "OS criada de verdade nao pode ser marcada como demo");
 
   // Simula que a OS foi aberta ha 2 horas, cruzando o limiar de 1h configurado
   // acima -- sem isso, o teste dependeria de esperar de verdade.
@@ -73,12 +74,18 @@ test("prioridade automatica por tempo aparece na leitura sem gravar, e so persis
 
   const listResponse = await fetch(`${baseUrl}/api/service-orders`, { headers: { cookie } });
   assert.equal(listResponse.status, 200);
-  const listed = (await listResponse.json()).serviceOrders.find((order) => order.id === created.id);
+  const allOrders = (await listResponse.json()).serviceOrders;
+  const listed = allOrders.find((order) => order.id === created.id);
   assert.equal(listed.priority, "medium", "a listagem deve mostrar a prioridade calculada por tempo");
+  assert.equal(listed.isDemo, false, "OS criada de verdade nao pode ser marcada como demo");
 
   const detailResponse = await fetch(`${baseUrl}/api/service-orders/${created.id}`, { headers: { cookie } });
   assert.equal(detailResponse.status, 200);
   assert.equal((await detailResponse.json()).serviceOrder.priority, "medium");
+
+  const demoOrder = allOrders.find((order) => order.id === "demo-os-001");
+  assert.ok(demoOrder, "seed de demonstracao deveria existir com ENABLE_DEMO_SEED=true");
+  assert.equal(demoOrder.isDemo, true, "OS semeada por demonstracao deve ser marcada como demo");
 
   // A leitura acima nao pode ter escrito nada: nem a coluna, nem o historico.
   const afterReadsRow = await query("SELECT priority FROM service_orders WHERE id = $1", [created.id]);

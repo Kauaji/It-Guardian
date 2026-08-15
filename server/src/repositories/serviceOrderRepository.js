@@ -581,6 +581,7 @@ function fromItemRow(row) {
 function fromOrderRow(row, history = [], items = []) {
   return {
     id: row.id,
+    isDemo: String(row.id || "").startsWith("demo-os-"),
     number: row.number,
     title: row.title,
     description: row.description,

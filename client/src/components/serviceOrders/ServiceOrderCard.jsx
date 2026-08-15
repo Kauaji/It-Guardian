@@ -28,7 +28,10 @@ export default function ServiceOrderCard({
       onDragEnd={onDragEnd}
       onClick={() => onOpen(order)}
     >
-      <span className="service-order-number">{order.number}</span>
+      <span className="service-order-number">
+        {order.number}
+        {order.isDemo && <span className="demo-data-badge">Demo</span>}
+      </span>
       <strong>{order.title}</strong>
       <small>{asset?.name || order.assetName || "Sem máquina"}</small>
       <div className="service-order-card-tags">

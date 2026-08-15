@@ -6037,6 +6037,21 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
   line-height: 1.25;
 }
 
+.demo-data-badge {
+  display: inline-block;
+  width: fit-content;
+  border: 1px solid color-mix(in srgb, #f59e0b 45%, var(--border));
+  border-radius: 999px;
+  padding: 1px 7px;
+  margin-left: 6px;
+  background: color-mix(in srgb, #f59e0b 14%, var(--surface-soft));
+  color: #92400e;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.4;
+  vertical-align: middle;
+}
+
 .backup-badge.in-use {
   border-color: color-mix(in srgb, #ea580c 54%, var(--border));
   background: color-mix(in srgb, #ea580c 16%, var(--surface-soft));

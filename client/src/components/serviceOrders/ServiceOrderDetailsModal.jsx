@@ -624,7 +624,10 @@ export default function ServiceOrderDetailsModal({
         <header className="asset-modal-header">
           <div>
             <span className="asset-eyebrow">Ordem de Serviço</span>
-            <h2>{serviceOrder.number} - {serviceOrder.title}</h2>
+            <h2>
+              {serviceOrder.number} - {serviceOrder.title}
+              {serviceOrder.isDemo && <span className="demo-data-badge">Demo</span>}
+            </h2>
             <p>{statusLabelMap[serviceOrder.status] || serviceOrder.status} - Prioridade {priorityLabels[serviceOrder.priority]}</p>
           </div>
           <div className="asset-modal-header-actions">
