@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { query, withTransaction } from "../database.js";
+import { conflict, badRequest, forbidden, notFoundError, serviceUnavailable } from "../lib/errors.js";
 import { addAssetHistory } from "./assetHistoryRepository.js";
 import { addLog } from "./logRepository.js";
 import { isRemoteScriptExecutionEnabled } from "../config/environment.js";
@@ -16,27 +17,21 @@ function assertSecondReviewer(script, userId) {
   if (!dualControlRiskLevels.has(String(script.riskLevel || "").toLowerCase())) return;
   if (userId !== script.contentUpdatedBy) return;
 
-  const error = new Error(
+  throw forbidden(
     "Scripts de risco alto ou critico nao podem ser enfileirados pela mesma pessoa que cadastrou " +
-      "ou editou o conteudo por ultimo. Peca para outro usuario com permissao revisar e enviar."
+      "ou editou o conteudo por ultimo. Peca para outro usuario com permissao revisar e enviar.",
+    { code: "SCRIPT_EXECUTION_REQUIRES_SECOND_REVIEWER" }
   );
-  error.statusCode = 403;
-  error.expose = true;
-  error.code = "SCRIPT_EXECUTION_REQUIRES_SECOND_REVIEWER";
-  throw error;
 }
 const terminalStatuses = new Set(["succeeded", "failed", "timed_out"]);
 const maxOutputLength = 65536;
 
 function assertRemoteScriptExecutionEnabled() {
   if (isRemoteScriptExecutionEnabled()) return;
-  const error = new Error(
-    "A execucao remota esta desabilitada nesta instalacao. O registro pode ser mantido em modo de simulacao."
+  throw serviceUnavailable(
+    "A execucao remota esta desabilitada nesta instalacao. O registro pode ser mantido em modo de simulacao.",
+    { code: "REMOTE_SCRIPT_EXECUTION_DISABLED" }
   );
-  error.statusCode = 503;
-  error.expose = true;
-  error.code = "REMOTE_SCRIPT_EXECUTION_DISABLED";
-  throw error;
 }
 
 function clampTimeout(value) {
@@ -73,14 +68,10 @@ export async function queueAgentScriptJob({
 }) {
   assertRemoteScriptExecutionEnabled();
   if (!script || !executableTypes.has(String(script.type || "").toLowerCase())) {
-    const error = new Error("Somente scripts BAT, CMD e PowerShell podem ser enviados ao agente.");
-    error.statusCode = 400;
-    throw error;
+    throw badRequest("Somente scripts BAT, CMD e PowerShell podem ser enviados ao agente.");
   }
   if (!String(script.content || "").trim()) {
-    const error = new Error("O script cadastrado nao possui conteudo executavel.");
-    error.statusCode = 400;
-    throw error;
+    throw badRequest("O script cadastrado nao possui conteudo executavel.");
   }
   assertSecondReviewer(script, userId);
 
@@ -97,9 +88,7 @@ export async function queueAgentScriptJob({
   );
   const asset = assetResult.rows[0];
   if (!asset) {
-    const error = new Error("A maquina selecionada nao possui um agente ativo para executar o script.");
-    error.statusCode = 409;
-    throw error;
+    throw conflict("A maquina selecionada nao possui um agente ativo para executar o script.");
   }
 
   const result = await db(
@@ -237,15 +226,11 @@ export async function completeAgentScriptJob({ jobId, enrollmentId, result }) {
     );
     const job = current.rows[0];
     if (!job) {
-      const error = new Error("Trabalho do agente nao encontrado.");
-      error.statusCode = 404;
-      throw error;
+      throw notFoundError("Trabalho do agente nao encontrado.");
     }
     if (terminalStatuses.has(job.status)) return { id: job.id, status: job.status, reused: true };
     if (job.status !== "claimed") {
-      const error = new Error("O trabalho ainda nao foi entregue a este agente.");
-      error.statusCode = 409;
-      throw error;
+      throw conflict("O trabalho ainda nao foi entregue a este agente.");
     }
 
     const timedOut = result.timedOut === true;

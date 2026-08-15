@@ -76,6 +76,55 @@ entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
   auth/permissoes/notificacoes como o "estado global" a extrair, nao o
   estado de UI especifico de cada tela.
 
+## 2026-08-15 - Classe de erro tipada (AppError) no backend
+
+### Causa raiz
+
+- a auditoria original apontou 114 ocorrencias do padrao manual
+  `const error = new Error(); error.statusCode = X; throw error;` espalhadas
+  pelo backend, sem nenhuma classe de erro tipada.
+
+### Correcao
+
+- novo `server/src/lib/errors.js`: `AppError` (subclasse real de `Error`,
+  com `statusCode`/`code`/`expose`) e cinco factories atalho —
+  `badRequest`, `forbidden`, `notFoundError`, `conflict`,
+  `serviceUnavailable` — cobrindo os status codes 400/403/404/409/503 que
+  ja apareciam no padrao manual;
+- `errorMiddleware.js` ja lia `error.statusCode`/`error.code`/`error.expose`
+  de forma generica (duck typing), entao nao precisou de nenhuma mudanca —
+  `AppError` e compativel por construcao;
+- migrados os 22 pontos de `agentScriptJobRepository.js` (7) e
+  `maintenanceScriptRepository.js` (15) — os dois arquivos mais
+  concentrados do padrao, e os que mais mudaram nesta mesma sessao;
+- `expose` conferido caso a caso antes de migrar: para status < 500 o
+  `errorMiddleware` sempre usa `error.message` direto, independente de
+  `expose` — entao o default `expose: true` do `AppError` nao muda
+  comportamento nenhum nesses casos; os dois casos que ja usavam
+  `expose: true` explicitamente (403 e 503) continuam identicos.
+
+### Validacoes
+
+- novo `server/src/lib/errors.test.mjs`: cobre defaults, overrides e as
+  cinco factories;
+- `npm run test --workspace server`: 264 aprovados, 2 ignorados por exigir
+  PostgreSQL real, 0 falhas — inclui os testes que ja verificavam
+  `statusCode`/`message` exatos dos caminhos migrados (nenhuma regressao);
+- `npm run test:integration --workspace server`: 22 aprovados, 2 ignorados,
+  0 falhas;
+- `npm run lint` e `npm run check:architecture` (317 arquivos) aprovados.
+
+### Pendencias reais
+
+- restam ~90 ocorrencias do padrao manual em outros arquivos do backend —
+  migradas apenas os dois arquivos mais concentrados nesta rodada, como
+  demonstracao do padrao; converter o resto e um trabalho mecanico mas
+  extenso, fica para rodadas incrementais futuras;
+- a classificacao de erro de banco por regex sobre `error.message`
+  (`errorMiddleware.js`) nao foi tocada — e um problema relacionado mas
+  distinto (deteccao heuristica de erro de conexao, nao falta de
+  tipagem).
+
 ## 2026-08-15 - Focus trap nos modais que usam useModalLifecycle
 
 ### Causa raiz

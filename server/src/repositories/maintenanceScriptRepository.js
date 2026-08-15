@@ -11,6 +11,7 @@ import { addLog } from "./logRepository.js";
 import { addServiceOrderHistory } from "./serviceOrderRepository.js";
 import { queueAgentScriptJob } from "./agentScriptJobRepository.js";
 import { trimString } from "../lib/textUtils.js";
+import { badRequest, conflict, notFoundError } from "../lib/errors.js";
 
 export const scriptTypes = new Set(["bat", "cmd", "powershell", "shell", "other"]);
 export const riskLevels = new Set(["low", "medium", "high", "critical"]);
@@ -843,22 +844,16 @@ function normalizeScriptPayload(payload = {}, current = {}) {
   const content = String(payload.content ?? current.content ?? "").slice(0, maxLengths.content);
 
   if (!name || name.length < 3) {
-    const error = new Error("Informe um nome de script com pelo menos 3 caracteres.");
-    error.statusCode = 400;
-    throw error;
+    throw badRequest("Informe um nome de script com pelo menos 3 caracteres.");
   }
 
   if (!content.trim()) {
-    const error = new Error("Informe o conteúdo do script como texto.");
-    error.statusCode = 400;
-    throw error;
+    throw badRequest("Informe o conteúdo do script como texto.");
   }
 
   const analysis = analyzeMaintenanceScriptContent(content);
   if (analysis.unknownVariables?.length) {
-    const error = new Error(`Variaveis nao permitidas no script: ${analysis.unknownVariables.join(", ")}.`);
-    error.statusCode = 400;
-    throw error;
+    throw badRequest(`Variaveis nao permitidas no script: ${analysis.unknownVariables.join(", ")}.`);
   }
   const suggestedRiskLevel = normalizeRiskLevel(
     payload.suggestedRiskLevel ?? current.suggestedRiskLevel,
@@ -1231,24 +1226,18 @@ export async function registerMaintenanceScriptSimulation({ scriptId, payload = 
   const script = await findMaintenanceScriptById(scriptId);
 
   if (!script || script.active === false) {
-    const error = new Error("Script de manutenção não encontrado ou inativo.");
-    error.statusCode = 404;
-    throw error;
+    throw notFoundError("Script de manutenção não encontrado ou inativo.");
   }
 
   if (payload.confirmed !== true) {
-    const error = new Error("Confirme que esta ação registra apenas uma simulação. Nenhum comando será executado.");
-    error.statusCode = 400;
-    throw error;
+    throw badRequest("Confirme que esta ação registra apenas uma simulação. Nenhum comando será executado.");
   }
 
   const riskLevel = normalizeRiskLevel(script.riskLevel || script.suggestedRiskLevel, "medium");
   const requiresExtraConfirmation = riskLevel === "high" || riskLevel === "critical";
 
   if (requiresExtraConfirmation && payload.riskAcknowledged !== true) {
-    const error = new Error("Scripts de alto risco exigem confirmação extra antes de registrar a simulação.");
-    error.statusCode = 400;
-    throw error;
+    throw badRequest("Scripts de alto risco exigem confirmação extra antes de registrar a simulação.");
   }
 
   const assetId = trimString(payload.assetId, 120);
@@ -1383,9 +1372,7 @@ export async function listRecommendedScriptsForSuggestion(suggestionId) {
   const suggestion = await findServiceOrderSuggestionById(suggestionId);
 
   if (!suggestion) {
-    const error = new Error("Sugestão de OS não encontrada.");
-    error.statusCode = 404;
-    throw error;
+    throw notFoundError("Sugestão de OS não encontrada.");
   }
 
   const [alert, scripts] = await Promise.all([
@@ -1429,31 +1416,21 @@ export async function useScriptFromSuggestion({ suggestionId, scriptId, payload 
   ]);
 
   if (!suggestion) {
-    const error = new Error("Sugestão de OS não encontrada.");
-    error.statusCode = 404;
-    throw error;
+    throw notFoundError("Sugestão de OS não encontrada.");
   }
   if (!["pending", "observed_persistent", "insufficient_data", "validation_cancelled"].includes(suggestion.status)) {
-    const error = new Error("Apenas sugestões pendentes podem receber observação de script.");
-    error.statusCode = 409;
-    throw error;
+    throw conflict("Apenas sugestões pendentes podem receber observação de script.");
   }
   if (!script || script.active === false) {
-    const error = new Error("Script de manutenção não encontrado ou inativo.");
-    error.statusCode = 404;
-    throw error;
+    throw notFoundError("Script de manutenção não encontrado ou inativo.");
   }
   if (payload.confirmed !== true) {
-    const error = new Error("Confirme o envio deste script cadastrado para execução pelo agente da máquina.");
-    error.statusCode = 400;
-    throw error;
+    throw badRequest("Confirme o envio deste script cadastrado para execução pelo agente da máquina.");
   }
 
   const riskLevel = normalizeRiskLevel(script.riskLevel || script.suggestedRiskLevel, "medium");
   if ((riskLevel === "high" || riskLevel === "critical") && payload.riskAcknowledged !== true) {
-    const error = new Error("Scripts de alto risco exigem confirmação extra antes de registrar o uso.");
-    error.statusCode = 400;
-    throw error;
+    throw badRequest("Scripts de alto risco exigem confirmação extra antes de registrar o uso.");
   }
 
   const validationWindowMinutes = Math.min(
@@ -1728,9 +1705,7 @@ export async function cancelScriptValidation(id, user = null) {
   );
 
   if (!result.rows[0]) {
-    const error = new Error("Observação não encontrada ou já finalizada.");
-    error.statusCode = 404;
-    throw error;
+    throw notFoundError("Observação não encontrada ou já finalizada.");
   }
 
   const validation = fromValidationRow(result.rows[0]);
@@ -1814,9 +1789,7 @@ export async function acknowledgeScriptLog(id, user = null) {
   );
 
   if (!result.rows[0]) {
-    const error = new Error("Log de script não encontrado.");
-    error.statusCode = 404;
-    throw error;
+    throw notFoundError("Log de script não encontrado.");
   }
 
   return fromLogRow(result.rows[0]);
@@ -1825,9 +1798,7 @@ export async function acknowledgeScriptLog(id, user = null) {
 export async function applyScriptLogSuggestedSolution(id, payload = {}, user = null) {
   const log = await findScriptLogById(id);
   if (!log) {
-    const error = new Error("Log de script não encontrado.");
-    error.statusCode = 404;
-    throw error;
+    throw notFoundError("Log de script não encontrado.");
   }
 
   const notes = trimString(
