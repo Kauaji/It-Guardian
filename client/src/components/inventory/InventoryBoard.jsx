@@ -1,12 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
-import { ArrowDown, ArrowUp, ChevronDown, Database, Edit3, ListFilter, Map as MapIcon, MoreHorizontal, Plus, Search, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Box, ChevronDown, Database, Edit3, ListFilter, Map as MapIcon, MoreHorizontal, Plus, Search, Trash2 } from "lucide-react";
 import SegmentCard from "./SegmentCard.jsx";
 import MoveMachineModal from "./MoveMachineModal.jsx";
 import MachineDetailsModal from "./MachineDetailsModal.jsx";
 import BulkActionsBar from "./BulkActionsBar.jsx";
 import InventoryTabs from "./InventoryTabs.jsx";
 import ColorPickerSegment from "./ColorPickerSegment.jsx";
+
+const InventoryVisualMapView = lazy(() => import("./InventoryVisualMapView.jsx"));
 
 function SegmentGroupContainer({ groupId, color, className = "", children }) {
   const { isOver, setNodeRef } = useDroppable({
@@ -116,6 +118,13 @@ export default function InventoryBoard({
 
     return next;
   }, [groups, segments]);
+  const visualMapDevices = useMemo(() => {
+    const byId = new Map();
+    for (const machines of machinesBySegment.values()) {
+      for (const machine of machines) byId.set(machine.id, machine);
+    }
+    return Array.from(byId.values());
+  }, [machinesBySegment]);
   const visibleSegments = useMemo(() => segments.filter((segment) => {
     if (search.trim()) return (machinesBySegment.get(segment.id) || []).length > 0;
     if (selectedSegmentId !== "all") return segment.id === selectedSegmentId;
@@ -281,9 +290,31 @@ export default function InventoryBoard({
             Plantas
           </button>
         )}
+        <button
+          type="button"
+          className={inventoryViewMode === "visual-map" ? "active" : ""}
+          onClick={() => setInventoryViewMode("visual-map")}
+          aria-selected={inventoryViewMode === "visual-map"}
+        >
+          <Box size={16} />
+          Mapa 3D
+        </button>
       </div>
 
-      {inventoryViewMode === "board" ? (
+      {inventoryViewMode === "visual-map" ? (
+        <Suspense fallback={<div className="floor-plan-loading">Carregando 3D...</div>}>
+          <InventoryVisualMapView
+            token={token}
+            notify={notify}
+            devices={visualMapDevices}
+            segments={segments}
+            groups={groups}
+            tabs={tabs}
+            activeTab={activeTab}
+            canManage={canManage}
+          />
+        </Suspense>
+      ) : inventoryViewMode === "board" ? (
         <>
       <section className="inventory-tab-panel">
         <div className="inventory-board-actions">

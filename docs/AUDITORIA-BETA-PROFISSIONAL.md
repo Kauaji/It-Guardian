@@ -76,6 +76,15 @@ o codebase (servidor, cliente, agente). Achados corrigidos nesta entrega:
 | Alta | `isAllowedVercelOrigin()` confiava em qualquer origem terminando em `.vercel.app` — dominio publico e compartilhado onde qualquer conta pode publicar um projeto — para o CORS **e** para a verificacao de origem do CSRF (`requireTrustedCookieOrigin`), permitindo que um site de terceiros hospedado em outro projeto Vercel enviasse requisicoes autenticadas usando o cookie de sessao do usuario | passa a exigir igualdade exata com `VERCEL_PROJECT_PRODUCTION_URL` (dominio de producao do proprio projeto, garantido unico pela Vercel); uma primeira tentativa com sufixo de time tambem se mostrou falsificavel (um projeto pode ser nomeado para terminar com o mesmo sufixo) e foi descartada — testes cobrem os dois cenarios |
 | Baixa | Componente `InventoryVisualMapView.jsx` (1176 linhas) sem nenhuma referencia no app ou nos testes, substituido por `InventoryVisualMapScene.jsx` e os paineis de conexao atuais | removido |
 
+> **Correcao (2026-08-15):** a linha acima estava errada. `InventoryVisualMapScene.jsx`
+> e os paineis de conexao **nao** estavam em uso — eles tambem nao tinham
+> nenhuma referencia em lugar nenhum, porque `InventoryVisualMapView.jsx` era
+> exatamente o componente que os compunha e os conectava ao Inventario. A
+> remocao nao foi uma limpeza de codigo morto: foi a causa de todo o Mapa
+> Visual 3D (backend completo e testado, ~1800 linhas ao todo) ficar orfao.
+> Restaurado do historico do git e conectado ao `InventoryBoard` como terceira
+> aba, validado interativamente no navegador (ver `docs/MAPA-VISUAL-3D-INVENTARIO.md`).
+
 Achados registrados, ainda nao corrigidos (ver riscos residuais abaixo):
 
 - o rate limit por IP/token roda em memoria por instancia de funcao

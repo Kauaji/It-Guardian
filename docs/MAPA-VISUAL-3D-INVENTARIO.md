@@ -66,7 +66,18 @@ O frontend apenas esconde controles quando o usuario nao possui permissao. O bac
 - `InventoryVisualMapConnectionEditor`: edicao de camada, tipo, pontos manuais, estilo, metadados e notas da conexao.
 - `InventoryBoard`: alternancia entre Quadro, Plantas e Mapa visual 3D.
 
-`InventoryVisualMapView` e importado de forma lazy pelo `App`, de modo que a cena adicional nao interfere no carregamento principal do inventario.
+`InventoryVisualMapView` e importado de forma lazy (`lazy()` + `Suspense`) pelo
+`InventoryBoard`, de modo que a cena adicional nao interfere no carregamento
+principal do inventario — confirmado no build: fica em chunk proprio, o
+bundle do Quadro/Plantas nao cresce ao existir o Mapa 3D.
+
+Nota de historico (2026-08-14): esta tela chegou a ficar orfa por um
+periodo — uma auditoria removeu `InventoryVisualMapView.jsx` como "codigo
+morto sem nenhuma referencia", sem perceber que ele era exatamente o
+componente que faltava conectar ao `InventoryBoard`, nao um substituto ja
+em uso. Restaurado do historico do git e conectado como a terceira aba
+("Mapa 3D"), validado interativamente no navegador: criar mapa, adicionar
+ativo e renderizar a cena Three.js funcionam de ponta a ponta.
 
 ## Camadas
 
