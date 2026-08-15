@@ -76,6 +76,51 @@ entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
   auth/permissoes/notificacoes como o "estado global" a extrair, nao o
   estado de UI especifico de cada tela.
 
+## 2026-08-15 - Ampliacao da cobertura de testes do client (Vitest)
+
+### Causa raiz
+
+- a entrega de 15/08 que introduziu Vitest cobriu so 3 arquivos (2 modulos
+  puros + 1 componente de exemplo) como primeiro passo deliberadamente
+  minimo. Este item retoma esse ponto e amplia a cobertura de verdade.
+
+### Correcao
+
+- a maioria dos utilitarios puros do client ja tinha cobertura via
+  `node --test` no workspace do servidor (import direto cruzado de
+  workspace, padrao ja estabelecido no projeto para `serviceOrderBoardUtils.js`,
+  `automationUtils.js`, `permissions.js`, `remoteAssistanceModel.js` etc.)
+  — duplicar esses em Vitest teria baixo valor;
+- o gap real era em **componentes** (renderizacao, interacao real), a
+  categoria que o Vitest+Testing Library existe para cobrir e que so tinha
+  1 exemplo. Adicionados: `Toast.jsx` (mensagem condicional, classe de
+  tone, timer de auto-fechamento com fake timers, e que trocar a mensagem
+  não dispara o `onClose` antigo pendente), `PermissionBlocked.jsx` e
+  `ViewLoadingState.jsx` (smoke tests de acessibilidade), e
+  `AutomationIndicatorDots.jsx` (funcoes puras exportadas + interacao real
+  de usuario: clicar num ponto chama `onSelectPlan`, o botao "+N" abre um
+  popover com `aria-expanded` correto).
+
+### Validacoes
+
+- um teste inicial (`maxVisible` clampado para 1 mesmo com `0`) revelou que
+  minha suposicao sobre o comportamento estava errada: `Number(0) || 4`
+  avalia para `4` porque `0` e falsy em JS, entao `maxVisible: 0` cai no
+  padrao de 4, nao fica em 1 — o teste foi corrigido para descrever o
+  comportamento real do componente, nao o que eu assumi que ele fazia;
+- `npm run test --workspace client`: 8 arquivos, 49 testes aprovados (era
+  3 arquivos, 30 testes);
+- `npm run lint`, `npm run check:architecture` (321 arquivos) e
+  `npm run build` aprovados.
+
+### Pendencias reais
+
+- ainda e uma fracao pequena dos ~121 arquivos-fonte do client; a maioria
+  das telas maiores (`InventoryBoard`, `ServiceOrdersBoard`,
+  `AlertCenterV2`) continua sem teste de componente — ampliar isso segue
+  sendo trabalho incremental para rodadas futuras, nao algo que se fecha
+  de uma vez.
+
 ## 2026-08-15 - Classe de erro tipada (AppError) no backend
 
 ### Causa raiz
