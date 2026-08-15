@@ -102,7 +102,11 @@ Achados registrados, ainda nao corrigidos (ver riscos residuais abaixo):
 
 ## Riscos residuais antes de cliente real
 
-1. O instalador e o coletor ainda precisam de assinatura de codigo confiavel.
+1. O instalador e o coletor ainda precisam de assinatura de codigo confiavel
+   (certificado Authenticode) — o pipeline de build ja assina automaticamente
+   assim que um certificado for configurado (`IT_GUARDIAN_CODE_SIGN_PFX` ou
+   `IT_GUARDIAN_CODE_SIGN_THUMBPRINT`, ver `installers/windows-collector/README.md`),
+   falta apenas adquirir o certificado.
 2. Atualizacao automatica assinada ainda nao existe; usar `Reparar ou atualizar`.
 3. A execucao remota deve permanecer desligada ate existir assinatura de
    scripts, segregacao de permissao e homologacao independente.

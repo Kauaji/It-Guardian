@@ -11,6 +11,72 @@ if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
   $OutputDirectory = Join-Path $PSScriptRoot "output"
 }
 
+# --- Assinatura de codigo (Authenticode) -----------------------------------
+# Desligada por padrao: sem certificado configurado, o build funciona
+# exatamente como antes (executaveis nao assinados). Quando um certificado
+# for adquirido, ligar via variaveis de ambiente -- nenhuma mudanca de
+# codigo necessaria:
+#
+#   IT_GUARDIAN_CODE_SIGN_PFX           caminho do arquivo .pfx/.p12
+#   IT_GUARDIAN_CODE_SIGN_PFX_PASSWORD  senha do .pfx
+#   -- ou, para certificado em token/HSM ja instalado no repositorio do Windows --
+#   IT_GUARDIAN_CODE_SIGN_THUMBPRINT    thumbprint do certificado
+#
+#   IT_GUARDIAN_CODE_SIGN_TIMESTAMP_URL opcional, RFC3161 (default: DigiCert)
+#   SIGNTOOL_PATH                       opcional, caminho direto do signtool.exe
+function Find-SignTool {
+  if (-not [string]::IsNullOrWhiteSpace($env:SIGNTOOL_PATH)) {
+    if (Test-Path -LiteralPath $env:SIGNTOOL_PATH) { return $env:SIGNTOOL_PATH }
+    throw "SIGNTOOL_PATH definido mas o arquivo nao existe: $env:SIGNTOOL_PATH"
+  }
+  $kitsRoot = Join-Path ${env:ProgramFiles(x86)} "Windows Kits\10\bin"
+  if (-not (Test-Path -LiteralPath $kitsRoot)) { return $null }
+  return Get-ChildItem -LiteralPath $kitsRoot -Directory -ErrorAction SilentlyContinue |
+    Sort-Object Name -Descending |
+    ForEach-Object { Join-Path $_.FullName "x64\signtool.exe" } |
+    Where-Object { Test-Path -LiteralPath $_ } |
+    Select-Object -First 1
+}
+
+function Invoke-CodeSigning {
+  param([Parameter(Mandatory)] [string]$FilePath)
+
+  $hasPfx = -not [string]::IsNullOrWhiteSpace($env:IT_GUARDIAN_CODE_SIGN_PFX)
+  $hasThumbprint = -not [string]::IsNullOrWhiteSpace($env:IT_GUARDIAN_CODE_SIGN_THUMBPRINT)
+  if (-not $hasPfx -and -not $hasThumbprint) {
+    return $false
+  }
+
+  $signtool = Find-SignTool
+  if (-not $signtool) {
+    throw "Certificado de assinatura configurado, mas signtool.exe nao foi encontrado. Instale o Windows SDK ou defina SIGNTOOL_PATH."
+  }
+
+  $timestampUrl = if ([string]::IsNullOrWhiteSpace($env:IT_GUARDIAN_CODE_SIGN_TIMESTAMP_URL)) {
+    "http://timestamp.digicert.com"
+  } else {
+    $env:IT_GUARDIAN_CODE_SIGN_TIMESTAMP_URL
+  }
+
+  $signArgs = @("sign", "/fd", "SHA256", "/tr", $timestampUrl, "/td", "SHA256")
+  if ($hasPfx) {
+    $signArgs += @("/f", $env:IT_GUARDIAN_CODE_SIGN_PFX)
+    if (-not [string]::IsNullOrWhiteSpace($env:IT_GUARDIAN_CODE_SIGN_PFX_PASSWORD)) {
+      $signArgs += @("/p", $env:IT_GUARDIAN_CODE_SIGN_PFX_PASSWORD)
+    }
+  } else {
+    $signArgs += @("/sha1", $env:IT_GUARDIAN_CODE_SIGN_THUMBPRINT)
+  }
+  $signArgs += $FilePath
+
+  & $signtool @signArgs
+  if ($LASTEXITCODE -ne 0) {
+    throw "Falha ao assinar $FilePath (signtool saiu com codigo $LASTEXITCODE)."
+  }
+  Write-Host "Assinado: $FilePath" -ForegroundColor Green
+  return $true
+}
+
 $iconPath = Join-Path $PSScriptRoot "it-guardian.ico"
 $executablePath = Join-Path $PSScriptRoot "ITGuardian.exe"
 $uninstallerExecutablePath = Join-Path $PSScriptRoot "ITGuardian-Uninstaller.exe"
@@ -52,6 +118,7 @@ if (-not (Test-Path -LiteralPath $uninstallerSourcePath)) {
 if ($LASTEXITCODE -ne 0) {
   throw "A compilacao do ITGuardian.exe falhou com codigo $LASTEXITCODE."
 }
+Invoke-CodeSigning -FilePath $executablePath | Out-Null
 
 & $csharpCompiler `
   /nologo `
@@ -66,6 +133,7 @@ if ($LASTEXITCODE -ne 0) {
 if ($LASTEXITCODE -ne 0) {
   throw "A compilacao do ITGuardian-Uninstaller.exe falhou com codigo $LASTEXITCODE."
 }
+Invoke-CodeSigning -FilePath $uninstallerExecutablePath | Out-Null
 
 $uri = $null
 if (
@@ -119,5 +187,10 @@ New-Item -ItemType Directory -Force -Path $resolvedOutputDirectory | Out-Null
 if ($LASTEXITCODE -ne 0) {
   throw "A compilacao do instalador falhou com codigo $LASTEXITCODE."
 }
+$installerExecutablePath = Join-Path $resolvedOutputDirectory "ITGuardian-Collector-Setup.exe"
+$signedInstaller = Invoke-CodeSigning -FilePath $installerExecutablePath
 
+if (-not $signedInstaller) {
+  Write-Host "Aviso: executaveis nao assinados (nenhum certificado configurado). Veja IT_GUARDIAN_CODE_SIGN_* no topo deste script." -ForegroundColor Yellow
+}
 Write-Host "Instalador criado em $resolvedOutputDirectory" -ForegroundColor Green

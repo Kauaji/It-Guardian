@@ -38,6 +38,34 @@ Antes de distribuir, publique o executavel em um endereco HTTPS e configure
 `VITE_COLLECTOR_INSTALLER_URL` no build do frontend. Para uma liberacao publica,
 assine o executavel e valide a instalacao e a remocao em uma VM Windows limpa.
 
+### Assinatura de codigo (Authenticode)
+
+Desligada por padrao — sem certificado configurado, o build funciona
+exatamente como sempre funcionou (executaveis nao assinados). Quando houver
+um certificado, ligue via variaveis de ambiente antes de rodar o build,
+sem nenhuma mudanca de codigo:
+
+```powershell
+$env:IT_GUARDIAN_CODE_SIGN_PFX = "C:\caminho\certificado.pfx"
+$env:IT_GUARDIAN_CODE_SIGN_PFX_PASSWORD = "senha-do-pfx"
+npm run installer:windows
+```
+
+Para certificado em token/HSM ja instalado no repositorio de certificados do
+Windows (comum em certificados EV), use o thumbprint em vez do arquivo:
+
+```powershell
+$env:IT_GUARDIAN_CODE_SIGN_THUMBPRINT = "AB12CD34..."
+npm run installer:windows
+```
+
+Exige o `signtool.exe` do Windows SDK (procurado automaticamente em
+`Windows Kits\10\bin`; defina `SIGNTOOL_PATH` para apontar direto se
+necessario). O carimbo de tempo usa `http://timestamp.digicert.com` por
+padrao, configuravel via `IT_GUARDIAN_CODE_SIGN_TIMESTAMP_URL`. Os três
+executaveis (`ITGuardian.exe`, `ITGuardian-Uninstaller.exe` e o instalador
+final) sao assinados quando um certificado esta configurado.
+
 ## Resultado da instalacao
 
 - arquivos em `C:\ProgramData\ITGuardian`;
