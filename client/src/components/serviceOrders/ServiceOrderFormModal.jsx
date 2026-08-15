@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { fetchClients, fetchTechnicians } from "../../api.js";
 import { assetTypeLabel, assetTypeOptions } from "../inventory/assetTypes.js";
+import { useModalLifecycle } from "../../hooks/useModalLifecycle.js";
 
 const priorities = [
   { value: "low", label: "Baixa" },
@@ -46,6 +47,7 @@ export default function ServiceOrderFormModal({
   const [technicians, setTechnicians] = useState([]);
   const [clients, setClients] = useState([]);
   const [formError, setFormError] = useState("");
+  const dialogRef = useModalLifecycle(open, onClose);
   const businessMode = systemMode === "business";
   const environmentLabel = businessMode ? "Cliente" : "Ambiente";
   const helperText = businessMode
@@ -169,7 +171,7 @@ export default function ServiceOrderFormModal({
 
   return (
     <div className="modal-backdrop service-order-backdrop" role="presentation">
-      <form className="modal-panel service-order-form-modal" role="dialog" aria-modal="true" onSubmit={submit}>
+      <form ref={dialogRef} className="modal-panel service-order-form-modal" role="dialog" aria-modal="true" onSubmit={submit}>
         <header>
           <div>
             <h2>Nova Ordem de Serviço</h2>

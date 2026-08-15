@@ -1,0 +1,68 @@
+import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { useModalLifecycle } from "./useModalLifecycle.js";
+
+function TestModal({ open, onClose }) {
+  const dialogRef = useModalLifecycle(open, onClose);
+
+  if (!open) return null;
+
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section ref={dialogRef} role="dialog" aria-modal="true" aria-label="Modal de teste">
+        <button type="button">Primeiro</button>
+        <button type="button">Meio</button>
+        <button type="button">Ultimo</button>
+      </section>
+    </div>
+  );
+}
+
+describe("useModalLifecycle", () => {
+  it("foca o primeiro elemento focavel ao abrir", async () => {
+    render(<TestModal open onClose={() => {}} />);
+    await waitFor(() => expect(screen.getByText("Primeiro")).toHaveFocus());
+  });
+
+  it("Tab no ultimo elemento volta o foco para o primeiro (focus trap)", async () => {
+    render(<TestModal open onClose={() => {}} />);
+    const first = screen.getByText("Primeiro");
+    const last = screen.getByText("Ultimo");
+    await waitFor(() => expect(first).toHaveFocus());
+
+    last.focus();
+    expect(last).toHaveFocus();
+    fireEvent.keyDown(window, { key: "Tab" });
+    expect(first).toHaveFocus();
+  });
+
+  it("Shift+Tab no primeiro elemento vai para o ultimo (focus trap)", async () => {
+    render(<TestModal open onClose={() => {}} />);
+    const first = screen.getByText("Primeiro");
+    const last = screen.getByText("Ultimo");
+    await waitFor(() => expect(first).toHaveFocus());
+
+    fireEvent.keyDown(window, { key: "Tab", shiftKey: true });
+    expect(last).toHaveFocus();
+  });
+
+  it("Escape chama onClose", async () => {
+    const onClose = vi.fn();
+    render(<TestModal open onClose={onClose} />);
+    await waitFor(() => expect(screen.getByText("Primeiro")).toHaveFocus());
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("Tab num elemento do meio nao interfere no fluxo normal do navegador", async () => {
+    render(<TestModal open onClose={() => {}} />);
+    const middle = screen.getByText("Meio");
+    await waitFor(() => expect(screen.getByText("Primeiro")).toHaveFocus());
+
+    middle.focus();
+    fireEvent.keyDown(window, { key: "Tab" });
+    expect(middle).toHaveFocus();
+  });
+});

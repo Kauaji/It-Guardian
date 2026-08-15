@@ -1,19 +1,8 @@
 import { X } from "lucide-react";
-import { useEffect } from "react";
+import { useModalLifecycle } from "../../hooks/useModalLifecycle.js";
 
 export default function MoveMachineModal({ machine, segments, targetSegmentId, onTargetChange, onClose, onConfirm }) {
-  useEffect(() => {
-    if (!machine) return undefined;
-
-    function handleKeydown(event) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
-    window.addEventListener("keydown", handleKeydown);
-    return () => window.removeEventListener("keydown", handleKeydown);
-  }, [machine, onClose]);
+  const dialogRef = useModalLifecycle(Boolean(machine), onClose);
 
   if (!machine) {
     return null;
@@ -21,7 +10,7 @@ export default function MoveMachineModal({ machine, segments, targetSegmentId, o
 
   return (
     <div className="modal-backdrop" role="presentation">
-      <section className="modal-panel" role="dialog" aria-modal="true" aria-label="Mover maquina">
+      <section ref={dialogRef} className="modal-panel" role="dialog" aria-modal="true" aria-label="Mover maquina">
         <header>
           <div>
             <h2>Mover maquina</h2>

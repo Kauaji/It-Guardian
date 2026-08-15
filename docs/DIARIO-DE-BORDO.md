@@ -76,6 +76,57 @@ entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
   auth/permissoes/notificacoes como o "estado global" a extrair, nao o
   estado de UI especifico de cada tela.
 
+## 2026-08-15 - Focus trap nos modais que usam useModalLifecycle
+
+### Causa raiz
+
+- a auditoria original apontou "sem focus trap em nenhum modal; tratamento
+  de Escape inconsistente entre eles". Investigando: `useModalLifecycle.js`
+  ja existia e ja cuidava de Escape, foco inicial e restauracao de foco ao
+  fechar de forma consistente — mas so 4 dos ~20 componentes tipo-modal do
+  projeto usavam esse hook compartilhado; o resto tinha logica de Escape
+  duplicada (ou nenhuma) e nenhum deles impedia Tab/Shift+Tab de escapar
+  do modal para o conteudo atras do backdrop.
+
+### Correcao
+
+- `useModalLifecycle` ganhou focus trap: ao pressionar Tab no ultimo
+  elemento focavel do modal (ou Shift+Tab no primeiro), o foco volta para
+  o outro extremo em vez de sair do modal; tambem cobre o caso defensivo de
+  o foco ja estar fora do dialog por algum outro motivo;
+- `MoveMachineModal.jsx` (so tinha Escape ad-hoc) e
+  `ServiceOrderFormModal.jsx` (nao tinha Escape nenhum) migrados para o
+  hook compartilhado — ganham focus trap e Escape consistente no mesmo
+  commit;
+- escopo deliberadamente contido: migrar os ~15 modais restantes
+  (`MachineDetailsModal`, `GeneralSettingsModal`, `ServiceOrderDetailsModal`
+  etc., a maioria dos quais ja tem Escape ad-hoc proprio, alguns com
+  excecoes especificas como o de `MachineDetailsModal` para nao fechar por
+  cima de um modal de assistencia remota aberto) fica para uma proxima
+  rodada — cada um precisa de revisao individual antes de trocar sua logica
+  de Escape por uma generica.
+
+### Validacoes
+
+- novo `client/src/hooks/useModalLifecycle.test.jsx`: foco inicial no
+  primeiro elemento focavel, Tab no ultimo volta ao primeiro, Shift+Tab no
+  primeiro vai ao ultimo, Escape chama `onClose`, e Tab num elemento do
+  meio nao interfere no fluxo normal;
+- a checagem de visibilidade original (`offsetParent !== null`) nao
+  funciona em jsdom (que nao calcula layout) e teria feito os proprios
+  testes falharem por engano — trocada por uma checagem via
+  `getComputedStyle` (`display`/`visibility`), que funciona igual em
+  navegador real e em jsdom;
+- validado interativamente num navegador real (nao so os testes): abri o
+  formulario de criar segmento, confirmei que Shift+Tab do botao "Fechar"
+  vai para "Cancelar" (pulando corretamente o botao "Criar segmento",
+  desabilitado enquanto o nome esta vazio — prova que o trap respeita
+  elementos desabilitados), Tab de volta retorna a "Fechar", e Escape
+  fecha o modal;
+- `npm run test --workspace client`: 35 testes aprovados;
+- `npm run lint`, `npm run check:architecture` (315 arquivos) e
+  `npm run build` aprovados.
+
 ## 2026-08-15 - Alerta ativo quando o deploy serverless nao tem Redis compartilhado
 
 ### Causa raiz
