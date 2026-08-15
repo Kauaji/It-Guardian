@@ -193,9 +193,37 @@ try {
 } catch {
   Write-InstallLog "AVISO: a tarefa foi registrada, mas nao iniciou imediatamente; o Windows tentara novamente. $($_.Exception.Message)"
 }
-try {
-  Start-Process -FilePath $collectorPath -ArgumentList @("--tray", "--config", "`"$configPath`"")
-} catch {
-  Write-InstallLog "AVISO: o icone de bandeja nao iniciou nesta sessao; ele sera iniciado no proximo logon. $($_.Exception.Message)"
+
+function Test-TrayRunning {
+  $trayProcesses = Get-CimInstance Win32_Process -Filter "Name = 'ITGuardian.exe'" -ErrorAction SilentlyContinue |
+    Where-Object { $_.ExecutablePath -eq $collectorPath -and $_.CommandLine -like "*--tray*" }
+  return @($trayProcesses).Count -gt 0
 }
+
+# Uma unica tentativa de Start-Process sem verificacao mascarava o caso mais
+# comum de falha: o executavel nao e assinado (sem certificado configurado),
+# entao o antivirus/SmartScreen frequentemente faz uma varredura no primeiro
+# uso que atrasa (ou some com) a janela/icone sem lancar excecao nenhuma no
+# PowerShell -- a tentativa "tinha sucesso" e o icone nunca aparecia mesmo
+# assim. Repete com verificacao real do processo antes de desistir e cair no
+# proximo logon.
+$trayStarted = $false
+for ($attempt = 1; $attempt -le 3; $attempt++) {
+  try {
+    Start-Process -FilePath $collectorPath -ArgumentList @("--tray", "--config", "`"$configPath`"")
+  } catch {
+    Write-InstallLog "AVISO: tentativa $attempt de lancar o icone de bandeja falhou ao iniciar o processo. $($_.Exception.Message)"
+  }
+  Start-Sleep -Seconds 3
+  if (Test-TrayRunning) {
+    $trayStarted = $true
+    Write-InstallLog "Icone de bandeja confirmado rodando (tentativa $attempt)."
+    break
+  }
+  Write-InstallLog "AVISO: icone de bandeja ainda nao confirmado rodando apos a tentativa $attempt."
+}
+if (-not $trayStarted) {
+  Write-InstallLog "AVISO: o icone de bandeja nao foi confirmado rodando apos 3 tentativas nesta sessao; a chave HKLM Run ja registrada vai inicia-lo no proximo logon (deslogar/logar de novo ou reiniciar resolve)."
+}
+
 Write-InstallLog "Instalacao finalizada com sucesso."

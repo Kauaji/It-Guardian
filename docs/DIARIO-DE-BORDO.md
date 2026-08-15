@@ -4,6 +4,54 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-15 - Instalador: torna confiavel o primeiro lancamento do icone de bandeja
+
+### Causa raiz
+
+- a tela de consentimento da assistencia remota (`RemoteAssistanceConsentForm`)
+  ja existe no agente e funciona — mas ela so aparece dentro do processo do
+  icone de bandeja (`ITGuardian.exe --tray`), que e um processo separado do
+  coletor de fundo (`--collector`, que roda como tarefa agendada com SYSTEM).
+  O coletor por si so nunca mostra UI nenhuma.
+- `Finalize-CollectorInstall.ps1` ja tentava lancar o icone de bandeja logo
+  apos instalar (`Start-Process ... --tray`), mas numa unica tentativa sem
+  verificar se o processo de fato ficou de pe — so capturava excecao de
+  lancamento, nao falha silenciosa. Como o executavel nao e assinado (sem
+  certificado configurado), o antivirus/SmartScreen frequentemente faz uma
+  varredura no primeiro uso que atrasa ou interrompe essa primeira janela sem
+  lancar excecao nenhuma no PowerShell — a tentativa "tinha sucesso" e o
+  icone nunca aparecia mesmo assim, deixando o usuario preso em "Aguardando
+  autorizacao local" indefinidamente ate deslogar/logar de novo (unico
+  momento em que a chave `HKLM...\Run` ja registrada teria uma nova chance).
+
+### Correcao
+
+- `installers/windows-collector/Finalize-CollectorInstall.ps1`: substituida a
+  tentativa unica por um loop de ate 3 tentativas com verificacao real via
+  `Get-CimInstance Win32_Process` (filtrando `ExecutablePath` + `CommandLine
+  like "*--tray*"` para diferenciar do processo `--collector`, que usa o
+  mesmo executavel). So desiste e cai no aviso de "proximo logon" depois de
+  3 tentativas sem confirmar o processo rodando;
+- instalador reconstruido (`npm run installer:windows`) para embutir o script
+  corrigido — o `.exe` anterior nao tem essa correcao, precisa ser gerado de
+  novo a partir deste commit em diante.
+
+### Validacoes
+
+- `[System.Management.Automation.Language.Parser]::ParseFile` no script
+  alterado: sem erros de sintaxe;
+- `npm run installer:windows`: build concluido com sucesso, script novo
+  confirmado embutido no `.exe` gerado.
+
+### Pendencias conhecidas
+
+- nao foi possivel testar o fluxo completo (instalar → nova sessao →
+  confirmar icone visivel → responder ao consentimento) numa maquina real
+  nesta sessao; a correcao endereca a causa mais provavel (varredura de
+  antivirus no primeiro uso do executavel nao assinado) mas continua sujeita
+  a ambientes onde 3 tentativas de ~3s nao sejam suficientes — nesses casos o
+  fallback de "proximo logon" continua valendo.
+
 ## 2026-08-15 - Reativada a assistencia remota em deploy publico (pausa de seguranca resolvida)
 
 ### Contexto
