@@ -57,18 +57,17 @@ export function getRemoteAssistanceConfig(env = process.env) {
   ]);
   const publicDeployment = env.VERCEL === "1" || env.VERCEL_ENV === "production";
   const environmentAllowed = allowedEnvironments.has(environment);
-  // Pausa de seguranca temporaria (2026-08-14): auditoria encontrou que o ACL
-  // do pipe nomeado local do agente Windows aceita qualquer usuario
-  // autenticado da maquina (nao so o usuario logado), permitindo interferir
-  // no consentimento sem o dono da tela saber. Assistencia remota fica
-  // desligada em deploy publico ate o agente com o ACL corrigido ser
-  // distribuido e confirmado em uso — remover esta linha faz parte da
-  // reativacao, nao antes dela.
-  const remoteAssistanceSecurityPause = publicDeployment;
-  const enabled =
-    !remoteAssistanceSecurityPause &&
-    isTruthyEnv(env.ENABLE_REMOTE_ASSISTANCE) &&
-    environmentAllowed;
+  // Pausa de seguranca temporaria (2026-08-14 a 2026-08-15): auditoria
+  // encontrou que o ACL do pipe nomeado local do agente Windows aceitava
+  // qualquer usuario autenticado da maquina (nao so o usuario logado),
+  // permitindo interferir no consentimento sem o dono da tela saber.
+  // Corrigido no agente (pipe restrito a WellKnownSidType.InteractiveSid,
+  // commit 9c4e06f) e confirmado em uso apos reinstalacao do coletor —
+  // reativado. Maquinas que ainda rodam um agente anterior a esse commit
+  // continuam com o pipe antigo ate serem reinstaladas com o instalador
+  // atual; assistencia remota so e de fato segura na maquina especifica que
+  // ja recebeu o agente corrigido.
+  const enabled = isTruthyEnv(env.ENABLE_REMOTE_ASSISTANCE) && environmentAllowed;
   const controlEnabled = enabled && isTruthyEnv(
     env.ENABLE_REMOTE_CONTROL ?? env.ENABLE_REMOTE_ASSISTANCE_CONTROL
   );
@@ -123,11 +122,9 @@ export function getRemoteAssistanceConfig(env = process.env) {
     publicDeployment,
     disabledReason: enabled
       ? null
-      : remoteAssistanceSecurityPause
-          ? "security_pause"
-          : !environmentAllowed
-              ? "environment_not_allowed"
-              : "feature_disabled",
+      : !environmentAllowed
+          ? "environment_not_allowed"
+          : "feature_disabled",
     captureEnabled: enabled,
     controlEnabled,
     privacyModeEnabled: enabled && isTruthyEnv(env.ENABLE_REMOTE_PRIVACY_MODE),

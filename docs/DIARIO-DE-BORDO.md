@@ -4,6 +4,69 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-15 - Reativada a assistencia remota em deploy publico (pausa de seguranca resolvida)
+
+### Contexto
+
+- em 2026-08-14 (commit `9c4e06f`) uma auditoria encontrou que o ACL do pipe
+  nomeado local do agente Windows aceitava qualquer usuario autenticado da
+  maquina (nao so o usuario logado), permitindo interferir no consentimento
+  local sem o dono da tela saber. O mesmo commit ja corrigiu o ACL (restrito
+  a `WellKnownSidType.InteractiveSid`) e, por seguranca, forcou
+  `enabled = false` para assistencia remota em qualquer deploy publico
+  (`VERCEL === "1"` ou `VERCEL_ENV === "production"`) — independente de
+  qualquer variavel de ambiente — ate o agente corrigido ser distribuido e
+  confirmado em uso.
+- nesta entrega: gerado um instalador novo (`npm run installer:windows`),
+  compilado a partir do `agent/windows/ITGuardian.RemoteAssistance.cs` atual
+  (ja com a correcao do ACL), e confirmado que foi instalado numa maquina
+  real. Criterio de reativacao documentado no proprio codigo satisfeito.
+
+### Correcao
+
+- `server/src/config/environment.js` (`getRemoteAssistanceConfig`): removida
+  a pausa incondicional (`remoteAssistanceSecurityPause`/`publicDeployment`
+  forcando `enabled = false`). `enabled` volta a depender só de
+  `ENABLE_REMOTE_ASSISTANCE` e da lista de ambientes permitidos
+  (`REMOTE_ASSISTANCE_ENV` em lab/laboratorio/homologacao/internal/test) —
+  a mesma logica que ja existia antes da pausa temporaria. `publicDeployment`
+  continua existindo e sendo usado (retornado na config, e ainda desliga
+  `autoConsentEnabled` em deploy publico — esse controle especifico nao
+  tinha relacao com o bug do ACL e permanece intacto);
+- `disabledReason` no retorno da funcao ajustado: o valor `"security_pause"`
+  nao existe mais (so `"environment_not_allowed"` ou `"feature_disabled"`);
+- `server/src/config/environment.test.mjs`: teste que afirmava a pausa
+  incondicional em Vercel reescrito para o comportamento correto (habilitado
+  quando as flags estao corretas, mesmo em deploy publico); teste novo
+  cobrindo que `environment_not_allowed` continua bloqueando mesmo com
+  `ENABLE_REMOTE_ASSISTANCE=true`, se `REMOTE_ASSISTANCE_ENV` nao estiver
+  numa lista permitida.
+
+### Validacoes
+
+- `node --test server/src/config/environment.test.mjs`: 13/13;
+- `npm run test` (suite completa do servidor): 267 testes, 265 passaram, 2
+  skips pre-existentes, 0 falhas — inclui o teste de integracao "pipe local
+  da assistencia remota nao aceita qualquer usuario autenticado da maquina",
+  que segue validando a correcao do ACL em si (nao mexida nesta entrega);
+- `npx eslint` nos arquivos alterados: sem erros nem warnings;
+- varredura completa do repositorio confirmando zero referencias residuais a
+  `remoteAssistanceSecurityPause`/`"security_pause"`.
+
+### Pendencias conhecidas
+
+- este commit por si so nao liga a assistencia remota em producao: ainda e
+  necessario configurar em producao (Vercel) as variaveis
+  `ENABLE_REMOTE_ASSISTANCE=true`, `REMOTE_ASSISTANCE_ENV` com um valor
+  permitido (ex.: `internal`) no projeto do servidor, e
+  `VITE_ENABLE_REMOTE_ASSISTANCE=true` no build do client (exige novo build,
+  variavel de compilacao) — nenhuma dessas foi configurada nesta sessao por
+  falta de acesso ao painel da Vercel;
+- a protecao do ACL só vale nas maquinas que ja rodam o agente compilado a
+  partir do commit `9c4e06f` em diante. Qualquer maquina ainda com um agente
+  mais antigo continua com o pipe vulneravel especificamente nela ate ser
+  reinstalada com o instalador atual.
+
 ## 2026-08-15 - Dashboard redesenhado: faixa de KPI, LEDs de pulso e numeros animados
 
 ### Causa raiz / motivacao

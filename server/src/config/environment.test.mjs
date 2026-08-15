@@ -11,14 +11,20 @@ function labEnv(overrides = {}) {
   };
 }
 
-test("assistencia remota fica pausada em deploy publico (Vercel), mesmo com as flags ligadas", () => {
+test("assistencia remota pode ser habilitada em deploy publico (Vercel) com as flags ligadas, apos a correcao do ACL do agente (commit 9c4e06f)", () => {
   const onVercel = getRemoteAssistanceConfig(labEnv({ VERCEL: "1" }));
-  assert.equal(onVercel.enabled, false);
-  assert.equal(onVercel.disabledReason, "security_pause");
+  assert.equal(onVercel.enabled, true);
+  assert.equal(onVercel.disabledReason, null);
 
   const vercelProduction = getRemoteAssistanceConfig(labEnv({ VERCEL_ENV: "production" }));
-  assert.equal(vercelProduction.enabled, false);
-  assert.equal(vercelProduction.disabledReason, "security_pause");
+  assert.equal(vercelProduction.enabled, true);
+  assert.equal(vercelProduction.disabledReason, null);
+});
+
+test("assistencia remota continua desligada em deploy publico se o ambiente nao estiver na lista permitida, mesmo com a flag ligada", () => {
+  const onVercel = getRemoteAssistanceConfig({ ENABLE_REMOTE_ASSISTANCE: "true", VERCEL: "1" });
+  assert.equal(onVercel.enabled, false);
+  assert.equal(onVercel.disabledReason, "environment_not_allowed");
 });
 
 test("assistencia remota continua habilitavel fora de deploy publico com as flags de laboratorio", () => {
