@@ -35,7 +35,7 @@
   --system-neutral-soft: #e2e8f0;
   --shadow-sm: 0 8px 20px rgba(24, 33, 47, 0.07);
   --shadow-md: 0 18px 42px rgba(24, 33, 47, 0.11);
-  --focus-ring: 0 0 0 3px color-mix(in srgb, #2563eb 22%, transparent);
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--status-info) 22%, transparent);
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
@@ -43,6 +43,23 @@
   --sidebar-layer: 1100;
   --dialog-backdrop-layer: 5000;
   --dialog-dropdown-layer: 5200;
+
+  /* Tokens de cor extraidos de literais hex repetidos (auditoria de 15/08). */
+  --status-info: #2563eb;
+  --status-danger: #dc2626;
+  --status-warning: #f59e0b;
+  --slate-950: #0f172a;
+  --slate-50: #f8fafc;
+  --slate-900: #111827;
+  --slate-600: #536074;
+  --slate-200: #dbe4ef;
+  --red-700: #b91c1c;
+  --red-500: #d64545;
+  --green-600: #16a34a;
+  --amber-600: #d97706;
+  --orange-500: #f97316;
+  --slate-300: #cbd5e1;
+  --orange-400: #fb923c;
 }
 
 @keyframes soft-pop {
@@ -62,7 +79,7 @@
   background: #0b111b;
   color-scheme: dark;
   --app-bg: #0b111b;
-  --surface: #111827;
+  --surface: var(--slate-900);
   --surface-soft: #172235;
   --surface-muted: #0f1724;
   --text: #eaf2ff;
@@ -210,7 +227,7 @@ button {
 .segmented button {
   min-height: 42px;
   border-radius: 6px;
-  color: #536074;
+  color: var(--slate-600);
   background: transparent;
 }
 
@@ -228,7 +245,7 @@ button {
 label {
   display: grid;
   gap: 7px;
-  color: #536074;
+  color: var(--slate-600);
   font-weight: 700;
   font-size: 13px;
 }
@@ -1068,13 +1085,13 @@ body.is-inventory-dragging .sidebar-segment-filter button.drop-over .segment-fil
 }
 
 .script-variable-list.error {
-  border-color: color-mix(in srgb, #dc2626 38%, var(--border-soft));
-  background: color-mix(in srgb, #dc2626 8%, var(--surface));
+  border-color: color-mix(in srgb, var(--status-danger) 38%, var(--border-soft));
+  background: color-mix(in srgb, var(--status-danger) 8%, var(--surface));
 }
 
 .script-variable-list.error strong,
 .script-variable-list.error p {
-  color: #b91c1c;
+  color: var(--red-700);
 }
 
 .script-form-actions,
@@ -1106,7 +1123,7 @@ body.is-inventory-dragging .sidebar-segment-filter button.drop-over .segment-fil
 }
 
 .maintenance-script-card.critical {
-  border-left-color: #d64545;
+  border-left-color: var(--red-500);
 }
 
 .script-card-header {
@@ -1236,7 +1253,7 @@ body.is-inventory-dragging .sidebar-segment-filter button.drop-over .segment-fil
 .summary-card.danger svg,
 .pill.danger,
 .bar span.danger {
-  color: #d64545;
+  color: var(--red-500);
 }
 
 .summary-card.warning svg,
@@ -1482,7 +1499,7 @@ tbody tr.selected {
   border: 1px solid #d5ddea;
   border-radius: 6px;
   background: #ffffff;
-  color: #536074;
+  color: var(--slate-600);
   font-weight: 800;
   padding: 0 10px;
 }
@@ -1509,7 +1526,7 @@ tbody tr.selected {
 }
 
 .alert-card.critical {
-  border-left-color: #d64545;
+  border-left-color: var(--red-500);
 }
 
 .alert-card.warning {
@@ -1534,7 +1551,7 @@ tbody tr.selected {
 }
 
 .alert-card p {
-  color: #536074;
+  color: var(--slate-600);
   font-size: 14px;
 }
 
@@ -1831,15 +1848,15 @@ tbody tr.selected {
 }
 
 .suggestion-card .suggestion-actions .danger-action.compact-action {
-  border-color: color-mix(in srgb, #dc2626 34%, var(--border));
-  background: color-mix(in srgb, #dc2626 7%, var(--surface));
-  color: #b91c1c;
+  border-color: color-mix(in srgb, var(--status-danger) 34%, var(--border));
+  background: color-mix(in srgb, var(--status-danger) 7%, var(--surface));
+  color: var(--red-700);
   box-shadow: 0 8px 16px rgba(185, 28, 28, 0.08);
 }
 
 .suggestion-card .suggestion-actions .danger-action.compact-action:hover:not(:disabled) {
-  border-color: color-mix(in srgb, #dc2626 54%, var(--border-strong));
-  background: color-mix(in srgb, #dc2626 12%, var(--surface));
+  border-color: color-mix(in srgb, var(--status-danger) 54%, var(--border-strong));
+  background: color-mix(in srgb, var(--status-danger) 12%, var(--surface));
   transform: translateY(-1px);
 }
 
@@ -1852,8 +1869,8 @@ tbody tr.selected {
   display: inline-grid;
   place-items: center;
   border-radius: 8px;
-  color: #dc2626;
-  background: color-mix(in srgb, #dc2626 8%, var(--surface));
+  color: var(--status-danger);
+  background: color-mix(in srgb, var(--status-danger) 8%, var(--surface));
 }
 
 .suggestion-script-menu {
@@ -1901,8 +1918,8 @@ tbody tr.selected {
   height: 28px;
   min-height: 28px;
   border-radius: 8px;
-  color: #dc2626;
-  background: color-mix(in srgb, #dc2626 8%, var(--surface));
+  color: var(--status-danger);
+  background: color-mix(in srgb, var(--status-danger) 8%, var(--surface));
 }
 
 .suggestion-validation-indicator {
@@ -1914,9 +1931,9 @@ tbody tr.selected {
   height: 24px;
   display: inline-grid;
   place-items: center;
-  border: 1px solid color-mix(in srgb, #16a34a 34%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--green-600) 34%, var(--border));
   border-radius: 999px;
-  background: color-mix(in srgb, #16a34a 16%, var(--surface));
+  background: color-mix(in srgb, var(--green-600) 16%, var(--surface));
   color: #15803d;
   box-shadow: 0 8px 18px rgba(21, 128, 61, 0.16);
 }
@@ -1924,9 +1941,9 @@ tbody tr.selected {
 .suggestion-validation-indicator.observed_persistent,
 .suggestion-validation-indicator.execution_failed,
 .suggestion-validation-indicator.validation_failed {
-  border-color: color-mix(in srgb, #dc2626 38%, var(--border));
-  background: color-mix(in srgb, #dc2626 14%, var(--surface));
-  color: #b91c1c;
+  border-color: color-mix(in srgb, var(--status-danger) 38%, var(--border));
+  background: color-mix(in srgb, var(--status-danger) 14%, var(--surface));
+  color: var(--red-700);
   box-shadow: 0 8px 18px rgba(185, 28, 28, 0.16);
 }
 
@@ -1942,14 +1959,14 @@ tbody tr.selected {
 .suggestion-validation-indicator.prepared,
 .suggestion-validation-indicator.observation_pending,
 .suggestion-validation-indicator.pending_validation {
-  border-color: color-mix(in srgb, #2563eb 36%, var(--border));
-  background: color-mix(in srgb, #2563eb 12%, var(--surface));
+  border-color: color-mix(in srgb, var(--status-info) 36%, var(--border));
+  background: color-mix(in srgb, var(--status-info) 12%, var(--surface));
   color: #1d4ed8;
 }
 
 .suggestion-validation-indicator.insufficient_data {
-  border-color: color-mix(in srgb, #d97706 38%, var(--border));
-  background: color-mix(in srgb, #f59e0b 16%, var(--surface));
+  border-color: color-mix(in srgb, var(--amber-600) 38%, var(--border));
+  background: color-mix(in srgb, var(--status-warning) 16%, var(--surface));
   color: #92400e;
 }
 
@@ -1999,9 +2016,9 @@ tbody tr.selected {
 .service-order-card .suggestion-script-popover section > em {
   width: fit-content;
   padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, #16a34a 26%, var(--border-soft));
+  border: 1px solid color-mix(in srgb, var(--green-600) 26%, var(--border-soft));
   border-radius: 999px;
-  background: color-mix(in srgb, #16a34a 13%, var(--surface));
+  background: color-mix(in srgb, var(--green-600) 13%, var(--surface));
   color: #15803d;
   font-size: 0.68rem;
   font-style: normal;
@@ -2405,7 +2422,7 @@ tbody tr.selected {
   gap: 10px;
   min-width: 0;
   border: 1px solid var(--border);
-  border-left: 4px solid #d97706;
+  border-left: 4px solid var(--amber-600);
   border-radius: 8px;
   padding: 12px;
   background: var(--surface);
@@ -2413,7 +2430,7 @@ tbody tr.selected {
 }
 
 .alert-diagnostic-card.critical {
-  border-left-color: #dc2626;
+  border-left-color: var(--status-danger);
 }
 
 .alert-diagnostic-card header {
@@ -2531,14 +2548,14 @@ tbody tr.selected {
   gap: 5px;
   min-width: 0;
   border: 1px solid var(--border);
-  border-left: 4px solid #d97706;
+  border-left: 4px solid var(--amber-600);
   border-radius: 8px;
   padding: 10px;
   background: var(--surface);
 }
 
 .alert-correlation-card.critical {
-  border-left-color: #dc2626;
+  border-left-color: var(--status-danger);
 }
 
 .alert-correlation-card span {
@@ -2912,7 +2929,7 @@ tbody tr.selected {
 
 .resolve-icon-button.danger {
   border-color: #f0b8b8;
-  color: #d64545;
+  color: var(--red-500);
 }
 
 .resolve-icon-button.danger:hover {
@@ -2947,7 +2964,7 @@ tbody tr.selected {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #536074;
+  color: var(--slate-600);
 }
 
 .bar {
@@ -3060,7 +3077,7 @@ tbody tr.selected {
 }
 
 .disk-list span {
-  color: #536074;
+  color: var(--slate-600);
 }
 
 .disk-list strong {
@@ -3093,11 +3110,11 @@ tbody tr.selected {
   display: grid;
   gap: 0;
   min-width: 0;
-  border: 1px solid color-mix(in srgb, var(--active-tab-color, #2563eb) 40%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--active-tab-color, var(--status-info)) 40%, var(--border));
   border-radius: 18px;
   background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--active-tab-color, #2563eb) 22%, transparent), transparent 38%),
-    linear-gradient(180deg, color-mix(in srgb, var(--active-tab-color, #2563eb) 14%, var(--surface)), var(--app-bg) 54%);
+    radial-gradient(circle at top left, color-mix(in srgb, var(--active-tab-color, var(--status-info)) 22%, transparent), transparent 38%),
+    linear-gradient(180deg, color-mix(in srgb, var(--active-tab-color, var(--status-info)) 14%, var(--surface)), var(--app-bg) 54%);
   padding: 10px 12px 12px;
   box-shadow: var(--shadow-sm);
   transition:
@@ -3157,7 +3174,7 @@ tbody tr.selected {
 }
 
 .inventory-tab {
-  --tab-color: #2563eb;
+  --tab-color: var(--status-info);
   min-width: 116px;
   min-height: 38px;
   border: 1px solid color-mix(in srgb, var(--tab-color) 42%, var(--border));
@@ -3236,9 +3253,9 @@ tbody tr.selected {
   min-width: 31px;
   height: 31px;
   min-height: 31px;
-  border: 1px solid color-mix(in srgb, var(--tab-color, #2563eb) 24%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--tab-color, var(--status-info)) 24%, var(--border));
   border-radius: 9px;
-  background: color-mix(in srgb, var(--surface) 86%, var(--tab-color, #2563eb));
+  background: color-mix(in srgb, var(--surface) 86%, var(--tab-color, var(--status-info)));
   color: var(--text-muted);
   display: inline-flex;
   align-items: center;
@@ -3255,8 +3272,8 @@ tbody tr.selected {
 
 .inventory-tab-actions > button:hover,
 .inventory-tab-add:hover {
-  border-color: color-mix(in srgb, var(--tab-color, #2563eb) 48%, var(--border-strong));
-  background: color-mix(in srgb, var(--tab-color, #2563eb) 12%, var(--surface));
+  border-color: color-mix(in srgb, var(--tab-color, var(--status-info)) 48%, var(--border-strong));
+  background: color-mix(in srgb, var(--tab-color, var(--status-info)) 12%, var(--surface));
   color: var(--text-strong);
   box-shadow: var(--shadow-sm);
   transform: translateY(-1px);
@@ -3264,15 +3281,15 @@ tbody tr.selected {
 
 .inventory-tab-add {
   margin-bottom: 6px;
-  --tab-color: var(--active-tab-color, #2563eb);
+  --tab-color: var(--active-tab-color, var(--status-info));
 }
 
 .inventory-tab-panel {
   margin-top: -1px;
-  border: 1px solid color-mix(in srgb, var(--active-tab-color, #2563eb) 42%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--active-tab-color, var(--status-info)) 42%, var(--border));
   border-radius: 0 16px 16px;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--active-tab-color, #2563eb) 15%, var(--surface)), var(--surface) 82%);
+    linear-gradient(180deg, color-mix(in srgb, var(--active-tab-color, var(--status-info)) 15%, var(--surface)), var(--surface) 82%);
   padding: 14px;
   box-shadow: var(--shadow-sm);
 }
@@ -3283,9 +3300,9 @@ tbody tr.selected {
   align-items: center;
   gap: 8px;
   padding: 6px;
-  border: 1px solid color-mix(in srgb, var(--active-tab-color, #2563eb) 28%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--active-tab-color, var(--status-info)) 28%, var(--border));
   border-radius: 14px;
-  background: color-mix(in srgb, var(--surface) 86%, var(--active-tab-color, #2563eb) 14%);
+  background: color-mix(in srgb, var(--surface) 86%, var(--active-tab-color, var(--status-info)) 14%);
   box-shadow: var(--shadow-sm);
 }
 
@@ -3313,7 +3330,7 @@ tbody tr.selected {
 
 .inventory-view-switch button:hover,
 .inventory-view-switch button.active {
-  border-color: color-mix(in srgb, var(--active-tab-color, #2563eb) 42%, var(--border-strong));
+  border-color: color-mix(in srgb, var(--active-tab-color, var(--status-info)) 42%, var(--border-strong));
   background: var(--surface);
   color: var(--accent);
   box-shadow: var(--shadow-sm);
@@ -3362,7 +3379,7 @@ tbody tr.selected {
   width: fit-content;
   margin-top: 3px;
   border-radius: 999px;
-  background: color-mix(in srgb, #d97706 12%, var(--surface));
+  background: color-mix(in srgb, var(--amber-600) 12%, var(--surface));
   color: #9a5700;
   padding: 3px 8px;
   font-size: 0.7rem;
@@ -3391,8 +3408,8 @@ tbody tr.selected {
 }
 
 .inventory-visual-map-error {
-  border-color: color-mix(in srgb, #dc2626 28%, var(--border));
-  background: color-mix(in srgb, #dc2626 8%, var(--surface));
+  border-color: color-mix(in srgb, var(--status-danger) 28%, var(--border));
+  background: color-mix(in srgb, var(--status-danger) 8%, var(--surface));
   color: #991b1b;
 }
 
@@ -3714,7 +3731,7 @@ tbody tr.selected {
   border: 1px solid var(--border);
   border-radius: 16px;
   overflow: hidden;
-  background: #f8fafc;
+  background: var(--slate-50);
 }
 
 .inventory-visual-map-canvas canvas {
@@ -3896,8 +3913,8 @@ tbody tr.selected {
 }
 
 .floor-plan-object-glyph.fixture .floor-plan-tv-screen {
-  fill: #0f172a;
-  stroke: #2563eb;
+  fill: var(--slate-950);
+  stroke: var(--status-info);
   stroke-width: 1.4;
 }
 
@@ -3913,7 +3930,7 @@ tbody tr.selected {
 
 .floor-plan-object-selection-outline {
   fill: none !important;
-  stroke: #2563eb !important;
+  stroke: var(--status-info) !important;
   stroke-width: 2.5 !important;
   stroke-dasharray: 7 5;
   vector-effect: non-scaling-stroke;
@@ -3934,7 +3951,7 @@ tbody tr.selected {
 .floor-plan-marquee-selection {
   fill: rgba(37, 99, 235, 0.14);
   pointer-events: none;
-  stroke: #2563eb;
+  stroke: var(--status-info);
   stroke-dasharray: 7 5;
   stroke-width: 2;
   vector-effect: non-scaling-stroke;
@@ -3943,7 +3960,7 @@ tbody tr.selected {
 .floor-plan-object-resize-overlay.wall-endpoints circle {
   cursor: crosshair;
   fill: #ffffff;
-  stroke: #2563eb;
+  stroke: var(--status-info);
   stroke-width: 3;
   vector-effect: non-scaling-stroke;
 }
@@ -4217,7 +4234,7 @@ tbody tr.selected {
 
 .floor-plan-brush-tip {
   align-items: flex-start;
-  background: #f8fafc;
+  background: var(--slate-50);
   border: 1px solid var(--plan-border);
   border-radius: 8px;
   color: #4c5a70;
@@ -4822,8 +4839,8 @@ tbody tr.selected {
 }
 
 .bulk-actions-bar button.danger:hover {
-  border-color: #d64545;
-  color: #d64545;
+  border-color: var(--red-500);
+  color: var(--red-500);
 }
 
 .inventory-board-view > .bulk-actions-bar {
@@ -5064,37 +5081,37 @@ tbody tr.selected {
 }
 
 .segment-card.default-segment-card {
-  --segment-color: #111827;
+  --segment-color: var(--slate-900);
   margin-top: 4px;
   border-style: solid;
-  border-color: color-mix(in srgb, #111827 58%, var(--border));
+  border-color: color-mix(in srgb, var(--slate-900) 58%, var(--border));
   border-radius: 16px;
   background:
-    radial-gradient(circle at top left, color-mix(in srgb, #111827 13%, transparent), transparent 34%),
-    linear-gradient(180deg, color-mix(in srgb, #111827 14%, var(--surface)), var(--surface) 86%);
+    radial-gradient(circle at top left, color-mix(in srgb, var(--slate-900) 13%, transparent), transparent 34%),
+    linear-gradient(180deg, color-mix(in srgb, var(--slate-900) 14%, var(--surface)), var(--surface) 86%);
 }
 
 .segment-card.default-segment-card:hover {
-  border-color: color-mix(in srgb, #111827 70%, var(--border-strong));
+  border-color: color-mix(in srgb, var(--slate-900) 70%, var(--border-strong));
   box-shadow:
-    0 0 0 1px color-mix(in srgb, #111827 12%, transparent),
-    0 8px 18px color-mix(in srgb, #111827 10%, transparent);
+    0 0 0 1px color-mix(in srgb, var(--slate-900) 12%, transparent),
+    0 8px 18px color-mix(in srgb, var(--slate-900) 10%, transparent);
 }
 
 .segment-card.backup-segment-card {
-  --segment-color: #f97316;
+  --segment-color: var(--orange-500);
   border-style: solid;
-  border-color: color-mix(in srgb, #f97316 66%, var(--border));
+  border-color: color-mix(in srgb, var(--orange-500) 66%, var(--border));
   border-radius: 16px;
   background:
-    radial-gradient(circle at top left, color-mix(in srgb, #f97316 22%, transparent), transparent 34%),
-    linear-gradient(180deg, color-mix(in srgb, #f97316 18%, var(--surface)), var(--surface) 86%);
+    radial-gradient(circle at top left, color-mix(in srgb, var(--orange-500) 22%, transparent), transparent 34%),
+    linear-gradient(180deg, color-mix(in srgb, var(--orange-500) 18%, var(--surface)), var(--surface) 86%);
 }
 
 .segment-card.backup-segment-card .segment-card-header {
-  border-bottom-color: color-mix(in srgb, #f97316 46%, var(--border));
+  border-bottom-color: color-mix(in srgb, var(--orange-500) 46%, var(--border));
   background:
-    linear-gradient(90deg, color-mix(in srgb, #f97316 38%, var(--surface)), color-mix(in srgb, #f97316 22%, var(--surface)));
+    linear-gradient(90deg, color-mix(in srgb, var(--orange-500) 38%, var(--surface)), color-mix(in srgb, var(--orange-500) 22%, var(--surface)));
 }
 
 @keyframes drop-confirm-pulse {
@@ -5127,13 +5144,13 @@ tbody tr.selected {
 .segment-card.default-segment-card .segment-card-header {
   border-radius: 15px 15px 0 0;
   background:
-    linear-gradient(90deg, color-mix(in srgb, #111827 26%, var(--surface)), color-mix(in srgb, #111827 12%, var(--surface)));
-  border-bottom-color: color-mix(in srgb, #111827 36%, var(--border));
+    linear-gradient(90deg, color-mix(in srgb, var(--slate-900) 26%, var(--surface)), color-mix(in srgb, var(--slate-900) 12%, var(--surface)));
+  border-bottom-color: color-mix(in srgb, var(--slate-900) 36%, var(--border));
 }
 
 .segment-card.default-segment-card.backup-segment-card .segment-card-header,
 .segment-card.backup-segment-card .segment-card-header {
-  border-bottom-color: color-mix(in srgb, #f97316 58%, var(--border));
+  border-bottom-color: color-mix(in srgb, var(--orange-500) 58%, var(--border));
   background:
     linear-gradient(90deg, #fed7aa, #ffedd5);
 }
@@ -5318,7 +5335,7 @@ tbody tr.selected {
 
 .segment-header-tools button:disabled:hover {
   background: #ffffff;
-  color: #536074;
+  color: var(--slate-600);
 }
 
 .segment-actions-menu-wrap,
@@ -5348,8 +5365,8 @@ tbody tr.selected {
   min-height: 31px !important;
   padding: 0 !important;
   border-radius: 9px !important;
-  border: 1px solid color-mix(in srgb, var(--segment-color, var(--tab-color, var(--group-color, var(--active-tab-color, #2563eb)))) 24%, var(--border)) !important;
-  background: color-mix(in srgb, var(--surface) 88%, var(--segment-color, var(--tab-color, var(--group-color, var(--active-tab-color, #2563eb))))) !important;
+  border: 1px solid color-mix(in srgb, var(--segment-color, var(--tab-color, var(--group-color, var(--active-tab-color, var(--status-info))))) 24%, var(--border)) !important;
+  background: color-mix(in srgb, var(--surface) 88%, var(--segment-color, var(--tab-color, var(--group-color, var(--active-tab-color, var(--status-info)))))) !important;
   color: var(--text-muted) !important;
   display: inline-flex !important;
   align-items: center !important;
@@ -5367,8 +5384,8 @@ tbody tr.selected {
 
 .inline-action-button:hover,
 .inline-action-strip .segment-color-trigger:hover {
-  border-color: color-mix(in srgb, var(--segment-color, var(--tab-color, var(--group-color, var(--active-tab-color, #2563eb)))) 48%, var(--border-strong)) !important;
-  background: color-mix(in srgb, var(--segment-color, var(--tab-color, var(--group-color, var(--active-tab-color, #2563eb)))) 12%, var(--surface)) !important;
+  border-color: color-mix(in srgb, var(--segment-color, var(--tab-color, var(--group-color, var(--active-tab-color, var(--status-info))))) 48%, var(--border-strong)) !important;
+  background: color-mix(in srgb, var(--segment-color, var(--tab-color, var(--group-color, var(--active-tab-color, var(--status-info))))) 12%, var(--surface)) !important;
   color: var(--text-strong) !important;
   box-shadow: var(--shadow-sm);
   transform: translateY(-1px);
@@ -5379,9 +5396,9 @@ tbody tr.selected {
 }
 
 .inline-action-button.danger:hover {
-  border-color: color-mix(in srgb, #dc2626 40%, var(--border-strong)) !important;
-  background: color-mix(in srgb, #dc2626 12%, var(--surface)) !important;
-  color: #b91c1c !important;
+  border-color: color-mix(in srgb, var(--status-danger) 40%, var(--border-strong)) !important;
+  background: color-mix(in srgb, var(--status-danger) 12%, var(--surface)) !important;
+  color: var(--red-700) !important;
 }
 
 .inline-action-strip .segment-color-trigger span {
@@ -5415,22 +5432,22 @@ tbody tr.selected {
   display: grid;
   gap: 5px;
   padding: 8px;
-  border: 1px solid color-mix(in srgb, var(--segment-color, var(--active-tab-color, #2563eb)) 24%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--segment-color, var(--active-tab-color, var(--status-info))) 24%, var(--border));
   border-radius: 12px;
-  background: color-mix(in srgb, var(--surface) 96%, var(--segment-color, var(--active-tab-color, #2563eb)));
+  background: color-mix(in srgb, var(--surface) 96%, var(--segment-color, var(--active-tab-color, var(--status-info))));
   box-shadow: 0 14px 32px rgba(15, 23, 42, 0.14);
   animation: popover-soft-in 130ms var(--ease-premium);
 }
 
 .tab-actions-menu {
-  --segment-color: var(--tab-color, var(--active-tab-color, #2563eb));
+  --segment-color: var(--tab-color, var(--active-tab-color, var(--status-info)));
   top: calc(100% + 8px);
   left: 0;
   right: auto;
 }
 
 .group-actions-menu {
-  --segment-color: var(--group-color, var(--active-tab-color, #2563eb));
+  --segment-color: var(--group-color, var(--active-tab-color, var(--status-info)));
 }
 
 .action-menu-item,
@@ -5458,7 +5475,7 @@ tbody tr.selected {
 
 .action-menu-item:hover,
 .action-menu-select:hover {
-  background: color-mix(in srgb, var(--segment-color, #2563eb) 12%, var(--surface-soft)) !important;
+  background: color-mix(in srgb, var(--segment-color, var(--status-info)) 12%, var(--surface-soft)) !important;
   color: var(--text-strong) !important;
   transform: translateX(2px);
 }
@@ -5468,8 +5485,8 @@ tbody tr.selected {
 }
 
 .action-menu-item.danger:hover {
-  background: color-mix(in srgb, #dc2626 12%, var(--surface-soft)) !important;
-  color: #b91c1c !important;
+  background: color-mix(in srgb, var(--status-danger) 12%, var(--surface-soft)) !important;
+  color: var(--red-700) !important;
 }
 
 .action-menu-item.color-action {
@@ -5575,7 +5592,7 @@ tbody tr.selected {
   padding: 0;
   overflow: visible;
   border-radius: 9px !important;
-  background: color-mix(in srgb, var(--surface) 88%, var(--segment-color, var(--active-tab-color, #2563eb))) !important;
+  background: color-mix(in srgb, var(--surface) 88%, var(--segment-color, var(--active-tab-color, var(--status-info)))) !important;
 }
 
 .segment-color-trigger svg {
@@ -5665,7 +5682,7 @@ tbody tr.selected {
   min-width: 0;
   align-content: start;
   gap: 4px;
-  border: 1px solid color-mix(in srgb, var(--segment-color, #2563eb) 16%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--segment-color, var(--status-info)) 16%, var(--border));
   border-radius: 8px;
   background: var(--surface);
   background-clip: padding-box;
@@ -5681,7 +5698,7 @@ tbody tr.selected {
 }
 
 .machine-card:hover {
-  border-color: color-mix(in srgb, var(--segment-color, #2563eb) 38%, var(--border-strong));
+  border-color: color-mix(in srgb, var(--segment-color, var(--status-info)) 38%, var(--border-strong));
   box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
@@ -5695,24 +5712,24 @@ tbody tr.selected {
 }
 
 .machine-card.selected {
-  border-color: color-mix(in srgb, var(--segment-color, #2563eb) 72%, var(--border-strong));
+  border-color: color-mix(in srgb, var(--segment-color, var(--status-info)) 72%, var(--border-strong));
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--segment-color, #2563eb) 10%, transparent), transparent 58%),
+    linear-gradient(135deg, color-mix(in srgb, var(--segment-color, var(--status-info)) 10%, transparent), transparent 58%),
     var(--surface);
   box-shadow:
-    0 0 0 2px color-mix(in srgb, var(--segment-color, #2563eb) 24%, transparent),
+    0 0 0 2px color-mix(in srgb, var(--segment-color, var(--status-info)) 24%, transparent),
     var(--shadow-md);
 }
 
 .machine-card.backup-card {
-  border-color: color-mix(in srgb, #f59e0b 48%, var(--border));
+  border-color: color-mix(in srgb, var(--status-warning) 48%, var(--border));
   background:
-    linear-gradient(135deg, color-mix(in srgb, #f59e0b 9%, transparent), transparent 58%),
+    linear-gradient(135deg, color-mix(in srgb, var(--status-warning) 9%, transparent), transparent 58%),
     var(--surface);
 }
 
 .machine-card.backup-card:hover {
-  border-color: color-mix(in srgb, #f59e0b 68%, var(--border-strong));
+  border-color: color-mix(in srgb, var(--status-warning) 68%, var(--border-strong));
 }
 
 .machine-card.backup-card.backup-in-use {
@@ -5773,7 +5790,7 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
 }
 
 .asset-drag-compact-overlay {
-  --overlay-segment-color: #2563eb;
+  --overlay-segment-color: var(--status-info);
   max-width: min(360px, 72vw);
   min-height: 42px;
   display: inline-flex;
@@ -5835,13 +5852,13 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
   z-index: 5;
   width: 20px;
   height: 20px;
-  border: 1px solid color-mix(in srgb, var(--segment-color, #2563eb) 30%, var(--border-strong));
+  border: 1px solid color-mix(in srgb, var(--segment-color, var(--status-info)) 30%, var(--border-strong));
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0;
-  background: color-mix(in srgb, var(--surface) 88%, var(--segment-color, #2563eb));
+  background: color-mix(in srgb, var(--surface) 88%, var(--segment-color, var(--status-info)));
   color: var(--surface);
   cursor: pointer;
   opacity: 0.72;
@@ -5861,9 +5878,9 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
 }
 
 .selection-checkbox.checked {
-  border-color: color-mix(in srgb, var(--segment-color, #2563eb) 82%, var(--accent));
-  background: color-mix(in srgb, var(--segment-color, #2563eb) 78%, var(--accent));
-  box-shadow: 0 10px 24px color-mix(in srgb, var(--segment-color, #2563eb) 28%, transparent);
+  border-color: color-mix(in srgb, var(--segment-color, var(--status-info)) 82%, var(--accent));
+  background: color-mix(in srgb, var(--segment-color, var(--status-info)) 78%, var(--accent));
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--segment-color, var(--status-info)) 28%, transparent);
 }
 
 .selection-checkbox:hover {
@@ -5881,12 +5898,12 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
   z-index: 4;
   border-radius: 999px;
   padding: 5px 8px;
-  background: color-mix(in srgb, var(--segment-color, #2563eb) 84%, #0f172a);
+  background: color-mix(in srgb, var(--segment-color, var(--status-info)) 84%, var(--slate-950));
   color: #ffffff;
   font-size: 11px;
   font-weight: 900;
   line-height: 1;
-  box-shadow: 0 12px 24px color-mix(in srgb, var(--segment-color, #2563eb) 22%, transparent);
+  box-shadow: 0 12px 24px color-mix(in srgb, var(--segment-color, var(--status-info)) 22%, transparent);
 }
 
 .machine-card-header {
@@ -5978,7 +5995,7 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
 
 .status-dot.offline,
 .status-dot.error {
-  color: #dc2626;
+  color: var(--status-danger);
   background: #ffd7d7;
 }
 
@@ -5996,11 +6013,11 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
 
 .asset-type-badge {
   width: fit-content;
-  border: 1px solid color-mix(in srgb, var(--segment-color, #2563eb) 34%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--segment-color, var(--status-info)) 34%, var(--border));
   border-radius: 999px;
   padding: 2px 7px;
-  background: color-mix(in srgb, var(--segment-color, #2563eb) 15%, var(--surface-soft));
-  color: color-mix(in srgb, var(--segment-color, #2563eb) 74%, var(--text-strong));
+  background: color-mix(in srgb, var(--segment-color, var(--status-info)) 15%, var(--surface-soft));
+  color: color-mix(in srgb, var(--segment-color, var(--status-info)) 74%, var(--text-strong));
   font-size: 11px;
   font-weight: 800;
   line-height: 1.25;
@@ -6027,10 +6044,10 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
 
 .backup-badge {
   width: fit-content;
-  border: 1px solid color-mix(in srgb, #f59e0b 45%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--status-warning) 45%, var(--border));
   border-radius: 999px;
   padding: 2px 7px;
-  background: color-mix(in srgb, #f59e0b 14%, var(--surface-soft));
+  background: color-mix(in srgb, var(--status-warning) 14%, var(--surface-soft));
   color: #92400e;
   font-size: 10.8px;
   font-weight: 900;
@@ -6040,11 +6057,11 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
 .demo-data-badge {
   display: inline-block;
   width: fit-content;
-  border: 1px solid color-mix(in srgb, #f59e0b 45%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--status-warning) 45%, var(--border));
   border-radius: 999px;
   padding: 1px 7px;
   margin-left: 6px;
-  background: color-mix(in srgb, #f59e0b 14%, var(--surface-soft));
+  background: color-mix(in srgb, var(--status-warning) 14%, var(--surface-soft));
   color: #92400e;
   font-size: 10px;
   font-weight: 800;
@@ -6059,15 +6076,15 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
 }
 
 .backup-action {
-  border-color: color-mix(in srgb, #f59e0b 36%, var(--border));
-  background: color-mix(in srgb, #f59e0b 8%, var(--surface));
+  border-color: color-mix(in srgb, var(--status-warning) 36%, var(--border));
+  background: color-mix(in srgb, var(--status-warning) 8%, var(--surface));
   color: #92400e;
 }
 
 .backup-action:hover:not(:disabled),
 .backup-action.active {
-  border-color: color-mix(in srgb, #f59e0b 62%, var(--border-strong));
-  background: color-mix(in srgb, #f59e0b 15%, var(--surface));
+  border-color: color-mix(in srgb, var(--status-warning) 62%, var(--border-strong));
+  background: color-mix(in srgb, var(--status-warning) 15%, var(--surface));
   color: #b45309;
 }
 
@@ -6103,8 +6120,8 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
 
 .machine-metrics div {
   border-radius: 6px;
-  border: 1px solid color-mix(in srgb, var(--segment-color, #2563eb) 12%, var(--border));
-  background: color-mix(in srgb, var(--segment-color, #2563eb) 7%, var(--surface-soft));
+  border: 1px solid color-mix(in srgb, var(--segment-color, var(--status-info)) 12%, var(--border));
+  background: color-mix(in srgb, var(--segment-color, var(--status-info)) 7%, var(--surface-soft));
   padding: 4px 6px;
   display: grid;
   gap: 1px;
@@ -6139,15 +6156,15 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
 }
 
 .machine-metrics strong.ok {
-  color: #16a34a;
+  color: var(--green-600);
 }
 
 .machine-metrics strong.warning {
-  color: #d97706;
+  color: var(--amber-600);
 }
 
 .machine-metrics strong.danger {
-  color: #dc2626;
+  color: var(--status-danger);
 }
 
 .agent-card-facts {
@@ -6235,7 +6252,7 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
 }
 
 .disk-indicator.danger {
-  color: #dc2626;
+  color: var(--status-danger);
   background: rgba(220, 38, 38, 0.13);
   border-color: rgba(220, 38, 38, 0.28);
 }
@@ -6412,7 +6429,7 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
 .peripheral-panel header {
   display: flex;
   justify-content: space-between;
-  color: #536074;
+  color: var(--slate-600);
   font-size: 12px;
   font-weight: 800;
 }
@@ -6471,7 +6488,7 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
 
 .peripheral-remove-button:hover {
   border-color: rgba(220, 38, 38, 0.35);
-  color: #dc2626;
+  color: var(--status-danger);
   background: rgba(220, 38, 38, 0.08);
 }
 
@@ -6607,23 +6624,23 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
 }
 
 .maintenance-action {
-  border-color: color-mix(in srgb, #f59e0b 34%, var(--border));
+  border-color: color-mix(in srgb, var(--status-warning) 34%, var(--border));
   color: #9a5a00;
-  background: color-mix(in srgb, #f59e0b 10%, var(--surface));
+  background: color-mix(in srgb, var(--status-warning) 10%, var(--surface));
 }
 
 .maintenance-action.active {
-  border-color: color-mix(in srgb, #f59e0b 54%, var(--border-strong));
+  border-color: color-mix(in srgb, var(--status-warning) 54%, var(--border-strong));
   color: #92400e;
-  background: color-mix(in srgb, #f59e0b 18%, var(--surface));
+  background: color-mix(in srgb, var(--status-warning) 18%, var(--surface));
 }
 
 .danger-action {
   min-height: 40px;
-  border: 1px solid color-mix(in srgb, #dc2626 30%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--status-danger) 30%, var(--border));
   border-radius: var(--radius-md);
-  color: #b91c1c;
-  background: color-mix(in srgb, #dc2626 8%, var(--surface));
+  color: var(--red-700);
+  background: color-mix(in srgb, var(--status-danger) 8%, var(--surface));
   font-weight: 800;
   transition:
     border-color 160ms var(--ease-premium),
@@ -6633,8 +6650,8 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
 }
 
 .danger-action:hover:not(:disabled) {
-  border-color: color-mix(in srgb, #dc2626 52%, var(--border-strong));
-  background: color-mix(in srgb, #dc2626 12%, var(--surface));
+  border-color: color-mix(in srgb, var(--status-danger) 52%, var(--border-strong));
+  background: color-mix(in srgb, var(--status-danger) 12%, var(--surface));
   transform: translateY(-1px);
   box-shadow: 0 8px 18px rgba(185, 28, 28, 0.12);
 }
@@ -6713,7 +6730,7 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
   border: 1px solid #dfe5ee;
   border-radius: 8px;
   padding: 12px;
-  background: #f8fafc;
+  background: var(--slate-50);
 }
 
 .asset-overview-grid svg {
@@ -6758,7 +6775,7 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
   border: 1px solid #d5ddea;
   border-radius: 6px;
   background: #ffffff;
-  color: #536074;
+  color: var(--slate-600);
 }
 
 .alias-editor.editing {
@@ -6778,7 +6795,7 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
   border: 1px solid #edf1f6;
   border-radius: 8px;
   padding: 10px;
-  background: #f8fafc;
+  background: var(--slate-50);
 }
 
 .detail-item strong {
@@ -7023,7 +7040,7 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
 .remote-assistance-status.status-reconnecting,
 .remote-assistance-status.status-agent_offline {
   color: #92400e;
-  background: color-mix(in srgb, #f59e0b 16%, var(--surface));
+  background: color-mix(in srgb, var(--status-warning) 16%, var(--surface));
 }
 
 .remote-assistance-single-monitor {
@@ -7411,7 +7428,7 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
 
 .error-alert-card {
   border: 1px solid var(--border);
-  border-left: 4px solid #d97706;
+  border-left: 4px solid var(--amber-600);
   border-radius: 10px;
   background: var(--surface);
   padding: 12px;
@@ -7420,15 +7437,15 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
 }
 
 .error-alert-card.critical {
-  border-left-color: #dc2626;
+  border-left-color: var(--status-danger);
 }
 
 .error-alert-card.warning {
-  border-left-color: #d97706;
+  border-left-color: var(--amber-600);
 }
 
 .error-alert-card.resolved {
-  border-left-color: #16a34a;
+  border-left-color: var(--green-600);
 }
 
 .error-alert-card header {
@@ -7523,7 +7540,7 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
   border: 1px solid #dfe5ee;
   border-radius: 999px;
   padding: 7px 10px;
-  color: #536074;
+  color: var(--slate-600);
   background: #ffffff;
   font-size: 12px;
   font-weight: 800;
@@ -7559,7 +7576,7 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
   border-left: 3px solid #1f7a61;
   border-radius: 8px;
   padding: 10px 12px;
-  background: #f8fafc;
+  background: var(--slate-50);
 }
 
 .timeline-item time,
@@ -7610,7 +7627,7 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  color: #536074;
+  color: var(--slate-600);
 }
 
 .hardware-change-details b {
@@ -7713,7 +7730,7 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
   border-radius: 8px;
   background: #f6f8fb;
   padding: 10px;
-  color: #536074;
+  color: var(--slate-600);
 }
 
 .asset-public-section h2 {
@@ -7748,7 +7765,7 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
   border: 1px solid #dfe5ee;
   border-radius: 999px;
   padding: 6px 10px;
-  color: #536074;
+  color: var(--slate-600);
   background: #ffffff;
   font-size: 12px;
 }
@@ -7792,7 +7809,7 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
   grid-template-columns: 12px 90px 1fr;
   align-items: center;
   gap: 8px;
-  color: #536074;
+  color: var(--slate-600);
   font-size: 13px;
 }
 
@@ -7804,7 +7821,7 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
 }
 
 .dot.critical {
-  background: #d64545;
+  background: var(--red-500);
 }
 
 .dot.warning {
@@ -7891,12 +7908,12 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
   height: 12px;
   flex: 0 0 auto;
   border-radius: 999px;
-  background: #16a34a;
+  background: var(--green-600);
   box-shadow: 0 0 0 5px rgba(22, 163, 74, 0.13);
 }
 
 .agent-status-summary.offline .agent-status-pulse {
-  background: #d97706;
+  background: var(--amber-600);
   box-shadow: 0 0 0 5px rgba(217, 119, 6, 0.13);
 }
 
@@ -7913,7 +7930,7 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
 .network-asset-facts div {
   min-width: 0;
   border-radius: 6px;
-  border: 1px solid color-mix(in srgb, var(--segment-color, #2563eb) 12%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--segment-color, var(--status-info)) 12%, var(--border));
   padding: 4px 5px;
   background: #f4f7fb;
 }
@@ -8028,7 +8045,7 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
   border: 1px solid #dfe5ee;
   border-radius: 10px;
   padding: 12px;
-  background: #f8fafc;
+  background: var(--slate-50);
 }
 
 .asset-type-editor label {
@@ -8182,33 +8199,33 @@ table strong,
   background:
     radial-gradient(circle at top left, color-mix(in srgb, #94a3b8 16%, transparent), transparent 34%),
     linear-gradient(180deg, color-mix(in srgb, #020617 56%, var(--surface)), color-mix(in srgb, #020617 18%, var(--surface)) 84%);
-  border-color: color-mix(in srgb, #cbd5e1 36%, var(--border));
+  border-color: color-mix(in srgb, var(--slate-300) 36%, var(--border));
 }
 
 :root[data-theme="dark"] .segment-card.default-segment-card .segment-card-header {
   background:
-    linear-gradient(90deg, color-mix(in srgb, #020617 70%, var(--surface)), color-mix(in srgb, #111827 42%, var(--surface)));
-  border-bottom-color: color-mix(in srgb, #cbd5e1 32%, var(--border));
+    linear-gradient(90deg, color-mix(in srgb, #020617 70%, var(--surface)), color-mix(in srgb, var(--slate-900) 42%, var(--surface)));
+  border-bottom-color: color-mix(in srgb, var(--slate-300) 32%, var(--border));
 }
 
 :root[data-theme="dark"] .segment-card.backup-segment-card {
-  border-color: color-mix(in srgb, #fb923c 62%, var(--border));
+  border-color: color-mix(in srgb, var(--orange-400) 62%, var(--border));
   background:
-    radial-gradient(circle at top left, color-mix(in srgb, #fb923c 24%, transparent), transparent 34%),
-    linear-gradient(180deg, color-mix(in srgb, #fb923c 18%, var(--surface)), var(--surface) 84%);
+    radial-gradient(circle at top left, color-mix(in srgb, var(--orange-400) 24%, transparent), transparent 34%),
+    linear-gradient(180deg, color-mix(in srgb, var(--orange-400) 18%, var(--surface)), var(--surface) 84%);
 }
 
 :root[data-theme="dark"] .segment-card.backup-segment-card .segment-card-header {
   background:
-    linear-gradient(90deg, color-mix(in srgb, #fb923c 38%, var(--surface)), color-mix(in srgb, #fb923c 22%, var(--surface)));
-  border-bottom-color: color-mix(in srgb, #fb923c 42%, var(--border));
+    linear-gradient(90deg, color-mix(in srgb, var(--orange-400) 38%, var(--surface)), color-mix(in srgb, var(--orange-400) 22%, var(--surface)));
+  border-bottom-color: color-mix(in srgb, var(--orange-400) 42%, var(--border));
 }
 
 :root[data-theme="dark"] .segment-card.default-segment-card.backup-segment-card .segment-card-header,
 :root[data-theme="dark"] .segment-card.backup-segment-card .segment-card-header {
   background:
-    linear-gradient(90deg, color-mix(in srgb, #fb923c 44%, var(--surface)), color-mix(in srgb, #f97316 28%, var(--surface)));
-  border-bottom-color: color-mix(in srgb, #fb923c 58%, var(--border));
+    linear-gradient(90deg, color-mix(in srgb, var(--orange-400) 44%, var(--surface)), color-mix(in srgb, var(--orange-500) 28%, var(--surface)));
+  border-bottom-color: color-mix(in srgb, var(--orange-400) 58%, var(--border));
 }
 
 :root[data-theme="dark"] .segment-color-mark {
@@ -8241,26 +8258,26 @@ table strong,
 }
 
 :root[data-theme="dark"] .asset-type-badge {
-  background: color-mix(in srgb, var(--segment-color, #2563eb) 22%, var(--surface-soft));
-  border-color: color-mix(in srgb, var(--segment-color, #2563eb) 44%, var(--border));
+  background: color-mix(in srgb, var(--segment-color, var(--status-info)) 22%, var(--surface-soft));
+  border-color: color-mix(in srgb, var(--segment-color, var(--status-info)) 44%, var(--border));
   color: color-mix(in srgb, var(--segment-color, #7dd3fc) 42%, var(--text-strong));
 }
 
 :root[data-theme="dark"] .machine-card.backup-card {
-  border-color: color-mix(in srgb, #f59e0b 45%, var(--border));
+  border-color: color-mix(in srgb, var(--status-warning) 45%, var(--border));
   background:
-    linear-gradient(135deg, color-mix(in srgb, #f59e0b 11%, transparent), transparent 58%),
+    linear-gradient(135deg, color-mix(in srgb, var(--status-warning) 11%, transparent), transparent 58%),
     var(--surface);
 }
 
 :root[data-theme="dark"] .backup-badge {
-  border-color: color-mix(in srgb, #f59e0b 44%, var(--border));
-  background: color-mix(in srgb, #f59e0b 20%, var(--surface-soft));
+  border-color: color-mix(in srgb, var(--status-warning) 44%, var(--border));
+  background: color-mix(in srgb, var(--status-warning) 20%, var(--surface-soft));
   color: #ffd47a;
 }
 
 :root[data-theme="dark"] .backup-badge.in-use {
-  border-color: color-mix(in srgb, #fb923c 52%, var(--border));
+  border-color: color-mix(in srgb, var(--orange-400) 52%, var(--border));
   background: color-mix(in srgb, #ea580c 22%, var(--surface-soft));
   color: #fed7aa;
 }
@@ -8325,28 +8342,28 @@ table strong,
 }
 
 :root[data-theme="dark"] .maintenance-action {
-  border-color: color-mix(in srgb, #f59e0b 58%, var(--border));
-  background: color-mix(in srgb, #f59e0b 18%, #111b2a);
+  border-color: color-mix(in srgb, var(--status-warning) 58%, var(--border));
+  background: color-mix(in srgb, var(--status-warning) 18%, #111b2a);
   color: #ffd47a;
 }
 
 :root[data-theme="dark"] .maintenance-action:hover,
 :root[data-theme="dark"] .maintenance-action.active {
-  border-color: color-mix(in srgb, #f59e0b 74%, var(--border-strong));
-  background: color-mix(in srgb, #f59e0b 28%, #111b2a);
+  border-color: color-mix(in srgb, var(--status-warning) 74%, var(--border-strong));
+  background: color-mix(in srgb, var(--status-warning) 28%, #111b2a);
   color: #ffe6a8;
 }
 
 :root[data-theme="dark"] .backup-action {
-  border-color: color-mix(in srgb, #f59e0b 52%, var(--border));
-  background: color-mix(in srgb, #f59e0b 14%, #111b2a);
+  border-color: color-mix(in srgb, var(--status-warning) 52%, var(--border));
+  background: color-mix(in srgb, var(--status-warning) 14%, #111b2a);
   color: #ffd47a;
 }
 
 :root[data-theme="dark"] .backup-action:hover,
 :root[data-theme="dark"] .backup-action.active {
-  border-color: color-mix(in srgb, #f59e0b 72%, var(--border-strong));
-  background: color-mix(in srgb, #f59e0b 24%, #111b2a);
+  border-color: color-mix(in srgb, var(--status-warning) 72%, var(--border-strong));
+  background: color-mix(in srgb, var(--status-warning) 24%, #111b2a);
   color: #ffe6a8;
 }
 
@@ -8378,7 +8395,7 @@ table strong,
 :root[data-theme="dark"] .segment-color-popover,
 :root[data-theme="dark"] .move-menu-popover,
 :root[data-theme="dark"] .action-menu-popover {
-  background: #111827;
+  background: var(--slate-900);
   border-color: var(--border);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.38);
 }
@@ -9161,7 +9178,7 @@ table strong,
   border: 1px solid rgba(220, 38, 38, 0.28);
   border-radius: 12px;
   background: rgba(220, 38, 38, 0.1);
-  color: #b91c1c;
+  color: var(--red-700);
   font-weight: 850;
   padding: 11px 13px;
 }
@@ -9703,7 +9720,7 @@ table strong,
 .public-support-error {
   border: 1px solid #fecaca;
   background: #fff1f2;
-  color: #b91c1c;
+  color: var(--red-700);
 }
 
 .public-support-actions {
@@ -10458,8 +10475,8 @@ table strong,
   min-height: 42px;
   padding: 0;
   justify-content: center;
-  border-color: color-mix(in srgb, #16a34a 72%, var(--border));
-  background: #16a34a;
+  border-color: color-mix(in srgb, var(--green-600) 72%, var(--border));
+  background: var(--green-600);
   color: #ffffff;
 }
 
@@ -10640,10 +10657,10 @@ table strong,
   order: 3;
   display: grid;
   gap: 12px;
-  border: 1px solid color-mix(in srgb, #f59e0b 28%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--status-warning) 28%, var(--border));
   border-radius: 14px;
   background:
-    linear-gradient(135deg, color-mix(in srgb, #f59e0b 8%, transparent), transparent 62%),
+    linear-gradient(135deg, color-mix(in srgb, var(--status-warning) 8%, transparent), transparent 62%),
     var(--surface-soft);
   padding: 14px;
 }
@@ -10693,7 +10710,7 @@ table strong,
 
 .service-order-backup-card-list button {
   justify-content: flex-start;
-  border: 1px solid color-mix(in srgb, #f59e0b 32%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--status-warning) 32%, var(--border));
   border-radius: 12px;
   background: var(--surface);
   color: var(--text);
@@ -10708,7 +10725,7 @@ table strong,
 }
 
 .service-order-backup-card-list button:hover:not(:disabled) {
-  border-color: #f59e0b;
+  border-color: var(--status-warning);
   color: #b45309;
   box-shadow: var(--shadow-sm);
   transform: translateY(-1px);
@@ -10988,7 +11005,7 @@ table strong,
 }
 
 .icon-button.danger {
-  color: #dc2626;
+  color: var(--status-danger);
 }
 
 .settings-empty {
@@ -12385,7 +12402,7 @@ table strong,
     align-items: center;
     gap: 2mm;
     padding: var(--label-padding, 2mm);
-    color: #0f172a;
+    color: var(--slate-950);
     background: #ffffff;
     text-align: left;
     overflow: hidden;
@@ -12407,7 +12424,7 @@ table strong,
   body.qr-print-mode .zebra-qr-label h1 {
     max-width: 100%;
     margin: 0 0 1.2mm;
-    color: #0f172a;
+    color: var(--slate-950);
     font: 800 8.5px/1.08 Arial, sans-serif;
     overflow-wrap: anywhere;
     word-break: break-word;
@@ -12418,7 +12435,7 @@ table strong,
   body.qr-print-mode .zebra-qr-label p {
     max-width: 100%;
     margin: 0;
-    color: #111827;
+    color: var(--slate-900);
     font: 700 7.3px/1.18 Arial, sans-serif;
     overflow-wrap: anywhere;
     word-break: break-word;
@@ -12744,26 +12761,26 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 }
 
 .preventive-device-row.has-error {
-  border-color: color-mix(in srgb, #dc2626 30%, var(--border-soft));
+  border-color: color-mix(in srgb, var(--status-danger) 30%, var(--border-soft));
   background:
-    linear-gradient(90deg, color-mix(in srgb, #dc2626 14%, transparent), transparent 72%),
-    color-mix(in srgb, #dc2626 8%, var(--surface));
+    linear-gradient(90deg, color-mix(in srgb, var(--status-danger) 14%, transparent), transparent 72%),
+    color-mix(in srgb, var(--status-danger) 8%, var(--surface));
 }
 
 .preventive-device-row.has-error:hover:not(:disabled) {
-  border-color: color-mix(in srgb, #dc2626 46%, var(--border-strong));
+  border-color: color-mix(in srgb, var(--status-danger) 46%, var(--border-strong));
   background:
-    linear-gradient(90deg, color-mix(in srgb, #dc2626 18%, transparent), transparent 72%),
-    color-mix(in srgb, #dc2626 12%, var(--surface));
+    linear-gradient(90deg, color-mix(in srgb, var(--status-danger) 18%, transparent), transparent 72%),
+    color-mix(in srgb, var(--status-danger) 12%, var(--surface));
 }
 
 .preventive-device-row.has-error.selected {
-  border-color: color-mix(in srgb, #dc2626 70%, var(--border-strong));
+  border-color: color-mix(in srgb, var(--status-danger) 70%, var(--border-strong));
   background:
-    linear-gradient(90deg, color-mix(in srgb, #dc2626 24%, transparent), transparent 72%),
-    color-mix(in srgb, #dc2626 18%, var(--surface));
+    linear-gradient(90deg, color-mix(in srgb, var(--status-danger) 24%, transparent), transparent 72%),
+    color-mix(in srgb, var(--status-danger) 18%, var(--surface));
   box-shadow:
-    inset 4px 0 0 #dc2626,
+    inset 4px 0 0 var(--status-danger),
     0 14px 30px rgba(220, 38, 38, 0.16);
 }
 
@@ -14273,9 +14290,9 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
   justify-content: space-between;
   gap: 12px;
   padding: 14px;
-  border: 1px solid color-mix(in srgb, #dc2626 35%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--status-danger) 35%, var(--border));
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, #dc2626 7%, var(--surface));
+  background: color-mix(in srgb, var(--status-danger) 7%, var(--surface));
 }
 
 .automation-management-error p {
@@ -14545,7 +14562,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 }
 
 .automation-machine-plan-heading .automation-recurrence-origin.personalized {
-  background: color-mix(in srgb, #2563eb 12%, var(--surface));
+  background: color-mix(in srgb, var(--status-info) 12%, var(--surface));
   color: #1d4ed8;
 }
 
@@ -14566,7 +14583,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 }
 
 .automation-machine-detail-status.error {
-  color: #b91c1c;
+  color: var(--red-700);
 }
 
 .automation-machine-history {
@@ -14616,7 +14633,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 }
 
 .automation-field-error {
-  color: #b91c1c;
+  color: var(--red-700);
   font-size: 0.7rem;
   font-weight: 700;
 }
@@ -14810,7 +14827,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 
 .floor-plans-view {
   background: #ffffff;
-  border: 1px solid #dbe4ef;
+  border: 1px solid var(--slate-200);
   border-radius: 18px;
   box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
   padding: 22px;
@@ -14848,7 +14865,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 }
 
 .floor-plans-header h2 {
-  color: #0f172a;
+  color: var(--slate-950);
   font-size: 1.65rem;
   line-height: 1.1;
 }
@@ -14888,7 +14905,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 }
 
 .floor-plan-list-empty {
-  background: #f8fafc;
+  background: var(--slate-50);
   border: 1px dashed #b8c7da;
   border-radius: 14px;
   color: #5b6b84;
@@ -14898,7 +14915,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 }
 
 .floor-plan-list-empty strong {
-  color: #0f172a;
+  color: var(--slate-950);
   font-size: 1.05rem;
 }
 
@@ -14910,7 +14927,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 
 .floor-plan-card {
   background: linear-gradient(145deg, #ffffff 0%, #f8fbff 100%);
-  border: 1px solid #dbe4ef;
+  border: 1px solid var(--slate-200);
   border-left: 4px solid #1f7a61;
   border-radius: 14px;
   box-shadow: 0 14px 30px rgba(15, 23, 42, 0.07);
@@ -14928,7 +14945,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 }
 
 .floor-plan-card h3 {
-  color: #0f172a;
+  color: var(--slate-950);
   font-size: 1.2rem;
   line-height: 1.15;
 }
@@ -14953,7 +14970,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 }
 
 .floor-plan-card dd {
-  color: #0f172a;
+  color: var(--slate-950);
   font-weight: 900;
 }
 
@@ -14975,12 +14992,12 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 
 .floor-plan-status.archived {
   background: #f1f5f9;
-  border-color: #cbd5e1;
+  border-color: var(--slate-300);
   color: #64748b;
 }
 
 .danger-icon {
-  color: #dc2626;
+  color: var(--status-danger);
 }
 
 .floor-plan-editor-shell {
@@ -14989,7 +15006,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 
 .floor-plan-editor-topbar {
   background: rgba(255, 255, 255, 0.96);
-  border: 1px solid #dbe4ef;
+  border: 1px solid var(--slate-200);
   border-radius: 18px;
   box-shadow: 0 14px 32px rgba(15, 23, 42, 0.08);
   gap: 14px;
@@ -15012,7 +15029,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 }
 
 .floor-plan-editor-identity strong {
-  color: #0f172a;
+  color: var(--slate-950);
   display: block;
   font-size: 1rem;
   line-height: 1.1;
@@ -15030,8 +15047,8 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 
 .floor-plan-save-state {
   align-items: center;
-  background: #f8fafc;
-  border: 1px solid #dbe4ef;
+  background: var(--slate-50);
+  border: 1px solid var(--slate-200);
   border-radius: 999px;
   display: inline-flex;
   gap: 6px;
@@ -15054,12 +15071,12 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 .floor-plan-save-state.error {
   background: #fef2f2;
   border-color: #fecaca;
-  color: #b91c1c;
+  color: var(--red-700);
 }
 
 .segmented-control.compact {
   background: #f1f5f9;
-  border: 1px solid #dbe4ef;
+  border: 1px solid var(--slate-200);
   border-radius: 12px;
   display: inline-flex;
   gap: 4px;
@@ -15080,7 +15097,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 .segmented-control.compact button.active {
   background: #ffffff;
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
-  color: #0f172a;
+  color: var(--slate-950);
 }
 
 .floor-plan-editor-layout {
@@ -15094,7 +15111,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 .floor-plan-canvas-panel,
 .floor-plan-inspector {
   background: #ffffff;
-  border: 1px solid #dbe4ef;
+  border: 1px solid var(--slate-200);
   border-radius: 18px;
   box-shadow: 0 16px 35px rgba(15, 23, 42, 0.08);
 }
@@ -15108,8 +15125,8 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 
 .floor-plan-toolrail button {
   align-items: center;
-  background: #f8fafc;
-  border: 1px solid #dbe4ef;
+  background: var(--slate-50);
+  border: 1px solid var(--slate-200);
   border-radius: 12px;
   color: #475569;
   cursor: pointer;
@@ -15142,7 +15159,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 }
 
 .floor-plan-floorbar {
-  background: #f8fafc;
+  background: var(--slate-50);
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   gap: 12px;
@@ -15163,9 +15180,9 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 .floor-plan-inspector input,
 .floor-plan-inspector select {
   background: #ffffff;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--slate-300);
   border-radius: 10px;
-  color: #0f172a;
+  color: var(--slate-950);
   font: inherit;
   font-weight: 800;
   min-height: 40px;
@@ -15179,8 +15196,8 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 
 .floor-plan-paint-panel {
   align-items: end;
-  background: #f8fafc;
-  border: 1px solid #cbd5e1;
+  background: var(--slate-50);
+  border: 1px solid var(--slate-300);
   border-radius: 12px;
   display: grid;
   gap: 10px;
@@ -15201,7 +15218,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 }
 
 .floor-plan-paint-panel-title strong {
-  color: #0f172a;
+  color: var(--slate-950);
 }
 
 .floor-plan-paint-panel-title span {
@@ -15220,9 +15237,9 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 
 .floor-plan-paint-panel select {
   background: #ffffff;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--slate-300);
   border-radius: 9px;
-  color: #0f172a;
+  color: var(--slate-950);
   font: inherit;
   min-height: 36px;
   padding: 0 9px;
@@ -15259,9 +15276,9 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
   background:
     linear-gradient(90deg, rgba(37, 99, 235, 0.05) 1px, transparent 1px),
     linear-gradient(0deg, rgba(37, 99, 235, 0.05) 1px, transparent 1px),
-    #f8fafc;
+    var(--slate-50);
   background-size: 28px 28px;
-  border: 1px solid #dbe4ef;
+  border: 1px solid var(--slate-200);
   border-radius: 14px;
   overflow: auto;
   position: relative;
@@ -15285,7 +15302,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 
 .floor-plan-delete-plan {
   border-color: #fecaca;
-  color: #dc2626;
+  color: var(--status-danger);
 }
 
 .floor-plan-delete-plan:hover {
@@ -15319,7 +15336,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 .floor-plan-zone text,
 .floor-plan-object text,
 .floor-plan-point text {
-  fill: #0f172a;
+  fill: var(--slate-950);
   font-size: 16px;
   font-weight: 900;
   pointer-events: none;
@@ -15351,8 +15368,8 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 }
 
 .floor-plan-catalog {
-  background: #f8fafc;
-  border: 1px solid #dbe4ef;
+  background: var(--slate-50);
+  border: 1px solid var(--slate-200);
   border-radius: 14px;
   bottom: 10px;
   box-shadow: 0 14px 34px rgba(15, 23, 42, 0.12);
@@ -15376,7 +15393,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 
 .floor-plan-catalog nav button {
   background: #ffffff;
-  border: 1px solid #dbe4ef;
+  border: 1px solid var(--slate-200);
   border-radius: 999px;
   color: #475569;
   cursor: pointer;
@@ -15403,9 +15420,9 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 .floor-plan-catalog-items button {
   align-items: center;
   background: #ffffff;
-  border: 1px solid #dbe4ef;
+  border: 1px solid var(--slate-200);
   border-radius: 12px;
-  color: #0f172a;
+  color: var(--slate-950);
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -15419,8 +15436,8 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 .floor-plan-catalog-items button::before {
   background:
     linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(20, 184, 166, 0.12)),
-    #f8fafc;
-  border: 1px solid #cbd5e1;
+    var(--slate-50);
+  border: 1px solid var(--slate-300);
   border-radius: 10px;
   box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.62);
   content: "";
@@ -15429,7 +15446,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 }
 
 .floor-plan-catalog-items button svg {
-  color: #2563eb;
+  color: var(--status-info);
   margin-top: -45px;
   position: relative;
 }
@@ -15437,7 +15454,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 .floor-plan-power-link {
   opacity: 0.68;
   pointer-events: none;
-  stroke: #d97706;
+  stroke: var(--amber-600);
   stroke-dasharray: 9 7;
   stroke-linecap: round;
   stroke-width: 3;
@@ -15447,7 +15464,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
   fill: none;
   opacity: 0.62;
   pointer-events: none;
-  stroke: #0f172a;
+  stroke: var(--slate-950);
   stroke-dasharray: 5 5;
   stroke-linecap: round;
   stroke-width: 2;
@@ -15455,7 +15472,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 
 .floor-plan-door-leaf {
   pointer-events: none;
-  stroke: #0f172a;
+  stroke: var(--slate-950);
   stroke-linecap: round;
   stroke-width: 3;
 }
@@ -15467,7 +15484,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 .floor-plan-object-resize-overlay > rect {
   fill: none;
   pointer-events: none;
-  stroke: #2563eb;
+  stroke: var(--status-info);
   stroke-dasharray: 6 5;
   stroke-width: 2;
 }
@@ -15480,12 +15497,12 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 .floor-plan-object-resize-handle circle {
   fill: #ffffff;
   filter: drop-shadow(0 5px 10px rgba(37, 99, 235, 0.25));
-  stroke: #2563eb;
+  stroke: var(--status-info);
   stroke-width: 2.5;
 }
 
 .floor-plan-object-resize-handle text {
-  fill: #2563eb;
+  fill: var(--status-info);
   font-size: 18px;
   font-weight: 950;
   pointer-events: none;
@@ -15521,9 +15538,9 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 .room-catalog-card {
   align-items: stretch;
   background: #ffffff;
-  border: 1px solid #dbe4ef;
+  border: 1px solid var(--slate-200);
   border-radius: 12px;
-  color: #0f172a;
+  color: var(--slate-950);
   cursor: pointer;
   display: grid;
   gap: 2px;
@@ -15566,7 +15583,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 }
 
 .room-template-thumbnail {
-  background: #f8fafc;
+  background: var(--slate-50);
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   display: block;
@@ -15579,7 +15596,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
   background:
     linear-gradient(#edf2f7 1px, transparent 1px),
     linear-gradient(90deg, #edf2f7 1px, transparent 1px),
-    #f8fafc;
+    var(--slate-50);
   background-size: 10px 10px;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
@@ -15619,7 +15636,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 }
 
 .floor-plan-room-name {
-  fill: #111827;
+  fill: var(--slate-900);
   font-size: 18px;
   font-weight: 950;
   letter-spacing: 0;
@@ -15642,11 +15659,11 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 
 .room-placement-preview.invalid .floor-plan-room > rect:first-of-type {
   fill: #fecaca;
-  stroke: #dc2626;
+  stroke: var(--status-danger);
 }
 
 .room-placement-preview text {
-  fill: #0f172a;
+  fill: var(--slate-950);
   font-size: 14px;
   font-weight: 950;
   paint-order: stroke;
@@ -15655,19 +15672,19 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 }
 
 .floor-plan-wall-preview line {
-  stroke: #2563eb;
+  stroke: var(--status-info);
   stroke-linecap: round;
   stroke-width: 12px;
 }
 
 .floor-plan-wall-preview circle {
   fill: #ffffff;
-  stroke: #2563eb;
+  stroke: var(--status-info);
   stroke-width: 3px;
 }
 
 .floor-plan-wall-preview text {
-  fill: #0f172a;
+  fill: var(--slate-950);
   font-size: 13px;
   font-weight: 900;
   paint-order: stroke;
@@ -15686,12 +15703,12 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 .room-resize-handle circle {
   fill: #ffffff;
   filter: drop-shadow(0 7px 12px rgba(15, 23, 42, 0.18));
-  stroke: #2563eb;
+  stroke: var(--status-info);
   stroke-width: 2.4;
 }
 
 .room-resize-handle svg {
-  color: #2563eb;
+  color: var(--status-info);
 }
 
 .room-floating-toolbar {
@@ -15700,12 +15717,12 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 
 .room-floating-toolbar > rect {
   fill: #ffffff;
-  stroke: #cbd5e1;
+  stroke: var(--slate-300);
   stroke-width: 1.2;
 }
 
 .room-floating-toolbar text {
-  fill: #0f172a;
+  fill: var(--slate-950);
   font-size: 12px;
   font-weight: 950;
   pointer-events: none;
@@ -15721,7 +15738,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 }
 
 .room-floating-toolbar > g svg {
-  color: #2563eb;
+  color: var(--status-info);
 }
 
 .room-floating-toolbar > g:last-child rect {
@@ -15730,7 +15747,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 }
 
 .room-floating-toolbar > g:last-child svg {
-  color: #dc2626;
+  color: var(--status-danger);
 }
 
 .floor-plan-inspector {
@@ -15751,7 +15768,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 }
 
 .floor-plan-inspector header > span {
-  color: #0f172a;
+  color: var(--slate-950);
   font-size: 1rem;
   font-weight: 900;
 }
@@ -15792,7 +15809,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 }
 
 .floor-plan-linked-asset strong {
-  color: #0f172a;
+  color: var(--slate-950);
 }
 
 .floor-plan-inspector-note {
@@ -15813,7 +15830,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 .floor-plan-scene-actions {
   align-items: center;
   background: rgba(255, 255, 255, 0.94);
-  border: 1px solid #dbe4ef;
+  border: 1px solid var(--slate-200);
   border-radius: 8px;
   bottom: 14px;
   box-shadow: 0 10px 28px rgba(15, 23, 42, 0.14);
@@ -16084,7 +16101,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
 
 .floor-plan-editor-shell .floor-plan-brush-tip {
   align-items: flex-start;
-  background: #f8fafc;
+  background: var(--slate-50);
   border: 1px solid var(--plan-border);
   border-radius: 8px;
   color: #4c5a70;
@@ -16368,7 +16385,7 @@ body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:las
   background: #94a3b8;
   border: 2px solid #fff;
   border-radius: 50%;
-  box-shadow: 0 0 0 1px #cbd5e1;
+  box-shadow: 0 0 0 1px var(--slate-300);
   display: inline-block;
   flex: 0 0 auto;
   height: 11px;
@@ -16769,7 +16786,7 @@ body:not(.modal-open):not(.alert-modal-open):not(.machine-details-open) {
 }
 
 .floor-plan-catalog-placement-preview.valid { color: #14805f; }
-.floor-plan-catalog-placement-preview.invalid { color: #dc2626; }
+.floor-plan-catalog-placement-preview.invalid { color: var(--status-danger); }
 
 .floor-plan-catalog-placement-preview > circle,
 .floor-plan-catalog-placement-preview > polyline,
@@ -16869,7 +16886,7 @@ body:not(.modal-open):not(.alert-modal-open):not(.machine-details-open) {
 }
 
 .floor-plan-editor-shell .floor-plan-catalog-object-preview {
-  background: #f8fafc;
+  background: var(--slate-50);
   border: 1px solid #e2e8f0;
   border-radius: 5px;
   box-sizing: border-box;
@@ -17028,7 +17045,7 @@ body:not(.modal-open):not(.alert-modal-open):not(.machine-details-open) {
 .floor-plan-editor-shell .floor-plan-top-tools button.danger-tool {
   background: #fee2e2;
   border-color: #fca5a5;
-  color: #b91c1c;
+  color: var(--red-700);
 }
 
 .floor-plan-editor-shell .floor-plan-top-tools button:disabled {
@@ -17186,7 +17203,7 @@ body:not(.modal-open):not(.alert-modal-open):not(.machine-details-open) {
 
 .floor-plan-editor-shell .floor-plan-object-selection-outline {
   fill: none !important;
-  stroke: #2563eb !important;
+  stroke: var(--status-info) !important;
   stroke-dasharray: 7 5;
   stroke-width: 2.5 !important;
 }
@@ -17244,7 +17261,7 @@ body:not(.modal-open):not(.alert-modal-open):not(.machine-details-open) {
 }
 
 .floor-plan-paint-area-label {
-  fill: #0f172a;
+  fill: var(--slate-950);
   font-size: 15px;
   font-weight: 900;
   paint-order: stroke;
@@ -17454,7 +17471,7 @@ body:not(.modal-open):not(.alert-modal-open):not(.machine-details-open) {
 }
 
 .floor-plan-rack-config {
-  background: #f8fafc;
+  background: var(--slate-50);
   border: 1px solid #dbe4ee;
   border-radius: 8px;
   display: grid;
@@ -17754,7 +17771,7 @@ body:not(.modal-open):not(.alert-modal-open):not(.machine-details-open) {
 }
 
 .dashboard-kpi-card.danger {
-  border-left-color: #d64545;
+  border-left-color: var(--red-500);
 }
 
 .dashboard-kpi-card.muted {
@@ -17793,8 +17810,8 @@ body:not(.modal-open):not(.alert-modal-open):not(.machine-details-open) {
 }
 
 .dashboard-kpi-card.danger .dashboard-kpi-icon-badge {
-  background: color-mix(in srgb, #d64545 16%, transparent);
-  color: #d64545;
+  background: color-mix(in srgb, var(--red-500) 16%, transparent);
+  color: var(--red-500);
 }
 
 .dashboard-kpi-card.muted .dashboard-kpi-icon-badge {
@@ -17884,7 +17901,7 @@ body:not(.modal-open):not(.alert-modal-open):not(.machine-details-open) {
 }
 
 .dashboard-health-deductions strong {
-  color: #d64545;
+  color: var(--red-500);
   font-size: 12px;
 }
 

@@ -76,6 +76,65 @@ entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
   auth/permissoes/notificacoes como o "estado global" a extrair, nao o
   estado de UI especifico de cada tela.
 
+## 2026-08-15 - Extracao mecanica de tokens de cor no styles.css
+
+### Causa raiz
+
+- a auditoria original apontou `styles.css` com 18.076 linhas, so 76
+  tokens contra 944 cores hex hardcoded, e 105 `!important`. Diferente dos
+  outros achados desta sessao, esse nao foi corrigido nas rodadas
+  anteriores porque nao tem uma forma de verificacao equivalente (teste que
+  passa/falha, query no banco): a unica forma de saber se uma reescrita de
+  CSS quebrou alguma tela e inspecao visual, e o app tem dezenas de telas
+  em dois temas.
+
+### Correcao (escopo deliberadamente contido)
+
+- em vez de uma reescrita ampla, uma extracao puramente mecanica: as 15
+  cores hex mais repetidas no arquivo (295 das 947 ocorrencias, ~31%) que
+  **nao colidem com o valor de nenhum token existente** foram substituidas
+  por `var(--nome-do-token)`, com o token declarado no `:root` base com o
+  mesmo valor hex exato — sem mudar uma unica cor renderizada;
+- a exclusao de colisao importa: `#1f7a61` (47 ocorrencias) e `#ffffff`
+  (79 ocorrencias) coincidem com os valores atuais de `--accent` e
+  `--surface`, que **variam por tema** (`--accent` e `#34d399` no escuro).
+  Trocar esses literais por esses tokens existentes mudaria a cor
+  renderizada no modo escuro — por isso foram deixados de fora desta
+  rodada, nao tocados;
+- os 15 novos tokens (`--status-info`, `--status-danger`,
+  `--status-warning`, mais uma escala neutra `--slate-*`/`--red-*`/
+  `--amber-600`/`--orange-*`/`--green-600`) sao declarados uma unica vez,
+  sem variante por tema — inspecionado o contexto de uso antes de nomear
+  (`#dc2626` aparece consistentemente em `.danger-action`, `.critical`,
+  `.error`; `#f59e0b` em `.backup-*`/avisos; `#2563eb` em foco/abas) para
+  justificar os nomes semanticos dos tres primeiros;
+- script de migracao com checagem de seguranca programada: aborta se
+  qualquer cor-alvo ja for o valor de um token nomeado existente, antes de
+  fazer qualquer substituicao.
+
+### Validacoes
+
+- verificado num navegador real, nos dois temas: `getComputedStyle` dos
+  tres tokens principais (`--status-info`/`--status-danger`/
+  `--status-warning`) resolve para o hex original identico tanto em
+  `data-theme="light"` quanto `"dark"` — prova direta de que nenhuma cor
+  mudou;
+- `npm run build` aprovado, CSS gerado sem erro de sintaxe;
+- `npm run lint`, `npm run check:architecture` (321 arquivos) e
+  `npm run test:client` (49 testes) aprovados;
+- contagem de cores hex no arquivo caiu de 947 para ~652 ocorrencias em
+  uso real (78 → 93 tokens declarados).
+
+### Pendencias reais
+
+- restam ~650 ocorrencias de cores hardcoded, incluindo as de maior
+  frequencia (`#ffffff`, `#1f7a61`) que exigem decisao caso a caso (nao
+  mecanica) sobre se cada uso deveria de fato seguir o tema ou permanecer
+  fixo — trabalho para rodadas futuras, com revisao visual real;
+- os 105 `!important` nao foram tocados nesta rodada;
+- este e um primeiro passo mecanico e comprovadamente seguro, nao uma
+  resposta completa ao achado original.
+
 ## 2026-08-15 - Ampliacao da cobertura de testes do client (Vitest)
 
 ### Causa raiz
