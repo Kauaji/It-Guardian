@@ -13,14 +13,10 @@ import {
   findPreventiveAutomationPlanByPreventivePlanId
 } from "./preventiveAutomationRepository.js";
 import { startMaintenanceForAsset } from "./assetLifecycleRepository.js";
+import { trimString } from "../lib/textUtils.js";
 
 const allowedStatuses = new Set(["prepared", "simulated", "completed", "failed", "cancelled"]);
 const highRiskLevels = new Set(["high", "critical"]);
-
-function trimString(value, maxLength = 1000, fallback = "") {
-  const text = String(value ?? "").trim();
-  return text ? text.slice(0, maxLength) : fallback;
-}
 
 function normalizeStatus(value, fallback = "prepared") {
   const status = String(value || "").trim().toLowerCase();

@@ -10,6 +10,7 @@ import {
 import { addLog } from "./logRepository.js";
 import { addServiceOrderHistory } from "./serviceOrderRepository.js";
 import { queueAgentScriptJob } from "./agentScriptJobRepository.js";
+import { trimString } from "../lib/textUtils.js";
 
 export const scriptTypes = new Set(["bat", "cmd", "powershell", "shell", "other"]);
 export const riskLevels = new Set(["low", "medium", "high", "critical"]);
@@ -354,12 +355,6 @@ const defaultMaintenanceScripts = [
     recommendedForCategories: ["Hardware"]
   }
 ];
-
-function trimString(value, maxLength, fallback = "") {
-  const text = String(value ?? "").trim();
-  if (!text) return fallback;
-  return text.slice(0, maxLength);
-}
 
 function parseArrayValue(value) {
   if (Array.isArray(value)) return value;

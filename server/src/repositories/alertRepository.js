@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { query } from "../database.js";
+import { normalizeBoolean } from "../lib/textUtils.js";
 
 export const defaultAlertRules = [
   {
@@ -150,13 +151,6 @@ const defaultAlertSettings = {
 function toNumber(value, fallback = null) {
   const number = Number(value);
   return Number.isFinite(number) ? number : fallback;
-}
-
-function normalizeBoolean(value, fallback = true) {
-  if (typeof value === "boolean") return value;
-  if (value === "false") return false;
-  if (value === "true") return true;
-  return fallback;
 }
 
 function normalizePriority(value, fallback = "medium") {

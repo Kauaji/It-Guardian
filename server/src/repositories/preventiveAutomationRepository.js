@@ -10,6 +10,7 @@ import {
 import { queueAgentScriptJob } from "./agentScriptJobRepository.js";
 import { listDevices } from "../services/monitoringService.js";
 import { syncAutoPriorities } from "./serviceOrderRepository.js";
+import { normalizeBoolean, serializeTimestamp, trimString } from "../lib/textUtils.js";
 import {
   canAccessAutomationAsset,
   canAccessAutomationPlan,
@@ -54,21 +55,9 @@ function createHttpError(message, statusCode = 400) {
   return error;
 }
 
-function trimString(value, maxLength = 1000, fallback = "") {
-  const text = String(value ?? "").trim();
-  return text ? text.slice(0, maxLength) : fallback;
-}
-
 function normalizeIndicatorColor(value, fallback = DEFAULT_INDICATOR_COLOR) {
   const color = String(value || "").trim();
   return /^#[0-9a-f]{6}$/i.test(color) ? color.toLowerCase() : fallback;
-}
-
-function normalizeBoolean(value, fallback = true) {
-  if (typeof value === "boolean") return value;
-  if (value === "true") return true;
-  if (value === "false") return false;
-  return fallback;
 }
 
 function parseJsonArray(value) {
@@ -80,12 +69,6 @@ function parseJsonArray(value) {
   } catch {
     return [];
   }
-}
-
-function serializeTimestamp(value) {
-  if (!value) return null;
-  const date = value instanceof Date ? value : new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
 function toValidDate(value = new Date()) {

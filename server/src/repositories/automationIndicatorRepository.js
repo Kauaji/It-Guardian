@@ -1,4 +1,5 @@
 import { query } from "../database.js";
+import { serializeTimestamp, trimString } from "../lib/textUtils.js";
 
 const recurrenceTypes = new Set(["daily", "weekly", "biweekly", "monthly", "custom_days"]);
 const recurrenceIntervalDefaults = {
@@ -11,11 +12,6 @@ const recurrenceIntervalDefaults = {
 const DEFAULT_TIMEZONE = "America/Sao_Paulo";
 const DEFAULT_PREFERRED_TIME = "08:00";
 const DEFAULT_INDICATOR_COLOR = "#1f7a61";
-
-function trimString(value, maxLength = 1000, fallback = "") {
-  const text = String(value ?? "").trim();
-  return text ? text.slice(0, maxLength) : fallback;
-}
 
 function normalizeAssetIds(value = []) {
   return [
@@ -41,12 +37,6 @@ function parseJsonArray(value) {
   } catch {
     return [];
   }
-}
-
-function serializeTimestamp(value) {
-  if (!value) return null;
-  const date = value instanceof Date ? value : new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
 function normalizeRecurrenceType(value, fallback = "monthly") {
