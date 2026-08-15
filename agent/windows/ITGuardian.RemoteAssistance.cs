@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.IO.Pipes;
+using System.Media;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Security.AccessControl;
@@ -397,6 +398,74 @@ namespace ITGuardian.Windows
         }
     }
 
+    /// <summary>
+    /// Formularios de assistencia remota (consentimento, indicador) sao
+    /// exibidos a partir de um tick de timer em segundo plano, nao de uma
+    /// acao direta do usuario -- o Windows restringe qual processo pode
+    /// roubar o foco nesse caso (protecao contra popups abusivos) e um
+    /// Form.Show()/ShowDialog() comum pode so piscar na barra de tarefas em
+    /// vez de vir para frente enquanto o usuario esta digitando em outra
+    /// janela. AttachThreadInput fixa temporariamente a thread desta janela
+    /// a thread da janela em primeiro plano para que SetForegroundWindow
+    /// funcione de forma confiavel, depois desfaz o vinculo.
+    /// </summary>
+    internal static class ForegroundHelper
+    {
+        [DllImport("user32.dll")]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetForegroundWindow();
+
+        [DllImport("user32.dll")]
+        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, IntPtr processId);
+
+        [DllImport("user32.dll")]
+        private static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
+
+        [DllImport("kernel32.dll")]
+        private static extern uint GetCurrentThreadId();
+
+        internal static void ForceToForeground(Form form)
+        {
+            try
+            {
+                form.TopMost = true;
+                form.WindowState = FormWindowState.Normal;
+                form.BringToFront();
+
+                IntPtr foregroundWindow = GetForegroundWindow();
+                uint foregroundThreadId = GetWindowThreadProcessId(foregroundWindow, IntPtr.Zero);
+                uint currentThreadId = GetCurrentThreadId();
+
+                if (foregroundThreadId != currentThreadId)
+                {
+                    AttachThreadInput(currentThreadId, foregroundThreadId, true);
+                    try
+                    {
+                        SetForegroundWindow(form.Handle);
+                        form.Activate();
+                    }
+                    finally
+                    {
+                        AttachThreadInput(currentThreadId, foregroundThreadId, false);
+                    }
+                }
+                else
+                {
+                    SetForegroundWindow(form.Handle);
+                    form.Activate();
+                }
+            }
+            catch
+            {
+                // Falha ao forcar o foco nao pode derrubar o formulario: ele
+                // continua visivel (TopMost) mesmo se nao vier para frente.
+                form.Activate();
+            }
+        }
+    }
+
     internal sealed class RemoteAssistanceConsentForm : Form
     {
         private readonly CheckBox controlCheckBox;
@@ -464,6 +533,13 @@ namespace ITGuardian.Windows
             CancelButton = deny;
         }
 
+        protected override void OnShown(EventArgs e)
+        {
+            base.OnShown(e);
+            try { SystemSounds.Exclamation.Play(); } catch { }
+            ForegroundHelper.ForceToForeground(this);
+        }
+
         private static Control Detail(string label, string value)
         {
             Label detail = new Label();
@@ -527,6 +603,7 @@ namespace ITGuardian.Windows
             base.OnShown(e);
             Rectangle area = Screen.PrimaryScreen.WorkingArea;
             Location = new Point(area.Right - Width - 16, area.Top + 16);
+            ForegroundHelper.ForceToForeground(this);
         }
     }
 

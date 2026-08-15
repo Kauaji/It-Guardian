@@ -4,6 +4,60 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-15 - Assistencia remota: forca a tela de consentimento para o primeiro plano
+
+### Causa raiz
+
+- `RemoteAssistanceConsentForm` e `RemoteAssistanceIndicatorForm` ja tinham
+  `TopMost = true` e `StartPosition = CenterScreen`/posicionamento manual,
+  mas ambos sao exibidos a partir de um tick de `System.Windows.Forms.Timer`
+  em segundo plano (`PollPending`), nao de uma acao direta do usuario. O
+  Windows restringe qual processo pode roubar o foco nesse cenario (mesma
+  protecao que impede popups abusivos); nesse caso o formulario podia so
+  piscar na barra de tarefas em vez de vir de fato para frente enquanto o
+  usuario estava digitando ou clicando em outra janela.
+
+### Correcao
+
+- `agent/windows/ITGuardian.RemoteAssistance.cs`: novo `ForegroundHelper`
+  estatico com o padrao AttachThreadInput + SetForegroundWindow (fixa
+  temporariamente a thread do formulario a thread da janela em primeiro
+  plano atual para que SetForegroundWindow funcione de forma confiavel,
+  depois desfaz o vinculo) — aplicado no `OnShown` de
+  `RemoteAssistanceConsentForm` e `RemoteAssistanceIndicatorForm`;
+  `RemoteAssistanceConsentForm` tambem passou a tocar
+  `SystemSounds.Exclamation` ao aparecer, como reforco sonoro;
+  falha ao forcar o foco nunca derruba o formulario (ele continua visivel
+  por ser `TopMost`, so nao necessariamente ativo/com foco de teclado).
+- confirmado que a tela de consentimento ja mostra tecnico, organizacao,
+  computador, sistema operacional e motivo (descricao) informados pelo
+  tecnico, com botoes Autorizar/Negar — nao precisou ser criada do zero.
+  O chat (`RemoteAssistanceChatForm`) fica disponivel a partir do indicador
+  flutuante ("Chat") assim que a sessao e aceita — antes do consentimento
+  nao existe sessao para rotear mensagens, entao nao faz sentido oferecer
+  chat na propria tela de autorizacao.
+- instalador reconstruido (`npm run installer:windows`) para embutir o
+  agente corrigido.
+
+### Validacoes
+
+- `npm run installer:windows`: compilacao do `ITGuardian.exe` sem erros
+  (confirma que `ForegroundHelper` e as novas chamadas compilam);
+- `npm run test` (suite completa do servidor): 267 testes, 265 passaram, 2
+  skips pre-existentes, 0 falhas — sem regressao.
+
+### Pendencias conhecidas
+
+- **nao foi possivel testar visualmente** o comportamento de vir para
+  frente numa maquina Windows real com o usuario ativo em outra janela —
+  essa e uma limitacao de ambiente desta sessao (sem acesso a um desktop
+  Windows interativo), nao algo verificado e confirmado funcionando. A
+  implementacao segue o padrao Win32 documentado e usado por outras
+  ferramentas de suporte remoto, e a suite de testes automatizados nao
+  cobre (nem consegue cobrir) esse comportamento especifico de UI nativa —
+  precisa de teste manual numa maquina real apos reinstalar com o
+  instalador novo.
+
 ## 2026-08-15 - Instalador: torna confiavel o primeiro lancamento do icone de bandeja
 
 ### Causa raiz
