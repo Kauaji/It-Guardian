@@ -4,7 +4,93 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
-## 2026-08-15 - Assistencia remota: forca a tela de consentimento para o primeiro plano
+## 2026-08-15 - Decisao registrada: assistencia remota mantida ativa sem pentest independente
+
+A avaliacao tecnica publicada (ver `Avaliação Técnica — IT Guardian`) lista
+homologacao/pentest independente como pre-requisito, separado da correcao do
+ACL do pipe, antes de reativar a assistencia remota em deploy publico. A
+reativacao feita mais cedo em 15/08 (commit `518cfde`/`c29961a` e a remocao
+do `remoteAssistanceSecurityPause`) seguiu o criterio mais estreito que
+estava escrito no comentario do codigo (agente corrigido, distribuido e
+confirmado em uso) — nao o criterio mais amplo da auditoria completa. Diante
+dessa lacuna, explicitamente apresentada, o responsavel pelo projeto optou
+por manter a assistencia remota ativa, assumindo conscientemente o risco
+residual ate que um pentest de fato aconteca. Registrado aqui para que uma
+proxima rodada de auditoria trate isso como decisao informada, nao como
+achado que passou despercebido.
+
+## 2026-08-15 - Agente Windows: conta de servico dedicada no lugar de SYSTEM
+
+### Causa raiz
+
+- a auditoria tecnica (Agente Windows, 5,5/10) lista "task agendada continua
+  rodando como SYSTEM permanente sem nenhuma camada de contencao" como
+  achado aberto de severidade alta. Investigacao direta no codigo
+  (`agent/windows/ITGuardian.Windows.cs`) mapeou exatamente por que SYSTEM
+  foi usado: leitura de saude/SMART de disco via WMI (`root\wmi` —
+  `MSStorageDriver_FailurePredictData` — e `root\Microsoft\Windows\Storage` —
+  `MSFT_StorageReliabilityCounter`) e levantamento de software instalado por
+  usuario via enumeracao de `HKEY_USERS` de todos os perfis carregados.
+  Nenhuma dessas operacoes exige a identidade SYSTEM especificamente —
+  exige associacao ao grupo Administradores, que SYSTEM tambem satisfaz por
+  ser um superconjunto.
+
+### Correcao
+
+- `installers/windows-collector/Finalize-CollectorInstall.ps1`: nova conta
+  de servico local dedicada `ITGuardianCollector`, criada (ou com senha
+  rotacionada, se ja existir) a cada instalacao/reinstalacao/troca de chave,
+  com senha aleatoria de 24 caracteres gerada via
+  `RandomNumberGenerator` (garante ao menos 1 caractere de cada classe:
+  maiuscula/minuscula/digito/simbolo, embaralhados por Fisher-Yates — nao
+  fica so anexada como sufixo previsivel), adicionada ao grupo
+  Administradores, com `PasswordNeverExpires`/`UserMayNotChangePassword`
+  (conta de servico, sem uso interativo). A tarefa agendada passa a rodar
+  sob essa conta (`Register-ScheduledTask -User ".\ITGuardianCollector"
+  -Password ...`) em vez de `-UserId "SYSTEM" -LogonType ServiceAccount`. A
+  senha em texto claro fica em memoria só pelo tempo do registro da tarefa
+  (o Task Scheduler protege a credencial internamente depois de registrada,
+  do mesmo jeito que ja faz para contas de servico do Windows) e a variavel
+  e zerada logo em seguida.
+- ACL de `config.json` (`S-1-5-18`/SYSTEM + `S-1-5-32-544`/Administradores)
+  nao precisou mudar: a nova conta ja tem acesso por ser membro de
+  Administradores. O grant de `FullControl` no pipe nomeado da assistencia
+  remota (`CreatePipe()` em `ITGuardian.RemoteAssistance.cs`) tambem nao
+  precisou mudar pelo mesmo motivo — ja concedia tanto a `LocalSystemSid`
+  quanto a `BuiltinAdministratorsSid`.
+- `installers/windows-collector/Uninstall-Collector.ps1`: remove a conta
+  `ITGuardianCollector` ao desinstalar.
+- instalador reconstruido para embutir os scripts corrigidos.
+
+### Validacoes
+
+- `[System.Management.Automation.Language.Parser]::ParseFile` nos dois
+  scripts alterados: sem erros de sintaxe;
+- assinaturas exatas de `New-LocalUser`/`Set-LocalUser`/
+  `Register-ScheduledTask`/`Add-LocalGroupMember`/`Get-LocalGroupMember`/
+  `Remove-LocalUser` conferidas via `Get-Command -Syntax` nesta mesma
+  maquina antes de escrever o codigo que as usa (evitou pelo menos uma
+  suposicao errada: `Set-LocalUser` usa `-UserMayChangePassword <bool>`,
+  nome e tipo diferentes do `-UserMayNotChangePassword` switch do
+  `New-LocalUser`);
+- gerador de senha testado isoladamente (8 amostras): sempre 24 caracteres,
+  sempre as 4 classes de caractere presentes, sem elevacao necessaria para
+  essa parte;
+- `npm run installer:windows`: compilacao completa sem erros.
+
+### Pendencias conhecidas
+
+- **não foi possível testar a criação da conta e o registro da tarefa
+  agendada de ponta a ponta nesta sessão** — a sessão do PowerShell
+  disponível aqui não está elevada (`IsAdmin: False`), e `New-LocalUser`/
+  `Add-LocalGroupMember`/`Register-ScheduledTask -User -Password` exigem
+  administrador. A verificação ficou limitada a sintaxe do script,
+  assinatura exata dos cmdlets, e teste isolado do gerador de senha — não
+  cobre o cenário completo (conta criada, associada a Administradores,
+  tarefa rodando sob ela, coleta de inventário incluindo SMART e software
+  por usuário funcionando). **Precisa de teste manual numa máquina real**
+  antes de considerar este achado fechado com a mesma confiança dos outros
+  itens desta auditoria.
 
 ### Causa raiz
 

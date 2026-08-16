@@ -3,6 +3,7 @@ param()
 
 $ErrorActionPreference = "Continue"
 $taskNames = @("IT Guardian Collector", "IT Guardian Cloud Collector")
+$collectorAccountName = "ITGuardianCollector"
 $installDirectory = Split-Path -Parent $PSCommandPath
 $monitoringMarkerPath = Join-Path $installDirectory "monitoring-agents.json"
 
@@ -80,6 +81,11 @@ Remove-ItemProperty `
   -Name "IT Guardian" `
   -ErrorAction SilentlyContinue
 Stop-Process -Name "ITGuardian" -Force -ErrorAction SilentlyContinue
+
+$collectorAccount = Get-LocalUser -Name $collectorAccountName -ErrorAction SilentlyContinue
+if ($collectorAccount) {
+  Remove-LocalUser -Name $collectorAccountName -ErrorAction SilentlyContinue
+}
 
 if (Test-Path -LiteralPath $monitoringMarkerPath) {
   $monitoring = Get-Content -LiteralPath $monitoringMarkerPath -Raw | ConvertFrom-Json
