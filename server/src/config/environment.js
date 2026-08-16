@@ -168,6 +168,37 @@ export function isRemoteScriptExecutionEnabled(env = process.env) {
   return isTruthyEnv(env.ENABLE_REMOTE_SCRIPT_EXECUTION);
 }
 
+const SHA256_HEX_PATTERN = /^[0-9a-f]{64}$/i;
+
+// Sem certificado de assinatura em uso ainda, o hash SHA-256 declarado aqui e
+// a UNICA verificacao de integridade do binario baixado pelo agente -- o
+// mesmo modelo de confianca ja usado para pinagem de conteudo de scripts de
+// manutencao (maintenance_scripts.content_updated_by). Por isso as tres
+// variaveis sao exigidas em conjunto: uma URL de download sem hash esperado,
+// ou um hash sem URL, nao habilita nada.
+export function getAgentAutoUpdateInfo(env = process.env) {
+  const version = String(env.AGENT_LATEST_VERSION || "").trim();
+  const downloadUrl = String(env.AGENT_LATEST_VERSION_URL || "").trim();
+  const sha256 = String(env.AGENT_LATEST_VERSION_SHA256 || "").trim().toLowerCase();
+
+  if (!version || !downloadUrl || !sha256) {
+    return { version: null, downloadUrl: null, sha256: null };
+  }
+  if (!SHA256_HEX_PATTERN.test(sha256)) {
+    return { version: null, downloadUrl: null, sha256: null };
+  }
+  try {
+    const parsed = new URL(downloadUrl);
+    if (parsed.protocol !== "https:") {
+      return { version: null, downloadUrl: null, sha256: null };
+    }
+  } catch {
+    return { version: null, downloadUrl: null, sha256: null };
+  }
+
+  return { version, downloadUrl, sha256 };
+}
+
 export function resolveDatabasePoolConfig({
   env = process.env,
   serverless = isVercel

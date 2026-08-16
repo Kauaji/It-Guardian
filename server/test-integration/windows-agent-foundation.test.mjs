@@ -121,7 +121,42 @@ test("agente autentica, valida, atualiza inventario e respeita revogacao", async
     body: JSON.stringify(payload())
   });
   assert.equal(accepted.status, 202);
-  assert.equal((await accepted.json()).assetId, "machine-guid-agent-test");
+  const acceptedBody = await accepted.json();
+  assert.equal(acceptedBody.assetId, "machine-guid-agent-test");
+  assert.equal(acceptedBody.latestVersion, null, "sem AGENT_LATEST_VERSION configurado, nao deve sugerir atualizacao");
+
+  t.after(() => {
+    delete process.env.AGENT_LATEST_VERSION;
+    delete process.env.AGENT_LATEST_VERSION_URL;
+    delete process.env.AGENT_LATEST_VERSION_SHA256;
+  });
+  process.env.AGENT_LATEST_VERSION = "2.0.0";
+  process.env.AGENT_LATEST_VERSION_URL = "https://cdn.example.com/ITGuardian.exe";
+  process.env.AGENT_LATEST_VERSION_SHA256 = "a".repeat(64);
+
+  const withUpdateAvailable = await fetch(`${baseUrl}/api/agents/heartbeat`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${enrollment.token}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(payload({ agentVersion: "1.0.0" }))
+  });
+  const updateBody = await withUpdateAvailable.json();
+  assert.equal(updateBody.latestVersion, "2.0.0");
+  assert.equal(updateBody.latestVersionDownloadUrl, "https://cdn.example.com/ITGuardian.exe");
+  assert.equal(updateBody.latestVersionSha256, "a".repeat(64));
+
+  const alreadyUpToDate = await fetch(`${baseUrl}/api/agents/heartbeat`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${enrollment.token}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(payload({ agentVersion: "2.0.0" }))
+  });
+  const upToDateBody = await alreadyUpToDate.json();
+  assert.equal(upToDateBody.latestVersion, null, "agente ja na versao mais recente nao deve receber sugestao de atualizacao");
 
   const acceptedWithNulCharacters = await fetch(`${baseUrl}/api/agents/heartbeat`, {
     method: "POST",

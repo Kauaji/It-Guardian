@@ -72,8 +72,16 @@ test("instalador cloud usa apenas a chave e instala o coletor nativo", async () 
 
   assert.match(postInstall, /New-ScheduledTaskTrigger -AtStartup/);
   assert.match(postInstall, /New-ScheduledTaskTrigger -AtLogOn/);
-  assert.match(postInstall, /New-ScheduledTaskPrincipal/);
-  assert.match(postInstall, /-UserId "SYSTEM"/);
+  // Contencao do SYSTEM: o coletor roda sob uma conta de servico dedicada
+  // (Administradores, nao SYSTEM), criada/rotacionada a cada instalacao.
+  assert.match(postInstall, /\$collectorAccountName = "ITGuardianCollector"/);
+  assert.match(postInstall, /New-LocalUser/);
+  assert.match(postInstall, /Add-LocalGroupMember -Name "Administrators" -Member \$collectorAccountName/);
+  assert.match(postInstall, /Register-ScheduledTask/);
+  assert.match(postInstall, /-User "\.\\\$collectorAccountName"/);
+  assert.match(postInstall, /-RunLevel Highest/);
+  assert.doesNotMatch(postInstall, /-UserId "SYSTEM"/);
+  assert.doesNotMatch(postInstall, /New-ScheduledTaskPrincipal/);
   assert.match(postInstall, /-AllowStartIfOnBatteries/);
   assert.match(postInstall, /-DontStopIfGoingOnBatteries/);
   assert.match(postInstall, /-StartWhenAvailable/);
@@ -102,6 +110,7 @@ test("instalador cloud usa apenas a chave e instala o coletor nativo", async () 
   assert.doesNotMatch(postInstall, /throw "O primeiro heartbeat do coletor falhou\."/);
   assert.match(uninstall, /Unregister-ScheduledTask/);
   assert.match(uninstall, /Stop-Process -Name "ITGuardian"/);
+  assert.match(uninstall, /Remove-LocalUser -Name \$collectorAccountName/);
   assert.doesNotMatch(setup, /OCS-Windows-Agent|zabbix_agent|vendor\\ocs|vendor\\zabbix/);
   assert.doesNotMatch(buildInstaller, /Get-OfficialMonitoringAgents|OCS-Windows-Agent|zabbix_agent/);
   await assert.rejects(

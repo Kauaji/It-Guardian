@@ -4,6 +4,98 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-16 - Agente Windows: auto-atualizacao via heartbeat
+
+### Causa raiz
+
+- a auditoria tecnica (Agente Windows, 5,5/10) lista "sem mecanismo de
+  auto-atualizacao" como achado aberto: uma correcao de seguranca no agente
+  so chega as maquinas que forem reinstaladas manualmente, o que nao
+  escala e deixa parques inteiros presos em versoes antigas indefinidamente.
+
+### Correcao
+
+- reaproveitado o round-trip de heartbeat ja existente
+  (`POST /api/agents/heartbeat`) em vez de criar um endpoint novo — o agente
+  ja envia `agentVersion` em todo heartbeat, entao o servidor so precisou
+  comparar essa versao com a mais recente configurada e devolver os dados
+  de atualizacao na propria resposta;
+- `server/src/config/environment.js`: `getAgentAutoUpdateInfo()` so fica
+  ativo com as tres variaveis `AGENT_LATEST_VERSION`,
+  `AGENT_LATEST_VERSION_URL` e `AGENT_LATEST_VERSION_SHA256` presentes
+  simultaneamente (qualquer uma ausente desativa por completo); URL
+  precisa ser https (download de binario nunca sobre http); hash validado
+  como hexadecimal de 64 caracteres antes de ser aceito;
+- `server/src/services/agentService.js`: `compareVersions()` faz
+  comparacao numerica por segmento (nao comparacao de string, que ordenaria
+  "1.10.0" antes de "1.9.0" incorretamente); `receiveAgentInventory()` so
+  devolve `latestVersion`/`latestVersionDownloadUrl`/`latestVersionSha256`
+  quando a versao configurada e genuinamente mais nova que a reportada pelo
+  agente;
+- `agent/windows/ITGuardian.Windows.cs`: ao receber uma versao mais nova no
+  heartbeat, baixa para um arquivo `.new`, calcula o SHA-256 e recusa
+  silenciosamente em caso de divergencia (unico controle de integridade
+  disponivel hoje, no mesmo padrao ja usado nos scripts de manutencao —
+  ainda nao existe certificado de assinatura de codigo em uso), depois
+  renomeia o executavel atual para `.old` e o `.new` para o nome real
+  (Windows permite renomear um executavel em execucao) e finaliza com
+  `Environment.Exit(42)` **depois** do `try/finally` que ja existia, para
+  garantir que `remoteAssistanceBroker.Dispose()` rode antes da saida. O
+  codigo 42 aciona o mecanismo de reinicio por falha que a tarefa agendada
+  ja tinha configurado (`RestartCount 999`, `RestartInterval` de 1 minuto),
+  entao nenhuma infraestrutura de agendamento nova foi necessaria;
+- o heartbeat `--once` usado logo apos a instalacao (dentro de
+  `Finalize-CollectorInstall.ps1`) pula a checagem de atualizacao
+  (`skipAutoUpdate`) para nao gerar um codigo de saida diferente de zero
+  logo depois de instalar, o que confundiria a logica de retry do proprio
+  instalador;
+- funcionalidade desligada por padrao — sem as tres variaveis configuradas
+  no ambiente do servidor, o comportamento e identico ao de hoje.
+
+### Validacoes
+
+- `node --test server/src/config/environment.test.mjs
+  server/test-integration/windows-agent-foundation.test.mjs`: 18/18 testes
+  passando, incluindo os 4 novos casos de `getAgentAutoUpdateInfo` (config
+  completa aceita, qualquer variavel faltando desativa, URL nao-https
+  rejeitada, hash invalido rejeitado) e o caso de integracao completo (uma
+  versao antiga recebe os dados de atualizacao no heartbeat, uma versao ja
+  atual recebe `latestVersion: null`);
+- suite completa do servidor (`npm run test`, 271 testes) rodada depois —
+  pegou uma regressao real: um teste de seguranca do instalador
+  (`windows-collector-installer-security.test.mjs`) ainda esperava o
+  `New-ScheduledTaskPrincipal`/`-UserId "SYSTEM"` antigo, que a contencao
+  do SYSTEM do dia anterior ja tinha substituido por
+  `Register-ScheduledTask -User -Password`. Teste corrigido para validar o
+  comportamento atual (conta dedicada, `Add-LocalGroupMember`,
+  `Register-ScheduledTask` sob `ITGuardianCollector`) e para travar contra
+  regressao futura (`doesNotMatch` explicito em `-UserId "SYSTEM"` e
+  `New-ScheduledTaskPrincipal`); tambem adicionada a asserção de que o
+  desinstalador remove a conta dedicada. Suite completa voltou a passar:
+  269 passando, 0 falhas, 2 skipped (inalterados, nao relacionados);
+- `npx eslint` limpo em todos os arquivos tocados (servidor, testes,
+  incluindo o teste de instalador corrigido);
+- compilacao real do agente via `npm run installer:windows` (duas vezes):
+  "Successful compile" e `ITGuardian-Collector-Setup.exe` gerado sem erros;
+- `npm run check:architecture`: 324 arquivos, sem violacoes.
+
+### Pendencias conhecidas
+
+- **o fluxo real de auto-atualizacao (download, verificacao de hash, troca
+  de executavel, reinicio via codigo 42) nao foi testado de ponta a ponta
+  com um agente rodando de verdade nesta sessao** — o que foi validado e a
+  compilacao do C#, a logica de validacao de configuracao no servidor
+  (variaveis, https, hash) via testes automatizados, e o contrato do
+  heartbeat (quais campos vao e voltam). O comportamento do
+  `File.Move` durante a execucao, o disparo efetivo do restart-on-failure
+  da tarefa agendada, e o download real de um binario por
+  `HttpWebRequest` precisam de um teste manual numa maquina Windows real
+  antes de considerar este achado fechado com a mesma confianca dos
+  outros itens desta auditoria;
+- a funcionalidade so tem efeito quando as tres variaveis forem
+  configuradas em producao (hoje nenhuma esta) — ate la o achado da
+  auditoria fica tecnicamente corrigivel mas nao exercitado em producao.
+
 ## 2026-08-15 - Decisao registrada: assistencia remota mantida ativa sem pentest independente
 
 A avaliacao tecnica publicada (ver `Avaliação Técnica — IT Guardian`) lista

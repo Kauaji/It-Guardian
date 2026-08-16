@@ -9,7 +9,7 @@ import {
   claimNextAgentScriptJob,
   completeAgentScriptJob
 } from "../repositories/agentScriptJobRepository.js";
-import { getFrontendUrl, isRemoteScriptExecutionEnabled } from "../config/environment.js";
+import { getAgentAutoUpdateInfo, getFrontendUrl, isRemoteScriptExecutionEnabled } from "../config/environment.js";
 import { createPublicMachineToken } from "../domain/publicMachineToken.js";
 
 const acceptedFields = new Set([
@@ -41,6 +41,17 @@ const acceptedFields = new Set([
   "segment",
   "inventoryDetails"
 ]);
+
+function compareVersions(a, b) {
+  const partsA = String(a || "0").split(".").map((part) => parseInt(part, 10) || 0);
+  const partsB = String(b || "0").split(".").map((part) => parseInt(part, 10) || 0);
+  const length = Math.max(partsA.length, partsB.length);
+  for (let index = 0; index < length; index += 1) {
+    const diff = (partsA[index] || 0) - (partsB[index] || 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
 
 function badRequest(message) {
   const error = new Error(message);
@@ -188,12 +199,23 @@ export async function receiveAgentInventory({ token, body }) {
     assetId: asset.id,
     enrollmentId: enrollment.id
   });
+
+  const autoUpdate = getAgentAutoUpdateInfo();
+  const reportedVersion = String(body?.agentVersion || "").trim();
+  const updateAvailable =
+    Boolean(autoUpdate.version) &&
+    Boolean(reportedVersion) &&
+    compareVersions(autoUpdate.version, reportedVersion) > 0;
+
   return {
     assetId: asset.id,
     acceptedAt: new Date().toISOString(),
     intervalSeconds: asset.intervalSeconds,
     remoteScriptExecutionEnabled: isRemoteScriptExecutionEnabled(),
-    job
+    job,
+    latestVersion: updateAvailable ? autoUpdate.version : null,
+    latestVersionDownloadUrl: updateAvailable ? autoUpdate.downloadUrl : null,
+    latestVersionSha256: updateAvailable ? autoUpdate.sha256 : null
   };
 }
 

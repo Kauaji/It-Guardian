@@ -6,6 +6,7 @@ using System.Drawing;
 using System.IO;
 using System.Management;
 using System.Net;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Web.Script.Serialization;
@@ -41,6 +42,9 @@ namespace ITGuardian.Windows
         public string assetId { get; set; }
         public bool remoteScriptExecutionEnabled { get; set; }
         public AgentScriptJob job { get; set; }
+        public string latestVersion { get; set; }
+        public string latestVersionDownloadUrl { get; set; }
+        public string latestVersionSha256 { get; set; }
     }
 
     internal sealed class AgentScriptJob
@@ -69,6 +73,14 @@ namespace ITGuardian.Windows
         private const string AgentVersion = "1.6.3";
         private const int MaxInventoryPayloadBytes = 1024 * 1024;
         private const int MaximumOutputLength = 65536;
+        // Codigo de saida nao-zero de proposito: RestartCount/RestartInterval, ja
+        // configurados na tarefa agendada pelo instalador, so relancam o processo
+        // quando o Task Scheduler considera a execucao uma "falha" -- ou seja,
+        // qualquer saida diferente de zero. Reaproveita esse mecanismo existente
+        // em vez de criar um novo gatilho so para a auto-atualizacao.
+        private const int AutoUpdateRestartExitCode = 42;
+        private const int MinUpdateBinaryBytes = 100 * 1024;
+        private const int MaxUpdateBinaryBytes = 50 * 1024 * 1024;
 
         [STAThread]
         private static int Main(string[] args)
@@ -160,19 +172,22 @@ namespace ITGuardian.Windows
                 remoteAssistanceBroker.Start();
             }
 
+            bool restartForUpdate = false;
             try
             {
                 do
                 {
                     try
                     {
-                        SendInventory(config);
+                        restartForUpdate = SendInventory(config, runOnce);
                     }
                     catch (Exception error)
                     {
                         WriteLog("ERROR", error.Message);
                         if (runOnce) throw;
                     }
+
+                    if (restartForUpdate) break;
 
                     if (!runOnce)
                     {
@@ -189,6 +204,12 @@ namespace ITGuardian.Windows
                     remoteAssistanceBroker.Dispose();
                 }
             }
+
+            if (restartForUpdate)
+            {
+                WriteLog("INFO", "Encerrando para reiniciar sob o binario atualizado.");
+                Environment.Exit(AutoUpdateRestartExitCode);
+            }
         }
 
         private static void WaitForNextHeartbeat(int intervalSeconds)
@@ -202,7 +223,7 @@ namespace ITGuardian.Windows
             }
         }
 
-        private static void SendInventory(AgentConfig config)
+        private static bool SendInventory(AgentConfig config, bool skipAutoUpdate = false)
         {
             Dictionary<string, object> payload = CollectInventory(config);
             string endpoint = config.serverUrl.TrimEnd('/') + "/api/agents/heartbeat";
@@ -245,6 +266,114 @@ namespace ITGuardian.Windows
             {
                 WriteLog("WARN", "Trabalho remoto recusado: execucao nao habilitada no servidor e no coletor.");
             }
+
+            if (!skipAutoUpdate &&
+                heartbeat != null &&
+                !string.IsNullOrWhiteSpace(heartbeat.latestVersion) &&
+                !string.IsNullOrWhiteSpace(heartbeat.latestVersionDownloadUrl) &&
+                !string.IsNullOrWhiteSpace(heartbeat.latestVersionSha256))
+            {
+                try
+                {
+                    return ApplyUpdate(
+                        heartbeat.latestVersion,
+                        heartbeat.latestVersionDownloadUrl,
+                        heartbeat.latestVersionSha256
+                    );
+                }
+                catch (Exception updateError)
+                {
+                    WriteLog("ERROR", "Falha ao aplicar atualizacao automatica: " + updateError.Message);
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Baixa o binario indicado pelo servidor, confere o hash SHA-256 contra o
+        /// valor esperado e so troca o executavel em uso se ele bater exatamente --
+        /// sem certificado de assinatura em uso ainda, esse hash e a UNICA garantia
+        /// de integridade, o mesmo modelo ja usado na pinagem de scripts de
+        /// manutencao. Nunca lanca: qualquer falha (rede, hash divergente, tamanho
+        /// fora do esperado) so cancela a atualizacao desta vez, sem afetar a
+        /// coleta normal de inventario.
+        /// </summary>
+        private static bool ApplyUpdate(string newVersion, string downloadUrl, string expectedSha256)
+        {
+            Uri parsedUrl;
+            if (!Uri.TryCreate(downloadUrl, UriKind.Absolute, out parsedUrl) ||
+                parsedUrl.Scheme != Uri.UriSchemeHttps)
+            {
+                WriteLog("WARN", "URL de atualizacao ausente ou nao HTTPS; atualizacao automatica ignorada.");
+                return false;
+            }
+
+            byte[] downloadedBytes;
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(parsedUrl);
+            request.Method = "GET";
+            request.Timeout = 120000;
+            request.ReadWriteTimeout = 120000;
+            using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+            {
+                if ((int)response.StatusCode < 200 || (int)response.StatusCode >= 300)
+                {
+                    WriteLog("WARN", "Download da atualizacao recusado (" + (int)response.StatusCode + ").");
+                    return false;
+                }
+                using (MemoryStream memory = new MemoryStream())
+                {
+                    response.GetResponseStream().CopyTo(memory);
+                    downloadedBytes = memory.ToArray();
+                }
+            }
+
+            if (downloadedBytes.Length < MinUpdateBinaryBytes || downloadedBytes.Length > MaxUpdateBinaryBytes)
+            {
+                WriteLog(
+                    "WARN",
+                    "Tamanho do binario baixado (" + downloadedBytes.Length +
+                    " bytes) fora do intervalo esperado; atualizacao automatica ignorada."
+                );
+                return false;
+            }
+
+            string actualHash;
+            using (SHA256 sha256 = SHA256.Create())
+            {
+                byte[] hashBytes = sha256.ComputeHash(downloadedBytes);
+                StringBuilder builder = new StringBuilder(hashBytes.Length * 2);
+                foreach (byte value in hashBytes)
+                {
+                    builder.Append(value.ToString("x2"));
+                }
+                actualHash = builder.ToString();
+            }
+
+            if (!string.Equals(actualHash, expectedSha256, StringComparison.OrdinalIgnoreCase))
+            {
+                WriteLog(
+                    "ERROR",
+                    "Hash do binario baixado nao confere com o esperado pelo servidor; atualizacao recusada."
+                );
+                return false;
+            }
+
+            string currentExecutablePath = Process.GetCurrentProcess().MainModule.FileName;
+            string directory = Path.GetDirectoryName(currentExecutablePath);
+            string downloadedPath = Path.Combine(directory, "ITGuardian.exe.new");
+            string previousPath = Path.Combine(directory, "ITGuardian.exe.old");
+
+            File.WriteAllBytes(downloadedPath, downloadedBytes);
+
+            if (File.Exists(previousPath))
+            {
+                try { File.Delete(previousPath); } catch { }
+            }
+            File.Move(currentExecutablePath, previousPath);
+            File.Move(downloadedPath, currentExecutablePath);
+
+            WriteLog("INFO", "Atualizacao automatica aplicada: versao " + newVersion + ".");
+            return true;
         }
 
         private static void ExecuteAndReportJob(AgentConfig config, AgentScriptJob job)

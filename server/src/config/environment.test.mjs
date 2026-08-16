@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { getRemoteAssistanceConfig, isAllowedVercelOrigin, resolveDatabasePoolConfig } from "./environment.js";
+import {
+  getAgentAutoUpdateInfo,
+  getRemoteAssistanceConfig,
+  isAllowedVercelOrigin,
+  resolveDatabasePoolConfig
+} from "./environment.js";
 
 function labEnv(overrides = {}) {
   return {
@@ -31,6 +36,48 @@ test("assistencia remota continua habilitavel fora de deploy publico com as flag
   const local = getRemoteAssistanceConfig(labEnv());
   assert.equal(local.enabled, true);
   assert.equal(local.disabledReason, null);
+});
+
+function autoUpdateEnv(overrides = {}) {
+  return {
+    AGENT_LATEST_VERSION: "2.0.0",
+    AGENT_LATEST_VERSION_URL: "https://cdn.example.com/ITGuardian.exe",
+    AGENT_LATEST_VERSION_SHA256: "A".repeat(64),
+    ...overrides
+  };
+}
+
+test("getAgentAutoUpdateInfo retorna a versao quando as tres variaveis estao configuradas corretamente", () => {
+  const info = getAgentAutoUpdateInfo(autoUpdateEnv());
+  assert.equal(info.version, "2.0.0");
+  assert.equal(info.downloadUrl, "https://cdn.example.com/ITGuardian.exe");
+  assert.equal(info.sha256, "a".repeat(64), "hash deve ser normalizado para minusculo");
+});
+
+test("getAgentAutoUpdateInfo fica inativo se qualquer uma das tres variaveis faltar", () => {
+  assert.equal(getAgentAutoUpdateInfo(autoUpdateEnv({ AGENT_LATEST_VERSION: "" })).version, null);
+  assert.equal(getAgentAutoUpdateInfo(autoUpdateEnv({ AGENT_LATEST_VERSION_URL: "" })).version, null);
+  assert.equal(getAgentAutoUpdateInfo(autoUpdateEnv({ AGENT_LATEST_VERSION_SHA256: "" })).version, null);
+  assert.equal(getAgentAutoUpdateInfo({}).version, null);
+});
+
+test("getAgentAutoUpdateInfo rejeita URL de download que nao seja https", () => {
+  const info = getAgentAutoUpdateInfo(
+    autoUpdateEnv({ AGENT_LATEST_VERSION_URL: "http://cdn.example.com/ITGuardian.exe" })
+  );
+  assert.equal(info.version, null, "download de binario sobre HTTP nao deve ser aceito");
+
+  const malformed = getAgentAutoUpdateInfo(autoUpdateEnv({ AGENT_LATEST_VERSION_URL: "nao-e-uma-url" }));
+  assert.equal(malformed.version, null);
+});
+
+test("getAgentAutoUpdateInfo rejeita hash que nao seja hexadecimal de 64 caracteres", () => {
+  assert.equal(getAgentAutoUpdateInfo(autoUpdateEnv({ AGENT_LATEST_VERSION_SHA256: "abc123" })).version, null);
+  assert.equal(
+    getAgentAutoUpdateInfo(autoUpdateEnv({ AGENT_LATEST_VERSION_SHA256: "g".repeat(64) })).version,
+    null,
+    "'g' nao e um digito hexadecimal valido"
+  );
 });
 
 test("uses a single short-lived database connection in serverless environments", () => {
