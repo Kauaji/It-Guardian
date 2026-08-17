@@ -1,25 +1,25 @@
 import {
-  analyzeMaintenanceScriptContent,
-  acknowledgeScriptLog,
-  applyScriptLogSuggestedSolution,
-  cancelScriptValidation,
-  createMaintenanceScript,
-  deactivateMaintenanceScript,
-  findScriptLogById,
-  listMaintenanceScripts,
-  listPendingScriptLogs,
-  listRecommendedScriptsForSuggestion,
-  listScriptValidationsForSuggestion,
-  registerMaintenanceScriptSimulation,
-  updateMaintenanceScript,
-  useScriptFromSuggestion
-} from "../repositories/maintenanceScriptRepository.js";
-import { listRecommendedScriptsForContext } from "../services/maintenanceScriptRecommendationService.js";
+  acknowledgeLogById,
+  analyzeScriptContent,
+  applySuggestedSolutionToLog,
+  cancelValidationById,
+  createScript,
+  deactivateScript,
+  getLogById,
+  listAllMaintenanceScripts,
+  listPendingLogs,
+  listRecommendedForContext,
+  listRecommendedForSuggestion,
+  listValidationsForSuggestion,
+  registerSimulationForScript,
+  updateScript,
+  useScriptForSuggestion
+} from "../services/maintenanceScriptService.js";
 
 export async function list(req, res, next) {
   try {
     const includeInactive = req.query.includeInactive !== "false";
-    res.json({ scripts: await listMaintenanceScripts({ includeInactive }) });
+    res.json({ scripts: await listAllMaintenanceScripts(includeInactive) });
   } catch (error) {
     next(error);
   }
@@ -27,7 +27,7 @@ export async function list(req, res, next) {
 
 export async function analyze(req, res, next) {
   try {
-    res.json({ analysis: analyzeMaintenanceScriptContent(req.body?.content || "") });
+    res.json({ analysis: analyzeScriptContent(req.body?.content) });
   } catch (error) {
     next(error);
   }
@@ -35,7 +35,7 @@ export async function analyze(req, res, next) {
 
 export async function create(req, res, next) {
   try {
-    const script = await createMaintenanceScript(req.body || {}, req.user);
+    const script = await createScript(req.body, req.user);
     res.status(201).json({ script });
   } catch (error) {
     next(error);
@@ -44,40 +44,25 @@ export async function create(req, res, next) {
 
 export async function update(req, res, next) {
   try {
-    const script = await updateMaintenanceScript(req.params.id, req.body || {}, req.user);
-
-    if (!script) {
-      return res.status(404).json({ message: "Script de manutenção não encontrado." });
-    }
-
-    return res.json({ script });
+    const script = await updateScript(req.params.id, req.body, req.user);
+    res.json({ script });
   } catch (error) {
-    return next(error);
+    next(error);
   }
 }
 
 export async function remove(req, res, next) {
   try {
-    const script = await deactivateMaintenanceScript(req.params.id);
-
-    if (!script) {
-      return res.status(404).json({ message: "Script de manutenção não encontrado." });
-    }
-
-    return res.json({ script });
+    const script = await deactivateScript(req.params.id);
+    res.json({ script });
   } catch (error) {
-    return next(error);
+    next(error);
   }
 }
 
 export async function registerSimulation(req, res, next) {
   try {
-    const result = await registerMaintenanceScriptSimulation({
-      scriptId: req.params.id,
-      payload: req.body || {},
-      user: req.user
-    });
-
+    const result = await registerSimulationForScript(req.params.id, req.body, req.user);
     res.status(201).json(result);
   } catch (error) {
     next(error);
@@ -86,13 +71,7 @@ export async function registerSimulation(req, res, next) {
 
 export async function useFromSuggestion(req, res, next) {
   try {
-    const result = await useScriptFromSuggestion({
-      suggestionId: req.params.id,
-      scriptId: req.params.scriptId,
-      payload: req.body || {},
-      user: req.user
-    });
-
+    const result = await useScriptForSuggestion(req.params.id, req.params.scriptId, req.body, req.user);
     res.status(201).json(result);
   } catch (error) {
     next(error);
@@ -101,7 +80,7 @@ export async function useFromSuggestion(req, res, next) {
 
 export async function suggestionValidations(req, res, next) {
   try {
-    res.json({ validations: await listScriptValidationsForSuggestion(req.params.id) });
+    res.json({ validations: await listValidationsForSuggestion(req.params.id) });
   } catch (error) {
     next(error);
   }
@@ -109,7 +88,7 @@ export async function suggestionValidations(req, res, next) {
 
 export async function suggestionRecommendedScripts(req, res, next) {
   try {
-    res.json(await listRecommendedScriptsForSuggestion(req.params.id));
+    res.json(await listRecommendedForSuggestion(req.params.id));
   } catch (error) {
     next(error);
   }
@@ -117,7 +96,7 @@ export async function suggestionRecommendedScripts(req, res, next) {
 
 export async function recommendedScriptsForContext(req, res, next) {
   try {
-    res.json(await listRecommendedScriptsForContext(req.body || {}));
+    res.json(await listRecommendedForContext(req.body));
   } catch (error) {
     next(error);
   }
@@ -125,7 +104,7 @@ export async function recommendedScriptsForContext(req, res, next) {
 
 export async function cancelValidation(req, res, next) {
   try {
-    res.json({ validation: await cancelScriptValidation(req.params.id, req.user) });
+    res.json({ validation: await cancelValidationById(req.params.id, req.user) });
   } catch (error) {
     next(error);
   }
@@ -133,7 +112,7 @@ export async function cancelValidation(req, res, next) {
 
 export async function pendingLogs(_req, res, next) {
   try {
-    res.json({ logs: await listPendingScriptLogs() });
+    res.json({ logs: await listPendingLogs() });
   } catch (error) {
     next(error);
   }
@@ -141,19 +120,16 @@ export async function pendingLogs(_req, res, next) {
 
 export async function getLog(req, res, next) {
   try {
-    const log = await findScriptLogById(req.params.id);
-    if (!log) {
-      return res.status(404).json({ message: "Log de script não encontrado." });
-    }
-    return res.json({ log });
+    const log = await getLogById(req.params.id);
+    res.json({ log });
   } catch (error) {
-    return next(error);
+    next(error);
   }
 }
 
 export async function acknowledgeLog(req, res, next) {
   try {
-    res.json({ log: await acknowledgeScriptLog(req.params.id, req.user) });
+    res.json({ log: await acknowledgeLogById(req.params.id, req.user) });
   } catch (error) {
     next(error);
   }
@@ -161,9 +137,7 @@ export async function acknowledgeLog(req, res, next) {
 
 export async function applySuggestedSolution(req, res, next) {
   try {
-    res.json({
-      log: await applyScriptLogSuggestedSolution(req.params.id, req.body || {}, req.user)
-    });
+    res.json({ log: await applySuggestedSolutionToLog(req.params.id, req.body, req.user) });
   } catch (error) {
     next(error);
   }
