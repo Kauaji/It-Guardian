@@ -98,6 +98,128 @@ entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
   sem regressao;
 - `npm run build` (client) limpo.
 
+## 2026-08-17 - Setima rodada: Context para AlertCenterV2 e tokens de cor no CSS
+
+### Contexto
+
+- continuacao direta do pedido "quero subir o front para 8,5 assim
+  como os demais" - Frontend tinha dois achados abertos depois da
+  rodada anterior: props de dados/callbacks de `AlertCenterV2`
+  (severidade Alta, parcial - so as props de permissao tinham saido)
+  e CSS de 18 mil linhas com hex hardcoded e mais de 100 `!important`
+  (severidade Media, intocado);
+- perguntado sobre o nivel de rigor para os dois, a resposta foi
+  "fazer os dois com rigor total" - Context de verdade para
+  AlertCenterV2 (nao so agrupar props num objeto) e substituicao de
+  hex por token caso a caso por propriedade, nao em lote cego.
+
+### AlertCenterV2: Context real, nao so agrupamento de props
+
+- antes de mexer, confirmado que as ~52 props restantes de
+  `AlertCenterV2` NAO eram prop-drilling acidental: `useDashboardData()`
+  e a fonte unica desses dados, chamada uma vez em `App.jsx` e tambem
+  consumida diretamente por `DashboardPage` (que le `alerts`/`history`
+  do mesmo hook, fora da arvore de `AlertCenterV2`). Ou seja, e estado
+  genuinamente compartilhado entre views - a escolha certa era Context,
+  nao seria correto fazer `AlertCenterV2` buscar os dados de novo por
+  conta propria (arriscaria desincronizar as duas telas);
+- criado `client/src/context/AlertCenterContext.jsx`, replicando
+  exatamente o padrao ja usado em `AppSessionContext.jsx`
+  (`createContext(null)` + Provider + hook que lanca erro se usado fora
+  do Provider);
+- `App.jsx` passou a envolver `<AlertCenterV2>` num
+  `<AlertCenterProvider value={{...}}>` com os 20 campos de dados/filtro
+  e as 25 callbacks, todos reaproveitando as funcoes que ja existiam em
+  `App.jsx` sem mudar nenhuma logica - so o transporte mudou, de props
+  nomeadas para um Context;
+- `AlertCenterV2.jsx` teve a assinatura reduzida de 52 props nomeadas
+  para 7 (`token`, `devices`, `segments`, `segmentGroups`,
+  `inventoryTabs`, `serviceOrders`, `onOpenServiceOrders`) e passou a
+  chamar `useAlertCenterData()` logo apos `useAppSession()`. Os ~90
+  usos internos dos identificadores nao precisaram mudar, ja que os
+  nomes das variaveis ficaram identicos;
+- tambem eliminada `remoteScriptExecutionEnabled` da lista de props -
+  era uma constante de build (`config/features.js`), nao estado de
+  app, e virou import direto;
+- commit `a7ee45b`.
+
+### CSS: tokens ja existiam, so nunca tinham sido aplicados
+
+- descoberto que uma auditoria anterior (15/08) ja tinha extraido 94
+  cores repetidas para `--variaveis` em `:root` (comentario
+  "Tokens de cor extraidos de literais hex repetidos" na linha 47 de
+  `styles.css`), mas nunca voltou para trocar os hex literais no corpo
+  do arquivo pelos tokens - o trabalho tinha ficado pela metade;
+- antes de qualquer substituicao, identificado um risco semantico real:
+  o mesmo hex (ex. `#ffffff`) aparece tanto em `background` (onde bate
+  com `--surface`) quanto em `color` (texto branco sobre botao
+  colorido, sem token equivalente) - uma troca cega por find-replace
+  teria sido semanticamente errada nesse segundo caso, mesmo parecendo
+  visualmente identica no tema claro;
+- construido um script de analise (`css_token_audit2.mjs`) que so
+  considera uma ocorrencia segura quando a propriedade da declaracao
+  bate com o papel semantico do token (ex. `#dfe5ee` em `border`/
+  `border-color` vira `--border`, mas o mesmo hex numa propriedade
+  diferente nao seria trocado). Resultado: 122 ocorrencias inequivocas
+  de 6 hex repetidos (`--surface`, `--border`, `--text-soft`,
+  `--system-neutral`, `--text`, `--accent`) fora dos blocos `:root`;
+- aplicadas as 122 substituicoes com um segundo script
+  (`css_token_apply.mjs`), preservando indentacao, `!important` e
+  prefixos de shorthand (ex. `border: 1px solid #dfe5ee` vira
+  `border: 1px solid var(--border)`). `git diff --stat` confirmou
+  exatamente 122 insercoes e 122 remocoes - nenhuma linha extra
+  tocada;
+- os mais de 100 `!important` do mesmo achado original **nao foram
+  tocados** de proposito - misturar substituicao de token (mecanica,
+  baixo risco) com remocao de `!important` (exige entender por que
+  cada um foi usado, risco de regressao visual maior) na mesma rodada
+  teria diluido o rigor pedido;
+- commit `56dd57e`.
+
+### Validacao com sessao real de navegador
+
+- reaproveitado o servidor (`DATABASE_URL=memory`) que ja estava no ar
+  de uma verificacao anterior nesta sessao (confirmado saudavel via
+  `/api/health` antes de reusar, em vez de assumir); client iniciado
+  via `preview_start`;
+- aba nova (nao reaproveitada, seguindo a licao registrada na rodada
+  anterior sobre console acumulando historico de abas antigas);
+- AlertCenterV2: confirmado render inicial com dados reais, troca de
+  aba para Preventivas, um modal abrindo/fechando com Escape (prova
+  que a correcao desta rodada convive com a pilha de modais da rodada
+  anterior), e - o teste mais rigoroso - um clique real em "Avaliar"
+  gerando `POST /api/alerts/evaluate` com resposta `200`. Prova a
+  cadeia prop-antiga-virou-Context->callback funcionando de ponta a
+  ponta para uma mutacao de estado real, nao so exibicao passiva;
+- CSS: `getComputedStyle` no tema claro confirmou os tokens resolvendo
+  para os valores esperados. No tema escuro, uma primeira leitura
+  pareceu mostrar um botao com fundo branco em vez do surface escuro -
+  investigado a fundo em vez de descartado como "so visual": a variavel
+  `--surface` ja resolvia corretamente (`#111827`) em toda a arvore de
+  ancestrais do elemento, mas o `background-color` pintado ficava preso
+  no valor antigo. Isolado como uma transicao CSS de 180ms congelada no
+  frame inicial - confirmado que a aba deste navegador de automacao nao
+  compoe frames quando o pane nao esta visualmente exibido (o mesmo
+  efeito ja documentado nesta sessao para o `preview_start`/screenshot),
+  nao um defeito da substituicao. Confirmado desligando as transicoes
+  via um `<style>` temporario: o `background-color` final bateu com o
+  token esperado (`rgb(17, 24, 39)`). Border, que nao tinha transicao
+  configurada na regra vencedora, ja mostrava o valor correto sem esse
+  truque - o que ajudou a isolar a causa;
+- `npx eslint` limpo; suite completa do client (122 testes) sem
+  regressao; `npm run build` (client) limpo, CSS final ~323 kB /
+  ~51 kB gzip.
+
+### Resultado: Frontend fecha o achado Alto, avanca no Medio
+
+- Frontend tinha dois achados abertos: props de `AlertCenterV2` (Alto,
+  parcial) e CSS (Medio, intocado). O primeiro fecha por completo
+  nesta rodada. O segundo avanca pela metade - hex virou token, mas
+  os `!important` ficam para uma proxima rodada;
+- nota de Frontend sobe de 7,5 para 8,5, alcancando o mesmo teto de
+  Backend e Testes. Nota geral recalculada:
+  0,2×(8,0+6,5+9,0) + 0,1×(8,5+8,5+8,5+8,5) = 4,70 + 3,40 = **8,10**.
+
 ## 2026-08-17 - Quinta rodada: e2e para avisos e scripts de manutencao, achado de Testes fecha por completo
 
 ### Contexto
