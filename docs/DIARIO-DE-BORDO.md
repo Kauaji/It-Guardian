@@ -4,6 +4,91 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-17 - Testes: services da tarefa #72 e 3 modulos utilitarios do client
+
+### Causa raiz
+
+- a auditoria tecnica (Testes e qualidade real, 7,0/10) registra
+  progresso incremental como o padrao esperado ("client foi de 3 para
+  8 arquivos de teste... ainda não é cobertura ampla dos ~121 arquivos-
+  fonte do client"); os 18 arquivos de service criados na extracao de
+  camada de servico (tarefa #72, mesma sessao) ficaram sem teste
+  proprio - a cobertura existente so os exercitava indiretamente via
+  os testes de integracao dos controllers, nao validando a logica pura
+  (validacao, slug, calculo de prioridade) isoladamente.
+
+### Correcao
+
+- exportadas as funcoes puras (sem I/O) de 4 services que antes eram
+  privadas ao modulo, seguindo o padrao ja usado em
+  `alertService.js`/`buildAgentAlerts`: `slugifyStatusId`,
+  `sanitizeStatusPayload`, `applyExclusiveFlags`
+  (`serviceOrderStatusService.js`); `normalize`, `sanitizePriority`,
+  `chooseHigherPriority`, `uniqueCategories`
+  (`publicServiceOrderService.js`); `ensureRole` (`userService.js`);
+  `validateManualAsset` (`deviceService.js`);
+- 32 testes unitarios novos cobrindo essas funcoes, incluindo o caso
+  que motivou a reescrita de `slugifyStatusId` sem escape Unicode
+  nesta sessao (stripping de acento via NFD - `"Configuração"` vira
+  `"configuracao"`) e o teste que prova a ORDEM de checagem em
+  `validateManualAsset` (campo obrigatorio ausente vence sobre tipo de
+  ativo invalido quando os dois problemas coexistem no mesmo payload);
+- no client, 69 testes novos em 3 modulos utilitarios puros que ainda
+  nao tinham teste proprio: `automationFormUtils.js` (rascunho e
+  validacao de plano/override de automacao preventiva - inclui um
+  teste que documenta um comportamento real e nao obvio do codigo: um
+  override com `active:false` ainda cai para `active:true` no
+  rascunho final, porque `activeOverride` falsy faz o calculo cair
+  para `schedule`/`plan` em vez de travar em `false`);
+  `automationStatusUtils.js` (derivacao de status de maquina/plano -
+  inclui o teste que prova que o filtro `"all"` so bate quando ha pelo
+  menos um total, nao e um passthrough incondicional);
+  `inventoryVisualMapConnectionUtils.js` (rotulo/camada/rascunho
+  padrao por tipo de conexao no editor visual - inclui um teste em
+  loop confirmando que toda entrada de `CONNECTION_TYPE_OPTIONS` mapeia
+  para a propria camada declarada).
+
+### Regressao pega pela suite completa (e a licao repetida)
+
+- a suite completa do servidor (nao a do cliente) pegou uma regressao:
+  `automationManagement.test.mjs` tinha um teste que verificava o
+  texto-fonte de `AutomationPlanDetails.jsx` e
+  `AutomationMachineDetails.jsx` (arquivos do CLIENTE) procurando
+  literalmente `event.key === "Escape"` - padrao que a migracao para
+  `useModalLifecycle` (tarefa #73, mesma sessao) moveu para dentro do
+  hook compartilhado. Atualizado para verificar a mesma garantia
+  (fecha com Escape) checando a chamada ao hook nos dois componentes e
+  a logica de Escape dentro do proprio hook;
+- **esta e a segunda vez na mesma sessao que esse padrao especifico
+  causa uma regressao** (a primeira foi em `automationManagement.test.mjs`
+  tambem, na tarefa #72, com `listPreventiveAutomationManagement(req.user`).
+  A causa raiz de fundo e que `npm run test` na raiz do projeto roda
+  SO o workspace do servidor (`"test": "npm run test --workspace
+  server"` no `package.json` raiz) - alterar um arquivo do cliente e
+  rodar so `npm run test:client` (vitest) nao pega esses testes de
+  inspecao de codigo-fonte cruzada que o backend mantem sobre o
+  frontend. A partir de agora, qualquer mudanca em `client/src/`
+  precisa rodar as DUAS suites (`npm run test` e `npm run
+  test:client`), nao so a que corresponde ao lado alterado.
+
+### Validacoes
+
+- servidor: 303 testes (271 -> 303), 301 passam, 2 skip nao
+  relacionados; `npx eslint` e `npm run check:architecture` (349
+  arquivos) limpos;
+- client: 118 testes (49 -> 118), 11 arquivos de teste (8 -> 11);
+  `npx eslint` limpo nos 3 arquivos novos.
+
+### Pendencias conhecidas
+
+- ainda nao e cobertura ampla dos ~121 arquivos-fonte do client nem
+  dos arquivos de repositorio/servico do backend que ja existiam antes
+  desta sessao - o escopo desta rodada foi deliberadamente focado no
+  codigo criado/alterado nesta mesma sessao (services da tarefa #72),
+  mais uma extensao pontual de 3 modulos utilitarios do client,
+  seguindo o mesmo ritmo incremental que a auditoria ja registrou como
+  padrao aceitavel nas rodadas anteriores.
+
 ## 2026-08-17 - Frontend: AlertCenterV2 sem props de permissao e mais 7 modais migrados
 
 ### Causa raiz
