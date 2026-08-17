@@ -11,7 +11,7 @@
     "product-key:create": "node src/cli/createProductKey.js",
     "product-key:monitoring": "node src/cli/configureProductKeyMonitoring.js",
     "test": "node --test",
-    "test:coverage": "node --test --experimental-test-coverage --test-coverage-lines=40 --test-coverage-branches=60 --test-coverage-functions=30 --test-coverage-include=\"../client/src/components/automation/*.js\" --test-coverage-include=\"../client/src/components/serviceOrders/serviceOrderBoardUtils.js\" --test-coverage-include=\"src/domain/*.js\" --test-coverage-include=\"src/repositories/automationAccessScope.js\" --test-coverage-include=\"src/security/*.js\" --test-coverage-include=\"src/middleware/csrfOriginMiddleware.js\" --test-coverage-include=\"src/middleware/rateLimitMiddleware.js\"",
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-lines=40 --test-coverage-branches=60 --test-coverage-functions=30 --test-coverage-include=\"../client/src/components/automation/*.js\" --test-coverage-include=\"../client/src/components/serviceOrders/serviceOrderBoardUtils.js\" --test-coverage-include=\"src/*.js\" --test-coverage-include=\"src/domain/*.js\" --test-coverage-include=\"src/repositories/*.js\" --test-coverage-include=\"src/security/*.js\" --test-coverage-include=\"src/middleware/*.js\" --test-coverage-include=\"src/services/*.js\" --test-coverage-include=\"src/controllers/*.js\" --test-coverage-include=\"src/lib/*.js\" --test-coverage-include=\"src/config/*.js\" --test-coverage-include=\"src/integrations/*.js\" --test-coverage-include=\"src/routes/*.js\"",
     "test:integration": "node --test test-integration/*.test.mjs"
   },
   "dependencies": {
