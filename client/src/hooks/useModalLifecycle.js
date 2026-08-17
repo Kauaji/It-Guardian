@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 
 let openModalCount = 0;
+let modalStack = [];
+let nextModalId = 0;
 
 const focusableSelector =
   "[autofocus], button:not([disabled]), input:not([disabled]), select:not([disabled]), " +
@@ -23,12 +25,22 @@ function getFocusableElements(dialog) {
 
 export function useModalLifecycle(open, onClose) {
   const dialogRef = useRef(null);
+  const idRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!open) return undefined;
 
+    if (idRef.current === null) {
+      nextModalId += 1;
+      idRef.current = nextModalId;
+    }
+    const id = idRef.current;
+
     const previouslyFocused = document.activeElement;
     openModalCount += 1;
+    modalStack.push(id);
     updateDocumentModalState();
 
     const focusTimer = window.setTimeout(() => {
@@ -37,9 +49,15 @@ export function useModalLifecycle(open, onClose) {
     }, 0);
 
     function handleKeydown(event) {
+      // Modais aninhados (ex.: assistencia remota aberta de dentro dos
+      // detalhes de uma maquina) compartilham o mesmo listener no window;
+      // so o modal mais recentemente aberto (o mais interno) deve reagir a
+      // Escape/Tab, senao os dois niveis fechariam/disputariam foco juntos.
+      if (modalStack[modalStack.length - 1] !== id) return;
+
       if (event.key === "Escape") {
         event.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -73,10 +91,11 @@ export function useModalLifecycle(open, onClose) {
       window.clearTimeout(focusTimer);
       window.removeEventListener("keydown", handleKeydown);
       openModalCount = Math.max(0, openModalCount - 1);
+      modalStack = modalStack.filter((entry) => entry !== id);
       updateDocumentModalState();
       previouslyFocused?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   return dialogRef;
 }

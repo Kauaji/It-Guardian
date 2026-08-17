@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Archive, ChevronDown, Clock3, Monitor, Plus, Printer, RotateCcw, Search, Trash2, X } from "lucide-react";
 import { fetchDevice, fetchProducts, fetchServices, fetchTechnicians } from "../../api.js";
+import { useModalLifecycle } from "../../hooks/useModalLifecycle.js";
 import { assetTypeLabel } from "../inventory/assetTypes.js";
 import RemoteAssistanceAction from "../remoteAssistance/RemoteAssistanceAction.jsx";
 
@@ -373,6 +374,8 @@ export default function ServiceOrderDetailsModal({
     });
   }, [devices, linkDraft, segmentByIdForLink]);
 
+  const dialogRef = useModalLifecycle(Boolean(serviceOrder), onClose);
+
   if (!serviceOrder) return null;
 
   function updateDraft(field, value) {
@@ -620,7 +623,7 @@ export default function ServiceOrderDetailsModal({
 
   return (
     <div className="modal-backdrop asset-modal-backdrop" role="presentation">
-      <section className="asset-modal service-order-detail-modal" role="dialog" aria-modal="true" aria-label="Detalhes da OS">
+      <section ref={dialogRef} className="asset-modal service-order-detail-modal" role="dialog" aria-modal="true" aria-label="Detalhes da OS">
         <header className="asset-modal-header">
           <div>
             <span className="asset-eyebrow">Ordem de Serviço</span>

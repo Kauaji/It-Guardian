@@ -14,6 +14,7 @@ import {
   X
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useModalLifecycle } from "../../hooks/useModalLifecycle.js";
 import {
   fetchClients,
   fetchSectors,
@@ -259,26 +260,7 @@ export default function ServiceOrdersBoard({
     setFiltersOpen(false);
   }, [settingsOpen]);
 
-  useEffect(() => {
-    const dialogOpen = formOpen || settingsOpen || Boolean(selectedOrderCurrent);
-    if (!dialogOpen) return undefined;
-
-    function handleDialogKeydown(event) {
-      if (event.key !== "Escape") return;
-      if (document.querySelector(".remote-assistance-modal")) return;
-
-      if (selectedOrderCurrent) {
-        setSelectedOrder(null);
-      } else if (formOpen) {
-        setFormOpen(false);
-      } else if (settingsOpen) {
-        setSettingsOpen(false);
-      }
-    }
-
-    window.addEventListener("keydown", handleDialogKeydown);
-    return () => window.removeEventListener("keydown", handleDialogKeydown);
-  }, [formOpen, selectedOrderCurrent, settingsOpen]);
+  const settingsDialogRef = useModalLifecycle(settingsOpen, () => setSettingsOpen(false));
 
   useEffect(() => {
     if (monthFilter) {
@@ -672,7 +654,7 @@ export default function ServiceOrdersBoard({
 
       {settingsOpen && (
         <div className="modal-backdrop service-order-settings-backdrop" role="presentation">
-          <section className="service-order-settings-modal" role="dialog" aria-modal="true" aria-label="Configurações da OS">
+          <section ref={settingsDialogRef} className="service-order-settings-modal" role="dialog" aria-modal="true" aria-label="Configurações da OS">
             <header className="service-order-settings-modal-header">
               <div>
                 <span className="section-eyebrow">Ordens de Serviço</span>

@@ -16,6 +16,7 @@ import {
   X
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useModalLifecycle } from "../../hooks/useModalLifecycle.js";
 import AssetTypeIcon from "./AssetTypeIcon.jsx";
 import { assetTypeLabel, assetTypeOptions } from "./assetTypes.js";
 import HardwareHistory from "./HardwareHistory.jsx";
@@ -353,24 +354,13 @@ export default function MachineDetailsModal({
     }
   }, [activeTab, visibleTabs]);
 
-  useEffect(() => {
-    if (!machine) return undefined;
-
-    function handleKeydown(event) {
-      if (event.key === "Escape" && !document.querySelector(".remote-assistance-modal")) {
-        onClose();
-      }
-    }
-
-    window.addEventListener("keydown", handleKeydown);
-    return () => window.removeEventListener("keydown", handleKeydown);
-  }, [machine, onClose]);
+  const dialogRef = useModalLifecycle(Boolean(machine), onClose);
 
   if (!machine) return null;
 
   return (
     <div className="modal-backdrop asset-modal-backdrop" role="presentation">
-      <section className="asset-modal" role="dialog" aria-modal="true" aria-label="Detalhes do ativo">
+      <section ref={dialogRef} className="asset-modal" role="dialog" aria-modal="true" aria-label="Detalhes do ativo">
         <header className="asset-modal-header">
           <div>
             <span className="asset-eyebrow">
