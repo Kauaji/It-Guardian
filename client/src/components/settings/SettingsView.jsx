@@ -28,6 +28,7 @@ import {
   updateService,
   updateTechnician
 } from "../../api.js";
+import { useModalLifecycle } from "../../hooks/useModalLifecycle.js";
 
 const sections = [
   { id: "clients", label: "Clientes", icon: Building2 },
@@ -291,16 +292,7 @@ function SettingsFormModal({ sectionId, record, records = [], businessMode, clie
     setCategoryOptions(buildProblemCategories(records));
   }, [records]);
 
-  useEffect(() => {
-    function handleKeydown(event) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
-    window.addEventListener("keydown", handleKeydown);
-    return () => window.removeEventListener("keydown", handleKeydown);
-  }, [onClose]);
+  const dialogRef = useModalLifecycle(true, onClose);
 
   function updateField(name, value) {
     setForm((current) => ({ ...current, [name]: value }));
@@ -325,7 +317,7 @@ function SettingsFormModal({ sectionId, record, records = [], businessMode, clie
 
   return (
     <div className="modal-backdrop settings-modal-backdrop" role="presentation">
-      <form className="modal-panel settings-form-modal" role="dialog" aria-modal="true" onSubmit={submit}>
+      <form ref={dialogRef} className="modal-panel settings-form-modal" role="dialog" aria-modal="true" onSubmit={submit}>
         <header>
           <div>
             <h2>{record ? "Editar" : "Novo"} {config.singular}</h2>

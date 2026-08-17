@@ -24,6 +24,7 @@ import {
 } from "../../api.js";
 import { permissionGroups } from "../../permissions.js";
 import CloudProductAdminPanel from "./CloudProductAdminPanel.jsx";
+import { useModalLifecycle } from "../../hooks/useModalLifecycle.js";
 
 const accentColorKey = "it_guardian_accent_color";
 const generalPreferencesKey = "it_guardian_general_preferences";
@@ -459,6 +460,7 @@ export default function GeneralSettingsModal({
   const [loadingAdmin, setLoadingAdmin] = useState(false);
   const [savingAdmin, setSavingAdmin] = useState(false);
   const [userPermissionsOpen, setUserPermissionsOpen] = useState(false);
+  const dialogRef = useModalLifecycle(open, onClose);
 
   const isAdmin = user?.role === "admin" || user?.isAdmin;
 
@@ -484,19 +486,6 @@ export default function GeneralSettingsModal({
       setSection("usability");
     }
   }, [open, section, isAdmin]);
-
-  useEffect(() => {
-    if (!open) return undefined;
-
-    function handleKeydown(event) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
-    window.addEventListener("keydown", handleKeydown);
-    return () => window.removeEventListener("keydown", handleKeydown);
-  }, [open, onClose]);
 
   useEffect(() => {
     if (!open || section !== "admin" || !token || !isAdmin) return;
@@ -715,7 +704,7 @@ export default function GeneralSettingsModal({
 
   return (
     <div className="modal-backdrop general-settings-backdrop" role="presentation">
-      <section className="general-settings-modal" role="dialog" aria-modal="true" aria-label="Configurações gerais">
+      <section ref={dialogRef} className="general-settings-modal" role="dialog" aria-modal="true" aria-label="Configurações gerais">
         <header className="general-settings-header">
           <div>
             <span className="section-eyebrow">Sistema</span>

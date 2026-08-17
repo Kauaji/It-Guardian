@@ -9,6 +9,7 @@ import {
 import { formatAutomationDate, formatRecurrence, recurrenceLabels } from "./automationUtils.js";
 import UnsavedChangesPrompt from "./UnsavedChangesPrompt.jsx";
 import useUnsavedChanges from "./useUnsavedChanges.js";
+import { useModalLifecycle } from "../../hooks/useModalLifecycle.js";
 
 const colorOptions = ["#1f7a61", "#2563eb", "#7c3aed", "#d97706", "#dc2626", "#0f766e"];
 
@@ -75,14 +76,7 @@ export default function AutomationPlanDetails({
     unsavedChanges.requestAction(onClose);
   }
 
-  useEffect(() => {
-    if (!open) return undefined;
-    function handleKeydown(event) {
-      if (event.key === "Escape") requestClose();
-    }
-    document.addEventListener("keydown", handleKeydown);
-    return () => document.removeEventListener("keydown", handleKeydown);
-  }, [open, isDirty]);
+  const dialogRef = useModalLifecycle(open, requestClose);
 
   if (!open || !plan) return null;
   const busy = saving || submitting;
@@ -145,7 +139,7 @@ export default function AutomationPlanDetails({
         if (event.target === event.currentTarget) requestClose();
       }}
     >
-      <section className="modal-panel automation-plan-details" role="dialog" aria-modal="true" aria-labelledby="automation-plan-title">
+      <section ref={dialogRef} className="modal-panel automation-plan-details" role="dialog" aria-modal="true" aria-labelledby="automation-plan-title">
         <header>
           <div>
             <span>Configuração geral do plano</span>

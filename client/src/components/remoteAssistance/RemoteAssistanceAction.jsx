@@ -47,6 +47,7 @@ import {
   remoteAssistanceStatusLabel,
   remoteAssistanceTransportLabel
 } from "./remoteAssistanceModel.js";
+import { useModalLifecycle } from "../../hooks/useModalLifecycle.js";
 
 const defaultViewerPollMs = 1000;
 
@@ -323,6 +324,8 @@ export default function RemoteAssistanceAction({
     setChatDraft("");
   }
 
+  const dialogRef = useModalLifecycle(open, closeDialog);
+
   async function sendChatMessage(event) {
     event.preventDefault();
     const text = chatDraft.trim();
@@ -449,7 +452,13 @@ export default function RemoteAssistanceAction({
 
   const dialog = open ? (
     <div className="modal-backdrop remote-assistance-backdrop" role="presentation">
-      <section className="remote-assistance-modal" role="dialog" aria-modal="true" aria-label="Assistencia remota">
+      <section
+        ref={dialogRef}
+        className="remote-assistance-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Assistencia remota"
+      >
         <header className="remote-assistance-header">
           <div>
             <span className="asset-eyebrow">Assistencia Remota</span>

@@ -24,6 +24,7 @@ import {
 } from "../../api.js";
 import AutomationIndicatorDots from "../AutomationIndicatorDots.jsx";
 import { useAppSession } from "../../context/AppSessionContext.jsx";
+import { useModalLifecycle } from "../../hooks/useModalLifecycle.js";
 import PreventiveAutomationPanel from "../automation/PreventiveAutomationPanel.jsx";
 import { shouldShowAutomationManagement } from "../automation/automationUtils.js";
 import MaintenanceScriptsPanel from "../maintenance/MaintenanceScriptsPanel.jsx";
@@ -234,35 +235,13 @@ export default function AlertCenterV2({
     setPriorityColorsOpen(false);
   }, [settingsOpen]);
 
-  useEffect(() => {
-    const dialogOpen = settingsOpen || preventiveReviewOpen || Boolean(selectedSuggestionInfoId) || Boolean(selectedScriptLog);
-    if (!dialogOpen) return undefined;
-
-    document.body.classList.add("alert-modal-open");
-    return () => document.body.classList.remove("alert-modal-open");
-  }, [settingsOpen, preventiveReviewOpen, selectedSuggestionInfoId, selectedScriptLog]);
-
-  useEffect(() => {
-    const dialogOpen = settingsOpen || preventiveReviewOpen || Boolean(selectedSuggestionInfoId) || Boolean(selectedScriptLog);
-    if (!dialogOpen) return undefined;
-
-    function handleAlertDialogKeydown(event) {
-      if (event.key !== "Escape") return;
-
-      if (selectedScriptLog) {
-        setSelectedScriptLog(null);
-      } else if (selectedSuggestionInfoId) {
-        setSelectedSuggestionInfoId(null);
-      } else if (preventiveReviewOpen) {
-        setPreventiveReviewOpen(false);
-      } else if (settingsOpen) {
-        setSettingsOpen(false);
-      }
-    }
-
-    window.addEventListener("keydown", handleAlertDialogKeydown);
-    return () => window.removeEventListener("keydown", handleAlertDialogKeydown);
-  }, [settingsOpen, preventiveReviewOpen, selectedSuggestionInfoId, selectedScriptLog]);
+  const settingsDialogRef = useModalLifecycle(settingsOpen, () => setSettingsOpen(false));
+  const preventiveReviewDialogRef = useModalLifecycle(preventiveReviewOpen, () => setPreventiveReviewOpen(false));
+  const suggestionInfoDialogRef = useModalLifecycle(
+    Boolean(selectedSuggestionInfoId),
+    () => setSelectedSuggestionInfoId(null)
+  );
+  const scriptLogDialogRef = useModalLifecycle(Boolean(selectedScriptLog), () => setSelectedScriptLog(null));
 
   const priorityColorById = useMemo(
     () => ({
@@ -1931,6 +1910,7 @@ export default function AlertCenterV2({
           {preventiveReviewOpen && (
             <div className="modal-backdrop preventive-review-backdrop" role="presentation">
               <section
+                ref={preventiveReviewDialogRef}
                 className="modal-panel preventive-review-modal"
                 role="dialog"
                 aria-modal="true"
@@ -2082,6 +2062,7 @@ export default function AlertCenterV2({
           onMouseDown={() => setSelectedSuggestionInfoId(null)}
         >
           <section
+            ref={suggestionInfoDialogRef}
             className="modal-panel suggestion-info-modal"
             role="dialog"
             aria-modal="true"
@@ -2323,11 +2304,18 @@ export default function AlertCenterV2({
 
       {selectedScriptLog && (
         <div className="modal-backdrop suggestion-info-backdrop" onMouseDown={() => setSelectedScriptLog(null)}>
-          <section className="modal-panel script-log-modal" onMouseDown={(event) => event.stopPropagation()}>
+          <section
+            ref={scriptLogDialogRef}
+            className="modal-panel script-log-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="script-log-modal-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
             <header>
               <div>
                 <span>LOG DE SCRIPT</span>
-                <h2>{formatDisplayText(selectedScriptLog.scriptName, "Registro de script")}</h2>
+                <h2 id="script-log-modal-title">{formatDisplayText(selectedScriptLog.scriptName, "Registro de script")}</h2>
                 <p>{formatDisplayText(selectedScriptLog.parsedSummary, "Registro preparado para observação segura.")}</p>
               </div>
               <button type="button" className="icon-button" onClick={() => setSelectedScriptLog(null)} aria-label="Fechar log">
@@ -2456,11 +2444,18 @@ export default function AlertCenterV2({
 
       {settingsOpen && (
         <div className="modal-backdrop alert-settings-backdrop" onMouseDown={() => setSettingsOpen(false)}>
-          <section className="modal-panel alert-settings-modal" onMouseDown={(event) => event.stopPropagation()}>
+          <section
+            ref={settingsDialogRef}
+            className="modal-panel alert-settings-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="alert-settings-modal-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
             <header className="alert-settings-modal-header">
               <div>
                 <span>AVISOS</span>
-                <h2>Configurações de aviso</h2>
+                <h2 id="alert-settings-modal-title">Configurações de aviso</h2>
                 <p>Regras de recorrência, limites e cadastro seguro de scripts de manutenção.</p>
               </div>
               <button type="button" className="icon-button" onClick={() => setSettingsOpen(false)}>

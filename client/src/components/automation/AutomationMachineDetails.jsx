@@ -8,6 +8,7 @@ import {
 import { formatAutomationDate, formatRecurrence, recurrenceLabels } from "./automationUtils.js";
 import UnsavedChangesPrompt from "./UnsavedChangesPrompt.jsx";
 import useUnsavedChanges from "./useUnsavedChanges.js";
+import { useModalLifecycle } from "../../hooks/useModalLifecycle.js";
 
 const emptyOverrideDraft = buildAutomationOverrideDraft();
 
@@ -108,14 +109,7 @@ export default function AutomationMachineDetails({
     unsavedChanges.requestAction(onClose);
   }
 
-  useEffect(() => {
-    if (!open) return undefined;
-    function handleKeydown(event) {
-      if (event.key === "Escape") requestClose();
-    }
-    document.addEventListener("keydown", handleKeydown);
-    return () => document.removeEventListener("keydown", handleKeydown);
-  }, [open, isOverrideDirty]);
+  const dialogRef = useModalLifecycle(open, requestClose);
 
   if (!open || !machine || !selectedPlan) return null;
 
@@ -195,7 +189,7 @@ export default function AutomationMachineDetails({
         if (event.target === event.currentTarget) requestClose();
       }}
     >
-      <section className="modal-panel automation-machine-details" role="dialog" aria-modal="true" aria-labelledby="automation-machine-title">
+      <section ref={dialogRef} className="modal-panel automation-machine-details" role="dialog" aria-modal="true" aria-labelledby="automation-machine-title">
         <header>
           <div>
             <span>Configuração desta máquina</span>

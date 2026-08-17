@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, XCircle } from "lucide-react";
+import { useModalLifecycle } from "../../hooks/useModalLifecycle.js";
 
 function formatDate(value) {
   if (!value) return "Não informado";
@@ -123,18 +124,7 @@ export default function PreventiveAutomationPanel({
     (normalizedFormName && duplicateNamePlan) || duplicateColorPlan
   );
 
-  useEffect(() => {
-    if (!modalOpen) return undefined;
-
-    function handleKeydown(event) {
-      if (event.key === "Escape") {
-        setModalOpen(false);
-      }
-    }
-
-    window.addEventListener("keydown", handleKeydown);
-    return () => window.removeEventListener("keydown", handleKeydown);
-  }, [modalOpen]);
+  const dialogRef = useModalLifecycle(modalOpen, () => setModalOpen(false));
 
   useEffect(() => {
     if (!createRequest?.id || lastCreateRequestId.current === createRequest.id) return;
@@ -468,7 +458,7 @@ export default function PreventiveAutomationPanel({
 
       {modalOpen && (
         <div className="modal-backdrop preventive-automation-backdrop" role="presentation">
-          <form className={`modal-panel preventive-automation-modal ${wizardMode ? "wizard-mode" : ""}`} onSubmit={submitForm}>
+          <form ref={dialogRef} className={`modal-panel preventive-automation-modal ${wizardMode ? "wizard-mode" : ""}`} role="dialog" aria-modal="true" onSubmit={submitForm}>
             <header>
               <div>
                 <span>{wizardMode ? "Etapa 3" : "Automação Preventiva"}</span>
