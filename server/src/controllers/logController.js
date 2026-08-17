@@ -1,4 +1,4 @@
-import { listLogs } from "../repositories/logRepository.js";
+import { listLogs } from "../services/logService.js";
 
 export async function list(req, res, next) {
   try {
@@ -8,4 +8,3 @@ export async function list(req, res, next) {
     next(error);
   }
 }
-

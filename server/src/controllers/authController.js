@@ -1,41 +1,16 @@
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
-import { getJwtSecret } from "../config/environment.js";
-import { addLog } from "../repositories/logRepository.js";
-import { countActiveAdminsExcluding, createUser, findUserByEmail, toPublicUser } from "../repositories/userRepository.js";
 import { clearSessionCookie, setSessionCookie } from "../security/sessionCookie.js";
-import { endRemoteAssistanceSessionsOnLogout } from "../services/remoteAssistanceService.js";
-
-function signToken(user) {
-  return jwt.sign(
-    { sub: user.id, email: user.email, role: user.role },
-    getJwtSecret(),
-    { expiresIn: process.env.JWT_EXPIRES_IN || "8h" }
-  );
-}
+import {
+  authenticateWithCredentials,
+  endSessionOnLogout,
+  registerFirstAdmin,
+  signToken
+} from "../services/authService.js";
 
 export async function register(req, res, next) {
   try {
-    const { name, email, password } = req.body;
-
-    if (!name || !email || !password || password.length < 6) {
-      return res.status(400).json({ message: "Informe nome, e-mail e senha com pelo menos 6 caracteres." });
-    }
-
-    const activeAdmins = await countActiveAdminsExcluding("");
-    if (activeAdmins > 0) {
-      return res.status(403).json({ message: "Cadastro publico desativado. Solicite acesso a um administrador." });
-    }
-
-    const user = await createUser({ name, email, password, role: "admin", permissions: ["admin.full"] });
-    await addLog({ type: "auth", message: "First admin registered", userId: user.id });
-
-    const token = signToken(user);
+    const { user, token } = await registerFirstAdmin(req.body || {});
     setSessionCookie(res, token);
-    res.status(201).json({
-      user: toPublicUser(user),
-      token
-    });
+    res.status(201).json({ user, token });
   } catch (error) {
     next(error);
   }
@@ -43,21 +18,9 @@ export async function register(req, res, next) {
 
 export async function login(req, res, next) {
   try {
-    const { email, password } = req.body;
-    const user = await findUserByEmail(email || "");
-
-    if (!user || user.active === false || !(await bcrypt.compare(password || "", user.passwordHash))) {
-      return res.status(401).json({ message: "E-mail ou senha invalidos." });
-    }
-
-    await addLog({ type: "auth", message: "User logged in", userId: user.id });
-
-    const token = signToken(user);
+    const { user, token } = await authenticateWithCredentials(req.body || {});
     setSessionCookie(res, token);
-    res.json({
-      user: toPublicUser(user),
-      token
-    });
+    res.json({ user, token });
   } catch (error) {
     next(error);
   }
@@ -71,7 +34,7 @@ export function me(req, res) {
 
 export async function logout(req, res, next) {
   try {
-    await endRemoteAssistanceSessionsOnLogout(req.user);
+    await endSessionOnLogout(req.user);
     clearSessionCookie(res);
     res.status(204).end();
   } catch (error) {

@@ -7,7 +7,7 @@ import {
   listFloorPlans,
   saveFloorPlanEditorData,
   updateFloorPlan
-} from "../repositories/floorPlanRepository.js";
+} from "../services/floorPlanService.js";
 
 export async function listFloorPlanController(req, res, next) {
   try {
