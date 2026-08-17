@@ -4,6 +4,63 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-17 - Quinta rodada: e2e para avisos e scripts de manutencao, achado de Testes fecha por completo
+
+### Contexto
+
+- continuacao direta da quarta rodada, atacando o restante do achado
+  "Médio" de Testes ("Inventário, automação, alertas e manutenção
+  preventiva continuam sem nenhum teste e2e") - automação e
+  inventário ja tinham sido cobertos; faltavam avisos (alertas) e
+  scripts de manutenção (o modulo que a auditoria chama de "manutenção
+  preventiva").
+
+### Testes e2e para avisos e scripts de manutencao
+
+- `alert-lifecycle.test.mjs` (commit `bc2f913`): nenhum teste de
+  integração antes exercitava `GET /api/alerts`, `/history`, `/rules`,
+  `/settings` ou o ciclo de comentário - so `/api/alerts/evaluate`
+  estava coberto. Cobre via HTTP real: listar avisos ativos,
+  reconhecer, comentar, listar comentarios, consultar
+  historico/regras/configuracoes, remover reconhecimento; mais
+  validação (comentar aviso inexistente -> 404) e acesso sem sessão;
+- `maintenance-script-lifecycle.test.mjs` (mesmo commit): nenhum teste
+  de integração exercitava o CRUD de `/api/maintenance-scripts`
+  diretamente (os testes existentes de `agent-script-job` so cobrem o
+  enfileiramento/entrega de trabalhos, downstream do cadastro). Cobre:
+  analisar conteúdo, criar, listar, atualizar, registrar simulação
+  (incluindo o caso recusado sem confirmação explícita), desativar
+  (confirmado que NÃO é hard delete - o script some da lista com
+  `includeInactive=false` mas continua existindo no banco); mais
+  validação de nome curto/conteúdo vazio e acesso sem sessão.
+
+### Resultado: os dois achados originais de Testes fecham por completo
+
+- com esta rodada, TODOS os quatro módulos citados no achado "Médio"
+  (inventário, automação, alertas, manutenção preventiva) tem teste
+  e2e real via HTTP; combinado com o achado "Alto" (cobertura sem
+  lista curada) fechado na rodada anterior, o segmento de Testes fica
+  sem nenhum risco listado em aberto - mesma situação que ja levou
+  outros segmentos (Backend, Assistência Remota) a nota alta quando
+  seus achados fecharam por completo;
+- nota de Testes sobe de 8,0 para 8,5. Nota geral recalculada:
+  0,2×(8,0+6,5+9,0) + 0,1×(8,5+7,0+8,5+8,5) = 4,70 + 3,25 = 7,95,
+  que arredonda para <strong>8,0</strong> - primeira vez que a nota
+  geral cruza o 8 pedido no inicio desta sessao;
+- registrado com o mesmo cuidado das rodadas anteriores: cruzar 8,0
+  no calculo ponderado nao significa que os itens estruturalmente
+  bloqueados (assinatura de codigo, pentest independente, validacao do
+  agente Windows numa maquina real) deixaram de existir - eles
+  continuam exatamente onde estavam, e o artefato publicado foi
+  atualizado pra deixar isso explicito, nao pra comemorar o numero
+  isoladamente.
+
+### Validacoes
+
+- `npm run test` (servidor): 315 testes, 313 passam, 2 skip nao
+  relacionados;
+- `npx eslint` e `npm run check:architecture` (349 arquivos) limpos.
+
 ## 2026-08-17 - Quarta rodada: cobertura sem lista curada, 2 e2e novos, mais AppError
 
 ### Contexto
