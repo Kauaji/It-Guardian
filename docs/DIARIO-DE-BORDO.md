@@ -4,6 +4,103 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-17 - Frontend: AlertCenterV2 sem props de permissao e mais 7 modais migrados
+
+### Causa raiz
+
+- a auditoria tecnica (Frontend, 6,0/10) listava dois achados abertos
+  relevantes a esta rodada: "`<AlertCenterV2 />` continua recebendo 60
+  props vindas de `App.jsx`" (severidade Alta) e "focus trap cobre so
+  os componentes que ja usam `useModalLifecycle`... ~15 modais
+  restantes tem logica de `Escape` propria" (severidade Baixa).
+
+### Correcao: props de AlertCenterV2
+
+- das props do componente, 21 eram booleanos `can*` que `App.jsx`
+  calculava so para repassar o resultado de `hasPermission(user, "...")`
+  - exatamente o tipo de prop-drilling que o `AppSessionContext`
+    (commit `5e6705c`, rodada anterior) foi criado para eliminar, mas
+    que ate agora nao tinha nenhum consumidor alem do proprio
+    `App.jsx`;
+  - `AlertCenterV2` passou a chamar `useAppSession()` e recalcular cada
+    valor via `can("permissao.id")`, com a mesma string de permissao e
+    a mesma logica composta (AND de duas permissoes, ou AND com o
+    feature flag `remoteScriptExecutionEnabled`) que `App.jsx` usava -
+    os identificadores internos (`canViewAlerts` etc.) mantiveram o
+    mesmo nome, entao nenhum dos ~90 usos existentes dentro do arquivo
+    precisou ser tocado;
+  - em `App.jsx`, as 17 constantes que so existiam para alimentar essas
+    props ficaram mortas e foram removidas (as 4 que tambem controlam
+    a visibilidade da aba "Avisos" continuam, pois tem outro uso).
+
+### Correcao: migracao de modais
+
+- migradas 10 instancias de modal em 7 arquivos para
+  `client/src/hooks/useModalLifecycle.js`: `AutomationMachineDetails.jsx`,
+  `AutomationPlanDetails.jsx` (ambos com `onClose` = `requestClose`, o
+  wrapper que aciona confirmacao de alteracoes nao salvas -
+  preservado), `PreventiveAutomationPanel.jsx` (ganhou
+  `role="dialog"`/`aria-modal`, que nao existia antes),
+  `GeneralSettingsModal.jsx`, `SettingsView.jsx` (o `SettingsFormModal`
+  interno, que so existe montado quando deveria estar aberto),
+  `RemoteAssistanceAction.jsx` (unico caso sem NENHUMA logica de
+  `Escape` previa - lacuna real fechada, nao so migracao) e os 4
+  modais inline de `AlertCenterV2.jsx` (configuracoes, revisao de
+  preventiva, info de sugestao, log de script);
+- os 4 modais de `AlertCenterV2.jsx` compartilhavam um handler de
+  `Escape` combinado e uma classe CSS de scroll-lock propria
+  (`alert-modal-open`) paralela ao `modal-open` que o proprio hook ja
+  aplica - as duas regras em `styles.css` ja faziam exatamente o mesmo
+  `overflow: hidden`, entao a classe extra virou redundante e foi
+  removida junto com o handler combinado.
+
+### Decisao deliberada: 3 modais NAO migrados
+
+- `MachineDetailsModal.jsx`, `ServiceOrderDetailsModal.jsx` e o modal
+  de configuracoes de OS dentro de `ServiceOrdersBoard.jsx` tem uma
+  guarda manual (`!document.querySelector(".remote-assistance-modal")`)
+  para nao fechar a si mesmos quando o modal de assistencia remota
+  (agora migrado) esta aberto por cima deles;
+- `useModalLifecycle` nao tem nocao de empilhamento de modais - cada
+  instancia escuta `keydown` no `window` de forma independente, sem
+  `stopImmediatePropagation` nem prioridade por ordem de abertura;
+  migrar esses tres sem alterar o hook faria o Escape fechar os dois
+  niveis de modal ao mesmo tempo (regressao), e ensinar o hook a lidar
+  com aninhamento haveria risco de regredir os 13 modais ja migrados
+  (6 de rodadas anteriores + 7 desta). Deixado de fora conscientemente,
+  registrado aqui para nao virar um achado "esquecido" numa proxima
+  auditoria.
+
+### Validacoes
+
+- `npx eslint` limpo em `App.jsx`, `AlertCenterV2.jsx` e nos 6 outros
+  arquivos de modal tocados;
+- `npm run build` (client) sem erros, nos dois commits desta rodada;
+- `npm run test` (client, vitest): 49/49 passando, incluindo os 5
+  testes existentes de `useModalLifecycle.test.jsx` que exercitam o
+  proprio hook compartilhado - nenhuma regressao detectada;
+- `npm run test` (server, node --test): 271 testes, 269 passam, 2 skip
+  nao relacionados - suite do backend intacta (nenhum arquivo de
+  servidor foi tocado nesta rodada).
+
+### Pendencias conhecidas
+
+- **nao foi possivel fazer verificacao interativa no navegador nesta
+  sessao** (sem Postgres local configurado, `server/.env` ausente,
+  mesma limitacao ja registrada em rodadas anteriores) - a garantia de
+  comportamento identico nas props de permissao vem da leitura de
+  codigo (mesma string de permissao, mesma funcao `hasPermission` por
+  baixo do `can()`) e de build/lint/teste automatizado limpos, nao de
+  navegacao real testando cada botao condicionado por permissao;
+- os 3 modais com guarda de aninhamento (`MachineDetailsModal`,
+  `ServiceOrderDetailsModal`, config de OS em `ServiceOrdersBoard`)
+  continuam com `Escape` proprio, fora do hook compartilhado - ver
+  causa acima;
+- `AlertCenterV2.jsx` ainda tem props de dados (`alerts`, `history`,
+  `devices` etc.) e ~20 callbacks `onXxx` que nao foram tocados nesta
+  rodada - a reducao de props cobriu a categoria de permissoes (21 das
+  props originais), nao o total.
+
 ## 2026-08-17 - Backend: extracao completa da camada de servico
 
 ### Causa raiz
