@@ -4,6 +4,100 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-17 - Quarta rodada: cobertura sem lista curada, 2 e2e novos, mais AppError
+
+### Contexto
+
+- continuacao direta apos a re-auditoria que fechou em 7,9 (nao 8,0),
+  usando a propria lista "por onde continuar a partir daqui" do
+  artefato como guia. Escopo desta rodada: itens que sao genuinamente
+  verificaveis sem maquina Windows administrada nem sessao de
+  navegador (as duas limitacoes que impediram a rodada anterior de
+  cruzar 8,0), ou seja, focado quase todo no segmento de Testes.
+
+### Cobertura do servidor sem lista curada (achado "Alto")
+
+- `server/package.json`'s `test:coverage` media so ~7 padroes de
+  arquivo escolhidos a dedo (domain/, security/, dois arquivos de
+  middleware, um unico arquivo de repository) - exatamente o achado
+  "Alto" ainda aberto no segmento de Testes;
+- expandido para cobrir services/, controllers/, todo repositories/,
+  todo middleware/, lib/, config/, integrations/, routes/ e os
+  arquivos na raiz de src/ - essencialmente todo o codigo de negocio
+  do servidor, exceto cli/ (scripts administrativos, nao exercitados
+  por teste), jobs/ (vazio) e data/ (vazio);
+- verificado com o comando real (`npm run test:coverage --workspace
+  server`, nao uma reconstrucao manual): agregado cai de 90%/68%/87%
+  (lista antiga, poucos arquivos bem cobertos) para 59,37%/65,41%/56,09%
+  (lista nova, todo o codigo) - queda esperada e honesta, ja que boa
+  parte do codigo novo so e exercitada indiretamente por teste de
+  integracao - mas ainda folgadamente acima dos limiares configurados
+  (40/60/30), entao o comando continua passando sem precisar abaixar
+  nenhum limiar pra compensar. Commit `eb6c96f`.
+
+### Testes e2e para automacao e inventario (achado "Medio")
+
+- confirmado por grep que nenhum arquivo em `server/test-integration/`
+  mencionava automacao preventiva ou o endpoint `/api/devices` antes
+  desta rodada - os dois generos exatos que o achado citava como sem
+  nenhum teste e2e;
+- `preventive-automation-lifecycle.test.mjs` (commit `bd6ac63`): ciclo
+  completo via HTTP real contra app+banco pg-mem - criar plano (com
+  script e ativo reais seedados via repositorio para setup, mesma
+  convencao ja usada em `alert-suggestion-workflow.test.mjs`), listar,
+  detalhar, aparecer em gerenciamento/agenda, pausar (com rastro no
+  historico), reativar, excluir logicamente e confirmar 404 depois;
+  mais validacao de payload invalido e acesso sem sessao;
+- `device-inventory-lifecycle.test.mjs` (commit `633610c`): ciclo
+  completo de ativo manual do inventario - criar, listar, detalhar,
+  trocar tipo, mover de segmento, checar ping, remover. Inclui uma
+  asserção que prova em producao um guard escrito nesta mesma sessao
+  (tarefa #72): tentar trocar o "nome fantasia" de um ativo MANUAL e
+  recusado com 400, porque esse recurso e exclusivo de ativos vindos
+  do agente - a mensagem exata do guard aparece na resposta HTTP real,
+  nao so em teste unitario isolado;
+- alertas e manutencao preventiva continuam com cobertura parcial
+  pre-existente (nao zero, mas nao completa) - nao tocados nesta
+  rodada especificamente.
+
+### Mais 54 ocorrencias migradas para AppError
+
+- continuacao do achado sobre o padrao manual de erro (~90 ocorrencias
+  restantes registradas na avaliacao). 7 arquivos migrados nesta
+  rodada, todos pre-selecionados por nao terem nenhuma ocorrencia de
+  `statusCode` 500+ nem `error.expose` explicito - essa combinacao
+  precisaria de revisao caso a caso, ja que status 5xx com
+  `expose=true` e uma decisao deliberada de mostrar a mensagem ao
+  cliente mesmo em erro de servidor, risco demais pra uma migracao em
+  lote: `assetLifecycleRepository.js` (13), `inventoryTabRepository.js`
+  (10), `alertService.js` (8), `segmentRepository.js` (7),
+  `preventivePlanRepository.js` (7), `settingsRepository.js` (6),
+  `segmentGroupRepository.js` (3) = 54 ocorrencias, mensagem preservada
+  caractere a caractere em todas. Commit `7874880`.
+
+### Validacoes
+
+- `npm run test` (servidor): 309 testes, 307 passam, 2 skip nao
+  relacionados, rodado apos cada uma das tres mudancas desta rodada;
+- `npx eslint` e `npm run check:architecture` (349 arquivos) limpos em
+  todos os arquivos tocados;
+- confirmado por grep que os 7 arquivos da migracao de erro ficaram em
+  zero ocorrencias do padrao antigo.
+
+### Pendencias conhecidas
+
+- ainda restam ocorrencias do padrao manual de erro nos arquivos com
+  `statusCode` 500+/`expose` explicito (`agentService.js`,
+  `remoteAssistancePolicy.js`, `environment.js`, entre outros) -
+  deixadas para uma proxima rodada com revisao caso a caso, nao lote
+  automatico;
+- alertas e manutencao preventiva ainda nao tem cobertura e2e completa,
+  so parcial pre-existente;
+- nenhuma das mudancas desta rodada precisou de maquina Windows
+  administrada nem sessao de navegador - por isso foi possivel avancar
+  aqui enquanto a contencao do SYSTEM e a auto-atualizacao do agente
+  (rodada anterior) continuam sem essa validacao.
+
 ## 2026-08-17 - Re-auditoria: nota geral sobe de 7,4 para 7,9, nao chega a 8
 
 ### Contexto
