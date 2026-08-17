@@ -346,6 +346,7 @@ test("pausa e reativação usam a mesma atualização e sincronizam agendas", ()
   const repository = source("./preventiveAutomationRepository.js");
   const routes = source("../routes/preventiveAutomationRoutes.js");
   const controller = source("../controllers/preventiveAutomationController.js");
+  const service = source("../services/preventiveAutomationService.js");
   assert.match(component, /Pausar automação/);
   assert.match(component, /Reativar automação/);
   assert.match(component, /onPausePlan/);
@@ -354,7 +355,8 @@ test("pausa e reativação usam a mesma atualização e sincronizam agendas", ()
   assert.match(repository, /preventive_automation_paused/);
   assert.match(repository, /preventive_automation_reactivated/);
   assert.match(routes, /"\/:id\/reactivate", requirePermission\("preventive_automation\.disable"\), reactivate/);
-  assert.match(controller, /reactivatePreventiveAutomationPlan/);
+  assert.match(controller, /reactivatePlan\(req\.params\.id, req\.user\)/);
+  assert.match(service, /reactivatePreventiveAutomationPlan/);
 });
 
 test("plano excluído logicamente não pode ser reativado", () => {
@@ -531,9 +533,13 @@ test("criação, edição e override aplicam escopo de máquina no backend", () 
 
 test("controllers repassam usuario para leituras de automacao", () => {
   const controller = source("../controllers/preventiveAutomationController.js");
-  assert.match(controller, /listPreventiveAutomationManagement\(req\.user/);
-  assert.match(controller, /listPreventiveAutomationAgenda\(req\.query \|\| \{\}, req\.user\)/);
-  assert.match(controller, /findPreventiveAutomationAssetDetails\(req\.params\.id, req\.params\.assetId, req\.user\)/);
+  const service = source("../services/preventiveAutomationService.js");
+  assert.match(controller, /getManagementOverview\(req\.user, req\.query\)/);
+  assert.match(controller, /getAgenda\(req\.query, req\.user\)/);
+  assert.match(controller, /getAssetDetail\(req\.params\.id, req\.params\.assetId, req\.user\)/);
+  assert.match(service, /listPreventiveAutomationManagement\(user/);
+  assert.match(service, /listPreventiveAutomationAgenda\(query \|\| \{\}, user\)/);
+  assert.match(service, /findPreventiveAutomationAssetDetails\(id, assetId, user\)/);
 });
 
 test("detalhe de ativo usa consultas direcionadas e nao carrega o gerenciamento completo", () => {
