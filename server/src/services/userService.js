@@ -14,7 +14,7 @@ import {
 
 const allowedRoles = new Set(["admin", "operator", "viewer"]);
 
-function ensureRole(role) {
+export function ensureRole(role) {
   if (!allowedRoles.has(role)) {
     throw badRequest("Role must be admin, operator or viewer");
   }

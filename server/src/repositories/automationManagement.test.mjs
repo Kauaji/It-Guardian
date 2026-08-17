@@ -326,8 +326,10 @@ test("bolinhas têm tooltip, aria-label, Escape e devolução de foco", () => {
 test("modais de plano e máquina fecham com Escape", () => {
   const plan = source("../../../client/src/components/automation/AutomationPlanDetails.jsx");
   const machine = source("../../../client/src/components/automation/AutomationMachineDetails.jsx");
-  assert.match(plan, /event\.key === "Escape"/);
-  assert.match(machine, /event\.key === "Escape"/);
+  const hook = source("../../../client/src/hooks/useModalLifecycle.js");
+  assert.match(plan, /useModalLifecycle\(open, requestClose\)/);
+  assert.match(machine, /useModalLifecycle\(open, requestClose\)/);
+  assert.match(hook, /event\.key === "Escape"/);
 });
 
 test("edição protege alterações não salvas antes de fechar ou trocar de plano", () => {

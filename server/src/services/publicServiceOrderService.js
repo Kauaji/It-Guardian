@@ -43,7 +43,7 @@ function trim(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function normalize(value = "") {
+export function normalize(value = "") {
   return String(value)
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
@@ -51,11 +51,11 @@ function normalize(value = "") {
     .toLowerCase();
 }
 
-function sanitizePriority(value, fallback = "medium") {
+export function sanitizePriority(value, fallback = "medium") {
   return serviceOrderPriorities.has(value) ? value : fallback;
 }
 
-function uniqueCategories(problemTypes) {
+export function uniqueCategories(problemTypes) {
   const configuredCategories = problemTypes
     .map((item) => trim(item.category))
     .filter(Boolean);
@@ -63,7 +63,7 @@ function uniqueCategories(problemTypes) {
   return Array.from(new Set([...configuredCategories, ...defaultCategories]));
 }
 
-function chooseHigherPriority(current, candidate) {
+export function chooseHigherPriority(current, candidate) {
   const safeCandidate = sanitizePriority(candidate, "");
   if (!safeCandidate) return current;
   return priorityRank[safeCandidate] > priorityRank[current] ? safeCandidate : current;

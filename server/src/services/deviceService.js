@@ -24,7 +24,7 @@ const assetTypes = new Set([
 const backupStatuses = new Set(["available", "in_use"]);
 const deviceNotFoundMessage = "Device not found";
 
-function validateManualAsset(payload) {
+export function validateManualAsset(payload) {
   const required = ["name", "type", "brand", "model", "assetTag", "ip"];
   const missing = required.filter((field) => !payload[field]?.trim?.());
 

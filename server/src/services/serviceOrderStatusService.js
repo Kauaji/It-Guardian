@@ -16,7 +16,7 @@ function stripCombiningMarks(value) {
   return result;
 }
 
-function slugifyStatusId(value, fallback) {
+export function slugifyStatusId(value, fallback) {
   const normalized = stripCombiningMarks(String(value || "").normalize("NFD"))
     .trim()
     .toLowerCase()
@@ -26,7 +26,7 @@ function slugifyStatusId(value, fallback) {
   return normalized || fallback;
 }
 
-function sanitizeStatusPayload(payload = {}, fallbackOrder = 0) {
+export function sanitizeStatusPayload(payload = {}, fallbackOrder = 0) {
   const name = String(payload.name || payload.label || "").trim();
   const id = slugifyStatusId(payload.id || payload.value || name, `status_${Date.now()}`);
   const order = Number(payload.order);
@@ -41,7 +41,7 @@ function sanitizeStatusPayload(payload = {}, fallbackOrder = 0) {
   };
 }
 
-function applyExclusiveFlags(statuses, status) {
+export function applyExclusiveFlags(statuses, status) {
   let next = statuses;
 
   if (status.isInitial) {
