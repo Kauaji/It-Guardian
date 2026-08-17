@@ -4,6 +4,100 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-17 - Sexta rodada: useModalLifecycle aprende a empilhar modais
+
+### Contexto
+
+- pedido do usuario: "vamos focar no outros valores por hora e deixar de
+  lado o instalador" - continuar melhorando os segmentos que nao
+  dependem de uma maquina Windows administrada. Alvo escolhido: o
+  motivo registrado nas rodadas anteriores para NAO migrar
+  `MachineDetailsModal.jsx`, `ServiceOrderDetailsModal.jsx` e o modal
+  de configuracoes de OS em `ServiceOrdersBoard.jsx` para
+  `useModalLifecycle` - o hook nao tinha nocao de empilhamento de
+  modais.
+
+### Causa raiz
+
+- cada instancia do hook escutava `keydown` no `window` de forma
+  independente, sem `stopImmediatePropagation` nem prioridade por
+  ordem de abertura. Migrar um modal que as vezes tem outro aberto por
+  cima dele (o caso real: assistencia remota aberta de dentro dos
+  detalhes de uma maquina ou de uma OS) faria o Escape fechar os dois
+  niveis de uma vez, regredindo a guarda manual
+  (`!document.querySelector(".remote-assistance-modal")`) que cada um
+  desses tres arquivos tinha por conta propria.
+
+### Correcao
+
+- `useModalLifecycle.js` ganhou uma pilha de ids (`modalStack`) em
+  nivel de modulo. Cada instancia so reage a Escape/Tab se for a mais
+  recentemente aberta (o topo da pilha); as demais ja abertas ficam
+  quietas ate a mais interna fechar - resolvido sem precisar que os
+  componentes saibam uns dos outros por nome de classe CSS;
+- `onClose` passou a viver numa ref (`onCloseRef`) em vez do array de
+  dependencias do efeito - corrige de brinde um problema latente: se o
+  `onClose` passado por um pai mudasse de referencia (comum com funcao
+  inline) enquanto o MESMO modal seguia aberto, o efeito inteiro
+  desmontava e remontava so por causa disso (perdia foco, reindexava a
+  pilha sem necessidade);
+- os tres arquivos migrados, com a guarda manual removida (nao e mais
+  necessaria): `MachineDetailsModal.jsx`,
+  `ServiceOrderDetailsModal.jsx` (que nao tinha NENHUMA logica de
+  Escape propria - dependia inteiramente do handler combinado do pai)
+  e o modal de configuracoes de OS em `ServiceOrdersBoard.jsx` (o
+  handler combinado do pai foi reduzido a so essa responsabilidade, ja
+  que `formOpen`/`selectedOrderCurrent` ja eram tratados pelos
+  proprios `ServiceOrderFormModal`/`ServiceOrderDetailsModal`).
+
+### Validacao com sessao real de navegador (primeira vez nesta sessao)
+
+- descoberto que ja existia um `.claude/launch.json` funcional de uma
+  sessao anterior (`itguardian-server-memory` + `itguardian-client`) -
+  sobrescrito por engano ao criar um novo antes de perceber que ja
+  existia; reconstruido com os mesmos dois servidores (servidor com
+  `DATABASE_URL=memory` + seed de demonstracao, client via Vite);
+- com os dois no ar, testado ao vivo: `Configurações Gerais` (modal ja
+  migrado numa rodada anterior) fecha corretamente com Escape num
+  navegador real - primeira verificacao interativa genuina desta
+  sessao inteira para uma mudanca de frontend;
+- um alarme falso apareceu no console de uma aba reaproveitada
+  ("Rendered more hooks than during the previous render", apontando
+  `MoveMachineModal`/`SegmentFormModal`) - investigado a fundo antes
+  de descartar: confirmado como ruido acumulado de Fast Refresh
+  durante as edicoes ao vivo do arquivo do hook, nao um bug real. Duas
+  abas novas, carregadas do zero, mostraram console limpo de forma
+  consistente, e a leitura do codigo final nao encontrou nenhuma
+  chamada condicional de hook;
+- 4 testes novos em `useModalLifecycle.test.jsx` reproduzindo o
+  cenario real (modal externo abre, foco assenta, so entao o interno
+  abre - nunca simultaneamente, que e como modais aninhados de verdade
+  sempre abrem): Escape fecha so o interno; depois que o interno
+  fecha, Escape volta a fechar o externo; Tab so percorre o interno;
+  trocar a referencia de `onClose` do externo enquanto ele segue
+  aberto nao reordena a pilha.
+
+### Resultado: o ultimo item do achado "Baixo" de Frontend fecha
+
+- Frontend tinha tres achados abertos: props de `AlertCenterV2`
+  (Alto, parcial), CSS de 18 mil linhas (Medio, intocado) e foco/Escape
+  cobrindo so parte dos modais (Baixo, parcial - 3 modais deixados de
+  fora por este exato motivo). O terceiro fecha por completo agora -
+  todos os modais do app usam o hook compartilhado. Os outros dois
+  seguem exatamente como estavam;
+- nota de Frontend sobe de 7,0 para 7,5. Nota geral recalculada:
+  0,2×(8,0+6,5+9,0) + 0,1×(8,5+7,5+8,5+8,5) = 4,70 + 3,30 = 8,00 -
+  mantem o 8,0 alcancado na rodada anterior, com evidencia adicional
+  real por baixo do numero, nao so o mesmo resultado por coincidencia
+  de arredondamento.
+
+### Validacoes
+
+- `npx eslint` limpo nos 5 arquivos tocados;
+- suite completa do client (122 testes) e do servidor (313 testes)
+  sem regressao;
+- `npm run build` (client) limpo.
+
 ## 2026-08-17 - Quinta rodada: e2e para avisos e scripts de manutencao, achado de Testes fecha por completo
 
 ### Contexto
