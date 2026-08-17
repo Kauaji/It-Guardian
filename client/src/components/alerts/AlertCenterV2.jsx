@@ -24,7 +24,9 @@ import {
 } from "../../api.js";
 import AutomationIndicatorDots from "../AutomationIndicatorDots.jsx";
 import { useAppSession } from "../../context/AppSessionContext.jsx";
+import { useAlertCenterData } from "../../context/AlertCenterContext.jsx";
 import { useModalLifecycle } from "../../hooks/useModalLifecycle.js";
+import { remoteScriptExecutionEnabled } from "../../config/features.js";
 import PreventiveAutomationPanel from "../automation/PreventiveAutomationPanel.jsx";
 import { shouldShowAutomationManagement } from "../automation/automationUtils.js";
 import MaintenanceScriptsPanel from "../maintenance/MaintenanceScriptsPanel.jsx";
@@ -67,59 +69,60 @@ const AutomationManagementView = lazy(() => import("../automation/AutomationMana
 
 export default function AlertCenterV2({
   token,
-  alerts,
-  history,
-  suggestions,
-  rules,
-  scripts,
-  preventivePlans = [],
-  preventiveAutomationPlans = [],
-  preventiveAutomationManagement = { plans: [], machines: [], metadata: { planCount: 0, machineCount: 0 } },
-  preventiveAutomationManagementError = "",
-  preventiveAutomationManagementLoading = false,
   devices,
   segments = [],
   segmentGroups = [],
   inventoryTabs = [],
-  alertPriorityColors = defaultPriorityColors,
-  alertPrioritySettings = normalizePrioritySettings(),
-  alertCorrelations = [],
   serviceOrders,
-  severityFilter,
-  setSeverityFilter,
-  statusFilter,
-  setStatusFilter,
-  suggestionStatusFilter,
-  setSuggestionStatusFilter,
-  remoteScriptExecutionEnabled = false,
-  onEvaluateAlerts,
-  onAcceptSuggestion,
-  onRejectSuggestion,
-  onCreatePreventivePlan,
-  onCreatePreventivePlanServiceOrder,
-  onSavePreventiveAutomationPlan,
-  onDisablePreventiveAutomationPlan,
-  onReactivatePreventiveAutomationPlan,
-  onDeletePreventiveAutomationPlan,
-  onSavePreventiveAutomationAssetOverride,
-  onRemovePreventiveAutomationAssetOverride,
-  onRemoveAssetFromPreventiveAutomationPlan,
-  onRefreshPreventiveAutomationManagement,
-  onFetchPreventiveAutomationAsset,
-  onOpenServiceOrders,
-  onUpdateRule,
-  onAddAlertComment,
-  onSaveAlertPrioritySettings,
-  onAnalyzeMaintenanceScript,
-  onSaveMaintenanceScript,
-  onDeactivateMaintenanceScript,
-  onRegisterMaintenanceScriptSimulation,
-  onUseSuggestionScript,
-  onAcknowledgeScriptLog,
-  onApplyScriptLogSuggestedSolution,
-  onCancelScriptValidation
+  onOpenServiceOrders
 }) {
   const { can } = useAppSession();
+  const {
+    alerts,
+    history,
+    suggestions,
+    rules,
+    scripts,
+    preventivePlans = [],
+    preventiveAutomationPlans = [],
+    preventiveAutomationManagement = { plans: [], machines: [], metadata: { planCount: 0, machineCount: 0 } },
+    preventiveAutomationManagementError = "",
+    preventiveAutomationManagementLoading = false,
+    alertPriorityColors = defaultPriorityColors,
+    alertPrioritySettings = normalizePrioritySettings(),
+    alertCorrelations = [],
+    severityFilter,
+    setSeverityFilter,
+    statusFilter,
+    setStatusFilter,
+    suggestionStatusFilter,
+    setSuggestionStatusFilter,
+    onEvaluateAlerts,
+    onAcceptSuggestion,
+    onRejectSuggestion,
+    onCreatePreventivePlan,
+    onCreatePreventivePlanServiceOrder,
+    onSavePreventiveAutomationPlan,
+    onDisablePreventiveAutomationPlan,
+    onReactivatePreventiveAutomationPlan,
+    onDeletePreventiveAutomationPlan,
+    onSavePreventiveAutomationAssetOverride,
+    onRemovePreventiveAutomationAssetOverride,
+    onRemoveAssetFromPreventiveAutomationPlan,
+    onRefreshPreventiveAutomationManagement,
+    onFetchPreventiveAutomationAsset,
+    onUpdateRule,
+    onAddAlertComment,
+    onSaveAlertPrioritySettings,
+    onAnalyzeMaintenanceScript,
+    onSaveMaintenanceScript,
+    onDeactivateMaintenanceScript,
+    onRegisterMaintenanceScriptSimulation,
+    onUseSuggestionScript,
+    onAcknowledgeScriptLog,
+    onApplyScriptLogSuggestedSolution,
+    onCancelScriptValidation
+  } = useAlertCenterData();
   const canViewAlerts = can("alerts.view");
   const canViewScripts = can("scripts.view");
   const canViewPreventivePlans = can("preventive_plans.view");

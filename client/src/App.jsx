@@ -108,6 +108,7 @@ import { formatSoftwareLabel } from "./components/inventory/hardwarePresentation
 import { isMaintenanceSegmentName } from "./utils/display.js";
 import { useAppSessionController } from "./hooks/useAppSessionController.js";
 import { AppSessionProvider, useAppSession } from "./context/AppSessionContext.jsx";
+import { AlertCenterProvider } from "./context/AlertCenterContext.jsx";
 import { useDashboardData } from "./hooks/useDashboardData.js";
 import { useInventoryPersistence } from "./hooks/useInventoryPersistence.js";
 
@@ -2964,60 +2965,64 @@ function Dashboard() {
 
         {activeView === "alerts" && (canViewAlerts || canViewScripts || canViewPreventivePlans || canViewPreventiveAutomation) && (
           <ViewErrorBoundary label="Avisos" resetKey={activeView}>
-          <AlertCenterV2
-            token={token}
-            alerts={alerts}
-            history={history}
-            suggestions={serviceOrderSuggestions}
-            rules={alertRules}
-            scripts={maintenanceScripts}
-            preventivePlans={preventivePlans}
-            preventiveAutomationPlans={preventiveAutomationPlans}
-            preventiveAutomationManagement={preventiveAutomationManagement}
-            preventiveAutomationManagementError={preventiveAutomationManagementError}
-            preventiveAutomationManagementLoading={loading}
-            devices={decoratedAllDevices}
-            segments={decoratedSegments}
-            segmentGroups={decoratedSegmentGroups}
-            inventoryTabs={inventoryTabs}
-            alertPriorityColors={alertPriorityColors}
-            alertPrioritySettings={alertPrioritySettings}
-            alertCorrelations={alertCorrelations}
-            serviceOrders={serviceOrders}
-            severityFilter={severityFilter}
-            setSeverityFilter={setSeverityFilter}
-            statusFilter={alertStatusFilter}
-            setStatusFilter={setAlertStatusFilter}
-            suggestionStatusFilter={suggestionStatusFilter}
-            setSuggestionStatusFilter={setSuggestionStatusFilter}
-            remoteScriptExecutionEnabled={remoteScriptExecutionEnabled}
-            onEvaluateAlerts={handleEvaluateAlerts}
-            onAcceptSuggestion={handleAcceptSuggestion}
-            onRejectSuggestion={handleRejectSuggestion}
-            onCreatePreventivePlan={handleCreatePreventivePlan}
-            onCreatePreventivePlanServiceOrder={handleCreatePreventivePlanServiceOrder}
-            onSavePreventiveAutomationPlan={handleSavePreventiveAutomationPlan}
-            onDisablePreventiveAutomationPlan={handleDisablePreventiveAutomationPlan}
-            onReactivatePreventiveAutomationPlan={handleReactivatePreventiveAutomationPlan}
-            onDeletePreventiveAutomationPlan={handleDeletePreventiveAutomationPlan}
-            onSavePreventiveAutomationAssetOverride={handleSavePreventiveAutomationAssetOverride}
-            onRemovePreventiveAutomationAssetOverride={handleRemovePreventiveAutomationAssetOverride}
-            onRemoveAssetFromPreventiveAutomationPlan={handleRemoveAssetFromPreventiveAutomationPlan}
-            onRefreshPreventiveAutomationManagement={() => loadData(true)}
-            onFetchPreventiveAutomationAsset={handleFetchPreventiveAutomationAsset}
-            onOpenServiceOrders={() => setActiveView("service-orders")}
-            onUpdateRule={handleUpdateAlertRule}
-            onAddAlertComment={handleAddAlertComment}
-            onSaveAlertPrioritySettings={handleSaveAlertPrioritySettings}
-            onAnalyzeMaintenanceScript={handleAnalyzeMaintenanceScript}
-            onSaveMaintenanceScript={handleSaveMaintenanceScript}
-            onDeactivateMaintenanceScript={handleDeactivateMaintenanceScript}
-            onRegisterMaintenanceScriptSimulation={handleRegisterMaintenanceScriptSimulation}
-            onUseSuggestionScript={handleUseSuggestionScript}
-            onAcknowledgeScriptLog={handleAcknowledgeScriptLog}
-            onApplyScriptLogSuggestedSolution={handleApplyScriptLogSuggestedSolution}
-            onCancelScriptValidation={handleCancelScriptValidation}
-          />
+          <AlertCenterProvider
+            value={{
+              alerts,
+              history,
+              suggestions: serviceOrderSuggestions,
+              rules: alertRules,
+              scripts: maintenanceScripts,
+              preventivePlans,
+              preventiveAutomationPlans,
+              preventiveAutomationManagement,
+              preventiveAutomationManagementError,
+              preventiveAutomationManagementLoading: loading,
+              alertPriorityColors,
+              alertPrioritySettings,
+              alertCorrelations,
+              severityFilter,
+              setSeverityFilter,
+              statusFilter: alertStatusFilter,
+              setStatusFilter: setAlertStatusFilter,
+              suggestionStatusFilter,
+              setSuggestionStatusFilter,
+              onEvaluateAlerts: handleEvaluateAlerts,
+              onAcceptSuggestion: handleAcceptSuggestion,
+              onRejectSuggestion: handleRejectSuggestion,
+              onCreatePreventivePlan: handleCreatePreventivePlan,
+              onCreatePreventivePlanServiceOrder: handleCreatePreventivePlanServiceOrder,
+              onSavePreventiveAutomationPlan: handleSavePreventiveAutomationPlan,
+              onDisablePreventiveAutomationPlan: handleDisablePreventiveAutomationPlan,
+              onReactivatePreventiveAutomationPlan: handleReactivatePreventiveAutomationPlan,
+              onDeletePreventiveAutomationPlan: handleDeletePreventiveAutomationPlan,
+              onSavePreventiveAutomationAssetOverride: handleSavePreventiveAutomationAssetOverride,
+              onRemovePreventiveAutomationAssetOverride: handleRemovePreventiveAutomationAssetOverride,
+              onRemoveAssetFromPreventiveAutomationPlan: handleRemoveAssetFromPreventiveAutomationPlan,
+              onRefreshPreventiveAutomationManagement: () => loadData(true),
+              onFetchPreventiveAutomationAsset: handleFetchPreventiveAutomationAsset,
+              onUpdateRule: handleUpdateAlertRule,
+              onAddAlertComment: handleAddAlertComment,
+              onSaveAlertPrioritySettings: handleSaveAlertPrioritySettings,
+              onAnalyzeMaintenanceScript: handleAnalyzeMaintenanceScript,
+              onSaveMaintenanceScript: handleSaveMaintenanceScript,
+              onDeactivateMaintenanceScript: handleDeactivateMaintenanceScript,
+              onRegisterMaintenanceScriptSimulation: handleRegisterMaintenanceScriptSimulation,
+              onUseSuggestionScript: handleUseSuggestionScript,
+              onAcknowledgeScriptLog: handleAcknowledgeScriptLog,
+              onApplyScriptLogSuggestedSolution: handleApplyScriptLogSuggestedSolution,
+              onCancelScriptValidation: handleCancelScriptValidation
+            }}
+          >
+            <AlertCenterV2
+              token={token}
+              devices={decoratedAllDevices}
+              segments={decoratedSegments}
+              segmentGroups={decoratedSegmentGroups}
+              inventoryTabs={inventoryTabs}
+              serviceOrders={serviceOrders}
+              onOpenServiceOrders={() => setActiveView("service-orders")}
+            />
+          </AlertCenterProvider>
           </ViewErrorBoundary>
         )}
 
