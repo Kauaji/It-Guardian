@@ -4,6 +4,111 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-17 - Backend: extracao completa da camada de servico
+
+### Causa raiz
+
+- a auditoria tecnica (Backend, 7,5/10) listava como unico risco em
+  aberto: "18 de ~25 controllers ainda importam repositorios
+  diretamente - a camada de 'servico' continua so existindo de fato
+  para integracoes externas", severidade Alta. Controllers chamando
+  repositorio (ou, em dois casos, `database.js`/`node:crypto`)
+  diretamente misturava HTTP (parse de request, codigo de status) com
+  regra de negocio (validacao, efeitos colaterais como log/historico/
+  broadcast, remapeamento de erro de unicidade do Postgres), tornando
+  a regra de negocio impossivel de testar ou reusar sem subir um
+  servidor Express inteiro.
+
+### Correcao
+
+- criados 14 arquivos novos em `server/src/services/`: `logService`,
+  `systemSettingsService`, `userPreferenceService`, `preventivePlanService`,
+  `authService`, `floorPlanService`, `inventoryTabService`, `sectorService`,
+  `inventoryVisualMapService`, `serviceOrderStatusService`,
+  `maintenanceScriptService`, `userService`, `segmentService`,
+  `settingsService`, `publicServiceOrderService`,
+  `preventiveAutomationService`, `serviceOrderService`, `deviceService`
+  (18 controllers no total, alguns compartilhando decisoes de design
+  citadas abaixo);
+- os 18 controllers listados pela auditoria foram reescritos para
+  importar exclusivamente de `services/` - confirmado por
+  `grep -rn "repositories/" server/src/controllers/*.js` sem nenhum
+  resultado apos a mudanca;
+- toda regra de negocio foi movida 1:1, preservando comportamento
+  exato: `sectorService`/`segmentService` mantem o remapeamento de
+  violacao de unicidade do Postgres (`23505`) para 409; `userService`
+  mantem a guarda de "nao remover o ultimo administrador ativo";
+  `authService` mantem a verificacao de senha com `bcrypt.compare` e a
+  emissao de JWT; `preventiveAutomationService.verifyCronSecret` mantem
+  a comparacao em `timingSafeEqual` (tempo constante) do segredo do
+  cron de manutencao preventiva - trocar por comparacao de string
+  comum teria reintroduzido uma vulnerabilidade de side-channel timing
+  attack que o codigo original ja evitava deliberadamente;
+- `serviceOrderStatusController.js` e `publicServiceOrderController.js`
+  tinham escopo maior que os demais: o primeiro fazia uma query SQL
+  bruta direto no controller (`query()` de `database.js`), o segundo
+  concentrava calculo de prioridade de chamado publico (regras
+  configuraveis por categoria/tipo de problema/cliente) - ambos
+  totalmente migrados para o service correspondente;
+- onde a validacao antes respondia direto via `res.status(x).json()`
+  sem passar pelo `errorHandler` (ex.: `if (!nome) return
+  res.status(400).json({message})`), migrada para as factories de
+  `AppError` ja existentes em `server/src/lib/errors.js`
+  (`badRequest`/`forbidden`/`conflict`/`notFoundError`/
+  `serviceUnavailable`), mesmo padrao ja usado em
+  `maintenanceScriptRepository.js`/`agentScriptJobRepository.js`
+  (achado separado da mesma auditoria, "~90 ocorrencias restantes do
+  padrao manual") - migrar essas ~30 ocorrencias novas para o mesmo
+  padrao foi um efeito colateral positivo, nao o objetivo principal
+  desta rodada. Unica mudanca de contrato observavel: a resposta de
+  erro passa a incluir `statusCode`/`requestId` (formato ja usado em
+  todo o resto da API), confirmado por grep que nenhum teste dependia
+  do formato anterior antes de cada mudanca;
+- exports dos controllers preservados com os mesmos nomes que as rotas
+  importam (`list`, `create`, `settings`, `clientController` etc.) -
+  onde um nome de funcao do service coincidia com um nome ja exportado
+  pelo controller (`inventoryVisualMapController`: `createMap`,
+  `updateMap` etc. sao tanto nomes de rota quanto nomes naturais de
+  service), o import foi feito com `as` para evitar colisao, mantendo
+  a rota inalterada.
+
+### Validacoes
+
+- suite completa do servidor (`npm run test`, 271 testes) rodada apos
+  cada lote de controllers (3 lotes de commit: 10+4+4 controllers) -
+  269 passam, 2 skip nao relacionados, 0 falhas em todos os lotes;
+- um teste de arquitetura (`automationManagement.test.mjs`) verificava
+  o texto-fonte do `preventiveAutomationController.js` diretamente
+  (ex.: `listPreventiveAutomationManagement(req.user, ...)` aparecendo
+  literalmente no controller) - com a extracao, essa chamada passou a
+  viver no service. Teste atualizado para verificar a mesma garantia
+  (usuario do request propagado ate a query, sem bypass) na nova
+  fronteira controller->service->repository, em vez de suavizar ou
+  remover a checagem;
+- `npx eslint server/src/controllers server/src/services --max-warnings=0`
+  limpo;
+- `npm run check:architecture`: 342 arquivos, sem violacoes nem
+  dependencia circular introduzida pelos novos services;
+- verificacao adicional especifica: a funcao de remocao de acentos de
+  `serviceOrderStatusService.js` foi reescrita sem regex de escape
+  Unicode (`̀-ͯ`) por checagem direta de code point,
+  apos uma tentativa inicial com a notacao de escape original ter
+  sido silenciosamente corrompida pelo pipeline de ferramentas desta
+  sessao (os caracteres de combinacao apareceram literalmente no
+  arquivo em vez do texto de escape) - identificado por inspecao de
+  bytes antes do commit, testado isoladamente ("Configuração" ->
+  "Configuracao") e confirmado idêntico ao comportamento original.
+
+### Pendencias conhecidas
+
+- nenhuma pendencia tecnica neste achado especifico - os 18 controllers
+  citados pela auditoria estao 100% migrados e confirmados por grep;
+- a migracao do padrao manual de erro (`error.statusCode = X; throw
+  error`) para `AppError` cobriu apenas os casos tocados por esta
+  extracao (~30 pontos); as demais ocorrencias fora dos controllers
+  migrados permanecem no padrao antigo, como ja registrado no achado
+  separado da auditoria sobre esse tema.
+
 ## 2026-08-16 - Agente Windows: auto-atualizacao via heartbeat
 
 ### Causa raiz
