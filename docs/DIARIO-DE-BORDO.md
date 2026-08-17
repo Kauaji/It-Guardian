@@ -4,6 +4,94 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-17 - Re-auditoria: nota geral sobe de 7,4 para 7,9, nao chega a 8
+
+### Contexto
+
+- pedido original da sessao: "vamos focar em elevar a nota geral do
+  programa, quero no minimo 8". Trabalho feito nas tarefas #70-74 desta
+  sessao: contencao do SYSTEM e auto-atualizacao no agente Windows,
+  extracao completa de camada de servico no backend (18 controllers),
+  reducao de props de permissao e migracao de modais no frontend, e
+  101 testes novos. Esta tarefa fecha o ciclo: reavaliar a avaliacao
+  tecnica publicada (`https://claude.ai/code/artifact/ebdfd9f2-015c-43a7-9456-c147f008b883`)
+  usando o mesmo padrao de evidencia que o proprio documento ja usava,
+  nao reescrever a nota diretamente.
+
+### Metodologia aplicada
+
+- reavaliacao segmento por segmento comparando cada achado aberto
+  citado no documento original contra o codigo/commits/testes atuais,
+  mantendo os mesmos pesos (20% Seguranca + 20% Agente Windows + 20%
+  Assistencia Remota + 10% cada um dos outros quatro);
+- toda correcao citada precisou de pelo menos uma evidencia real:
+  suite de testes executada, lint/arquitetura aprovados, ou (quando
+  aplicavel) query direta no banco/sessao interativa - nenhuma das duas
+  ultimas foi possivel nesta sessao (sem Postgres local, sem PowerShell
+  elevado), entao isso foi tratado como uma limitacao explicita de
+  evidencia, nao ignorado;
+- onde uma correcao tem codigo real mas so validacao parcial (testes
+  automatizados/compilacao, sem execucao numa maquina real ou sessao
+  de navegador), foi classificada como "Parcial", nao "Corrigido" -
+  mesma distincao que o documento original ja usava para a assinatura
+  de codigo preparada-mas-nao-comprada.
+
+### Resultado por segmento (era -> agora)
+
+- Backend: 7,5 -> 8,5 - o unico risco que restava (18 controllers
+  importando repositorios diretamente, severidade Alta) fechou por
+  completo, confirmado por grep sem nenhum resultado e pela suite
+  inteira de testes (303 casos). E o unico item que recebeu
+  classificacao "Corrigido" plena nesta rodada, nao "Parcial";
+- Agente Windows: 5,5 -> 6,5 - dois achados abertos (SYSTEM sem
+  contencao, zero auto-atualizacao) ganharam codigo real e commits
+  reais, mas nenhum dos dois foi observado rodando numa maquina
+  Windows de verdade nesta sessao - classificados como "Parcial". O
+  achado da assinatura Authenticode nao mudou;
+- Frontend: 6,0 -> 7,0 - dois dos tres achados abertos (props de
+  AlertCenterV2, foco/Escape nos modais) receberam reducao real mas
+  parcial, sem verificacao interativa no navegador nesta rodada. CSS
+  nao tocado;
+- Testes: 7,0 -> 7,5 - 101 casos novos, mas concentrados no codigo
+  criado nesta propria sessao, nao nos dois achados especificos ja
+  listados (lista curada do servidor, ausencia de e2e);
+- Seguranca, Assistencia Remota e Modulos de Negocio: sem mudanca
+  (8,0 / 9,0 / 8,5) - nenhum arquivo desses segmentos foi tocado nesta
+  sessao.
+
+### Nota geral: 7,4 -> 7,9 (nao 8,0)
+
+- calculo: 0,2x(8,0+6,5+9,0) + 0,1x(8,5+7,0+7,5+8,5) = 4,7 + 3,15 =
+  7,85, arredondado para 7,9;
+- a distancia ate 8,0 nao e retorica: e o resultado direto de duas
+  mudancas de alto risco (identidade da tarefa agendada do agente,
+  mecanismo de auto-atualizacao) terem sido implementadas e
+  parcialmente testadas mas nunca observadas rodando de fato, somado a
+  progresso real-mas-parcial em duas frentes de frontend. Documentado
+  explicitamente no artefato, sem arredondar para cima.
+
+### Publicacao
+
+- artefato reescrito integralmente (mesma paleta/tipografia/layout do
+  original, so conteudo atualizado) e republicado no mesmo URL via
+  parametro `url` do Artifact tool, preservando o link ja compartilhado
+  anteriormente com o responsavel do projeto;
+- adicionado um novo padrao transversal ("Correcoes sem verificacao ao
+  vivo pesam mais nesta rodada") e um callout registrando a tensao
+  ja documentada em 15/08 sobre a reativacao da assistencia remota sem
+  pentest, para manter o historico de decisoes visivel na propria
+  avaliacao, nao so no diario de bordo.
+
+### Pendencias conhecidas (validas para a proxima rodada, nao so para este documento)
+
+- as duas correcoes de maior risco desta sessao (contencao do SYSTEM,
+  auto-atualizacao do agente) precisam ser validadas numa maquina
+  Windows administrada de verdade antes de qualquer reclassificacao
+  para "Corrigido";
+- certificado de assinatura de codigo e pentest independente continuam
+  fora do alcance de qualquer sessao de correcao guiada por codigo,
+  como ja registrado nas rodadas anteriores.
+
 ## 2026-08-17 - Testes: services da tarefa #72 e 3 modulos utilitarios do client
 
 ### Causa raiz
