@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { query } from "../database.js";
+import { badRequest, conflict, notFoundError } from "../lib/errors.js";
 import { addAssetHistory } from "./assetHistoryRepository.js";
 import { findDeviceMetadata, updateDeviceBackup } from "./deviceMetadataRepository.js";
 import {
@@ -185,23 +186,17 @@ export async function startMaintenanceForAsset({
   user
 }) {
   if (!assetId) {
-    const error = new Error("assetId e obrigatorio.");
-    error.statusCode = 400;
-    throw error;
+    throw badRequest("assetId e obrigatorio.");
   }
 
   const active = await findActiveMaintenanceByAsset(assetId);
   if (active) {
-    const error = new Error("Esta máquina já está em manutenção.");
-    error.statusCode = 409;
-    throw error;
+    throw conflict("Esta máquina já está em manutenção.");
   }
 
   const currentSegment = await getCurrentDeviceSegment(assetId);
   if (normalizeReservedName(currentSegment.name) === "manutencao") {
-    const error = new Error("Esta máquina já está no segmento de manutenção.");
-    error.statusCode = 409;
-    throw error;
+    throw conflict("Esta máquina já está no segmento de manutenção.");
   }
 
   const maintenanceSegment = await ensureMaintenanceSegment(currentSegment.groupId, user.id || null);
@@ -263,9 +258,7 @@ export async function finishMaintenanceForAsset({
 
   if (!active) {
     if (allowMissing) return null;
-    const error = new Error("Não existe manutenção ativa para esta máquina.");
-    error.statusCode = 404;
-    throw error;
+    throw notFoundError("Não existe manutenção ativa para esta máquina.");
   }
 
   const targetSegment =
@@ -273,9 +266,7 @@ export async function finishMaintenanceForAsset({
     (await findSegmentByIdRaw(DEFAULT_SEGMENT_ID));
 
   if (!targetSegment.id) {
-    const error = new Error("Não foi possível localizar o segmento de retorno.");
-    error.statusCode = 409;
-    throw error;
+    throw conflict("Não foi possível localizar o segmento de retorno.");
   }
 
   await updateDeviceSegment({ deviceId: active.assetId, segmentId: targetSegment.id, userId: user.id || null
@@ -367,34 +358,24 @@ async function findActiveBackupAssignmentByAsset(backupAssetId) {
 export async function assignBackupToServiceOrder({ serviceOrderId, backupAssetId, user }) {
   const order = await findServiceOrderRaw(serviceOrderId);
   if (!order) {
-    const error = new Error("Ordem de Serviço não encontrada.");
-    error.statusCode = 404;
-    throw error;
+    throw notFoundError("Ordem de Serviço não encontrada.");
   }
 
   if (!order.asset_id) {
-    const error = new Error("Vincule a máquina principal antes de selecionar um Backup.");
-    error.statusCode = 400;
-    throw error;
+    throw badRequest("Vincule a máquina principal antes de selecionar um Backup.");
   }
 
   if (order.backup_asset_id) {
-    const error = new Error("Esta OS já possui uma máquina Backup vinculada.");
-    error.statusCode = 409;
-    throw error;
+    throw conflict("Esta OS já possui uma máquina Backup vinculada.");
   }
 
   const metadata = await findDeviceMetadata(backupAssetId);
   if (!metadata.isBackup) {
-    const error = new Error("Selecione uma máquina marcada como Backup.");
-    error.statusCode = 400;
-    throw error;
+    throw badRequest("Selecione uma máquina marcada como Backup.");
   }
 
   if (metadata.backupStatus === "in_use" || await findActiveBackupAssignmentByAsset(backupAssetId)) {
-    const error = new Error("Esta máquina Backup já está em uso em outra OS.");
-    error.statusCode = 409;
-    throw error;
+    throw conflict("Esta máquina Backup já está em uso em outra OS.");
   }
 
   let maintenance = await findActiveMaintenanceByAsset(order.asset_id);
@@ -416,9 +397,7 @@ export async function assignBackupToServiceOrder({ serviceOrderId, backupAssetId
     (await findSegmentByIdRaw(DEFAULT_SEGMENT_ID));
 
   if (!targetSegment.id) {
-    const error = new Error("Não foi possível localizar o segmento de destino do Backup.");
-    error.statusCode = 409;
-    throw error;
+    throw conflict("Não foi possível localizar o segmento de destino do Backup.");
   }
 
   await updateDeviceSegment({ deviceId: backupAssetId, segmentId: targetSegment.id, userId: user.id || null
@@ -459,9 +438,7 @@ export async function releaseBackupFromServiceOrder({ serviceOrderId, user, allo
 
   if (!backupAssetId) {
     if (allowMissing) return null;
-    const error = new Error("Esta OS não possui Backup ativo.");
-    error.statusCode = 404;
-    throw error;
+    throw notFoundError("Esta OS não possui Backup ativo.");
   }
 
   const metadata = await findDeviceMetadata(backupAssetId);
@@ -470,9 +447,7 @@ export async function releaseBackupFromServiceOrder({ serviceOrderId, user, allo
     (await findSegmentByIdRaw(DEFAULT_SEGMENT_ID));
 
   if (!targetSegment.id) {
-    const error = new Error("Não foi possível localizar o retorno do Backup.");
-    error.statusCode = 409;
-    throw error;
+    throw conflict("Não foi possível localizar o retorno do Backup.");
   }
 
   await updateDeviceSegment({ deviceId: backupAssetId, segmentId: targetSegment.id, userId: user.id || null

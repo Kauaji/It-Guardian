@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { query } from "../database.js";
+import { badRequest, conflict, notFoundError } from "../lib/errors.js";
 
 const resources = {
   clients: {
@@ -109,9 +110,7 @@ const resources = {
 function getResourceConfig(resource) {
   const config = resources[resource];
   if (!config) {
-    const error = new Error("Recurso de configuracao invalido.");
-    error.statusCode = 404;
-    throw error;
+    throw notFoundError("Recurso de configuracao invalido.");
   }
   return config;
 }
@@ -168,9 +167,7 @@ async function assertUniqueServiceCode(code, currentId = "") {
     [code, currentId || ""]
   );
   if (result.rows.length) {
-    const error = new Error("Ja existe um servico com esse codigo.");
-    error.statusCode = 409;
-    throw error;
+    throw conflict("Ja existe um servico com esse codigo.");
   }
 }
 
@@ -328,9 +325,7 @@ export async function createSettingsRecord(resource, payload) {
   const normalized = normalizePayload(config, payload);
 
   if (!normalized[config.required] || String(normalized[config.required]).trim().length < 2) {
-    const error = new Error("Informe um nome com pelo menos 2 caracteres.");
-    error.statusCode = 400;
-    throw error;
+    throw badRequest("Informe um nome com pelo menos 2 caracteres.");
   }
 
   if (resource === "services") {
@@ -360,9 +355,7 @@ export async function updateSettingsRecord(resource, id, payload) {
   const config = getResourceConfig(resource);
   const current = await findSettingsRecord(resource, id);
   if (!current) {
-    const error = new Error("Registro nao encontrado.");
-    error.statusCode = 404;
-    throw error;
+    throw notFoundError("Registro nao encontrado.");
   }
 
   const normalized = normalizePayload(config, payload);
@@ -383,9 +376,7 @@ export async function updateSettingsRecord(resource, id, payload) {
   if (!keys.length) return current;
 
   if (config.required in normalized && String(normalized[config.required] || "").trim().length < 2) {
-    const error = new Error("Informe um nome com pelo menos 2 caracteres.");
-    error.statusCode = 400;
-    throw error;
+    throw badRequest("Informe um nome com pelo menos 2 caracteres.");
   }
 
   const assignments = keys.map((key, index) => `${config.columns[key]} = $${index + 2}`);
@@ -408,9 +399,7 @@ export async function deleteSettingsRecord(resource, id) {
   const config = getResourceConfig(resource);
   const result = await query(`DELETE FROM ${config.table} WHERE id = $1 RETURNING *`, [id]);
   if (!result.rows[0]) {
-    const error = new Error("Registro nao encontrado.");
-    error.statusCode = 404;
-    throw error;
+    throw notFoundError("Registro nao encontrado.");
   }
   return fromRow(result.rows[0], resource);
 }

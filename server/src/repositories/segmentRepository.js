@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { query } from "../database.js";
+import { badRequest, conflict, notFoundError } from "../lib/errors.js";
 
 export const DEFAULT_SEGMENT_ID = "unorganized";
 export const DEFAULT_SEGMENT_NAME = "Nao organizadas";
@@ -90,15 +91,11 @@ export async function updateSegment({ id, name, color, groupId }) {
   const existing = await findSegmentById(id);
 
   if (!existing) {
-    const error = new Error("Segment not found");
-    error.statusCode = 404;
-    throw error;
+    throw notFoundError("Segment not found");
   }
 
   if (existing.isDefault && name && name.trim() !== existing.name) {
-    const error = new Error("Default segment cannot be renamed");
-    error.statusCode = 400;
-    throw error;
+    throw badRequest("Default segment cannot be renamed");
   }
 
   const nextName = name?.trim() || existing.name;
@@ -130,15 +127,11 @@ export async function deleteSegment(id) {
   const existing = await findSegmentById(id);
 
   if (!existing) {
-    const error = new Error("Segment not found");
-    error.statusCode = 404;
-    throw error;
+    throw notFoundError("Segment not found");
   }
 
   if (existing.isDefault) {
-    const error = new Error("Default segment cannot be deleted");
-    error.statusCode = 400;
-    throw error;
+    throw badRequest("Default segment cannot be deleted");
   }
 
   await query(
@@ -181,9 +174,7 @@ export async function updateDeviceSegment({ deviceId, segmentId, userId }) {
   const segment = await findSegmentById(segmentId);
 
   if (!segment) {
-    const error = new Error("Segment not found");
-    error.statusCode = 404;
-    throw error;
+    throw notFoundError("Segment not found");
   }
 
   const result = await query(
@@ -226,9 +217,7 @@ function normalizeGroupId(groupId) {
 
 async function assertSegmentNameAvailable({ name, groupId = null, ignoreId = null, allowReservedName = false }) {
   if (!allowReservedName && isReservedSegmentName(name)) {
-    const error = new Error("Esse nome e reservado pelo sistema.");
-    error.statusCode = 400;
-    throw error;
+    throw badRequest("Esse nome e reservado pelo sistema.");
   }
 
   const result = await query(
@@ -244,8 +233,6 @@ async function assertSegmentNameAvailable({ name, groupId = null, ignoreId = nul
   );
 
   if (result.rows.length) {
-    const error = new Error("Ja existe um segmento com esse nome neste grupo.");
-    error.statusCode = 409;
-    throw error;
+    throw conflict("Ja existe um segmento com esse nome neste grupo.");
   }
 }

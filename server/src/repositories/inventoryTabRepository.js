@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { query } from "../database.js";
+import { badRequest, conflict, notFoundError } from "../lib/errors.js";
 
 export const DEFAULT_INVENTORY_TAB_ID = "tab-default";
 export const DEFAULT_INVENTORY_TAB_NAME = "Novo ambiente";
@@ -95,9 +96,7 @@ export async function createInventoryTab({ id, name, color, sortOrder, userId })
   const cleanName = normalizeName(name);
 
   if (cleanName.length < 2) {
-    const error = new Error("O nome da aba deve ter pelo menos 2 caracteres.");
-    error.statusCode = 400;
-    throw error;
+    throw badRequest("O nome da aba deve ter pelo menos 2 caracteres.");
   }
 
   await assertTabNameAvailable(cleanName);
@@ -123,15 +122,11 @@ export async function updateInventoryTab({ id, name, color, sortOrder, active, i
   const existing = await findInventoryTabById(id);
 
   if (!existing) {
-    const error = new Error("Aba não encontrada.");
-    error.statusCode = 404;
-    throw error;
+    throw notFoundError("Aba não encontrada.");
   }
   const cleanName = name === undefined ? existing.name : normalizeName(name);
   if (cleanName.length < 2) {
-    const error = new Error("O nome da aba deve ter pelo menos 2 caracteres.");
-    error.statusCode = 400;
-    throw error;
+    throw badRequest("O nome da aba deve ter pelo menos 2 caracteres.");
   }
 
   await assertTabNameAvailable(cleanName, id);
@@ -181,15 +176,11 @@ export async function deleteInventoryTab(id) {
   const existing = await findInventoryTabById(id);
 
   if (!existing) {
-    const error = new Error("Aba não encontrada.");
-    error.statusCode = 404;
-    throw error;
+    throw notFoundError("Aba não encontrada.");
   }
 
   if (existing.isDefault) {
-    const error = new Error("A aba padrão não pode ser excluída.");
-    error.statusCode = 400;
-    throw error;
+    throw badRequest("A aba padrão não pode ser excluída.");
   }
 
   await assertCanDeactivateTab(id);
@@ -205,9 +196,7 @@ export async function reorderInventoryTabs(tabIds) {
   const ids = Array.isArray(tabIds) ? tabIds.map((id) => String(id || "").trim()).filter(Boolean) : [];
 
   if (!ids.length) {
-    const error = new Error("Informe a ordem das abas.");
-    error.statusCode = 400;
-    throw error;
+    throw badRequest("Informe a ordem das abas.");
   }
 
   const existing = await listInventoryTabs();
@@ -215,9 +204,7 @@ export async function reorderInventoryTabs(tabIds) {
   const unknown = ids.find((id) => !existingIds.has(id));
 
   if (unknown) {
-    const error = new Error("A ordem contem uma aba inexistente.");
-    error.statusCode = 400;
-    throw error;
+    throw badRequest("A ordem contem uma aba inexistente.");
   }
 
   await Promise.all(
@@ -271,9 +258,7 @@ async function assertTabNameAvailable(name, ignoreId = null) {
   );
 
   if (result.rows.length) {
-    const error = new Error("Já existe uma aba com esse nome.");
-    error.statusCode = 409;
-    throw error;
+    throw conflict("Já existe uma aba com esse nome.");
   }
 }
 
@@ -289,9 +274,7 @@ async function assertCanDeactivateTab(id) {
   );
 
   if (Number(result.rows[0].active_count || 0) < 1) {
-    const error = new Error("Mantenha pelo menos uma aba ativa no inventário.");
-    error.statusCode = 400;
-    throw error;
+    throw badRequest("Mantenha pelo menos uma aba ativa no inventário.");
   }
 }
 
@@ -317,9 +300,7 @@ async function assertTabHasNoInventory(id) {
   const machineCount = Number(usage.machine_count || 0);
 
   if (groupCount || segmentCount || machineCount) {
-    const error = new Error("Não é possível excluir uma aba com grupos, segmentos ou máquinas.");
-    error.statusCode = 409;
-    throw error;
+    throw conflict("Não é possível excluir uma aba com grupos, segmentos ou máquinas.");
   }
 }
 

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { query } from "../database.js";
+import { conflict, notFoundError } from "../lib/errors.js";
 
 const DEFAULT_GROUP_COLOR = "#8b9bb0";
 
@@ -62,9 +63,7 @@ export async function updateSegmentGroup({ id, name, color, collapsed }) {
   const existing = await findSegmentGroupById(id);
 
   if (!existing) {
-    const error = new Error("Grupo nao encontrado.");
-    error.statusCode = 404;
-    throw error;
+    throw notFoundError("Grupo nao encontrado.");
   }
 
   if (name !== undefined) {
@@ -96,9 +95,7 @@ export async function deleteSegmentGroup(id) {
   const existing = await findSegmentGroupById(id);
 
   if (!existing) {
-    const error = new Error("Grupo nao encontrado.");
-    error.statusCode = 404;
-    throw error;
+    throw notFoundError("Grupo nao encontrado.");
   }
 
   await query(
@@ -128,9 +125,7 @@ async function assertGroupNameAvailable(name, ignoreId = null) {
   );
 
   if (result.rows.length) {
-    const error = new Error("Ja existe um grupo com esse nome.");
-    error.statusCode = 409;
-    throw error;
+    throw conflict("Ja existe um grupo com esse nome.");
   }
 }
 

@@ -36,6 +36,7 @@ import { listAgentAssets } from "../repositories/agentRepository.js";
 import { startMaintenanceForAsset } from "../repositories/assetLifecycleRepository.js";
 import { listDeviceSegmentMap } from "../repositories/segmentRepository.js";
 import { listSegmentGroups } from "../repositories/segmentGroupRepository.js";
+import { conflict, notFoundError } from "../lib/errors.js";
 
 const alertTypeLabels = {
   ram_high: "Memória RAM acima do limite",
@@ -749,9 +750,7 @@ export async function getAlertInsights() {
 export async function listCommentsForAlert(alertId) {
   const alert = await findAlertById(alertId);
   if (!alert) {
-    const error = new Error("Aviso não encontrado.");
-    error.statusCode = 404;
-    throw error;
+    throw notFoundError("Aviso não encontrado.");
   }
 
   return listAlertComments(alertId);
@@ -760,9 +759,7 @@ export async function listCommentsForAlert(alertId) {
 export async function addCommentToAlert({ alertId, message, user }) {
   const alert = await findAlertById(alertId);
   if (!alert) {
-    const error = new Error("Aviso não encontrado.");
-    error.statusCode = 404;
-    throw error;
+    throw notFoundError("Aviso não encontrado.");
   }
 
   const comment = await addAlertComment({
@@ -787,18 +784,14 @@ export async function addCommentToAlert({ alertId, message, user }) {
 export async function acceptServiceOrderSuggestion({ id, user }) {
   const suggestion = await findServiceOrderSuggestionById(id);
   if (!suggestion) {
-    const error = new Error("Sugestão de OS não encontrada.");
-    error.statusCode = 404;
-    throw error;
+    throw notFoundError("Sugestão de OS não encontrada.");
   }
   if (suggestion.status === "accepted" && suggestion.createdServiceOrderId) {
     const serviceOrder = await findServiceOrderById(suggestion.createdServiceOrderId, user);
     return { suggestion, serviceOrder };
   }
   if (suggestion.status !== "pending") {
-    const error = new Error("Apenas sugestões pendentes podem ser aceitas.");
-    error.statusCode = 409;
-    throw error;
+    throw conflict("Apenas sugestões pendentes podem ser aceitas.");
   }
 
   const alert = await findAlertById(suggestion.alertId);
@@ -870,14 +863,10 @@ export async function acceptServiceOrderSuggestion({ id, user }) {
 export async function rejectServiceOrderSuggestion({ id, reason, user }) {
   const suggestion = await findServiceOrderSuggestionById(id);
   if (!suggestion) {
-    const error = new Error("Sugestão de OS não encontrada.");
-    error.statusCode = 404;
-    throw error;
+    throw notFoundError("Sugestão de OS não encontrada.");
   }
   if (suggestion.status !== "pending") {
-    const error = new Error("Apenas sugestões pendentes podem ser recusadas.");
-    error.statusCode = 409;
-    throw error;
+    throw conflict("Apenas sugestões pendentes podem ser recusadas.");
   }
 
   const settings = await getAlertSettings();
@@ -925,9 +914,7 @@ export async function acknowledgeAlert({ alertId, user, note }) {
   const alert = await findAlertById(alertId);
 
   if (!alert) {
-    const error = new Error("Alert not found");
-    error.statusCode = 404;
-    throw error;
+    throw notFoundError("Alert not found");
   }
 
   const acknowledgement = await upsertAcknowledgement({ alertId, userId: user.id, note });
@@ -946,9 +933,7 @@ export async function unacknowledgeAlert({ alertId, user }) {
   const acknowledgement = await findAcknowledgement(alertId);
 
   if (!acknowledgement) {
-    const error = new Error("Alert acknowledgement not found");
-    error.statusCode = 404;
-    throw error;
+    throw notFoundError("Alert acknowledgement not found");
   }
 
   await deleteAcknowledgement(alertId);

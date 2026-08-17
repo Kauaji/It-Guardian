@@ -14,6 +14,7 @@ import {
 } from "./preventiveAutomationRepository.js";
 import { startMaintenanceForAsset } from "./assetLifecycleRepository.js";
 import { trimString } from "../lib/textUtils.js";
+import { badRequest, conflict } from "../lib/errors.js";
 
 const allowedStatuses = new Set(["prepared", "simulated", "completed", "failed", "cancelled"]);
 const highRiskLevels = new Set(["high", "critical"]);
@@ -86,21 +87,15 @@ function normalizePlanPayload(payload = {}) {
     : [];
 
   if (name.length < 3) {
-    const error = new Error("Informe um nome de plano preventivo com pelo menos 3 caracteres.");
-    error.statusCode = 400;
-    throw error;
+    throw badRequest("Informe um nome de plano preventivo com pelo menos 3 caracteres.");
   }
 
   if (!assetIds.length) {
-    const error = new Error("Selecione pelo menos uma máquina para a preventiva.");
-    error.statusCode = 400;
-    throw error;
+    throw badRequest("Selecione pelo menos uma máquina para a preventiva.");
   }
 
   if (!scriptIds.length) {
-    const error = new Error("Selecione pelo menos uma verificação/script cadastrado para compor o plano.");
-    error.statusCode = 400;
-    throw error;
+    throw badRequest("Selecione pelo menos uma verificação/script cadastrado para compor o plano.");
   }
 
   return {
@@ -245,18 +240,14 @@ export async function createPreventivePlan(payload = {}, user = null) {
   for (const scriptId of normalized.scriptIds) {
     const script = await findMaintenanceScriptById(scriptId);
     if (!script || script.active === false) {
-      const error = new Error("Um dos scripts selecionados não existe ou está inativo.");
-      error.statusCode = 400;
-      throw error;
+      throw badRequest("Um dos scripts selecionados não existe ou está inativo.");
     }
     scripts.push(script);
   }
 
   const hasHighRiskScript = scripts.some((script) => highRiskLevels.has(script.riskLevel || script.suggestedRiskLevel));
   if (hasHighRiskScript && !normalized.riskAcknowledged) {
-    const error = new Error("Scripts de alto risco exigem confirmação extra antes de preparar a preventiva.");
-    error.statusCode = 400;
-    throw error;
+    throw badRequest("Scripts de alto risco exigem confirmação extra antes de preparar a preventiva.");
   }
 
   const automationEnabled = payload.automation?.enabled === true;
@@ -471,9 +462,7 @@ export async function createServiceOrderFromPreventivePlan(id, user = null) {
     if (!plan) return null;
 
     if (plan.serviceOrderId) {
-      const error = new Error("Este plano já possui uma OS preventiva vinculada.");
-      error.statusCode = 409;
-      throw error;
+      throw conflict("Este plano já possui uma OS preventiva vinculada.");
     }
 
     const assetIds = (plan.assets || []).map((asset) => asset.assetId).filter(Boolean);
@@ -537,9 +526,7 @@ export async function createServiceOrderFromPreventivePlan(id, user = null) {
     );
 
     if (!updateResult.rowCount) {
-      const error = new Error("Este plano já possui uma OS preventiva vinculada.");
-      error.statusCode = 409;
-      throw error;
+      throw conflict("Este plano já possui uma OS preventiva vinculada.");
     }
 
     await addServiceOrderHistory({
