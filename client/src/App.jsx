@@ -403,30 +403,6 @@ function Dashboard() {
     if (canViewInventory) views.push("inventory");
     return views;
   }, [canViewAlerts, canViewDashboard, canViewInventory, canViewPreventiveAutomation, canViewPreventivePlans, canViewScripts, canViewServiceOrders]);
-  const canConfigureAlerts = hasPermission(user, "alerts.configure");
-  const canConfigureAlertPrioritySettings = hasPermission(user, "alerts.configure");
-  const canCommentAlerts = hasPermission(user, "alerts.comment");
-  const canManageAlertSuggestions =
-    hasPermission(user, "alerts.manage_suggestions") &&
-    hasPermission(user, "service_orders.create_from_alert");
-  const canManageScripts = hasPermission(user, "scripts.manage");
-  const canRegisterScriptSimulation = hasPermission(user, "scripts.register_simulation");
-  const canUseScriptsFromAlerts =
-    remoteScriptExecutionEnabled && hasPermission(user, "scripts.use_from_alert");
-  const canViewScriptLogs = hasPermission(user, "script_logs.view");
-  const canResolveScriptLogs = hasPermission(user, "script_logs.resolve");
-  const canCreatePreventivePlans =
-    hasPermission(user, "preventive_plans.create") &&
-    hasPermission(user, "preventive_plans.prepare");
-  const canCreatePreventiveServiceOrder =
-    hasPermission(user, "preventive_plans.create_service_order") &&
-    hasPermission(user, "service_orders.create");
-  const canCreatePreventiveAutomation = hasPermission(user, "preventive_automation.create");
-  const canUpdatePreventiveAutomation = hasPermission(user, "preventive_automation.update");
-  const canDisablePreventiveAutomation = hasPermission(user, "preventive_automation.disable");
-  const canDeletePreventiveAutomation = hasPermission(user, "preventive_automation.delete");
-  const canRemovePreventiveAutomationAsset = hasPermission(user, "preventive_automation.remove_asset");
-  const canManagePreventiveAutomationOverride = hasPermission(user, "preventive_automation.manage_asset_override");
   const canManageInventory =
     hasPermission(user, "inventory.create_asset") ||
     hasPermission(user, "inventory.edit_asset") ||
@@ -3014,28 +2990,7 @@ function Dashboard() {
             setStatusFilter={setAlertStatusFilter}
             suggestionStatusFilter={suggestionStatusFilter}
             setSuggestionStatusFilter={setSuggestionStatusFilter}
-            canViewAlerts={canViewAlerts}
-            canManageSuggestions={canManageAlertSuggestions}
-            canConfigureAlerts={canConfigureAlerts}
-            canConfigureAlertPrioritySettings={canConfigureAlertPrioritySettings}
-            canCommentAlerts={canCommentAlerts}
-            canViewScripts={canViewScripts}
-            canManageScripts={canManageScripts}
-            canRegisterScriptSimulation={canRegisterScriptSimulation}
-            canUseScriptsFromAlerts={canUseScriptsFromAlerts}
             remoteScriptExecutionEnabled={remoteScriptExecutionEnabled}
-            canViewScriptLogs={canViewScriptLogs}
-            canResolveScriptLogs={canResolveScriptLogs}
-            canViewPreventivePlans={canViewPreventivePlans}
-            canCreatePreventivePlans={canCreatePreventivePlans}
-            canCreatePreventiveServiceOrder={canCreatePreventiveServiceOrder}
-            canViewPreventiveAutomation={canViewPreventiveAutomation}
-            canCreatePreventiveAutomation={canCreatePreventiveAutomation}
-            canUpdatePreventiveAutomation={canUpdatePreventiveAutomation}
-            canDisablePreventiveAutomation={canDisablePreventiveAutomation}
-            canDeletePreventiveAutomation={canDeletePreventiveAutomation}
-            canRemovePreventiveAutomationAsset={canRemovePreventiveAutomationAsset}
-            canManagePreventiveAutomationOverride={canManagePreventiveAutomationOverride}
             onEvaluateAlerts={handleEvaluateAlerts}
             onAcceptSuggestion={handleAcceptSuggestion}
             onRejectSuggestion={handleRejectSuggestion}

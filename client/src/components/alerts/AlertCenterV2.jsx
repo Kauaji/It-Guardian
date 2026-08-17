@@ -23,6 +23,7 @@ import {
   fetchSuggestionRecommendedScripts
 } from "../../api.js";
 import AutomationIndicatorDots from "../AutomationIndicatorDots.jsx";
+import { useAppSession } from "../../context/AppSessionContext.jsx";
 import PreventiveAutomationPanel from "../automation/PreventiveAutomationPanel.jsx";
 import { shouldShowAutomationManagement } from "../automation/automationUtils.js";
 import MaintenanceScriptsPanel from "../maintenance/MaintenanceScriptsPanel.jsx";
@@ -89,28 +90,7 @@ export default function AlertCenterV2({
   setStatusFilter,
   suggestionStatusFilter,
   setSuggestionStatusFilter,
-  canViewAlerts,
-  canManageSuggestions,
-  canConfigureAlerts,
-  canConfigureAlertPrioritySettings,
-  canCommentAlerts,
-  canViewScripts,
-  canManageScripts,
-  canRegisterScriptSimulation,
-  canUseScriptsFromAlerts,
   remoteScriptExecutionEnabled = false,
-  canViewScriptLogs,
-  canResolveScriptLogs,
-  canViewPreventivePlans,
-  canCreatePreventivePlans,
-  canCreatePreventiveServiceOrder,
-  canViewPreventiveAutomation,
-  canCreatePreventiveAutomation,
-  canUpdatePreventiveAutomation,
-  canDisablePreventiveAutomation,
-  canDeletePreventiveAutomation,
-  canRemovePreventiveAutomationAsset,
-  canManagePreventiveAutomationOverride,
   onEvaluateAlerts,
   onAcceptSuggestion,
   onRejectSuggestion,
@@ -138,6 +118,29 @@ export default function AlertCenterV2({
   onApplyScriptLogSuggestedSolution,
   onCancelScriptValidation
 }) {
+  const { can } = useAppSession();
+  const canViewAlerts = can("alerts.view");
+  const canViewScripts = can("scripts.view");
+  const canViewPreventivePlans = can("preventive_plans.view");
+  const canViewPreventiveAutomation = can("preventive_automation.view");
+  const canConfigureAlerts = can("alerts.configure");
+  const canConfigureAlertPrioritySettings = can("alerts.configure");
+  const canCommentAlerts = can("alerts.comment");
+  const canManageSuggestions = can("alerts.manage_suggestions") && can("service_orders.create_from_alert");
+  const canManageScripts = can("scripts.manage");
+  const canRegisterScriptSimulation = can("scripts.register_simulation");
+  const canUseScriptsFromAlerts = remoteScriptExecutionEnabled && can("scripts.use_from_alert");
+  const canViewScriptLogs = can("script_logs.view");
+  const canResolveScriptLogs = can("script_logs.resolve");
+  const canCreatePreventivePlans = can("preventive_plans.create") && can("preventive_plans.prepare");
+  const canCreatePreventiveServiceOrder =
+    can("preventive_plans.create_service_order") && can("service_orders.create");
+  const canCreatePreventiveAutomation = can("preventive_automation.create");
+  const canUpdatePreventiveAutomation = can("preventive_automation.update");
+  const canDisablePreventiveAutomation = can("preventive_automation.disable");
+  const canDeletePreventiveAutomation = can("preventive_automation.delete");
+  const canRemovePreventiveAutomationAsset = can("preventive_automation.remove_asset");
+  const canManagePreventiveAutomationOverride = can("preventive_automation.manage_asset_override");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [alertActiveTab, setAlertActiveTab] = useState("suggestions");
   const [settingsSectionsOpen, setSettingsSectionsOpen] = useState({
