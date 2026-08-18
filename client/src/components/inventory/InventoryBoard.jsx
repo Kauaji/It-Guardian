@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
-import { ArrowDown, ArrowUp, Box, ChevronDown, Database, Edit3, ListFilter, Map as MapIcon, MoreHorizontal, Plus, Search, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Box, ChevronDown, Database, Edit3, ListFilter, Map as MapIcon, MoreHorizontal, Network, Plus, Search, Trash2 } from "lucide-react";
 import SegmentCard from "./SegmentCard.jsx";
 import MoveMachineModal from "./MoveMachineModal.jsx";
 import MachineDetailsModal from "./MachineDetailsModal.jsx";
@@ -9,6 +9,7 @@ import InventoryTabs from "./InventoryTabs.jsx";
 import ColorPickerSegment from "./ColorPickerSegment.jsx";
 
 const InventoryVisualMapView = lazy(() => import("./InventoryVisualMapView.jsx"));
+const InventoryNetworkTopologyView = lazy(() => import("./topology/InventoryNetworkTopologyView.jsx"));
 
 function SegmentGroupContainer({ groupId, color, className = "", children }) {
   const { isOver, setNodeRef } = useDroppable({
@@ -299,6 +300,15 @@ export default function InventoryBoard({
           <Box size={16} />
           Mapa 3D
         </button>
+        <button
+          type="button"
+          className={inventoryViewMode === "topology" ? "active" : ""}
+          onClick={() => setInventoryViewMode("topology")}
+          aria-selected={inventoryViewMode === "topology"}
+        >
+          <Network size={16} />
+          Mapa de Rede
+        </button>
       </div>
 
       {inventoryViewMode === "visual-map" ? (
@@ -312,6 +322,16 @@ export default function InventoryBoard({
             tabs={tabs}
             activeTab={activeTab}
             canManage={canManage}
+          />
+        </Suspense>
+      ) : inventoryViewMode === "topology" ? (
+        <Suspense fallback={<div className="floor-plan-loading">Carregando mapa de rede...</div>}>
+          <InventoryNetworkTopologyView
+            token={token}
+            notify={notify}
+            devices={visualMapDevices}
+            segments={segments}
+            onOpenDetails={setSelectedMachine}
           />
         </Suspense>
       ) : inventoryViewMode === "board" ? (
