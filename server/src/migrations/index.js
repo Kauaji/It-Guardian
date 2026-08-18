@@ -17,6 +17,7 @@ import { migration014EnableRowLevelSecurity } from "./014-enable-row-level-secur
 import { migration015AgentScriptJobContentIntegrity } from "./015-agent-script-job-content-integrity.js";
 import { migration016MaintenanceScriptContentAttribution } from "./016-maintenance-script-content-attribution.js";
 import { migration017RemoteAssistanceEventHashChain } from "./017-remote-assistance-event-hash-chain.js";
+import { migration018NetworkTopologyMap } from "./018-network-topology-map.js";
 
 export const migrations = [
   migration001RuntimeFoundation,
@@ -35,7 +36,8 @@ export const migrations = [
   migration014EnableRowLevelSecurity,
   migration015AgentScriptJobContentIntegrity,
   migration016MaintenanceScriptContentAttribution,
-  migration017RemoteAssistanceEventHashChain
+  migration017RemoteAssistanceEventHashChain,
+  migration018NetworkTopologyMap
 ];
 
 export async function runMigrations() {
