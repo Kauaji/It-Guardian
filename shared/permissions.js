@@ -31,6 +31,15 @@ export const permissionGroups = [
     ]
   },
   {
+    id: "network_topology",
+    label: "Mapa de Rede (Inventário)",
+    permissions: [
+      { id: "inventory.topology.view", label: "Visualizar mapa de rede" },
+      { id: "inventory.topology.manage", label: "Gerenciar mapas e ativos" },
+      { id: "inventory.topology.link_assets", label: "Conectar ativos no mapa" }
+    ]
+  },
+  {
     id: "service_orders",
     label: "Ordens de Serviço",
     permissions: [
@@ -163,6 +172,9 @@ export const roleDefaultPermissions = {
     "floor_plans.update",
     "floor_plans.delete",
     "floor_plans.link_inventory",
+    "inventory.topology.view",
+    "inventory.topology.manage",
+    "inventory.topology.link_assets",
     "service_orders.view",
     "service_orders.create",
     "service_orders.edit",
