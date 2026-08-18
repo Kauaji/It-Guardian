@@ -18,6 +18,7 @@ import { migration015AgentScriptJobContentIntegrity } from "./015-agent-script-j
 import { migration016MaintenanceScriptContentAttribution } from "./016-maintenance-script-content-attribution.js";
 import { migration017RemoteAssistanceEventHashChain } from "./017-remote-assistance-event-hash-chain.js";
 import { migration018NetworkTopologyMap } from "./018-network-topology-map.js";
+import { migration019RemoteAssistanceEventsAssetIndex } from "./019-remote-assistance-events-asset-index.js";
 
 export const migrations = [
   migration001RuntimeFoundation,
@@ -37,7 +38,8 @@ export const migrations = [
   migration015AgentScriptJobContentIntegrity,
   migration016MaintenanceScriptContentAttribution,
   migration017RemoteAssistanceEventHashChain,
-  migration018NetworkTopologyMap
+  migration018NetworkTopologyMap,
+  migration019RemoteAssistanceEventsAssetIndex
 ];
 
 export async function runMigrations() {
