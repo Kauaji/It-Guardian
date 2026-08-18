@@ -18213,3 +18213,425 @@ button.dashboard-ranking-item.clickable:hover {
     border-bottom: none;
   }
 }
+
+/* ---------- Mapa de Rede (Inventario) ---------- */
+
+:root {
+  --topology-status-online: #16a34a;
+  --topology-status-warning: #f59e0b;
+  --topology-status-critical: #dc2626;
+  --topology-status-offline: #dc2626;
+  --topology-status-problem: #dc2626;
+  --topology-status-manual: #2563eb;
+  --topology-status-unknown: #64748b;
+}
+
+:root[data-theme="dark"] {
+  --topology-status-online: #34d399;
+  --topology-status-warning: #fbbf24;
+  --topology-status-critical: #f87171;
+  --topology-status-offline: #f87171;
+  --topology-status-problem: #f87171;
+  --topology-status-manual: #60a5fa;
+  --topology-status-unknown: #94a3b8;
+}
+
+.network-topology-view {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.network-topology-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 40px 32px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-soft);
+  max-width: 560px;
+}
+
+.network-topology-empty-state h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.05rem;
+}
+
+.network-topology-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.network-topology-toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.network-topology-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.network-topology-toolbar-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-soft);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
+}
+
+.network-topology-toolbar-button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.network-topology-toolbar-button.is-active {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.network-topology-toolbar-button.is-danger {
+  color: var(--status-danger);
+}
+
+.network-topology-toolbar-button.is-danger:hover:not(:disabled) {
+  border-color: var(--status-danger);
+  color: var(--status-danger);
+}
+
+.network-topology-toolbar-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.network-topology-toolbar-input,
+.network-topology-toolbar-select {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.82rem;
+}
+
+.network-topology-toolbar-input {
+  flex: 1 1 220px;
+  min-width: 160px;
+}
+
+.network-topology-toolbar-counters {
+  margin-left: auto;
+  display: flex;
+  gap: 12px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.network-topology-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.network-topology-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  color: var(--text-soft);
+}
+
+.network-topology-legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.network-topology-body {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  min-height: 560px;
+}
+
+.network-topology-body.has-inspector {
+  grid-template-columns: 1fr 320px;
+}
+
+.network-topology-canvas-wrap {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--surface-soft, var(--surface));
+  min-height: 560px;
+}
+
+.network-topology-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  cursor: grab;
+}
+
+.network-topology-canvas:active {
+  cursor: grabbing;
+}
+
+.network-topology-grid-line {
+  fill: none;
+  stroke: var(--border-soft, var(--border));
+  stroke-width: 1;
+}
+
+.network-topology-node {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  padding: 8px 10px;
+  border: 2px solid var(--node-status-color, var(--border));
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  user-select: none;
+}
+
+.network-topology-node.is-editable {
+  cursor: grab;
+}
+
+.network-topology-node.is-selected {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.network-topology-node.is-link-source {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--topology-status-manual) 45%, transparent);
+}
+
+.network-topology-node.is-missing {
+  border-style: dashed;
+  opacity: 0.6;
+}
+
+.network-topology-node-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--node-status-color, var(--border)) 16%, var(--surface));
+  color: var(--node-status-color, var(--text-soft));
+  flex-shrink: 0;
+}
+
+.network-topology-node-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.network-topology-node-name {
+  font-size: 0.82rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.network-topology-node-meta,
+.network-topology-node-segment {
+  font-size: 0.7rem;
+  color: var(--text-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.network-topology-node-badges {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.network-topology-node-badge.is-critical {
+  color: var(--status-danger);
+}
+
+.network-topology-node-badge.is-maintenance {
+  color: var(--status-warning);
+}
+
+.network-topology-link-label {
+  font-size: 11px;
+  fill: var(--text-soft);
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 3px;
+}
+
+.network-topology-inspector {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  height: fit-content;
+}
+
+.network-topology-inspector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.network-topology-inspector-header h3 {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--text);
+}
+
+.network-topology-inspector-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-soft);
+  cursor: pointer;
+}
+
+.network-topology-inspector-close:hover {
+  color: var(--text);
+  background: var(--surface-soft, var(--border-soft));
+}
+
+.network-topology-inspector-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+}
+
+.network-topology-inspector-fields div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.8rem;
+}
+
+.network-topology-inspector-fields dt {
+  color: var(--text-soft);
+}
+
+.network-topology-inspector-fields dd {
+  margin: 0;
+  color: var(--text);
+  text-align: right;
+}
+
+.network-topology-inspector-empty {
+  font-size: 0.82rem;
+  color: var(--text-soft);
+}
+
+.network-topology-inspector-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.network-topology-inspector-connection-summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--text);
+  margin: 0;
+}
+
+.network-topology-inspector-connection-summary span {
+  color: var(--text-soft);
+}
+
+.network-topology-inspector-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.network-topology-inspector-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: var(--text-soft);
+}
+
+.network-topology-inspector-form input,
+.network-topology-inspector-form select,
+.network-topology-inspector-form textarea {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-size: 0.82rem;
+  color: var(--text);
+  background: var(--surface);
+  font-family: inherit;
+  resize: vertical;
+}
+
+.network-topology-inspector-disclaimer {
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-soft);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+@media (max-width: 900px) {
+  .network-topology-body.has-inspector {
+    grid-template-columns: 1fr;
+  }
+
+  .network-topology-canvas-wrap {
+    min-height: 420px;
+  }
+}

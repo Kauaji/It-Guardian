@@ -1,0 +1,256 @@
+import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from "react";
+import NetworkTopologyNode, { NODE_HEIGHT, NODE_WIDTH } from "./NetworkTopologyNode.jsx";
+import NetworkTopologyLink from "./NetworkTopologyLink.jsx";
+
+const DEFAULT_VIEWBOX = { x: 0, y: 0, width: 1600, height: 1000 };
+const MIN_WIDTH = 400;
+const MAX_WIDTH = 6000;
+const DRAG_THRESHOLD = 3;
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+const NetworkTopologyCanvas = forwardRef(function NetworkTopologyCanvas(
+  {
+    nodes,
+    links,
+    devicesById,
+    segmentNameById,
+    editMode,
+    selectedNodeId,
+    selectedLinkId,
+    linkDraftSourceNodeId,
+    onNodeActivate,
+    onNodeDrag,
+    onNodeDragEnd,
+    onSelectLink,
+    onCanvasBackgroundClick
+  },
+  ref
+) {
+  const svgRef = useRef(null);
+  const dragRef = useRef(null);
+  const [viewBox, setViewBox] = useState(DEFAULT_VIEWBOX);
+
+  const getSvgPoint = useCallback((clientX, clientY) => {
+    const svg = svgRef.current;
+    if (!svg) return { x: 0, y: 0 };
+    const point = svg.createSVGPoint();
+    point.x = clientX;
+    point.y = clientY;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return { x: 0, y: 0 };
+    const transformed = point.matrixTransform(ctm.inverse());
+    return { x: transformed.x, y: transformed.y };
+  }, []);
+
+  const fitToBounds = useCallback((bounds) => {
+    if (!bounds) {
+      setViewBox(DEFAULT_VIEWBOX);
+      return;
+    }
+    const padding = 120;
+    const width = Math.max(bounds.maxX - bounds.minX + padding * 2, MIN_WIDTH);
+    const height = width * (DEFAULT_VIEWBOX.height / DEFAULT_VIEWBOX.width);
+    const centerX = (bounds.minX + bounds.maxX) / 2;
+    const centerY = (bounds.minY + bounds.maxY) / 2;
+    setViewBox({ x: centerX - width / 2, y: centerY - height / 2, width, height });
+  }, []);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      centerView: () => setViewBox(DEFAULT_VIEWBOX),
+      fitToNodes: () => {
+        if (!nodes.length) {
+          setViewBox(DEFAULT_VIEWBOX);
+          return;
+        }
+        const bounds = nodes.reduce(
+          (acc, node) => ({
+            minX: Math.min(acc.minX, node.x - NODE_WIDTH / 2),
+            maxX: Math.max(acc.maxX, node.x + NODE_WIDTH / 2),
+            minY: Math.min(acc.minY, node.y - NODE_HEIGHT / 2),
+            maxY: Math.max(acc.maxY, node.y + NODE_HEIGHT / 2)
+          }),
+          { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity }
+        );
+        fitToBounds(bounds);
+      }
+    }),
+    [nodes, fitToBounds]
+  );
+
+  const handleNodePointerDown = useCallback(
+    (nodeId, event) => {
+      event.stopPropagation();
+      const node = nodes.find((entry) => entry.id === nodeId);
+      if (!node) return;
+
+      if (!editMode) {
+        onNodeActivate(nodeId);
+        return;
+      }
+
+      const point = getSvgPoint(event.clientX, event.clientY);
+      dragRef.current = {
+        type: "node",
+        nodeId,
+        startSvgX: point.x,
+        startSvgY: point.y,
+        originX: node.x,
+        originY: node.y,
+        moved: false
+      };
+      try {
+        event.target.setPointerCapture?.(event.pointerId);
+      } catch {
+        // Pointer pode ja nao estar ativo (ex.: toque rapido/duplo) - captura e so uma
+        // otimizacao para o arrastar continuar recebendo eventos fora do elemento.
+      }
+    },
+    [editMode, getSvgPoint, nodes, onNodeActivate]
+  );
+
+  const handleSvgPointerDown = useCallback(
+    (event) => {
+      if (event.target !== svgRef.current) return;
+      const point = getSvgPoint(event.clientX, event.clientY);
+      dragRef.current = { type: "pan", startSvgX: point.x, startSvgY: point.y, startViewBox: viewBox };
+    },
+    [getSvgPoint, viewBox]
+  );
+
+  const handlePointerMove = useCallback(
+    (event) => {
+      const drag = dragRef.current;
+      if (!drag) return;
+      const point = getSvgPoint(event.clientX, event.clientY);
+
+      if (drag.type === "node") {
+        const dx = point.x - drag.startSvgX;
+        const dy = point.y - drag.startSvgY;
+        if (!drag.moved && (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD)) {
+          drag.moved = true;
+        }
+        if (drag.moved) {
+          onNodeDrag(drag.nodeId, drag.originX + dx, drag.originY + dy);
+        }
+        return;
+      }
+
+      if (drag.type === "pan") {
+        const dx = point.x - drag.startSvgX;
+        const dy = point.y - drag.startSvgY;
+        setViewBox({
+          ...drag.startViewBox,
+          x: drag.startViewBox.x - dx,
+          y: drag.startViewBox.y - dy
+        });
+      }
+    },
+    [getSvgPoint, onNodeDrag]
+  );
+
+  const handlePointerUp = useCallback(() => {
+    const drag = dragRef.current;
+    dragRef.current = null;
+    if (!drag) return;
+
+    if (drag.type === "node") {
+      if (drag.moved) {
+        onNodeDragEnd(drag.nodeId);
+      } else {
+        onNodeActivate(drag.nodeId);
+      }
+      return;
+    }
+
+    if (drag.type === "pan" && !drag.moved) {
+      onCanvasBackgroundClick();
+    }
+  }, [onCanvasBackgroundClick, onNodeActivate, onNodeDragEnd]);
+
+  const handleWheel = useCallback(
+    (event) => {
+      event.preventDefault();
+      const point = getSvgPoint(event.clientX, event.clientY);
+      const scaleFactor = event.deltaY > 0 ? 1.12 : 1 / 1.12;
+
+      setViewBox((current) => {
+        const newWidth = clamp(current.width * scaleFactor, MIN_WIDTH, MAX_WIDTH);
+        const newHeight = newWidth * (current.height / current.width);
+        const ratioX = (point.x - current.x) / current.width;
+        const ratioY = (point.y - current.y) / current.height;
+        return {
+          x: point.x - ratioX * newWidth,
+          y: point.y - ratioY * newHeight,
+          width: newWidth,
+          height: newHeight
+        };
+      });
+    },
+    [getSvgPoint]
+  );
+
+  const nodeByAssetId = useMemo(() => new Map(nodes.map((node) => [node.assetId, node])), [nodes]);
+
+  return (
+    <div className="network-topology-canvas-wrap">
+      <svg
+        ref={svgRef}
+        className="network-topology-canvas"
+        viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
+        onPointerDown={handleSvgPointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
+        onWheel={handleWheel}
+      >
+        <defs>
+          <pattern
+            id="network-topology-grid"
+            width={48}
+            height={48}
+            patternUnits="userSpaceOnUse"
+          >
+            <path d="M 48 0 L 0 0 0 48" className="network-topology-grid-line" />
+          </pattern>
+        </defs>
+        <rect
+          x={viewBox.x - 800}
+          y={viewBox.y - 800}
+          width={viewBox.width + 1600}
+          height={viewBox.height + 1600}
+          fill="url(#network-topology-grid)"
+        />
+        {links.map((link) => (
+          <NetworkTopologyLink
+            key={link.id}
+            link={link}
+            sourceNode={nodeByAssetId.get(link.sourceAssetId)}
+            targetNode={nodeByAssetId.get(link.targetAssetId)}
+            devicesById={devicesById}
+            selected={link.id === selectedLinkId}
+            onClick={onSelectLink}
+          />
+        ))}
+        {nodes.map((node) => (
+          <NetworkTopologyNode
+            key={node.id}
+            node={node}
+            device={devicesById.get(node.assetId)}
+            segmentName={segmentNameById.get(devicesById.get(node.assetId)?.segmentId)}
+            selected={node.id === selectedNodeId}
+            isLinkSource={node.id === linkDraftSourceNodeId}
+            editMode={editMode}
+            onPointerDown={handleNodePointerDown}
+          />
+        ))}
+      </svg>
+    </div>
+  );
+});
+
+export default NetworkTopologyCanvas;
