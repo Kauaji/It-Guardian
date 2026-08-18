@@ -4,6 +4,130 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-17 - Oitava rodada: Mapa de Rede (topologia) no Inventario
+
+### Contexto
+
+- pedido explicito e detalhado do usuario: uma quarta visualizacao no
+  Inventario ("Mapa de Rede"/topologia), inspirada conceitualmente em
+  ferramentas como Zabbix Maps mas sem copiar nenhum asset/interface -
+  ativos como nos num canvas, conexoes manuais com cor por status,
+  arrastar para posicionar, layout automatico, filtros, permissoes
+  dedicadas, sem tocar Assistencia Remota/WebRTC/execucao remota de
+  scripts/agente Windows;
+- branch nova `feature/inventory-network-topology-map`, plano aprovado
+  antes de qualquer edicao (modo de planejamento), pesquisa dedicada nos
+  dois precedentes mais proximos do proprio codigo antes de desenhar
+  qualquer coisa nova.
+
+### Estrategia: reaproveitar dois precedentes existentes, nao reinventar
+
+- **Mapa 3D** (`InventoryVisualMapView`/`inventoryVisualMapRepository`/
+  `Service`/`Routes`) ja resolvia "mapa → nos → conexoes" como modelo de
+  dados, CRUD via API, encaixe no seletor de visualizacoes do Inventario
+  e permissoes por rota - virou o molde estrutural;
+- **Plantas** (`FloorPlansModule`) ja resolvia "arrastar um no num canvas
+  e persistir posicao" via `viewBox`/eventos de ponteiro - virou a
+  referencia conceitual de interacao (implementacao nova e mais simples,
+  dado que o arquivo de Plantas tem 3480 linhas e logica fortemente
+  acoplada a moveis/salas - extrair codigo dali teria sido mais arriscado
+  que reimplementar o padrao do zero, de forma isolada).
+
+### Decisoes de design que fecham lacunas do pedido original
+
+- **`asset_id` sem chave estrangeira** em `network_topology_nodes`/
+  `_links`: ativos vem de agente/manual/OCS/Zabbix sem uma tabela unica -
+  guardado como texto solto, checagem de existencia via
+  `ensureAssetsExist` (mesma consulta `EXISTS` ja usada por
+  `inventoryVisualMapRepository.js`) na criacao, e "ativo ainda existe?"
+  resolvido no frontend comparando com a lista atual de devices. Cumpre a
+  regra pedida - remover um ativo do inventario nunca quebra
+  (`CASCADE`) o mapa;
+- **migration numerada** (`018-network-topology-map.js`), nao
+  `legacyBootstrap.js`: os dois precedentes usados como molde antecedem o
+  padrao atual de migrations; toda funcionalidade nova desde entao (RLS,
+  hash-chain, chat da assistencia remota) usa migration numerada;
+- **duplicidade de conexao** via indice unico `(map_id, source_asset_id,
+  target_asset_id)` mais checagem em codigo (`ensureLinkNotDuplicate`)
+  para a ordem invertida - descartado um indice funcional
+  `LEAST()`/`GREATEST()` por risco de incompatibilidade nao testada com
+  o pg-mem usado nos testes locais;
+- **"Abrir ficha" reaproveita o `MachineDetailsModal` ja existente**:
+  descoberto que ele e controlado inteiramente dentro de
+  `InventoryBoard.jsx` (`selectedMachine`/`setSelectedMachine`) - a nova
+  view recebe o mesmo `onOpenDetails={setSelectedMachine}` que as
+  visualizacoes do Quadro ja usam, sem nenhum modal novo;
+- **salvamento de layout explicito, nao autosave**: um botao "Salvar
+  layout" dispara um unico PATCH em lote, mais simples e com menos
+  superficie de erro que o debounce+dirty-tracking de Plantas - escolha
+  deliberada para uma primeira versao;
+- **sem preview client-side do layout automatico**: o plano original
+  previa uma segunda implementacao do algoritmo de auto-layout so para
+  pre-visualizar antes de confirmar; simplificado para um unico calculo
+  no backend que ja persiste direto, evitando duas copias do mesmo
+  algoritmo divergindo com o tempo;
+- **permissoes dedicadas** (`inventory.topology.view`/`.manage`/
+  `.link_assets`) em vez de reaproveitar `inventory.manage_segments` -
+  os tres ids literais pedidos pelo usuario, com `link_assets` protegendo
+  especificamente as rotas de conexao.
+
+### Validacao com sessao real de navegador
+
+- ambiente seedado sem nenhum ativo por padrao ("Novo ambiente", zero
+  maquinas) - criados 3 ativos manuais reais via API (switch online,
+  desktop offline, impressora online) para ter dado real de status a
+  testar, nao so verificacao estrutural;
+- fluxo completo testado com requisicoes HTTP reais (nao so inspecao
+  visual): criar mapa, adicionar os 3 ativos, arrastar um no e salvar
+  layout (`PATCH .../nodes/positions` → 200), criar uma conexao via o
+  fluxo de dois cliques (origem→destino), confirmar a cor da conexao
+  derivada do status dos dois ativos (`--topology-status-critical`,
+  vermelho, porque um dos lados esta offline - nunca promete
+  monitoramento real do link), editar rotulo/tipo da conexao (PATCH
+  200), gerar layout automatico (POST 200), abrir "Abrir ficha" e
+  confirmar que o `MachineDetailsModal` real abre com os dados corretos,
+  aplicar filtro de status e confirmar que nos/conexoes se escondem
+  corretamente, excluir conexao e remover ativo do mapa (DELETE 200
+  ambos);
+- confirmado que Quadro, Plantas e Mapa 3D continuam funcionando sem
+  nenhuma mudanca de comportamento;
+- um erro real encontrado durante a validacao (nao um artefato de teste):
+  `setPointerCapture` podia lancar `NotFoundError` em cenarios de toque
+  rapido/duplo - corrigido com um `try/catch` defensivo em
+  `NetworkTopologyCanvas.jsx`; confirmado corrigido reproduzindo o mesmo
+  cenario numa aba nova e limpa do navegador (sem historico de console
+  acumulado de testes anteriores).
+
+### Documentacao
+
+- `docs/MAPA-DE-REDE-INVENTARIO.md` (novo): objetivo, diferenca entre
+  mapa topologico e planta fisica, diferenca explicita entre conexao
+  manual e monitoramento real, endpoints, permissoes, como usar,
+  limitacoes (v1 so mapa global, sem integracao real de monitoramento de
+  link) e proximos passos;
+- `docs/FASE-1-INVENTARIO.md` **nao foi alterado** - e um retrato
+  congelado da Fase 1 (nem Mapa 3D nem Plantas, entregues depois,
+  aparecem la), nao um indice mantido de features - forcar uma entrada
+  nova la destoaria de como o proprio arquivo evoluiu ate aqui.
+
+### Validacoes
+
+- `npm run lint` (repo inteiro), `npm run check:architecture` (366
+  arquivos), `npm run test --workspace server` (322 testes, 320 passam, 2
+  skips preexistentes), `npm run test:integration --workspace server` (39
+  testes, incluindo o novo `network-topology-lifecycle.test.mjs`: ciclo
+  completo, duplicidade de no/conexao recusada nas duas ordens, self-link
+  recusado, 401 sem sessao, 403 sem permissao), `npm run test:client`
+  (140 testes, incluindo os 18 novos de `networkTopologyModel.test.js`),
+  `npm run build` (client) - todos limpos.
+
+### Resultado
+
+- Quarta visualizacao do Inventario funcionando de ponta a ponta, sem
+  regressao nas tres existentes. Fora do escopo desta rodada (nao
+  pedido, nao tentado): reavaliacao da nota tecnica publicada - este e um
+  recurso novo, nao a correcao de um achado ja auditado.
+
 ## 2026-08-17 - Sexta rodada: useModalLifecycle aprende a empilhar modais
 
 ### Contexto
