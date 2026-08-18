@@ -4,6 +4,125 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-18 - Nona rodada: Prontuario Tecnico do Ativo (timeline)
+
+### Contexto
+
+- pedido explicito do usuario: consolidar numa nova aba da ficha da
+  maquina o historico tecnico completo do ativo - OS, alertas,
+  preventivas, assistencia remota, manutencao, observacoes, hardware,
+  pecas e vinculo com o Mapa de Rede, em ordem cronologica;
+- restricoes explicitas: nao reconstruir o Inventario nem o
+  `MachineDetailsModal`, nao quebrar nenhum modulo existente, nao tocar
+  WebRTC/execucao remota de scripts/agente Windows, nunca inventar
+  historico sem evidencia real no banco, nunca expor token/frame/comando
+  remoto/chat;
+- branch `feature/asset-technical-timeline`, a partir de `main` na ponta -
+  auditoria do estado atual (assetHistory, fontes de evento existentes,
+  permissoes) feita e documentada no plano antes de qualquer edicao,
+  seguida de uma segunda passada de validacao por um agente de plano
+  dedicado.
+
+### Achado de auditoria: a aba "Historico" existente nao mostrava nada real
+
+A aba que existia antes desta rodada renderizava `machine.assetHistory`
+(que no fluxo do Inventario e so uma lista client-local de trocas de
+periferico, nao as linhas reais da tabela `asset_history`) e
+`hardware.changeHistory` (confirmado sempre `[]` em
+`monitoringService.js` - nunca existiu captura real de hardware). A nova
+aba renomeia esse mesmo slot para "Prontuario Tecnico" em vez de
+adicionar uma nona aba, e passa a buscar dado real.
+
+### Decisao de arquitetura: services estruturados como fonte primaria, `asset_history` como backbone
+
+- `asset_history` ja e escrita por ~15 arquivos do sistema mas so guarda
+  `event_type`/`message`/`old_value`/`new_value`, sem referencia
+  estruturada a entidade relacionada - insuficiente para os cartoes ricos
+  pedidos ("OS #123 aberta - Prioridade: Alta | Tecnico: Joao");
+- solucao: OS (`listServiceOrdersByAssetId`, nova, com `WHERE asset_id`
+  dedicado - deliberadamente **nao** reaproveita `listServiceOrders()`,
+  que carregaria a tabela inteira a cada timeline) e alertas
+  (`alertService.getHostAlertsWithAcknowledgements`, ja existia, zero
+  codigo novo) sao lidos das proprias tabelas estruturadas; o restante
+  (segmento, manutencao, backup, preventivas, CRUD de ativo manual,
+  vinculo com Plantas/Mapa Visual 3D) vem do backbone generico
+  `listAssetHistory`, com os prefixos `service_order_*` e
+  `remote_assistance_*` excluidos dele pra nao duplicar o mesmo evento
+  (exigencia explicita do pedido);
+- Mapa de Rede nunca escrevia em `asset_history` - `networkTopologyRepository.js`
+  passou a gravar (`network_topology_node_added/removed`,
+  `link_created/removed`) nos mesmos 4 pontos que ja gravam `addLog`,
+  mesmo padrao de `addServiceOrderAssetHistory`, valido so daqui pra
+  frente (sem reconstruir o passado). Um bloco de resumo separado
+  (`findNetworkTopologyReferencesForAsset`, consulta direta nas tabelas
+  de nos/conexoes) cobre vinculos anteriores a esta rodada, que nao tem
+  evento historico.
+
+### Achado de seguranca pre-existente, corrigido so no novo endpoint
+
+`monitoringService.getDeviceDetails()` (fluxo do Dashboard) ja retornava
+`assetHistory` sem nenhum filtro de permissao de assistencia remota -
+isso incluia os eventos `remote_assistance_*` que ja existiam em
+`asset_history` antes desta rodada. Na pratica nunca apareceu porque a
+aba antiga do Inventario nao lia esse campo (dois bugs que se
+cancelavam). Como o Prontuario expõe `asset_history` de proposito e com
+destaque, foi adicionado um gate de permissao dentro do proprio
+`assetTimelineService.js`: a categoria `remote_assistance` so entra na
+resposta se `hasPermission(user, "remote_assistance.view")` - confirmado
+por teste de integracao que um usuario `operator` (tem
+`inventory.view_machine` por padrao, mas nenhuma permissao de
+`remote_assistance.*`) nao recebe essa categoria, enquanto `admin` recebe.
+`getDeviceDetails`/Dashboard **nao foram alterados** - fora do escopo
+pedido; o achado foi documentado como follow-up recomendado, nao
+corrigido silenciosamente por conta propria.
+
+### Cortes de escopo decididos
+
+- **Transicoes de status ao vivo** (online/offline/problem): o status e
+  calculado a cada leitura, nunca persistido - instrumentar o loop de
+  polling do Zabbix/OCS seria uma mudanca de risco bem maior que o resto
+  da feature (mexe no caminho quente que tambem alimenta o Dashboard).
+  Entrada/saida de manutencao ja funciona (via segmento) e cobre a parte
+  mais usada na pratica;
+- **Alteracoes de hardware**: confirmado que nunca existiu captura real
+  (`hardware.changeHistory` sempre `[]`) - categoria preparada no
+  modelo/filtros do frontend, sem dado real ainda;
+- **Observacoes nao passam pelo backend**: `observations[assetId]` e
+  preferencia do usuario logado (`localStorage` + `saveUserPreference`),
+  nao uma tabela por ativo - fundidas no cliente, sem endpoint novo;
+- **Sem link de navegacao entre modulos para OS/alerta**: o app so tem
+  navegacao por modulo (`setActiveView`), nao um mecanismo de "abrir item
+  especifico" entre Inventario/OS/Alertas - cartoes mostram os dados como
+  texto informativo. O vinculo com o Mapa de Rede e excecao (mesmo
+  `InventoryBoard`, troca de aba interna funciona de verdade).
+
+### Validacoes
+
+- `npm run lint` (repo inteiro), `npm run check:architecture` (374
+  arquivos), `npm run test --workspace server` (335 testes, 333 passam, 2
+  skips preexistentes, incluindo os 11 novos de
+  `assetTimelineService.test.mjs` - funcoes puras de normalizacao/
+  categorizacao/severidade/resumo, sem mock de banco),
+  `npm run test:integration --workspace server` (41 testes, incluindo os 2
+  novos de `asset-technical-timeline.test.mjs`: ciclo completo com OS
+  real criada e fechada, alerta semeado via `upsertAlert`, manutencao via
+  segmento, vinculo com mapa de rede, filtro por categoria, paginacao,
+  403 sem `inventory.view_machine`; e o teste dedicado do gate de
+  assistencia remota, usando `agent_assets` real via enrollment+heartbeat
+  e sessao/evento semeados direto via repository), `npm run test:client`
+  (160 testes, incluindo os 20 novos de `assetTimelineModel`/
+  `assetTimelineFormatters`), `npm run build` (client) - todos limpos.
+
+### Resultado
+
+- Nova aba "Prontuario Tecnico" na ficha da maquina, consolidando OS,
+  alertas, manutencao, preventivas, assistencia remota (com gate de
+  permissao correto) e vinculo com o Mapa de Rede a partir de dado real
+  já existente no banco. Sem regressao no Inventario, Dashboard, OS,
+  Alertas, Preventivas, Assistencia Remota ou Mapa de Rede. Limitacoes
+  documentadas (status ao vivo, hardware, observacoes, navegacao
+  entre modulos) em vez de implementadas de forma rasa ou fingida.
+
 ## 2026-08-17 - Oitava rodada: Mapa de Rede (topologia) no Inventario
 
 ### Contexto

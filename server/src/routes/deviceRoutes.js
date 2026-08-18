@@ -10,6 +10,7 @@ import {
   publicDetails,
   refreshPing,
   removeDevice,
+  timeline,
   updateManual
 } from "../controllers/deviceController.js";
 import { requireAuth, requirePermission } from "../middleware/authMiddleware.js";
@@ -27,6 +28,7 @@ router.patch("/:id/backup", requirePermission("inventory.edit_asset"), changeDev
 router.post("/:id/ping", requirePermission("inventory.edit_asset"), refreshPing);
 router.patch("/:id/segment", requirePermission("inventory.move_assets"), moveToSegment);
 router.get("/:id", requirePermission("inventory.view_machine"), details);
+router.get("/:id/timeline", requirePermission("inventory.view_machine"), timeline);
 router.delete("/:id", requirePermission("inventory.edit_asset"), removeDevice);
 
 export default router;

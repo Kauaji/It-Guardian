@@ -402,6 +402,19 @@ export async function listRemoteAssistanceEvents(sessionId, db = query) {
   return result.rows.map(eventFromRow);
 }
 
+export async function listRemoteAssistanceEventsByAssetId(assetId, { limit = 50 } = {}, db = query) {
+  const result = await db(
+    `
+      SELECT * FROM remote_assistance_events
+      WHERE asset_id = $1
+      ORDER BY created_at DESC
+      LIMIT $2
+    `,
+    [assetId, limit]
+  );
+  return result.rows.map(eventFromRow);
+}
+
 export async function verifyRemoteAssistanceEventChain(sessionId, db = query) {
   const events = await listRemoteAssistanceEvents(sessionId, db);
   let previousHash = null;

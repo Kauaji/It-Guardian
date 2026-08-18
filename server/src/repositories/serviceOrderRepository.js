@@ -905,6 +905,26 @@ export async function listServiceOrders(user = null) {
     .filter((order) => !user || canViewServiceOrder(user, order));
 }
 
+export async function listServiceOrdersByAssetId(assetId, { limit = 50 } = {}) {
+  const settings = await getServiceOrderSettings();
+  const result = await query(
+    `
+      SELECT *
+      FROM service_orders
+      WHERE asset_id = $1
+      ORDER BY created_at DESC
+      LIMIT $2
+    `,
+    [assetId, limit]
+  );
+
+  const orderIds = result.rows.map((row) => row.id);
+  const itemsByOrder = await listServiceOrderItemsByOrderIds(orderIds);
+  const rows = result.rows.map((row) => withDisplayPriority(row, settings));
+
+  return rows.map((row) => fromOrderRow(row, [], itemsByOrder.get(row.id) || []));
+}
+
 export async function findServiceOrderById(id, user = null) {
   const settings = await getServiceOrderSettings();
   const result = await query("SELECT * FROM service_orders WHERE id = $1", [id]);
@@ -932,7 +952,7 @@ async function listServiceOrderItems(serviceOrderId) {
   return result.rows.map(fromItemRow);
 }
 
-async function listServiceOrderItemsByOrderIds(orderIds = []) {
+export async function listServiceOrderItemsByOrderIds(orderIds = []) {
   const ids = orderIds.filter(Boolean);
   const itemsByOrder = new Map();
   if (!ids.length) return itemsByOrder;
