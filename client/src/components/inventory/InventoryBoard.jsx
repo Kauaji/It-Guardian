@@ -729,6 +729,10 @@ export default function InventoryBoard({
           const removed = await onRemoveMachine?.(selectedMachine);
           if (removed) setSelectedMachine(null);
         }}
+        onOpenNetworkMap={() => {
+          setInventoryViewMode("topology");
+          setSelectedMachine(null);
+        }}
         canManage={canManage}
         onAddPeripheral={(peripheral) => {
           const result = onAddPeripheral(selectedMachine.id, peripheral);

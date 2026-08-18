@@ -19,12 +19,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useModalLifecycle } from "../../hooks/useModalLifecycle.js";
 import AssetTypeIcon from "./AssetTypeIcon.jsx";
 import { assetTypeLabel, assetTypeOptions } from "./assetTypes.js";
-import HardwareHistory from "./HardwareHistory.jsx";
 import MachineAliasEditor from "./MachineAliasEditor.jsx";
 import MachineTabs from "./MachineTabs.jsx";
 import ObservationTimeline from "./ObservationTimeline.jsx";
 import PeripheralList from "./PeripheralList.jsx";
 import QRCodePrint from "./QRCodePrint.jsx";
+import AssetTechnicalTimeline from "./timeline/AssetTechnicalTimeline.jsx";
 import AutomationIndicatorDots from "../AutomationIndicatorDots.jsx";
 import RemoteAssistanceAction from "../remoteAssistance/RemoteAssistanceAction.jsx";
 import {
@@ -42,7 +42,7 @@ const tabs = [
   { id: "network", label: "Rede" },
   { id: "peripherals", label: "Periféricos" },
   { id: "notes", label: "Observações" },
-  { id: "history", label: "Histórico" }
+  { id: "history", label: "Prontuário Técnico" }
 ];
 
 function DetailItem({ label, value }) {
@@ -307,6 +307,7 @@ export default function MachineDetailsModal({
   onRemoveMachine,
   onAddPeripheral,
   onRemovePeripheral,
+  onOpenNetworkMap,
   canManage = false,
   onClose
 }) {
@@ -795,29 +796,12 @@ export default function MachineDetailsModal({
           )}
 
           {activeTab === "history" && (
-            <section className="asset-tab-content">
-              {resolvedAlerts.length > 0 && (
-                <div className="error-alert-section resolved">
-                  <div>
-                    <h3>Erros resolvidos</h3>
-                    <span>{resolvedAlerts.length} registros</span>
-                  </div>
-                  <div className="error-alert-list compact">
-                    {resolvedAlerts.map((alert) => (
-                      <article key={alert.id} className="error-alert-card resolved">
-                        <header>
-                          <strong>{formatHardwareValue(alert.description, "Alerta resolvido")}</strong>
-                          <span>{formatHardwareValue(alert.status, "Resolvido")}</span>
-                        </header>
-                        <p>{formatHardwareValue(alert.metric)}: {formatHardwareValue(alert.limit)} para {formatHardwareValue(alert.value)} em {formatDate(alert.detectedAt)}</p>
-                      </article>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <HardwareHistory changes={machine.assetHistory || []} />
-              <HardwareHistory changes={hardware.changeHistory || []} />
-            </section>
+            <AssetTechnicalTimeline
+              assetId={machine.id}
+              token={token}
+              observations={observations}
+              onOpenNetworkMap={onOpenNetworkMap}
+            />
           )}
         </div>
       </section>

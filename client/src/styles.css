@@ -18635,3 +18635,240 @@ button.dashboard-ranking-item.clickable:hover {
     min-height: 420px;
   }
 }
+
+/* Prontuario Tecnico do Ativo (ficha da maquina) */
+
+.asset-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.asset-timeline-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.asset-timeline-summary-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+}
+
+.asset-timeline-summary-stat strong {
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.asset-timeline-summary-stat span {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.asset-timeline-topology-block {
+  padding: 10px 12px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--status-info) 6%, var(--surface));
+  font-size: 0.82rem;
+}
+
+.asset-timeline-topology-block ul {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.asset-timeline-topology-block li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.asset-timeline-topology-disclaimer {
+  margin: 8px 0 0;
+  font-size: 0.72rem;
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+.asset-timeline-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.asset-timeline-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 160px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-muted);
+}
+
+.asset-timeline-search input {
+  border: none;
+  background: transparent;
+  outline: none;
+  flex: 1;
+  color: var(--text);
+  font-size: 0.85rem;
+}
+
+.asset-timeline-filters select {
+  padding: 6px 8px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  font-size: 0.82rem;
+}
+
+.asset-timeline-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.asset-timeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.asset-timeline-day-group h4 {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.asset-timeline-day-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.asset-timeline-day-group > *:not(h4) {
+  margin-top: 8px;
+}
+
+.asset-timeline-event {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-soft);
+  border-left: 3px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.asset-timeline-event.severity-info {
+  border-left-color: var(--status-info);
+}
+
+.asset-timeline-event.severity-success {
+  border-left-color: var(--green-600);
+}
+
+.asset-timeline-event.severity-warning {
+  border-left-color: var(--status-warning);
+}
+
+.asset-timeline-event.severity-critical {
+  border-left-color: var(--status-danger);
+}
+
+.asset-timeline-event.severity-neutral {
+  border-left-color: var(--border-soft);
+}
+
+.asset-timeline-event-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--surface-soft);
+  color: var(--text-muted);
+}
+
+.asset-timeline-event-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.asset-timeline-event-body header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.asset-timeline-event-body strong {
+  font-size: 0.86rem;
+}
+
+.asset-timeline-event-body time {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.asset-timeline-event-body p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.asset-timeline-event-actor {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.asset-timeline-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px 16px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.asset-timeline-load-more {
+  align-self: center;
+}
+
+.asset-timeline-filters .spinning {
+  animation: asset-timeline-spin 0.8s linear infinite;
+}
+
+@keyframes asset-timeline-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
