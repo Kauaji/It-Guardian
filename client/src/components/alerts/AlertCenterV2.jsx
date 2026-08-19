@@ -26,7 +26,8 @@ import AutomationIndicatorDots from "../AutomationIndicatorDots.jsx";
 import { useAppSession } from "../../context/AppSessionContext.jsx";
 import { useAlertCenterData } from "../../context/AlertCenterContext.jsx";
 import { useModalLifecycle } from "../../hooks/useModalLifecycle.js";
-import { remoteScriptExecutionEnabled } from "../../config/features.js";
+import { remoteScriptExecutionEnabled as remoteScriptExecutionEnabledBuildFlag } from "../../config/features.js";
+import { hasRemoteAssistanceAgent, isRemoteAssistanceAssetFresh } from "../remoteAssistance/remoteAssistanceModel.js";
 import PreventiveAutomationPanel from "../automation/PreventiveAutomationPanel.jsx";
 import { shouldShowAutomationManagement } from "../automation/automationUtils.js";
 import MaintenanceScriptsPanel from "../maintenance/MaintenanceScriptsPanel.jsx";
@@ -67,6 +68,14 @@ import {
 
 const AutomationManagementView = lazy(() => import("../automation/AutomationManagementView.jsx"));
 
+const jobStatusLabels = {
+  queued: "Na fila",
+  claimed: "Entregue ao agente",
+  succeeded: "Concluída com sucesso",
+  failed: "Falhou",
+  timed_out: "Tempo limite excedido"
+};
+
 export default function AlertCenterV2({
   token,
   devices,
@@ -74,9 +83,14 @@ export default function AlertCenterV2({
   segmentGroups = [],
   inventoryTabs = [],
   serviceOrders,
-  onOpenServiceOrders
+  onOpenServiceOrders,
+  remoteScriptExecutionEnabled: remoteScriptExecutionEnabledProp
 }) {
   const { can } = useAppSession();
+  // Prefere o valor real do servidor (buscado no carregamento inicial,
+  // sem exigir rebuild) sobre o flag de build-time - so cai no flag de
+  // build antes do primeiro carregamento ou se a prop nao for passada.
+  const remoteScriptExecutionEnabled = remoteScriptExecutionEnabledProp ?? remoteScriptExecutionEnabledBuildFlag;
   const {
     alerts,
     history,
@@ -1051,22 +1065,34 @@ export default function AlertCenterV2({
   async function handleUseSuggestionScript(suggestion, script) {
     const scriptUseKey = `${suggestion.id}:${script.id}`;
     if (usingSuggestionScriptKey === scriptUseKey) return;
-    const baseConfirmation =
-      "O script cadastrado será enviado ao agente autenticado desta máquina e poderá alterar o sistema. Deseja continuar?";
     const highRisk = script.riskLevel === "high" || script.riskLevel === "critical";
+    const device = findSuggestionDevice(suggestion);
+    const agentActive = hasRemoteAssistanceAgent(device) && isRemoteAssistanceAssetFresh(device);
 
+    if (!agentActive) {
+      window.alert(
+        "Esta máquina não possui um agente ativo no momento. A execução real não pode ser enviada enquanto o agente estiver offline ou desatualizado."
+      );
+      return;
+    }
+
+    const baseConfirmation =
+      "Este script será executado de verdade na máquina selecionada pelo agente IT Guardian autenticado. " +
+      "A execução ficará registrada no histórico do aviso e nos logs de auditoria. Deseja continuar?";
     if (!window.confirm(baseConfirmation)) return;
 
     if (highRisk) {
       const riskConfirmation =
-        "Este script foi marcado como alto risco. A execução real não está disponível nesta versão. Deseja apenas registrar a observação preparada?";
+        "Este script foi marcado como risco alto/crítico e exige aprovação de um segundo revisor com permissão " +
+        "para aprovar execuções de risco elevado. Se você não tiver essa permissão, o envio será recusado pelo servidor. " +
+        "Deseja continuar mesmo assim?";
       if (!window.confirm(riskConfirmation)) return;
     }
 
     setUsingSuggestionScriptKey(scriptUseKey);
     try {
       await onUseSuggestionScript(suggestion.id, script.id, {
-        mode: "prepared",
+        mode: "agent",
         confirmed: true,
         riskAcknowledged: highRisk,
         validationWindowMinutes: priorityDraft.scriptValidationWindowMinutes,
@@ -1343,6 +1369,10 @@ export default function AlertCenterV2({
                   const hasPendingScriptLog = Boolean(
                     latestValidation?.log?.attentionRequired && !latestValidation.log.acknowledgedAt
                   );
+                  const suggestionDevice = findSuggestionDevice(suggestion);
+                  const suggestionAgentPresent = hasRemoteAssistanceAgent(suggestionDevice);
+                  const suggestionAgentActive = suggestionAgentPresent && isRemoteAssistanceAssetFresh(suggestionDevice);
+                  const suggestionJobStatus = latestValidation?.job?.status || "";
 
                   return (
                     <article
@@ -1460,8 +1490,20 @@ export default function AlertCenterV2({
                               {openScriptMenuSuggestionId === suggestion.id && (
                                 <div className="suggestion-script-popover">
                                   <strong>Scripts disponíveis</strong>
+                                  <p className={`suggestion-agent-status ${suggestionAgentActive ? "active" : "inactive"}`}>
+                                    {suggestionAgentActive
+                                      ? "Agente ativo nesta máquina — execução real disponível."
+                                      : suggestionAgentPresent
+                                        ? "Agente desta máquina está offline ou desatualizado. Execução real indisponível agora."
+                                        : "Esta máquina não possui agente registrado. Execução real indisponível."}
+                                  </p>
                                   {!remoteScriptExecutionEnabled && (
-                                    <p>Execução real desabilitada. Somente simulação e registro estão disponíveis.</p>
+                                    <p>Execução real desabilitada no servidor. Somente simulação e registro estão disponíveis.</p>
+                                  )}
+                                  {suggestionJobStatus && (
+                                    <p className="suggestion-job-status">
+                                      Última execução: {jobStatusLabels[suggestionJobStatus] || suggestionJobStatus}
+                                    </p>
                                   )}
                                   {recommendationLoading && <p>Carregando scripts...</p>}
                                   {recommendationError && <p>{recommendationError}</p>}
@@ -1472,7 +1514,7 @@ export default function AlertCenterV2({
                                         <button
                                           key={script.id}
                                           type="button"
-                                          disabled={!canUseScriptsFromAlerts || usingSuggestionScriptKey === `${suggestion.id}:${script.id}`}
+                                          disabled={!canUseScriptsFromAlerts || !suggestionAgentActive || usingSuggestionScriptKey === `${suggestion.id}:${script.id}`}
                                           onClick={() => handleUseSuggestionScript(suggestion, script)}
                                         >
                                           <span>{getSafeScriptLabel(script, "Script recomendado")}</span>
@@ -1488,7 +1530,7 @@ export default function AlertCenterV2({
                                         <button
                                           key={script.id}
                                           type="button"
-                                          disabled={!canUseScriptsFromAlerts || usingSuggestionScriptKey === `${suggestion.id}:${script.id}`}
+                                          disabled={!canUseScriptsFromAlerts || !suggestionAgentActive || usingSuggestionScriptKey === `${suggestion.id}:${script.id}`}
                                           onClick={() => handleUseSuggestionScript(suggestion, script)}
                                         >
                                           <span>{getSafeScriptLabel(script, "Script disponivel")}</span>

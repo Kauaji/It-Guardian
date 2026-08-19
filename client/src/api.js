@@ -661,6 +661,18 @@ export function fetchSuggestionRecommendedScripts(token, suggestionId) {
   return apiFetch(`/service-order-suggestions/${suggestionId}/recommended-scripts`, { token });
 }
 
+export function useServiceOrderScript(token, serviceOrderId, scriptId, payload = {}) {
+  return apiFetch(`/service-orders/${serviceOrderId}/scripts/${scriptId}/use`, {
+    token,
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function fetchServiceOrderScriptActivity(token, serviceOrderId) {
+  return apiFetch(`/service-orders/${serviceOrderId}/script-activity`, { token });
+}
+
 export function fetchSuggestionScriptValidations(token, suggestionId) {
   return apiFetch(`/service-order-suggestions/${suggestionId}/script-validations`, { token });
 }

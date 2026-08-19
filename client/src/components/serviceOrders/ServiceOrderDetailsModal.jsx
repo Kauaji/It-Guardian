@@ -19,6 +19,7 @@ import RemoteAssistanceAction from "../remoteAssistance/RemoteAssistanceAction.j
 import ServiceOrderAttachmentsTab from "./tabs/ServiceOrderAttachmentsTab.jsx";
 import ServiceOrderChecklistTab from "./tabs/ServiceOrderChecklistTab.jsx";
 import ServiceOrderFeedbackTab from "./tabs/ServiceOrderFeedbackTab.jsx";
+import ServiceOrderScriptsTab from "./tabs/ServiceOrderScriptsTab.jsx";
 import ServiceOrderSlaTab from "./tabs/ServiceOrderSlaTab.jsx";
 
 const fallbackStatusLabels = {
@@ -41,6 +42,7 @@ const tabs = [
   { id: "asset", label: "Máquina" },
   { id: "sla", label: "SLA" },
   { id: "checklist", label: "Checklist" },
+  { id: "scripts", label: "Scripts" },
   { id: "attachments", label: "Anexos" },
   { id: "feedback", label: "Avaliação" },
   { id: "history", label: "Histórico" }
@@ -155,7 +157,8 @@ export default function ServiceOrderDetailsModal({
   onReleaseBackup,
   onReopen,
   permissions = {},
-  canChangeSector = false
+  canChangeSector = false,
+  remoteScriptExecutionEnabled = false
 }) {
   const businessMode = systemMode === "business";
   const canEditOrder = permissions.edit ?? true;
@@ -164,6 +167,7 @@ export default function ServiceOrderDetailsModal({
   const canRegisterAttendance = permissions.attendance ?? true;
   const canPrintOrder = permissions.print ?? true;
   const canReopenOrder = permissions.reopen ?? false;
+  const canRunScripts = permissions.runScripts ?? false;
   const [activeTab, setActiveTab] = useState("general");
   const [reopening, setReopening] = useState(false);
   const [technicians, setTechnicians] = useState([]);
@@ -1287,6 +1291,17 @@ export default function ServiceOrderDetailsModal({
               token={token}
               notify={notify}
               canManage={canRegisterAttendance}
+            />
+          )}
+
+          {activeTab === "scripts" && (
+            <ServiceOrderScriptsTab
+              serviceOrder={serviceOrder}
+              asset={asset}
+              token={token}
+              notify={notify}
+              canManage={canRunScripts}
+              remoteScriptExecutionEnabled={remoteScriptExecutionEnabled}
             />
           )}
 

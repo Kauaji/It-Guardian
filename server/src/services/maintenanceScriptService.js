@@ -1,4 +1,5 @@
-import { notFoundError } from "../lib/errors.js";
+import { forbidden, notFoundError } from "../lib/errors.js";
+import { hasPermission } from "../permissions.js";
 import {
   analyzeMaintenanceScriptContent,
   acknowledgeScriptLog,
@@ -6,16 +7,36 @@ import {
   cancelScriptValidation,
   createMaintenanceScript,
   deactivateMaintenanceScript,
+  findMaintenanceScriptById,
   findScriptLogById,
   listMaintenanceScripts,
   listPendingScriptLogs,
   listRecommendedScriptsForSuggestion,
   listScriptValidationsForSuggestion,
+  listServiceOrderScriptActivity,
+  normalizeRiskLevel,
   registerMaintenanceScriptSimulation,
   updateMaintenanceScript,
+  useScriptForServiceOrder,
   useScriptFromSuggestion
 } from "../repositories/maintenanceScriptRepository.js";
 import { listRecommendedScriptsForContext } from "./maintenanceScriptRecommendationService.js";
+
+const dualControlRiskLevels = new Set(["high", "critical"]);
+
+// Reforca o segundo revisor: assertSecondReviewer (na repository) so
+// impede a MESMA pessoa que editou o script de enfileirar risco alto/
+// critico, mas nao garante que quem enfileira tenha autoridade pra
+// isso. Essa checagem na camada de servico exige a permissao dedicada
+// alem do identity-diff ja existente - defesa em profundidade.
+async function assertCanQueueScript(scriptId, user) {
+  const script = await findMaintenanceScriptById(scriptId);
+  if (!script) return;
+  const riskLevel = normalizeRiskLevel(script.riskLevel || script.suggestedRiskLevel, "medium");
+  if (dualControlRiskLevels.has(riskLevel) && !hasPermission(user, "scripts.approve_high_risk")) {
+    throw forbidden("Scripts de risco alto ou crítico exigem um revisor com permissão de aprovação (scripts.approve_high_risk).");
+  }
+}
 
 export async function listAllMaintenanceScripts(includeInactive) {
   return listMaintenanceScripts({ includeInactive });
@@ -46,7 +67,17 @@ export async function registerSimulationForScript(scriptId, payload, user) {
 }
 
 export async function useScriptForSuggestion(suggestionId, scriptId, payload, user) {
+  await assertCanQueueScript(scriptId, user);
   return useScriptFromSuggestion({ suggestionId, scriptId, payload: payload || {}, user });
+}
+
+export async function useScriptForServiceOrderEntry(serviceOrderId, scriptId, payload, user) {
+  await assertCanQueueScript(scriptId, user);
+  return useScriptForServiceOrder({ serviceOrderId, scriptId, payload: payload || {}, user });
+}
+
+export async function listScriptActivityForServiceOrder(serviceOrderId) {
+  return listServiceOrderScriptActivity(serviceOrderId);
 }
 
 export async function listValidationsForSuggestion(suggestionId) {

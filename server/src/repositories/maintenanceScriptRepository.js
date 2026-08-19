@@ -2,13 +2,19 @@ import { randomUUID } from "node:crypto";
 import { query, withTransaction } from "../database.js";
 import { addAssetHistory } from "./assetHistoryRepository.js";
 import {
+  addAlertComment,
   findAlertById,
   findServiceOrderSuggestionById,
   getAlertSettings,
   markSuggestionValidated
 } from "./alertRepository.js";
 import { addLog } from "./logRepository.js";
-import { addServiceOrderHistory } from "./serviceOrderRepository.js";
+import {
+  addServiceOrderHistory,
+  findServiceOrderById,
+  getFinalStatus,
+  getServiceOrderSettings
+} from "./serviceOrderRepository.js";
 import { queueAgentScriptJob } from "./agentScriptJobRepository.js";
 import { trimString } from "../lib/textUtils.js";
 import { badRequest, conflict, notFoundError } from "../lib/errors.js";
@@ -624,7 +630,7 @@ function normalizeScriptType(value) {
   return scriptTypes.has(type) ? type : "other";
 }
 
-function normalizeRiskLevel(value, fallback = "medium") {
+export function normalizeRiskLevel(value, fallback = "medium") {
   const risk = String(value || fallback).trim().toLowerCase();
   return riskLevels.has(risk) ? risk : fallback;
 }
@@ -839,6 +845,44 @@ export function analyzeMaintenanceScriptContent(content = "") {
   };
 }
 
+// Diferente de analyzeMaintenanceScriptContent (so estima risco, nunca
+// bloqueia), esta lista e um bloqueio rigido: comandos claramente
+// destrutivos ou de escalonamento/evasao nao podem ser salvos no
+// catalogo, independente do risk_level informado. Cada entrada tem um
+// motivo legivel para o erro nao ficar generico.
+const dangerousContentPatterns = [
+  { pattern: /\bformat\b/i, reason: "formatar unidade de disco (format)" },
+  { pattern: /\bdiskpart\b/i, reason: "particionamento de disco (diskpart)" },
+  { pattern: /\bcipher\s+\/w\b/i, reason: "apagamento seguro de disco (cipher /w)" },
+  { pattern: /\bdel\s+\/s\s+\/q\s+c:/i, reason: "exclusao recursiva da unidade C: (del /s /q C:)" },
+  { pattern: /\brd\s+\/s\s+\/q\s+c:/i, reason: "remocao recursiva da unidade C: (rd /s /q C:)" },
+  { pattern: /\bnet\s+user\s+\S+\s+\S*\s*\/add\b/i, reason: "criacao de usuario (net user /add)" },
+  { pattern: /\bnet\s+localgroup\s+administrators\s+\S+\s+\/add\b/i, reason: "adicao de usuario ao grupo administradores" },
+  { pattern: /\breg\s+add\s+["']?hklm[^\r\n]*\\run\b/i, reason: "persistencia via chave de registro Run" },
+  { pattern: /\bschtasks\s+\/create\b/i, reason: "criacao de tarefa agendada (schtasks /create)" },
+  { pattern: /(?=[\s\S]*\binvoke-webrequest\b)(?=[\s\S]*\bstart-process\b)/i, reason: "download seguido de execucao (Invoke-WebRequest + Start-Process)" },
+  { pattern: /\b(curl|wget)\b[^\r\n]*\.exe\b/i, reason: "download de executavel externo (curl/wget para .exe)" },
+  { pattern: /\bcertutil\s+.*-urlcache\b/i, reason: "download disfarcado via certutil -urlcache" },
+  { pattern: /\bvssadmin\s+delete\s+shadows\b/i, reason: "exclusao de copias de sombra (vssadmin delete shadows)" },
+  { pattern: /\bbcdedit\b/i, reason: "alteracao de configuracao de boot (bcdedit)" },
+  { pattern: /\b(takeown|icacls)\b[^\r\n]*\\windows\\system32\b/i, reason: "alteracao de permissoes em diretorio do sistema" },
+  {
+    pattern: /(?=[\s\S]*\b(taskkill|sc\s+stop)\b)(?=[\s\S]*\b(defender|msmpeng|avp|mcafee|symantec|avast|kaspersky|sophos)\b)/i,
+    reason: "encerramento de processo/servico de antivirus"
+  },
+  { pattern: /\bset-mppreference\b/i, reason: "alteracao de preferencias do Windows Defender (Set-MpPreference)" },
+  { pattern: /\bdisablerealtimemonitoring\b/i, reason: "desativacao de protecao em tempo real (DisableRealtimeMonitoring)" }
+];
+
+export function assertScriptContentIsSafe(content) {
+  const text = String(content || "");
+  for (const { pattern, reason } of dangerousContentPatterns) {
+    if (pattern.test(text)) {
+      throw badRequest(`Conteudo do script bloqueado: ${reason}. Scripts destrutivos ou de evasao nao podem ser cadastrados.`);
+    }
+  }
+}
+
 function normalizeScriptPayload(payload = {}, current = {}) {
   const name = trimString(payload.name ?? current.name, maxLengths.name);
   const content = String(payload.content ?? current.content ?? "").slice(0, maxLengths.content);
@@ -850,6 +894,8 @@ function normalizeScriptPayload(payload = {}, current = {}) {
   if (!content.trim()) {
     throw badRequest("Informe o conteúdo do script como texto.");
   }
+
+  assertScriptContentIsSafe(content);
 
   const analysis = analyzeMaintenanceScriptContent(content);
   if (analysis.unknownVariables?.length) {
@@ -1455,7 +1501,7 @@ export async function useScriptFromSuggestion({ suggestionId, scriptId, payload 
     "Aguardando o agente autenticado da máquina executar e devolver o resultado."
   ].join("\n");
 
-  return await withTransaction(async (db) => {
+  const result = await withTransaction(async (db) => {
     const duplicatedValidation = await findActiveScriptValidationForSuggestion(suggestion.id, script.id, db);
     if (duplicatedValidation) {
       const duplicatedLog = duplicatedValidation.logId ? await findScriptLogById(duplicatedValidation.logId) : null;
@@ -1571,7 +1617,169 @@ export async function useScriptFromSuggestion({ suggestionId, scriptId, payload 
 
     return { suggestion, script, log, validation, job };
   });
+
+  // Comentario no proprio timeline do alerta (mecanismo separado de
+  // asset_history) - so nos ramos que de fato enfileiraram algo novo,
+  // nunca nos ramos de reuso idempotente (reused:true), pra nao poluir
+  // o timeline em cliques repetidos.
+  if (!result.reused && suggestion.alertId) {
+    await addAlertComment({
+      alertId: suggestion.alertId,
+      userId: user?.id || null,
+      message: `Script "${script.name}" enfileirado para execução pelo agente autenticado desta máquina.`
+    });
+  }
+
+  return result;
 }
+
+// Disparo direto a partir de uma Ordem de Servico. Diferente de
+// useScriptFromSuggestion, nao usa script_validation_runs (heuristica
+// de "observar se o alerta se resolve sozinho" especifica de sugestao,
+// sem sentido aqui): a conclusao real vem do proprio agente via
+// completeAgentScriptJob, que ja atualiza o script_execution_logs
+// vinculado por execution_log_id.
+export async function useScriptForServiceOrder({ serviceOrderId, scriptId, payload = {}, user = null }) {
+  const [order, script, settings] = await Promise.all([
+    findServiceOrderById(serviceOrderId),
+    findMaintenanceScriptById(scriptId),
+    getServiceOrderSettings()
+  ]);
+
+  if (!order) {
+    throw notFoundError("Ordem de serviço não encontrada.");
+  }
+  if (!order.assetId) {
+    throw conflict("Esta Ordem de Serviço não tem uma máquina/ativo vinculado. Vincule um ativo antes de executar scripts.");
+  }
+  if (order.status === getFinalStatus(settings).id) {
+    throw conflict("Não é possível executar scripts em uma Ordem de Serviço finalizada. Reabra a OS antes de continuar.");
+  }
+  if (!script || script.active === false) {
+    throw notFoundError("Script de manutenção não encontrado ou inativo.");
+  }
+  if (payload.confirmed !== true) {
+    throw badRequest("Confirme o envio deste script cadastrado para execução pelo agente da máquina.");
+  }
+
+  const riskLevel = normalizeRiskLevel(script.riskLevel || script.suggestedRiskLevel, "medium");
+  if ((riskLevel === "high" || riskLevel === "critical") && payload.riskAcknowledged !== true) {
+    throw badRequest("Scripts de alto risco exigem confirmação extra antes de registrar o uso.");
+  }
+
+  const userName = user?.name || "Usuário";
+  const notes = trimString(payload.notes, maxLengths.notes);
+  const rawLog = [
+    "Execução solicitada a partir de uma Ordem de Serviço.",
+    "O servidor apenas enfileirou o script cadastrado.",
+    "Aguardando o agente autenticado da máquina executar e devolver o resultado."
+  ].join("\n");
+
+  return await withTransaction(async (db) => {
+    const log = await createScriptSimulationLog({
+      scriptId: script.id,
+      assetId: order.assetId,
+      serviceOrderId: order.id,
+      mode: "agent",
+      status: "queued",
+      executedBy: user?.id || null,
+      notes,
+      rawLog,
+      parsedSummary: "Script enfileirado. O agente da máquina enviará o resultado após a execução.",
+      errorDetected: false,
+      attentionRequired: false,
+      db
+    });
+
+    const job = await queueAgentScriptJob({
+      script,
+      assetId: order.assetId,
+      executionLogId: log.id,
+      userId: user?.id || null,
+      timeoutSeconds: payload.timeoutSeconds,
+      db
+    });
+
+    await addServiceOrderHistory({
+      serviceOrderId: order.id,
+      eventType: "script_execution_queued",
+      message: `Script '${script.name}' foi enfileirado por ${userName}; aguardando o agente da máquina.`,
+      oldValue: null,
+      newValue: JSON.stringify({ jobId: job.id, scriptId: script.id, scriptName: script.name, status: "queued" }),
+      user,
+      db
+    });
+
+    await addAssetHistory({
+      assetId: order.assetId,
+      eventType: "script_execution_queued",
+      message: `Script '${script.name}' foi enfileirado pela Ordem de Serviço ${order.number || order.id}. Solicitado por ${userName}.`,
+      oldValue: null,
+      newValue: JSON.stringify({ jobId: job.id, scriptId: script.id, scriptName: script.name, status: "queued" }),
+      userId: user?.id || null,
+      userName,
+      db
+    });
+
+    await addLog({
+      type: "agent_script_execution_queued",
+      message: `Script enfileirado para o agente a partir da Ordem de Serviço: ${script.name}.`,
+      userId: user?.id || null,
+      meta: {
+        serviceOrderId: order.id,
+        assetId: order.assetId,
+        scriptId: script.id,
+        jobId: job.id
+      },
+      db
+    });
+
+    return { serviceOrder: order, script, log, job };
+  });
+}
+
+export async function listServiceOrderScriptActivity(serviceOrderId) {
+  const result = await query(
+    `
+      SELECT logs.*,
+             scripts.name AS script_name,
+             jobs.id AS job_id,
+             jobs.status AS job_status,
+             jobs.claimed_at AS job_claimed_at,
+             jobs.completed_at AS job_completed_at,
+             jobs.exit_code AS job_exit_code,
+             jobs.timed_out AS job_timed_out,
+             jobs.stdout AS job_stdout,
+             jobs.stderr AS job_stderr,
+             jobs.error_message AS job_error_message
+      FROM script_execution_logs logs
+      LEFT JOIN maintenance_scripts scripts ON scripts.id = logs.script_id
+      LEFT JOIN agent_script_jobs jobs ON jobs.execution_log_id = logs.id
+      WHERE logs.service_order_id = $1
+      ORDER BY logs.created_at DESC
+    `,
+    [serviceOrderId]
+  );
+
+  return result.rows.map((row) => ({
+    ...fromLogRow(row),
+    scriptName: row.script_name || "",
+    job: row.job_id
+      ? {
+          id: row.job_id,
+          status: row.job_status,
+          claimedAt: row.job_claimed_at,
+          completedAt: row.job_completed_at,
+          exitCode: row.job_exit_code,
+          timedOut: row.job_timed_out === true,
+          stdout: row.job_stdout || "",
+          stderr: row.job_stderr || "",
+          errorMessage: row.job_error_message || ""
+        }
+      : null
+  }));
+}
+
 export async function refreshDueScriptValidations(options = {}) {
   const result = await query(`
     SELECT validations.*,

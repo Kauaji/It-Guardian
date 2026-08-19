@@ -24,6 +24,10 @@ import {
   getChecklistHandler,
   updateChecklistItemHandler
 } from "../controllers/serviceOrderChecklistController.js";
+import {
+  serviceOrderScriptActivity,
+  useForServiceOrder
+} from "../controllers/maintenanceScriptController.js";
 import { requireAuth, requirePermission } from "../middleware/authMiddleware.js";
 
 const router = Router();
@@ -49,6 +53,8 @@ router.patch("/:id/checklist/:resultId", requirePermission("service_orders.atten
 router.get("/:id/attachments", requirePermission("service_orders.view"), listAttachments);
 router.post("/:id/attachments", requirePermission("service_orders.attendance"), addAttachment);
 router.delete("/:id/attachments/:attachmentId", requirePermission("service_orders.edit"), removeAttachment);
+router.get("/:id/script-activity", requirePermission("service_orders.view"), serviceOrderScriptActivity);
+router.post("/:id/scripts/:scriptId/use", requirePermission("service_orders.run_scripts"), useForServiceOrder);
 router.delete("/:id", requirePermission("service_orders.edit"), remove);
 
 export default router;

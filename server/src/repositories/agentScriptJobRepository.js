@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { query, withTransaction } from "../database.js";
 import { conflict, badRequest, forbidden, notFoundError, serviceUnavailable } from "../lib/errors.js";
 import { addAssetHistory } from "./assetHistoryRepository.js";
+import { addAlertComment } from "./alertRepository.js";
 import { addLog } from "./logRepository.js";
 import { isRemoteScriptExecutionEnabled } from "../config/environment.js";
 
@@ -212,13 +213,17 @@ export async function claimNextAgentScriptJob({ assetId, enrollmentId }) {
 }
 
 export async function completeAgentScriptJob({ jobId, enrollmentId, result }) {
-  return withTransaction(async (db) => {
+  let alertCommentInfo = null;
+
+  const outcome = await withTransaction(async (db) => {
     const current = await db(
       `
-        SELECT jobs.*, scripts.name AS script_name, users.name AS requested_by_name
+        SELECT jobs.*, scripts.name AS script_name, users.name AS requested_by_name,
+               logs.alert_id AS log_alert_id
         FROM agent_script_jobs jobs
         INNER JOIN maintenance_scripts scripts ON scripts.id = jobs.script_id
         LEFT JOIN users ON users.id = jobs.requested_by
+        LEFT JOIN script_execution_logs logs ON logs.id = jobs.execution_log_id
         WHERE jobs.id = $1 AND jobs.enrollment_id = $2
         LIMIT 1
       `,
@@ -426,6 +431,17 @@ export async function completeAgentScriptJob({ jobId, enrollmentId, result }) {
       meta: { jobId: job.id, assetId: job.asset_id, scriptId: job.script_id, status, exitCode, timedOut },
       db
     });
+
+    if (job.log_alert_id) {
+      alertCommentInfo = { alertId: job.log_alert_id, userId: job.requested_by, message: summary };
+    }
+
     return { id: job.id, status, exitCode, timedOut };
   });
+
+  if (alertCommentInfo) {
+    await addAlertComment(alertCommentInfo);
+  }
+
+  return outcome;
 }
