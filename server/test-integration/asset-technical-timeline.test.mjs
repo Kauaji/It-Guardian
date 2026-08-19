@@ -15,6 +15,8 @@ const {
   addRemoteAssistanceEvent
 } = await import("../src/repositories/remoteAssistanceRepository.js");
 const { default: jwt } = await import("jsonwebtoken");
+const { query, closeDatabase } = await import("../src/database.js");
+const { syncSlaBreaches } = await import("../src/repositories/serviceOrderRepository.js");
 
 const trustedOrigin = "http://localhost:5173";
 
@@ -269,4 +271,67 @@ test("prontuario tecnico do ativo: assistencia remota so aparece para quem tem r
     operatorBody.events.every((event) => event.category !== "remote_assistance"),
     "operator tem inventory.view_machine mas nao remote_assistance.view - categoria deve ficar de fora"
   );
+});
+
+test.after(closeDatabase);
+
+test("prontuario tecnico do ativo: inclui SLA vencido, reabertura e avaliacao da OS", async (t) => {
+  const server = await listen(createApp({ initializeOnRequest: true }));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  const cookie = await login(baseUrl);
+
+  const asset = await createManualAsset(baseUrl, cookie, "PatrimonioTimelineSla1");
+
+  // OS separada para o SLA vencido: reabrir uma OS limpa sla_breached_at (o
+  // prazo e recalculado do zero), entao testar os 3 eventos na mesma OS
+  // faria o evento de vencimento desaparecer antes de checar a timeline.
+  const slaOrderResponse = await fetch(`${baseUrl}/api/service-orders`, {
+    method: "POST",
+    headers: requestHeaders(cookie),
+    body: JSON.stringify({ title: "OS com SLA vencido", priority: "critical", assetId: asset.id })
+  });
+  const slaOrder = (await slaOrderResponse.json()).serviceOrder;
+  await query("UPDATE service_orders SET sla_due_at = NOW() - INTERVAL '1 hour' WHERE id = $1", [slaOrder.id]);
+  const syncResult = await syncSlaBreaches();
+  assert.ok(syncResult.breached >= 1);
+
+  const order = (await (await fetch(`${baseUrl}/api/service-orders`, {
+    method: "POST",
+    headers: requestHeaders(cookie),
+    body: JSON.stringify({ title: "OS com reabertura e avaliacao", assetId: asset.id })
+  })).json()).serviceOrder;
+
+  await fetch(`${baseUrl}/api/service-orders/${order.id}/technician`, {
+    method: "PATCH",
+    headers: requestHeaders(cookie),
+    body: JSON.stringify({ assignedTechnicianName: "Tecnico Timeline SLA" })
+  });
+  await fetch(`${baseUrl}/api/service-orders/${order.id}/status`, {
+    method: "PATCH",
+    headers: requestHeaders(cookie),
+    body: JSON.stringify({ status: "closed" })
+  });
+  const reopenResponse = await fetch(`${baseUrl}/api/service-orders/${order.id}/reopen`, {
+    method: "POST",
+    headers: requestHeaders(cookie),
+    body: JSON.stringify({ reason: "Problema voltou a ocorrer apos o fechamento." })
+  });
+  assert.equal(reopenResponse.status, 200);
+
+  const feedbackResponse = await fetch(`${baseUrl}/api/service-orders/${order.id}/feedback`, {
+    method: "POST",
+    headers: requestHeaders(cookie),
+    body: JSON.stringify({ rating: 5, comment: "Atendimento resolvido apos a reabertura." })
+  });
+  assert.equal(feedbackResponse.status, 201);
+
+  const timelineResponse = await fetch(`${baseUrl}/api/devices/${asset.id}/timeline`, { headers: { cookie } });
+  const timelineBody = await timelineResponse.json();
+  assert.equal(timelineResponse.status, 200, JSON.stringify(timelineBody));
+
+  const types = timelineBody.events.map((event) => event.type);
+  assert.ok(types.includes("service_order_sla_breached"), "deve incluir o evento de SLA vencido");
+  assert.ok(types.includes("service_order_reopened"), "deve incluir o evento de reabertura");
+  assert.ok(types.includes("service_order_feedback_submitted"), "deve incluir o evento de avaliacao");
 });

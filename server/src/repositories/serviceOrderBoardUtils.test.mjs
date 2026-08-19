@@ -4,6 +4,8 @@ import {
   buildServiceOrderMonthValues,
   buildServiceOrderNumberPreview,
   getMonthValue,
+  getServiceOrderOriginKey,
+  getServiceOrderOriginLabel,
   isServiceOrderVisibleInMonth,
   mergeServiceOrderSettings,
   normalizeSearchText,
@@ -80,4 +82,29 @@ test("seletor mensal inclui meses intermediarios sem novas OS", () => {
     buildServiceOrderMonthValues([{ createdAt: "2026-05-10T10:00:00.000Z" }], "2026-08"),
     ["2026-05", "2026-06", "2026-07", "2026-08"]
   );
+});
+
+test("configuracao de SLA e checklist obrigatorio recebe defaults sem perder valores informados", () => {
+  const settings = mergeServiceOrderSettings({ sla: { critical: 2 }, requireChecklistBeforeFinish: true });
+  assert.equal(settings.sla.critical, 2);
+  assert.equal(settings.sla.low, 72, "prioridades nao informadas mantem o default");
+  assert.equal(settings.requireChecklistBeforeFinish, true);
+});
+
+test("configuracao sem SLA informado recebe os defaults completos", () => {
+  const settings = mergeServiceOrderSettings({});
+  assert.deepEqual(settings.sla, { low: 72, medium: 48, high: 24, critical: 4, nearDuePercent: 20, nearDueMinHours: 2 });
+  assert.equal(settings.requireChecklistBeforeFinish, false);
+});
+
+test("origem da OS prioriza vinculo com plano preventivo sobre o campo source", () => {
+  assert.equal(getServiceOrderOriginKey({ preventivePlanId: "plan-1", source: "alert_suggestion" }), "preventive");
+  assert.equal(getServiceOrderOriginLabel({ preventivePlanId: "plan-1" }), "Preventiva");
+});
+
+test("origem da OS reconhece alerta e portal publico, com manual como fallback", () => {
+  assert.equal(getServiceOrderOriginKey({ source: "alert_suggestion" }), "alert_suggestion");
+  assert.equal(getServiceOrderOriginKey({ source: "public_support_form" }), "public_support_form");
+  assert.equal(getServiceOrderOriginKey({}), "manual");
+  assert.equal(getServiceOrderOriginLabel({}), "Manual");
 });
