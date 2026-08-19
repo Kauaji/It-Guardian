@@ -19,6 +19,7 @@ import serviceOrderRoutes from "./routes/serviceOrderRoutes.js";
 import serviceOrderSuggestionRoutes from "./routes/serviceOrderSuggestionRoutes.js";
 import serviceOrderSettingsRoutes from "./routes/serviceOrderSettingsRoutes.js";
 import serviceOrderStatusRoutes from "./routes/serviceOrderStatusRoutes.js";
+import serviceOrderChecklistTemplateRoutes from "./routes/serviceOrderChecklistTemplateRoutes.js";
 import clientRoutes from "./routes/clientRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
 import serviceRoutes from "./routes/serviceRoutes.js";
@@ -151,6 +152,7 @@ export function createApp({ initializeOnRequest = false } = {}) {
   app.use("/api/service-order-suggestions", serviceOrderSuggestionRoutes);
   app.use("/api/service-order-settings", serviceOrderSettingsRoutes);
   app.use("/api/service-order-statuses", serviceOrderStatusRoutes);
+  app.use("/api/service-order-checklist-templates", serviceOrderChecklistTemplateRoutes);
   app.use("/api/system-settings", systemSettingsRoutes);
   app.use("/api/clients", clientRoutes);
   app.use("/api/products", productRoutes);

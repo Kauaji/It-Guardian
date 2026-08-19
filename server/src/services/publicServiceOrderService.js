@@ -69,7 +69,7 @@ export function chooseHigherPriority(current, candidate) {
   return priorityRank[safeCandidate] > priorityRank[current] ? safeCandidate : current;
 }
 
-async function getActiveProblemTypes() {
+export async function getActiveProblemTypes() {
   const configured = await listSettingsRecords("problemTypes");
   const active = configured
     .filter((item) => item.active !== false)
@@ -108,6 +108,19 @@ async function calculatePriority({ category, problemType, environmentName }) {
   }
 
   return priority;
+}
+
+// Reaproveitada pelo checklist tecnico (serviceOrderChecklistService.js)
+// pra resolver `service_orders.problem_type` (texto livre - pode ser o id
+// de um problem_types configurado, o nome, ou um slug default-* quando
+// nao ha nenhum problem type configurado) na mesma chave usada por
+// `calculatePriority` - evita as duas logicas de match divergirem.
+export async function resolveProblemTypeKey(problemTypeValue) {
+  const problemTypes = await getActiveProblemTypes();
+  const match = problemTypes.find(
+    (item) => normalize(item.id) === normalize(problemTypeValue) || normalize(item.name) === normalize(problemTypeValue)
+  );
+  return match ? match.id : null;
 }
 
 export async function getSupportOptions() {

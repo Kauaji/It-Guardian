@@ -735,6 +735,18 @@ export async function findServiceOrderSuggestionById(id) {
   return result.rows[0] ? fromSuggestionRow(result.rows[0]) : null;
 }
 
+// Ponteiro reverso: dado o id de uma OS ja criada, encontra a sugestao de
+// alerta que a originou (se houver) - usado pra mostrar/linkar "alerta
+// relacionado" na ficha da OS, sem precisar de uma coluna alert_id direta
+// em service_orders (created_service_order_id ja e unico por alerta).
+export async function findServiceOrderSuggestionByServiceOrderId(serviceOrderId) {
+  const result = await query(
+    "SELECT * FROM service_order_suggestions WHERE created_service_order_id = $1 LIMIT 1",
+    [serviceOrderId]
+  );
+  return result.rows[0] ? fromSuggestionRow(result.rows[0]) : null;
+}
+
 export async function createSuggestionForAlert(alert, suggestion) {
   const existing = await query(
     "SELECT * FROM service_order_suggestions WHERE alert_id = $1 LIMIT 1",

@@ -28,6 +28,15 @@ export const defaultServiceOrderStatuses = [
   { id: "closed", name: "Finalizada", color: "#16a34a", order: 3, isInitial: false, isFinal: true }
 ];
 
+const defaultSlaSettings = {
+  low: 72,
+  medium: 48,
+  high: 24,
+  critical: 4,
+  nearDuePercent: 20,
+  nearDueMinHours: 2
+};
+
 const defaultServiceOrderSettings = {
   numberFormat: {
     prefix: "OS",
@@ -43,7 +52,9 @@ const defaultServiceOrderSettings = {
   },
   statuses: defaultServiceOrderStatuses,
   priorityColors: defaultPriorityColors,
-  boardLayout: "horizontal"
+  boardLayout: "horizontal",
+  sla: defaultSlaSettings,
+  requireChecklistBeforeFinish: false
 };
 
 function mergeServiceOrderSettings(value = {}) {
@@ -61,7 +72,12 @@ function mergeServiceOrderSettings(value = {}) {
       ...defaultServiceOrderSettings.priorityColors,
       ...(value.priorityColors || {})
     },
-    boardLayout: value.boardLayout || defaultServiceOrderSettings.boardLayout
+    boardLayout: value.boardLayout || defaultServiceOrderSettings.boardLayout,
+    sla: {
+      ...defaultSlaSettings,
+      ...(value.sla || {})
+    },
+    requireChecklistBeforeFinish: Boolean(value.requireChecklistBeforeFinish)
   };
 }
 
@@ -176,7 +192,16 @@ function normalizeServiceOrderSettings(value = {}) {
         sanitizeStatusColor(merged.priorityColors?.[priority], fallback)
       ])
     ),
-    boardLayout
+    boardLayout,
+    sla: {
+      low: Math.max(0, Number(merged.sla.low) || 0) || defaultSlaSettings.low,
+      medium: Math.max(0, Number(merged.sla.medium) || 0) || defaultSlaSettings.medium,
+      high: Math.max(0, Number(merged.sla.high) || 0) || defaultSlaSettings.high,
+      critical: Math.max(0, Number(merged.sla.critical) || 0) || defaultSlaSettings.critical,
+      nearDuePercent: Math.min(90, Math.max(1, Number(merged.sla.nearDuePercent) || defaultSlaSettings.nearDuePercent)),
+      nearDueMinHours: Math.max(0, Number(merged.sla.nearDueMinHours) || defaultSlaSettings.nearDueMinHours)
+    },
+    requireChecklistBeforeFinish: merged.requireChecklistBeforeFinish
   };
 }
 
@@ -471,6 +496,82 @@ export function hasServiceOrderStatus(settings, statusId) {
   return normalizeServiceOrderSettings(settings).statuses.some((status) => status.id === statusId);
 }
 
+export const SLA_STATUSES = {
+  ON_TRACK: "on_track",
+  NEAR_DUE: "near_due",
+  BREACHED: "breached",
+  PAUSED: "paused",
+  RESOLVED: "resolved",
+  NOT_APPLICABLE: "not_applicable"
+};
+
+function slaPriorityHours(settings, priority) {
+  const hours = Number(settings?.sla?.[priority]);
+  return Number.isFinite(hours) && hours > 0 ? hours : null;
+}
+
+// Calcula o prazo de SLA uma unica vez, no momento em que ha um "inicio"
+// valido (criacao da OS, ou reescala de prioridade automatica) -- nunca
+// recalculado so por causa de leitura.
+export function computeServiceOrderSlaDueAt(priority, settings, startAt) {
+  const hours = slaPriorityHours(settings, priority);
+  const start = new Date(startAt).getTime();
+  if (!hours || !Number.isFinite(start)) return null;
+  return new Date(start + hours * 60 * 60 * 1000).toISOString();
+}
+
+/**
+ * Funcao pura: status de SLA (on_track/near_due/breached/resolved/
+ * not_applicable) e minutos restantes, sempre computados na leitura a
+ * partir de `slaDueAt` (persistido) - mesmo principio de
+ * `withDisplayPriority`, nunca grava nada. `slaBreachedAt` (persistido
+ * so por `syncSlaBreaches`) e o unico sinal que vira evento discreto de
+ * historico; aqui ele so afeta o status retornado, nao e alterado.
+ */
+export function calculateServiceOrderSla(order, settings, now = new Date()) {
+  const empty = { dueAt: null, status: SLA_STATUSES.NOT_APPLICABLE, remainingMinutes: null, breached: false, nearDue: false };
+  if (!order?.slaDueAt) return empty;
+
+  const dueAt = order.slaDueAt;
+  const dueMs = new Date(dueAt).getTime();
+  if (!Number.isFinite(dueMs)) return empty;
+
+  const finalStatusId = getFinalStatus(settings).id;
+  const isFinal = order.status === finalStatusId;
+
+  if (isFinal) {
+    const closedMs = order.closedAt ? new Date(order.closedAt).getTime() : null;
+    const resolvedLate = Boolean(order.slaBreachedAt) || (Number.isFinite(closedMs) && closedMs > dueMs);
+    return {
+      dueAt,
+      status: resolvedLate ? SLA_STATUSES.BREACHED : SLA_STATUSES.RESOLVED,
+      remainingMinutes: null,
+      breached: resolvedLate,
+      nearDue: false
+    };
+  }
+
+  const nowMs = now.getTime();
+  const remainingMinutes = Math.round((dueMs - nowMs) / 60000);
+  const breached = Boolean(order.slaBreachedAt) || remainingMinutes <= 0;
+
+  if (breached) {
+    return { dueAt, status: SLA_STATUSES.BREACHED, remainingMinutes: Math.min(remainingMinutes, 0), breached: true, nearDue: false };
+  }
+
+  const totalHours = slaPriorityHours(settings, order.priority);
+  const totalMinutes = totalHours ? totalHours * 60 : null;
+  const nearDuePercent = settings?.sla?.nearDuePercent ?? defaultSlaSettings.nearDuePercent;
+  const nearDueMinHours = settings?.sla?.nearDueMinHours ?? defaultSlaSettings.nearDueMinHours;
+
+  const percentRule = Boolean(totalMinutes) && remainingMinutes <= totalMinutes * (nearDuePercent / 100);
+  const hoursRule =
+    (order.priority === "high" || order.priority === "critical") && remainingMinutes <= nearDueMinHours * 60;
+  const nearDue = percentRule || hoursRule;
+
+  return { dueAt, status: nearDue ? SLA_STATUSES.NEAR_DUE : SLA_STATUSES.ON_TRACK, remainingMinutes, breached: false, nearDue };
+}
+
 function getTimedPriority(row, settings) {
   if (!settings.autoPriority.enabled || !row.auto_priority_enabled || row.status === getFinalStatus(settings).id) {
     return row.priority;
@@ -502,14 +603,21 @@ async function persistAutoPriority(row, settings) {
   const nextPriority = getTimedPriority(row, settings);
   if (nextPriority === row.priority) return row;
 
+  // Se a OS ja tinha um prazo de SLA calculado, recalcula com a prioridade
+  // nova (mesmo inicio - created_at) - sem isso, uma OS escalada de baixa
+  // pra critica manteria um prazo de 72h calculado quando ainda era baixa.
+  const nextSlaDueAt = row.sla_due_at
+    ? computeServiceOrderSlaDueAt(nextPriority, settings, row.created_at)
+    : row.sla_due_at;
+
   const result = await query(
     `
       UPDATE service_orders
-      SET priority = $2, updated_at = NOW()
+      SET priority = $2, sla_due_at = $3, updated_at = NOW()
       WHERE id = $1
       RETURNING *
     `,
-    [row.id, nextPriority]
+    [row.id, nextPriority, nextSlaDueAt]
   );
 
   await addServiceOrderHistory({
@@ -563,6 +671,74 @@ export async function syncAutoPriorities() {
   return { checked: result.rows.length, updated };
 }
 
+/**
+ * Marca `sla_breached_at` uma unica vez por OS (guardado por IS NULL) --
+ * mesmo padrao de `syncAutoPriorities`: so roda pelo job agendado, nunca
+ * por leitura. E o unico jeito de "SLA vencido" virar um evento discreto
+ * no historico/Prontuario Tecnico, em vez de recomputado a cada leitura.
+ */
+export async function syncSlaBreaches() {
+  const settings = await getServiceOrderSettings();
+  const finalStatusId = getFinalStatus(settings).id;
+
+  const result = await query(
+    `
+      SELECT *
+      FROM service_orders
+      WHERE sla_due_at < NOW()
+        AND sla_breached_at IS NULL
+        AND status != $1
+    `,
+    [finalStatusId]
+  );
+
+  let breached = 0;
+  for (const row of result.rows) {
+    const updated = await query(
+      `
+        UPDATE service_orders
+        SET sla_breached_at = NOW(), updated_at = NOW()
+        WHERE id = $1 AND sla_breached_at IS NULL
+        RETURNING *
+      `,
+      [row.id]
+    );
+    if (!updated.rows[0]) continue;
+    breached += 1;
+
+    await addServiceOrderHistory({
+      serviceOrderId: row.id,
+      eventType: "sla_breached",
+      message: "SLA da ordem de servico vencido.",
+      oldValue: null,
+      newValue: row.sla_due_at,
+      user: { name: "Sistema" }
+    });
+    await addServiceOrderAssetHistory({
+      assetId: row.asset_id,
+      serviceOrder: row,
+      eventType: "sla_breached",
+      message: "SLA vencido.",
+      oldValue: null,
+      newValue: row.sla_due_at,
+      user: { name: "Sistema" }
+    });
+  }
+
+  return { checked: result.rows.length, breached };
+}
+
+// Guardado por IS NULL - so grava na primeira vez que a OS recebe algum
+// tipo de resposta apos a criacao (tecnico atribuido, status sai do
+// inicial, ou atendimento registrado). Chamado explicitamente pelos 3
+// pontos certos em serviceOrderService.js, nunca pelo PATCH generico.
+export async function setFirstResponseAtIfNeeded(id) {
+  await query(
+    "UPDATE service_orders SET first_response_at = NOW() WHERE id = $1 AND first_response_at IS NULL",
+    [id]
+  );
+}
+
 function fromItemRow(row) {
   return {
     id: row.id,
@@ -578,8 +754,8 @@ function fromItemRow(row) {
   };
 }
 
-function fromOrderRow(row, history = [], items = []) {
-  return {
+function fromOrderRow(row, history = [], items = [], settings = null, feedback = null) {
+  const order = {
     id: row.id,
     isDemo: String(row.id || "").startsWith("demo-os-"),
     number: row.number,
@@ -625,8 +801,18 @@ function fromOrderRow(row, history = [], items = []) {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     closedAt: row.closed_at,
+    slaDueAt: row.sla_due_at,
+    firstResponseAt: row.first_response_at,
+    slaBreachedAt: row.sla_breached_at,
+    reopenedAt: row.reopened_at,
+    reopenedBy: row.reopened_by,
+    reopenReason: row.reopen_reason,
+    reopenCount: Number(row.reopen_count || 0),
+    feedback,
     history
   };
+  if (settings) order.sla = calculateServiceOrderSla(order, settings);
+  return order;
 }
 
 function fromHistoryRow(row) {
@@ -672,7 +858,9 @@ function settingsFromDedicatedRow(row, statuses = []) {
     },
     statuses,
     priorityColors: parseJsonObject(row.priority_colors, defaultPriorityColors),
-    boardLayout: row.board_layout
+    boardLayout: row.board_layout,
+    sla: parseJsonObject(row.sla, defaultSlaSettings),
+    requireChecklistBeforeFinish: row.require_checklist_before_finish
   });
 }
 
@@ -717,9 +905,10 @@ async function persistServiceOrderSettings(settings) {
       INSERT INTO service_order_settings (
         id, number_prefix, use_year, use_month, next_number,
         auto_priority_enabled, low_to_medium_hours, medium_to_high_hours,
-        high_to_critical_hours, priority_colors, board_layout, updated_at
+        high_to_critical_hours, priority_colors, board_layout,
+        sla, require_checklist_before_finish, updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())
       ON CONFLICT (id)
       DO UPDATE SET
         number_prefix = EXCLUDED.number_prefix,
@@ -732,6 +921,8 @@ async function persistServiceOrderSettings(settings) {
         high_to_critical_hours = EXCLUDED.high_to_critical_hours,
         priority_colors = EXCLUDED.priority_colors,
         board_layout = EXCLUDED.board_layout,
+        sla = EXCLUDED.sla,
+        require_checklist_before_finish = EXCLUDED.require_checklist_before_finish,
         updated_at = NOW()
     `,
     [
@@ -745,7 +936,9 @@ async function persistServiceOrderSettings(settings) {
       normalized.autoPriority.mediumToHighHours,
       normalized.autoPriority.highToCriticalHours,
       JSON.stringify(normalized.priorityColors),
-      normalized.boardLayout
+      normalized.boardLayout,
+      JSON.stringify(normalized.sla),
+      normalized.requireChecklistBeforeFinish
     ]
   );
 
@@ -835,7 +1028,15 @@ export async function updateServiceOrderSettings(payload = {}) {
       ...current.priorityColors,
       ...(payload.priorityColors || {})
     },
-    boardLayout: payload.boardLayout || current.boardLayout
+    boardLayout: payload.boardLayout || current.boardLayout,
+    sla: {
+      ...current.sla,
+      ...(payload.sla || {})
+    },
+    requireChecklistBeforeFinish:
+      payload.requireChecklistBeforeFinish !== undefined
+        ? payload.requireChecklistBeforeFinish
+        : current.requireChecklistBeforeFinish
   });
 
   if (Array.isArray(payload.statuses)) {
@@ -896,12 +1097,20 @@ export async function listServiceOrders(user = null) {
     historyByOrder.set(event.serviceOrderId, current);
   }
 
-  const itemsByOrder = await listServiceOrderItemsByOrderIds(result.rows.map((row) => row.id));
+  const orderIds = result.rows.map((row) => row.id);
+  const itemsByOrder = await listServiceOrderItemsByOrderIds(orderIds);
+  const feedbackByOrder = await listServiceOrderFeedbackByOrderIds(orderIds);
 
   const rows = result.rows.map((row) => withDisplayPriority(row, settings));
 
   return rows
-    .map((row) => fromOrderRow(row, historyByOrder.get(row.id) || [], itemsByOrder.get(row.id) || []))
+    .map((row) => fromOrderRow(
+      row,
+      historyByOrder.get(row.id) || [],
+      itemsByOrder.get(row.id) || [],
+      settings,
+      feedbackByOrder.get(row.id) || null
+    ))
     .filter((order) => !user || canViewServiceOrder(user, order));
 }
 
@@ -920,9 +1129,12 @@ export async function listServiceOrdersByAssetId(assetId, { limit = 50 } = {}) {
 
   const orderIds = result.rows.map((row) => row.id);
   const itemsByOrder = await listServiceOrderItemsByOrderIds(orderIds);
+  const feedbackByOrder = await listServiceOrderFeedbackByOrderIds(orderIds);
   const rows = result.rows.map((row) => withDisplayPriority(row, settings));
 
-  return rows.map((row) => fromOrderRow(row, [], itemsByOrder.get(row.id) || []));
+  return rows.map((row) =>
+    fromOrderRow(row, [], itemsByOrder.get(row.id) || [], settings, feedbackByOrder.get(row.id) || null)
+  );
 }
 
 export async function findServiceOrderById(id, user = null) {
@@ -933,7 +1145,7 @@ export async function findServiceOrderById(id, user = null) {
 
   const history = await listServiceOrderHistory(id);
   const items = await listServiceOrderItems(id);
-  const order = fromOrderRow(row, history, items);
+  const order = fromOrderRow(row, history, items, settings);
   if (user && !canViewServiceOrder(user, order)) return null;
   return order;
 }
@@ -1082,6 +1294,7 @@ export async function createServiceOrder({ payload, user, db = query }) {
   const totalPartsValue = sumServiceOrderItems(items);
   const totalValue = Math.round((serviceValue + totalPartsValue) * 100) / 100;
   const priority = await calculateConfiguredPriority(payload, sector, service);
+  const slaDueAt = computeServiceOrderSlaDueAt(priority, settings, new Date());
   let id = randomUUID();
   let insertedRow = null;
 
@@ -1099,12 +1312,12 @@ export async function createServiceOrder({ payload, user, db = query }) {
             source, assigned_technician_name, auto_priority_enabled, notes,
             service_performed, attendance_notes,
             service_value, total_parts_value, total_value, backup_asset_id, sector_id, sector_name,
-            service_id, service_code, service_name, preventive_plan_id, created_by
+            service_id, service_code, service_name, preventive_plan_id, created_by, sla_due_at
           )
           VALUES (
             $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
             $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
-            $31, $32, $33, $34, $35
+            $31, $32, $33, $34, $35, $36
           )
           RETURNING *
         `,
@@ -1143,7 +1356,8 @@ export async function createServiceOrder({ payload, user, db = query }) {
           service.serviceCode,
           service.serviceName,
           payload.preventivePlanId || null,
-          user?.id || null
+          user?.id || null,
+          slaDueAt
         ]
       );
       insertedRow = result.rows[0];
@@ -1182,7 +1396,7 @@ export async function createServiceOrder({ payload, user, db = query }) {
     db
   });
 
-  return fromOrderRow(insertedRow, [createdHistory], items);
+  return fromOrderRow(insertedRow, [createdHistory], items, settings);
 }
 
 export async function updateServiceOrder({ id, payload, user }) {
@@ -1393,7 +1607,7 @@ export async function updateServiceOrder({ id, payload, user }) {
   }
 
   return {
-    ...fromOrderRow(updatedRow, await listServiceOrderHistory(id), await listServiceOrderItems(id))
+    ...fromOrderRow(updatedRow, await listServiceOrderHistory(id), await listServiceOrderItems(id), settings)
   };
 }
 
@@ -1435,7 +1649,7 @@ export async function updateServiceOrderStatus({ id, status, user }) {
   });
 
   return {
-    ...fromOrderRow(result.rows[0], await listServiceOrderHistory(id), await listServiceOrderItems(id))
+    ...fromOrderRow(result.rows[0], await listServiceOrderHistory(id), await listServiceOrderItems(id), settings)
   };
 }
 
@@ -1453,6 +1667,306 @@ export async function deleteServiceOrder(id, user = null) {
   });
   await query("DELETE FROM service_orders WHERE id = $1", [id]);
   return current;
+}
+
+function makeHttpError(message, statusCode = 400) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  error.expose = true;
+  return error;
+}
+
+// Reabertura tem dois caminhos: o dropdown de status generico ja tratava
+// implicitamente "voltar pro status inicial" como reopened (sem exigir
+// motivo, comportamento existente preservado). Esta funcao e o caminho
+// dedicado e mais forte: exige motivo, incrementa reopen_count e reinicia
+// o prazo de SLA a partir de agora (nova janela de atendimento).
+export async function reopenServiceOrder({ id, reason, user }) {
+  const settings = await getServiceOrderSettings();
+  const current = await findServiceOrderById(id);
+  if (!current) return null;
+
+  const finalStatusId = getFinalStatus(settings).id;
+  if (current.status !== finalStatusId) {
+    throw makeHttpError("Só é possível reabrir uma Ordem de Serviço finalizada.");
+  }
+
+  const normalizedReason = String(reason || "").trim();
+  if (normalizedReason.length < 3) {
+    throw makeHttpError("Informe o motivo da reabertura.");
+  }
+
+  const initialStatusId = getInitialStatus(settings).id;
+  const nextSlaDueAt = computeServiceOrderSlaDueAt(current.priority, settings, new Date());
+
+  const result = await query(
+    `
+      UPDATE service_orders
+      SET status = $2,
+          closed_at = NULL,
+          reopened_at = NOW(),
+          reopened_by = $3,
+          reopen_reason = $4,
+          reopen_count = reopen_count + 1,
+          sla_due_at = $5,
+          sla_breached_at = NULL,
+          updated_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    `,
+    [id, initialStatusId, user?.id || null, normalizedReason, nextSlaDueAt]
+  );
+  const updatedRow = result.rows[0];
+
+  await addServiceOrderHistory({
+    serviceOrderId: id,
+    eventType: "reopened",
+    message: `OS reaberta. Motivo: ${normalizedReason}`,
+    oldValue: current.status,
+    newValue: initialStatusId,
+    user
+  });
+  await addServiceOrderAssetHistory({
+    assetId: current.assetId,
+    serviceOrder: updatedRow,
+    eventType: "reopened",
+    message: `reaberta. Motivo: ${normalizedReason}`,
+    oldValue: current.status,
+    newValue: initialStatusId,
+    user
+  });
+
+  return fromOrderRow(updatedRow, await listServiceOrderHistory(id), await listServiceOrderItems(id), settings);
+}
+
+function fromFeedbackRow(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    serviceOrderId: row.service_order_id,
+    rating: Number(row.rating),
+    comment: row.comment,
+    submittedByName: row.submitted_by_name,
+    submittedBy: row.submitted_by,
+    submittedAt: row.submitted_at,
+    source: row.source
+  };
+}
+
+export async function findServiceOrderFeedback(serviceOrderId) {
+  const result = await query(
+    "SELECT * FROM service_order_feedback WHERE service_order_id = $1",
+    [serviceOrderId]
+  );
+  return fromFeedbackRow(result.rows[0]);
+}
+
+export async function listServiceOrderFeedbackByOrderIds(orderIds = []) {
+  const ids = orderIds.filter(Boolean);
+  const feedbackByOrder = new Map();
+  if (!ids.length) return feedbackByOrder;
+
+  const placeholders = ids.map((_, index) => `$${index + 1}`).join(", ");
+  const result = await query(
+    `SELECT * FROM service_order_feedback WHERE service_order_id IN (${placeholders})`,
+    ids
+  );
+  for (const row of result.rows.map(fromFeedbackRow)) {
+    feedbackByOrder.set(row.serviceOrderId, row);
+  }
+  return feedbackByOrder;
+}
+
+// Avaliacao interna (registrada por admin/tecnico dentro da OS) - sem
+// fluxo de link publico com token nesta rodada. Uma avaliacao por OS
+// (indice unico) - reenviar atualiza a existente.
+export async function submitServiceOrderFeedback({ id, rating, comment, user, source = "internal" }) {
+  const current = await findServiceOrderById(id);
+  if (!current) return null;
+
+  const normalizedRating = Math.trunc(Number(rating));
+  if (!Number.isFinite(normalizedRating) || normalizedRating < 1 || normalizedRating > 5) {
+    throw makeHttpError("A avaliação deve ser uma nota de 1 a 5.");
+  }
+
+  const result = await query(
+    `
+      INSERT INTO service_order_feedback (
+        id, service_order_id, rating, comment, submitted_by_name, submitted_by, source
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      ON CONFLICT (service_order_id)
+      DO UPDATE SET
+        rating = EXCLUDED.rating,
+        comment = EXCLUDED.comment,
+        submitted_by_name = EXCLUDED.submitted_by_name,
+        submitted_by = EXCLUDED.submitted_by,
+        submitted_at = NOW(),
+        source = EXCLUDED.source
+      RETURNING *
+    `,
+    [randomUUID(), id, normalizedRating, comment || null, user?.name || null, user?.id || null, source]
+  );
+
+  await addServiceOrderHistory({
+    serviceOrderId: id,
+    eventType: "feedback_submitted",
+    message: `Avaliação registrada: ${normalizedRating}/5.`,
+    newValue: String(normalizedRating),
+    user
+  });
+  await addServiceOrderAssetHistory({
+    assetId: current.assetId,
+    serviceOrder: current,
+    eventType: "feedback_submitted",
+    message: `avaliação registrada: ${normalizedRating}/5.`,
+    newValue: String(normalizedRating),
+    user
+  });
+
+  return fromFeedbackRow(result.rows[0]);
+}
+
+const BLOCKED_ATTACHMENT_EXTENSIONS = new Set([
+  ".exe", ".bat", ".cmd", ".ps1", ".js", ".vbs", ".msi", ".scr", ".jar", ".com"
+]);
+export const serviceOrderAttachmentCategories = new Set([
+  "evidencia", "orcamento", "foto", "documento", "print", "outro"
+]);
+
+function fileExtension(value) {
+  const match = String(value || "").trim().match(/\.[a-z0-9]+$/i);
+  return match ? match[0].toLowerCase() : "";
+}
+
+function assertSafeAttachmentReference(value, fieldLabel) {
+  const ext = fileExtension(value);
+  if (ext && BLOCKED_ATTACHMENT_EXTENSIONS.has(ext)) {
+    throw makeHttpError(`${fieldLabel} aponta para um tipo de arquivo não permitido (${ext}).`);
+  }
+}
+
+function fromAttachmentRow(row) {
+  return {
+    id: row.id,
+    serviceOrderId: row.service_order_id,
+    fileName: row.file_name,
+    fileType: row.file_type,
+    fileSize: row.file_size != null ? Number(row.file_size) : null,
+    storageKey: row.storage_key,
+    category: row.category,
+    description: row.description,
+    uploadedBy: row.uploaded_by,
+    uploadedAt: row.uploaded_at
+  };
+}
+
+export async function listServiceOrderAttachments(serviceOrderId) {
+  const result = await query(
+    "SELECT * FROM service_order_attachments WHERE service_order_id = $1 ORDER BY uploaded_at DESC",
+    [serviceOrderId]
+  );
+  return result.rows.map(fromAttachmentRow);
+}
+
+/**
+ * Anexo metadata-only: nenhuma infraestrutura de upload/storage existe no
+ * projeto hoje (sem multer, sem S3/disco). `storageKey` e uma referencia
+ * em texto (link/descricao de onde a evidencia real esta guardada), nao
+ * um upload binario - limitacao documentada em docs/ORDENS-DE-SERVICO.md.
+ * A validacao de extensao ainda se aplica ao nome/referencia informados.
+ */
+export async function createServiceOrderAttachment({
+  serviceOrderId,
+  fileName,
+  fileType,
+  fileSize,
+  storageKey,
+  category,
+  description,
+  user
+}) {
+  const current = await findServiceOrderById(serviceOrderId);
+  if (!current) return null;
+
+  const normalizedFileName = String(fileName || "").trim();
+  if (normalizedFileName.length < 1) {
+    throw makeHttpError("Informe o nome do anexo.");
+  }
+  assertSafeAttachmentReference(normalizedFileName, "O nome do anexo");
+  assertSafeAttachmentReference(storageKey, "A referência do anexo");
+
+  const normalizedCategory = serviceOrderAttachmentCategories.has(category) ? category : "outro";
+  const size = Number(fileSize);
+
+  const result = await query(
+    `
+      INSERT INTO service_order_attachments (
+        id, service_order_id, file_name, file_type, file_size, storage_key, category, description, uploaded_by
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING *
+    `,
+    [
+      randomUUID(),
+      serviceOrderId,
+      normalizedFileName.slice(0, 255),
+      fileType ? String(fileType).slice(0, 100) : null,
+      Number.isFinite(size) && size >= 0 ? Math.trunc(size) : null,
+      storageKey ? String(storageKey).slice(0, 1000) : null,
+      normalizedCategory,
+      description ? String(description).slice(0, 1000) : null,
+      user?.id || null
+    ]
+  );
+
+  await addServiceOrderHistory({
+    serviceOrderId,
+    eventType: "attachment_added",
+    message: `Anexo adicionado: ${normalizedFileName}.`,
+    newValue: normalizedFileName,
+    user
+  });
+  await addServiceOrderAssetHistory({
+    assetId: current.assetId,
+    serviceOrder: current,
+    eventType: "attachment_added",
+    message: `anexo adicionado: ${normalizedFileName}.`,
+    newValue: normalizedFileName,
+    user
+  });
+
+  return fromAttachmentRow(result.rows[0]);
+}
+
+export async function deleteServiceOrderAttachment(serviceOrderId, attachmentId, user = null) {
+  const current = await findServiceOrderById(serviceOrderId);
+  if (!current) return null;
+
+  const result = await query(
+    "DELETE FROM service_order_attachments WHERE id = $1 AND service_order_id = $2 RETURNING *",
+    [attachmentId, serviceOrderId]
+  );
+  const deleted = result.rows[0] ? fromAttachmentRow(result.rows[0]) : null;
+  if (!deleted) return null;
+
+  await addServiceOrderHistory({
+    serviceOrderId,
+    eventType: "attachment_removed",
+    message: `Anexo removido: ${deleted.fileName}.`,
+    oldValue: deleted.fileName,
+    user
+  });
+  await addServiceOrderAssetHistory({
+    assetId: current.assetId,
+    serviceOrder: current,
+    eventType: "attachment_removed",
+    message: `anexo removido: ${deleted.fileName}.`,
+    oldValue: deleted.fileName,
+    user
+  });
+
+  return deleted;
 }
 
 

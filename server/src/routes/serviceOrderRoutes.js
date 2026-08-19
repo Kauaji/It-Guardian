@@ -1,19 +1,29 @@
 import { Router } from "express";
 import {
+  addAttachment,
   addHistory,
   assignTechnician,
   changePriority,
   changeStatus,
   create,
   details,
+  getFeedback,
   linkAsset,
   list,
+  listAttachments,
   remove,
+  removeAttachment,
+  reopen,
   replaceItems,
   settings,
+  submitFeedback,
   update,
   updateSettings
 } from "../controllers/serviceOrderController.js";
+import {
+  getChecklistHandler,
+  updateChecklistItemHandler
+} from "../controllers/serviceOrderChecklistController.js";
 import { requireAuth, requirePermission } from "../middleware/authMiddleware.js";
 
 const router = Router();
@@ -31,6 +41,14 @@ router.patch("/:id/asset", requirePermission("service_orders.edit"), linkAsset);
 router.post("/:id/items", requirePermission("service_orders.parts"), replaceItems);
 router.patch("/:id", requirePermission("service_orders.edit"), update);
 router.post("/:id/history", requirePermission("service_orders.attendance"), addHistory);
+router.post("/:id/reopen", requirePermission("service_orders.reopen"), reopen);
+router.get("/:id/feedback", requirePermission("service_orders.view"), getFeedback);
+router.post("/:id/feedback", requirePermission("service_orders.attendance"), submitFeedback);
+router.get("/:id/checklist", requirePermission("service_orders.view"), getChecklistHandler);
+router.patch("/:id/checklist/:resultId", requirePermission("service_orders.attendance"), updateChecklistItemHandler);
+router.get("/:id/attachments", requirePermission("service_orders.view"), listAttachments);
+router.post("/:id/attachments", requirePermission("service_orders.attendance"), addAttachment);
+router.delete("/:id/attachments/:attachmentId", requirePermission("service_orders.edit"), removeAttachment);
 router.delete("/:id", requirePermission("service_orders.edit"), remove);
 
 export default router;

@@ -19,6 +19,11 @@ import { migration016MaintenanceScriptContentAttribution } from "./016-maintenan
 import { migration017RemoteAssistanceEventHashChain } from "./017-remote-assistance-event-hash-chain.js";
 import { migration018NetworkTopologyMap } from "./018-network-topology-map.js";
 import { migration019RemoteAssistanceEventsAssetIndex } from "./019-remote-assistance-events-asset-index.js";
+import { migration020ServiceOrderSla } from "./020-service-order-sla.js";
+import { migration021ServiceOrderReopen } from "./021-service-order-reopen.js";
+import { migration022ServiceOrderChecklists } from "./022-service-order-checklists.js";
+import { migration023ServiceOrderAttachments } from "./023-service-order-attachments.js";
+import { migration024ServiceOrderFeedback } from "./024-service-order-feedback.js";
 
 export const migrations = [
   migration001RuntimeFoundation,
@@ -39,7 +44,12 @@ export const migrations = [
   migration016MaintenanceScriptContentAttribution,
   migration017RemoteAssistanceEventHashChain,
   migration018NetworkTopologyMap,
-  migration019RemoteAssistanceEventsAssetIndex
+  migration019RemoteAssistanceEventsAssetIndex,
+  migration020ServiceOrderSla,
+  migration021ServiceOrderReopen,
+  migration022ServiceOrderChecklists,
+  migration023ServiceOrderAttachments,
+  migration024ServiceOrderFeedback
 ];
 
 export async function runMigrations() {
