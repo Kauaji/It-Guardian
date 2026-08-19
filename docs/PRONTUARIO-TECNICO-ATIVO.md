@@ -29,7 +29,7 @@ aberta, nao quando a ficha da maquina abre.
 
 | Categoria | Fonte | Observacao |
 |---|---|---|
-| `service_order` / `part` | `service_orders`, `service_order_items` (consulta dedicada por `asset_id`) | Abertura, fechamento e pecas registradas em cada OS do ativo. |
+| `service_order` / `part` | `service_orders`, `service_order_items` (consulta dedicada por `asset_id`) | Abertura, fechamento, pecas registradas, SLA vencido (`service_order_sla_breached`), reabertura (`service_order_reopened`) e avaliacao recebida (`service_order_feedback_submitted`) - lidos direto dos campos ja retornados por `listServiceOrdersByAssetId` (`slaBreachedAt`, `reopenedAt`, `feedback`), sem gravar em `asset_history`. |
 | `alert` | `alertService.getHostAlertsWithAcknowledgements` (ja existia) | Criacao, reconhecimento e resolucao. |
 | `remote_assistance` | `remote_assistance_events` (consulta dedicada por `asset_id`) | So aparece para quem tem `remote_assistance.view` - ver "Permissoes". |
 | `topology` | `network_topology_nodes`/`_links` (vinculo atual) + `asset_history` (eventos daqui pra frente) | Ver secao propria abaixo. |

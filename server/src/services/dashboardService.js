@@ -1,7 +1,7 @@
 import { calculateInfrastructureHealth } from "../domain/infrastructureHealth.js";
 import { listAlerts } from "../repositories/alertRepository.js";
 import { listActiveMaintenanceRecordsMap } from "../repositories/assetLifecycleRepository.js";
-import { getServiceOrderSettings, listServiceOrders } from "../repositories/serviceOrderRepository.js";
+import { calculateServiceOrderSla, getServiceOrderSettings, listServiceOrders } from "../repositories/serviceOrderRepository.js";
 import { getSystemSettings } from "../repositories/systemSettingsRepository.js";
 import { getActiveAlertsWithAcknowledgements, getAlertCategory, getAlertCompactLabel } from "./alertService.js";
 import { listDevices } from "./monitoringService.js";
@@ -31,6 +31,34 @@ function dayKey(value) {
 function withinPeriod(value, sinceDate) {
   const time = Date.parse(value);
   return Number.isFinite(time) && time >= sinceDate.getTime();
+}
+
+// Computa o SLA de cada OS ainda aberta uma unica vez (evita recalcular a
+// mesma lista em buildOverview e buildServiceOrdersSection). Nao inventa
+// "vencida" pra OS sem sla_due_at - calculateServiceOrderSla ja retorna
+// not_applicable nesse caso.
+function splitServiceOrdersBySla(openOrders, settings) {
+  const overdueOrders = [];
+  const nearDueOrders = [];
+  for (const order of openOrders) {
+    const sla = calculateServiceOrderSla(order, settings);
+    if (sla.breached) overdueOrders.push({ ...order, sla });
+    else if (sla.nearDue) nearDueOrders.push({ ...order, sla });
+  }
+  return { overdueOrders, nearDueOrders };
+}
+
+function averageMinutesBetween(orders, startField, endField) {
+  const diffs = orders
+    .map((order) => {
+      const start = Date.parse(order[startField]);
+      const end = Date.parse(order[endField]);
+      return Number.isFinite(start) && Number.isFinite(end) && end >= start ? (end - start) / 60000 : null;
+    })
+    .filter((value) => value != null);
+
+  if (!diffs.length) return null;
+  return Math.round(diffs.reduce((sum, value) => sum + value, 0) / diffs.length);
 }
 
 function isMetricCritical(value) {
@@ -100,7 +128,18 @@ function rankAssetsByAlerts(alerts, devices, limit = RANKING_LIMIT) {
     .slice(0, limit);
 }
 
-function buildOverview({ devices, activeAlerts, allAlerts, serviceOrders, isFinalStatus, maintenanceMap }) {
+function buildOverview({
+  devices,
+  activeAlerts,
+  allAlerts,
+  serviceOrders,
+  isFinalStatus,
+  maintenanceMap,
+  overdueCount,
+  nearDueCount,
+  averageResolutionMinutes,
+  averageFirstResponseMinutes
+}) {
   const totalAssets = devices.length;
   const onlineAssets = devices.filter((device) => device.status === "online").length;
   const offlineAssets = devices.filter((device) => device.status === "offline").length;
@@ -133,7 +172,7 @@ function buildOverview({ devices, activeAlerts, allAlerts, serviceOrders, isFina
     totalAssets,
     offlineAssets,
     criticalAlerts,
-    overdueServiceOrders: 0,
+    overdueServiceOrders: overdueCount,
     criticalDiskAssets,
     criticalPerformanceAssets,
     staleHeartbeatAssets: criticalAssets,
@@ -147,8 +186,11 @@ function buildOverview({ devices, activeAlerts, allAlerts, serviceOrders, isFina
     warningAssets,
     criticalAssets,
     openServiceOrders,
-    overdueServiceOrders: 0,
-    overdueServiceOrdersAvailable: false,
+    overdueServiceOrders: overdueCount,
+    overdueServiceOrdersAvailable: true,
+    nearDueServiceOrders: nearDueCount,
+    averageResolutionMinutes,
+    averageFirstResponseMinutes,
     criticalAlerts,
     resolvedAlertsToday,
     inMaintenanceAssets: maintenanceMap.size,
@@ -194,7 +236,7 @@ function buildAssetsSection(devices, activeAlerts) {
   };
 }
 
-function buildServiceOrdersSection(serviceOrders, statusSettings, isFinalStatus, sinceDate, periodDays) {
+function buildServiceOrdersSection(serviceOrders, statusSettings, isFinalStatus, sinceDate, periodDays, overdueOrders) {
   const statusById = new Map(statusSettings.statuses.map((status) => [status.id, status]));
   const open = serviceOrders.filter((order) => !isFinalStatus(order.status));
 
@@ -235,13 +277,26 @@ function buildServiceOrdersSection(serviceOrders, statusSettings, isFinalStatus,
     (order) => order.assignedTechnicianName
   ).slice(0, 10);
 
+  const overdue = [...overdueOrders]
+    .sort((a, b) => Date.parse(a.sla.dueAt) - Date.parse(b.sla.dueAt))
+    .slice(0, RANKING_LIMIT)
+    .map((order) => ({
+      id: order.id,
+      number: order.number,
+      title: order.title,
+      status: order.status,
+      priority: order.priority,
+      dueAt: order.sla.dueAt,
+      overdueMinutes: Math.abs(order.sla.remainingMinutes ?? 0)
+    }));
+
   return {
     byStatus,
     byPriority,
     recent,
     oldestOpen,
-    overdue: [],
-    overdueAvailable: false,
+    overdue,
+    overdueAvailable: true,
     trend,
     byTechnician,
     openCount: open.length,
@@ -337,10 +392,34 @@ export async function getDashboardSummaryReport({ period = defaultPeriod, user =
   const statusById = new Map(statusSettings.statuses.map((status) => [status.id, status]));
   const isFinalStatus = (statusId) => statusById.get(statusId)?.isFinal ?? statusId === "closed";
 
+  const openOrders = serviceOrders.filter((order) => !isFinalStatus(order.status));
+  const { overdueOrders, nearDueOrders } = splitServiceOrdersBySla(openOrders, statusSettings);
+  const averageResolutionMinutes = averageMinutesBetween(
+    serviceOrders.filter((order) => isFinalStatus(order.status) && order.closedAt),
+    "createdAt",
+    "closedAt"
+  );
+  const averageFirstResponseMinutes = averageMinutesBetween(
+    serviceOrders.filter((order) => order.firstResponseAt),
+    "createdAt",
+    "firstResponseAt"
+  );
+
   return {
-    overview: buildOverview({ devices, activeAlerts, allAlerts, serviceOrders, isFinalStatus, maintenanceMap }),
+    overview: buildOverview({
+      devices,
+      activeAlerts,
+      allAlerts,
+      serviceOrders,
+      isFinalStatus,
+      maintenanceMap,
+      overdueCount: overdueOrders.length,
+      nearDueCount: nearDueOrders.length,
+      averageResolutionMinutes,
+      averageFirstResponseMinutes
+    }),
     assets: buildAssetsSection(devices, activeAlerts),
-    serviceOrders: buildServiceOrdersSection(serviceOrders, statusSettings, isFinalStatus, sinceDate, periodDays),
+    serviceOrders: buildServiceOrdersSection(serviceOrders, statusSettings, isFinalStatus, sinceDate, periodDays, overdueOrders),
     alerts: buildAlertsSection(allAlerts, activeAlerts, devices, sinceDate, periodDays),
     business: buildBusinessSection(serviceOrders, systemSettings.systemMode),
     metadata: {

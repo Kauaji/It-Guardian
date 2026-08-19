@@ -10281,6 +10281,373 @@ table strong,
   overflow-wrap: anywhere;
 }
 
+.service-order-sla-chip,
+.service-order-sla-badge,
+.service-order-origin-badge {
+  display: inline-block;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 1px 7px;
+  margin-left: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.4;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.service-order-sla-badge {
+  font-size: 11px;
+}
+
+.service-order-origin-badge {
+  border: 1px solid color-mix(in srgb, var(--status-info) 45%, var(--border));
+  background: color-mix(in srgb, var(--status-info) 14%, var(--surface-soft));
+  color: color-mix(in srgb, var(--status-info) 78%, var(--text-strong));
+}
+
+.service-order-sla-chip-breached,
+.service-order-sla-badge-breached,
+.service-order-sla-status.service-order-sla-breached {
+  border: 1px solid color-mix(in srgb, var(--status-danger) 45%, var(--border));
+  background: color-mix(in srgb, var(--status-danger) 16%, var(--surface-soft));
+  color: color-mix(in srgb, var(--status-danger) 82%, var(--text-strong));
+}
+
+.service-order-sla-chip-near_due,
+.service-order-sla-badge-near_due,
+.service-order-sla-status.service-order-sla-near_due {
+  border: 1px solid color-mix(in srgb, var(--status-warning) 45%, var(--border));
+  background: color-mix(in srgb, var(--status-warning) 16%, var(--surface-soft));
+  color: #92400e;
+}
+
+.service-order-sla-badge-not_applicable {
+  border: 1px solid color-mix(in srgb, var(--text-muted) 32%, var(--border));
+  background: color-mix(in srgb, var(--text-muted) 12%, var(--surface-soft));
+  color: var(--text-muted);
+}
+
+.service-order-sla-status.service-order-sla-on_track {
+  border: 1px solid color-mix(in srgb, var(--green-600) 34%, var(--border));
+  background: color-mix(in srgb, var(--green-600) 12%, var(--surface));
+  color: color-mix(in srgb, var(--green-600) 80%, var(--text-strong));
+}
+
+.service-order-sla-status.service-order-sla-resolved {
+  border: 1px solid color-mix(in srgb, var(--green-600) 34%, var(--border));
+  background: color-mix(in srgb, var(--green-600) 12%, var(--surface));
+  color: color-mix(in srgb, var(--green-600) 80%, var(--text-strong));
+}
+
+.service-order-sla-status.service-order-sla-not_applicable {
+  border: 1px solid color-mix(in srgb, var(--text-muted) 30%, var(--border));
+  background: var(--surface-soft);
+  color: var(--text-muted);
+}
+
+.service-order-sla-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.service-order-sla-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+}
+
+.service-order-sla-status > div {
+  display: grid;
+  gap: 2px;
+}
+
+.service-order-sla-status strong {
+  font-size: 0.95rem;
+}
+
+.service-order-sla-status span {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.service-order-sla-reopen-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.service-order-checklist-panel,
+.service-order-attachments-panel,
+.service-order-feedback-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.service-order-checklist-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.service-order-checklist-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.service-order-checklist-list li {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.service-order-checklist-list li.checked {
+  border-color: color-mix(in srgb, var(--green-600) 40%, var(--border));
+  background: color-mix(in srgb, var(--green-600) 8%, var(--surface));
+}
+
+.service-order-checklist-list label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.service-order-checklist-list label em {
+  color: var(--status-danger);
+  font-style: normal;
+}
+
+.service-order-checklist-item-description {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.service-order-checklist-item-notes {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-soft);
+  color: var(--text);
+  font: inherit;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.service-order-attachments-limitation {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--status-warning) 40%, var(--border));
+  background: color-mix(in srgb, var(--status-warning) 12%, var(--surface-soft));
+  color: #92400e;
+  font-size: 0.8rem;
+}
+
+.service-order-attachment-form,
+.service-order-feedback-form {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.service-order-attachment-form input,
+.service-order-attachment-form select,
+.service-order-attachment-form textarea,
+.service-order-feedback-form textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  padding: 8px 10px;
+}
+
+.service-order-attachment-form textarea,
+.service-order-feedback-form textarea {
+  min-height: 60px;
+  resize: vertical;
+}
+
+.service-order-attachments-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.service-order-attachments-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.service-order-attachments-list li > div {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.service-order-attachments-list li span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.service-order-attachments-list li p {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.service-order-attachment-reference {
+  color: var(--status-info);
+  overflow-wrap: anywhere;
+}
+
+.service-order-attachments-list li button {
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
+.service-order-feedback-current {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.service-order-feedback-current span {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.service-order-feedback-stars {
+  display: flex;
+  gap: 4px;
+}
+
+.service-order-feedback-stars button {
+  display: inline-flex;
+  border: none;
+  background: none;
+  padding: 2px;
+  color: color-mix(in srgb, var(--status-warning) 70%, var(--text-strong));
+  cursor: pointer;
+}
+
+.service-order-feedback-stars button:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.service-order-checklist-templates-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.service-order-checklist-templates-hint {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--surface-soft);
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.service-order-checklist-template-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.service-order-checklist-template-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.service-order-checklist-template-header input,
+.service-order-checklist-template-header select {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-soft);
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  padding: 8px 10px;
+}
+
+.service-order-checklist-template-items {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.service-order-checklist-template-items li {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.2fr) auto auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.service-order-checklist-template-items input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-soft);
+  color: var(--text);
+  font: inherit;
+  padding: 7px 9px;
+}
+
+.service-order-checklist-template-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.service-order-checklist-template-actions .danger {
+  color: var(--status-danger);
+  border-color: color-mix(in srgb, var(--status-danger) 40%, var(--border));
+}
+
 .service-order-sector-edit select {
   width: 100%;
   min-height: 34px;

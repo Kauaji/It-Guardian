@@ -55,7 +55,8 @@ test("resumo do dashboard tem estrutura valida com apenas o seed padrao (sem ati
   assert.ok(body.overview.totalAssets >= 0);
   assert.equal(body.overview.onlineAssets + body.overview.offlineAssets + body.overview.criticalAssets <= body.overview.totalAssets, true);
   assert.equal(body.overview.overdueServiceOrders, 0);
-  assert.equal(body.overview.overdueServiceOrdersAvailable, false);
+  assert.equal(body.overview.overdueServiceOrdersAvailable, true);
+  assert.equal(typeof body.overview.nearDueServiceOrders, "number");
   assert.ok(body.overview.infrastructureHealth.score >= 0 && body.overview.infrastructureHealth.score <= 100);
   assert.ok(["healthy", "attention", "critical", "emergency"].includes(body.overview.infrastructureHealth.classification));
   assert.ok(Array.isArray(body.overview.infrastructureHealth.deductions));
@@ -170,4 +171,33 @@ test("filtro de periodo altera a janela da tendencia sem quebrar a resposta", as
   assert.equal(invalidPeriod.status, 200);
   const invalidPeriodBody = await invalidPeriod.json();
   assert.equal(invalidPeriodBody.metadata.period, "30d");
+});
+
+test("resumo do dashboard reflete OS com SLA vencido de verdade, sem inventar dados", async (t) => {
+  await initializeRuntime();
+  const server = await listen(createApp());
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  const cookie = await login(baseUrl);
+  const { query } = await import("../src/database.js");
+
+  const before = await (await fetch(`${baseUrl}/api/dashboard/summary`, { headers: { cookie } })).json();
+
+  const createResponse = await fetch(`${baseUrl}/api/service-orders`, {
+    method: "POST",
+    headers: browserHeaders(cookie),
+    body: JSON.stringify({ title: "OS vencida para o dashboard", priority: "critical" })
+  });
+  assert.equal(createResponse.status, 201);
+  const order = (await createResponse.json()).serviceOrder;
+  await query("UPDATE service_orders SET sla_due_at = NOW() - INTERVAL '1 hour' WHERE id = $1", [order.id]);
+
+  const after = await (await fetch(`${baseUrl}/api/dashboard/summary`, { headers: { cookie } })).json();
+
+  assert.equal(after.overview.overdueServiceOrders, before.overview.overdueServiceOrders + 1);
+  assert.equal(after.overview.overdueServiceOrdersAvailable, true);
+  assert.equal(after.serviceOrders.overdueAvailable, true);
+  const overdueEntry = after.serviceOrders.overdue.find((item) => item.id === order.id);
+  assert.ok(overdueEntry, "a OS vencida deve aparecer na lista de vencidas do dashboard");
+  assert.ok(overdueEntry.overdueMinutes >= 59);
 });

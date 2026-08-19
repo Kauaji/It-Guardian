@@ -9,7 +9,7 @@ import {
 } from "./maintenanceScriptRepository.js";
 import { queueAgentScriptJob } from "./agentScriptJobRepository.js";
 import { listDevices } from "../services/monitoringService.js";
-import { syncAutoPriorities } from "./serviceOrderRepository.js";
+import { syncAutoPriorities, syncSlaBreaches } from "./serviceOrderRepository.js";
 import { normalizeBoolean, serializeTimestamp, trimString } from "../lib/textUtils.js";
 import {
   canAccessAutomationAsset,
@@ -2438,11 +2438,13 @@ export async function processScheduledMaintenanceTasks(user = null) {
   const preventiveAutomation = await processDuePreventiveAutomationPlans(user);
   const scriptValidations = await refreshDueScriptValidations({ summary: true });
   const serviceOrderAutoPriority = await syncAutoPriorities();
+  const serviceOrderSlaBreaches = await syncSlaBreaches();
 
   return {
     backfill,
     preventiveAutomation,
     scriptValidations,
-    serviceOrderAutoPriority
+    serviceOrderAutoPriority,
+    serviceOrderSlaBreaches
   };
 }

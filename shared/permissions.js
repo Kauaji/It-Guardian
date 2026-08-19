@@ -55,7 +55,9 @@ export const permissionGroups = [
       { id: "service_orders.parts", label: "Registrar peças trocadas" },
       { id: "service_orders.print", label: "Imprimir Ordem de Serviço" },
       { id: "service_orders.settings", label: "Acessar configurações da OS" },
-      { id: "service_orders.create_from_alert", label: "Criar OS a partir de aviso" }
+      { id: "service_orders.create_from_alert", label: "Criar OS a partir de aviso" },
+      { id: "service_orders.reopen", label: "Reabrir Ordem de Serviço finalizada" },
+      { id: "service_orders.manage_checklists", label: "Gerenciar templates de checklist técnico" }
     ]
   },
   {
@@ -186,6 +188,8 @@ export const roleDefaultPermissions = {
     "service_orders.print",
     "service_orders.settings",
     "service_orders.create_from_alert",
+    "service_orders.reopen",
+    "service_orders.manage_checklists",
     "alerts.view",
     "alerts.configure",
     "alerts.comment",

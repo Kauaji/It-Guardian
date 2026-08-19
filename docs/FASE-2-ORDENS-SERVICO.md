@@ -237,10 +237,35 @@ https://dominio-do-it-guardian/abrir-chamado?assetId=...&hostname=...&ambiente=.
 
 Esse atalho podera preencher automaticamente identificador da maquina, hostname, IP, usuario logado e ambiente sem expor o inventario completo.
 
+## Evolucao profissional (SLA, checklist, anexos, reabertura, avaliacao)
+
+Rodada seguinte que evoluiu o modulo para um fluxo de suporte tecnico mais
+completo, sem reconstruir nada do que ja existia:
+
+- **SLA**: prazo por prioridade, alerta de proximidade e vencimento -
+  detalhado em [SLA-ORDENS-DE-SERVICO.md](SLA-ORDENS-DE-SERVICO.md).
+- **Checklist tecnico**: templates por tipo de problema, aplicados
+  automaticamente na criacao da OS; pode bloquear a finalizacao se
+  configurado. Aba "Checklists tecnicos" nas configuracoes de OS.
+- **Anexos**: metadados (nome, categoria, referencia/link, descricao) por OS
+  - sem upload real de arquivo binario, ja que nenhuma infraestrutura de
+  storage existe no projeto. Validacao de extensao bloqueia referencias para
+  `.exe/.bat/.cmd/.ps1/.js/.vbs/.msi/.scr/.jar/.com`.
+- **Reabertura**: uma OS finalizada pode ser reaberta com motivo obrigatorio
+  (permissao `service_orders.reopen`); reabrir zera `closed_at`, recalcula o
+  prazo de SLA a partir de agora e incrementa um contador de reaberturas.
+- **Avaliacao de atendimento**: nota de 1 a 5 e comentario opcional,
+  registrados internamente (sem link publico com token nesta rodada);
+  reenviar atualiza a avaliacao existente em vez de criar outra.
+- **Integracoes**: Dashboard mostra OS vencidas/proximas do vencimento reais
+  (nao mais placeholder); Prontuario Tecnico do ativo ganhou 3 eventos novos
+  (SLA vencido, reabertura, avaliacao recebida); a OS mostra o alerta
+  relacionado quando a origem for `alert_suggestion`.
+- **Permissoes novas**: `service_orders.reopen` e
+  `service_orders.manage_checklists`.
+
 ## Fora do escopo desta etapa
 
-- anexos;
-- SLA avancado;
 - relatorios;
 - notificacoes;
 - WhatsApp/e-mail;
@@ -249,6 +274,14 @@ Esse atalho podera preencher automaticamente identificador da maquina, hostname,
 - criacao automatica por alerta.
 - importacao Excel real.
 - motor avancado de prioridade.
+
+> **Atualizacao:** SLA (prazo por prioridade) e anexos (metadata-only) deixaram
+> de ser lacunas a partir da rodada "Evolucao Profissional do Modulo de OS" -
+> ver [SLA-ORDENS-DE-SERVICO.md](SLA-ORDENS-DE-SERVICO.md) e a secao
+> "Evolucao profissional" abaixo. O que ainda fica de fora dessa rodada:
+> pausa de SLA, avaliacao via link publico com token, upload real de arquivo
+> binario, reordenar checklist por drag-and-drop, e CAPTCHA/honeypot no
+> formulario publico.
 
 ## Checklist manual
 

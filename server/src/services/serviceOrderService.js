@@ -1,5 +1,6 @@
 import { addLog } from "../repositories/logRepository.js";
 import { addAssetHistory } from "../repositories/assetHistoryRepository.js";
+import { findServiceOrderSuggestionByServiceOrderId } from "../repositories/alertRepository.js";
 import { hasPermission } from "../permissions.js";
 import { badRequest, conflict, forbidden, notFoundError } from "../lib/errors.js";
 import {
@@ -10,19 +11,27 @@ import {
 import {
   addServiceOrderHistory,
   createServiceOrder,
+  createServiceOrderAttachment,
   deleteServiceOrder,
+  deleteServiceOrderAttachment,
   findServiceOrderById,
+  findServiceOrderFeedback,
   getFinalStatus,
   getInitialStatus,
   getServiceOrderSettings,
   hasServiceOrderStatus,
+  listServiceOrderAttachments,
   listServiceOrders,
   maxServiceOrderStatuses,
+  reopenServiceOrder,
   serviceOrderPriorities,
+  setFirstResponseAtIfNeeded,
+  submitServiceOrderFeedback,
   updateServiceOrder,
   updateServiceOrderSettings,
   updateServiceOrderStatus
 } from "../repositories/serviceOrderRepository.js";
+import { applyChecklistTemplateOnCreate, assertChecklistCompleteForFinish } from "./serviceOrderChecklistService.js";
 
 const notFoundMessage = "Ordem de servico nao encontrada.";
 
@@ -95,7 +104,15 @@ export async function listAllServiceOrders(user) {
 export async function getServiceOrderDetails(id, user) {
   const serviceOrder = await findServiceOrderById(id, user);
   if (!serviceOrder) throw notFoundError(notFoundMessage);
-  return serviceOrder;
+
+  // So busca a sugestao de alerta relacionada quando a origem indica isso -
+  // evita uma consulta extra desnecessaria pra OS manuais/publicas.
+  const relatedAlertSuggestion =
+    serviceOrder.source === "alert_suggestion"
+      ? await findServiceOrderSuggestionByServiceOrderId(id)
+      : null;
+
+  return { ...serviceOrder, relatedAlertSuggestion };
 }
 
 export async function getSettings() {
@@ -122,6 +139,7 @@ export async function createNewServiceOrder(payload, user) {
 
   const serviceOrder = await createServiceOrder({ payload, user });
   await syncServiceOrderMaintenance({ serviceOrder, user });
+  await applyChecklistTemplateOnCreate(serviceOrder);
   await addLog({
     type: "service_order_create",
     message: `Service order created: ${serviceOrder.number}`,
@@ -200,6 +218,10 @@ export async function assignServiceOrderTechnician(id, payload, user) {
   });
   if (!serviceOrder) throw notFoundError(notFoundMessage);
 
+  if (assignedTechnicianName) {
+    await setFirstResponseAtIfNeeded(id);
+  }
+
   await addLog({
     type: "service_order_technician",
     message: `Service order technician changed: ${serviceOrder.number}`,
@@ -267,7 +289,14 @@ export async function changeServiceOrderStatus(id, status, user) {
     throw badRequest("Defina um tecnico responsavel antes de avancar a ordem de servico.");
   }
 
+  if (status === getFinalStatus(settings).id) {
+    await assertChecklistCompleteForFinish(id);
+  }
+
   const serviceOrder = await updateServiceOrderStatus({ id, status, user });
+  if (status !== getInitialStatus(settings).id) {
+    await setFirstResponseAtIfNeeded(id);
+  }
   await syncServiceOrderMaintenance({ previous: current, serviceOrder, user, settings });
   await addLog({
     type: "service_order_status",
@@ -294,6 +323,7 @@ export async function addServiceOrderHistoryEntry(id, body, user) {
     newValue: body.newValue,
     user
   });
+  await setFirstResponseAtIfNeeded(id);
 
   if (current.assetId) {
     await addAssetHistory({
@@ -335,4 +365,91 @@ export async function removeServiceOrder(id, user) {
   });
 
   return serviceOrder;
+}
+
+// Caminho dedicado de reabertura: exige motivo, permissao propria
+// (service_orders.reopen), incrementa reopen_count e reinicia o prazo de
+// SLA. Complementa (nao substitui) o dropdown de status generico, que ja
+// tratava "voltar pro status inicial" como reopened sem exigir motivo -
+// esse comportamento existente foi preservado de proposito.
+export async function reopenServiceOrderEntry(id, payload, user) {
+  const serviceOrder = await reopenServiceOrder({ id, reason: payload?.reason, user });
+  if (!serviceOrder) throw notFoundError(notFoundMessage);
+
+  await addLog({
+    type: "service_order_reopen",
+    message: `Service order reopened: ${serviceOrder.number}`,
+    userId: user.id,
+    meta: { serviceOrderId: serviceOrder.id }
+  });
+
+  return serviceOrder;
+}
+
+export async function submitServiceOrderFeedbackEntry(id, payload, user) {
+  const feedback = await submitServiceOrderFeedback({
+    id,
+    rating: payload?.rating,
+    comment: payload?.comment,
+    user
+  });
+  if (!feedback) throw notFoundError(notFoundMessage);
+
+  await addLog({
+    type: "service_order_feedback",
+    message: `Service order feedback submitted: ${id}`,
+    userId: user.id,
+    meta: { serviceOrderId: id, rating: feedback.rating }
+  });
+
+  return feedback;
+}
+
+export async function getServiceOrderFeedbackEntry(id, user) {
+  const current = await findServiceOrderById(id, user);
+  if (!current) throw notFoundError(notFoundMessage);
+  return findServiceOrderFeedback(id);
+}
+
+export async function listServiceOrderAttachmentsEntry(id, user) {
+  const current = await findServiceOrderById(id, user);
+  if (!current) throw notFoundError(notFoundMessage);
+  return listServiceOrderAttachments(id);
+}
+
+export async function createServiceOrderAttachmentEntry(id, payload, user) {
+  const attachment = await createServiceOrderAttachment({
+    serviceOrderId: id,
+    fileName: payload?.fileName,
+    fileType: payload?.fileType,
+    fileSize: payload?.fileSize,
+    storageKey: payload?.storageKey,
+    category: payload?.category,
+    description: payload?.description,
+    user
+  });
+  if (!attachment) throw notFoundError(notFoundMessage);
+
+  await addLog({
+    type: "service_order_attachment_add",
+    message: `Service order attachment added: ${attachment.fileName}`,
+    userId: user.id,
+    meta: { serviceOrderId: id, attachmentId: attachment.id }
+  });
+
+  return attachment;
+}
+
+export async function deleteServiceOrderAttachmentEntry(id, attachmentId, user) {
+  const attachment = await deleteServiceOrderAttachment(id, attachmentId, user);
+  if (!attachment) throw notFoundError("Anexo nao encontrado.");
+
+  await addLog({
+    type: "service_order_attachment_remove",
+    message: `Service order attachment removed: ${attachment.fileName}`,
+    userId: user.id,
+    meta: { serviceOrderId: id, attachmentId }
+  });
+
+  return attachment;
 }

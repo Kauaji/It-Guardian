@@ -150,6 +150,7 @@ export async function runScheduledMaintenanceCron(receivedSecret) {
     preventivePlans: result.preventiveAutomation,
     scriptValidations: result.scriptValidations,
     serviceOrderAutoPriority: result.serviceOrderAutoPriority,
+    serviceOrderSlaBreaches: result.serviceOrderSlaBreaches,
     errors: [
       ...(result.backfill?.plans || [])
         .filter((plan) => plan.status === "failed")

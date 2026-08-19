@@ -984,6 +984,92 @@ export function deleteServiceOrder(token, id) {
   });
 }
 
+export function reopenServiceOrder(token, id, reason) {
+  return apiFetch(`/service-orders/${id}/reopen`, {
+    token,
+    method: "POST",
+    body: JSON.stringify({ reason })
+  });
+}
+
+export function fetchServiceOrderFeedback(token, id) {
+  return apiFetch(`/service-orders/${id}/feedback`, { token });
+}
+
+export function submitServiceOrderFeedback(token, id, payload) {
+  return apiFetch(`/service-orders/${id}/feedback`, {
+    token,
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function fetchServiceOrderChecklist(token, id) {
+  return apiFetch(`/service-orders/${id}/checklist`, { token });
+}
+
+export function updateServiceOrderChecklistItem(token, id, resultId, payload) {
+  return apiFetch(`/service-orders/${id}/checklist/${resultId}`, {
+    token,
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function fetchServiceOrderAttachments(token, id) {
+  return apiFetch(`/service-orders/${id}/attachments`, { token });
+}
+
+export function createServiceOrderAttachment(token, id, payload) {
+  return apiFetch(`/service-orders/${id}/attachments`, {
+    token,
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function deleteServiceOrderAttachment(token, id, attachmentId) {
+  return apiFetch(`/service-orders/${id}/attachments/${attachmentId}`, {
+    token,
+    method: "DELETE"
+  });
+}
+
+export function fetchServiceOrderChecklistTemplates(token) {
+  return apiFetch("/service-order-checklist-templates", { token });
+}
+
+export function createServiceOrderChecklistTemplate(token, payload) {
+  return apiFetch("/service-order-checklist-templates", {
+    token,
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function updateServiceOrderChecklistTemplate(token, id, payload) {
+  return apiFetch(`/service-order-checklist-templates/${id}`, {
+    token,
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function deleteServiceOrderChecklistTemplate(token, id) {
+  return apiFetch(`/service-order-checklist-templates/${id}`, {
+    token,
+    method: "DELETE"
+  });
+}
+
+export function updateServiceOrderChecklistPolicy(token, payload) {
+  return apiFetch("/service-order-checklist-templates/policy", {
+    token,
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+}
+
 export function fetchUsers(token) {
   return apiFetch("/users", { token });
 }

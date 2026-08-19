@@ -159,6 +159,64 @@ export function buildServiceOrderEvents(assetId, orders) {
         })
       );
     }
+
+    if (order.slaBreachedAt) {
+      events.push(
+        makeEvent({
+          id: `service-order-${order.id}-sla-breached`,
+          assetId,
+          occurredAt: order.slaBreachedAt,
+          category: "service_order",
+          type: "service_order_sla_breached",
+          title: `SLA da OS #${order.number} vencido`,
+          description: "",
+          severity: "critical",
+          sourceModule: "service_orders",
+          relatedEntityType: "service_order",
+          relatedEntityId: order.id,
+          metadata: { number: order.number, dueAt: order.slaDueAt }
+        })
+      );
+    }
+
+    if (order.reopenedAt) {
+      events.push(
+        makeEvent({
+          id: `service-order-${order.id}-reopened`,
+          assetId,
+          occurredAt: order.reopenedAt,
+          category: "service_order",
+          type: "service_order_reopened",
+          title: `OS #${order.number} reaberta`,
+          description: order.reopenReason || "",
+          severity: "warning",
+          sourceModule: "service_orders",
+          relatedEntityType: "service_order",
+          relatedEntityId: order.id,
+          metadata: { number: order.number, reopenCount: order.reopenCount }
+        })
+      );
+    }
+
+    if (order.feedback) {
+      events.push(
+        makeEvent({
+          id: `service-order-${order.id}-feedback`,
+          assetId,
+          occurredAt: order.feedback.submittedAt,
+          category: "service_order",
+          type: "service_order_feedback_submitted",
+          title: `Avaliação recebida na OS #${order.number}`,
+          description: order.feedback.comment || `Nota ${order.feedback.rating}/5`,
+          severity: order.feedback.rating <= 2 ? "warning" : "success",
+          sourceModule: "service_orders",
+          actorName: order.feedback.submittedByName || null,
+          relatedEntityType: "service_order",
+          relatedEntityId: order.id,
+          metadata: { number: order.number, rating: order.feedback.rating }
+        })
+      );
+    }
   }
   return events;
 }
