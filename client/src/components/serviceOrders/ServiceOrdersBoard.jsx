@@ -73,7 +73,8 @@ export default function ServiceOrdersBoard({
   onReleaseBackup,
   onReopen,
   permissions = {},
-  user = null
+  user = null,
+  remoteScriptExecutionEnabled = false
 }) {
   const [formOpen, setFormOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -1329,6 +1330,7 @@ export default function ServiceOrdersBoard({
         onReopen={onReopen}
         permissions={permissions}
         canChangeSector={canChangeSector}
+        remoteScriptExecutionEnabled={remoteScriptExecutionEnabled}
       />
     </section>
   );

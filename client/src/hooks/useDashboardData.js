@@ -164,6 +164,7 @@ export function useDashboardData({
   const [preventiveAutomationManagementError, setPreventiveAutomationManagementError] = useState("");
   const [serviceOrders, setServiceOrders] = useState([]);
   const [systemMode, setSystemMode] = useState(initialSystemMode);
+  const [remoteScriptExecutionEnabledOnServer, setRemoteScriptExecutionEnabledOnServer] = useState(null);
   const [alertPrioritySettings, setAlertPrioritySettings] = useState(() => normalizePrioritySettings());
   const [alertPriorityColors, setAlertPriorityColors] = useState(defaultPriorityColors);
   const [loading, setLoading] = useState(true);
@@ -281,6 +282,9 @@ export function useDashboardData({
         if (systemSettingsData.settings?.systemMode) {
           const nextMode = systemSettingsData.settings.systemMode === "business" ? "business" : "local";
           setSystemMode(nextMode);
+        }
+        if (typeof systemSettingsData.settings?.remoteScriptExecutionEnabled === "boolean") {
+          setRemoteScriptExecutionEnabledOnServer(systemSettingsData.settings.remoteScriptExecutionEnabled);
         }
 
         setLastUpdated(new Date());
@@ -430,6 +434,7 @@ export function useDashboardData({
     setSummary,
     setSystemMode,
     summary,
-    systemMode
+    systemMode,
+    remoteScriptExecutionEnabledOnServer
   };
 }

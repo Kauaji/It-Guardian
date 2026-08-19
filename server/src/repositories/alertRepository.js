@@ -312,6 +312,15 @@ function fromLatestSuggestionValidationRow(row) {
       requiresLoggedUser: row.log_requires_logged_user === true,
       attentionRequired: row.log_attention_required === true,
       acknowledgedAt: row.log_acknowledged_at
+    } : null,
+    job: row.job_id ? {
+      id: row.job_id,
+      status: row.job_status,
+      claimedAt: row.job_claimed_at,
+      completedAt: row.job_completed_at,
+      exitCode: row.job_exit_code,
+      timedOut: row.job_timed_out === true,
+      errorMessage: row.job_error_message || ""
     } : null
   };
 }
@@ -697,10 +706,18 @@ export async function listServiceOrderSuggestions() {
                logs.requires_admin AS log_requires_admin,
                logs.requires_logged_user AS log_requires_logged_user,
                logs.attention_required AS log_attention_required,
-               logs.acknowledged_at AS log_acknowledged_at
+               logs.acknowledged_at AS log_acknowledged_at,
+               jobs.id AS job_id,
+               jobs.status AS job_status,
+               jobs.claimed_at AS job_claimed_at,
+               jobs.completed_at AS job_completed_at,
+               jobs.exit_code AS job_exit_code,
+               jobs.timed_out AS job_timed_out,
+               jobs.error_message AS job_error_message
         FROM script_validation_runs validations
         LEFT JOIN maintenance_scripts scripts ON scripts.id = validations.script_id
         LEFT JOIN script_execution_logs logs ON logs.id = validations.log_id
+        LEFT JOIN agent_script_jobs jobs ON jobs.execution_log_id = logs.id
         WHERE validations.suggestion_id IN (${placeholders})
         ORDER BY validations.suggestion_id ASC, validations.created_at DESC
       `,

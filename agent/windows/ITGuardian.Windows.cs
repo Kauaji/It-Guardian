@@ -378,7 +378,19 @@ namespace ITGuardian.Windows
 
         private static void ExecuteAndReportJob(AgentConfig config, AgentScriptJob job)
         {
+            WriteLog(
+                "INFO",
+                "Trabalho recebido do servidor: id=" + job.id + " scriptId=" + job.scriptId +
+                " nome=\"" + (job.name ?? "") + "\" tipo=" + job.type + "."
+            );
             AgentScriptResult result = ExecuteJob(config, job);
+            WriteLog(
+                "INFO",
+                "Execucao finalizada: id=" + job.id +
+                " exitCode=" + (result.exitCode.HasValue ? result.exitCode.Value.ToString() : "n/a") +
+                " timedOut=" + result.timedOut +
+                (string.IsNullOrEmpty(result.errorMessage) ? "" : " erro=\"" + result.errorMessage + "\"") + "."
+            );
             string endpoint =
                 config.serverUrl.TrimEnd('/') + "/api/agents/jobs/" + Uri.EscapeDataString(job.id) + "/result";
             byte[] body = Encoding.UTF8.GetBytes(new JavaScriptSerializer().Serialize(result));
@@ -416,18 +428,23 @@ namespace ITGuardian.Windows
             if (type != "bat" && type != "cmd" && type != "powershell")
             {
                 result.errorMessage = "Tipo de script nao permitido pelo agente.";
+                WriteLog("WARN", "Trabalho " + job.id + " recusado: " + result.errorMessage);
                 return result;
             }
             if (job.requiresAdmin && !IsAdministrator())
             {
                 result.errorMessage = "Este script exige um agente executado como administrador.";
+                WriteLog("WARN", "Trabalho " + job.id + " recusado: " + result.errorMessage);
                 return result;
             }
             if (job.requiresLoggedUser && !Environment.UserInteractive)
             {
                 result.errorMessage = "Este script exige uma sessao interativa de usuario.";
+                WriteLog("WARN", "Trabalho " + job.id + " recusado: " + result.errorMessage);
                 return result;
             }
+
+            WriteLog("INFO", "Iniciando execucao do trabalho " + job.id + " (tipo=" + type + ").");
 
             string extension = type == "powershell" ? ".ps1" : ".cmd";
             string temporaryPath = Path.Combine(
@@ -498,6 +515,11 @@ namespace ITGuardian.Windows
                         result.timedOut = true;
                         try { process.Kill(); } catch { }
                         process.WaitForExit();
+                        WriteLog(
+                            "WARN",
+                            "Trabalho " + job.id + " atingiu o tempo limite (" +
+                            (timeoutMilliseconds / 1000) + "s) e foi encerrado."
+                        );
                     }
                     else
                     {
@@ -511,6 +533,7 @@ namespace ITGuardian.Windows
             catch (Exception error)
             {
                 result.errorMessage = LimitOutput(error.Message);
+                WriteLog("ERROR", "Falha ao executar o trabalho " + job.id + ": " + error.Message);
             }
             finally
             {

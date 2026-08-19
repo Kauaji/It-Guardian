@@ -4,6 +4,101 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-19 - Decima primeira rodada: Execucao Controlada de Scripts em Avisos e OS
+
+### Contexto
+
+- pedido explicito do usuario (prompt de 14 partes): ativar execucao real
+  controlada de scripts BAT/CMD/PowerShell disparada a partir de Avisos e de
+  Ordens de Servico, reaproveitando a infraestrutura ja existente
+  (`maintenance_scripts`, `agent_script_jobs`, agente Windows, heartbeat,
+  `/api/agents/jobs/:id/result`);
+- restricoes explicitas: sem campo de comando livre, sem upload de `.bat`
+  por usuarios finais, sem execucao invisivel/nao auditada, sem UAC bypass,
+  keylogger, desativacao de antivirus/firewall, download-e-execucao de
+  binario externo, shell remoto livre ou persistencia maliciosa; sem
+  execucao sem agente ativo ou com qualquer uma das flags desligada; risco
+  alto/critico exige segundo revisor; auditoria completa (historico do
+  ativo, da OS, do aviso e logs); bloqueio rigido de padroes de comando
+  perigosos (nao so classificacao consultiva);
+- branch `feature/controlled-bat-execution-alerts-os`, a partir de `main` -
+  auditoria do estado atual (o que ja funcionava de verdade, o que so
+  simulava, quais flags faltavam) e resposta as 8 perguntas obrigatorias do
+  pedido registradas no plano antes de qualquer edicao.
+
+### Achado principal da auditoria: a execucao real ja existia, escondida atras de uma mensagem errada
+
+`useScriptFromSuggestion` sempre enfileirava um job real via
+`queueAgentScriptJob` - o campo `mode` do payload nunca era um interruptor
+entre simulado e real, so um rotulo salvo no log. Ou seja, a execucao real a
+partir de Avisos ja funcionava quando `ENABLE_REMOTE_SCRIPT_EXECUTION=true`,
+mas o frontend (`AlertCenterV2.jsx`) mostrava "Execucao real nao esta
+disponivel nesta versao" no fluxo de risco alto - um bug de confianca real:
+o usuario achava que so registraria uma observacao, mas um comando real ja
+era enfileirado. Corrigido como prioridade explicita desta rodada, junto com
+um indicador de "agente ativo" e o status do job por sugestao.
+
+### Terceira flag nao mencionada no pedido original
+
+Alem de `ENABLE_REMOTE_SCRIPT_EXECUTION` (servidor) e
+`enableRemoteScriptExecution` (config.json do agente), existe uma terceira
+flag de build-time (`VITE_ENABLE_REMOTE_SCRIPT_EXECUTION`) que controla so
+se o botao aparece no navegador, independente do estado real do servidor -
+mesmo padrao ja usado (e ja imperfeito) pela Assistencia Remota. Corrigido
+expondo o valor real via `GET /api/system-settings` (endpoint que o cliente
+ja busca no carregamento), sem exigir rebuild do cliente para refletir a
+flag do servidor.
+
+### Decisoes de arquitetura
+
+- **Ordens de Servico ganham uma funcao nova, nao reusam
+  `script_validation_runs`**: essa tabela e uma heuristica especifica de
+  sugestao ("observar se o alerta se resolve sozinho"), sem sentido para um
+  disparo direto de OS cuja conclusao vem do proprio agente via
+  `completeAgentScriptJob`. `useScriptForServiceOrder` (nova) grava
+  `script_execution_logs.service_order_id` diretamente - coluna que ja
+  existia, **zero migrations novas** nesta rodada.
+- **Bloqueio rigido de conteudo** (`assertScriptContentIsSafe`, 18 padroes
+  regex) e uma camada nova, separada da classificacao consultiva ja
+  existente (`analyzeMaintenanceScriptContent`), chamada no ponto unico ja
+  usado por create/update (`normalizeScriptPayload`) para nao divergir
+  entre os dois callers.
+- **Controle duplo reforcado com uma permissao nova**
+  (`scripts.approve_high_risk`), checada na camada de servico, alem do
+  identity-diff ja existente na repository (defesa em profundidade). Nao
+  concedida a nenhum papel por padrao - concessao deliberada, nao herdada.
+- Recomendacao de scripts para OS reaproveita o endpoint ja existente
+  (`POST /api/maintenance-scripts/recommendations`) - nenhuma funcao/rota
+  nova de recomendacao.
+
+### Testes e verificacao
+
+- Unidade: `assertScriptContentIsSafe` (18 padroes bloqueados + 9 scripts
+  seguros, 33 casos em `maintenanceScriptRepository.test.mjs`).
+- Integracao: `service-order-script-execution.test.mjs` (recomendacao,
+  enfileiramento, entrega via heartbeat real, conclusao, historico da OS e
+  do ativo, bloqueio por OS finalizada/sem ativo/sem permissao/flag
+  desligada, controle duplo de risco alto) e
+  `alert-script-execution-history.test.mjs` (comentario no aviso ao
+  enfileirar e ao concluir, sem duplicar em reuso idempotente nem em
+  reenvio de resultado ja terminal).
+- Agente Windows: logging estruturado adicionado
+  (`ITGuardian.Windows.cs`) - recebido/inicio/fim/timeout/erro, nunca o
+  conteudo do script; validado compilando com o `csc.exe` do .NET
+  Framework localmente (nao ha como automatizar a execucao real do `.exe`
+  neste repositorio - roteiro de teste manual documentado em
+  `docs/SCRIPTS-MANUTENCAO-SEGURANCA.md`).
+
+### Documentacao
+
+`docs/SCRIPTS-MANUTENCAO-SEGURANCA.md` reescrito (pontos de disparo,
+bloqueio de conteudo, controle duplo em duas camadas, as tres flags,
+scripts de exemplo prontos para colar, roteiro de teste manual do agente).
+`docs/FASE-2-ORDENS-SERVICO.md` ganhou uma secao nova sobre a aba de
+Scripts na OS. `docs/PRONTUARIO-TECNICO-ATIVO.md` documenta que os eventos
+`script_execution_*` ja caem no backbone generico (categoria `system`, sem
+ficarem ocultos).
+
 ## 2026-08-18 - Decima rodada: Evolucao Profissional do Modulo de Ordens de Servico
 
 ### Contexto

@@ -57,7 +57,8 @@ export const permissionGroups = [
       { id: "service_orders.settings", label: "Acessar configurações da OS" },
       { id: "service_orders.create_from_alert", label: "Criar OS a partir de aviso" },
       { id: "service_orders.reopen", label: "Reabrir Ordem de Serviço finalizada" },
-      { id: "service_orders.manage_checklists", label: "Gerenciar templates de checklist técnico" }
+      { id: "service_orders.manage_checklists", label: "Gerenciar templates de checklist técnico" },
+      { id: "service_orders.run_scripts", label: "Executar scripts de manutenção na OS" }
     ]
   },
   {
@@ -79,6 +80,7 @@ export const permissionGroups = [
       { id: "scripts.manage", label: "Cadastrar e editar scripts de manutenção" },
       { id: "scripts.register_simulation", label: "Registrar simulação de script" },
       { id: "scripts.use_from_alert", label: "Usar script em sugestão de OS" },
+      { id: "scripts.approve_high_risk", label: "Aprovar execução de scripts de risco alto ou crítico" },
       { id: "script_logs.view", label: "Visualizar logs de scripts" },
       { id: "script_logs.resolve", label: "Resolver logs de scripts" },
       { id: "script_validations.manage", label: "Gerenciar validações de scripts" }
@@ -190,6 +192,7 @@ export const roleDefaultPermissions = {
     "service_orders.create_from_alert",
     "service_orders.reopen",
     "service_orders.manage_checklists",
+    "service_orders.run_scripts",
     "alerts.view",
     "alerts.configure",
     "alerts.comment",

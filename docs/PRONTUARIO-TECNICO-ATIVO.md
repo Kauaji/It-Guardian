@@ -33,7 +33,7 @@ aberta, nao quando a ficha da maquina abre.
 | `alert` | `alertService.getHostAlertsWithAcknowledgements` (ja existia) | Criacao, reconhecimento e resolucao. |
 | `remote_assistance` | `remote_assistance_events` (consulta dedicada por `asset_id`) | So aparece para quem tem `remote_assistance.view` - ver "Permissoes". |
 | `topology` | `network_topology_nodes`/`_links` (vinculo atual) + `asset_history` (eventos daqui pra frente) | Ver secao propria abaixo. |
-| `preventive`, `maintenance`, `segment`, `hardware`, `system` | `asset_history` (tabela generica ja usada por varios modulos) | Backbone: cobre tudo que ja era gravado antes desta rodada. |
+| `preventive`, `maintenance`, `segment`, `hardware`, `system` | `asset_history` (tabela generica ja usada por varios modulos) | Backbone: cobre tudo que ja era gravado antes desta rodada. Os eventos `script_execution_queued`/`_succeeded`/`_failed` (execucao real de script via Aviso ou OS - ver [SCRIPTS-MANUTENCAO-SEGURANCA.md](SCRIPTS-MANUTENCAO-SEGURANCA.md)) ja caem aqui sem prefixo dedicado em `BACKBONE_CATEGORY_RULES`, entao aparecem na timeline categorizados como `system` em vez de algo mais especifico - confirmado que nao ficam ocultos, so com uma categoria generica. |
 | `observation` | Prop `observations` (preferencia do usuario logado) | Fundido no **cliente**, nao vem do backend - ver "Limitacoes". |
 | `asset` | `manual_network_assets`/`agent_assets` (melhor esforco) | So aparece se houver `createdAt` real. |
 

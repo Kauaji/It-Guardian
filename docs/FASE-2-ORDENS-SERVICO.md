@@ -264,6 +264,24 @@ completo, sem reconstruir nada do que ja existia:
 - **Permissoes novas**: `service_orders.reopen` e
   `service_orders.manage_checklists`.
 
+## Execucao controlada de scripts de manutencao
+
+Rodada seguinte adicionou uma aba "Scripts" na OS (visivel quando o ativo
+vinculado permite), reaproveitando o mesmo catalogo e a mesma fila de
+execucao ja usados pelo fluxo de Avisos. Nao existe campo de comando livre
+nem upload de `.bat`: o tecnico so pode disparar um script ja cadastrado no
+catalogo, com confirmacao explicita e aviso de auditoria antes de enviar.
+Documentacao completa (fluxo, bloqueio de conteudo, controle duplo, flags,
+roteiro de teste do agente) em
+[SCRIPTS-MANUTENCAO-SEGURANCA.md](SCRIPTS-MANUTENCAO-SEGURANCA.md).
+
+- **Permissao nova**: `service_orders.run_scripts` (papel padrao `operator`
+  ja recebe essa permissao); scripts de risco alto/critico exigem ainda
+  `scripts.approve_high_risk`, que nao e concedida a nenhum papel por
+  padrao.
+- **Sem migration nova**: `script_execution_logs` ja tinha as colunas
+  `service_order_id`/`alert_id`/`suggestion_id`.
+
 ## Fora do escopo desta etapa
 
 - relatorios;

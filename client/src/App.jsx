@@ -365,7 +365,8 @@ function Dashboard() {
     setServiceOrders,
     setSystemMode,
     summary,
-    systemMode
+    systemMode,
+    remoteScriptExecutionEnabledOnServer
   } = useDashboardData({
     activeView,
     applyInventoryLocalState,
@@ -392,6 +393,12 @@ function Dashboard() {
     status,
     token
   });
+  // A flag de build-time (VITE_ENABLE_REMOTE_SCRIPT_EXECUTION) so muda
+  // com um novo build do cliente; o valor vindo do servidor (buscado
+  // junto com o resto do carregamento inicial em useDashboardData)
+  // reflete o estado real do backend sem precisar rebuildar - usado
+  // assim que carrega, com o flag de build como fallback ate la.
+  const remoteScriptExecutionEnabledEffective = remoteScriptExecutionEnabledOnServer ?? remoteScriptExecutionEnabled;
   const canOpenGeneralSettings =
     hasPermission(user, "settings.view") ||
     hasPermission(user, "settings.appearance") ||
@@ -922,7 +929,7 @@ function Dashboard() {
   }
 
   async function handleUseSuggestionScript(suggestionId, scriptId, payload) {
-    if (!remoteScriptExecutionEnabled) {
+    if (!remoteScriptExecutionEnabledEffective) {
       notify("Execucao remota desabilitada. Use o registro em modo de simulacao.", "warning");
       return;
     }
@@ -3040,6 +3047,7 @@ function Dashboard() {
               inventoryTabs={inventoryTabs}
               serviceOrders={serviceOrders}
               onOpenServiceOrders={() => setActiveView("service-orders")}
+              remoteScriptExecutionEnabled={remoteScriptExecutionEnabledEffective}
             />
           </AlertCenterProvider>
           </ViewErrorBoundary>
@@ -3161,6 +3169,7 @@ function Dashboard() {
             onReleaseBackup={releaseBackupForServiceOrder}
             onReopen={handleReopenServiceOrder}
             user={user}
+            remoteScriptExecutionEnabled={remoteScriptExecutionEnabledEffective}
             permissions={{
               create: hasPermission(user, "service_orders.create"),
               edit: hasPermission(user, "service_orders.edit"),
@@ -3173,7 +3182,8 @@ function Dashboard() {
               print: hasPermission(user, "service_orders.print"),
               settings: hasPermission(user, "service_orders.settings"),
               reopen: hasPermission(user, "service_orders.reopen"),
-              manageChecklists: hasPermission(user, "service_orders.manage_checklists")
+              manageChecklists: hasPermission(user, "service_orders.manage_checklists"),
+              runScripts: hasPermission(user, "service_orders.run_scripts")
             }}
             />
           </Suspense>

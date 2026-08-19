@@ -10,9 +10,11 @@ import {
   listPendingLogs,
   listRecommendedForContext,
   listRecommendedForSuggestion,
+  listScriptActivityForServiceOrder,
   listValidationsForSuggestion,
   registerSimulationForScript,
   updateScript,
+  useScriptForServiceOrderEntry,
   useScriptForSuggestion
 } from "../services/maintenanceScriptService.js";
 
@@ -73,6 +75,23 @@ export async function useFromSuggestion(req, res, next) {
   try {
     const result = await useScriptForSuggestion(req.params.id, req.params.scriptId, req.body, req.user);
     res.status(201).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function useForServiceOrder(req, res, next) {
+  try {
+    const result = await useScriptForServiceOrderEntry(req.params.id, req.params.scriptId, req.body, req.user);
+    res.status(201).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function serviceOrderScriptActivity(req, res, next) {
+  try {
+    res.json({ activity: await listScriptActivityForServiceOrder(req.params.id) });
   } catch (error) {
     next(error);
   }
