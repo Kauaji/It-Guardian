@@ -26,6 +26,7 @@ import SettingsView from "../settings/SettingsView.jsx";
 import ServiceOrderDetailsModal from "./ServiceOrderDetailsModal.jsx";
 import ServiceOrderFormModal from "./ServiceOrderFormModal.jsx";
 import ServiceOrderCard from "./ServiceOrderCard.jsx";
+import ServiceOrderChecklistTemplatesSettings from "./ServiceOrderChecklistTemplatesSettings.jsx";
 import SettingsAccordionSection from "../settings/SettingsAccordionSection.jsx";
 import {
   buildServiceOrderNumberPreview,
@@ -44,8 +45,12 @@ import {
   normalizeStatuses,
   orderBelongsToClient,
   orderBelongsToSector,
+  originFilterOptions,
+  getServiceOrderOriginKey,
   priorityLabels,
-  settingsTabs
+  ratingFilterOptions,
+  settingsTabs,
+  slaFilterOptions
 } from "./serviceOrderBoardUtils.js";
 
 export default function ServiceOrdersBoard({
@@ -66,6 +71,7 @@ export default function ServiceOrdersBoard({
   onDelete,
   onSelectBackup,
   onReleaseBackup,
+  onReopen,
   permissions = {},
   user = null
 }) {
@@ -94,6 +100,9 @@ export default function ServiceOrdersBoard({
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [technicianFilter, setTechnicianFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [slaFilter, setSlaFilter] = useState("all");
+  const [originFilter, setOriginFilter] = useState("all");
+  const [ratingFilter, setRatingFilter] = useState("all");
   const canCreateOrders = permissions.create ?? true;
   const canManageSettings = permissions.settings ?? true;
   const canChangeStatus = permissions.changeStatus ?? true;
@@ -156,12 +165,31 @@ export default function ServiceOrdersBoard({
       orders = orders.filter((order) => order.status === statusFilter);
     }
 
+    if (slaFilter !== "all") {
+      orders = orders.filter((order) => (order.sla?.status || "not_applicable") === slaFilter);
+    }
+
+    if (originFilter !== "all") {
+      orders = orders.filter((order) => getServiceOrderOriginKey(order) === originFilter);
+    }
+
+    if (ratingFilter !== "all") {
+      orders = orders.filter((order) =>
+        ratingFilter === "none"
+          ? !order.feedback?.rating
+          : order.feedback?.rating === Number(ratingFilter)
+      );
+    }
+
     return orders;
   }, [
     businessMode,
     clientFilter,
+    originFilter,
     priorityFilter,
+    ratingFilter,
     sectorFilteredServiceOrders,
+    slaFilter,
     statusFilter,
     technicianFilter
   ]);
@@ -648,6 +676,30 @@ export default function ServiceOrdersBoard({
               ))}
             </select>
           </label>
+          <label className="service-order-sector-filter">
+            <span>Prazo (SLA)</span>
+            <select value={slaFilter} onChange={(event) => setSlaFilter(event.target.value)}>
+              {slaFilterOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+          <label className="service-order-sector-filter">
+            <span>Origem</span>
+            <select value={originFilter} onChange={(event) => setOriginFilter(event.target.value)}>
+              {originFilterOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+          <label className="service-order-sector-filter">
+            <span>Avaliação</span>
+            <select value={ratingFilter} onChange={(event) => setRatingFilter(event.target.value)}>
+              {ratingFilterOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
         </div>
         )}
       </header>
@@ -831,6 +883,55 @@ export default function ServiceOrdersBoard({
                             onChange={(event) => updateServiceOrderSettingsField("autoPriority", "enabled", event.target.checked)}
                           />
                           Ativar prioridade automática
+                        </label>
+                      </div>
+                    </SettingsAccordionSection>
+
+                    <SettingsAccordionSection
+                      id="sla"
+                      title="SLA (prazo de atendimento)"
+                      description="Define o prazo por prioridade e quando exigir checklist para finalizar."
+                      activeSection={generalSettingsSection}
+                      onToggle={setGeneralSettingsSection}
+                    >
+                      <div className="service-order-number-settings">
+                        {Object.entries(priorityLabels).map(([priority, label]) => (
+                          <label key={priority}>
+                            {label} (horas)
+                            <input
+                              type="number"
+                              min="1"
+                              value={serviceOrderSettings.sla[priority]}
+                              onChange={(event) => updateServiceOrderSettingsField("sla", priority, event.target.value)}
+                            />
+                          </label>
+                        ))}
+                        <label>
+                          Alerta de "próxima do vencimento" (% do prazo restante)
+                          <input
+                            type="number"
+                            min="1"
+                            max="100"
+                            value={serviceOrderSettings.sla.nearDuePercent}
+                            onChange={(event) => updateServiceOrderSettingsField("sla", "nearDuePercent", event.target.value)}
+                          />
+                        </label>
+                        <label>
+                          Ou quando restarem menos de (horas)
+                          <input
+                            type="number"
+                            min="1"
+                            value={serviceOrderSettings.sla.nearDueMinHours}
+                            onChange={(event) => updateServiceOrderSettingsField("sla", "nearDueMinHours", event.target.value)}
+                          />
+                        </label>
+                        <label className="settings-inline-check">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(serviceOrderSettings.requireChecklistBeforeFinish)}
+                            onChange={(event) => updateServiceOrderSetting("requireChecklistBeforeFinish", event.target.checked)}
+                          />
+                          Exigir checklist técnico completo para finalizar a OS
                         </label>
                       </div>
                     </SettingsAccordionSection>
@@ -1117,6 +1218,10 @@ export default function ServiceOrdersBoard({
                   hideTabs
                 />
               )}
+
+              {settingsTab === "checklists" && (
+                <ServiceOrderChecklistTemplatesSettings token={token} notify={notify} />
+              )}
             </div>
           </section>
         </div>
@@ -1221,6 +1326,7 @@ export default function ServiceOrdersBoard({
         onDelete={onDelete}
         onSelectBackup={onSelectBackup}
         onReleaseBackup={onReleaseBackup}
+        onReopen={onReopen}
         permissions={permissions}
         canChangeSector={canChangeSector}
       />

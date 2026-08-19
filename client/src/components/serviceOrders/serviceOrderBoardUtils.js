@@ -12,6 +12,15 @@ export const defaultServiceOrderStatuses = [
   { id: "closed", name: "Finalizada", color: "#16a34a", order: 3, isInitial: false, isFinal: true }
 ];
 
+export const defaultSlaSettings = {
+  low: 72,
+  medium: 48,
+  high: 24,
+  critical: 4,
+  nearDuePercent: 20,
+  nearDueMinHours: 2
+};
+
 export const defaultServiceOrderSettings = {
   numberFormat: { prefix: "OS", useYear: false, useMonth: false, nextNumber: "" },
   autoPriority: {
@@ -22,7 +31,9 @@ export const defaultServiceOrderSettings = {
   },
   statuses: defaultServiceOrderStatuses,
   priorityColors: defaultPriorityColors,
-  boardLayout: "horizontal"
+  boardLayout: "horizontal",
+  sla: defaultSlaSettings,
+  requireChecklistBeforeFinish: false
 };
 
 export const settingsTabs = [
@@ -31,7 +42,8 @@ export const settingsTabs = [
   { id: "technicians", label: "Técnicos" },
   { id: "products", label: "Peças" },
   { id: "services", label: "Serviços" },
-  { id: "problemTypes", label: "Tipos de problema" }
+  { id: "problemTypes", label: "Tipos de problema" },
+  { id: "checklists", label: "Checklists técnicos" }
 ];
 
 export const maxServiceOrderStatuses = 10;
@@ -128,6 +140,57 @@ export function getServiceLabel(order = {}) {
   return order.serviceName || order.serviceCode || order.servicePerformed || "";
 }
 
+export const slaStatusLabels = {
+  on_track: "No prazo",
+  near_due: "Próx. vencimento",
+  breached: "Vencida",
+  resolved: "Concluída no prazo",
+  not_applicable: "Sem SLA"
+};
+
+export const slaFilterOptions = [
+  { value: "all", label: "Todos os prazos" },
+  { value: "breached", label: "Vencidas" },
+  { value: "near_due", label: "Próximas do vencimento" },
+  { value: "not_applicable", label: "Sem SLA" }
+];
+
+export function getServiceOrderOriginKey(order = {}) {
+  if (order.preventivePlanId) return "preventive";
+  if (order.source === "alert_suggestion") return "alert_suggestion";
+  if (order.source === "public_support_form") return "public_support_form";
+  return "manual";
+}
+
+export const originLabels = {
+  preventive: "Preventiva",
+  alert_suggestion: "Alerta",
+  public_support_form: "Portal público",
+  manual: "Manual"
+};
+
+export function getServiceOrderOriginLabel(order = {}) {
+  return originLabels[getServiceOrderOriginKey(order)];
+}
+
+export const originFilterOptions = [
+  { value: "all", label: "Todas as origens" },
+  { value: "preventive", label: originLabels.preventive },
+  { value: "alert_suggestion", label: originLabels.alert_suggestion },
+  { value: "public_support_form", label: originLabels.public_support_form },
+  { value: "manual", label: originLabels.manual }
+];
+
+export const ratingFilterOptions = [
+  { value: "all", label: "Todas as avaliações" },
+  { value: "5", label: "5 estrelas" },
+  { value: "4", label: "4 estrelas" },
+  { value: "3", label: "3 estrelas" },
+  { value: "2", label: "2 estrelas" },
+  { value: "1", label: "1 estrela" },
+  { value: "none", label: "Sem avaliação" }
+];
+
 export function formatMonthFilterLabel(value) {
   if (!value) return "Todos os meses";
   const date = new Date(`${value}-01T00:00:00`);
@@ -202,6 +265,8 @@ export function mergeServiceOrderSettings(settings = {}) {
     autoPriority: { ...defaultServiceOrderSettings.autoPriority, ...(settings.autoPriority || {}) },
     statuses: normalizeStatuses(settings.statuses),
     priorityColors: { ...defaultPriorityColors, ...(settings.priorityColors || {}) },
-    boardLayout: settings.boardLayout === "vertical" ? "vertical" : "horizontal"
+    boardLayout: settings.boardLayout === "vertical" ? "vertical" : "horizontal",
+    sla: { ...defaultSlaSettings, ...(settings.sla || {}) },
+    requireChecklistBeforeFinish: Boolean(settings.requireChecklistBeforeFinish)
   };
 }

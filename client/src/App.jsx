@@ -47,6 +47,7 @@ import {
   refreshAssetPing,
   createServiceOrder,
   addServiceOrderHistory,
+  reopenServiceOrder,
   updateServiceOrder,
   updateAlertSettings,
   updateServiceOrderStatus,
@@ -1203,6 +1204,24 @@ function Dashboard() {
         current.map((order) => (order.id === id ? response.serviceOrder : order))
       );
       notify("Ordem de Serviço atualizada.", "ok");
+      await loadData(true);
+      return response.serviceOrder;
+    } catch (error) {
+      notify(error.message, "danger");
+      return null;
+    } finally {
+      setServiceOrderSaving(false);
+    }
+  }
+
+  async function handleReopenServiceOrder(id, reason) {
+    setServiceOrderSaving(true);
+    try {
+      const response = await reopenServiceOrder(token, id, reason);
+      setServiceOrders((current) =>
+        current.map((order) => (order.id === id ? response.serviceOrder : order))
+      );
+      notify("Ordem de Serviço reaberta.", "ok");
       await loadData(true);
       return response.serviceOrder;
     } catch (error) {
@@ -3140,6 +3159,7 @@ function Dashboard() {
             onDelete={handleDeleteServiceOrder}
             onSelectBackup={handleSelectBackupForServiceOrder}
             onReleaseBackup={releaseBackupForServiceOrder}
+            onReopen={handleReopenServiceOrder}
             user={user}
             permissions={{
               create: hasPermission(user, "service_orders.create"),
@@ -3151,7 +3171,9 @@ function Dashboard() {
               attendance: hasPermission(user, "service_orders.attendance"),
               parts: hasPermission(user, "service_orders.parts"),
               print: hasPermission(user, "service_orders.print"),
-              settings: hasPermission(user, "service_orders.settings")
+              settings: hasPermission(user, "service_orders.settings"),
+              reopen: hasPermission(user, "service_orders.reopen"),
+              manageChecklists: hasPermission(user, "service_orders.manage_checklists")
             }}
             />
           </Suspense>

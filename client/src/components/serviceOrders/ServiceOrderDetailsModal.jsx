@@ -1,9 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
-import { Archive, ChevronDown, Clock3, Monitor, Plus, Printer, RotateCcw, Search, Trash2, X } from "lucide-react";
+import {
+  Archive,
+  ChevronDown,
+  Clock3,
+  Monitor,
+  Plus,
+  Printer,
+  RotateCcw,
+  Search,
+  Trash2,
+  Undo2,
+  X
+} from "lucide-react";
 import { fetchDevice, fetchProducts, fetchServices, fetchTechnicians } from "../../api.js";
 import { useModalLifecycle } from "../../hooks/useModalLifecycle.js";
 import { assetTypeLabel } from "../inventory/assetTypes.js";
 import RemoteAssistanceAction from "../remoteAssistance/RemoteAssistanceAction.jsx";
+import ServiceOrderAttachmentsTab from "./tabs/ServiceOrderAttachmentsTab.jsx";
+import ServiceOrderChecklistTab from "./tabs/ServiceOrderChecklistTab.jsx";
+import ServiceOrderFeedbackTab from "./tabs/ServiceOrderFeedbackTab.jsx";
+import ServiceOrderSlaTab from "./tabs/ServiceOrderSlaTab.jsx";
 
 const fallbackStatusLabels = {
   open: "Aberta",
@@ -23,8 +39,18 @@ const tabs = [
   { id: "general", label: "Geral" },
   { id: "attendance", label: "Atendimento" },
   { id: "asset", label: "Máquina" },
+  { id: "sla", label: "SLA" },
+  { id: "checklist", label: "Checklist" },
+  { id: "attachments", label: "Anexos" },
+  { id: "feedback", label: "Avaliação" },
   { id: "history", label: "Histórico" }
 ];
+
+const SLA_BADGE_LABELS = {
+  breached: "Vencida",
+  near_due: "Próxima do vencimento",
+  not_applicable: "Sem SLA"
+};
 
 function formatDate(value) {
   if (!value) return "Não informado";
@@ -127,6 +153,7 @@ export default function ServiceOrderDetailsModal({
   onDelete,
   onSelectBackup,
   onReleaseBackup,
+  onReopen,
   permissions = {},
   canChangeSector = false
 }) {
@@ -136,7 +163,9 @@ export default function ServiceOrderDetailsModal({
   const canFinishOrder = permissions.finish ?? canChangeStatus;
   const canRegisterAttendance = permissions.attendance ?? true;
   const canPrintOrder = permissions.print ?? true;
+  const canReopenOrder = permissions.reopen ?? false;
   const [activeTab, setActiveTab] = useState("general");
+  const [reopening, setReopening] = useState(false);
   const [technicians, setTechnicians] = useState([]);
   const [products, setProducts] = useState([]);
   const [services, setServices] = useState([]);
@@ -609,6 +638,23 @@ export default function ServiceOrderDetailsModal({
     });
   }
 
+  async function reopenOrder() {
+    const reason = window.prompt("Motivo da reabertura desta Ordem de Serviço:");
+    if (reason == null) return;
+    if (!reason.trim()) {
+      notify?.("Informe o motivo da reabertura.", "danger");
+      return;
+    }
+
+    setReopening(true);
+    try {
+      const updated = await onReopen?.(serviceOrder.id, reason.trim());
+      if (updated) notify?.("Ordem de Serviço reaberta.", "ok");
+    } finally {
+      setReopening(false);
+    }
+  }
+
   async function deleteOrder() {
     const baseMessage = "Tem certeza que deseja excluir esta Ordem de Serviço? Essa ação não poderá ser desfeita.";
     const inProgressMessage = serviceOrder.closedAt
@@ -630,10 +676,26 @@ export default function ServiceOrderDetailsModal({
             <h2>
               {serviceOrder.number} - {serviceOrder.title}
               {serviceOrder.isDemo && <span className="demo-data-badge">Demo</span>}
+              {serviceOrder.sla && SLA_BADGE_LABELS[serviceOrder.sla.status] && (
+                <span className={`service-order-sla-badge service-order-sla-badge-${serviceOrder.sla.status}`}>
+                  {SLA_BADGE_LABELS[serviceOrder.sla.status]}
+                </span>
+              )}
             </h2>
             <p>{statusLabelMap[serviceOrder.status] || serviceOrder.status} - Prioridade {priorityLabels[serviceOrder.priority]}</p>
           </div>
           <div className="asset-modal-header-actions">
+            {canReopenOrder && serviceOrder.closedAt && (
+              <button
+                type="button"
+                className="icon-button"
+                onClick={reopenOrder}
+                disabled={reopening}
+                title="Reabrir Ordem de Serviço"
+              >
+                <Undo2 size={18} />
+              </button>
+            )}
             <RemoteAssistanceAction
               asset={asset}
               alias={asset?.alias}
@@ -1215,6 +1277,36 @@ export default function ServiceOrderDetailsModal({
                 ))}
               </div>
             </section>
+          )}
+
+          {activeTab === "sla" && <ServiceOrderSlaTab serviceOrder={serviceOrder} />}
+
+          {activeTab === "checklist" && (
+            <ServiceOrderChecklistTab
+              serviceOrderId={serviceOrder.id}
+              token={token}
+              notify={notify}
+              canManage={canRegisterAttendance}
+            />
+          )}
+
+          {activeTab === "attachments" && (
+            <ServiceOrderAttachmentsTab
+              serviceOrderId={serviceOrder.id}
+              token={token}
+              notify={notify}
+              canAdd={canRegisterAttendance}
+              canRemove={canEditOrder}
+            />
+          )}
+
+          {activeTab === "feedback" && (
+            <ServiceOrderFeedbackTab
+              serviceOrderId={serviceOrder.id}
+              token={token}
+              notify={notify}
+              canManage={canRegisterAttendance}
+            />
           )}
         </div>
 
