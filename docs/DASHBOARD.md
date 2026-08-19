@@ -43,7 +43,7 @@ tem um teto de dedução próprio para que um único problema não domine a nota
 | --- | --- |
 | % de ativos offline | 40 pontos |
 | Alertas críticos ativos | 20 pontos |
-| OS vencidas | 15 pontos (hoje sempre 0 — ver limitação abaixo) |
+| OS vencidas | 15 pontos (contagem real de SLA, ver seção abaixo) |
 | Ativos com disco crítico | 15 pontos |
 | Ativos com CPU/memória em alerta | 10 pontos |
 | Ativos sem contato recente do agente | 10 pontos |
@@ -52,20 +52,27 @@ tem um teto de dedução próprio para que um único problema não domine a nota
 Classificação por faixa: `85–100` Saudável, `70–84` Atenção, `50–69` Crítico,
 `<50` Emergencial.
 
-## Limitação conhecida: OS vencidas
+## OS vencidas (SLA)
 
-O schema atual não tem um campo de prazo/SLA persistido em ordem de serviço.
-Por isso:
+Desde a rodada "Evolução Profissional do Módulo de OS", `service_orders` tem
+um prazo de SLA persistido (`sla_due_at`, calculado uma vez na criação a
+partir da prioridade — ver [SLA-ORDENS-DE-SERVICO.md](SLA-ORDENS-DE-SERVICO.md)).
+O dashboard usa isso para calcular, a cada leitura e sem gravar nada:
 
-- o card "OS vencidas" mostra explicitamente **Indisponível** com a legenda
-  "Depende de prazo/SLA persistido (ainda não implementado)", em vez de
-  mostrar `0` (que seria enganoso) ou desaparecer (que esconderia a lacuna);
-- o fator "OS vencidas" da saúde da infraestrutura sempre recebe `0`
-  (`overdueServiceOrdersAvailable: false` na resposta da API), então essa nota
-  nunca é penalizada por um dado que não existe.
+- `overview.overdueServiceOrders`: contagem real de OS abertas com SLA
+  vencido; `overview.overdueServiceOrdersAvailable` agora é sempre `true`;
+- `overview.nearDueServiceOrders`: OS abertas próximas do vencimento;
+- `overview.averageResolutionMinutes` / `averageFirstResponseMinutes`: médias
+  reais (retornam `null`, nunca `0`, quando não há OS com os timestamps
+  necessários — sem inventar dado);
+- `serviceOrders.overdue`: lista das até 5 OS mais próximas/mais vencidas,
+  ordenadas por prazo, com `overdueMinutes`;
+- o fator "OS vencidas" da saúde da infraestrutura agora reflete a contagem
+  real (antes sempre recebia `0`).
 
-Quando um campo de prazo/SLA for persistido, o serviço passa a calcular o
-valor real e este documento deve ser atualizado.
+OS sem prazo calculável (prioridade sem SLA configurado) simplesmente não
+entram nas contagens de vencida/próxima — não é tratada como vencida por
+padrão.
 
 ## Visão Local vs. Business
 

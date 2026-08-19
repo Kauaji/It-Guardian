@@ -4,6 +4,117 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-18 - Decima rodada: Evolucao Profissional do Modulo de Ordens de Servico
+
+### Contexto
+
+- pedido explicito do usuario (prompt de 18 partes): evoluir Ordens de
+  Servico para um fluxo de suporte tecnico profissional - SLA real,
+  checklist tecnico por tipo de problema, anexos/evidencias, reabertura com
+  motivo, avaliacao de atendimento, historico mais rico, e integracao real
+  com Dashboard, Prontuario Tecnico do Ativo e Alertas/Preventivas;
+- restricoes explicitas: nao reconstruir o modulo do zero; nao remover
+  status configuraveis, filtros existentes, integracao com ativo ou
+  abertura publica de chamado; nao quebrar Inventario/Dashboard/Prontuario
+  Tecnico/Alertas/Preventivas; nao tocar Assistencia Remota/WebRTC/agente
+  Windows/execucao remota de scripts alem de preservar o botao/integracao
+  ja existente dentro da OS; sem faturamento/nota fiscal/pagamento real -
+  "esta tarefa e sobre Ordens de Servico, nao sobre criar um ERP";
+- branch `feature/service-orders-professional-flow`, a partir de `main` na
+  ponta - auditoria do estado atual e resposta as 8 perguntas obrigatorias
+  do pedido registradas no plano antes de qualquer edicao, seguida de
+  validacao por um agente de plano dedicado.
+
+### Decisao de arquitetura: SLA com `sla_due_at` persistido, status sempre computado na leitura
+
+Mesmo principio ja usado pela prioridade automatica por tempo
+(`withDisplayPriority`/`getTimedPriority`): `sla_due_at` e calculado uma
+unica vez na criacao da OS (a partir da prioridade + configuracao),
+persistido; o status de SLA (`on_track`/`near_due`/`breached`/`resolved`/
+`not_applicable`) e sempre recomputado ao vivo por uma funcao pura nova,
+`calculateServiceOrderSla`, nunca gravado numa leitura. `sla_breached_at` e
+a unica marca de vencimento realmente persistida, e so pelo job agendado
+`syncSlaBreaches()` (mesmo cron externo secreto que ja persiste a
+prioridade automatica) - nunca por uma requisicao GET. Documentado por
+inteiro em `docs/SLA-ORDENS-DE-SERVICO.md`.
+
+### Bug real encontrado e corrigido: `pg-mem` nao combina `IS NOT NULL` com outra condicao na mesma coluna
+
+A query original de `syncSlaBreaches()` (`WHERE sla_due_at IS NOT NULL AND
+sla_due_at < NOW() AND ...`) sempre retornava zero linhas sob `pg-mem` -
+usado tanto nos testes de integracao quanto no modo local
+`DATABASE_URL=memory` (ver `.claude/launch.json`/`docs/INSTALACAO-LOCAL.md`).
+Confirmado isolando cada condicao: cada uma sozinha (ou como expressao no
+`SELECT`) avaliava `true` corretamente, mas a combinacao via `AND` na MESMA
+coluna zerava o resultado - um bug real do `pg-mem`, nao um erro de logica.
+Como `sla_due_at IS NOT NULL` e redundante (`NULL < NOW()` ja e falso em
+SQL padrao), a correcao foi remover essa clausula - mais simples e resolve
+o bug ao mesmo tempo. Sem essa correcao, o evento de "SLA vencido" nunca
+apareceria no Prontuario Tecnico nem a marca `sla_breached_at` seria
+persistida em nenhum ambiente rodando em modo memoria.
+
+### Checklist tecnico: template resolvido por texto normalizado, nao FK estrita
+
+`service_orders.problem_type` e texto livre (pode ser o id de um
+`problem_types` configurado, o nome, ou um slug `default-*` quando nao ha
+nenhum tipo configurado). Em vez de duas logicas de match divergentes, o
+checklist reaproveita a mesma normalizacao ja usada por
+`calculatePriority` em `publicServiceOrderService.js`, extraida para uma
+funcao compartilhada `resolveProblemTypeKey`. Os itens de checklist
+aplicados a uma OS sao uma copia (snapshot) do template no momento da
+aplicacao - editar o template depois nao corrompe uma OS ja criada.
+
+### Escopo cortado nesta rodada (documentado, nao implementado)
+
+- pausa de SLA (aguardando peca/cliente);
+- avaliacao via link publico com token (avaliacao fica interna nesta
+  rodada);
+- upload real de arquivo binario - anexos ficam metadata-only (nome,
+  categoria, referencia/link, descricao), com validacao de extensao
+  bloqueada mesmo sem bytes reais - nenhuma infraestrutura de storage
+  existia no projeto antes desta rodada;
+- reordenar itens de checklist por drag-and-drop - editor fica lista
+  simples (adicionar/remover/marcar obrigatorio);
+- CAPTCHA/honeypot no formulario publico de abertura de chamado.
+
+### Validacao
+
+- unidade: 11 casos novos para `calculateServiceOrderSla`/
+  `computeServiceOrderSlaDueAt` (todos os status, regra de 20%/horas
+  minimas, exclusao da regra de horas minimas pra baixa/media) +
+  4 casos novos para `serviceOrderBoardUtils.js` (merge de settings de
+  SLA/checklist, origem da OS);
+- integracao: 5 arquivos novos (`service-order-sla`, `service-order-
+  checklist`, `service-order-reopen`, `service-order-attachments`,
+  `service-order-feedback`) cobrindo criacao/vencimento/escalonamento de
+  SLA, auto-aplicacao de checklist + bloqueio de finalizacao, reabertura
+  com motivo obrigatorio, anexos com extensao bloqueada, avaliacao com
+  upsert - todos com um caso de 403 pra usuario sem a permissao nova; mais
+  extensoes em `dashboard-summary.test.mjs` (OS vencida real) e
+  `asset-technical-timeline.test.mjs` (3 eventos novos);
+- `node --test` (raiz `server/src`): 365 testes, 0 falhas;
+- `npm run test:client` (Vitest): 160 testes, 0 falhas;
+- verificacao manual no navegador: reabertura, 4 abas novas do modal
+  (SLA/Checklist/Anexos/Avaliacao), badges de SLA/origem no card, filtros
+  novos, secao SLA e aba "Checklists tecnicos" nas configuracoes -
+  criacao de template de checklist testada end-to-end (aplicado
+  automaticamente, bloqueia finalizacao, libera apos marcar item
+  obrigatorio).
+
+### Pendencias conhecidas
+
+- OS criadas antes desta rodada nao tem `sla_due_at` retroativo (aparecem
+  como `not_applicable` ate passarem por escalonamento automatico ou
+  reabertura);
+- `requireChecklistBeforeFinish` e uma politica global, nao por tipo de
+  problema/prioridade;
+- o endpoint dedicado `PATCH /api/service-order-checklist-templates/policy`
+  (permissao `service_orders.manage_checklists`) existe no backend, mas o
+  toggle de "exigir checklist" na interface hoje usa o formulario geral de
+  configuracoes de OS (permissao `service_orders.settings`, mais ampla) -
+  simplificacao deliberada para nao duplicar estado no frontend; o
+  endpoint dedicado fica disponivel para uma integracao futura mais fina.
+
 ## 2026-08-18 - Nona rodada: Prontuario Tecnico do Ativo (timeline)
 
 ### Contexto
