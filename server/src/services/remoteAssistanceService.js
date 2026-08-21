@@ -50,6 +50,7 @@ import {
   enqueueRelayCommand,
   getRelay,
   getRelayChatMessages,
+  getRelayFrame,
   initializeRelay,
   setRelayAdaptiveQuality,
   setRelayAgentState,
@@ -115,6 +116,20 @@ function normalizeMonitors(monitors) {
   }));
 }
 
+function monitorListsEqual(a, b) {
+  if (a.length !== b.length) return false;
+  return a.every((monitor, index) => {
+    const other = b[index] || {};
+    return (
+      monitor.id === other.id &&
+      monitor.name === other.name &&
+      monitor.primary === other.primary &&
+      monitor.width === other.width &&
+      monitor.height === other.height
+    );
+  });
+}
+
 function safeSession(session, relay = null, config = getRemoteAssistanceConfig()) {
   if (!session) return null;
   const metrics = computeRelayMetrics(relay);
@@ -123,7 +138,7 @@ function safeSession(session, relay = null, config = getRemoteAssistanceConfig()
     monitors: relay?.monitors || [],
     selectedMonitorId: relay?.selectedMonitorId || session.selectedMonitorId,
     frameReceivedAt: relay?.frameReceivedAt || null,
-    hasFrame: Boolean(relay?.latestFrame),
+    hasFrame: Boolean(relay?.latestFrameHash),
     controlEngaged: Boolean(relay?.controlEngaged),
     connectionState: deriveConnectionState({ session, relay, config }),
     transport: config.transport,
@@ -433,10 +448,10 @@ export async function getRemoteAssistanceFrame({ user, sessionId, viewerToken })
   const config = getRemoteAssistanceConfig();
   const session = await assertManagedSession(user, sessionId);
   await assertViewerToken(session, viewerToken);
-  const relay = await getRelay(session.id);
+  const [relay, frame] = await Promise.all([getRelay(session.id), getRelayFrame(session.id)]);
   const metrics = computeRelayMetrics(relay);
   return {
-    frame: relay?.latestFrame || null,
+    frame: frame || null,
     receivedAt: relay?.frameReceivedAt || null,
     selectedMonitorId: relay?.selectedMonitorId || session.selectedMonitorId,
     connectionState: deriveConnectionState({ session, relay, config }),
@@ -719,7 +734,19 @@ export async function receiveRemoteAssistanceFrame({
   }
   const normalizedMonitors = normalizeMonitors(monitors);
   if (normalizedMonitors.length) {
-    await setRelayAgentState(session.id, { monitors: normalizedMonitors, selectedMonitorId });
+    // O agente manda a lista de monitores em TODO frame (nao so quando ela
+    // muda), e cada escrita de estado e um GET+SET completo do relay. Como o
+    // caso comum e "nada mudou desde o ultimo frame", comparar contra o que
+    // ja esta carregado evita uma ida-e-volta ao Redis por frame quando a
+    // lista de monitores e o monitor selecionado continuam os mesmos.
+    const resolvedSelectedMonitorId =
+      selectedMonitorId || relay.selectedMonitorId || normalizedMonitors[0]?.id || null;
+    const monitorStateChanged =
+      resolvedSelectedMonitorId !== relay.selectedMonitorId ||
+      !monitorListsEqual(normalizedMonitors, relay.monitors || []);
+    if (monitorStateChanged) {
+      await setRelayAgentState(session.id, { monitors: normalizedMonitors, selectedMonitorId });
+    }
   }
   if (unchanged === true && !frame) {
     await touchRelayFrame(session.id);

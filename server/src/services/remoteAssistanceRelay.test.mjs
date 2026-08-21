@@ -11,6 +11,7 @@ import {
   getRelay,
   getRelayBackendName,
   getRelayChatMessages,
+  getRelayFrame,
   initializeRelay,
   setRelayAdaptiveQuality,
   setRelayFrame,
@@ -30,8 +31,11 @@ test("relay comeca vazio e e limpo por completo ao encerrar a sessao", async () 
   const sessionId = freshSessionId();
   await initializeRelay(sessionId, { agentToken: "agent-token", viewerToken: "viewer-token" });
   assert.ok(await getRelay(sessionId));
+  await setRelayFrame(sessionId, "data:image/jpeg;base64,AAA=", { bytes: 10, hash: "h", now: 1 });
+  assert.ok(await getRelayFrame(sessionId));
   await clearRelay(sessionId);
   assert.equal(await getRelay(sessionId), null);
+  assert.equal(await getRelayFrame(sessionId), null);
 });
 
 test("frames identicos (mesmo hash) nao contam para a janela de FPS/bytes", async () => {
@@ -45,6 +49,7 @@ test("frames identicos (mesmo hash) nao contam para a janela de FPS/bytes", asyn
   const relay = await getRelay(sessionId);
   assert.equal(relay.framesTotal, 3);
   assert.equal(relay.duplicateFramesSkipped, 1);
+  assert.equal(await getRelayFrame(sessionId), "data:image/jpeg;base64,BBB=");
 
   const metrics = computeRelayMetrics(relay, 1600);
   assert.equal(metrics.framesTotal, 3);
@@ -91,7 +96,7 @@ test("ping de tela inalterada renova o relay sem contar como novo frame", async 
   assert.equal(relay.framesTotal, 1);
   assert.equal(relay.unchangedPings, 1);
   assert.equal(relay.lastFrameAt, 2000);
-  assert.equal(relay.latestFrame, "data:image/jpeg;base64,AAA=");
+  assert.equal(await getRelayFrame(sessionId), "data:image/jpeg;base64,AAA=");
 
   const metrics = computeRelayMetrics(relay, 2000);
   assert.equal(metrics.framesTotal, 1);
@@ -152,8 +157,10 @@ function createFakeRedisClient() {
   const values = new Map();
   const lists = new Map();
   const ttlCalls = [];
+  const getCalls = [];
   return {
     async get(key) {
+      getCalls.push(key);
       return values.has(key) ? values.get(key) : null;
     },
     async set(key, value, opts) {
@@ -192,6 +199,7 @@ function createFakeRedisClient() {
       return 1;
     },
     _ttlCalls: ttlCalls,
+    _getCalls: getCalls,
     _rawValue: (key) => values.get(key),
     _rawList: (key) => lists.get(key) || []
   };
@@ -215,6 +223,34 @@ test("store Redis: guarda e devolve o relay via JSON, com TTL aplicado", async (
   assert.equal(fetched.quality, 60);
   assert.ok(Array.isArray(fetched.frameWindow));
   assert.ok(client._ttlCalls.some((call) => call.ex === 1800));
+  assert.equal(fetched.latestFrame, undefined, "o JPEG nao deve viver dentro do blob de metadados");
+});
+
+test("store Redis: o frame fica numa chave propria e a escrita nao le o valor antigo primeiro", async () => {
+  const client = createFakeRedisClient();
+  const redisStore = createRedisStore(client);
+  const sessionId = freshSessionId();
+
+  assert.equal(await redisStore.getFrame(sessionId), null);
+
+  const getCallsBefore = client._getCalls.length;
+  await redisStore.setFrame(sessionId, "data:image/jpeg;base64,AAA=");
+  assert.equal(
+    client._getCalls.length,
+    getCallsBefore,
+    "setFrame deve ser um SET puro, sem GET do valor antigo antes"
+  );
+
+  assert.equal(await redisStore.getFrame(sessionId), "data:image/jpeg;base64,AAA=");
+  assert.equal(client._rawValue(`remote-assistance:relay:${sessionId}:frame`), "data:image/jpeg;base64,AAA=");
+  assert.ok(client._ttlCalls.some((call) => call.key === `remote-assistance:relay:${sessionId}:frame` && call.ex === 1800));
+
+  await redisStore.mutate(sessionId, (relay) => { relay.agentToken = "a"; });
+  assert.equal(
+    await redisStore.getFrame(sessionId),
+    "data:image/jpeg;base64,AAA=",
+    "mutacoes de metadados nao devem afetar o frame guardado separadamente"
+  );
 });
 
 test("store Redis: mutacoes sucessivas leem o estado mais recente (nao perdem escrita anterior)", async () => {
@@ -230,17 +266,19 @@ test("store Redis: mutacoes sucessivas leem o estado mais recente (nao perdem es
   assert.equal(relay.viewerPaused, true);
 });
 
-test("store Redis: clear remove tanto o estado quanto a fila de comandos", async () => {
+test("store Redis: clear remove estado, frame e fila de comandos", async () => {
   const client = createFakeRedisClient();
   const redisStore = createRedisStore(client);
   const sessionId = freshSessionId();
 
   await redisStore.mutate(sessionId, (relay) => { relay.agentToken = "a"; });
+  await redisStore.setFrame(sessionId, "data:image/jpeg;base64,AAA=");
   await redisStore.enqueueCommand(sessionId, { type: "mouse_move" }, 10);
 
   await redisStore.clear(sessionId);
 
   assert.equal(await redisStore.get(sessionId), null);
+  assert.equal(await redisStore.getFrame(sessionId), null);
   assert.deepEqual(await redisStore.drainCommands(sessionId), []);
 });
 

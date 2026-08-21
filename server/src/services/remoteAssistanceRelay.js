@@ -11,7 +11,9 @@ function emptyRelay() {
   return {
     agentToken: null,
     viewerToken: null,
-    latestFrame: null,
+    // O JPEG em si (base64, ate dezenas de KB) mora na sua propria chave
+    // (store.setFrame/getFrame), nunca neste blob de metadados -- ver
+    // comentario acima de createRedisStore para o motivo.
     latestFrameHash: null,
     frameReceivedAt: null,
     lastFrameBytes: 0,
@@ -43,6 +45,7 @@ function emptyRelay() {
  */
 export function createMemoryStore() {
   const relays = new Map();
+  const frames = new Map();
   const commandQueues = new Map();
   const chatLogs = new Map();
 
@@ -57,8 +60,15 @@ export function createMemoryStore() {
       relays.set(sessionId, relay);
       return { relay, result };
     },
+    async setFrame(sessionId, dataUrl) {
+      frames.set(sessionId, dataUrl);
+    },
+    async getFrame(sessionId) {
+      return frames.get(sessionId) || null;
+    },
     async clear(sessionId) {
       relays.delete(sessionId);
+      frames.delete(sessionId);
       commandQueues.delete(sessionId);
       chatLogs.delete(sessionId);
     },
@@ -94,14 +104,27 @@ export function createMemoryStore() {
  * instancia da funcao le/escreve o mesmo relay externo, em vez de depender
  * de memoria de processo que nao e compartilhada entre instancias.
  *
- * O estado do relay (sem os comandos) fica numa unica chave JSON com TTL de
- * seguranca, renovado a cada escrita. A fila de comandos fica numa lista
- * Redis separada, usando RPUSH/LPOP para permanecer atomica mesmo sob
- * chamadas concorrentes (evita perder um clique ou tecla por causa de uma
- * corrida de leitura-modificacao-escrita).
+ * O estado do relay (sem os comandos, sem o frame) fica numa unica chave
+ * JSON com TTL de seguranca, renovado a cada escrita. A fila de comandos
+ * fica numa lista Redis separada, usando RPUSH/LPOP para permanecer atomica
+ * mesmo sob chamadas concorrentes (evita perder um clique ou tecla por causa
+ * de uma corrida de leitura-modificacao-escrita).
+ *
+ * O JPEG do frame (base64, pode chegar a dezenas de KB) fica numa chave
+ * PROPRIA, gravada com um SET puro (sem ler o valor antigo antes). Antes
+ * dessa separacao, o frame vivia dentro do mesmo blob JSON de metadados: um
+ * simples toggle de "controle engajado" (disparado por CADA movimento de
+ * mouse) ou a atualizacao de monitores (enviada em TODO frame pelo agente)
+ * faziam um GET+SET completo carregando o JPEG inteiro de um lado para o
+ * outro sem nenhum motivo, e a propria escrita do frame fazia um GET
+ * desperdicado so para descartar o frame anterior. Numa API REST do Upstash
+ * (uma requisicao HTTPS por comando, sem conexao persistente), isso multiplicava
+ * ida-e-voltas grandes e desnecessarias em cada ciclo de captura -- exatamente
+ * o tipo de atraso que se soma no transporte por snapshot/polling.
  */
 export function createRedisStore(redisClient) {
   const key = (sessionId) => `${RELAY_KEY_PREFIX}${sessionId}`;
+  const frameKey = (sessionId) => `${RELAY_KEY_PREFIX}${sessionId}:frame`;
   const commandsKey = (sessionId) => `${RELAY_KEY_PREFIX}${sessionId}${COMMANDS_KEY_SUFFIX}`;
   const chatKey = (sessionId) => `${RELAY_KEY_PREFIX}${sessionId}${CHAT_KEY_SUFFIX}`;
 
@@ -125,9 +148,18 @@ export function createRedisStore(redisClient) {
       await redisClient.set(key(sessionId), JSON.stringify(relay), { ex: RELAY_TTL_SECONDS });
       return { relay, result };
     },
+    async setFrame(sessionId, dataUrl) {
+      // SET puro, sem ler o valor antigo: o frame anterior nao importa mais,
+      // entao o GET-antes-de-escrever que `mutate` faz seria desperdicado aqui.
+      await redisClient.set(frameKey(sessionId), dataUrl, { ex: RELAY_TTL_SECONDS });
+    },
+    async getFrame(sessionId) {
+      return (await redisClient.get(frameKey(sessionId))) || null;
+    },
     async clear(sessionId) {
       await Promise.all([
         redisClient.del(key(sessionId)),
+        redisClient.del(frameKey(sessionId)),
         redisClient.del(commandsKey(sessionId)),
         redisClient.del(chatKey(sessionId))
       ]);
@@ -222,7 +254,6 @@ export async function setRelayFrame(sessionId, dataUrl, { bytes = 0, hash = null
   let duplicate = false;
   const { relay } = await store.mutate(sessionId, (relay) => {
     duplicate = Boolean(hash) && hash === relay.latestFrameHash;
-    relay.latestFrame = dataUrl;
     if (hash) relay.latestFrameHash = hash;
     relay.frameReceivedAt = new Date(now).toISOString();
     relay.lastFrameAt = now;
@@ -237,7 +268,15 @@ export async function setRelayFrame(sessionId, dataUrl, { bytes = 0, hash = null
       if (relay.frameWindow.length > FRAME_WINDOW_SIZE) relay.frameWindow.shift();
     }
   });
+  // So regrava os bytes do JPEG quando o quadro realmente mudou -- um quadro
+  // duplicado ja tem os mesmos bytes salvos na chave de frame, reenviar seria
+  // uma escrita Redis inteira sem nenhum efeito observavel.
+  if (!duplicate) await store.setFrame(sessionId, dataUrl);
   return { relay, duplicate };
+}
+
+export async function getRelayFrame(sessionId) {
+  return store.getFrame(sessionId);
 }
 
 export async function setRelayAdaptiveQuality(sessionId, { quality, width, height }) {
