@@ -211,6 +211,25 @@ namespace ITGuardian.Windows
                     {
                         WaitForNextHeartbeat(config.intervalSeconds);
                         config = ReadConfig(configPath);
+                        // enableRemoteScriptExecution ja era relido a cada ciclo (comparado no
+                        // heartbeat seguinte); a assistencia remota nao era -- o canal local so
+                        // nascia uma vez, na config lida no exato instante em que o processo
+                        // subiu. Mudar a flag no config.json exigia reiniciar o processo inteiro
+                        // (reboot/logon) para valer, sem nenhum aviso disso. Reavaliada a cada
+                        // ciclo agora, para o mesmo comportamento de recarga a quente do script.
+                        bool shouldRunRemoteAssistance = RemoteAssistanceEnvironment.IsAllowed(config);
+                        if (shouldRunRemoteAssistance && remoteAssistanceBroker == null)
+                        {
+                            remoteAssistanceBroker = new RemoteAssistanceBroker(config);
+                            remoteAssistanceBroker.Start();
+                            WriteLog("INFO", "Assistencia remota habilitada via configuracao atualizada; canal local iniciado.");
+                        }
+                        else if (!shouldRunRemoteAssistance && remoteAssistanceBroker != null)
+                        {
+                            remoteAssistanceBroker.Dispose();
+                            remoteAssistanceBroker = null;
+                            WriteLog("INFO", "Assistencia remota desabilitada via configuracao atualizada; canal local encerrado.");
+                        }
                     }
                 }
                 while (!runOnce);

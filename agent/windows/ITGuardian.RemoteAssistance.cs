@@ -131,13 +131,24 @@ namespace ITGuardian.Windows
     {
         internal const string PipeName = "ITGuardian.RemoteAssistance.v1";
 
+        // Antes exigia TAMBEM que config.environment fosse um valor de uma lista
+        // fixa ("lab", "interno", "test", ...) -- reaproveitando, sem nenhuma
+        // documentacao visivel, o mesmo campo que identifica o setor/site real
+        // da maquina no inventario. Uma maquina real com enableRemoteAssistance
+        // ligado pelo instalador (decisao explicita, mesmo padrao de
+        // enableRemoteScriptExecution) ficava presa para sempre em "aguardando
+        // autorizacao local" sem nenhum aviso, porque esse segundo requisito
+        // nao documentado nunca era satisfeito. O servidor ja tem seu proprio
+        // gate de laboratorio, independente (ENABLE_REMOTE_ASSISTANCE,
+        // REMOTE_ASSISTANCE_ENV) -- exigir de novo no agente, sobrecarregando
+        // um campo que tambem serve para agrupar o inventario, so causava
+        // confusao sem adicionar seguranca real. A decisao explicita do
+        // administrador (o checkbox do instalador ou a edicao manual do
+        // config.json) e suficiente, no mesmo nivel de confianca ja dado a
+        // execucao real de scripts.
         internal static bool IsAllowed(AgentConfig config)
         {
-            if (config == null || !config.enableRemoteAssistance) return false;
-            string value = (config.environment ?? "").Trim().ToLowerInvariant();
-            return value == "lab" || value == "laboratory" || value == "laboratorio" ||
-                value == "homologation" || value == "homologacao" || value == "internal" ||
-                value == "interno" || value == "test";
+            return config != null && config.enableRemoteAssistance;
         }
     }
 
