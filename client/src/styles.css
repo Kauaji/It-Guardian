@@ -10622,6 +10622,12 @@ table strong,
   background: var(--surface);
 }
 
+.service-order-script-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .service-order-script-card > div:first-child {
   display: flex;
   align-items: center;
@@ -10752,6 +10758,58 @@ table strong,
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+.script-diagnostic-loading {
+  margin: 0;
+  padding: 8px 10px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.script-diagnostic-panel {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-soft);
+  list-style: none;
+}
+
+.script-diagnostic-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.script-diagnostic-row > div {
+  display: grid;
+  gap: 1px;
+}
+
+.script-diagnostic-row span {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.script-diagnostic-row small {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.script-diagnostic-row.script-diagnostic-pass {
+  color: #047857;
+}
+
+.script-diagnostic-row.script-diagnostic-fail {
+  color: var(--status-danger);
+}
+
+.script-diagnostic-row.script-diagnostic-unknown {
+  color: var(--text-soft);
 }
 
 .service-order-checklist-templates-panel {

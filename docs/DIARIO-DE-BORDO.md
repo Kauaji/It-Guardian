@@ -4,6 +4,99 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-19 - Decima segunda rodada: Ativacao de Ponta a Ponta da Execucao Real de Scripts
+
+### Contexto
+
+- pedido explicito do usuario (prompt de 14 partes): verificar que a
+  execucao real controlada de scripts (implementada na decima primeira
+  rodada, ja mergeada em `main`) realmente funciona de ponta a ponta em
+  laboratorio/homologacao, e fechar lacunas operacionais reais - nao
+  reconstruir nada do que ja existia;
+- auditoria (3 agentes de pesquisa em paralelo + 1 agente de validacao de
+  plano) confirmou que o nucleo ja funcionava de verdade (fila real, hash
+  pinado, bloqueio de 18 padroes de conteudo, controle duplo, agente
+  Windows com as duas flags), mas achou 7 lacunas reais: sem diagnostico
+  visual itemizado (so uma frase "primeira causa vence"), instalador nunca
+  liga a flag do agente, job podia ficar preso em `claimed` para sempre se
+  o coletor recusasse localmente, aba de Scripts da OS sem fallback de
+  simulacao, popover de Avisos sem stdout/stderr do resultado (e a query
+  nem selecionava essas colunas), guardrails de Avisos com menos testes
+  que os de OS, e dois docs desatualizados;
+- branch `feature/enable-real-controlled-script-execution`, a partir de
+  `main` na ponta.
+
+### Diagnostico visual: endpoint novo, sem substituir o gate sincrono
+
+`POST /api/maintenance-scripts/execution-diagnosis` (`scripts.view`,
+somente leitura) calcula um checklist itemizado - servidor habilitado,
+agente registrado, agente com contato recente, permissao do usuario e,
+quando um script e passado, script ativo/tipo permitido/controle duplo de
+risco alto-critico. O item "coletor local permite execucao remota" e
+**sempre** reportado como desconhecido - o servidor genuinamente nao
+recebe esse valor no heartbeat hoje, e fingir certeza seria pior que nao
+mostrar nada. O botao de executar continua desabilitando instantaneamente
+com a logica sincrona ja existente no cliente; o diagnostico e uma
+explicacao adicional, buscada assincronamente uma vez por ativo.
+
+Extraido `findActiveAgentEnrollmentForAsset` (`agentRepository.js`) do
+join que so existia inline em `queueAgentScriptJob`, e
+`isAgentAssetFresh` (`server/src/lib/agentFreshness.js`, mesma formula do
+`isRemoteAssistanceAssetFresh` do cliente) - o diagnostico reusa os
+mesmos criterios que o enfileiramento real aplica, para as duas nocoes de
+"agente ativo" nunca divergirem.
+
+### Agente Windows: job nunca mais fica preso em "claimed"
+
+Quando o coletor recusava localmente um trabalho ja entregue no heartbeat
+(flag local desligada), o agente so registrava um aviso no log e nunca
+reportava resultado - o trabalho ficava `claimed` para sempre, invisivel
+como falha em qualquer tela. Corrigido: `ReportJobRefused` reporta
+`failed` com o motivo exato, reaproveitando o mesmo endpoint que ja
+reporta sucesso/falha real (`exitCode: null` e tratado como "nao-zero",
+nunca vira `succeeded`). Adicionadas as duas linhas de log declarativas
+pedidas (estado da flag local e do servidor a cada trabalho recebido).
+Compilado localmente com `csc.exe` (.NET Framework) para confirmar
+sintaxe - sem execucao real num Windows/heartbeat real.
+
+### Instalador: checkbox + parametro silencioso, sem mudar o padrao seguro
+
+`ITGuardianCollector.iss` grava `enableRemoteScriptExecution: false`
+sempre, sem nenhuma forma de ligar no assistente. Adicionada uma pagina
+opcional (checkbox, desmarcado por padrao) apos a chave de produto,
+pre-marcavel via `/EnableRemoteScriptExecution=1` na linha de comando
+(recurso nativo do Inno Setup 6.1+) para automacao de laboratorio -
+pulada quando o fluxo ja preserva a configuracao existente (reparo,
+desinstalacao, troca de chave com config no disco). Compilado localmente
+com `ISCC.exe` para confirmar a sintaxe Pascal - sem rodar o instalador
+de verdade (exigiria elevacao e chamaria a API de ativacao real de
+producao).
+
+### Frontend: simulacao na OS e stdout/stderr nos Avisos
+
+`ServiceOrderScriptsTab.jsx` ganhou um botao "Registrar simulacao"
+(visivel quando a execucao real esta bloqueada) - descoberta durante a
+auditoria: o backend (`registerMaintenanceScriptSimulation`) ja aceitava
+`serviceOrderId` por completo desde antes, entao foi so trabalho de
+frontend. `AlertCenterV2.jsx` passou a mostrar stdout/stderr/erro do
+ultimo job no popover de scripts - exigiu tambem uma correcao real de
+backend: `alertRepository.js` nunca selecionava `jobs.stdout`/`jobs.stderr`
+na query que alimenta o popover (so `exitCode`/`errorMessage`), achado
+pelo agente de validacao do plano ao revisar a proposta antes de
+implementar.
+
+### Testes e validacao
+
+Integracao nova: `script-execution-diagnosis.test.mjs` (5 casos - flag
+desligada, sem agente, agente obsoleto, tudo certo, controle duplo de
+risco alto/critico nos dois lados), guardrails de Avisos que faltavam
+(flag desligada, permissao ausente) adicionados a
+`alert-script-execution-history.test.mjs`, mais a asserção de
+stdout/stderr no teste ja existente. Unidade nova:
+`isRemoteScriptExecutionEnabled` (sem cobertura antes desta rodada).
+Suite completa (unidade+integracao+client+lint+arquitetura+build)
+validada antes de considerar a rodada concluida.
+
 ## 2026-08-19 - Decima primeira rodada: Execucao Controlada de Scripts em Avisos e OS
 
 ### Contexto

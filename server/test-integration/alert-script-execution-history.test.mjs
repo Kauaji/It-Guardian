@@ -13,6 +13,8 @@ const { closeDatabase } = await import("../src/database.js");
 const { createAgentEnrollment } = await import("../src/repositories/agentRepository.js");
 const { upsertAlert } = await import("../src/repositories/alertRepository.js");
 const { evaluateAlertsForSuggestions } = await import("../src/services/alertService.js");
+const { createUser } = await import("../src/repositories/userRepository.js");
+const { default: jwt } = await import("jsonwebtoken");
 
 const trustedOrigin = "http://localhost:5173";
 
@@ -55,6 +57,71 @@ function heartbeatPayload(machineId, overrides = {}) {
     intervalSeconds: 60,
     ...overrides
   };
+}
+
+function bearerHeaders(token) {
+  return { "content-type": "application/json", authorization: `Bearer ${token}`, origin: trustedOrigin };
+}
+
+async function bearerUser({ role, permissions = [] }) {
+  const user = await createUser({
+    name: `Usuario ${role} ${Math.random().toString(36).slice(2, 8)}`,
+    email: `${role}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}@alert-guardrails.local`,
+    password: "senha-nao-usada-neste-teste",
+    role,
+    permissions
+  });
+  const token = jwt.sign({ sub: user.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+  return { user, token };
+}
+
+async function setupAlertSuggestionAndScript(baseUrl, cookie, suffix) {
+  const machineId = `alert-guardrail-asset-${suffix}`;
+  const enrollment = await createAgentEnrollment({ name: `Agente guardrail ${suffix}` });
+  await fetch(`${baseUrl}/api/agents/heartbeat`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${enrollment.token}`, "content-type": "application/json" },
+    body: JSON.stringify(heartbeatPayload(machineId))
+  });
+
+  const alertId = `alert-guardrail-${suffix}`;
+  const observedAt = new Date().toISOString();
+  await upsertAlert({
+    id: alertId,
+    assetId: machineId,
+    hostName: machineId.toUpperCase(),
+    type: "disk_health_low",
+    metric: "disk_health",
+    title: "Saude do disco abaixo do limite",
+    description: "Alerta deterministico do teste de guardrails de script em aviso.",
+    severity: "critical",
+    value: 30,
+    threshold: 80,
+    status: "active",
+    firstSeenAt: observedAt,
+    lastSeenAt: observedAt,
+    occurrencesCount: 1,
+    source: "integration_test"
+  });
+  await evaluateAlertsForSuggestions();
+
+  const suggestionsResponse = await fetch(`${baseUrl}/api/service-order-suggestions`, { headers: { cookie } });
+  const suggestionsBody = await suggestionsResponse.json();
+  const suggestion = suggestionsBody.suggestions.find((item) => item.alertId === alertId);
+
+  const scriptResponse = await fetch(`${baseUrl}/api/maintenance-scripts`, {
+    method: "POST",
+    headers: browserHeaders(cookie),
+    body: JSON.stringify({
+      name: `Diagnostico guardrail ${suffix}`,
+      type: "powershell",
+      content: "Get-Service",
+      riskLevel: "low"
+    })
+  });
+  const script = (await scriptResponse.json()).script;
+
+  return { machineId, suggestion, script };
 }
 
 test.after(closeDatabase);
@@ -178,6 +245,8 @@ test("uso de script a partir de aviso comenta no alerta ao enfileirar e ao concl
   const suggestionsAfterCompletionBody = await suggestionsAfterCompletion.json();
   const updatedSuggestion = suggestionsAfterCompletionBody.suggestions.find((item) => item.id === suggestion.id);
   assert.equal(updatedSuggestion.latestValidation.job.status, "succeeded", "a listagem de sugestoes deve refletir o status do job concluido");
+  assert.equal(updatedSuggestion.latestValidation.job.stdout, "Healthy", "o stdout reportado pelo agente deve chegar na listagem de sugestoes");
+  assert.equal(updatedSuggestion.latestValidation.job.stderr, "", "o stderr deve chegar na listagem de sugestoes mesmo quando vazio");
 
   const duplicateResultResponse = await fetch(`${baseUrl}/api/agents/jobs/${deliveryBody.job.id}/result`, {
     method: "POST",
@@ -192,4 +261,47 @@ test("uso de script a partir de aviso comenta no alerta ao enfileirar e ao concl
     2,
     "reenviar o resultado de um trabalho ja concluido nao deve duplicar o comentario no aviso"
   );
+});
+
+test("bloqueia uso de script a partir de aviso quando ENABLE_REMOTE_SCRIPT_EXECUTION esta desligado no servidor", async (t) => {
+  await initializeRuntime();
+  const server = await listen(createApp());
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  const cookie = await login(baseUrl);
+
+  const { suggestion, script } = await setupAlertSuggestionAndScript(baseUrl, cookie, "flag-off");
+  assert.ok(suggestion, "a avaliacao de alertas deve gerar uma sugestao de OS para o alerta de teste");
+
+  const previousFlag = process.env.ENABLE_REMOTE_SCRIPT_EXECUTION;
+  process.env.ENABLE_REMOTE_SCRIPT_EXECUTION = "false";
+  try {
+    const useResponse = await fetch(`${baseUrl}/api/service-order-suggestions/${suggestion.id}/scripts/${script.id}/use`, {
+      method: "POST",
+      headers: browserHeaders(cookie),
+      body: JSON.stringify({ confirmed: true })
+    });
+    assert.equal(useResponse.status, 503);
+  } finally {
+    process.env.ENABLE_REMOTE_SCRIPT_EXECUTION = previousFlag;
+  }
+});
+
+test("bloqueia uso de script a partir de aviso sem a permissao scripts.use_from_alert", async (t) => {
+  await initializeRuntime();
+  const server = await listen(createApp());
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  const cookie = await login(baseUrl);
+
+  const { suggestion, script } = await setupAlertSuggestionAndScript(baseUrl, cookie, "no-permission");
+  assert.ok(suggestion, "a avaliacao de alertas deve gerar uma sugestao de OS para o alerta de teste");
+
+  const { token: viewerToken } = await bearerUser({ role: "viewer" });
+  const deniedResponse = await fetch(`${baseUrl}/api/service-order-suggestions/${suggestion.id}/scripts/${script.id}/use`, {
+    method: "POST",
+    headers: bearerHeaders(viewerToken),
+    body: JSON.stringify({ confirmed: true })
+  });
+  assert.equal(deniedResponse.status, 403);
 });

@@ -3183,7 +3183,8 @@ function Dashboard() {
               settings: hasPermission(user, "service_orders.settings"),
               reopen: hasPermission(user, "service_orders.reopen"),
               manageChecklists: hasPermission(user, "service_orders.manage_checklists"),
-              runScripts: hasPermission(user, "service_orders.run_scripts")
+              runScripts: hasPermission(user, "service_orders.run_scripts"),
+              registerSimulation: hasPermission(user, "scripts.register_simulation")
             }}
             />
           </Suspense>

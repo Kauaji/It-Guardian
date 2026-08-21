@@ -138,6 +138,7 @@ historico no servidor e preservado.
 `config.json` aceita somente:
 
 - `serverUrl`;
+- `supportUrl`;
 - `agentToken`;
 - `intervalSeconds`;
 - `machineId` opcional;
@@ -145,7 +146,12 @@ historico no servidor e preservado.
 - `environment`;
 - `group`;
 - `segment`;
-- `includeLoggedUser`.
+- `includeLoggedUser`;
+- `enableRemoteScriptExecution` (default `false` — ver "Trabalhos de
+  manutencao" abaixo e
+  [SCRIPTS-MANUTENCAO-SEGURANCA.md](SCRIPTS-MANUTENCAO-SEGURANCA.md));
+- `enableRemoteAssistance` (default `false`, fora do escopo deste
+  documento).
 
 O backend rejeita campos adicionais no inventario. Trabalhos de manutencao sao
 obtidos por uma fila autenticada separada; nao existe campo de comando no
@@ -153,11 +159,32 @@ obtidos por uma fila autenticada separada; nao existe campo de comando no
 
 ## Trabalhos de manutencao
 
-Sugestoes, preventivas e automatizacoes podem preparar trabalhos `bat`, `cmd`
-ou `powershell` para uma maquina especifica. O agente consulta uma fila
-autenticada, aceita somente esses tipos, aplica limite de 15 a 600 segundos,
-limita a saida a 64 KiB e devolve resultado e log ao servidor. Nenhum trabalho
-e executado se o agente da maquina estiver offline.
+Sugestoes, preventivas, automatizacoes, Avisos e Ordens de Servico podem
+preparar trabalhos `bat`, `cmd` ou `powershell` para uma maquina especifica.
+O agente consulta uma fila autenticada, aceita somente esses tipos, aplica
+limite de 15 a 600 segundos, limita a saida a 64 KiB e devolve resultado e
+log ao servidor. Nenhum trabalho e executado se o agente da maquina estiver
+offline.
+
+A execucao real so acontece quando **duas flags batem ao mesmo tempo**: o
+servidor (`ENABLE_REMOTE_SCRIPT_EXECUTION=true`) e o coletor local
+(`"enableRemoteScriptExecution": true` neste `config.json`). Por padrao as
+duas ficam desligadas — o sistema so registra/simula. Para ligar num
+computador:
+
+- **No instalador** (`installers/windows-collector/ITGuardianCollector.iss`,
+  compilado por `build-installer.ps1`): marque a opcao "Habilitar execucao
+  real de scripts nesta maquina" no assistente, ou gere/rode o instalador
+  silenciosamente com o parametro `/EnableRemoteScriptExecution=1`. Se essa
+  opcao nao aparece (repositorio ou "trocar a chave" preservando uma
+  configuracao existente), a flag continua vindo do `config.json` ja
+  presente na maquina.
+- **Manualmente**: editar `"enableRemoteScriptExecution": true` direto no
+  `config.json` instalado e reiniciar o servico/tarefa do coletor.
+
+Detalhes completos (bloqueio de conteudo perigoso, controle duplo,
+diagnostico visual de bloqueio, roteiro de teste ponta a ponta) em
+[SCRIPTS-MANUTENCAO-SEGURANCA.md](SCRIPTS-MANUTENCAO-SEGURANCA.md).
 
 A fila, o historico e a validacao automatica estao cobertos por testes. Uma
 execucao real em uma maquina deve ser feita conscientemente pelo tecnico; a

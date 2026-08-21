@@ -320,6 +320,8 @@ function fromLatestSuggestionValidationRow(row) {
       completedAt: row.job_completed_at,
       exitCode: row.job_exit_code,
       timedOut: row.job_timed_out === true,
+      stdout: row.job_stdout || "",
+      stderr: row.job_stderr || "",
       errorMessage: row.job_error_message || ""
     } : null
   };
@@ -713,6 +715,8 @@ export async function listServiceOrderSuggestions() {
                jobs.completed_at AS job_completed_at,
                jobs.exit_code AS job_exit_code,
                jobs.timed_out AS job_timed_out,
+               jobs.stdout AS job_stdout,
+               jobs.stderr AS job_stderr,
                jobs.error_message AS job_error_message
         FROM script_validation_runs validations
         LEFT JOIN maintenance_scripts scripts ON scripts.id = validations.script_id

@@ -720,6 +720,14 @@ export function fetchMaintenanceScriptRecommendations(token, payload = {}) {
   });
 }
 
+export function fetchScriptExecutionDiagnosis(token, payload = {}) {
+  return apiFetch("/maintenance-scripts/execution-diagnosis", {
+    token,
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
 export function analyzeMaintenanceScript(token, payload) {
   return apiFetch("/maintenance-scripts/analyze", {
     token,

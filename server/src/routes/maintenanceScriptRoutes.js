@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   analyze,
   create,
+  executionDiagnosis,
   list,
   recommendedScriptsForContext,
   registerSimulation,
@@ -15,6 +16,7 @@ const router = Router();
 router.use(requireAuth);
 router.get("/", requirePermission("scripts.view"), list);
 router.post("/recommendations", requirePermission("scripts.view"), recommendedScriptsForContext);
+router.post("/execution-diagnosis", requirePermission("scripts.view"), executionDiagnosis);
 router.post("/analyze", requirePermission("scripts.manage"), analyze);
 router.post("/", requirePermission("scripts.manage"), create);
 router.patch("/:id", requirePermission("scripts.manage"), update);

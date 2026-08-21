@@ -265,6 +265,27 @@ export async function findAgentAssetById(assetId) {
   return result.rows[0] ? assetFromRow(result.rows[0]) : null;
 }
 
+// Unico ponto que decide "este ativo tem um agente com enrollment
+// ativo" - reaproveitado tanto pelo enfileiramento real de scripts
+// (agentScriptJobRepository.js) quanto pelo diagnostico somente-leitura,
+// para as duas nocoes de "agente ativo" nunca divergirem entre si.
+export async function findActiveAgentEnrollmentForAsset(assetId, db = query) {
+  const result = await db(
+    `
+      SELECT assets.asset_id, assets.enrollment_id
+      FROM agent_assets assets
+      INNER JOIN agent_enrollments enrollments ON enrollments.id = assets.enrollment_id
+      WHERE assets.asset_id = $1
+        AND enrollments.active = TRUE
+      LIMIT 1
+    `,
+    [assetId]
+  );
+  return result.rows[0]
+    ? { assetId: result.rows[0].asset_id, enrollmentId: result.rows[0].enrollment_id }
+    : null;
+}
+
 export async function findAgentAssetByEnrollmentId(enrollmentId) {
   const result = await query(
     `

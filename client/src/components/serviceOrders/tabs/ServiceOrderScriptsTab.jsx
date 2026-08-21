@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
-import { PlayCircle, ShieldAlert, Terminal } from "lucide-react";
+import { ClipboardCheck, PlayCircle, ShieldAlert, Terminal } from "lucide-react";
 import {
   fetchMaintenanceScriptRecommendations,
   fetchServiceOrderScriptActivity,
+  registerMaintenanceScriptSimulation,
   useServiceOrderScript as executeServiceOrderScript
 } from "../../../api.js";
 import { hasRemoteAssistanceAgent, isRemoteAssistanceAssetFresh } from "../../remoteAssistance/remoteAssistanceModel.js";
+import ScriptExecutionDiagnosticPanel from "../../maintenance/ScriptExecutionDiagnosticPanel.jsx";
 
 const RISK_LABELS = { low: "Baixo", medium: "Médio", high: "Alto", critical: "Crítico" };
 const STATUS_LABELS = {
@@ -33,6 +35,7 @@ export default function ServiceOrderScriptsTab({
   token,
   notify,
   canManage = false,
+  canRegisterSimulation = false,
   remoteScriptExecutionEnabled = false
 }) {
   const [activity, setActivity] = useState([]);
@@ -40,6 +43,7 @@ export default function ServiceOrderScriptsTab({
   const [others, setOthers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [confirmingScript, setConfirmingScript] = useState(null);
+  const [confirmMode, setConfirmMode] = useState("execute");
   const [queueing, setQueueing] = useState(false);
 
   const serviceOrderId = serviceOrder?.id;
@@ -95,6 +99,31 @@ export default function ServiceOrderScriptsTab({
     }
   }
 
+  async function confirmSimulation(script, riskAcknowledged) {
+    setQueueing(true);
+    try {
+      await registerMaintenanceScriptSimulation(token, script.id, {
+        confirmed: true,
+        riskAcknowledged,
+        assetId: serviceOrder?.assetId,
+        serviceOrderId,
+        notes: `Simulação registrada pela aba Scripts da OS ${serviceOrder?.number || serviceOrderId}.`
+      });
+      notify?.("Simulação registrada. Nenhum comando foi executado.", "success");
+      setConfirmingScript(null);
+      loadActivity();
+    } catch (error) {
+      notify?.(error.message, "danger");
+    } finally {
+      setQueueing(false);
+    }
+  }
+
+  function openConfirm(script, mode) {
+    setConfirmMode(mode);
+    setConfirmingScript(script);
+  }
+
   function blockReason() {
     if (!hasAsset) return "Esta OS não tem uma máquina/ativo vinculado.";
     if (isFinalOrder) return "Esta OS está finalizada. Reabra a OS para executar scripts.";
@@ -106,6 +135,7 @@ export default function ServiceOrderScriptsTab({
   }
 
   const reason = canRunReal ? "" : blockReason();
+  const canRunSimulation = canRegisterSimulation && hasAsset && !isFinalOrder && !canRunReal;
 
   if (loading) return <p className="loading-message">Carregando scripts...</p>;
 
@@ -124,6 +154,10 @@ export default function ServiceOrderScriptsTab({
         </p>
       )}
 
+      {hasAsset && (
+        <ScriptExecutionDiagnosticPanel token={token} assetId={serviceOrder.assetId} context="service_order" />
+      )}
+
       <div className="service-order-scripts-list">
         <h4>Scripts recomendados</h4>
         {!recommended.length && !others.length && <p className="empty">Nenhum script ativo cadastrado no catálogo.</p>}
@@ -137,16 +171,30 @@ export default function ServiceOrderScriptsTab({
             </div>
             {script.recommendationReason && <p>{script.recommendationReason}</p>}
             {script.estimatedSummary && <p>{script.estimatedSummary}</p>}
-            <button
-              type="button"
-              className="primary-action compact-action"
-              disabled={!canRunReal || queueing}
-              onClick={() => setConfirmingScript(script)}
-              title={reason || undefined}
-            >
-              <PlayCircle size={14} />
-              Executar no agente
-            </button>
+            <div className="service-order-script-card-actions">
+              <button
+                type="button"
+                className="primary-action compact-action"
+                disabled={!canRunReal || queueing}
+                onClick={() => openConfirm(script, "execute")}
+                title={reason || undefined}
+              >
+                <PlayCircle size={14} />
+                Executar no agente
+              </button>
+              {canRunSimulation && (
+                <button
+                  type="button"
+                  className="ghost-action compact-action"
+                  disabled={queueing}
+                  onClick={() => openConfirm(script, "simulate")}
+                  title="Registra a intenção de uso do script sem enviar nada ao agente."
+                >
+                  <ClipboardCheck size={14} />
+                  Registrar simulação
+                </button>
+              )}
+            </div>
           </article>
         ))}
       </div>
@@ -178,10 +226,10 @@ export default function ServiceOrderScriptsTab({
             className="service-order-script-confirm-modal"
             role="dialog"
             aria-modal="true"
-            aria-label="Confirmar execução de script"
+            aria-label={confirmMode === "simulate" ? "Confirmar simulação de script" : "Confirmar execução de script"}
             onClick={(event) => event.stopPropagation()}
           >
-            <h3>Confirmar execução</h3>
+            <h3>{confirmMode === "simulate" ? "Confirmar simulação" : "Confirmar execução"}</h3>
             <dl>
               <dt>Script</dt>
               <dd>{confirmingScript.name}</dd>
@@ -189,16 +237,21 @@ export default function ServiceOrderScriptsTab({
               <dd>{RISK_LABELS[confirmingScript.riskLevel] || confirmingScript.riskLevel}</dd>
               <dt>Máquina alvo</dt>
               <dd>{asset?.name || serviceOrder?.assetId}</dd>
-              <dt>Timeout</dt>
-              <dd>até 600s</dd>
-              <dt>Requer administrador</dt>
-              <dd>{confirmingScript.requiresAdmin ? "Sim" : "Não"}</dd>
-              <dt>Requer usuário logado</dt>
-              <dd>{confirmingScript.requiresLoggedUser ? "Sim" : "Não"}</dd>
+              {confirmMode === "execute" && (
+                <>
+                  <dt>Timeout</dt>
+                  <dd>até 600s</dd>
+                  <dt>Requer administrador</dt>
+                  <dd>{confirmingScript.requiresAdmin ? "Sim" : "Não"}</dd>
+                  <dt>Requer usuário logado</dt>
+                  <dd>{confirmingScript.requiresLoggedUser ? "Sim" : "Não"}</dd>
+                </>
+              )}
             </dl>
             <p>
-              Este script será executado na máquina selecionada pelo agente IT Guardian. A execução será registrada no
-              histórico da OS, no prontuário do ativo e nos logs de auditoria.
+              {confirmMode === "simulate"
+                ? "Nenhum comando será executado. Esta ação apenas registra a intenção de uso do script no histórico da OS, no prontuário do ativo e nos logs de auditoria."
+                : "Este script será executado na máquina selecionada pelo agente IT Guardian. A execução será registrada no histórico da OS, no prontuário do ativo e nos logs de auditoria."}
             </p>
             <div className="service-order-script-confirm-actions">
               <button type="button" className="ghost-action compact-action" onClick={() => setConfirmingScript(null)} disabled={queueing}>
@@ -208,9 +261,16 @@ export default function ServiceOrderScriptsTab({
                 type="button"
                 className="primary-action compact-action"
                 disabled={queueing}
-                onClick={() => confirmRun(confirmingScript, confirmingScript.riskLevel === "high" || confirmingScript.riskLevel === "critical")}
+                onClick={() => {
+                  const riskAcknowledged = confirmingScript.riskLevel === "high" || confirmingScript.riskLevel === "critical";
+                  if (confirmMode === "simulate") {
+                    confirmSimulation(confirmingScript, riskAcknowledged);
+                  } else {
+                    confirmRun(confirmingScript, riskAcknowledged);
+                  }
+                }}
               >
-                {queueing ? "Enviando..." : "Confirmar execução"}
+                {queueing ? "Enviando..." : confirmMode === "simulate" ? "Confirmar simulação" : "Confirmar execução"}
               </button>
             </div>
           </section>

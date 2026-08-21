@@ -4,9 +4,10 @@ import { conflict, badRequest, forbidden, notFoundError, serviceUnavailable } fr
 import { addAssetHistory } from "./assetHistoryRepository.js";
 import { addAlertComment } from "./alertRepository.js";
 import { addLog } from "./logRepository.js";
+import { findActiveAgentEnrollmentForAsset } from "./agentRepository.js";
 import { isRemoteScriptExecutionEnabled } from "../config/environment.js";
 
-const executableTypes = new Set(["bat", "cmd", "powershell"]);
+export const executableTypes = new Set(["bat", "cmd", "powershell"]);
 const dualControlRiskLevels = new Set(["high", "critical"]);
 
 function hashScriptContent(content) {
@@ -76,18 +77,7 @@ export async function queueAgentScriptJob({
   }
   assertSecondReviewer(script, userId);
 
-  const assetResult = await db(
-    `
-      SELECT assets.asset_id, assets.enrollment_id
-      FROM agent_assets assets
-      INNER JOIN agent_enrollments enrollments ON enrollments.id = assets.enrollment_id
-      WHERE assets.asset_id = $1
-        AND enrollments.active = TRUE
-      LIMIT 1
-    `,
-    [assetId]
-  );
-  const asset = assetResult.rows[0];
+  const asset = await findActiveAgentEnrollmentForAsset(assetId, db);
   if (!asset) {
     throw conflict("A maquina selecionada nao possui um agente ativo para executar o script.");
   }
@@ -103,8 +93,8 @@ export async function queueAgentScriptJob({
     `,
     [
       randomUUID(),
-      asset.asset_id,
-      asset.enrollment_id,
+      asset.assetId,
+      asset.enrollmentId,
       script.id,
       executionLogId,
       validationId,
