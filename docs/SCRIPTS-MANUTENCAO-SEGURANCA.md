@@ -176,6 +176,63 @@ mantem o sistema em simulacao:
    continua existindo como fallback apenas para antes do primeiro
    carregamento das configuracoes.
 
+## Diagnostico visual de bloqueio
+
+Antes de executar um script (aba Scripts da OS e popover de scripts nos
+Avisos), a interface mostra um checklist itemizado — nao mais uma unica
+frase — buscado sob demanda em
+`POST /api/maintenance-scripts/execution-diagnosis` (permissao
+`scripts.view`, so leitura, nunca enfileira nada):
+
+- **Servidor habilitado**: `ENABLE_REMOTE_SCRIPT_EXECUTION` calculado ao
+  vivo.
+- **Agente registrado**: a maquina tem um `agent_enrollment` ativo.
+- **Agente com contato recente**: `last_seen_at` dentro da janela de
+  frescor (3x o intervalo do heartbeat, minimo 10 minutos — mesma formula
+  usada pela Assistencia Remota, agora tambem em
+  `server/src/lib/agentFreshness.js` para o lado do servidor).
+- **Coletor local permite execucao remota**: sempre aparece como "nao e
+  possivel confirmar remotamente" — o servidor genuinamente nao recebe o
+  valor de `enableRemoteScriptExecution` do `config.json` no heartbeat
+  hoje, e mostrar isso como certeza seria enganoso. Esse e exatamente o
+  cenario que a correcao do agente Windows abaixo cobre.
+- **Permissao do usuario**: a permissao base do contexto
+  (`service_orders.run_scripts` ou `scripts.use_from_alert`).
+- Quando um script especifico esta selecionado, tambem: script ativo,
+  tipo permitido, e — para risco alto/critico — se o controle duplo
+  (identidade + `scripts.approve_high_risk`) esta satisfeito.
+
+O botao de executar continua desabilitando instantaneamente com a logica
+sincrona ja existente no cliente (sem esperar essa chamada de rede) — o
+diagnostico e uma explicacao mais rica, nao o unico portao.
+
+### Job preso em "claimed" (corrigido)
+
+Antes desta rodada, se o coletor local recusasse um trabalho ja
+entregue no heartbeat (por ter `enableRemoteScriptExecution: false`
+localmente, mesmo com o servidor permitindo), o agente so registrava um
+aviso no log e **nunca reportava o resultado** — o trabalho ficava em
+`claimed` para sempre, sem aparecer como falho em lugar nenhum.
+Corrigido: o agente agora reporta o trabalho como `failed` (com o motivo
+exato no log de erro) para `/api/agents/jobs/:id/result` nesse caso,
+usando o mesmo endpoint que ja usa para reportar sucesso/falha real.
+
+## Botao de emergencia
+
+Para desligar a execucao real imediatamente, em qualquer ordem:
+
+1. **Servidor**: `ENABLE_REMOTE_SCRIPT_EXECUTION=false` e fazer o
+   redeploy — nenhum trabalho novo e enfileirado a partir desse momento
+   (`assertRemoteScriptExecutionEnabled` recusa com `503`), e o
+   heartbeat passa a devolver `remoteScriptExecutionEnabled: false`.
+2. **Agente**: `"enableRemoteScriptExecution": false` no `config.json`
+   de cada maquina e reiniciar o servico/tarefa do coletor — mesmo que o
+   servidor ainda esteja com a flag ligada, o agente nao executa nada
+   localmente.
+3. Nenhuma das duas acoes exige reverter codigo ou fazer rollback — sao
+   apenas as mesmas duas flags que ja controlam a funcionalidade em
+   condicoes normais.
+
 ## Scripts seguros de exemplo (para copiar e colar)
 
 Nenhum script e semeado automaticamente no catalogo — mesmo scripts
@@ -183,15 +240,33 @@ considerados seguros devem ser cadastrados deliberadamente por um
 administrador, que passa pela validacao de conteudo normal. Os exemplos
 abaixo sao um ponto de partida:
 
-- **Diagnostico de rede**: `ipconfig /all`
-- **Renovar IP e DNS**: `ipconfig /release` seguido de `ipconfig /renew` e
-  `ipconfig /flushdns`
-- **Limpar temporarios**:
+- **Diagnostico basico (CMD/BAT)**:
+  ```
+  echo Teste IT Guardian
+  hostname
+  whoami
+  ipconfig
+  ```
+- **Verificacao de disco (CMD/BAT)**:
+  ```
+  echo Verificacao de disco
+  wmic logicaldisk get caption,freespace,size
+  ```
+- **Limpar cache de DNS (CMD/BAT)**:
+  ```
+  echo Limpando cache DNS
+  ipconfig /flushdns
+  ```
+- **Diagnostico de rede (PowerShell)**: `ipconfig /all`
+- **Renovar IP e DNS (PowerShell)**: `ipconfig /release` seguido de
+  `ipconfig /renew` e `ipconfig /flushdns`
+- **Limpar temporarios (PowerShell)**:
   `Remove-Item -Path "$env:TEMP\*" -Recurse -Force -ErrorAction SilentlyContinue`
-- **Reiniciar o spooler de impressao**: `Restart-Service -Name Spooler -Force`
-- **Listar servicos parados**:
+- **Reiniciar o spooler de impressao (PowerShell)**:
+  `Restart-Service -Name Spooler -Force`
+- **Listar servicos parados (PowerShell)**:
   `Get-Service | Where-Object { $_.Status -eq 'Stopped' }`
-- **Verificar espaco em disco**:
+- **Verificar espaco em disco (PowerShell)**:
   `Get-CimInstance Win32_LogicalDisk | Select-Object DeviceID, FreeSpace, Size`
 
 ## Roteiro de teste manual do agente Windows
@@ -200,23 +275,34 @@ O agente (`agent/windows/ITGuardian.Windows.cs`) e C# compilado para
 `.exe` — nao ha como automatizar sua execucao real neste repositorio. Para
 validar manualmente:
 
-1. Compile com `installers/windows-collector/build-installer.ps1` (ou o
-   `csc.exe` do .NET Framework diretamente) e instale numa maquina de teste.
-2. No servidor, ligue `ENABLE_REMOTE_SCRIPT_EXECUTION=true`; no
-   `config.json` do agente instalado, ligue `enableRemoteScriptExecution:
-   true`; reinicie o servico do agente.
+1. Compile com `installers/windows-collector/build-installer.ps1` — no
+   assistente, marque "Habilitar execucao real de scripts nesta maquina"
+   (ou gere silenciosamente com `/EnableRemoteScriptExecution=1` na linha
+   de comando do instalador) — e instale numa maquina de teste. Se ja
+   tiver instalado sem marcar essa opcao, edite `enableRemoteScriptExecution:
+   true` direto no `config.json` e reinicie o servico do agente.
+2. No servidor, ligue `ENABLE_REMOTE_SCRIPT_EXECUTION=true` e faca o
+   redeploy.
 3. Cadastre um script de baixo risco (ex.: `ipconfig /all`) no catalogo.
 4. Abra uma OS com essa maquina vinculada (ou uma sugestao de Aviso gerada
-   para ela), va na aba/menu de Scripts, confirme a execucao.
+   para ela), va na aba/menu de Scripts — confirme que o painel de
+   diagnostico mostra todos os itens como disponiveis, exceto "coletor
+   local" (sempre neutro) — e confirme a execucao.
 5. Aguarde o proximo heartbeat (ou force um manualmente) — o agente deve
    receber o trabalho, executa-lo sem abrir janela visivel, e reportar o
    resultado.
 6. Confira: a atividade da OS/Aviso mostra o status `succeeded` com a saida
-   esperada; o log local do agente (`WriteLog`) mostra "trabalho recebido",
-   inicio e fim, sem o conteudo do script; o Prontuario Tecnico do ativo e
-   os logs de auditoria do servidor mostram o evento.
+   esperada; o log local do agente (`WriteLog`) mostra "execucao remota
+   habilitada no coletor", "servidor informou remoteScriptExecutionEnabled",
+   "trabalho recebido", inicio e fim, sem o conteudo do script; o
+   Prontuario Tecnico do ativo e os logs de auditoria do servidor mostram
+   o evento.
 7. Repita com um script que force falha (`exit 1`) e um timeout curto para
    confirmar os estados `failed` e `timed_out`.
+8. Desligue `enableRemoteScriptExecution` so no `config.json` (deixando o
+   servidor ligado) e enfileire outro trabalho — confirme que o agente
+   reporta `failed` com uma mensagem clara de recusa, em vez de deixar o
+   trabalho preso em `claimed` indefinidamente.
 
 ## Checklist
 
@@ -241,5 +327,12 @@ validar manualmente:
 - [x] Testes automatizados: unidade (bloqueio de conteudo), integracao
       (fila, permissoes, flags, historico) sem executar BAT/CMD/PowerShell
       operacional de verdade.
+- [x] Diagnostico visual itemizado (servidor/agente/permissao/risco) nas
+      duas telas de disparo, sem substituir o gate sincrono existente.
+- [x] Agente reporta falha explicita (nunca deixa preso em `claimed`)
+      quando recusa um trabalho por flag local desligada.
+- [x] Instalador permite habilitar `enableRemoteScriptExecution` no
+      assistente ou via parametro silencioso — sem mudar o padrao seguro
+      (desligado).
 - [ ] Assinatura criptografica de scripts antes de distribuicao publica.
 - [ ] Homologacao em maquina virtual limpa com um script de baixo risco.

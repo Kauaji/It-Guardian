@@ -257,14 +257,36 @@ namespace ITGuardian.Windows
                 }
             }
             WriteLog("INFO", "Inventario real enviado para " + config.serverUrl + ".");
-            if (heartbeat != null && heartbeat.job != null &&
-                heartbeat.remoteScriptExecutionEnabled && config.enableRemoteScriptExecution)
+            if (heartbeat != null && heartbeat.job != null)
             {
-                ExecuteAndReportJob(config, heartbeat.job);
-            }
-            else if (heartbeat != null && heartbeat.job != null)
-            {
-                WriteLog("WARN", "Trabalho remoto recusado: execucao nao habilitada no servidor e no coletor.");
+                WriteLog(
+                    "INFO",
+                    "Execucao remota habilitada no coletor: " + config.enableRemoteScriptExecution + "."
+                );
+                WriteLog(
+                    "INFO",
+                    "Servidor informou remoteScriptExecutionEnabled: " + heartbeat.remoteScriptExecutionEnabled + "."
+                );
+                if (heartbeat.remoteScriptExecutionEnabled && config.enableRemoteScriptExecution)
+                {
+                    ExecuteAndReportJob(config, heartbeat.job);
+                }
+                else
+                {
+                    string refusalReason = "Execucao remota nao habilitada no servidor e/ou no coletor.";
+                    WriteLog("WARN", "Trabalho " + heartbeat.job.id + " recusado: " + refusalReason);
+                    try
+                    {
+                        ReportJobRefused(config, heartbeat.job, refusalReason);
+                    }
+                    catch (Exception reportError)
+                    {
+                        WriteLog(
+                            "ERROR",
+                            "Falha ao reportar recusa do trabalho " + heartbeat.job.id + ": " + reportError.Message
+                        );
+                    }
+                }
             }
 
             if (!skipAutoUpdate &&
@@ -391,6 +413,29 @@ namespace ITGuardian.Windows
                 " timedOut=" + result.timedOut +
                 (string.IsNullOrEmpty(result.errorMessage) ? "" : " erro=\"" + result.errorMessage + "\"") + "."
             );
+            ReportJobResult(config, job, result);
+        }
+
+        // Sem isso, um trabalho ja "claimed" que o coletor recusa localmente
+        // (flag desligada) nunca volta a ter um resultado reportado -- fica
+        // preso em "claimed" no servidor para sempre. Reaproveita o mesmo
+        // endpoint de resultado, com exitCode nulo (o servidor trata como
+        // falha, nunca como sucesso) e a razao da recusa no errorMessage.
+        private static void ReportJobRefused(AgentConfig config, AgentScriptJob job, string reason)
+        {
+            AgentScriptResult result = new AgentScriptResult
+            {
+                exitCode = null,
+                timedOut = false,
+                stdout = "",
+                stderr = "",
+                errorMessage = reason
+            };
+            ReportJobResult(config, job, result);
+        }
+
+        private static void ReportJobResult(AgentConfig config, AgentScriptJob job, AgentScriptResult result)
+        {
             string endpoint =
                 config.serverUrl.TrimEnd('/') + "/api/agents/jobs/" + Uri.EscapeDataString(job.id) + "/result";
             byte[] body = Encoding.UTF8.GetBytes(new JavaScriptSerializer().Serialize(result));

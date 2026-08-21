@@ -168,6 +168,7 @@ export default function ServiceOrderDetailsModal({
   const canPrintOrder = permissions.print ?? true;
   const canReopenOrder = permissions.reopen ?? false;
   const canRunScripts = permissions.runScripts ?? false;
+  const canRegisterScriptSimulation = permissions.registerSimulation ?? false;
   const [activeTab, setActiveTab] = useState("general");
   const [reopening, setReopening] = useState(false);
   const [technicians, setTechnicians] = useState([]);
@@ -1301,6 +1302,7 @@ export default function ServiceOrderDetailsModal({
               token={token}
               notify={notify}
               canManage={canRunScripts}
+              canRegisterSimulation={canRegisterScriptSimulation}
               remoteScriptExecutionEnabled={remoteScriptExecutionEnabled}
             />
           )}

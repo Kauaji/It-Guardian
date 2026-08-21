@@ -50,9 +50,15 @@ runs e auditoria.
 
 ## Segurança
 
-O sistema cadastra, agenda, prepara e audita. Ele não executa BAT, CMD,
-PowerShell ou comandos do sistema operacional. Uma execução futura depende de
-agente seguro externo.
+O sistema cadastra, agenda, prepara e audita scripts BAT/CMD/PowerShell do
+catálogo. **Desde a rodada de execução controlada, a execução real já
+acontece** — via o agente Windows autenticado da máquina, quando o servidor
+(`ENABLE_REMOTE_SCRIPT_EXECUTION`) e o coletor local
+(`enableRemoteScriptExecution`) estão ligados e o técnico confirma
+explicitamente. Não existe campo de comando livre, upload de `.bat` por
+usuário final, nem execução sem confirmação/auditoria. Detalhes completos em
+[SCRIPTS-MANUTENCAO-SEGURANCA.md](SCRIPTS-MANUTENCAO-SEGURANCA.md).
+
 ## Complemento desta rodada
 
 A automacao preventiva agora diferencia explicitamente pausa, reativacao e edicao. Pausar desativa agendas futuras sem excluir historico; reativar recalcula a proxima preparacao das agendas validas e registra auditoria e historico por maquina. A listagem da agenda deve respeitar o escopo do usuario antes da paginacao.

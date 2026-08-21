@@ -61,6 +61,7 @@ const
 var
   RepairModePage: TInputOptionWizardPage;
   ProductKeyPage: TInputQueryWizardPage;
+  ScriptExecutionPage: TInputOptionWizardPage;
   ExistingConfig: AnsiString;
   ExistingConfigAvailable: Boolean;
   ExistingInstallDetected: Boolean;
@@ -110,6 +111,19 @@ end;
 function IsUninstallMode(): Boolean;
 begin
   Result := ExistingInstallDetected and (SelectedMode() = ModeUninstall);
+end;
+
+// Pulada quando o passo de instalacao nao vai reescrever config.json do
+// zero (reparo com config existente, desinstalacao, ou "trocar a chave"
+// preservando a customizacao ja gravada em disco) -- mostrar o checkbox
+// nesses casos seria enganoso, ja que a flag continuaria vindo do
+// arquivo existente e nao do que foi marcado na tela.
+function ShouldSkipScriptExecutionPage(): Boolean;
+begin
+  Result :=
+    (IsRepairInstall() and ExistingConfigAvailable) or
+    IsUninstallMode() or
+    ((SelectedMode() = ModeChangeKey) and ExistingConfigAvailable);
 end;
 
 function JsonEscape(Value: string): string;
@@ -315,6 +329,21 @@ begin
   if not ExistingConfigAvailable then
     SupportUrl := '';
   IntervalSeconds := 300;
+
+  ScriptExecutionPage := CreateInputOptionPage(
+    ProductKeyPage.ID,
+    'Execucao real de scripts (opcional)',
+    'Apenas para laboratorio/homologacao com supervisao',
+    'Por padrao esta opcao fica desligada e o IT Guardian so registra/simula scripts de manutencao. ' +
+    'Quando ligada, este computador podera executar de verdade scripts BAT/CMD/PowerShell enviados ' +
+    'pelo servidor -- sempre com confirmacao, controle duplo para risco alto/critico e auditoria completa. ' +
+    'So marque esta opcao se voce sabe o que esta fazendo.',
+    False,
+    False
+  );
+  ScriptExecutionPage.Add('Habilitar execucao real de scripts nesta maquina (enableRemoteScriptExecution)');
+  ScriptExecutionPage.Values[0] :=
+    CompareText(ExpandConstant('{param:EnableRemoteScriptExecution|0}'), '1') = 0;
 end;
 
 function ShouldSkipPage(PageID: Integer): Boolean;
@@ -322,6 +351,7 @@ begin
   Result :=
     ((PageID = ProductKeyPage.ID) and
       ((IsRepairInstall() and ExistingConfigAvailable) or IsUninstallMode())) or
+    ((PageID = ScriptExecutionPage.ID) and ShouldSkipScriptExecutionPage()) or
     (PageID = wpSelectDir) or
     (PageID = wpSelectProgramGroup) or
     (PageID = wpSelectTasks);
@@ -447,7 +477,7 @@ begin
       PreservedGroup := '';
       PreservedSegment := '';
       PreservedIncludeLoggedUser := False;
-      PreservedEnableRemoteScriptExecution := False;
+      PreservedEnableRemoteScriptExecution := ScriptExecutionPage.Values[0];
       PreservedEnableRemoteAssistance := False;
     end;
 

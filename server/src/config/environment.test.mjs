@@ -5,6 +5,7 @@ import {
   getAgentAutoUpdateInfo,
   getRemoteAssistanceConfig,
   isAllowedVercelOrigin,
+  isRemoteScriptExecutionEnabled,
   resolveDatabasePoolConfig
 } from "./environment.js";
 
@@ -36,6 +37,20 @@ test("assistencia remota continua habilitavel fora de deploy publico com as flag
   const local = getRemoteAssistanceConfig(labEnv());
   assert.equal(local.enabled, true);
   assert.equal(local.disabledReason, null);
+});
+
+test("isRemoteScriptExecutionEnabled reflete ENABLE_REMOTE_SCRIPT_EXECUTION sem restricao de ambiente", () => {
+  assert.equal(isRemoteScriptExecutionEnabled({}), false);
+  assert.equal(isRemoteScriptExecutionEnabled({ ENABLE_REMOTE_SCRIPT_EXECUTION: "false" }), false);
+  assert.equal(isRemoteScriptExecutionEnabled({ ENABLE_REMOTE_SCRIPT_EXECUTION: "true" }), true);
+  assert.equal(isRemoteScriptExecutionEnabled({ ENABLE_REMOTE_SCRIPT_EXECUTION: "1" }), true);
+  assert.equal(isRemoteScriptExecutionEnabled({ ENABLE_REMOTE_SCRIPT_EXECUTION: "sim" }), true);
+  // Diferente de getRemoteAssistanceConfig, nao ha allow-list de ambiente aqui -
+  // a flag liga em qualquer deploy, inclusive Vercel/producao, por design.
+  assert.equal(
+    isRemoteScriptExecutionEnabled({ ENABLE_REMOTE_SCRIPT_EXECUTION: "true", VERCEL: "1", VERCEL_ENV: "production" }),
+    true
+  );
 });
 
 function autoUpdateEnv(overrides = {}) {

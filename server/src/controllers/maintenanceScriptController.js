@@ -6,6 +6,7 @@ import {
   createScript,
   deactivateScript,
   getLogById,
+  getScriptExecutionDiagnosis,
   listAllMaintenanceScripts,
   listPendingLogs,
   listRecommendedForContext,
@@ -116,6 +117,20 @@ export async function suggestionRecommendedScripts(req, res, next) {
 export async function recommendedScriptsForContext(req, res, next) {
   try {
     res.json(await listRecommendedForContext(req.body));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function executionDiagnosis(req, res, next) {
+  try {
+    const diagnosis = await getScriptExecutionDiagnosis({
+      assetId: req.body?.assetId,
+      scriptId: req.body?.scriptId || null,
+      context: req.body?.context,
+      user: req.user
+    });
+    res.json({ diagnosis });
   } catch (error) {
     next(error);
   }
