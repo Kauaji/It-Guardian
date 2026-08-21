@@ -1,7 +1,7 @@
 {
   "serverUrl": "http://192.168.1.10",
   "agentToken": "itg_TOKEN_EXIBIDO_UMA_VEZ",
-  "intervalSeconds": 300,
+  "intervalSeconds": 60,
   "machineId": "",
   "machineAlias": "",
   "environment": "",

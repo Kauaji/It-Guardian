@@ -32,7 +32,7 @@ O instalador:
 - cria `C:\ProgramData\ITGuardianAgent`;
 - grava a configuracao com ACL restrita;
 - registra a tarefa `IT Guardian Agent` como `SYSTEM`;
-- inicia o agente e envia heartbeat a cada cinco minutos;
+- inicia o agente e envia heartbeat a cada 60 segundos (padrao atual);
 - executa um teste imediato;
 - grava logs em `C:\ProgramData\ITGuardianAgent\logs\agent.log`.
 

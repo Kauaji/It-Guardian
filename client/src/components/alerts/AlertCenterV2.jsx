@@ -33,6 +33,7 @@ import { shouldShowAutomationManagement } from "../automation/automationUtils.js
 import MaintenanceScriptsPanel from "../maintenance/MaintenanceScriptsPanel.jsx";
 import ScriptExecutionDiagnosticPanel from "../maintenance/ScriptExecutionDiagnosticPanel.jsx";
 import SummaryCard from "../ui/SummaryCard.jsx";
+import PulseDot from "../ui/PulseDot.jsx";
 import ViewLoadingState from "../ui/ViewLoadingState.jsx";
 import { formatDate, isMaintenanceSegmentName } from "../../utils/display.js";
 import {
@@ -70,12 +71,13 @@ import {
 const AutomationManagementView = lazy(() => import("../automation/AutomationManagementView.jsx"));
 
 const jobStatusLabels = {
-  queued: "Na fila",
-  claimed: "Entregue ao agente",
+  queued: "Na fila, aguardando o agente",
+  claimed: "Executando agora no agente",
   succeeded: "Concluída com sucesso",
   failed: "Falhou",
   timed_out: "Tempo limite excedido"
 };
+const activeJobStatuses = new Set(["queued", "claimed"]);
 
 export default function AlertCenterV2({
   token,
@@ -1010,9 +1012,14 @@ export default function AlertCenterV2({
   }
 
   function openScriptLogPreview() {
-    const latestValidationWithLog = suggestions
+    const validationsWithLog = suggestions
       .map((suggestion) => getSuggestionLatestValidation(suggestion))
-      .find((validation) => validation?.log);
+      .filter((validation) => validation?.log);
+    const latestValidationWithLog = validationsWithLog.sort((a, b) => {
+      const recencyOf = (validation) =>
+        new Date(validation.finishedAt || validation.job?.completedAt || validation.startedAt || 0).getTime();
+      return recencyOf(b) - recencyOf(a);
+    })[0];
 
     if (latestValidationWithLog?.log) {
       setSelectedScriptLog({
@@ -1506,6 +1513,12 @@ export default function AlertCenterV2({
                                   )}
                                   {suggestionJobStatus && (
                                     <p className="suggestion-job-status">
+                                      {activeJobStatuses.has(suggestionJobStatus) && (
+                                        <PulseDot
+                                          tone={suggestionJobStatus === "claimed" ? "ok" : "warning"}
+                                          title={jobStatusLabels[suggestionJobStatus]}
+                                        />
+                                      )}
                                       Última execução: {jobStatusLabels[suggestionJobStatus] || suggestionJobStatus}
                                     </p>
                                   )}

@@ -57,6 +57,18 @@ test("instalador cloud usa apenas a chave e instala o coletor nativo", async () 
   assert.match(setup, /if IsRepairInstall\(\) and ExistingConfigAvailable then/);
   assert.doesNotMatch(setup, /Install-MonitoringAgents|monitoring-agents\.json/);
 
+  // A bandeja so consegue mostrar o dialogo de consentimento se o coletor
+  // hospedar o pipe local, o que so acontece com enableRemoteAssistance
+  // ligado -- sem uma forma de ligar essa flag pelo instalador, todo pedido
+  // de assistencia remota ficava preso em "aguardando" sem nenhum aviso
+  // aparecer na maquina (achado real, corrigido nesta rodada).
+  assert.match(setup, /RemoteAssistancePage := CreateInputOptionPage/);
+  assert.match(setup, /RemoteAssistancePage\.Add\('Habilitar assistencia remota nesta maquina \(enableRemoteAssistance\)'\)/);
+  assert.match(setup, /\{param:EnableRemoteAssistance\|0\}/);
+  assert.match(setup, /ShouldSkipRemoteAssistancePage/);
+  assert.match(setup, /PreservedEnableRemoteAssistance := RemoteAssistancePage\.Values\[0\]/);
+  assert.doesNotMatch(setup, /PreservedEnableRemoteAssistance := False;/);
+
   // "Trocar a chave de produto" reativa o token, mas nao pode reescrever config.json do
   // zero por cima de customizacoes locais (alias, ambiente, grupo, segmento, flags).
   assert.match(setup, /PreserveCustomization := \(SelectedMode\(\) = ModeChangeKey\) and ExistingConfigAvailable/);
@@ -72,16 +84,22 @@ test("instalador cloud usa apenas a chave e instala o coletor nativo", async () 
 
   assert.match(postInstall, /New-ScheduledTaskTrigger -AtStartup/);
   assert.match(postInstall, /New-ScheduledTaskTrigger -AtLogOn/);
-  // Contencao do SYSTEM: o coletor roda sob uma conta de servico dedicada
-  // (Administradores, nao SYSTEM), criada/rotacionada a cada instalacao.
-  assert.match(postInstall, /\$collectorAccountName = "ITGuardianCollector"/);
-  assert.match(postInstall, /New-LocalUser/);
-  assert.match(postInstall, /Add-LocalGroupMember -Name "Administrators" -Member \$collectorAccountName/);
+  // Uma rodada anterior tentou rodar o coletor sob uma conta de servico
+  // dedicada (Administradores, nao SYSTEM) para reduzir superficie. Em teste
+  // real numa maquina Windows real, tanto Register-ScheduledTask quanto
+  // schtasks.exe falharam de forma persistente ao resolver essa conta local
+  // recem-criada (HRESULT 0x80070534/ERROR_NONE_MAPPED), mesmo apos retries
+  // com espera crescente e um reboot completo. Revertido para SYSTEM (a
+  // configuracao anterior, ja validada em producao) ate a causa ser
+  // diagnosticada com acesso administrativo mais profundo -- funcionar de
+  // verdade importa mais agora do que a reducao de superficie.
+  assert.doesNotMatch(postInstall, /New-LocalUser/);
+  assert.doesNotMatch(postInstall, /\$collectorAccountName/);
   assert.match(postInstall, /Register-ScheduledTask/);
-  assert.match(postInstall, /-User "\.\\\$collectorAccountName"/);
+  assert.match(postInstall, /New-ScheduledTaskPrincipal/);
+  assert.match(postInstall, /-UserId "SYSTEM"/);
+  assert.match(postInstall, /-LogonType ServiceAccount/);
   assert.match(postInstall, /-RunLevel Highest/);
-  assert.doesNotMatch(postInstall, /-UserId "SYSTEM"/);
-  assert.doesNotMatch(postInstall, /New-ScheduledTaskPrincipal/);
   assert.match(postInstall, /-AllowStartIfOnBatteries/);
   assert.match(postInstall, /-DontStopIfGoingOnBatteries/);
   assert.match(postInstall, /-StartWhenAvailable/);

@@ -7,7 +7,6 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $taskName = "IT Guardian Collector"
 $legacyTaskName = "IT Guardian Cloud Collector"
-$collectorAccountName = "ITGuardianCollector"
 $resolvedDirectory = [IO.Path]::GetFullPath($InstallDirectory)
 $configPath = Join-Path $resolvedDirectory "config.json"
 $collectorPath = Join-Path $resolvedDirectory "ITGuardian.exe"
@@ -122,77 +121,27 @@ Get-CimInstance Win32_Process -Filter "Name = 'ITGuardian.exe'" -ErrorAction Sil
   Where-Object { $_.ExecutablePath -eq $collectorPath } |
   ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 
-# --- Conta de servico dedicada (contencao do SYSTEM) ------------------------
-# O coletor precisava rodar como SYSTEM porque algumas leituras de inventario
-# exigem associacao ao grupo Administradores: dados SMART/saude de disco
-# (namespaces WMI root\wmi e root\Microsoft\Windows\Storage) e o levantamento
-# de software instalado por usuario (enumera HKEY_USERS de todos os perfis
-# carregados). Nenhuma dessas operacoes exige especificamente a identidade
-# SYSTEM -- exige Administrador. Uma conta local dedicada, sem privilegio de
-# SYSTEM (sem acesso a segredos da LSA, sem a confianca implicita do SO que
-# SYSTEM tem sobre outros processos), e uma reducao real de superficie sem
-# quebrar nenhuma coleta existente.
-function New-StrongPassword {
-  $upper = [char[]]"ABCDEFGHJKLMNPQRSTUVWXYZ"
-  $lower = [char[]]"abcdefghijkmnpqrstuvwxyz"
-  $digit = [char[]]"23456789"
-  $symbol = [char[]]"!@#%^*-_=+"
-  $all = $upper + $lower + $digit + $symbol
-  $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
-  function Get-RandomIndex([int]$max) {
-    $buffer = New-Object byte[] 4
-    $rng.GetBytes($buffer)
-    return [BitConverter]::ToUInt32($buffer, 0) % $max
-  }
-  $passwordChars = New-Object System.Collections.Generic.List[char]
-  $passwordChars.Add($upper[(Get-RandomIndex $upper.Length)])
-  $passwordChars.Add($lower[(Get-RandomIndex $lower.Length)])
-  $passwordChars.Add($digit[(Get-RandomIndex $digit.Length)])
-  $passwordChars.Add($symbol[(Get-RandomIndex $symbol.Length)])
-  for ($i = 0; $i -lt 20; $i++) { $passwordChars.Add($all[(Get-RandomIndex $all.Length)]) }
-  for ($i = $passwordChars.Count - 1; $i -gt 0; $i--) {
-    $j = Get-RandomIndex ($i + 1)
-    $temp = $passwordChars[$i]
-    $passwordChars[$i] = $passwordChars[$j]
-    $passwordChars[$j] = $temp
-  }
-  return -join $passwordChars
-}
-
-$collectorPasswordPlain = New-StrongPassword
-$collectorSecurePassword = ConvertTo-SecureString -String $collectorPasswordPlain -AsPlainText -Force
-
-$existingCollectorAccount = Get-LocalUser -Name $collectorAccountName -ErrorAction SilentlyContinue
-if ($existingCollectorAccount) {
-  Set-LocalUser `
-    -Name $collectorAccountName `
-    -Password $collectorSecurePassword `
-    -PasswordNeverExpires $true `
-    -UserMayChangePassword $false
-  Write-InstallLog "Conta de servico $collectorAccountName ja existia; senha rotacionada nesta instalacao."
-} else {
-  New-LocalUser `
-    -Name $collectorAccountName `
-    -Password $collectorSecurePassword `
-    -FullName "IT Guardian Collector Service" `
-    -Description "Conta dedicada ao coletor do IT Guardian. Sem uso interativo; nao e a conta SYSTEM." `
-    -AccountNeverExpires `
-    -PasswordNeverExpires `
-    -UserMayNotChangePassword | Out-Null
-  Write-InstallLog "Conta de servico $collectorAccountName criada."
-}
-
-$isAdminMember = $false
-try {
-  $isAdminMember = @(Get-LocalGroupMember -Name "Administrators" -Member $collectorAccountName -ErrorAction Stop).Count -gt 0
-} catch {
-  $isAdminMember = $false
-}
-if (-not $isAdminMember) {
-  Add-LocalGroupMember -Name "Administrators" -Member $collectorAccountName
-  Write-InstallLog "Conta $collectorAccountName adicionada ao grupo Administradores (necessario para SMART/root-wmi e inventario de software por usuario)."
-}
-
+# --- Identidade de execucao do coletor: SYSTEM ------------------------------
+# Uma rodada anterior tentou trocar SYSTEM por uma conta de servico local
+# dedicada (sem privilegio de SYSTEM, reducao real de superficie) para as
+# leituras que exigem Administrador: dados SMART/saude de disco (namespaces
+# WMI root\wmi e root\Microsoft\Windows\Storage) e levantamento de software
+# instalado por usuario (enumera HKEY_USERS de todos os perfis carregados).
+# Em teste real numa maquina Windows real, tanto Register-ScheduledTask
+# quanto schtasks.exe (dois caminhos de codigo distintos do Windows) falharam
+# de forma persistente e repetida ao tentar registrar a tarefa sob essa conta
+# nova com logon por senha -- "Nao foi feito mapeamento entre os nomes de
+# conta e as identificacoes de seguranca" (HRESULT 0x80070534), mesmo apos
+# multiplas tentativas com espera crescente (ate 18s) e um reboot completo da
+# maquina. Sem acesso administrativo mais profundo (politica de grupo,
+# diagnostico do LSA) para identificar a causa exata nessa maquina, a conta
+# dedicada nao pode ser confiada para garantir que a instalacao funcione.
+# Revertido para SYSTEM (a configuracao usada antes dessa tentativa, ja
+# validada em producao) ate a causa ser diagnosticada com acesso adequado --
+# funcionar de verdade importa mais agora do que a reducao de superficie.
+# SYSTEM nao precisa de senha nem de resolucao de nome via NTLM/LSA (usa o
+# SID fixo e universalmente conhecido S-1-5-18), entao nao ha essa classe de
+# falha para essa identidade.
 $action = New-ScheduledTaskAction `
   -Execute $collectorPath `
   -Argument "--collector --config `"$configPath`""
@@ -208,20 +157,19 @@ $settings = New-ScheduledTaskSettingsSet `
   -RestartInterval ([TimeSpan]::FromMinutes(1)) `
   -ExecutionTimeLimit ([TimeSpan]::Zero) `
   -MultipleInstances IgnoreNew
+$principal = New-ScheduledTaskPrincipal `
+  -UserId "SYSTEM" `
+  -LogonType ServiceAccount `
+  -RunLevel Highest
 Register-ScheduledTask `
   -TaskName $taskName `
   -Action $action `
   -Trigger $triggers `
-  -User ".\$collectorAccountName" `
-  -Password $collectorPasswordPlain `
-  -RunLevel Highest `
+  -Principal $principal `
   -Settings $settings `
   -Description "Mantem o inventario e o heartbeat do IT Guardian ativos." `
   -Force | Out-Null
-$collectorPasswordPlain = $null
-$collectorSecurePassword = $null
-[System.GC]::Collect()
-Write-InstallLog "Tarefa resiliente registrada sob a conta $collectorAccountName (nao SYSTEM) para inicializacao, logon, bateria e reinicio automatico."
+Write-InstallLog "Tarefa resiliente registrada sob SYSTEM para inicializacao, logon, bateria e reinicio automatico."
 
 New-ItemProperty `
   -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" `

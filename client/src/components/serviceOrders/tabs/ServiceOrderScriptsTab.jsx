@@ -8,15 +8,19 @@ import {
 } from "../../../api.js";
 import { hasRemoteAssistanceAgent, isRemoteAssistanceAssetFresh } from "../../remoteAssistance/remoteAssistanceModel.js";
 import ScriptExecutionDiagnosticPanel from "../../maintenance/ScriptExecutionDiagnosticPanel.jsx";
+import PulseDot from "../../ui/PulseDot.jsx";
 
 const RISK_LABELS = { low: "Baixo", medium: "Médio", high: "Alto", critical: "Crítico" };
 const STATUS_LABELS = {
-  queued: "Na fila",
-  claimed: "Entregue ao agente",
+  queued: "Na fila, aguardando o agente",
+  claimed: "Executando agora no agente",
   succeeded: "Concluído com sucesso",
   failed: "Falhou",
   timed_out: "Tempo limite excedido"
 };
+const ACTIVE_JOB_STATUSES = new Set(["queued", "claimed"]);
+const ACTIVE_POLL_INTERVAL_MS = 5000;
+const ACTIVE_POLL_MAX_ATTEMPTS = 90;
 
 function formatDate(value) {
   if (!value) return "";
@@ -84,6 +88,19 @@ export default function ServiceOrderScriptsTab({
       .finally(() => setLoading(false));
   }, [serviceOrderId, token, notify]);
 
+  const hasActiveJob = activity.some((entry) => ACTIVE_JOB_STATUSES.has(entry.job?.status || entry.status));
+
+  useEffect(() => {
+    if (!hasActiveJob || !serviceOrderId || !token) return undefined;
+    let attempts = 0;
+    const timer = setInterval(() => {
+      attempts += 1;
+      loadActivity();
+      if (attempts >= ACTIVE_POLL_MAX_ATTEMPTS) clearInterval(timer);
+    }, ACTIVE_POLL_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [hasActiveJob, serviceOrderId, token]);
+
   async function confirmRun(script, riskAcknowledged) {
     setQueueing(true);
     try {
@@ -91,7 +108,6 @@ export default function ServiceOrderScriptsTab({
       notify?.("Script enfileirado. Aguardando execução pelo agente da máquina.", "success");
       setConfirmingScript(null);
       loadActivity();
-      setTimeout(loadActivity, 4000);
     } catch (error) {
       notify?.(error.message, "danger");
     } finally {
@@ -203,20 +219,30 @@ export default function ServiceOrderScriptsTab({
         <h4>Atividade</h4>
         {!activity.length && <p className="empty">Nenhum script executado nesta OS ainda.</p>}
         <ul>
-          {activity.map((entry) => (
+          {activity.map((entry) => {
+            const entryStatus = entry.job?.status || entry.status;
+            const isActive = ACTIVE_JOB_STATUSES.has(entryStatus);
+            return (
             <li key={entry.id}>
               <Terminal size={14} />
               <div>
                 <strong>{entry.scriptName || "Script"}</strong>
                 <span>
-                  {STATUS_LABELS[entry.job?.status || entry.status] || entry.status} · {formatDate(entry.executedAt || entry.createdAt)}
+                  {isActive && (
+                    <PulseDot
+                      tone={entryStatus === "claimed" ? "ok" : "warning"}
+                      title={entryStatus === "claimed" ? "Executando agora no agente" : "Aguardando o agente"}
+                    />
+                  )}
+                  {STATUS_LABELS[entryStatus] || entryStatus} · {formatDate(entry.executedAt || entry.createdAt)}
                 </span>
                 {entry.job?.stdout && <p className="service-order-script-output">{entry.job.stdout.slice(0, 400)}</p>}
                 {entry.job?.stderr && <p className="service-order-script-output error">{entry.job.stderr.slice(0, 400)}</p>}
                 {entry.job?.errorMessage && <p className="service-order-script-output error">{entry.job.errorMessage}</p>}
               </div>
             </li>
-          ))}
+            );
+          })}
         </ul>
       </div>
 

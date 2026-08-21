@@ -2085,6 +2085,9 @@ tbody tr.selected {
 }
 
 .service-order-card .suggestion-script-popover p.suggestion-job-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: #1d4ed8;
 }
 
@@ -10741,6 +10744,9 @@ table strong,
 }
 
 .service-order-scripts-activity li span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--text-muted);
   font-size: 0.78rem;
 }

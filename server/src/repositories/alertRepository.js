@@ -300,6 +300,7 @@ function fromLatestSuggestionValidationRow(row) {
     log: row.log_id ? {
       id: row.log_id,
       status: row.log_status,
+      rawLog: row.log_raw_log || "",
       errorDetected: row.log_error_detected === true,
       errorType: row.log_error_type,
       errorCode: row.log_error_code,
@@ -697,6 +698,7 @@ export async function listServiceOrderSuggestions() {
         SELECT validations.*,
                scripts.name AS script_name,
                logs.status AS log_status,
+               logs.raw_log AS log_raw_log,
                logs.error_detected AS log_error_detected,
                logs.error_type AS log_error_type,
                logs.error_code AS log_error_code,

@@ -73,7 +73,7 @@ O intervalo aceito vai de 30 a 86400 segundos. O token fica no arquivo local de
 configuracao com acesso restrito a `SYSTEM` e administradores. No servidor ele
 fica somente em hash.
 
-O padrao oficial e um heartbeat a cada 300 segundos. Uma maquina fica `offline`
+O padrao oficial e um heartbeat a cada 60 segundos. Uma maquina fica `offline`
 depois do periodo configurado em `AGENT_OFFLINE_AFTER_MINUTES` (10 minutos por
 padrao), respeitando no minimo tres intervalos do agente.
 
@@ -150,8 +150,8 @@ historico no servidor e preservado.
 - `enableRemoteScriptExecution` (default `false` — ver "Trabalhos de
   manutencao" abaixo e
   [SCRIPTS-MANUTENCAO-SEGURANCA.md](SCRIPTS-MANUTENCAO-SEGURANCA.md));
-- `enableRemoteAssistance` (default `false`, fora do escopo deste
-  documento).
+- `enableRemoteAssistance` (default `false` — ver
+  [ASSISTENCIA-REMOTA.md](ASSISTENCIA-REMOTA.md#habilitar-tambem-no-agente-windows-flag-separada-por-maquina)).
 
 O backend rejeita campos adicionais no inventario. Trabalhos de manutencao sao
 obtidos por uma fila autenticada separada; nao existe campo de comando no

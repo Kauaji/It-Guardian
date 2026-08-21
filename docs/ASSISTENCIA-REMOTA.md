@@ -83,6 +83,29 @@ Reinicie API, frontend e agente depois da alteracao. O consentimento automatico
 existe exclusivamente para laboratorio isolado e deliberado. Ele e bloqueado
 em implantacao publica e deve continuar `false` no teste humano.
 
+### Habilitar tambem no agente Windows (flag separada, por maquina)
+
+As flags acima ligam a funcionalidade no servidor/frontend, mas cada maquina
+com o agente Windows so participa de assistencia remota se o `config.json`
+dela tambem tiver `"enableRemoteAssistance": true`. Sem essa segunda flag, o
+pedido de sessao do tecnico fica preso em "aguardando" para sempre e **nenhum
+aviso de consentimento aparece na maquina** — a bandeja (`RemoteAssistanceTrayController`)
+sonda um pipe local a cada 2,5s, mas esse pipe so existe quando o coletor
+(`RemoteAssistanceBroker`) inicia, e ele so inicia com essa flag ligada.
+
+Para ligar, na ordem de preferencia:
+
+- **No instalador** (`installers/windows-collector/ITGuardianCollector.iss`,
+  compilado por `build-installer.ps1`): marque a opcao "Habilitar assistencia
+  remota nesta maquina" no assistente, ou gere/rode o instalador
+  silenciosamente com o parametro `/EnableRemoteAssistance=1`. Se essa opcao
+  nao aparece (reparo ou "trocar a chave" preservando uma configuracao
+  existente), a flag continua vindo do `config.json` ja presente na maquina.
+- **Manualmente**: editar `"enableRemoteAssistance": true` direto no
+  `config.json` instalado (`C:\ProgramData\ITGuardian\config.json`, ACL
+  restrita a SYSTEM/Administradores) — o coletor rele o arquivo a cada ciclo
+  de heartbeat, nao precisa reinstalar nem reiniciar a tarefa.
+
 ## Ajustar fluidez do transporte snapshot polling
 
 Todos os limites abaixo sao aplicados no servidor

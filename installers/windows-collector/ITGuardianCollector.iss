@@ -62,6 +62,7 @@ var
   RepairModePage: TInputOptionWizardPage;
   ProductKeyPage: TInputQueryWizardPage;
   ScriptExecutionPage: TInputOptionWizardPage;
+  RemoteAssistancePage: TInputOptionWizardPage;
   ExistingConfig: AnsiString;
   ExistingConfigAvailable: Boolean;
   ExistingInstallDetected: Boolean;
@@ -119,6 +120,16 @@ end;
 // nesses casos seria enganoso, ja que a flag continuaria vindo do
 // arquivo existente e nao do que foi marcado na tela.
 function ShouldSkipScriptExecutionPage(): Boolean;
+begin
+  Result :=
+    (IsRepairInstall() and ExistingConfigAvailable) or
+    IsUninstallMode() or
+    ((SelectedMode() = ModeChangeKey) and ExistingConfigAvailable);
+end;
+
+// Mesma logica de ShouldSkipScriptExecutionPage: pulada quando o passo de
+// instalacao nao vai reescrever config.json do zero, para nao ser enganosa.
+function ShouldSkipRemoteAssistancePage(): Boolean;
 begin
   Result :=
     (IsRepairInstall() and ExistingConfigAvailable) or
@@ -344,6 +355,21 @@ begin
   ScriptExecutionPage.Add('Habilitar execucao real de scripts nesta maquina (enableRemoteScriptExecution)');
   ScriptExecutionPage.Values[0] :=
     CompareText(ExpandConstant('{param:EnableRemoteScriptExecution|0}'), '1') = 0;
+
+  RemoteAssistancePage := CreateInputOptionPage(
+    ScriptExecutionPage.ID,
+    'Assistencia remota (opcional)',
+    'Permite que um tecnico veja a tela e, com consentimento, controle esta maquina',
+    'Por padrao esta opcao fica desligada e nenhuma sessao de assistencia remota pode ser aberta ' +
+    'nesta maquina. Quando ligada, um tecnico podera solicitar uma sessao de tela -- sempre exige ' +
+    'consentimento explicito na hora, mostrado nesta maquina antes de qualquer captura comecar. ' +
+    'Sem essa opcao ligada, o pedido do tecnico fica esperando para sempre, sem nenhum aviso aparecer aqui.',
+    False,
+    False
+  );
+  RemoteAssistancePage.Add('Habilitar assistencia remota nesta maquina (enableRemoteAssistance)');
+  RemoteAssistancePage.Values[0] :=
+    CompareText(ExpandConstant('{param:EnableRemoteAssistance|0}'), '1') = 0;
 end;
 
 function ShouldSkipPage(PageID: Integer): Boolean;
@@ -352,6 +378,7 @@ begin
     ((PageID = ProductKeyPage.ID) and
       ((IsRepairInstall() and ExistingConfigAvailable) or IsUninstallMode())) or
     ((PageID = ScriptExecutionPage.ID) and ShouldSkipScriptExecutionPage()) or
+    ((PageID = RemoteAssistancePage.ID) and ShouldSkipRemoteAssistancePage()) or
     (PageID = wpSelectDir) or
     (PageID = wpSelectProgramGroup) or
     (PageID = wpSelectTasks);
@@ -478,7 +505,7 @@ begin
       PreservedSegment := '';
       PreservedIncludeLoggedUser := False;
       PreservedEnableRemoteScriptExecution := ScriptExecutionPage.Values[0];
-      PreservedEnableRemoteAssistance := False;
+      PreservedEnableRemoteAssistance := RemoteAssistancePage.Values[0];
     end;
 
     ConfigJson :=

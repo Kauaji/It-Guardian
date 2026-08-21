@@ -104,7 +104,7 @@ export async function activateCollector(input) {
   return {
     activationId: result.activation.id,
     agentToken: result.token,
-    intervalSeconds: 300,
+    intervalSeconds: 60,
     heartbeatPath: "/api/agents/heartbeat",
     supportUrl: `${publicAppUrl}/abrir-chamado?device=${encodeURIComponent(publicMachineToken)}`,
     monitoring: result.monitoring,

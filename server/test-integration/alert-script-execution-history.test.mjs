@@ -247,6 +247,11 @@ test("uso de script a partir de aviso comenta no alerta ao enfileirar e ao concl
   assert.equal(updatedSuggestion.latestValidation.job.status, "succeeded", "a listagem de sugestoes deve refletir o status do job concluido");
   assert.equal(updatedSuggestion.latestValidation.job.stdout, "Healthy", "o stdout reportado pelo agente deve chegar na listagem de sugestoes");
   assert.equal(updatedSuggestion.latestValidation.job.stderr, "", "o stderr deve chegar na listagem de sugestoes mesmo quando vazio");
+  assert.match(
+    updatedSuggestion.latestValidation.log.rawLog,
+    /STDOUT:\s*\nHealthy/,
+    "o log tecnico exibido ao tecnico (log.rawLog) precisa conter o stdout real do agente, nao ficar vazio"
+  );
 
   const duplicateResultResponse = await fetch(`${baseUrl}/api/agents/jobs/${deliveryBody.job.id}/result`, {
     method: "POST",

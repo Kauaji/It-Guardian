@@ -68,6 +68,24 @@ namespace ITGuardian.Windows
         public string errorMessage { get; set; }
     }
 
+    // Espelhado em disco (logs\execution-status.json, pasta ja com ACL
+    // liberada para o grupo Users) para que a bandeja interativa -- que roda
+    // como o usuario logado, numa sessao diferente da conta de servico do
+    // coletor -- consiga mostrar ao usuario, em tempo real, que um script
+    // esta rodando de verdade nesta maquina. So leitura/escrita local,
+    // nunca trafega pela rede.
+    internal sealed class AgentExecutionStatus
+    {
+        public string jobId { get; set; }
+        public string scriptId { get; set; }
+        public string name { get; set; }
+        public string type { get; set; }
+        public string status { get; set; }
+        public string startedAt { get; set; }
+        public string completedAt { get; set; }
+        public int? exitCode { get; set; }
+    }
+
     internal static class Program
     {
         private const string AgentVersion = "1.6.3";
@@ -405,6 +423,16 @@ namespace ITGuardian.Windows
                 "Trabalho recebido do servidor: id=" + job.id + " scriptId=" + job.scriptId +
                 " nome=\"" + (job.name ?? "") + "\" tipo=" + job.type + "."
             );
+            string startedAt = DateTime.UtcNow.ToString("o");
+            WriteExecutionStatus(new AgentExecutionStatus
+            {
+                jobId = job.id,
+                scriptId = job.scriptId,
+                name = job.name,
+                type = job.type,
+                status = "running",
+                startedAt = startedAt
+            });
             AgentScriptResult result = ExecuteJob(config, job);
             WriteLog(
                 "INFO",
@@ -413,7 +441,34 @@ namespace ITGuardian.Windows
                 " timedOut=" + result.timedOut +
                 (string.IsNullOrEmpty(result.errorMessage) ? "" : " erro=\"" + result.errorMessage + "\"") + "."
             );
+            WriteExecutionStatus(new AgentExecutionStatus
+            {
+                jobId = job.id,
+                scriptId = job.scriptId,
+                name = job.name,
+                type = job.type,
+                status = result.timedOut ? "timed_out" : (result.exitCode.HasValue && result.exitCode.Value == 0 ? "succeeded" : "failed"),
+                startedAt = startedAt,
+                completedAt = DateTime.UtcNow.ToString("o"),
+                exitCode = result.exitCode
+            });
             ReportJobResult(config, job, result);
+        }
+
+        private static void WriteExecutionStatus(AgentExecutionStatus status)
+        {
+            try
+            {
+                string logDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
+                Directory.CreateDirectory(logDirectory);
+                string statusPath = Path.Combine(logDirectory, "execution-status.json");
+                File.WriteAllText(statusPath, new JavaScriptSerializer().Serialize(status), new UTF8Encoding(false));
+            }
+            catch
+            {
+                // Cosmetico (feedback visual na bandeja) -- uma falha aqui nunca pode
+                // interromper a execucao real do script nem o envio do resultado.
+            }
         }
 
         // Sem isso, um trabalho ja "claimed" que o coletor recusa localmente
@@ -1462,8 +1517,12 @@ namespace ITGuardian.Windows
 
     internal sealed class TrayApplicationContext : ApplicationContext
     {
+        private const string DefaultTrayText = "IT Guardian ativo";
         private readonly NotifyIcon trayIcon;
         private readonly RemoteAssistanceTrayController remoteAssistance;
+        private readonly System.Windows.Forms.Timer executionStatusTimer;
+        private string lastNotifiedStartedAt = "";
+        private string lastNotifiedCompletedAt = "";
 
         internal TrayApplicationContext(string configPath)
         {
@@ -1483,14 +1542,79 @@ namespace ITGuardian.Windows
             trayIcon = new NotifyIcon
             {
                 Icon = applicationIcon ?? SystemIcons.Application,
-                Text = "IT Guardian ativo",
+                Text = DefaultTrayText,
                 Visible = true
             };
             remoteAssistance = new RemoteAssistanceTrayController(trayIcon);
+
+            // A bandeja roda na sessao interativa do usuario logado; o coletor
+            // que de fato executa os scripts roda como uma conta de servico
+            // dedicada, numa sessao separada, sem acesso ao desktop. Este
+            // arquivo (pasta logs\, ja com ACL liberada para o grupo Users) e
+            // o unico canal entre os dois -- por isso e sondado em vez de
+            // avisado diretamente.
+            executionStatusTimer = new System.Windows.Forms.Timer { Interval = 2000 };
+            executionStatusTimer.Tick += delegate { CheckExecutionStatus(); };
+            executionStatusTimer.Start();
+        }
+
+        private static string TruncateTrayText(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return text;
+            return text.Length <= 63 ? text : text.Substring(0, 60) + "...";
+        }
+
+        private void CheckExecutionStatus()
+        {
+            try
+            {
+                string statusPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs", "execution-status.json");
+                if (!File.Exists(statusPath)) return;
+
+                AgentExecutionStatus status =
+                    new JavaScriptSerializer().Deserialize<AgentExecutionStatus>(File.ReadAllText(statusPath));
+                if (status == null) return;
+
+                string displayName = string.IsNullOrWhiteSpace(status.name) ? "script de manutencao" : status.name;
+
+                if (status.status == "running" && status.startedAt != lastNotifiedStartedAt)
+                {
+                    lastNotifiedStartedAt = status.startedAt;
+                    trayIcon.Text = TruncateTrayText("IT Guardian - executando: " + displayName);
+                    trayIcon.BalloonTipIcon = ToolTipIcon.Info;
+                    trayIcon.BalloonTipTitle = "IT Guardian esta executando um script nesta maquina";
+                    trayIcon.BalloonTipText = displayName + " foi enviado por um tecnico e esta rodando agora.";
+                    trayIcon.ShowBalloonTip(6000);
+                }
+                else if (
+                    status.status != "running" &&
+                    !string.IsNullOrEmpty(status.completedAt) &&
+                    status.completedAt != lastNotifiedCompletedAt
+                )
+                {
+                    lastNotifiedCompletedAt = status.completedAt;
+                    trayIcon.Text = DefaultTrayText;
+                    bool succeeded = status.status == "succeeded";
+                    trayIcon.BalloonTipIcon = succeeded ? ToolTipIcon.Info : ToolTipIcon.Warning;
+                    trayIcon.BalloonTipTitle = succeeded
+                        ? "IT Guardian concluiu a execucao do script"
+                        : "IT Guardian: script terminou com erro";
+                    trayIcon.BalloonTipText = displayName + (succeeded
+                        ? " foi executado com sucesso nesta maquina."
+                        : " terminou com falha nesta maquina. O tecnico responsavel foi notificado.");
+                    trayIcon.ShowBalloonTip(6000);
+                }
+            }
+            catch
+            {
+                // Sondagem cosmetica -- nunca pode derrubar a bandeja.
+            }
         }
 
         protected override void ExitThreadCore()
         {
+            executionStatusTimer.Stop();
+            executionStatusTimer.Dispose();
             remoteAssistance.Dispose();
             trayIcon.Visible = false;
             trayIcon.Dispose();

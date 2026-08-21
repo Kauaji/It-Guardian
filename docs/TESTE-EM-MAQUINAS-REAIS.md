@@ -15,7 +15,7 @@ Windows. Nao valide o beta somente com dados demo.
 
 1. Confirme que `Invoke-RestMethod http://IP-DO-SERVIDOR/health` funciona.
 2. Execute `test-heartbeat.ps1` com o token.
-3. Instale o agente com intervalo de 300 segundos.
+3. Instale o agente com intervalo de 60 segundos (padrao atual).
 4. Confirme a tarefa `IT Guardian Agent`.
 5. Abra o inventario no servidor e localize o hostname.
 
