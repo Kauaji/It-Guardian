@@ -45,7 +45,7 @@ test("modo laboratorio habilita captura e limita o teto de FPS a um valor seguro
   assert.equal(config.enabled, true);
   assert.equal(config.captureEnabled, true);
   assert.equal(config.controlEnabled, true);
-  assert.equal(config.maxFramesPerSecond, 5);
+  assert.equal(config.maxFramesPerSecond, 9);
   assert.equal(config.privacyModeEnabled, false);
   assert.equal(config.adminActionsEnabled, false);
 });
@@ -64,8 +64,8 @@ test("FPS alvo nunca ultrapassa o teto configurado e permanece dentro do limite 
     ENABLE_REMOTE_ASSISTANCE: "true",
     REMOTE_ASSISTANCE_ENV: "lab"
   });
-  assert.equal(defaultTarget.maxFramesPerSecond, 3);
-  assert.equal(defaultTarget.targetFps, 3);
+  assert.equal(defaultTarget.maxFramesPerSecond, 8);
+  assert.equal(defaultTarget.targetFps, 8);
 
   const absurd = getRemoteAssistanceConfig({
     ENABLE_REMOTE_ASSISTANCE: "true",
@@ -73,8 +73,8 @@ test("FPS alvo nunca ultrapassa o teto configurado e permanece dentro do limite 
     REMOTE_ASSISTANCE_MAX_FPS: "999",
     REMOTE_ASSISTANCE_TARGET_FPS: "-5"
   });
-  assert.equal(absurd.maxFramesPerSecond, 5);
-  assert.ok(absurd.targetFps >= 1 && absurd.targetFps <= 5);
+  assert.equal(absurd.maxFramesPerSecond, 10);
+  assert.ok(absurd.targetFps >= 1 && absurd.targetFps <= 10);
 });
 
 test("qualidade JPEG adaptativa permanece dentro dos limites configurados", () => {
@@ -111,7 +111,7 @@ test("intervalo de captura do agente nunca fica abaixo do que o servidor aceita"
     REMOTE_ASSISTANCE_AGENT_CAPTURE_MS: "10"
   });
   assert.ok(config.agentCaptureMs >= Math.ceil(1000 / config.maxFramesPerSecond));
-  assert.ok(config.viewerPollMs >= 150);
+  assert.ok(config.viewerPollMs >= 80);
 });
 
 test("prazo de inatividade permanece sempre menor que o timeout de agente", () => {

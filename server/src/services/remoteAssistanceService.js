@@ -492,6 +492,9 @@ function sanitizeInputCommand(value) {
     if ((!printable && !namedKeys.has(key)) || !allowedKeyActions.has(action)) return null;
     return { type, key, action };
   }
+  if (type === "block_input") {
+    return { type, enabled: Boolean(value.enabled) };
+  }
   return null;
 }
 

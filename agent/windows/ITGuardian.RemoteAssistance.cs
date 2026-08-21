@@ -111,6 +111,7 @@ namespace ITGuardian.Windows
         public int delta { get; set; }
         public string key { get; set; }
         public string monitorId { get; set; }
+        public bool enabled { get; set; }
     }
 
     internal sealed class LocalBrokerRequest
@@ -724,7 +725,11 @@ namespace ITGuardian.Windows
 
     internal sealed class RemoteAssistanceTrayController : IDisposable
     {
-        private const int MinCaptureIntervalMs = 150;
+        // Piso reduzido de 150 para 60ms (~16.6 FPS) para acompanhar o novo teto
+        // de 10 FPS do servidor sem virar o novo gargalo; o servidor continua
+        // sendo o limite real de seguranca (ver REMOTE_ASSISTANCE_MAX_FPS em
+        // server/src/config/environment.js).
+        private const int MinCaptureIntervalMs = 60;
         private const int MaxCaptureIntervalMs = 3000;
         private const int MinJpegQualityValue = 10;
         private const int MaxJpegQualityValue = 95;
@@ -1063,6 +1068,7 @@ namespace ITGuardian.Windows
             lastFrameHash = null;
             qualityHint = null;
             capturePaused = false;
+            RemoteInput.SetInputBlocked(false);
             trayIcon.Text = "IT Guardian ativo";
             if (indicator != null)
             {
@@ -1186,6 +1192,32 @@ namespace ITGuardian.Windows
             else if (command.type == "mouse_button") ApplyMouseButton(command.button, command.action);
             else if (command.type == "mouse_wheel") mouse_event(MouseWheel, 0, 0, command.delta, UIntPtr.Zero);
             else if (command.type == "key") ApplyKey(command.key, command.action);
+            else if (command.type == "block_input") SetInputBlocked(command.enabled);
+        }
+
+        private static volatile bool inputBlocked;
+
+        [DllImport("user32.dll")]
+        private static extern bool BlockInput(bool fBlockIt);
+
+        /// <summary>
+        /// BlockInput nao bloqueia SendInput/keybd_event/mouse_event chamados pela
+        /// MESMA thread que o ativou (comportamento documentado pela Microsoft) --
+        /// por isso o controle remoto do tecnico continua funcionando normalmente
+        /// mesmo com o teclado/mouse local travado. Ctrl+Alt+Del sempre destrava
+        /// (sequencia de atencao segura do Windows), o que evita um travamento
+        /// permanente mesmo em caso de falha. O chamador (RemoteAssistanceTrayController)
+        /// tambem garante SetInputBlocked(false) sempre que a sessao termina,
+        /// por qualquer motivo (encerramento normal, queda de rede, falha).
+        /// </summary>
+        internal static void SetInputBlocked(bool blocked)
+        {
+            if (BlockInput(blocked)) inputBlocked = blocked;
+        }
+
+        internal static bool IsInputBlocked
+        {
+            get { return inputBlocked; }
         }
 
         private static Screen ScreenFromId(string id)

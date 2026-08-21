@@ -3,7 +3,10 @@ import {
   Clock3,
   Eye,
   KeyRound,
+  Lock,
+  Maximize2,
   MessageCircle,
+  Minimize2,
   MonitorUp,
   MousePointer2,
   Pause,
@@ -12,6 +15,7 @@ import {
   RefreshCw,
   SendHorizontal,
   ShieldCheck,
+  Unlock,
   WifiOff,
   X
 } from "lucide-react";
@@ -120,6 +124,9 @@ export default function RemoteAssistanceAction({
   const [chatMessages, setChatMessages] = useState([]);
   const [chatDraft, setChatDraft] = useState("");
   const [sendingChat, setSendingChat] = useState(false);
+  const [maximized, setMaximized] = useState(false);
+  const [chatOpen, setChatOpen] = useState(true);
+  const [keyboardLocked, setKeyboardLocked] = useState(false);
   const imageRef = useRef(null);
   const lastMouseMoveRef = useRef(0);
   const chatLogRef = useRef(null);
@@ -147,6 +154,14 @@ export default function RemoteAssistanceAction({
           : "Verificando atendimento remoto";
   const displayName = getRemoteAssetDisplayName(asset, alias);
   const monitors = Array.isArray(session?.monitors) ? session.monitors : [];
+  const selectedMonitor =
+    monitors.find((monitor) => monitor.id === (session?.selectedMonitorId || monitors[0]?.id)) ||
+    monitors[0] ||
+    null;
+  const screenAspectRatio =
+    selectedMonitor?.width && selectedMonitor?.height
+      ? `${selectedMonitor.width} / ${selectedMonitor.height}`
+      : "16 / 9";
   const terminal = isRemoteAssistanceTerminal(session?.status);
   const controlActive = Boolean(
     frontendControlEnabled &&
@@ -241,6 +256,10 @@ export default function RemoteAssistanceAction({
   }, [chatMessages]);
 
   useEffect(() => {
+    if (!controlActive) setKeyboardLocked(false);
+  }, [controlActive]);
+
+  useEffect(() => {
     if (!session?.id || terminal) return undefined;
     const handleAuthExpired = () => {
       endRemoteAssistanceSession({ token, sessionId: session.id, viewerToken }).catch(() => {});
@@ -322,6 +341,9 @@ export default function RemoteAssistanceAction({
     setRequestedMode("view");
     setChatMessages([]);
     setChatDraft("");
+    setMaximized(false);
+    setChatOpen(true);
+    setKeyboardLocked(false);
   }
 
   const dialogRef = useModalLifecycle(open, closeDialog);
@@ -413,6 +435,21 @@ export default function RemoteAssistanceAction({
     });
   }
 
+  function toggleMaximize() {
+    setMaximized((value) => !value);
+  }
+
+  function toggleChat() {
+    setChatOpen((value) => !value);
+  }
+
+  function toggleKeyboardLock() {
+    if (!controlActive) return;
+    const next = !keyboardLocked;
+    setKeyboardLocked(next);
+    sendInput({ type: "block_input", enabled: next });
+  }
+
   function pointerPosition(event) {
     const bounds = event.currentTarget.getBoundingClientRect();
     return {
@@ -454,7 +491,7 @@ export default function RemoteAssistanceAction({
     <div className="modal-backdrop remote-assistance-backdrop" role="presentation">
       <section
         ref={dialogRef}
-        className="remote-assistance-modal"
+        className={`remote-assistance-modal ${maximized ? "remote-assistance-modal--maximized" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-label="Assistencia remota"
@@ -592,6 +629,36 @@ export default function RemoteAssistanceAction({
                   {session.remoteControlEnabled ? "Liberar controle" : "Solicitar controle"}
                 </button>
               )}
+              {controlActive && (
+                <button
+                  type="button"
+                  className={`secondary-action ${keyboardLocked ? "active" : ""}`}
+                  onClick={toggleKeyboardLock}
+                  disabled={submitting}
+                  title={keyboardLocked ? "Destravar teclado e mouse locais" : "Travar teclado e mouse locais"}
+                >
+                  {keyboardLocked ? <Unlock size={16} /> : <Lock size={16} />}
+                  {keyboardLocked ? "Destravar teclado" : "Travar teclado"}
+                </button>
+              )}
+              <button
+                type="button"
+                className="secondary-action"
+                onClick={toggleMaximize}
+                title={maximized ? "Restaurar tamanho da janela" : "Maximizar tela"}
+              >
+                {maximized ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                {maximized ? "Restaurar" : "Maximizar"}
+              </button>
+              <button
+                type="button"
+                className="secondary-action"
+                onClick={toggleChat}
+                title={chatOpen ? "Fechar o chat com o usuario local" : "Abrir o chat com o usuario local"}
+              >
+                <MessageCircle size={16} />
+                {chatOpen ? "Fechar chat" : "Abrir chat"}
+              </button>
               {canEnd && !terminal && (
                 <button type="button" className="secondary-action danger" onClick={endSession} disabled={submitting}>
                   <Power size={16} /> Encerrar
@@ -602,6 +669,7 @@ export default function RemoteAssistanceAction({
             <div
               ref={imageRef}
               className={`remote-assistance-screen ${controlActive ? "control-active" : ""}`}
+              style={{ aspectRatio: screenAspectRatio }}
               tabIndex={controlActive ? 0 : -1}
               onMouseMove={handleMouseMove}
               onMouseDown={(event) => handleMouseButton(event, "down")}
@@ -652,45 +720,47 @@ export default function RemoteAssistanceAction({
               </div>
             </section>
 
-            <section className="remote-assistance-chat" aria-label="Chat com o usuario local">
-              <h3><MessageCircle size={16} /> Chat com o usuario local</h3>
-              <div className="remote-assistance-chat-log" ref={chatLogRef}>
-                {chatMessages.map((message) => (
-                  <p key={message.id} className={`chat-bubble chat-${message.sender}`}>
-                    <span className="chat-bubble-meta">
-                      {message.sender === "technician" ? "Voce" : (message.senderName || "Usuario local")}
-                      {" - "}
-                      {formatChatTime(message.createdAt)}
-                    </span>
-                    {message.text}
-                  </p>
-                ))}
-                {!chatMessages.length && <p className="remote-assistance-chat-empty">Nenhuma mensagem ainda.</p>}
-              </div>
-              {canChat ? (
-                <form className="remote-assistance-chat-form" onSubmit={sendChatMessage}>
-                  <input
-                    type="text"
-                    value={chatDraft}
-                    onChange={(event) => setChatDraft(event.target.value)}
-                    placeholder="Escreva uma mensagem..."
-                    maxLength={2000}
-                    disabled={session.status !== "active" || sendingChat}
-                    aria-label="Mensagem de chat"
-                  />
-                  <button
-                    type="submit"
-                    className="icon-button"
-                    disabled={session.status !== "active" || sendingChat || !chatDraft.trim()}
-                    title="Enviar mensagem"
-                  >
-                    <SendHorizontal size={16} />
-                  </button>
-                </form>
-              ) : (
-                <p className="remote-assistance-chat-empty">Voce nao tem permissao para enviar mensagens.</p>
-              )}
-            </section>
+            {chatOpen && (
+              <section className="remote-assistance-chat" aria-label="Chat com o usuario local">
+                <h3><MessageCircle size={16} /> Chat com o usuario local</h3>
+                <div className="remote-assistance-chat-log" ref={chatLogRef}>
+                  {chatMessages.map((message) => (
+                    <p key={message.id} className={`chat-bubble chat-${message.sender}`}>
+                      <span className="chat-bubble-meta">
+                        {message.sender === "technician" ? "Voce" : (message.senderName || "Usuario local")}
+                        {" - "}
+                        {formatChatTime(message.createdAt)}
+                      </span>
+                      {message.text}
+                    </p>
+                  ))}
+                  {!chatMessages.length && <p className="remote-assistance-chat-empty">Nenhuma mensagem ainda.</p>}
+                </div>
+                {canChat ? (
+                  <form className="remote-assistance-chat-form" onSubmit={sendChatMessage}>
+                    <input
+                      type="text"
+                      value={chatDraft}
+                      onChange={(event) => setChatDraft(event.target.value)}
+                      placeholder="Escreva uma mensagem..."
+                      maxLength={2000}
+                      disabled={session.status !== "active" || sendingChat}
+                      aria-label="Mensagem de chat"
+                    />
+                    <button
+                      type="submit"
+                      className="icon-button"
+                      disabled={session.status !== "active" || sendingChat || !chatDraft.trim()}
+                      title="Enviar mensagem"
+                    >
+                      <SendHorizontal size={16} />
+                    </button>
+                  </form>
+                ) : (
+                  <p className="remote-assistance-chat-empty">Voce nao tem permissao para enviar mensagens.</p>
+                )}
+              </section>
+            )}
             {error && <p className="form-error" role="alert">{error}</p>}
           </div>
         )}

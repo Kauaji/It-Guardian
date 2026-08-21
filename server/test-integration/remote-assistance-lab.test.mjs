@@ -312,6 +312,16 @@ test("assistencia remota exige autorizacao, consentimento e mantem frames efemer
   );
   assert.equal(invalidInput.status, 400);
 
+  const lockKeyboardResponse = await fetch(
+    `${baseUrl}/api/remote-assistance/sessions/${active.id}/input`,
+    {
+      method: "POST",
+      headers: browserHeaders(adminCookie, { "x-remote-viewer-token": started.viewerToken }),
+      body: JSON.stringify({ type: "block_input", enabled: true })
+    }
+  );
+  assert.equal(lockKeyboardResponse.status, 202);
+
   const commandsResponse = await fetch(
     `${baseUrl}/api/agents/remote-assistance/sessions/${active.id}/commands`,
     {
@@ -331,6 +341,7 @@ test("assistencia remota exige autorizacao, consentimento e mantem frames efemer
   assert.ok(commands.qualityHint.captureIntervalMs >= 1000);
   assert.ok(commands.commands.some((command) => command.type === "select_monitor"));
   assert.ok(commands.commands.some((command) => command.type === "mouse_move"));
+  assert.ok(commands.commands.some((command) => command.type === "block_input" && command.enabled === true));
 
   const frame = "data:image/jpeg;base64,/9j/2Q==";
   const frameResponse = await fetch(

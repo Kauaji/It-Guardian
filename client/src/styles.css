@@ -6850,6 +6850,12 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
   background: var(--surface);
   box-shadow: 0 28px 80px rgba(7, 15, 27, 0.3);
   animation: soft-pop 180ms var(--ease-premium);
+  transition: width 160ms var(--ease-premium), max-height 160ms var(--ease-premium);
+}
+
+.remote-assistance-modal--maximized {
+  width: min(1680px, calc(100dvw - 24px));
+  max-height: calc(100dvh - 24px);
 }
 
 .remote-assistance-header {
@@ -7079,12 +7085,20 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
   place-items: center;
   width: 100%;
   min-height: 320px;
+  max-height: min(66vh, 640px);
+  /* aspect-ratio vem inline (via JS) a partir da resolucao real do monitor
+     selecionado, para o bloco encaixar sem sobrar nem cortar a imagem;
+     16/9 aqui e so o fallback antes do primeiro monitor ser conhecido. */
   aspect-ratio: 16 / 9;
   overflow: hidden;
   border: 1px solid #263448;
   border-radius: var(--radius-sm);
   outline: 0;
   background: #0b111b;
+}
+
+.remote-assistance-modal--maximized .remote-assistance-screen {
+  max-height: calc(100dvh - 280px);
 }
 
 .remote-assistance-screen.control-active {
@@ -7247,7 +7261,8 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
     padding: 0;
   }
 
-  .remote-assistance-modal {
+  .remote-assistance-modal,
+  .remote-assistance-modal--maximized {
     width: 100%;
     max-height: 94dvh;
     border-radius: var(--radius-md) var(--radius-md) 0 0;

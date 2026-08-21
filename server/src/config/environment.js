@@ -75,10 +75,14 @@ export function getRemoteAssistanceConfig(env = process.env) {
   // Limite rigido de FPS: nunca aceitar quadros mais rapido do que o servidor
   // consegue validar/descartar com seguranca. targetFps e o valor "desejado"
   // repassado ao agente, sempre limitado pelo teto de maxFramesPerSecond.
-  const maxFramesPerSecond = boundedInteger(env.REMOTE_ASSISTANCE_MAX_FPS, 3, 1, 5);
+  // Teto e padrao elevados de 5/3 para 10/8 para reduzir o atraso percebido
+  // na transmissao -- ainda um limite deliberado (nao virou video real via
+  // WebRTC, continua snapshot JPEG por polling HTTP), so mais generoso do
+  // que o valor conservador original.
+  const maxFramesPerSecond = boundedInteger(env.REMOTE_ASSISTANCE_MAX_FPS, 8, 1, 10);
   const targetFps = Math.min(
     maxFramesPerSecond,
-    boundedInteger(env.REMOTE_ASSISTANCE_TARGET_FPS, maxFramesPerSecond, 1, 5)
+    boundedInteger(env.REMOTE_ASSISTANCE_TARGET_FPS, maxFramesPerSecond, 1, 10)
   );
   const minJpegQuality = boundedInteger(env.REMOTE_ASSISTANCE_MIN_JPEG_QUALITY, 35, 10, 90);
   const maxJpegQuality = Math.max(
@@ -104,9 +108,12 @@ export function getRemoteAssistanceConfig(env = process.env) {
       2000
     )
   );
+  // Piso reduzido de 150 para 80ms: com o novo teto de FPS, agentCaptureMs
+  // pode ficar em 100-125ms; um piso de 150 aqui viraria o novo gargalo,
+  // fazendo o visualizador esperar mais do que o agente realmente captura.
   const viewerPollMs = Math.max(
-    150,
-    boundedInteger(env.REMOTE_ASSISTANCE_VIEWER_POLL_MS, agentCaptureMs, 150, 2000)
+    80,
+    boundedInteger(env.REMOTE_ASSISTANCE_VIEWER_POLL_MS, agentCaptureMs, 80, 2000)
   );
 
   const requestedTransport = String(env.REMOTE_ASSISTANCE_TRANSPORT || "snapshot_polling")
