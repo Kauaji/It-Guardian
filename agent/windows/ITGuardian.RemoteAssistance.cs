@@ -351,8 +351,26 @@ namespace ITGuardian.Windows
                     CreateNoWindow = true
                 };
                 Process process = Process.Start(startInfo);
+                // Precisa drenar stdout/stderr de forma assincrona: com
+                // RedirectStandardOutput/Error ligados mas sem ninguem lendo,
+                // o buffer do pipe enche e o processo auxiliar trava na
+                // primeira escrita de console depois disso. De quebra, o
+                // diagnostico do processo auxiliar fica visivel no mesmo
+                // agent.log do coletor principal.
+                process.OutputDataReceived += delegate(object sender, DataReceivedEventArgs dataArgs)
+                {
+                    if (!string.IsNullOrEmpty(dataArgs.Data))
+                        Program.WriteLog("INFO", "[webrtc] " + dataArgs.Data);
+                };
+                process.ErrorDataReceived += delegate(object sender, DataReceivedEventArgs dataArgs)
+                {
+                    if (!string.IsNullOrEmpty(dataArgs.Data))
+                        Program.WriteLog("WARN", "[webrtc] " + dataArgs.Data);
+                };
                 process.StandardInput.WriteLine(paramsJson);
                 process.StandardInput.Flush();
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
                 lock (tokenLock) webrtcProcesses[sessionId] = process;
                 Program.WriteLog("INFO", "Processo auxiliar de WebRTC iniciado para a sessao " + sessionId + ".");
             }
