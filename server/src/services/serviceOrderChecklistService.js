@@ -2,7 +2,7 @@ import { badRequest, forbidden, notFoundError } from "../lib/errors.js";
 import { hasPermission } from "../permissions.js";
 import { addLog } from "../repositories/logRepository.js";
 import { findServiceOrderById, getServiceOrderSettings, updateServiceOrderSettings } from "../repositories/serviceOrderRepository.js";
-import { resolveProblemTypeKey } from "./publicServiceOrderService.js";
+import { resolveProblemTypeKey } from "../domain/problemTypes.js";
 import {
   applyChecklistTemplateToOrder,
   createChecklistTemplate,

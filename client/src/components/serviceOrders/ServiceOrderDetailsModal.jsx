@@ -15,6 +15,7 @@ import {
 import { fetchDevice, fetchProducts, fetchServices, fetchTechnicians } from "../../api.js";
 import { useModalLifecycle } from "../../hooks/useModalLifecycle.js";
 import { assetTypeLabel } from "../inventory/assetTypes.js";
+import { getServiceOrderOriginLabel } from "./serviceOrderBoardUtils.js";
 import RemoteAssistanceAction from "../remoteAssistance/RemoteAssistanceAction.jsx";
 import ServiceOrderAttachmentsTab from "./tabs/ServiceOrderAttachmentsTab.jsx";
 import ServiceOrderChecklistTab from "./tabs/ServiceOrderChecklistTab.jsx";
@@ -776,6 +777,9 @@ export default function ServiceOrderDetailsModal({
                 <DetailItem label="Prioridade" value={priorityLabels[serviceOrder.priority]} />
                 {serviceOrder.preventivePlanId && (
                   <DetailItem label="Origem preventiva" value="Plano Preventivo" />
+                )}
+                {serviceOrder.source === "public_support_form" && (
+                  <DetailItem label="Origem" value={getServiceOrderOriginLabel(serviceOrder)} />
                 )}
                 {canChangeSector ? (
                   <label className="service-order-detail-item service-order-sector-edit">
