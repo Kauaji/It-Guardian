@@ -9894,78 +9894,129 @@ table strong,
   color: #5fe0af;
 }
 
-[data-theme="dark"] .public-support-page {
-  background:
-    radial-gradient(circle at 18% 18%, rgba(31, 122, 97, 0.22), transparent 28%),
-    linear-gradient(135deg, #13313b 0%, #234d57 100%);
-  color: #102033;
+.public-support-honeypot {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
-[data-theme="dark"] .public-support-card {
-  border-color: rgba(209, 222, 236, 0.86);
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 24px 70px rgba(7, 20, 33, 0.24);
+.public-support-summary dl {
+  display: grid;
+  grid-template-columns: minmax(0, 160px) minmax(0, 1fr);
+  gap: 10px 16px;
+  margin: 0;
 }
 
-[data-theme="dark"] .public-support-brand {
-  color: #185867;
-}
-
-[data-theme="dark"] .public-support-brand strong,
-[data-theme="dark"] .public-support-header h1,
-[data-theme="dark"] .public-support-success h1 {
-  color: #143644;
-}
-
-[data-theme="dark"] .public-support-brand span,
-[data-theme="dark"] .public-support-header p,
-[data-theme="dark"] .public-support-success p,
-[data-theme="dark"] .public-support-section-title span,
-[data-theme="dark"] .public-support-ticket span,
-[data-theme="dark"] .public-support-meta span {
+.public-support-summary dt {
   color: #5d6c83;
+  font-weight: 800;
 }
 
-[data-theme="dark"] .public-support-form label {
-  color: #42516a;
-}
-
-[data-theme="dark"] .public-support-form input,
-[data-theme="dark"] .public-support-form select,
-[data-theme="dark"] .public-support-form textarea,
-[data-theme="dark"] .public-support-choices label {
-  border-color: #cbd8ea;
-  background: #f9fbff;
+.public-support-summary dd {
+  margin: 0;
   color: #0f1f35;
+  font-weight: 650;
 }
 
-[data-theme="dark"] .public-support-machine {
-  border-color: #d6e3f1;
-  background: #f5f9fd;
+.public-support-machine-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 13px;
+  padding: 13px 14px;
+  font-weight: 750;
+  color: #5b6980;
 }
 
-[data-theme="dark"] .public-support-choices label.selected {
-  border-color: #1f7a61;
-  background: #e9f8f1;
-  color: #145b48;
+.public-support-machine-status-warning {
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  color: #92610a;
 }
 
-[data-theme="dark"] .public-support-priority {
-  border-color: #c6dff2;
-  background: #eef7ff;
-  color: #27435e;
-}
-
-[data-theme="dark"] .public-support-ticket {
-  border-color: #cce8dc;
+.public-support-machine-status-ok {
+  border: 1px solid #cce8dc;
   background: #ecfdf5;
+  color: #0e5b47;
 }
 
-[data-theme="dark"] .public-support-ticket strong,
-[data-theme="dark"] .public-support-priority strong,
-[data-theme="dark"] .public-support-success > svg,
-[data-theme="dark"] .public-support-section-title {
-  color: var(--accent);
+.public-support-tracking {
+  display: grid;
+  gap: 12px;
+  width: min(420px, 100%);
+  border: 1px solid #d6e3f1;
+  border-radius: 16px;
+  background: #f5f9fd;
+  padding: 16px;
+}
+
+.public-support-tracking-hint {
+  margin: 0;
+  color: #5d6c83;
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.public-support-tracking code {
+  word-break: break-all;
+  font-size: 0.85rem;
+}
+
+.public-support-tracking-details dl {
+  display: grid;
+  grid-template-columns: minmax(0, 160px) minmax(0, 1fr);
+  gap: 10px 16px;
+  margin: 16px 0 0;
+}
+
+.public-support-tracking-details dt {
+  color: #5d6c83;
+  font-weight: 800;
+}
+
+.public-support-tracking-details dd {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #0f1f35;
+  font-weight: 650;
+}
+
+[data-theme="dark"] .public-support-summary dt,
+[data-theme="dark"] .public-support-tracking-hint,
+[data-theme="dark"] .public-support-tracking-details dt {
+  color: #9caec3;
+}
+
+[data-theme="dark"] .public-support-summary dd,
+[data-theme="dark"] .public-support-tracking-details dd {
+  color: #eaf2fb;
+}
+
+[data-theme="dark"] .public-support-machine-status {
+  color: #9caec3;
+}
+
+[data-theme="dark"] .public-support-machine-status-warning {
+  border-color: #92610a;
+  background: rgba(146, 97, 10, 0.14);
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .public-support-machine-status-ok {
+  border-color: #2f6c58;
+  background: #10251e;
+  color: #5fe0af;
+}
+
+[data-theme="dark"] .public-support-tracking {
+  border-color: #2d4258;
+  background: #0c1723;
 }
 
 .service-order-kanban {

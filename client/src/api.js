@@ -1244,6 +1244,10 @@ export function createPublicServiceOrder(payload) {
   });
 }
 
+export function fetchPublicServiceOrderTracking(trackingToken) {
+  return apiFetch(`/public/service-orders/track/${encodeURIComponent(trackingToken)}`);
+}
+
 export function fetchClients(token, params = {}) {
   const search = new URLSearchParams(params).toString();
   return apiFetch(`/clients${search ? `?${search}` : ""}`, { token });

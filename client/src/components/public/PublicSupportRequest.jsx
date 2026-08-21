@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle, Monitor, Send, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import {
   createPublicServiceOrder,
   fetchPublicMachineContext,
   fetchPublicSupportOptions
 } from "../../api.js";
+import { honeypotFieldName, validatePublicSupportForm } from "./publicSupportValidation.js";
+import PublicSupportForm from "./PublicSupportForm.jsx";
+import PublicSupportSummary from "./PublicSupportSummary.jsx";
+import PublicSupportSuccess from "./PublicSupportSuccess.jsx";
 
 const fallbackCategories = [
   "Computador",
@@ -29,13 +33,6 @@ const fallbackProblemTypes = [
   { id: "mouse", name: "Mouse com defeito", category: "Mouse", defaultPriority: "low" }
 ];
 
-const priorityLabels = {
-  low: "Baixa",
-  medium: "Média",
-  high: "Alta",
-  critical: "Crítica"
-};
-
 function findProblemType(problemTypes, value) {
   return problemTypes.find(
     (problemType) => problemType.name === value || problemType.id === value
@@ -47,14 +44,9 @@ function getFirstProblemTypeForCategory(problemTypes, category) {
     problemTypes[0];
 }
 
-function readSystemMode() {
-  return "local";
-}
-
 function readMachineContext() {
   const params = new URLSearchParams(window.location.search);
   const stored = {
-    assetId: localStorage.getItem("it_guardian_asset_id") || "",
     machineName: localStorage.getItem("it_guardian_machine_name") || "",
     assetTag: localStorage.getItem("it_guardian_asset_tag") || "",
     environmentName: localStorage.getItem("it_guardian_environment_name") || ""
@@ -62,7 +54,6 @@ function readMachineContext() {
 
   return {
     deviceToken: params.get("device") || "",
-    assetId: params.get("assetId") || params.get("asset") || stored.assetId,
     machineName: params.get("machine") || params.get("hostname") || stored.machineName,
     assetTag: params.get("patrimonio") || params.get("assetTag") || stored.assetTag,
     environmentName: params.get("ambiente") || params.get("environment") || stored.environmentName
@@ -71,15 +62,15 @@ function readMachineContext() {
 
 function buildRelatedAssetText(form) {
   return [
-    form.machineName ? `AnyDesk: ${form.machineName}` : "",
-    form.assetTag ? `VNC: ${form.assetTag}` : "",
-    form.location ? `TeamViewer: ${form.location}` : ""
+    form.machineName ? `Nome da máquina: ${form.machineName}` : "",
+    form.assetTag ? `Patrimônio: ${form.assetTag}` : "",
+    form.location ? `Localização: ${form.location}` : ""
   ].filter(Boolean).join(" | ");
 }
 
 export default function PublicSupportRequest() {
   const machineContext = useMemo(readMachineContext, []);
-  const [systemMode, setSystemMode] = useState(readSystemMode);
+  const [systemMode, setSystemMode] = useState("local");
   const businessMode = systemMode === "business";
   const [options, setOptions] = useState({
     categories: fallbackCategories,
@@ -94,19 +85,24 @@ export default function PublicSupportRequest() {
     contactInfo: "",
     department: "",
     extension: "",
+    urgency: "normal",
     machineScope: "",
     deviceToken: machineContext.deviceToken,
-    assetId: machineContext.assetId,
+    assetId: "",
     machineName: machineContext.machineName,
     assetTag: machineContext.assetTag,
     environmentName: machineContext.environmentName || "Não identificado",
     location: "",
-    machineNotes: ""
+    machineNotes: "",
+    [honeypotFieldName]: ""
   });
+  const [step, setStep] = useState("form");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(null);
+  const [machine, setMachine] = useState(null);
   const [machineContextLoading, setMachineContextLoading] = useState(Boolean(machineContext.deviceToken));
+  const [machineContextError, setMachineContextError] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -144,17 +140,19 @@ export default function PublicSupportRequest() {
     if (!machineContext.deviceToken) return;
     let active = true;
     fetchPublicMachineContext(machineContext.deviceToken)
-      .then(({ machine }) => {
-        if (!active || !machine) return;
+      .then(({ machine: resolvedMachine }) => {
+        if (!active || !resolvedMachine) return;
+        setMachine(resolvedMachine);
         setForm((current) => ({
           ...current,
-          assetId: machine.id,
-          machineName: machine.name || machine.hostname || current.machineName,
-          environmentName: machine.environmentName || current.environmentName
+          assetId: resolvedMachine.id,
+          machineScope: "mine",
+          machineName: resolvedMachine.name || resolvedMachine.hostname || current.machineName,
+          environmentName: resolvedMachine.environmentName || current.environmentName
         }));
       })
       .catch(() => {
-        if (active) setError("Nao foi possivel identificar automaticamente esta maquina. Repare o IT Guardian e tente novamente.");
+        if (active) setMachineContextError(true);
       })
       .finally(() => {
         if (active) setMachineContextLoading(false);
@@ -163,8 +161,6 @@ export default function PublicSupportRequest() {
       active = false;
     };
   }, [machineContext.deviceToken]);
-
-  const visibleProblemTypes = options.problemTypes;
 
   function updateField(field, value) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -193,18 +189,19 @@ export default function PublicSupportRequest() {
     setError("");
   }
 
-  async function submit(event) {
+  function goToSummary(event) {
     event.preventDefault();
-    setError("");
-
-    if (
-      businessMode &&
-      (!form.environmentName.trim() || form.environmentName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") === "nao identificado")
-    ) {
-      setError("No modo Business, selecione um cliente para abrir a Ordem de Serviço.");
+    const validationError = validatePublicSupportForm(form, { businessMode });
+    if (validationError) {
+      setError(validationError);
       return;
     }
+    setError("");
+    setStep("summary");
+  }
 
+  async function confirmSubmit() {
+    setError("");
     setLoading(true);
 
     try {
@@ -217,39 +214,14 @@ export default function PublicSupportRequest() {
       setSuccess(response.serviceOrder);
     } catch (submitError) {
       setError(submitError.message || "Não foi possível enviar a solicitação.");
+      setStep("form");
     } finally {
       setLoading(false);
     }
   }
 
   if (success) {
-    return (
-      <main className="public-support-page">
-        <section className="public-support-card public-support-success">
-          <div className="public-support-brand">
-            <ShieldCheck size={34} />
-            <div>
-              <strong>IT Guardian</strong>
-              <span>Suporte técnico</span>
-            </div>
-          </div>
-          <CheckCircle size={54} />
-          <h1>Solicitação enviada com sucesso.</h1>
-          <p>A equipe técnica recebeu o chamado e irá analisar as informações enviadas.</p>
-          <div className="public-support-ticket">
-            <span>Número da OS</span>
-            <strong>{success.number}</strong>
-          </div>
-          <div className="public-support-meta">
-            <span>Prioridade inicial: {priorityLabels[success.priority] || "Média"}</span>
-            <span>{new Date(success.createdAt).toLocaleString("pt-BR")}</span>
-          </div>
-          <button className="primary-action" onClick={() => window.location.reload()}>
-            Abrir outra solicitação
-          </button>
-        </section>
-      </main>
-    );
+    return <PublicSupportSuccess success={success} onReset={() => window.location.reload()} />;
   }
 
   return (
@@ -266,193 +238,37 @@ export default function PublicSupportRequest() {
           <div>
             <h1>Abrir chamado de suporte</h1>
             <p>
-              {businessMode
-                ? "Envie sua solicitação com cliente/ambiente identificado. Esta tela não dá acesso ao painel administrativo."
-                : "Envie sua solicitação para a equipe técnica. Esta tela não dá acesso ao painel administrativo."}
+              Descreva o problema encontrado. A equipe técnica receberá sua solicitação e acompanhará o
+              atendimento pelo IT Guardian. Esta tela não dá acesso ao painel administrativo.
             </p>
           </div>
         </header>
 
-        <form className="public-support-form" onSubmit={submit}>
-          <label className="public-support-wide">
-            Título
-            <input
-              required
-              minLength={3}
-              value={form.title}
-              onChange={(event) => updateField("title", event.target.value)}
-              placeholder="Ex: Computador não inicia"
-            />
-          </label>
-
-          <label>
-            Categoria
-            <select
-              required
-              value={form.category}
-              onChange={(event) => updateCategory(event.target.value)}
-            >
-              {options.categories.map((category) => (
-                <option key={category} value={category}>{category}</option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Tipo de problema
-            <select
-              required
-              value={form.problemType}
-              onChange={(event) => updateProblemType(event.target.value)}
-            >
-              {visibleProblemTypes.map((problemType) => (
-                <option key={problemType.id || problemType.name} value={problemType.name}>
-                  {problemType.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="public-support-wide">
-            Descrição do problema
-            <textarea
-              required
-              minLength={5}
-              value={form.description}
-              onChange={(event) => updateField("description", event.target.value)}
-              placeholder="Descreva o que aconteceu, quando comecou e qualquer mensagem de erro exibida."
-            />
-          </label>
-
-          <label>
-            Solicitante
-            <input
-              required
-              value={form.requesterName}
-              onChange={(event) => updateField("requesterName", event.target.value)}
-              placeholder="Seu nome"
-            />
-          </label>
-
-          {businessMode && (
-            <label>
-              WhatsApp
-              <input
-                required
-                value={form.contactInfo}
-                onChange={(event) => updateField("contactInfo", event.target.value)}
-                placeholder="Número do WhatsApp"
-              />
-            </label>
-          )}
-
-          {!businessMode && (
-            <label>
-              Ramal
-              <input
-                value={form.extension}
-                onChange={(event) => updateField("extension", event.target.value)}
-                placeholder="Ramal para contato"
-              />
-            </label>
-          )}
-
-          <label>
-            Setor
-            <input
-              value={form.department}
-              onChange={(event) => updateField("department", event.target.value)}
-              placeholder="Financeiro, RH, recepcao..."
-            />
-          </label>
-
-          {businessMode && (
-            <label>
-              Cliente
-              <input
-                required
-                value={form.environmentName}
-                onChange={(event) => updateField("environmentName", event.target.value)}
-                placeholder="Cliente, filial ou ambiente"
-              />
-            </label>
-          )}
-
-          <section className="public-support-machine public-support-wide">
-            <div className="public-support-section-title">
-              <Monitor size={18} />
-              <div>
-                <strong>Máquina relacionada</strong>
-              </div>
-            </div>
-            <div className="public-support-choices">
-              <label className={form.machineScope === "mine" ? "selected" : ""}>
-                <input
-                  type="radio"
-                  name="machineScope"
-                  checked={form.machineScope === "mine"}
-                  onChange={() => {
-                    updateField("machineScope", "mine");
-                    if (!form.assetId && !machineContextLoading) {
-                      setError("Esta maquina ainda nao foi identificada pelo instalador. Use Reparar no instalador.");
-                    }
-                  }}
-                />
-                O problema é na minha máquina
-                {form.machineScope === "mine" && form.assetId ? (
-                  <small>Identificada: {form.machineName}</small>
-                ) : null}
-              </label>
-              <label className={form.machineScope === "other" ? "selected" : ""}>
-                <input
-                  type="radio"
-                  name="machineScope"
-                  checked={form.machineScope === "other"}
-                  onChange={() => updateField("machineScope", "other")}
-                />
-                O problema é em outra máquina/equipamento
-              </label>
-            </div>
-
-            {form.machineScope && (
-              <div className="public-support-machine-grid">
-                <label>
-                  Acesso do AnyDesk
-                  <input
-                    value={form.machineName}
-                    onChange={(event) => updateField("machineName", event.target.value)}
-                    placeholder="ID ou endereço AnyDesk"
-                  />
-                </label>
-                <label>
-                  Acesso do VNC
-                  <input
-                    value={form.assetTag}
-                    onChange={(event) => updateField("assetTag", event.target.value)}
-                    placeholder="IP, host ou identificador VNC"
-                  />
-                </label>
-                <label>
-                  Acesso do TeamViewer
-                  <input
-                    value={form.location}
-                    onChange={(event) => updateField("location", event.target.value)}
-                    placeholder="ID ou dados do TeamViewer"
-                  />
-                </label>
-              </div>
-            )}
-          </section>
-
-          {error && <div className="public-support-error public-support-wide">{error}</div>}
-
-          <div className="public-support-actions public-support-wide">
-            <button className="primary-action" disabled={loading}>
-              <Send size={18} />
-              {loading ? "Enviando..." : "Enviar solicitação"}
-            </button>
-          </div>
-        </form>
+        {step === "form" ? (
+          <PublicSupportForm
+            form={form}
+            options={options}
+            businessMode={businessMode}
+            deviceToken={machineContext.deviceToken}
+            machineContextLoading={machineContextLoading}
+            machineContextError={machineContextError}
+            machine={machine}
+            updateField={updateField}
+            updateCategory={updateCategory}
+            updateProblemType={updateProblemType}
+            error={error}
+            onSubmit={goToSummary}
+          />
+        ) : (
+          <PublicSupportSummary
+            form={form}
+            machine={machine}
+            loading={loading}
+            error={error}
+            onBack={() => setStep("form")}
+            onConfirm={confirmSubmit}
+          />
+        )}
       </section>
     </main>
   );

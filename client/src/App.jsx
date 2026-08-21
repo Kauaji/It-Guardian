@@ -77,6 +77,7 @@ import SidebarSegmentFilter from "./components/inventory/SidebarSegmentFilter.js
 import { useInventoryDragAndDrop } from "./components/inventory/useInventoryDragAndDrop.js";
 import GeneralSettingsModal from "./components/settings/GeneralSettingsModal.jsx";
 import PublicSupportRequest from "./components/public/PublicSupportRequest.jsx";
+import PublicServiceOrderTracking from "./components/public/PublicServiceOrderTracking.jsx";
 import { hasPermission } from "./permissions.js";
 import { remoteScriptExecutionEnabled } from "./config/features.js";
 import {
@@ -3263,7 +3264,9 @@ function Dashboard() {
 }
 
 export default function App() {
-  const isPublicSupportPath = ["/abrir-chamado", "/solicitar-suporte"].includes(window.location.pathname);
+  const isSupportFormPath = ["/abrir-chamado", "/solicitar-suporte"].includes(window.location.pathname);
+  const trackingToken = window.location.pathname.match(/^\/chamado\/([^/]+)/)?.[1];
+  const isPublicSupportPath = isSupportFormPath || Boolean(trackingToken);
   const pathAssetId = window.location.pathname.match(/^\/assets\/([^/]+)/)?.[1];
   const assetId = pathAssetId
     ? decodeURIComponent(pathAssetId)
@@ -3271,7 +3274,11 @@ export default function App() {
   const sessionState = useAppSessionController({ isPublicSupportPath, assetId });
   const { authLoading, clearToast, handleAuth, notify, toast, token, user } = sessionState;
 
-  if (isPublicSupportPath) {
+  if (trackingToken) {
+    return <PublicServiceOrderTracking token={decodeURIComponent(trackingToken)} />;
+  }
+
+  if (isSupportFormPath) {
     return <PublicSupportRequest />;
   }
 

@@ -2,7 +2,8 @@ import { Router } from "express";
 import {
   createPublicServiceOrder,
   publicMachineContext,
-  supportOptions
+  supportOptions,
+  trackPublicServiceOrder
 } from "../controllers/publicServiceOrderController.js";
 import { createRateLimiter } from "../middleware/rateLimitMiddleware.js";
 
@@ -23,5 +24,6 @@ const publicWriteRateLimiter = createRateLimiter({
 router.get("/support-options", publicReadRateLimiter, supportOptions);
 router.get("/machine-context", publicReadRateLimiter, publicMachineContext);
 router.post("/service-orders", publicWriteRateLimiter, createPublicServiceOrder);
+router.get("/service-orders/track/:token", publicReadRateLimiter, trackPublicServiceOrder);
 
 export default router;

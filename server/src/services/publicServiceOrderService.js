@@ -2,86 +2,62 @@ import { findAgentAssetByActivationId } from "../repositories/agentRepository.js
 import { startMaintenanceForAsset } from "../repositories/assetLifecycleRepository.js";
 import {
   createServiceOrder,
-  serviceOrderPriorities
+  calculateServiceOrderSla,
+  findServiceOrderById,
+  formatServiceOrderNumber,
+  getServiceOrderSettings
 } from "../repositories/serviceOrderRepository.js";
 import { listSettingsRecords } from "../repositories/settingsRepository.js";
 import { getSystemSettings } from "../repositories/systemSettingsRepository.js";
 import { verifyPublicMachineToken } from "../domain/publicMachineToken.js";
+import {
+  createPublicServiceOrderTrackingToken,
+  verifyPublicServiceOrderTrackingToken
+} from "../domain/publicServiceOrderTrackingToken.js";
+import {
+  chooseHigherPriority,
+  getActiveProblemTypes,
+  normalize,
+  resolveProblemTypeKey,
+  sanitizePriority,
+  uniqueCategories
+} from "../domain/problemTypes.js";
+import { applyChecklistTemplateOnCreate } from "./serviceOrderChecklistService.js";
+import { trimString } from "../lib/textUtils.js";
 import { badRequest, notFoundError } from "../lib/errors.js";
 
-const defaultCategories = [
-  "Computador",
-  "Notebook",
-  "Servidor",
-  "Impressora",
-  "Teclado",
-  "Mouse",
-  "Monitor",
-  "Rede",
-  "Sistema",
-  "Outro"
-];
+// Reexportados porque publicServiceOrderService.test.mjs e outros
+// consumidores ja importam essas funcoes puras daqui - moveram de
+// implementacao (agora vivem em domain/problemTypes.js) sem mudar de onde
+// sao importadas.
+export { normalize, sanitizePriority, uniqueCategories, chooseHigherPriority, resolveProblemTypeKey };
 
-const defaultProblemTypes = [
-  { id: "default-computer-power", name: "Computador nao liga", category: "Computador", defaultPriority: "high" },
-  { id: "default-printer", name: "Impressora nao imprime", category: "Impressora", defaultPriority: "medium" },
-  { id: "default-network", name: "Internet lenta", category: "Rede", defaultPriority: "medium" },
-  { id: "default-system", name: "Sistema travando", category: "Sistema", defaultPriority: "medium" },
-  { id: "default-monitor", name: "Monitor sem imagem", category: "Monitor", defaultPriority: "medium" },
-  { id: "default-keyboard", name: "Teclado com defeito", category: "Teclado", defaultPriority: "low" },
-  { id: "default-mouse", name: "Mouse com defeito", category: "Mouse", defaultPriority: "low" }
-];
-
-const priorityRank = {
-  low: 1,
-  medium: 2,
-  high: 3,
-  critical: 4
+const maxLengths = {
+  title: 200,
+  description: 4000,
+  category: 120,
+  requesterName: 150,
+  problemType: 200,
+  contactInfo: 150,
+  department: 120,
+  extension: 20,
+  relatedAssetText: 500,
+  machineName: 150,
+  assetTag: 120,
+  location: 200,
+  machineNotes: 1000,
+  environmentName: 150
 };
 
-function trim(value) {
-  return typeof value === "string" ? value.trim() : "";
-}
+// Nome de um campo que nunca deve ser preenchido por um usuario real - so
+// bots que preenchem todo input do formulario (inclusive os escondidos por
+// CSS) tendem a preencher. Ver submitPublicServiceOrder: se vier
+// preenchido, retornamos sucesso (mesmo formato de uma OS real) sem gravar
+// nada, pra nao dar sinal nenhum ao bot sobre qual campo o denunciou.
+export const honeypotFieldName = "website";
 
-export function normalize(value = "") {
-  return String(value)
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .trim()
-    .toLowerCase();
-}
-
-export function sanitizePriority(value, fallback = "medium") {
-  return serviceOrderPriorities.has(value) ? value : fallback;
-}
-
-export function uniqueCategories(problemTypes) {
-  const configuredCategories = problemTypes
-    .map((item) => trim(item.category))
-    .filter(Boolean);
-
-  return Array.from(new Set([...configuredCategories, ...defaultCategories]));
-}
-
-export function chooseHigherPriority(current, candidate) {
-  const safeCandidate = sanitizePriority(candidate, "");
-  if (!safeCandidate) return current;
-  return priorityRank[safeCandidate] > priorityRank[current] ? safeCandidate : current;
-}
-
-export async function getActiveProblemTypes() {
-  const configured = await listSettingsRecords("problemTypes");
-  const active = configured
-    .filter((item) => item.active !== false)
-    .map((item) => ({
-      id: item.id,
-      name: item.name,
-      description: item.description,
-      category: item.category,
-      defaultPriority: sanitizePriority(item.defaultPriority, "medium")
-    }));
-
-  return active.length ? active : defaultProblemTypes;
+function trim(value, maxLength = 1000) {
+  return trimString(value, maxLength, "");
 }
 
 async function calculatePriority({ category, problemType, environmentName }) {
@@ -110,19 +86,6 @@ async function calculatePriority({ category, problemType, environmentName }) {
   return priority;
 }
 
-// Reaproveitada pelo checklist tecnico (serviceOrderChecklistService.js)
-// pra resolver `service_orders.problem_type` (texto livre - pode ser o id
-// de um problem_types configurado, o nome, ou um slug default-* quando
-// nao ha nenhum problem type configurado) na mesma chave usada por
-// `calculatePriority` - evita as duas logicas de match divergirem.
-export async function resolveProblemTypeKey(problemTypeValue) {
-  const problemTypes = await getActiveProblemTypes();
-  const match = problemTypes.find(
-    (item) => normalize(item.id) === normalize(problemTypeValue) || normalize(item.name) === normalize(problemTypeValue)
-  );
-  return match ? match.id : null;
-}
-
 export async function getSupportOptions() {
   const systemSettings = await getSystemSettings();
   const problemTypes = await getActiveProblemTypes();
@@ -135,7 +98,7 @@ export async function getSupportOptions() {
 }
 
 async function resolveMachineFromToken(token) {
-  const activationId = verifyPublicMachineToken(trim(token));
+  const activationId = verifyPublicMachineToken(trim(token, 2000));
   if (!activationId) return null;
   return findAgentAssetByActivationId(activationId);
 }
@@ -152,16 +115,34 @@ export async function getPublicMachineContext(deviceToken) {
   };
 }
 
+// Nunca consulta o banco (nextServiceOrderNumber faz COUNT + lock reais) -
+// so precisa "parecer" um numero real pro bot nao ter sinal nenhum de que
+// caiu num honeypot, sem gastar uma numeracao de verdade.
+async function buildFakeSuccessResponse() {
+  const settings = await getServiceOrderSettings();
+  const fakeSequence = 100000 + (Date.now() % 900000);
+  return {
+    number: formatServiceOrderNumber(fakeSequence, settings),
+    createdAt: new Date().toISOString(),
+    priority: "medium",
+    status: settings.statuses?.find((item) => item.isInitial)?.id || "open"
+  };
+}
+
 export async function submitPublicServiceOrder(body) {
-  const title = trim(body.title);
-  const description = trim(body.description);
-  const category = trim(body.category);
-  const requesterName = trim(body.requesterName);
-  const problemType = trim(body.problemType);
+  if (trim(body?.[honeypotFieldName], 2000)) {
+    return buildFakeSuccessResponse();
+  }
+
+  const title = trim(body.title, maxLengths.title);
+  const description = trim(body.description, maxLengths.description);
+  const category = trim(body.category, maxLengths.category);
+  const requesterName = trim(body.requesterName, maxLengths.requesterName);
+  const problemType = trim(body.problemType, maxLengths.problemType);
   const systemSettings = await getSystemSettings();
   const businessMode = systemSettings.systemMode === "business";
-  const contactInfo = businessMode ? trim(body.contactInfo) : "";
-  const extension = businessMode ? "" : trim(body.extension);
+  const contactInfo = businessMode ? trim(body.contactInfo, maxLengths.contactInfo) : "";
+  const extension = businessMode ? "" : trim(body.extension, maxLengths.extension);
 
   if (title.length < 3) {
     throw badRequest("Informe um título com pelo menos 3 caracteres.");
@@ -187,31 +168,42 @@ export async function submitPublicServiceOrder(body) {
     throw badRequest("Informe um contato para abrir o chamado.");
   }
 
-  const machineScope = trim(body.machineScope) || "mine";
+  const machineScope = trim(body.machineScope, 20) || "mine";
   const installedMachine = machineScope === "mine"
     ? await resolveMachineFromToken(body.deviceToken)
     : null;
-  if (machineScope === "mine" && trim(body.deviceToken) && !installedMachine) {
+  if (machineScope === "mine" && trim(body.deviceToken, 2000) && !installedMachine) {
     throw badRequest("Nao foi possivel identificar esta maquina pelo instalador.");
   }
-  const environmentName = installedMachine?.environment || trim(body.environmentName) || "Não identificado";
-  const relatedAssetText = trim(body.relatedAssetText);
+  const environmentName = installedMachine?.environment || trim(body.environmentName, maxLengths.environmentName) || "Não identificado";
+  const relatedAssetText = trim(body.relatedAssetText, maxLengths.relatedAssetText);
+  const machineName = trim(body.machineName, maxLengths.machineName);
+  const assetTag = trim(body.assetTag, maxLengths.assetTag);
+  const location = trim(body.location, maxLengths.location);
   const accessInfo = [
-    trim(body.machineName) ? `AnyDesk: ${trim(body.machineName)}` : "",
-    trim(body.assetTag) ? `VNC: ${trim(body.assetTag)}` : "",
-    trim(body.location) ? `TeamViewer: ${trim(body.location)}` : ""
+    machineName ? `Nome da máquina: ${machineName}` : "",
+    assetTag ? `Patrimônio: ${assetTag}` : "",
+    location ? `Localização: ${location}` : ""
   ].filter(Boolean).join(" | ");
   const relatedAssetInfo = relatedAssetText || accessInfo;
   const priority = await calculatePriority({ category, problemType, environmentName });
+  const department = trim(body.department, maxLengths.department);
+  const machineNotes = trim(body.machineNotes, maxLengths.machineNotes);
 
   const notes = [
     "Origem: formulário público/atalho do usuário",
-    trim(body.department) ? `Setor: ${trim(body.department)}` : "",
+    department ? `Setor: ${department}` : "",
     extension ? `Ramal: ${extension}` : "",
     relatedAssetInfo ? `Acessos informados: ${relatedAssetInfo}` : "",
-    trim(body.machineNotes) ? `Observação do equipamento: ${trim(body.machineNotes)}` : ""
+    machineNotes ? `Observação do equipamento: ${machineNotes}` : ""
   ].filter(Boolean).join("\n");
 
+  // assetId so pode vir de um ativo resolvido por token assinado
+  // (installedMachine) - nunca de um id bruto enviado pelo cliente, em
+  // nenhum dos dois machineScope. Antes desta correcao, machineScope:
+  // "other" aceitava um assetId qualquer sem nenhuma verificacao, o que
+  // permitia qualquer chamador anonimo colocar um ativo arbitrario (se
+  // soubesse/adivinhasse o UUID) em manutencao e gravar historico nele.
   const serviceOrder = await createServiceOrder({
     payload: {
       title,
@@ -219,20 +211,22 @@ export async function submitPublicServiceOrder(body) {
       priority,
       category,
       problemType,
-      assetId: installedMachine?.id || (machineScope === "other" ? trim(body.assetId) : null) || null,
+      assetId: installedMachine?.id || null,
       environmentName,
       requesterName,
       contactInfo: contactInfo || null,
-      requesterDepartment: trim(body.department) || null,
+      requesterDepartment: department || null,
       requesterExtension: extension || null,
       relatedAssetText: relatedAssetInfo || null,
       machineScope,
-      location: trim(body.location) || null,
+      location: location || null,
       source: "public_support_form",
       notes
     },
     user: { name: "Formulário público" }
   });
+
+  await applyChecklistTemplateOnCreate(serviceOrder);
 
   if (serviceOrder.assetId) {
     try {
@@ -247,10 +241,41 @@ export async function submitPublicServiceOrder(body) {
     }
   }
 
+  const trackingToken = createPublicServiceOrderTrackingToken(serviceOrder.id);
+
   return {
     number: serviceOrder.number,
     createdAt: serviceOrder.createdAt,
     priority: serviceOrder.priority,
-    status: serviceOrder.status
+    status: serviceOrder.status,
+    trackingToken
+  };
+}
+
+// So expoe o minimo necessario pra alguem com o link acompanhar o proprio
+// chamado - nunca o id interno (o token carrega o id, mas a resposta HTTP
+// nunca o repete), nunca historico, tecnico, anexos ou dados de outras OS.
+export async function getPublicServiceOrderTracking(token) {
+  const serviceOrderId = verifyPublicServiceOrderTrackingToken(trim(token, 2000));
+  if (!serviceOrderId) {
+    throw notFoundError("Não foi possível localizar este chamado pelo link informado.");
+  }
+
+  const serviceOrder = await findServiceOrderById(serviceOrderId);
+  if (!serviceOrder) {
+    throw notFoundError("Não foi possível localizar este chamado pelo link informado.");
+  }
+
+  const settings = await getServiceOrderSettings();
+  const sla = calculateServiceOrderSla(serviceOrder, settings);
+
+  return {
+    number: serviceOrder.number,
+    title: serviceOrder.title,
+    status: serviceOrder.status,
+    priority: serviceOrder.priority,
+    createdAt: serviceOrder.createdAt,
+    updatedAt: serviceOrder.updatedAt,
+    sla: { status: sla.status, dueAt: sla.dueAt }
   };
 }

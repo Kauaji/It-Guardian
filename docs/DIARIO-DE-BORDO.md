@@ -4,6 +4,103 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-21 - Tela publica de abertura de chamado: correcao de seguranca e experiencia completa
+
+### Contexto
+
+- pedido explicito do usuario (prompt de 14 partes): evoluir
+  `/abrir-chamado` para uma experiencia mais profissional e completa
+  (layout melhor, identificacao de maquina, prioridade calculada no
+  backend, resumo antes de enviar, tela de sucesso com numero de OS,
+  acompanhamento por token, protecao contra spam, integracao com
+  SLA/checklist, badge de origem no painel interno) sem reconstruir o
+  modulo de OS do zero;
+- auditoria (3 agentes de pesquisa em paralelo + 1 agente de validacao
+  de plano) confirmou que a base publica ja era solida - endpoints,
+  rate limiting, token de maquina assinado e redigido, calculo de SLA
+  identico ao interno - mas achou uma **vulnerabilidade de seguranca
+  real**, alem das lacunas do pedido;
+- branch `feature/public-service-request-professional-ui`, a partir de
+  `main` na ponta.
+
+### Vulnerabilidade corrigida: `assetId` bruto aceito sem verificacao
+
+Quando `machineScope === "other"` (controlado inteiramente pelo
+cliente), o backend aceitava um `assetId` enviado cru pelo proprio
+formulario e usava isso para colocar o ativo em manutencao e gravar
+historico - ou seja, qualquer pessoa anonima que soubesse ou
+adivinhasse um UUID de ativo valido conseguia mexer numa maquina que
+nao era dela, sem nenhuma autenticacao. Corrigido removendo o caso
+especial por completo (`assetId: installedMachine?.id || null`, sem
+mais nenhum caminho que aceite ID vindo do cliente): `assetId` agora
+so pode vir de um ativo resolvido via token de maquina verificado, nos
+dois `machineScope`. Confirmado que `startMaintenanceForAsset` ja e
+condicionado a `if (serviceOrder.assetId)` - com `null` a funcao nem e
+chamada, correcao completa e sem efeito colateral parcial. Coberto por
+teste de integracao dedicado (`machineScope` "other" com `assetId`
+forjado nao vincula nem coloca em manutencao).
+
+### Checklist automatico no caminho publico, sem criar import circular
+
+`submitPublicServiceOrder` passou a chamar
+`applyChecklistTemplateOnCreate`, igual ao caminho interno de criacao
+de OS - lacuna real, o formulario publico nunca aplicava checklist.
+Para nao criar um ciclo de import com `serviceOrderChecklistService.js`
+(que ja importava `resolveProblemTypeKey` de
+`publicServiceOrderService.js`), extraido
+`server/src/domain/problemTypes.js` com a logica pura compartilhada
+(`normalize`, `sanitizePriority`, `chooseHigherPriority`,
+`getActiveProblemTypes`, `resolveProblemTypeKey`).
+`publicServiceOrderService.js` reexporta essas funcoes para o teste de
+unidade existente continuar importando do mesmo lugar sem nenhuma
+mudanca. Verificado com carregamento direto do grafo de modulos do
+app antes de considerar resolvido.
+
+### Honeypot, limite de tamanho de campo e acompanhamento por token
+
+Campo invisivel (`website`) no formulario - se preenchido, o backend
+devolve sucesso fake no mesmo formato da resposta real (numero de OS
+formatado com uma sequencia fabricada, nao a numeracao real), mas sem
+gravar nada no banco. Campos de texto agora usam `trimString` com um
+teto por campo (reaproveitando o padrao ja usado em
+`maintenanceScriptRepository.js`), em vez de um `trim()` sem limite.
+Acompanhamento novo: `domain/publicServiceOrderTrackingToken.js`, JWT
+sem estado no mesmo padrao de `publicMachineToken.js`, mas com
+audience propria (`"public-support-tracking"`) para impedir que os
+dois tipos de token sejam trocados entre si mesmo compartilhando o
+mesmo segredo de assinatura. Endpoint novo
+`GET /api/public/service-orders/track/:token` devolve so os campos
+seguros (nunca o UUID interno da OS). Documentacao completa em
+[ABERTURA-PUBLICA-CHAMADOS.md](ABERTURA-PUBLICA-CHAMADOS.md) (novo).
+
+### Frontend: decomposicao em passos e badge de origem interno
+
+`PublicSupportRequest.jsx` (antes um unico arquivo com tudo) virou o
+orquestrador de um fluxo em passos - `PublicSupportForm.jsx`,
+`PublicSupportSummary.jsx` (resumo antes de enviar, passo novo),
+`PublicSupportSuccess.jsx` (sucesso + link de acompanhamento copiavel)
+e `PublicSupportMachineSummary.jsx`, com `publicSupportValidation.js`
+compartilhando a validacao client-side e o nome do campo honeypot.
+Campos "Acesso do AnyDesk/VNC/TeamViewer" (rotulos errados para dados
+que sempre foram nome da maquina/patrimonio/localizacao) renomeados
+nos dois lados - labels do formulario e o texto gravado em `notes`,
+para nao deixar tickets antigos e novos com prefixos inconsistentes.
+`ServiceOrderDetailsModal.jsx` ganhou um item "Origem" na aba Geral
+quando a OS veio do formulario publico.
+
+### Testes e validacao
+
+Integracao nova: `public-service-order.test.mjs` (9 casos - sem
+maquina vinculada, token de maquina valido vincula o ativo real, token
+invalido nao quebra o formulario, correcao de seguranca do
+`machineScope` "other", payload invalido e limite de campo, checklist
+aplicado, honeypot, limite de escrita, endpoint de acompanhamento
+seguro). Unidade nova: `publicServiceOrderTrackingToken.test.mjs`
+(round-trip + isolamento entre os dois tipos de token) e
+`publicSupportValidation.test.js` (client, 12 casos). Suite completa
+(unidade+integracao+client+lint+arquitetura+build) validada antes de
+considerar a rodada concluida.
+
 ## 2026-08-19 - Decima segunda rodada: Ativacao de Ponta a Ponta da Execucao Real de Scripts
 
 ### Contexto

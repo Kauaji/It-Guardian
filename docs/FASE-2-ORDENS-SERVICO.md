@@ -216,26 +216,13 @@ O codigo fica preparado para proximas evolucoes:
 
 ## Abertura publica de chamado
 
-A rota `/abrir-chamado` e sua alternativa `/solicitar-suporte` exibem uma tela isolada, sem sidebar e sem acesso ao painel tecnico.
+A rota `/abrir-chamado` e sua alternativa `/solicitar-suporte` exibem uma tela isolada, sem sidebar e sem acesso ao painel tecnico. O fluxo completo (formulario, resumo antes de enviar, tela de sucesso, acompanhamento por token, identificacao de maquina, protecao contra spam e o que fica publico vs. privado) esta detalhado em [ABERTURA-PUBLICA-CHAMADOS.md](ABERTURA-PUBLICA-CHAMADOS.md).
 
-O usuario final consegue apenas:
+Resumo rapido: o usuario final informa titulo, descricao, categoria, tipo de problema, solicitante, contato/ramal, setor, urgencia percebida (so informativa - a prioridade real e sempre calculada no backend) e dados da maquina relacionada; revisa tudo num passo de resumo antes de confirmar; e recebe o numero da OS mais um link de acompanhamento (`/chamado/:token`) que consulta só aquele chamado, sem login.
 
-- informar titulo, descricao, categoria, tipo de problema e solicitante;
-- informar contato, setor, ramal e dados simples da maquina/equipamento;
-- enviar a solicitacao;
-- receber o numero da OS criada.
+A identificacao de maquina usa um token JWT assinado gerado pelo instalador/agente (nao mais query params em texto puro) - `GET /api/public/machine-context` resolve o ativo real a partir desse token e devolve so `{id, name, hostname, environmentName}`, sem IP, serial ou usuario logado. Texto livre digitado para "outra maquina/equipamento" nunca vira um vinculo real de ativo.
 
-A tela usa `GET /api/public/support-options` para carregar categorias e tipos de problema ativos. Se nao houver configuracao, usa opcoes padrao.
-
-Ao enviar, `POST /api/public/service-orders` cria uma OS em `Aberta`, com origem `public_support_form`, prioridade calculada inicialmente e resposta limitada ao numero, data, prioridade e status.
-
-Para o futuro, o instalador/agente do IT Guardian podera criar um atalho na area de trabalho que abre:
-
-```txt
-https://dominio-do-it-guardian/abrir-chamado?assetId=...&hostname=...&ambiente=...
-```
-
-Esse atalho podera preencher automaticamente identificador da maquina, hostname, IP, usuario logado e ambiente sem expor o inventario completo.
+Ao enviar, `POST /api/public/service-orders` cria uma OS em `Aberta`, com origem `public_support_form`, prioridade calculada inicialmente e resposta limitada ao numero, data, prioridade, status e token de acompanhamento.
 
 ## Evolucao profissional (SLA, checklist, anexos, reabertura, avaliacao)
 

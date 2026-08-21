@@ -205,7 +205,7 @@ function normalizeServiceOrderSettings(value = {}) {
   };
 }
 
-function formatServiceOrderNumber(sequence, settings = defaultServiceOrderSettings) {
+export function formatServiceOrderNumber(sequence, settings = defaultServiceOrderSettings) {
   const { prefix, useYear, useMonth } = normalizeServiceOrderSettings(settings).numberFormat;
   const padded = String(sequence).padStart(serviceOrderNumberDigits, "0");
   const now = new Date();
