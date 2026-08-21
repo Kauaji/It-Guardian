@@ -183,7 +183,12 @@ test("com a flag ligada, oferta e resposta SDP sao relayadas com autenticacao pr
     { headers: { authorization: `Bearer ${enrollment.token}`, "x-remote-session-token": agentSessionToken } }
   );
   assert.equal(agentReadsOffer.status, 200);
-  assert.equal((await agentReadsOffer.json()).offer, validOffer.trim());
+  // sanitizeSdp reconstitui o CRLF final (removido pelo trim() de
+  // sanitizacao) porque SDP exige toda linha terminada em CRLF, inclusive a
+  // ultima -- um parser mais rigoroso (o do Chrome, por exemplo) rejeita o
+  // SDP inteiro sem isso. validOffer ja termina em \r\n, entao o valor
+  // devolvido bate com o original, nao com a versao aparada.
+  assert.equal((await agentReadsOffer.json()).offer, validOffer);
 
   const agentAnswers = await fetch(
     `${baseUrl}/api/agents/remote-assistance/sessions/${sessionId}/webrtc/answer`,
@@ -204,7 +209,7 @@ test("com a flag ligada, oferta e resposta SDP sao relayadas com autenticacao pr
     { headers: { cookie, "x-remote-viewer-token": viewerToken } }
   );
   assert.equal(viewerReadsAnswer.status, 200);
-  assert.equal((await viewerReadsAnswer.json()).answer, validAnswer.trim());
+  assert.equal((await viewerReadsAnswer.json()).answer, validAnswer);
 
   const wrongAgentToken = await fetch(
     `${baseUrl}/api/agents/remote-assistance/sessions/${sessionId}/webrtc/offer`,

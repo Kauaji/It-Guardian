@@ -166,9 +166,33 @@ export function getRemoteAssistanceConfig(env = process.env) {
       enabled: webrtcEnabled,
       stunUrls: parseIceUrls(env.REMOTE_ASSISTANCE_STUN_URLS, { schemes: ["stun:", "stuns:"] }),
       hasTurn: parseIceUrls(env.REMOTE_ASSISTANCE_TURN_URL, { maxEntries: 1, schemes: ["turn:", "turns:"] }).length > 0,
+      iceServers: buildIceServers(env),
       maxBitrateKbps: boundedInteger(env.REMOTE_ASSISTANCE_MAX_BITRATE_KBPS, 2500, 500, 6000)
     }
   };
+}
+
+/**
+ * Lista pronta de RTCIceServer (STUN + TURN, com credenciais quando
+ * configuradas) para o navegador e o agente montarem a mesma RTCConfiguration
+ * sem duplicar a leitura de env vars em dois lugares. Sem
+ * REMOTE_ASSISTANCE_TURN_URL configurado, a lista fica so com STUN -- valido
+ * para redes sem NAT simetrico, mas sem garantia de conectividade universal
+ * (isso exigiria um servidor TURN de verdade, que e infraestrutura separada,
+ * fora do que o deploy serverless atual hospeda).
+ */
+function buildIceServers(env) {
+  const servers = parseIceUrls(env.REMOTE_ASSISTANCE_STUN_URLS, { schemes: ["stun:", "stuns:"] })
+    .map((urls) => ({ urls }));
+  const turnUrls = parseIceUrls(env.REMOTE_ASSISTANCE_TURN_URL, { maxEntries: 1, schemes: ["turn:", "turns:"] });
+  if (turnUrls.length) {
+    servers.push({
+      urls: turnUrls[0],
+      username: String(env.REMOTE_ASSISTANCE_TURN_USERNAME || "").trim().slice(0, 200) || undefined,
+      credential: String(env.REMOTE_ASSISTANCE_TURN_CREDENTIAL || "").trim().slice(0, 200) || undefined
+    });
+  }
+  return servers;
 }
 
 export function isRemoteScriptExecutionEnabled(env = process.env) {

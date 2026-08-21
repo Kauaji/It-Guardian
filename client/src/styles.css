@@ -7106,7 +7106,8 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
-.remote-assistance-screen img {
+.remote-assistance-screen img,
+.remote-assistance-screen video {
   width: 100%;
   height: 100%;
   object-fit: contain;

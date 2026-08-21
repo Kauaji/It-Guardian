@@ -198,7 +198,8 @@ test("assistencia remota exige autorizacao, consentimento e mantem frames efemer
     viewerPollMs: 1000,
     idleTimeoutSeconds: 40,
     reconnectGraceSeconds: 30,
-    webrtcEnabled: false
+    webrtcEnabled: false,
+    iceServers: []
   });
 
   const orderResponse = await fetch(`${baseUrl}/api/service-orders`, {
@@ -342,6 +343,8 @@ test("assistencia remota exige autorizacao, consentimento e mantem frames efemer
   assert.ok(commands.commands.some((command) => command.type === "select_monitor"));
   assert.ok(commands.commands.some((command) => command.type === "mouse_move"));
   assert.ok(commands.commands.some((command) => command.type === "block_input" && command.enabled === true));
+  assert.equal(commands.transport, "snapshot_polling");
+  assert.deepEqual(commands.iceServers, []);
 
   const frame = "data:image/jpeg;base64,/9j/2Q==";
   const frameResponse = await fetch(

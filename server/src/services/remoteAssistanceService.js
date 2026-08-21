@@ -309,7 +309,8 @@ export function getRemoteAssistancePublicConfig() {
     viewerPollMs: config.viewerPollMs,
     idleTimeoutSeconds: config.idleTimeoutSeconds,
     reconnectGraceSeconds: config.reconnectGraceSeconds,
-    webrtcEnabled: config.webrtc.enabled
+    webrtcEnabled: config.webrtc.enabled,
+    iceServers: config.webrtc.enabled ? config.webrtc.iceServers : []
   };
 }
 
@@ -791,6 +792,12 @@ export async function getRemoteAssistanceCommandsForAgent({
       captureIntervalMs: config.agentCaptureMs
     },
     chatMessages: await getRelayChatMessages(session.id),
+    // O agente so decide iniciar o processo auxiliar de WebRTC quando o
+    // proprio transporte negociado for "webrtc" -- com a flag desligada ou
+    // sem pedido do visualizador, o agente continua no caminho JPEG de
+    // sempre, sem nenhuma mudanca de comportamento.
+    transport: config.transport,
+    iceServers: config.transport === "webrtc" ? config.webrtc.iceServers : [],
     ended: false
   };
 }

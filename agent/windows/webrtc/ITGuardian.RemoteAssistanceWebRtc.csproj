@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Processo separado e isolado do coletor principal (ITGuardian.exe, que
+    continua compilado via csc.exe/net48 sem nenhuma mudanca). Video real via
+    WebRTC precisa de um codificador: usamos SIPSorceryMedia.Encoders
+    (VpxVideoEncoder/VP8, gerenciado, sem depender do Media Foundation nem de
+    nenhum codec externo instalado na maquina) alimentado com os quadros BGR
+    que capturamos nos mesmos moldes do coletor principal (GDI+). Alveja
+    net10.0-windows (LTS atual) para poder usar a versao mais recente do
+    SIPSorcery, que corrige duas vulnerabilidades de alta severidade
+    presentes na serie 8.x. Publicar como self-contained evita depender de o
+    usuario ja ter o .NET 10 instalado; o coletor principal so inicia este
+    processo quando uma sessao pede transporte webrtc, e uma falha aqui nunca
+    derruba o heartbeat/inventario/scripts nem o caminho de captura por JPEG
+    ja comprovado em producao: os dois transportes sao processos
+    completamente separados.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.17763.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>ITGuardianRemoteAssistanceWebRtc</AssemblyName>
+    <RootNamespace>ITGuardian.RemoteAssistanceWebRtc</RootNamespace>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SIPSorcery" Version="10.0.16" />
+    <PackageReference Include="SIPSorceryMedia.Encoders" Version="10.0.4" />
+  </ItemGroup>
+
+</Project>

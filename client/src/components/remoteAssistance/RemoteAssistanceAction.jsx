@@ -28,10 +28,12 @@ import {
   fetchRemoteAssistanceEvents,
   fetchRemoteAssistanceFrame,
   fetchRemoteAssistanceSession,
+  fetchRemoteAssistanceWebrtcAnswer,
   reauthenticateRemoteAssistance,
   selectRemoteAssistanceMonitor,
   sendRemoteAssistanceChatMessage,
   sendRemoteAssistanceInput,
+  sendRemoteAssistanceWebrtcOffer,
   updateRemoteAssistanceCapture,
   updateRemoteAssistanceControl
 } from "../../api.js";
@@ -75,6 +77,31 @@ function formatChatTime(value) {
 
 function notifyResult(notify, message, type = "ok") {
   if (typeof notify === "function") notify(message, type);
+}
+
+/**
+ * Sem sinalizacao trickle no servidor (a oferta/resposta viajam como um SDP
+ * unico por poll), a negociacao so pode acontecer depois que a coleta de
+ * candidatos ICE termina -- por isso espera iceGatheringState virar
+ * "complete" em vez de mandar candidatos avulsos conforme chegam. O mesmo
+ * padrao e usado do lado do agente.
+ */
+function waitForIceGatheringComplete(peerConnection, timeoutMs = 8000) {
+  if (peerConnection.iceGatheringState === "complete") return Promise.resolve();
+  return new Promise((resolve) => {
+    function checkState() {
+      if (peerConnection.iceGatheringState === "complete") {
+        peerConnection.removeEventListener("icegatheringstatechange", checkState);
+        window.clearTimeout(timer);
+        resolve();
+      }
+    }
+    const timer = window.setTimeout(() => {
+      peerConnection.removeEventListener("icegatheringstatechange", checkState);
+      resolve();
+    }, timeoutMs);
+    peerConnection.addEventListener("icegatheringstatechange", checkState);
+  });
 }
 
 function RemoteStatus({ session }) {
@@ -127,7 +154,10 @@ export default function RemoteAssistanceAction({
   const [maximized, setMaximized] = useState(false);
   const [chatOpen, setChatOpen] = useState(true);
   const [keyboardLocked, setKeyboardLocked] = useState(false);
+  const [webrtcTrackActive, setWebrtcTrackActive] = useState(false);
   const imageRef = useRef(null);
+  const videoElementRef = useRef(null);
+  const peerConnectionRef = useRef(null);
   const lastMouseMoveRef = useRef(0);
   const chatLogRef = useRef(null);
 
@@ -172,6 +202,7 @@ export default function RemoteAssistanceAction({
   );
   const viewerPollMs = config?.viewerPollMs || defaultViewerPollMs;
   const paused = Boolean(session?.paused);
+  const isWebrtc = session?.transport === "webrtc";
   const connectionState = session?.connectionState || session?.status;
   const frameStale = Boolean(
     session?.status === "active" && !paused && isRemoteAssistanceFrameStale(metrics, viewerPollMs)
@@ -250,6 +281,71 @@ export default function RemoteAssistanceAction({
     const frameTimer = window.setInterval(refreshFrame, viewerPollMs);
     return () => window.clearInterval(frameTimer);
   }, [open, refreshFrame, session?.paused, session?.status, viewerPollMs]);
+
+  useEffect(() => {
+    if (
+      !open ||
+      session?.status !== "active" ||
+      session?.transport !== "webrtc" ||
+      session?.paused ||
+      !viewerToken
+    ) {
+      return undefined;
+    }
+    let cancelled = false;
+    let answerPollTimer = null;
+    const peerConnection = new RTCPeerConnection({ iceServers: config?.iceServers || [] });
+    peerConnectionRef.current = peerConnection;
+    setWebrtcTrackActive(false);
+
+    peerConnection.ontrack = (event) => {
+      if (videoElementRef.current && event.streams[0]) {
+        videoElementRef.current.srcObject = event.streams[0];
+      }
+      setWebrtcTrackActive(true);
+    };
+    peerConnection.addTransceiver("video", { direction: "recvonly" });
+
+    async function negotiate() {
+      try {
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        await waitForIceGatheringComplete(peerConnection);
+        if (cancelled) return;
+        await sendRemoteAssistanceWebrtcOffer({
+          token,
+          sessionId: session.id,
+          viewerToken,
+          sdp: peerConnection.localDescription.sdp
+        });
+        answerPollTimer = window.setInterval(async () => {
+          if (cancelled || peerConnection.signalingState !== "have-local-offer") return;
+          try {
+            const result = await fetchRemoteAssistanceWebrtcAnswer({ token, sessionId: session.id, viewerToken });
+            if (result.answer && !cancelled && peerConnection.signalingState === "have-local-offer") {
+              window.clearInterval(answerPollTimer);
+              await peerConnection.setRemoteDescription({ type: "answer", sdp: result.answer });
+            }
+          } catch (answerError) {
+            if (!cancelled) setError(answerError.message);
+          }
+        }, 1000);
+      } catch (negotiationError) {
+        if (!cancelled) setError(negotiationError.message);
+      }
+    }
+    negotiate();
+
+    return () => {
+      cancelled = true;
+      if (answerPollTimer) window.clearInterval(answerPollTimer);
+      peerConnection.ontrack = null;
+      peerConnection.close();
+      if (peerConnectionRef.current === peerConnection) peerConnectionRef.current = null;
+      if (videoElementRef.current) videoElementRef.current.srcObject = null;
+      setWebrtcTrackActive(false);
+    };
+  }, [config?.iceServers, open, session?.id, session?.paused, session?.status, session?.transport, token, viewerToken]);
 
   useEffect(() => {
     if (chatLogRef.current) chatLogRef.current.scrollTop = chatLogRef.current.scrollHeight;
@@ -686,16 +782,34 @@ export default function RemoteAssistanceAction({
               onKeyUp={(event) => handleKey(event, "up")}
               aria-label="Tela remota"
             >
-              {frame ? <img src={frame} alt={`Tela remota de ${displayName}`} draggable="false" /> : (
+              {isWebrtc ? (
+                <video
+                  ref={videoElementRef}
+                  className="remote-assistance-video"
+                  autoPlay
+                  playsInline
+                  muted
+                  style={{ display: webrtcTrackActive ? "block" : "none" }}
+                />
+              ) : null}
+              {isWebrtc && !webrtcTrackActive ? (
+                <div className="remote-assistance-waiting">
+                  <RefreshCw size={24} className="spin" />
+                  <strong>{remoteAssistanceStatusLabel(connectionState)}</strong>
+                  <span>Negociando conexao WebRTC com o agente...</span>
+                </div>
+              ) : !isWebrtc && frame ? (
+                <img src={frame} alt={`Tela remota de ${displayName}`} draggable="false" />
+              ) : !isWebrtc ? (
                 <div className="remote-assistance-waiting">
                   {session.status === "active" ? <RefreshCw size={24} className="spin" /> : <ShieldCheck size={28} />}
                   <strong>{remoteAssistanceStatusLabel(connectionState)}</strong>
                   <span>{session.status === "waiting_consent" ? "Aguardando resposta na maquina." : "A imagem aparecera quando o agente iniciar a transmissao."}</span>
                 </div>
-              )}
+              ) : null}
               {changingMonitor && <span className="remote-assistance-loading">Trocando monitor...</span>}
               {paused && !changingMonitor && <span className="remote-assistance-loading">Visualizacao pausada</span>}
-              {frameStale && !changingMonitor && !paused && (
+              {!isWebrtc && frameStale && !changingMonitor && !paused && (
                 <span className="remote-assistance-loading">Quadro atrasado - tentando atualizar...</span>
               )}
             </div>

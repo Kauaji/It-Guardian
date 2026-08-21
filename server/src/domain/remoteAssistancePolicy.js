@@ -9,9 +9,8 @@ export function assertRemoteAssistanceEnabled(config) {
 }
 
 /**
- * O transporte WebRTC e preparado (contrato de signaling) mas permanece
- * inativo ate REMOTE_ASSISTANCE_WEBRTC_ENABLED=true. Nenhum viewer/agente
- * real usa este caminho ainda; existe para futura evolucao sem redesenho.
+ * O transporte WebRTC fica inativo ate REMOTE_ASSISTANCE_WEBRTC_ENABLED=true
+ * (teto de FPS/latencia do snapshot polling continua sendo o padrao seguro).
  */
 export function assertWebrtcEnabled(config) {
   assertRemoteAssistanceEnabled(config);
@@ -24,12 +23,19 @@ export function assertWebrtcEnabled(config) {
 
 const MAX_SDP_LENGTH = 20000;
 
-/** Validacao minima de forma (tamanho e prefixo de versao SDP), nao semantica. */
+/**
+ * Validacao minima de forma (tamanho e prefixo de versao SDP), nao semantica.
+ * SDP exige toda linha terminada em CRLF, inclusive a ultima; trim() acima
+ * remove justamente esse terminador final, e um parser mais rigoroso (o do
+ * Chrome, por exemplo) rejeita o SDP inteiro por causa disso -- confirmado
+ * testando uma negociacao real de ponta a ponta -- entao ele e sempre
+ * reposto antes de devolver.
+ */
 export function sanitizeSdp(value) {
   const sdp = String(value || "").trim();
   if (!sdp || sdp.length > MAX_SDP_LENGTH) return null;
   if (!sdp.startsWith("v=0")) return null;
-  return sdp;
+  return sdp + "\r\n";
 }
 
 export function normalizeRequestedMode(value, config, canControl) {

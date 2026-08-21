@@ -132,6 +132,22 @@ export function fetchRemoteAssistanceFrame({ token, sessionId, viewerToken }) {
   });
 }
 
+export function sendRemoteAssistanceWebrtcOffer({ token, sessionId, viewerToken, sdp }) {
+  return apiFetch(`/remote-assistance/sessions/${encodeURIComponent(sessionId)}/webrtc/offer`, {
+    token,
+    method: "POST",
+    headers: { "x-remote-viewer-token": viewerToken },
+    body: JSON.stringify({ sdp })
+  });
+}
+
+export function fetchRemoteAssistanceWebrtcAnswer({ token, sessionId, viewerToken }) {
+  return apiFetch(`/remote-assistance/sessions/${encodeURIComponent(sessionId)}/webrtc/answer`, {
+    token,
+    headers: { "x-remote-viewer-token": viewerToken }
+  });
+}
+
 export function selectRemoteAssistanceMonitor({ token, sessionId, viewerToken, monitorId }) {
   return apiFetch(`/remote-assistance/sessions/${encodeURIComponent(sessionId)}/monitor`, {
     token,

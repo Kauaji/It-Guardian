@@ -9,6 +9,7 @@ import {
   isAgentFresh,
   isSessionActive,
   normalizeRequestedMode,
+  sanitizeSdp,
   stepAdaptiveQuality
 } from "./remoteAssistancePolicy.js";
 import {
@@ -159,10 +160,45 @@ test("URLs de STUN/TURN sao filtradas por esquema e limitadas em quantidade", ()
     ENABLE_REMOTE_ASSISTANCE: "true",
     REMOTE_ASSISTANCE_ENV: "lab",
     REMOTE_ASSISTANCE_STUN_URLS: "stun:stun.lab.local:3478, javascript:alert(1), stun:stun2.lab.local:3478",
-    REMOTE_ASSISTANCE_TURN_URL: "turn:turn.lab.local:3478"
+    REMOTE_ASSISTANCE_TURN_URL: "turn:turn.lab.local:3478",
+    REMOTE_ASSISTANCE_TURN_USERNAME: "tecnico",
+    REMOTE_ASSISTANCE_TURN_CREDENTIAL: "segredo-turn"
   });
   assert.deepEqual(config.webrtc.stunUrls, ["stun:stun.lab.local:3478", "stun:stun2.lab.local:3478"]);
   assert.equal(config.webrtc.hasTurn, true);
+  assert.deepEqual(config.webrtc.iceServers, [
+    { urls: "stun:stun.lab.local:3478" },
+    { urls: "stun:stun2.lab.local:3478" },
+    { urls: "turn:turn.lab.local:3478", username: "tecnico", credential: "segredo-turn" }
+  ]);
+});
+
+test("sem TURN configurado, a lista de ICE servers fica so com STUN", () => {
+  const config = getRemoteAssistanceConfig({
+    ENABLE_REMOTE_ASSISTANCE: "true",
+    REMOTE_ASSISTANCE_ENV: "lab",
+    REMOTE_ASSISTANCE_STUN_URLS: "stun:stun.lab.local:3478"
+  });
+  assert.deepEqual(config.webrtc.iceServers, [{ urls: "stun:stun.lab.local:3478" }]);
+});
+
+test("sanitizeSdp sempre devolve o SDP terminado em CRLF, mesmo apos o trim de sanitizacao", () => {
+  // SDP exige toda linha terminada em CRLF, inclusive a ultima. O trim() de
+  // sanitizacao remove justamente esse terminador final -- sem repor, um
+  // parser mais rigoroso (o do Chrome, por exemplo) rejeita o SDP inteiro.
+  // Confirmado com uma negociacao WebRTC real de ponta a ponta.
+  const withTrailingCrlf = "v=0\r\no=- 1 1 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\n";
+  assert.equal(sanitizeSdp(withTrailingCrlf), withTrailingCrlf);
+
+  const withoutTrailingCrlf = "v=0\r\no=- 1 1 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0";
+  assert.equal(sanitizeSdp(withoutTrailingCrlf), withoutTrailingCrlf + "\r\n");
+
+  const withSurroundingWhitespace = "  \n" + withTrailingCrlf + "  \n";
+  assert.equal(sanitizeSdp(withSurroundingWhitespace), withTrailingCrlf);
+
+  assert.equal(sanitizeSdp(""), null);
+  assert.equal(sanitizeSdp("nao comeca com v=0\r\n"), null);
+  assert.equal(sanitizeSdp("v=0\r\n" + "a".repeat(20000)), null);
 });
 
 test("auto consentimento nunca e aceito em deploy publico", () => {

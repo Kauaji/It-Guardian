@@ -15,3 +15,6 @@ tmp/
 installers/windows-collector/ITGuardian.exe
 installers/windows-collector/it-guardian.ico
 installers/windows-collector/vendor/
+installers/windows-collector/webrtc-publish/
+agent/windows/webrtc/bin/
+agent/windows/webrtc/obj/

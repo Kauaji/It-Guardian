@@ -40,6 +40,14 @@ Source: "it-guardian.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\agent\windows\diagnose-agent.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "Finalize-CollectorInstall.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "Uninstall-Collector.ps1"; DestDir: "{app}"; Flags: ignoreversion
+#ifdef WebrtcHelperPath
+; Processo auxiliar opcional de video WebRTC (ver build-installer.ps1). Sem
+; o SDK do .NET disponivel para quem gera o instalador, este define nunca
+; chega a existir e o instalador simplesmente sai sem este arquivo -- o
+; coletor ja trata a ausencia dele como um aviso, caindo de volta no
+; transporte JPEG de sempre, nunca como uma falha de instalacao.
+Source: "{#WebrtcHelperPath}"; DestDir: "{app}"; Flags: ignoreversion
+#endif
 
 [Icons]
 Name: "{commondesktop}\Abrir chamado - IT Guardian"; Filename: "{code:GetSupportUrl}"; WorkingDir: "{app}"; IconFilename: "{app}\ITGuardian.exe"

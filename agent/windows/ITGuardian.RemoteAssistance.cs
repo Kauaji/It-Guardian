@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -79,7 +80,16 @@ namespace ITGuardian.Windows
         public bool capturePaused { get; set; }
         public RemoteAssistanceQualityHint qualityHint { get; set; }
         public List<RemoteAssistanceChatMessage> chatMessages { get; set; }
+        public string transport { get; set; }
+        public List<RemoteAssistanceIceServer> iceServers { get; set; }
         public bool ended { get; set; }
+    }
+
+    internal sealed class RemoteAssistanceIceServer
+    {
+        public string urls { get; set; }
+        public string username { get; set; }
+        public string credential { get; set; }
     }
 
     internal sealed class RemoteAssistanceChatMessage
@@ -121,6 +131,12 @@ namespace ITGuardian.Windows
         public object payload { get; set; }
     }
 
+    internal sealed class RemoteAssistanceStartWebrtcPayload
+    {
+        public string monitorId { get; set; }
+        public List<RemoteAssistanceIceServer> iceServers { get; set; }
+    }
+
     internal sealed class LocalBrokerResponse
     {
         public bool ok { get; set; }
@@ -158,6 +174,7 @@ namespace ITGuardian.Windows
         private readonly AgentConfig config;
         private readonly object tokenLock = new object();
         private readonly Dictionary<string, string> sessionTokens = new Dictionary<string, string>();
+        private readonly Dictionary<string, Process> webrtcProcesses = new Dictionary<string, Process>();
         private volatile bool stopping;
         private Thread serverThread;
 
@@ -273,13 +290,91 @@ namespace ITGuardian.Windows
                 return GetForSession<RemoteAssistanceCommandResponse>(request.sessionId, "commands");
             if (action == "chat")
                 return PostForSession(request.sessionId, "chat", ConvertPayload<RemoteAssistanceChatPayload>(request.payload, serializer));
+            if (action == "start_webrtc")
+            {
+                StartWebrtc(request.sessionId, ConvertPayload<RemoteAssistanceStartWebrtcPayload>(request.payload, serializer));
+                return new Dictionary<string, object> { { "started", true } };
+            }
             if (action == "end")
             {
                 object result = PostForSession(request.sessionId, "end", new Dictionary<string, object>());
                 lock (tokenLock) sessionTokens.Remove(request.sessionId);
+                StopWebrtc(request.sessionId);
                 return result;
             }
             throw new InvalidOperationException("Acao local nao permitida.");
+        }
+
+        /// <summary>
+        /// Inicia (uma unica vez por sessao) o processo auxiliar de video
+        /// WebRTC, isolado do coletor principal. So o broker (nao o
+        /// controlador da bandeja, que roda do lado da sessao interativa)
+        /// tem acesso ao token efemero real da sessao -- por isso o
+        /// lancamento do processo auxiliar, que precisa desse token, mora
+        /// aqui, e nunca atravessa o pipe local em texto puro.
+        /// </summary>
+        private void StartWebrtc(string sessionId, RemoteAssistanceStartWebrtcPayload payload)
+        {
+            lock (tokenLock)
+            {
+                Process existing;
+                if (webrtcProcesses.TryGetValue(sessionId, out existing) && !existing.HasExited) return;
+            }
+            string exePath = Path.Combine(
+                Path.GetDirectoryName(typeof(RemoteAssistanceBroker).Assembly.Location) ?? string.Empty,
+                "ITGuardianRemoteAssistanceWebRtc.exe");
+            if (!File.Exists(exePath))
+            {
+                Program.WriteLog("WARN", "Processo auxiliar de WebRTC nao encontrado (" + exePath + "); a sessao permanece no transporte JPEG.");
+                return;
+            }
+            JavaScriptSerializer serializer = new JavaScriptSerializer();
+            serializer.MaxJsonLength = 2 * 1024 * 1024;
+            string paramsJson = serializer.Serialize(new Dictionary<string, object>
+            {
+                { "ServerUrl", config.serverUrl },
+                { "SessionId", sessionId },
+                { "BearerToken", config.agentToken },
+                { "SessionToken", TokenFor(sessionId) },
+                { "MonitorId", payload != null ? payload.monitorId : null },
+                { "IceServers", payload != null ? payload.iceServers : null }
+            });
+            try
+            {
+                ProcessStartInfo startInfo = new ProcessStartInfo
+                {
+                    FileName = exePath,
+                    UseShellExecute = false,
+                    RedirectStandardInput = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+                Process process = Process.Start(startInfo);
+                process.StandardInput.WriteLine(paramsJson);
+                process.StandardInput.Flush();
+                lock (tokenLock) webrtcProcesses[sessionId] = process;
+                Program.WriteLog("INFO", "Processo auxiliar de WebRTC iniciado para a sessao " + sessionId + ".");
+            }
+            catch (Exception error)
+            {
+                Program.WriteLog("WARN", "Falha ao iniciar o processo auxiliar de WebRTC: " + error.Message);
+            }
+        }
+
+        private void StopWebrtc(string sessionId)
+        {
+            Process process;
+            lock (tokenLock)
+            {
+                if (!webrtcProcesses.TryGetValue(sessionId, out process)) return;
+                webrtcProcesses.Remove(sessionId);
+            }
+            try
+            {
+                if (!process.HasExited) process.Kill();
+            }
+            catch { }
         }
 
         private object Pending()
@@ -369,6 +464,9 @@ namespace ITGuardian.Windows
         public void Dispose()
         {
             stopping = true;
+            List<string> activeWebrtcSessions;
+            lock (tokenLock) activeWebrtcSessions = new List<string>(webrtcProcesses.Keys);
+            foreach (string sessionId in activeWebrtcSessions) StopWebrtc(sessionId);
             try
             {
                 using (NamedPipeClientStream wake = new NamedPipeClientStream(
@@ -744,6 +842,7 @@ namespace ITGuardian.Windows
         private volatile bool polling;
         private volatile bool streaming;
         private volatile bool capturePaused;
+        private volatile bool webrtcRequested;
         private string activeSessionId;
         private string selectedMonitorId;
         private string technicianName;
@@ -831,6 +930,7 @@ namespace ITGuardian.Windows
             activeSessionId = session.id;
             selectedMonitorId = primary;
             technicianName = session.technicianName;
+            webrtcRequested = false;
             ShowIndicator(session.technicianName, controlAllowed);
             StartStreaming();
         }
@@ -960,7 +1060,38 @@ namespace ITGuardian.Windows
                         MinCaptureIntervalMs,
                         MaxCaptureIntervalMs);
 
-                    if (!capturePaused) CaptureAndSendFrame();
+                    // Video por WebRTC roda num processo auxiliar separado (o
+                    // broker que o inicia e quem tem acesso ao token efemero
+                    // real); esta thread continua tratando comandos de
+                    // controle, chat e deteccao de fim normalmente, so pula a
+                    // captura/envio de JPEG. Se o processo auxiliar nao
+                    // existir nesta instalacao (ainda nao atualizada) ou nao
+                    // conseguir iniciar, o broker registra um aviso e a
+                    // sessao continua no transporte JPEG de sempre.
+                    bool useWebrtc = string.Equals(commands.transport, "webrtc", StringComparison.OrdinalIgnoreCase);
+                    if (useWebrtc && !webrtcRequested)
+                    {
+                        webrtcRequested = true;
+                        try
+                        {
+                            LocalRemoteAssistanceClient.Call<object>("start_webrtc", activeSessionId, new RemoteAssistanceStartWebrtcPayload
+                            {
+                                monitorId = selectedMonitorId,
+                                iceServers = commands.iceServers
+                            });
+                        }
+                        catch (Exception startError)
+                        {
+                            Program.WriteLog("WARN", "Falha ao solicitar transporte WebRTC; mantendo captura por JPEG: " + startError.Message);
+                            useWebrtc = false;
+                            webrtcRequested = false;
+                        }
+                    }
+                    // Se useWebrtc continuar true aqui, ou o processo auxiliar
+                    // ja foi solicitado com sucesso num ciclo anterior, ou a
+                    // chamada acima acabou de pedir para iniciar -- nos dois
+                    // casos ele e quem fica responsavel pelo video.
+                    if (!useWebrtc && !capturePaused) CaptureAndSendFrame();
                     consecutiveFailures = 0;
                 }
                 catch
@@ -1068,6 +1199,7 @@ namespace ITGuardian.Windows
             lastFrameHash = null;
             qualityHint = null;
             capturePaused = false;
+            webrtcRequested = false;
             RemoteInput.SetInputBlocked(false);
             trayIcon.Text = "IT Guardian ativo";
             if (indicator != null)
