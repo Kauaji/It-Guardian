@@ -4,6 +4,7 @@ import {
   Activity,
   AlertTriangle,
   Database,
+  FileBarChart,
   LogOut,
   Moon,
   PanelLeftClose,
@@ -116,6 +117,7 @@ import { useInventoryPersistence } from "./hooks/useInventoryPersistence.js";
 
 const InventoryBoard = lazy(() => import("./components/inventory/InventoryBoard.jsx"));
 const ServiceOrdersBoard = lazy(() => import("./components/serviceOrders/ServiceOrdersBoard.jsx"));
+const ReportsPage = lazy(() => import("./components/reports/ReportsPage.jsx"));
 const FloorPlansModule = lazy(() => import("./components/floorPlans/FloorPlansModule.jsx"));
 
 function readSystemMode() {
@@ -328,6 +330,7 @@ function Dashboard() {
   const canViewInventory = hasPermission(user, "inventory.view");
   const canViewMachine = hasPermission(user, "inventory.view_machine");
   const canViewServiceOrders = hasPermission(user, "service_orders.view");
+  const canViewReports = hasPermission(user, "reports.view");
   const canViewFloorPlans = hasPermission(user, "floor_plans.view");
   const {
     alertCorrelations,
@@ -411,8 +414,9 @@ function Dashboard() {
     if (canViewAlerts || canViewScripts || canViewPreventivePlans || canViewPreventiveAutomation) views.push("alerts");
     if (canViewServiceOrders) views.push("service-orders");
     if (canViewInventory) views.push("inventory");
+    if (canViewReports) views.push("reports");
     return views;
-  }, [canViewAlerts, canViewDashboard, canViewInventory, canViewPreventiveAutomation, canViewPreventivePlans, canViewScripts, canViewServiceOrders]);
+  }, [canViewAlerts, canViewDashboard, canViewInventory, canViewPreventiveAutomation, canViewPreventivePlans, canViewReports, canViewScripts, canViewServiceOrders]);
   const canManageInventory =
     hasPermission(user, "inventory.create_asset") ||
     hasPermission(user, "inventory.edit_asset") ||
@@ -2900,6 +2904,11 @@ function Dashboard() {
               <ClipboardList size={18} /> <span className="nav-label">Ordens de Serviço</span>
             </button>
           )}
+          {canViewReports && (
+            <button className={activeView === "reports" ? "nav-active" : ""} onClick={() => setActiveView("reports")}>
+              <FileBarChart size={18} /> <span className="nav-label">Relatórios</span>
+            </button>
+          )}
           {canViewInventory && (
             <button
               className={activeView === "inventory" ? "nav-active" : ""}
@@ -3188,6 +3197,14 @@ function Dashboard() {
               registerSimulation: hasPermission(user, "scripts.register_simulation")
             }}
             />
+          </Suspense>
+          </ViewErrorBoundary>
+        )}
+
+        {activeView === "reports" && canViewReports && (
+          <ViewErrorBoundary label="Relatórios" resetKey={activeView}>
+          <Suspense fallback={<ViewLoadingState />}>
+            <ReportsPage token={token} user={user} notify={notify} />
           </Suspense>
           </ViewErrorBoundary>
         )}

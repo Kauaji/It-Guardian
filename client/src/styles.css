@@ -19554,3 +19554,80 @@ button.dashboard-ranking-item.clickable:hover {
     transform: rotate(360deg);
   }
 }
+
+/* Modulo de Relatorios */
+
+.report-type-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.report-type-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+  text-align: left;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.report-type-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 34%, var(--border-strong));
+  transform: translateY(-1px);
+}
+
+.report-type-card.active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+}
+
+.report-type-card strong {
+  font-size: 14px;
+}
+
+.report-type-card span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.report-filters {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.report-filters input,
+.report-filters select {
+  min-width: 160px;
+}
+
+.report-actions {
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.report-warnings {
+  margin-bottom: 14px;
+}
+
+.report-breakdown {
+  margin-bottom: 14px;
+}
+
+.report-breakdown h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.report-breakdown-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

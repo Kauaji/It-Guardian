@@ -21,6 +21,33 @@ test("catálogo contém permissões críticas de alertas, scripts e preventivas"
   assert.equal(permissions.has("preventive_automation.run_prepare"), true);
 });
 
+test("catálogo contém as permissões de relatórios e o operador só recebe as 4 de visualização básica por padrão", () => {
+  const permissions = new Set(sharedPermissions.allPermissionIds);
+
+  for (const id of [
+    "reports.view",
+    "reports.export",
+    "reports.view_service_orders",
+    "reports.view_assets",
+    "reports.view_alerts",
+    "reports.view_scripts",
+    "reports.view_remote_assistance",
+    "reports.manage"
+  ]) {
+    assert.equal(permissions.has(id), true, `catálogo deveria conter ${id}`);
+  }
+
+  const operatorPermissions = new Set(sharedPermissions.roleDefaultPermissions.operator);
+  assert.equal(operatorPermissions.has("reports.view"), true);
+  assert.equal(operatorPermissions.has("reports.view_service_orders"), true);
+  assert.equal(operatorPermissions.has("reports.view_assets"), true);
+  assert.equal(operatorPermissions.has("reports.view_alerts"), true);
+  assert.equal(operatorPermissions.has("reports.export"), false);
+  assert.equal(operatorPermissions.has("reports.view_scripts"), false);
+  assert.equal(operatorPermissions.has("reports.view_remote_assistance"), false);
+  assert.equal(operatorPermissions.has("reports.manage"), false);
+});
+
 test("permissões efetivas bloqueiam admin.* para usuário não administrador", () => {
   const permissions = sharedPermissions.getEffectivePermissions({
     role: "operator",

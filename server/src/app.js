@@ -6,6 +6,7 @@ import authRoutes from "./routes/authRoutes.js";
 import deviceRoutes from "./routes/deviceRoutes.js";
 import alertRoutes from "./routes/alertRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
+import reportRoutes from "./routes/reportRoutes.js";
 import logRoutes from "./routes/logRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import permissionRoutes from "./routes/permissionRoutes.js";
@@ -140,6 +141,7 @@ export function createApp({ initializeOnRequest = false } = {}) {
   app.use("/api/devices", deviceRoutes);
   app.use("/api/alerts", alertRoutes);
   app.use("/api/dashboard", dashboardRoutes);
+  app.use("/api/reports", reportRoutes);
   app.use("/api/logs", logRoutes);
   app.use("/api/users", userRoutes);
   app.use("/api/permissions", permissionRoutes);

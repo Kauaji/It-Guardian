@@ -24,6 +24,7 @@ import { migration021ServiceOrderReopen } from "./021-service-order-reopen.js";
 import { migration022ServiceOrderChecklists } from "./022-service-order-checklists.js";
 import { migration023ServiceOrderAttachments } from "./023-service-order-attachments.js";
 import { migration024ServiceOrderFeedback } from "./024-service-order-feedback.js";
+import { migration025ReportExports } from "./025-report-exports.js";
 
 export const migrations = [
   migration001RuntimeFoundation,
@@ -49,7 +50,8 @@ export const migrations = [
   migration021ServiceOrderReopen,
   migration022ServiceOrderChecklists,
   migration023ServiceOrderAttachments,
-  migration024ServiceOrderFeedback
+  migration024ServiceOrderFeedback,
+  migration025ReportExports
 ];
 
 export async function runMigrations() {
