@@ -1,12 +1,14 @@
 import { ChevronDown, Clock3, Cpu, HardDrive, Info, MemoryStick, MoveRight } from "lucide-react";
 import { useDraggable } from "@dnd-kit/core";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import AssetTypeIcon from "./AssetTypeIcon.jsx";
 import { assetTypeLabel } from "./assetTypes.js";
 import PeripheralList from "./PeripheralList.jsx";
 import SelectionCheckbox from "./SelectionCheckbox.jsx";
+import StatusTooltip from "./StatusTooltip.jsx";
+import MetricBadge from "./metrics/MetricBadge.jsx";
+import MetricHistoryModal from "./metrics/MetricHistoryModal.jsx";
 import AutomationIndicatorDots from "../AutomationIndicatorDots.jsx";
-import { getMachineSourceLabel } from "./agentPresentation.js";
 import RemoteAssistanceAction from "../remoteAssistance/RemoteAssistanceAction.jsx";
 import PulseDot from "../ui/PulseDot.jsx";
 
@@ -81,6 +83,7 @@ function MachineCardContent({
 }) {
   const menuRef = useRef(null);
   const detailsRef = useRef(null);
+  const [metricModalTarget, setMetricModalTarget] = useState(null);
   const movePopoverId = `move-${machine.id}`;
   const detailsPopoverId = `peripherals-${machine.id}`;
   const moveMenuOpen = activePopoverId === movePopoverId;
@@ -110,6 +113,7 @@ function MachineCardContent({
   }
 
   return (
+    <>
     <article
       ref={setNodeRef}
       style={style}
@@ -141,26 +145,27 @@ function MachineCardContent({
         </div>
       </div>
       <div className="machine-badge-row">
-        <PulseDot tone={pulseTone(machine.status)} title={statusLabel(machine.status)} />
-        {isManualAsset ? (
-          <button
-            type="button"
-            className={`status-dot status-action ${statusTone(machine.status)}`}
-            disabled={!canManage}
-            onClick={(event) => {
-              event.stopPropagation();
-              setActivePopoverId(null);
-              onRefreshPing(machine);
-            }}
-            title="Atualizar ping"
-          >
-            {statusLabel(machine.status)}
-          </button>
-        ) : (
-          <span className={`status-dot ${statusTone(machine.status)}`}>{statusLabel(machine.status)}</span>
-        )}
+        <StatusTooltip status={machine.status} lastSeenAt={machine.lastSeenAt}>
+          <PulseDot tone={pulseTone(machine.status)} title={statusLabel(machine.status)} />
+          {isManualAsset ? (
+            <button
+              type="button"
+              className={`status-dot status-action ${statusTone(machine.status)}`}
+              disabled={!canManage}
+              onClick={(event) => {
+                event.stopPropagation();
+                setActivePopoverId(null);
+                onRefreshPing(machine);
+              }}
+              title="Atualizar ping"
+            >
+              {statusLabel(machine.status)}
+            </button>
+          ) : (
+            <span className={`status-dot ${statusTone(machine.status)}`}>{statusLabel(machine.status)}</span>
+          )}
+        </StatusTooltip>
         <span className="asset-type-badge">{typeLabel}</span>
-        <span className="machine-source-badge">{getMachineSourceLabel(machine)}</span>
         {isBackup && (
           <span className={`backup-badge ${backupInUse ? "in-use" : "available"}`}>
             {backupInUse ? "Backup em uso" : "Backup disponivel"}
@@ -192,24 +197,34 @@ function MachineCardContent({
         </div>
       ) : (
         <div className="machine-metrics">
-          <div>
+          <MetricBadge metric="cpu" deviceId={machine.id} token={token} onOpenModal={setMetricModalTarget}>
             <span><Cpu size={13} /> CPU</span>
             <strong className={metrics.cpu == null ? "" : metricTone(metrics.cpu)}>
               {metrics.cpu == null ? "--" : `${metrics.cpu}%`}
             </strong>
-          </div>
-          <div>
+          </MetricBadge>
+          <MetricBadge metric="ram" deviceId={machine.id} token={token} onOpenModal={setMetricModalTarget}>
             <span><MemoryStick size={13} /> RAM</span>
             <strong className={metrics.ram == null ? "" : metricTone(metrics.ram)}>
               {metrics.ram == null ? "--" : `${metrics.ram}%`}
             </strong>
-          </div>
+          </MetricBadge>
         </div>
       )}
 
       {showDetails && (
         <div className="machine-card-actions">
-          {!isManualAsset && metrics?.disk != null && <DiskIndicator value={metrics.disk} />}
+          {!isManualAsset && metrics?.disk != null && (
+            <MetricBadge
+              metric="disk"
+              deviceId={machine.id}
+              token={token}
+              onOpenModal={setMetricModalTarget}
+              className="metric-badge--disk"
+            >
+              <DiskIndicator value={metrics.disk} />
+            </MetricBadge>
+          )}
           <RemoteAssistanceAction
             asset={machine}
             alias={alias}
@@ -305,6 +320,14 @@ function MachineCardContent({
       )}
 
     </article>
+    <MetricHistoryModal
+      metric={metricModalTarget}
+      deviceId={machine.id}
+      deviceName={alias || machine.name}
+      token={token}
+      onClose={() => setMetricModalTarget(null)}
+    />
+    </>
   );
 }
 

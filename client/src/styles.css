@@ -6048,7 +6048,6 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
   line-height: 1.25;
 }
 
-.machine-source-badge,
 .agent-origin-badge {
   width: fit-content;
   border: 1px solid var(--border);
@@ -6143,7 +6142,8 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
   gap: 5px;
 }
 
-.machine-metrics div {
+.machine-metrics div,
+.machine-metrics .metric-badge {
   border-radius: 6px;
   border: 1px solid color-mix(in srgb, var(--segment-color, var(--status-info)) 12%, var(--border));
   background: color-mix(in srgb, var(--segment-color, var(--status-info)) 7%, var(--surface-soft));
@@ -6152,17 +6152,20 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
   gap: 1px;
 }
 
-.machine-metrics div:has(strong.ok) {
+.machine-metrics div:has(strong.ok),
+.machine-metrics .metric-badge:has(strong.ok) {
   border-color: rgba(22, 163, 74, 0.24);
   background: rgba(22, 163, 74, 0.11);
 }
 
-.machine-metrics div:has(strong.warning) {
+.machine-metrics div:has(strong.warning),
+.machine-metrics .metric-badge:has(strong.warning) {
   border-color: rgba(217, 119, 6, 0.3);
   background: rgba(217, 119, 6, 0.13);
 }
 
-.machine-metrics div:has(strong.danger) {
+.machine-metrics div:has(strong.danger),
+.machine-metrics .metric-badge:has(strong.danger) {
   border-color: rgba(220, 38, 38, 0.28);
   background: rgba(220, 38, 38, 0.12);
 }
@@ -8323,17 +8326,20 @@ table strong,
   color: #fed7aa;
 }
 
-:root[data-theme="dark"] .machine-metrics div:has(strong.ok) {
+:root[data-theme="dark"] .machine-metrics div:has(strong.ok),
+:root[data-theme="dark"] .machine-metrics .metric-badge:has(strong.ok) {
   background: rgba(34, 197, 94, 0.14);
   border-color: rgba(34, 197, 94, 0.26);
 }
 
-:root[data-theme="dark"] .machine-metrics div:has(strong.warning) {
+:root[data-theme="dark"] .machine-metrics div:has(strong.warning),
+:root[data-theme="dark"] .machine-metrics .metric-badge:has(strong.warning) {
   background: rgba(245, 158, 11, 0.16);
   border-color: rgba(245, 158, 11, 0.3);
 }
 
-:root[data-theme="dark"] .machine-metrics div:has(strong.danger) {
+:root[data-theme="dark"] .machine-metrics div:has(strong.danger),
+:root[data-theme="dark"] .machine-metrics .metric-badge:has(strong.danger) {
   background: rgba(248, 113, 113, 0.15);
   border-color: rgba(248, 113, 113, 0.28);
 }
@@ -19553,4 +19559,144 @@ button.dashboard-ranking-item.clickable:hover {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* Historico visual de metricas nos cards do inventario */
+
+.metric-badge {
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.metric-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.1);
+}
+
+.metric-badge:focus-visible {
+  outline: 0;
+  box-shadow: var(--focus-ring);
+}
+
+.metric-badge--disk {
+  border: none;
+  background: transparent;
+  padding: 0;
+  display: inline-flex;
+}
+
+.metric-history-popover,
+.status-tooltip-popover {
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 0;
+  z-index: 4600;
+  display: grid;
+  gap: 6px;
+  width: max-content;
+  min-width: 200px;
+  max-width: min(260px, 82vw);
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+  text-align: left;
+  font-weight: 400;
+  white-space: normal;
+}
+
+.metric-history-popover strong,
+.status-tooltip-popover strong {
+  display: block;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+}
+
+.metric-history-popover dl {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 3px 10px;
+  margin: 0;
+}
+
+.metric-history-popover dt {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.metric-history-popover dd {
+  margin: 0;
+  font-weight: 700;
+  font-size: 12px;
+  text-align: right;
+}
+
+.metric-history-popover-status {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.metric-history-popover-status.danger {
+  color: var(--status-danger);
+}
+
+.status-tooltip-trigger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.status-tooltip-trigger:focus-visible {
+  outline: 0;
+  box-shadow: var(--focus-ring);
+  border-radius: 6px;
+}
+
+.status-tooltip-popover p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-soft);
+}
+
+.metric-history-modal-periods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 12px;
+}
+
+.metric-history-modal-periods .secondary-action {
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: 12.5px;
+}
+
+.metric-history-modal-periods .secondary-action.active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  color: var(--accent-strong);
+}
+
+.metric-history-modal-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin-top: 12px;
+  font-size: 12.5px;
+  color: var(--text-soft);
+}
+
+.metric-history-modal-summary span {
+  font-weight: 600;
 }

@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import { query, withTransaction } from "../database.js";
 import { createAgentToken, hashAgentToken } from "../domain/agentToken.js";
 import { addAssetHistory } from "./assetHistoryRepository.js";
+import { insertAssetMetricSample } from "./assetMetricHistoryRepository.js";
+import { deriveMetricSampleFields, hasUsefulMetricPayload } from "../domain/assetMetricSample.js";
 
 function enrollmentFromRow(row) {
   return {
@@ -205,6 +207,16 @@ export async function recordAgentInventory({ enrollment, payload }) {
       `,
       [randomUUID(), payload.machineId, enrollment.id, payload.collectedAt, payload]
     );
+
+    if (hasUsefulMetricPayload(payload)) {
+      await insertAssetMetricSample({
+        assetId: payload.machineId,
+        collectedAt: payload.collectedAt,
+        ...deriveMetricSampleFields(payload),
+        db
+      });
+    }
+
     await db("UPDATE agent_enrollments SET last_used_at = NOW() WHERE id = $1", [enrollment.id]);
     if (enrollment.activationId) {
       await db(
