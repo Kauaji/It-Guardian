@@ -13,6 +13,7 @@ import {
   stepAdaptiveQuality
 } from "../domain/remoteAssistancePolicy.js";
 import { hasPermission } from "../permissions.js";
+import { resolveIceServers } from "./meteredTurnService.js";
 import {
   authenticateAgentToken,
   findAgentAssetByEnrollmentId,
@@ -284,8 +285,9 @@ async function assertViewerToken(session, viewerToken) {
   if (!validToken) throw publicError("Token de visualizacao invalido ou expirado.", 401);
 }
 
-export function getRemoteAssistancePublicConfig() {
+export async function getRemoteAssistancePublicConfig() {
   const config = getRemoteAssistanceConfig();
+  const iceServers = config.webrtc.enabled ? await resolveIceServers(config) : [];
   return {
     enabled: config.enabled,
     disabledReason: config.disabledReason,
@@ -310,7 +312,7 @@ export function getRemoteAssistancePublicConfig() {
     idleTimeoutSeconds: config.idleTimeoutSeconds,
     reconnectGraceSeconds: config.reconnectGraceSeconds,
     webrtcEnabled: config.webrtc.enabled,
-    iceServers: config.webrtc.enabled ? config.webrtc.iceServers : []
+    iceServers
   };
 }
 
@@ -797,7 +799,7 @@ export async function getRemoteAssistanceCommandsForAgent({
     // sem pedido do visualizador, o agente continua no caminho JPEG de
     // sempre, sem nenhuma mudanca de comportamento.
     transport: config.transport,
-    iceServers: config.transport === "webrtc" ? config.webrtc.iceServers : [],
+    iceServers: config.transport === "webrtc" ? await resolveIceServers(config) : [],
     ended: false
   };
 }

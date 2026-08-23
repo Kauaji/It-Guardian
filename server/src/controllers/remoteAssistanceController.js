@@ -35,8 +35,10 @@ function viewerToken(req) {
   return String(req.headers["x-remote-viewer-token"] || "").trim();
 }
 
-export function config(_req, res) {
-  res.json(getRemoteAssistancePublicConfig());
+export async function config(_req, res, next) {
+  try {
+    res.json(await getRemoteAssistancePublicConfig());
+  } catch (error) { next(error); }
 }
 
 export async function start(req, res, next) {
