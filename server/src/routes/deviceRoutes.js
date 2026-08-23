@@ -6,6 +6,7 @@ import {
   createManual,
   details,
   list,
+  metricsHistory,
   moveToSegment,
   publicDetails,
   refreshPing,
@@ -29,6 +30,7 @@ router.post("/:id/ping", requirePermission("inventory.edit_asset"), refreshPing)
 router.patch("/:id/segment", requirePermission("inventory.move_assets"), moveToSegment);
 router.get("/:id", requirePermission("inventory.view_machine"), details);
 router.get("/:id/timeline", requirePermission("inventory.view_machine"), timeline);
+router.get("/:id/metrics-history", requirePermission("inventory.view_machine"), metricsHistory);
 router.delete("/:id", requirePermission("inventory.edit_asset"), removeDevice);
 
 export default router;

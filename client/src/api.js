@@ -244,6 +244,15 @@ export function fetchAssetTimeline(token, assetId, params = {}) {
   return apiFetch(`/devices/${assetId}/timeline${suffix}`, { token });
 }
 
+export function fetchDeviceMetricHistory(token, deviceId, params = {}, { signal } = {}) {
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== "" && value != null) search.set(key, value);
+  });
+  const suffix = search.toString() ? `?${search}` : "";
+  return apiFetch(`/devices/${deviceId}/metrics-history${suffix}`, { token, signal });
+}
+
 export function updateDeviceSegment(token, id, segmentId, extra = {}) {
   return apiFetch(`/devices/${id}/segment`, {
     token,

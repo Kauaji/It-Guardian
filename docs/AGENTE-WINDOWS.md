@@ -30,6 +30,13 @@ mantem um indicador visual na bandeja do Windows.
 O agente nao coleta arquivos, senhas, teclas, tela, historico, geolocalizacao,
 lista detalhada de processos ou conteudo pessoal.
 
+CPU/RAM/disco de cada heartbeat agora tambem ficam retidos como historico
+(`asset_metric_history`, uma linha por heartbeat), nao so como o snapshot
+mais recente em `agent_assets` - usado pelo popover/grafico de historico dos
+cards do Inventario. Cada amostra e uma leitura WMI instantanea no momento
+do heartbeat (nao uma media suavizada pelo agente), entao variacoes entre
+amostras consecutivas sao esperadas.
+
 ## Instalacao cloud por chave de produto
 
 Para novos computadores cloud, use o instalador visual descrito em

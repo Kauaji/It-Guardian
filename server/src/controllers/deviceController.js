@@ -12,6 +12,7 @@ import {
   updateManualDevice
 } from "../services/deviceService.js";
 import { getAssetTechnicalTimeline } from "../services/assetTimelineService.js";
+import { getDeviceMetricHistory } from "../services/assetMetricHistoryService.js";
 
 export async function list(req, res, next) {
   try {
@@ -34,6 +35,15 @@ export async function details(req, res, next) {
 export async function timeline(req, res, next) {
   try {
     const result = await getAssetTechnicalTimeline(req.params.id, req.query, req.user);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function metricsHistory(req, res, next) {
+  try {
+    const result = await getDeviceMetricHistory(req.params.id, req.query);
     res.json(result);
   } catch (error) {
     next(error);

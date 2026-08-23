@@ -4,6 +4,102 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-23 - Historico visual de metricas nos cards do inventario
+
+### Contexto
+
+- pedido do usuario: transformar os indicadores de CPU/RAM/Disco dos
+  cards de maquina do Inventario em algo interativo - hover destaca e
+  mostra um popover com relatorio basico de 24h, clique abre um modal
+  com grafico de linha por periodo (1h/6h/24h/7d/30d), hover no status
+  mostra a ultima vez online - sem inventar historico, sem dependencia
+  pesada de grafico nova, sem quebrar o card atual nem as cores de
+  alerta existentes;
+- auditoria (3 agentes de exploracao + 1 agente de plano) confirmou que
+  nao existia nenhuma tabela de serie temporal de metricas ate entao -
+  `agent_assets` so guarda o snapshot mais recente (UPDATE por
+  heartbeat) e `agent_heartbeats` ja fazia INSERT por heartbeat mas
+  como payload JSONB bruto, nunca lido por nenhum codigo;
+- branch `feature/inventory-metric-history-tooltips`, a partir de
+  `main` na ponta.
+
+### Nova tabela `asset_metric_history`
+
+Migration `025-asset-metric-history.js`: uma linha por heartbeat (nao
+uma sobrescrita, como `agent_assets`), colunas tipadas
+(`cpu_usage_percent`, `memory_usage_percent`, `disk_usage_percent` +
+bytes brutos), indice em `(asset_id, collected_at)`. Escrita dentro da
+mesma transacao do heartbeat (`agentRepository.js`'s
+`recordAgentInventory`), com uma guarda explicita: se nenhuma das tres
+familias de metrica vier no payload, nenhuma linha e gravada - nunca
+uma linha so de `null`. Formula de porcentagem de RAM/disco replicada
+exatamente da ja existente em `monitoringService.js`'s
+`buildAgentDevice`, nao reinventada (`server/src/domain/assetMetricSample.js`).
+
+### Leitura sem `date_trunc`/`width_bucket` - downsampling em JS puro
+
+`GET /api/devices/:id/metrics-history` (mesma permissao
+`inventory.view_machine` que ja protege a ficha/prontuario da
+maquina). Uma unica consulta SQL indexada (`WHERE asset_id = $1 AND
+collected_at >= $2 ORDER BY collected_at ASC LIMIT 2000`) - nenhuma
+funcao de agrupamento de data nao verificada contra o pg-mem usado nos
+testes (`LEFT()` ja se mostrou ausente do pg-mem numa rodada anterior).
+Todo o agrupamento/media por bucket acontece em JS puro
+(`assetMetricHistoryService.js`'s `bucketSamples`), testavel sem banco.
+Sem nenhuma amostra, a resposta e explicita (`summary: null, points:
+[], warnings: ["no_data"]`) - nunca uma linha reta inventada.
+
+### Frontend: um hook de popover construido uma vez, usado duas vezes
+
+Nao existia Tooltip/Popover generico no projeto nem logica de
+fechar-com-delay no hover. `client/src/hooks/useHoverPopover.js` foi
+construido uma unica vez e reaproveitado tanto pelos indicadores de
+metrica (`MetricBadge.jsx`) quanto pelo tooltip de status
+(`StatusTooltip.jsx`) - o segundo sem nenhuma chamada de API nova, so
+lendo `machine.lastSeenAt`/`status` ja disponiveis no objeto do
+device. O grafico do modal reaproveita o `recharts` ja usado no
+Dashboard (`DashboardChartCard.jsx` como container) - nenhuma
+dependencia nova. CPU/RAM/Disco no card continuam com o mesmo markup e
+classes de severidade (`ok`/`warning`/`danger`) de antes, so
+embrulhados por um botao interativo - card ocioso renderiza igual ao
+que era antes desta mudanca.
+
+### Testes e validacao
+
+- Unidade: `deriveMetricSampleFields`/`hasUsefulMetricPayload`
+  (`assetMetricSample.test.mjs`), `resolvePeriod`/`resolveSince`/
+  `bucketSamples`/`summarize` (`assetMetricHistoryService.test.mjs`),
+  `useHoverPopover` (delay, cancelamento, toggle), cache com TTL.
+- Integracao: heartbeat com metricas grava amostra, heartbeat sem
+  nenhuma metrica nao grava nada, 401/403 por permissao, "sem dados"
+  quando nao ha amostra, filtro de periodo exclui amostra fora da
+  janela (`server/test-integration/asset-metric-history.test.mjs`).
+- Componente: `MetricBadge`/`StatusTooltip` (dados reais no popover,
+  clique abre modal, mensagem de "sem historico" sem inventar dado).
+- Verificacao visual ao vivo: heartbeats reais enviados a um servidor
+  rodando de verdade, hover/clique confirmados mostrando dados reais
+  (media/pico/minimo calculados corretamente a partir das amostras
+  enviadas), maquina sem historico mostrando a mensagem correta,
+  tooltip de status mostrando ultima vez online no formato
+  dd/mm/aaaa hh:mm, zero chamadas de historico disparadas so por abrir
+  o quadro do Inventario.
+- `npm run lint`, `npm run check:architecture`,
+  `npm run test --workspace server` (447 testes),
+  `npm run test:integration --workspace server` (85 testes),
+  `npm run test --workspace client` (189 testes), `npm run build` -
+  todos passando.
+
+### Pendencias conhecidas
+
+- sem job de retencao/limpeza para `asset_metric_history` nesta
+  rodada - cresce sem limite, aceito como limitacao conhecida (o
+  `LIMIT` fixo na leitura mantem o custo de consulta controlado);
+- disco monitorado so na unidade `C:` (limite do agente, nao desta
+  funcionalidade);
+- o grafico morto em `client/src/components/dashboard/DeviceDetails.jsx`
+  (Dashboard, nao Inventario) continua desligado (`history: []` em
+  `monitoringService.js`) - fora do escopo desta rodada.
+
 ## 2026-08-21 - Tela publica de abertura de chamado: correcao de seguranca e experiencia completa
 
 ### Contexto
