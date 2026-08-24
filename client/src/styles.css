@@ -6260,7 +6260,6 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
   align-items: center;
   gap: 4px;
   padding: 0 7px;
-  margin-right: auto;
   color: var(--text-muted);
   background: var(--surface-soft);
   font-size: 11px;
@@ -19589,9 +19588,9 @@ button.dashboard-ranking-item.clickable:hover {
   background: transparent;
   padding: 0;
   display: inline-flex;
+  margin-right: auto;
 }
 
-.metric-history-popover,
 .status-tooltip-popover {
   position: absolute;
   top: calc(100% + 7px);
@@ -19612,42 +19611,12 @@ button.dashboard-ranking-item.clickable:hover {
   white-space: normal;
 }
 
-.metric-history-popover strong,
 .status-tooltip-popover strong {
   display: block;
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.02em;
   color: var(--text-muted);
-}
-
-.metric-history-popover dl {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 3px 10px;
-  margin: 0;
-}
-
-.metric-history-popover dt {
-  color: var(--text-muted);
-  font-size: 12px;
-}
-
-.metric-history-popover dd {
-  margin: 0;
-  font-weight: 700;
-  font-size: 12px;
-  text-align: right;
-}
-
-.metric-history-popover-status {
-  margin: 0;
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.metric-history-popover-status.danger {
-  color: var(--status-danger);
 }
 
 .status-tooltip-trigger {
