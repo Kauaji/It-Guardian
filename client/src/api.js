@@ -227,6 +227,31 @@ export function fetchDashboardSummary(token, { period = "30d" } = {}) {
   return apiFetch(`/dashboard/summary?${search}`, { token });
 }
 
+export function fetchDashboardLayout(token) {
+  return apiFetch("/dashboard/layout", { token });
+}
+
+export function saveDashboardLayout(token, layout) {
+  return apiFetch("/dashboard/layout", { token, method: "PUT", body: JSON.stringify(layout) });
+}
+
+export function resetDashboardLayout(token) {
+  return apiFetch("/dashboard/layout/reset", { token, method: "POST" });
+}
+
+export function fetchDashboardWidgetCatalog(token) {
+  return apiFetch("/dashboard/widgets/catalog", { token });
+}
+
+export function previewDashboardWidget(token, { type, config }, { signal } = {}) {
+  return apiFetch("/dashboard/widgets/preview", {
+    token,
+    method: "POST",
+    body: JSON.stringify({ type, config }),
+    signal
+  });
+}
+
 export function fetchDevice(token, id) {
   return apiFetch(`/devices/${id}`, { token });
 }

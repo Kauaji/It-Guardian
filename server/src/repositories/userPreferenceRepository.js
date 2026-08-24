@@ -8,6 +8,13 @@ export async function findUserPreference(userId, key) {
   return result.rows[0] || null;
 }
 
+export async function deleteUserPreference(userId, key) {
+  await query(
+    "DELETE FROM user_preferences WHERE user_id = $1 AND preference_key = $2",
+    [userId, key]
+  );
+}
+
 export async function upsertUserPreference(userId, key, value) {
   const result = await query(
     `
