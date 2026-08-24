@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
-import { ArrowDown, ArrowUp, Box, ChevronDown, Database, Edit3, ListFilter, Map as MapIcon, MoreHorizontal, Network, Plus, Search, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, Database, Edit3, ListFilter, Map as MapIcon, MoreHorizontal, Network, Plus, Search, Trash2 } from "lucide-react";
 import SegmentCard from "./SegmentCard.jsx";
 import MoveMachineModal from "./MoveMachineModal.jsx";
 import MachineDetailsModal from "./MachineDetailsModal.jsx";
@@ -8,7 +8,6 @@ import BulkActionsBar from "./BulkActionsBar.jsx";
 import InventoryTabs from "./InventoryTabs.jsx";
 import ColorPickerSegment from "./ColorPickerSegment.jsx";
 
-const InventoryVisualMapView = lazy(() => import("./InventoryVisualMapView.jsx"));
 const InventoryNetworkTopologyView = lazy(() => import("./topology/InventoryNetworkTopologyView.jsx"));
 
 function SegmentGroupContainer({ groupId, color, className = "", children }) {
@@ -293,15 +292,6 @@ export default function InventoryBoard({
         )}
         <button
           type="button"
-          className={inventoryViewMode === "visual-map" ? "active" : ""}
-          onClick={() => setInventoryViewMode("visual-map")}
-          aria-selected={inventoryViewMode === "visual-map"}
-        >
-          <Box size={16} />
-          Mapa 3D
-        </button>
-        <button
-          type="button"
           className={inventoryViewMode === "topology" ? "active" : ""}
           onClick={() => setInventoryViewMode("topology")}
           aria-selected={inventoryViewMode === "topology"}
@@ -311,20 +301,7 @@ export default function InventoryBoard({
         </button>
       </div>
 
-      {inventoryViewMode === "visual-map" ? (
-        <Suspense fallback={<div className="floor-plan-loading">Carregando 3D...</div>}>
-          <InventoryVisualMapView
-            token={token}
-            notify={notify}
-            devices={visualMapDevices}
-            segments={segments}
-            groups={groups}
-            tabs={tabs}
-            activeTab={activeTab}
-            canManage={canManage}
-          />
-        </Suspense>
-      ) : inventoryViewMode === "topology" ? (
+      {inventoryViewMode === "topology" ? (
         <Suspense fallback={<div className="floor-plan-loading">Carregando mapa de rede...</div>}>
           <InventoryNetworkTopologyView
             token={token}

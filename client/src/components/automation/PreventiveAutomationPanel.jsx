@@ -500,7 +500,6 @@ export default function PreventiveAutomationPanel({
                   <div>
                     <span>Revisão final</span>
                     <h3>{form.name}</h3>
-                    <p>Nenhum comando será executado nesta etapa. O sistema apenas registra e prepara a agenda preventiva.</p>
                   </div>
                   <span className="automation-color-dot" style={{ background: normalizeAutomationColor(form.indicatorColor) }} />
                 </header>

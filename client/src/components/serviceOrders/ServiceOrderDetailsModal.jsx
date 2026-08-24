@@ -49,12 +49,6 @@ const tabs = [
   { id: "history", label: "Histórico" }
 ];
 
-const SLA_BADGE_LABELS = {
-  breached: "Vencida",
-  near_due: "Próxima do vencimento",
-  not_applicable: "Sem SLA"
-};
-
 function formatDate(value) {
   if (!value) return "Não informado";
   return new Intl.DateTimeFormat("pt-BR", {
@@ -682,11 +676,6 @@ export default function ServiceOrderDetailsModal({
             <h2>
               {serviceOrder.number} - {serviceOrder.title}
               {serviceOrder.isDemo && <span className="demo-data-badge">Demo</span>}
-              {serviceOrder.sla && SLA_BADGE_LABELS[serviceOrder.sla.status] && (
-                <span className={`service-order-sla-badge service-order-sla-badge-${serviceOrder.sla.status}`}>
-                  {SLA_BADGE_LABELS[serviceOrder.sla.status]}
-                </span>
-              )}
             </h2>
             <p>{statusLabelMap[serviceOrder.status] || serviceOrder.status} - Prioridade {priorityLabels[serviceOrder.priority]}</p>
           </div>
