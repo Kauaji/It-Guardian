@@ -1,7 +1,8 @@
 import { AlertTriangle, Wrench } from "lucide-react";
 import AssetTypeIcon from "../AssetTypeIcon.jsx";
 import { assetTypeLabel } from "../assetTypes.js";
-import { resolveAssetType } from "./networkTopologyModel.js";
+import PulseDot from "../../ui/PulseDot.jsx";
+import { resolveAssetType, resolveNodeLabel, resolveNodeSecondaryName, resolveNodeStatusTone } from "./networkTopologyModel.js";
 
 const NODE_WIDTH = 176;
 const NODE_HEIGHT = 72;
@@ -13,10 +14,12 @@ export default function NetworkTopologyNode({
   selected,
   editMode,
   isLinkSource,
+  isNew,
   onPointerDown
 }) {
   const missing = !device;
-  const label = node.labelOverride || device?.name || "Ativo removido";
+  const label = resolveNodeLabel(node, device);
+  const secondaryName = resolveNodeSecondaryName(node, device, label);
   const type = resolveAssetType(device);
 
   return (
@@ -29,7 +32,8 @@ export default function NetworkTopologyNode({
             selected && "is-selected",
             missing && "is-missing",
             editMode && "is-editable",
-            isLinkSource && "is-link-source"
+            isLinkSource && "is-link-source",
+            isNew && "is-new"
           ]
             .filter(Boolean)
             .join(" ")}
@@ -39,12 +43,14 @@ export default function NetworkTopologyNode({
         >
           <span className="network-topology-node-icon">
             <AssetTypeIcon type={type} size={18} />
+            {!missing ? <PulseDot tone={resolveNodeStatusTone(device)} className="network-topology-node-pulse" /> : null}
           </span>
           <span className="network-topology-node-body">
             <strong className="network-topology-node-name">{label}</strong>
             <span className="network-topology-node-meta">
               {missing ? "Ativo removido do inventário" : device.ip || assetTypeLabel(type)}
             </span>
+            {secondaryName ? <span className="network-topology-node-realname">{secondaryName}</span> : null}
             {segmentName ? <span className="network-topology-node-segment">{segmentName}</span> : null}
           </span>
           <span className="network-topology-node-badges">

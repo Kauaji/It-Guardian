@@ -26,6 +26,12 @@ export function NetworkTopologyNodeInspector({ node, device, editMode, onOpenDet
             <dt>Nome</dt>
             <dd>{device.name}</dd>
           </div>
+          {device.technicalName && device.technicalName !== device.name ? (
+            <div>
+              <dt>Nome técnico</dt>
+              <dd>{device.technicalName}</dd>
+            </div>
+          ) : null}
           <div>
             <dt>Tipo</dt>
             <dd>{assetTypeLabel(resolveAssetType(device))}</dd>
