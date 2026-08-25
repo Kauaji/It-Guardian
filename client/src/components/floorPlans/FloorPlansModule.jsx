@@ -115,6 +115,14 @@ import {
   paintCells,
   parseCellKey
 } from "./utils/paintAreaGeometry.js";
+import {
+  appendDigitToBuffer,
+  createMeasurementObjectFromPoints,
+  isMeasurementObject,
+  parseTypedLengthBuffer,
+  snapMeasurementEndPoint
+} from "./utils/measurementGeometry.js";
+import { formatLength, metersToPx, pxToMeters } from "./utils/unitConversion.js";
 
 const FloorPlanScene3D = lazy(() => import("./FloorPlanScene3D.jsx"));
 
@@ -529,6 +537,26 @@ function WallPlacementPreview({ placement }) {
   );
 }
 
+function MeasurementPlacementPreview({ placement, plan }) {
+  if (placement?.kind !== "measurement" || !placement.start || !placement.end) return null;
+  const snappedEnd = snapMeasurementEndPoint(placement.start, placement.end, placement.gridSize || 5, {
+    constrainAngle: placement.constrainAngle,
+    overrideLengthPx: parseTypedLengthBuffer(placement.lengthBuffer, plan)
+  });
+  const lengthLabel = formatLength(pxToMeters(snappedEnd.length, plan));
+  const typedLabel = placement.lengthBuffer ? `Comprimento: ${placement.lengthBuffer}_` : null;
+  return (
+    <g className="floor-plan-measurement-preview" pointerEvents="none">
+      <line x1={placement.start.x} y1={placement.start.y} x2={snappedEnd.x} y2={snappedEnd.y} />
+      <circle cx={placement.start.x} cy={placement.start.y} r="6" />
+      <circle cx={snappedEnd.x} cy={snappedEnd.y} r="6" />
+      <text x={(placement.start.x + snappedEnd.x) / 2} y={(placement.start.y + snappedEnd.y) / 2 - 12} textAnchor="middle">
+        {typedLabel || lengthLabel}
+      </text>
+    </g>
+  );
+}
+
 function CatalogPlacementPreview({ placement }) {
   const preview = placement?.kind === "catalog" ? placement.preview : null;
   if (!preview) return null;
@@ -717,6 +745,7 @@ function FloorPlanCanvas({
   onRotateSelected,
   placement,
   paintDraft,
+  justPlacedObjectId,
   viewBox,
   onWheel,
   svgRef,
@@ -894,14 +923,14 @@ function FloorPlanCanvas({
           const objectSelected = selectedIdSet.has(object.id) || (selected?.type === "object" && selected.id === object.id);
           const objectWidth = object.width || 80;
           const objectHeight = object.height || 56;
-          const hideObjectLabel = isTableObject(object) || isWallObject(object) || isOpeningObject(object);
+          const hideObjectLabel = isTableObject(object) || isWallObject(object) || isOpeningObject(object) || isMeasurementObject(object);
           const wallOpenings = isWallObject(object)
             ? objects.filter((candidate) => candidate.metadata?.parentObjectId === object.id && isOpeningObject(candidate))
             : [];
           return (
             <g
               key={object.id}
-              className={`floor-plan-object${objectSelected ? " selected" : ""}${isEditorObjectLocked(object) ? " locked" : ""}`}
+              className={`floor-plan-object${objectSelected ? " selected" : ""}${isEditorObjectLocked(object) ? " locked" : ""}${object.id === justPlacedObjectId ? " is-new" : ""}`}
               transform={`translate(${object.x || 0} ${object.y || 0})`}
               onPointerDown={(event) => onPointerDown(event, "object", object.id)}
               onClick={(event) => {
@@ -922,6 +951,7 @@ function FloorPlanCanvas({
                   object={object}
                   width={objectWidth}
                   height={objectHeight}
+                  plan={editor?.plan}
                   selected={objectSelected}
                   openings={wallOpenings}
                 />
@@ -959,6 +989,7 @@ function FloorPlanCanvas({
         <CatalogPlacementPreview placement={placement} />
         <RoomPlacementPreview preview={placement?.kind === "room" ? placement.preview : null} plan={editor.plan} />
         <WallPlacementPreview placement={placement} />
+        <MeasurementPlacementPreview placement={placement} plan={editor?.plan} />
         <RoomSelectionOverlay
           zone={zones.find((zone) => selected?.type === "zone" && selected.id === zone.id && isRoomZone(zone))}
           plan={editor.plan}
@@ -1187,6 +1218,30 @@ function FloorPlanInspector({ editor, selected, onChangeSelected, onClearSelecte
         </>
       )}
 
+      {selected.type === "object" && isMeasurementObject(selectedEntity) && (
+        <div className="floor-plan-inspector-grid">
+          <label>
+            Comprimento (m)
+            <input
+              type="number"
+              min="0.05"
+              step="0.05"
+              value={Number(pxToMeters(selectedEntity.width || 0, editor?.plan).toFixed(2))}
+              onChange={(event) => onChangeSelected({ width: metersToPx(Number(event.target.value), editor?.plan) })}
+            />
+          </label>
+          <label>
+            Angulo
+            <input
+              type="number"
+              step="1"
+              value={Math.round(selectedEntity.rotation || 0)}
+              onChange={(event) => onChangeSelected({ rotation: Number(event.target.value) })}
+            />
+          </label>
+        </div>
+      )}
+
       {selected.type === "zone" && isRoomZone(selectedEntity) && (
         <label>
           Textura do piso
@@ -1395,6 +1450,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
   const [selectedTool, setSelectedTool] = useState("select");
   const [activeCatalog, setActiveCatalog] = useState("rooms");
   const [placement, setPlacement] = useState(null);
+  const [justPlacedObjectId, setJustPlacedObjectId] = useState(null);
   const [mode, setMode] = useState("2d");
   const [showGrid, setShowGrid] = useState(true);
   const [visibleLayers, setVisibleLayers] = useState(DEFAULT_FLOOR_PLAN_LAYERS);
@@ -1828,6 +1884,15 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
     setSelectedObjectIds([]);
     setPlacement({ kind: "catalog", item });
   }, [activeFloorId, editor, handleToolChange, notify]);
+
+  const startMeasurementTool = useCallback(() => {
+    const floor = getActiveFloor(editor, activeFloorId);
+    if (!floor) return;
+    setMode("2d");
+    setSelectedTool("select");
+    setSelected(null);
+    setPlacement({ kind: "measurement", start: null, end: null, constrainAngle: false, lengthBuffer: "", gridSize: getFineSnapSize(editor) });
+  }, [activeFloorId, editor]);
 
   const buildCatalogPlacementPreview = useCallback((item, point) => {
     const floor = getActiveFloor(editor, activeFloorId);
@@ -2355,6 +2420,43 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
       });
       if (createdWallId) setSelected({ type: "object", id: createdWallId });
       setPlacement((current) => current ? { ...current, start: null, end: null } : current);
+      return;
+    }
+    if (placement.kind === "measurement") {
+      if (!placement.start) {
+        const snappedPoint = { x: snap(point.x, placement.gridSize || 5), y: snap(point.y, placement.gridSize || 5) };
+        const start = snapPointToWallEndpoints(snappedPoint, editor.objects || [], floor.id);
+        setPlacement((current) => current ? { ...current, start, end: start } : current);
+        return;
+      }
+      let createdMeasurementId = null;
+      commitEditor((draft) => {
+        const snappedEndPoint = {
+          x: snap(point.x, placement.gridSize || 5),
+          y: snap(point.y, placement.gridSize || 5)
+        };
+        const end = snapPointToWallEndpoints(snappedEndPoint, draft.objects || [], floor.id);
+        const overrideLengthPx = parseTypedLengthBuffer(placement.lengthBuffer, draft.plan);
+        const measurement = createMeasurementObjectFromPoints({
+          id: createId("object"),
+          planId: draft.plan.id,
+          floorId: floor.id,
+          start: placement.start,
+          end,
+          gridSize: placement.gridSize || 5,
+          constrainAngle: placement.constrainAngle,
+          overrideLengthPx
+        });
+        createdMeasurementId = measurement.id;
+        draft.objects = [...(draft.objects || []), measurement];
+        return draft;
+      });
+      if (createdMeasurementId) {
+        setSelected({ type: "object", id: createdMeasurementId });
+        setJustPlacedObjectId(createdMeasurementId);
+        window.setTimeout(() => setJustPlacedObjectId((current) => (current === createdMeasurementId ? null : current)), 1400);
+      }
+      setPlacement((current) => current ? { ...current, start: null, end: null, lengthBuffer: "" } : current);
       return;
     }
     if (placement.kind === "opening") {
@@ -3096,6 +3198,22 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
       setPlacement((current) => current ? { ...current, end: endpoint } : current);
       return;
     }
+    if (placement?.kind === "measurement" && placement.start) {
+      const point = getSvgPoint(event);
+      const gridPoint = {
+        x: snapToGrid(point.x, editor?.plan?.snapSize || DEFAULT_PLAN_SIZE.snapSize),
+        y: snapToGrid(point.y, editor?.plan?.snapSize || DEFAULT_PLAN_SIZE.snapSize)
+      };
+      const endpoint = snapPointToWallEndpoints(
+        gridPoint,
+        editor?.objects || [],
+        activeFloorId,
+        null,
+        Math.max(18, editor?.plan?.snapSize || DEFAULT_PLAN_SIZE.snapSize)
+      );
+      setPlacement((current) => current ? { ...current, end: endpoint, constrainAngle: event.shiftKey } : current);
+      return;
+    }
     moveDrag(event);
   }, [activeFloorId, applyPaintAtPoint, buildCatalogPlacementPreview, editor, getSvgPoint, moveDrag, paintDraft, placement, updateRoomPlacementPreview]);
 
@@ -3198,6 +3316,43 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
         event.preventDefault();
         setSpacePressed(true);
       }
+      if (placement?.kind === "measurement" && placement.start) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          const floor = getActiveFloor(editor, activeFloorId);
+          if (floor && placement.end) {
+            let createdMeasurementId = null;
+            commitEditor((draft) => {
+              const overrideLengthPx = parseTypedLengthBuffer(placement.lengthBuffer, draft.plan);
+              const measurement = createMeasurementObjectFromPoints({
+                id: createId("object"),
+                planId: draft.plan.id,
+                floorId: floor.id,
+                start: placement.start,
+                end: placement.end,
+                gridSize: placement.gridSize || 5,
+                constrainAngle: placement.constrainAngle,
+                overrideLengthPx
+              });
+              createdMeasurementId = measurement.id;
+              draft.objects = [...(draft.objects || []), measurement];
+              return draft;
+            });
+            if (createdMeasurementId) {
+              setSelected({ type: "object", id: createdMeasurementId });
+              setJustPlacedObjectId(createdMeasurementId);
+              window.setTimeout(() => setJustPlacedObjectId((current) => (current === createdMeasurementId ? null : current)), 1400);
+            }
+            setPlacement((current) => current ? { ...current, start: null, end: null, lengthBuffer: "" } : current);
+          }
+          return;
+        }
+        if (/^[0-9]$/.test(event.key) || event.key === "," || event.key === "." || event.key === "Backspace") {
+          event.preventDefault();
+          setPlacement((current) => current ? { ...current, lengthBuffer: appendDigitToBuffer(current.lengthBuffer || "", event.key) } : current);
+          return;
+        }
+      }
       if (event.key.toLowerCase() === "g" && !event.repeat) {
         event.preventDefault();
         setShowGrid((current) => !current);
@@ -3252,7 +3407,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
       window.removeEventListener("keyup", handleKeyUp);
       window.removeEventListener("blur", handleWindowBlur);
     };
-  }, [deleteSelectedEntity, duplicateSelectedRoom, paintDraft, placement, redo, rotateSelectedRoom, undo, view]);
+  }, [activeFloorId, commitEditor, deleteSelectedEntity, duplicateSelectedRoom, editor, paintDraft, placement, redo, rotateSelectedRoom, undo, view]);
 
   const linkObject = useCallback(async (objectId, assetId) => {
     const device = devices.find((entry) => entry.id === assetId);
@@ -3332,6 +3487,8 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
         onToggleZoom={() => setZoomMode((current) => !current)}
         onDeletePlan={() => removePlan(editor.plan)}
         canDelete={Boolean(permissions.delete && editor?.plan)}
+        measurementActive={placement?.kind === "measurement"}
+        onStartMeasurement={startMeasurementTool}
       />
 
       <div className={`floor-plan-editor-layout ${isEditing ? "editing" : "view-only"}`}>
@@ -3404,6 +3561,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
                 onRotateSelected={rotateSelectedRoom}
                 placement={placement}
                 paintDraft={paintDraft}
+                justPlacedObjectId={justPlacedObjectId}
                 viewBox={canvasViewBox}
                 onWheel={handleCanvasWheel}
                 svgRef={svgRef}

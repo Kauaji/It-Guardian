@@ -1,4 +1,6 @@
 import { isOpeningObject, isWallObject } from "./utils/wallGeometry.js";
+import { isMeasurementObject } from "./utils/measurementGeometry.js";
+import { formatLength, pxToMeters } from "./utils/unitConversion.js";
 import { resolveSceneObjectType } from "./utils/sceneObjectPlacement.js";
 
 function Rect({ x = 0, y = 0, width, height, rx = 2, className = "" }) {
@@ -240,7 +242,24 @@ function DeviceGlyph({ type, width, height, metadata = {} }) {
   return <><Rect x={inset} y={inset} width={width - inset * 2} height={height - inset * 2} rx={5} /><line x1={inset + 5} y1={cy} x2={width - inset - 5} y2={cy} /></>;
 }
 
-export default function FloorPlanObjectGlyph({ object, width, height, selected = false, openings = [] }) {
+export default function FloorPlanObjectGlyph({ object, width, height, selected = false, openings = [], plan = {} }) {
+  if (isMeasurementObject(object)) {
+    const midY = height / 2;
+    const tickHalf = Math.max(6, height);
+    const label = formatLength(pxToMeters(width, plan));
+    return (
+      <g className={`floor-plan-object-glyph measurement ${selected ? "selected" : ""}`}>
+        <line className="floor-plan-measurement-line" x1={0} y1={midY} x2={width} y2={midY} />
+        <line className="floor-plan-measurement-tick" x1={0} y1={midY - tickHalf} x2={0} y2={midY + tickHalf} />
+        <line className="floor-plan-measurement-tick" x1={width} y1={midY - tickHalf} x2={width} y2={midY + tickHalf} />
+        <g className="floor-plan-measurement-label" transform={`translate(${width / 2}, ${midY - tickHalf - 6})`}>
+          <rect x={-(label.length * 3.6 + 8)} y={-13} width={label.length * 7.2 + 16} height={18} rx={5} />
+          <text textAnchor="middle" y={1}>{label}</text>
+        </g>
+      </g>
+    );
+  }
+
   const type = resolveSceneObjectType(object);
   const fallbackColors = {
     pc: "#2563eb",
