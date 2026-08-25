@@ -6284,7 +6284,7 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
   border-color: rgba(220, 38, 38, 0.28);
 }
 
-.machine-card-actions > button,
+.machine-card-actions > button:not(.metric-badge--disk),
 .machine-card-actions .details-menu > button,
 .machine-card-actions .move-menu > button {
   width: 26px;
@@ -6332,7 +6332,7 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
     background 180ms var(--ease-premium);
 }
 
-.machine-card-actions > button:hover,
+.machine-card-actions > button:not(.metric-badge--disk):hover,
 .machine-card-actions .details-menu > button:hover,
 .machine-card-actions .move-menu > button:hover,
 .peripheral-add-form button:hover {
@@ -8382,7 +8382,7 @@ table strong,
 }
 
 :root[data-theme="dark"] .segment-header-tools button,
-:root[data-theme="dark"] .machine-card-actions button,
+:root[data-theme="dark"] .machine-card-actions button:not(.metric-badge--disk),
 :root[data-theme="dark"] .peripheral-add-form button,
 :root[data-theme="dark"] .secondary-action,
 :root[data-theme="dark"] .ghost-action {
@@ -8392,7 +8392,7 @@ table strong,
 }
 
 :root[data-theme="dark"] .segment-header-tools button:hover,
-:root[data-theme="dark"] .machine-card-actions button:hover,
+:root[data-theme="dark"] .machine-card-actions button:not(.metric-badge--disk):hover,
 :root[data-theme="dark"] .peripheral-add-form button:hover,
 :root[data-theme="dark"] .secondary-action:hover,
 :root[data-theme="dark"] .ghost-action:hover {
@@ -19961,6 +19961,8 @@ button.dashboard-ranking-item.clickable:hover {
   background: transparent;
   padding: 0;
   display: inline-flex;
+  height: 26px;
+  flex: 0 0 auto;
   margin-right: auto;
 }
 
