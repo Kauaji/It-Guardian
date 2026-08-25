@@ -36,7 +36,6 @@ import {
   deleteSegmentGroup as deleteSegmentGroupApi,
   evaluateAlerts,
   fetchAlertCorrelations,
-  fetchDevice,
   fetchPreventiveAutomationAsset,
   removeAssetFromPreventiveAutomationPlan,
   removePreventiveAutomationAssetOverride,
@@ -105,7 +104,7 @@ import ViewErrorBoundary from "./components/ui/ViewErrorBoundary.jsx";
 import Toast from "./components/ui/Toast.jsx";
 import PermissionBlocked from "./components/ui/PermissionBlocked.jsx";
 import AuthScreen from "./components/auth/AuthScreen.jsx";
-import DashboardPage from "./components/dashboard/DashboardPage.jsx";
+import DashboardWorkspace from "./components/dashboard/widgets/DashboardWorkspace.jsx";
 import { formatSoftwareLabel } from "./components/inventory/hardwarePresentation.js";
 import { isMaintenanceSegmentName } from "./utils/display.js";
 import { useAppSessionController } from "./hooks/useAppSessionController.js";
@@ -270,10 +269,14 @@ function formatTime(value) {
 function Dashboard() {
   const { token, user, theme, toggleTheme: onToggleTheme, logout: onLogout, notify } = useAppSession();
   const [selectedId, setSelectedId] = useState(null);
-  const [selectedDevice, setSelectedDevice] = useState(null);
+  // setSelectedDevice ainda e chamado por useDashboardData/sincronizacao em
+  // tempo real; a leitura selectedDevice, e os setters de search/status,
+  // so alimentavam o antigo DashboardPage.jsx (removido do App.jsx no corte
+  // para o dashboard configuravel) e ficaram sem nenhum consumidor.
+  const [, setSelectedDevice] = useState(null);
   const [activeView, setActiveView] = useState(readInitialActiveView);
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("");
+  const [search] = useState("");
+  const [status] = useState("");
   const [severityFilter, setSeverityFilter] = useState("all");
   const [alertStatusFilter, setAlertStatusFilter] = useState("all");
   const [suggestionStatusFilter, setSuggestionStatusFilter] = useState("all");
@@ -321,6 +324,7 @@ function Dashboard() {
   const [serviceOrderSaving, setServiceOrderSaving] = useState(false);
   const [generalSettingsOpen, setGeneralSettingsOpen] = useState(false);
   const canViewDashboard = hasPermission(user, "dashboard.view");
+  const canCustomizeDashboard = hasPermission(user, "dashboard.customize");
   const canViewAlerts = hasPermission(user, "alerts.view");
   const canViewScripts = hasPermission(user, "scripts.view");
   const canViewPreventivePlans = hasPermission(user, "preventive_plans.view");
@@ -365,7 +369,6 @@ function Dashboard() {
     setServiceOrderSuggestions,
     setServiceOrders,
     setSystemMode,
-    summary,
     systemMode,
     remoteScriptExecutionEnabledOnServer
   } = useDashboardData({
@@ -787,12 +790,6 @@ function Dashboard() {
     if (segment) {
       setSelectedInventoryGroup(segment.groupId || "ungrouped");
     }
-  }
-
-  async function selectDevice(id) {
-    setSelectedId(id);
-    const details = await fetchDevice(token, id);
-    setSelectedDevice(details.device);
   }
 
   async function handleEvaluateAlerts() {
@@ -2967,25 +2964,10 @@ function Dashboard() {
 
         {activeView === "dashboard" && canViewDashboard && (
           <ViewErrorBoundary label="o Dashboard" resetKey={activeView}>
-            <DashboardPage
+            <DashboardWorkspace
               token={token}
+              canCustomize={canCustomizeDashboard}
               notify={notify}
-              summary={summary}
-              search={search}
-              setSearch={setSearch}
-              status={status}
-              setStatus={setStatus}
-              loading={loading}
-              devices={devices}
-              selectedId={selectedId}
-              selectedDevice={selectedDevice}
-              selectDevice={selectDevice}
-              alerts={alerts}
-              history={history}
-              onNavigateInventory={() => setActiveView("inventory")}
-              onNavigateAlerts={() => setActiveView("alerts")}
-              onNavigateServiceOrders={() => setActiveView("service-orders")}
-              onOpenSettings={() => setGeneralSettingsOpen(true)}
             />
           </ViewErrorBoundary>
         )}

@@ -4,6 +4,159 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-08-24 - Dashboard configuravel por widgets (inspirado no Zabbix)
+
+### Contexto
+
+- pedido do usuario: evoluir o Dashboard fixo para um painel modular
+  inspirado na arquitetura de widgets do Zabbix (sem copiar visualmente),
+  com modo de edicao, catalogo de widgets, mover/redimensionar/configurar,
+  layout salvo por usuario, mantendo uma visao padrao equivalente a de
+  hoje. Pedido veio como um prompt de 23 partes ja bem detalhado; a etapa
+  de auditoria "antes de alterar" (pedida explicitamente) foi feita com 3
+  agentes de exploracao + 1 agente de plano antes de qualquer linha de
+  codigo, em modo de planejamento;
+- achados da auditoria que corrigiram premissas do pedido original:
+  `docs/RELATORIOS.md`/`INVENTARIO.md` nao existem na branch atual (existe
+  uma branch separada `feature/reports-module-v1`, nao mesclada, com um
+  modulo de Relatorios completo — fora de escopo mexer nela agora); ja
+  existia uma tabela generica de preferencias por usuario
+  (`user_preferences`) reaproveitavel em vez de criar migration nova
+  (o proprio pedido permitia isso); `@dnd-kit/sortable` ja era dependencia
+  do projeto (instalada, nunca usada) — perfeita para reordenar widgets
+  sem adicionar nenhuma lib de grid nova;
+  branch `feature/zabbix-style-configurable-dashboard`, a partir de `main`
+  (a branch anterior, com a rodada de assistencia remota terminada mas
+  ainda nao commitada, foi commitada antes do corte).
+
+### Persistencia sem migration nova
+
+`user_preferences` (chave `dashboard-layout`) reaproveitada via acesso
+direto ao repositorio (`findUserPreference`/`upsertUserPreference`/nova
+`deleteUserPreference`) a partir de um servico proprio
+(`dashboardLayoutService.js`) — deliberadamente **sem** passar pelo
+`userPreferenceService.js` generico nem pela rota `/api/preferences/:key`,
+que so exige `requireAuth` (sem a permissao `dashboard.customize` nem a
+validacao de forma do layout). Um teste de integracao confirma que a rota
+generica continua rejeitando a chave `dashboard-layout` (nao virou uma
+porta dos fundos).
+
+### Registry de widgets, nao um switch gigante
+
+`server/src/services/dashboardWidgets/widgetRegistry.js` mapeia `type ->
+{ label, category, defaultSize, fetchData }`; 19 tipos implementados com
+dado real (nenhum inventado), cobrindo status geral, disponibilidade,
+problemas atuais, top ativos por CPU/RAM/disco (pelo valor atual — nao
+existe consulta multi-ativo historica ainda), grafico/gauge de metrica por
+ativo, OS por status/SLA/vencidas, alertas por severidade, ativos
+criticos, eventos tecnicos e execucoes de script. Um contexto por
+requisicao (`widgetContext.js`) memoiza fontes compartilhadas
+(`listDevices`/`listServiceOrders`/alertas) entre widgets que pedem a
+mesma lista. "Assistencia Remota" (item 20 do catalogo original) ficou de
+fora deliberadamente — nao ha consulta multi-sessao pronta e criar uma
+tocaria o modulo que esta rodada foi orientada a nao alterar.
+
+Refatoracao pequena e segura, feita a caminho: extraidos de
+`dashboardService.js` (o endpoint legado `/api/dashboard/summary`, que
+ficou intocado por baixo) para modulos de dominio reaproveitaveis tambem
+pelos widgets — `assetMetricThresholds.js` (limiares e media de
+minutos) e `serviceOrderAggregates.js` (split de SLA vencida/proxima).
+Cada extracao foi confirmada comportamento-identico rodando o teste de
+integracao existente do endpoint legado antes de seguir para a proxima.
+
+### Frontend: grid denso, nao coordenadas de pixel
+
+Decisao de design: `x`/`y` no modelo salvo sao so a ordem de exibicao (grid
+`grid-auto-flow: dense`, empacota sozinho a partir da largura de cada
+widget) — evita ter que resolver bin-packing 2D. Reordenar usa
+`@dnd-kit/sortable` (primeiro uso real da lib neste projeto — antes so
+`@dnd-kit/core` cru para o Inventario, num `DndContext` proprio aninhado
+dentro do `DndContext` do shell do app). Redimensionar e por tier discreto
+(P/M/G/Largo), nao arrasto de pixel livre — decisao deliberada para evitar
+instabilidade.
+
+Varios componentes existentes (`DashboardChartCard`, `DashboardRankingList`)
+embutem seu proprio `<section><div class="panel-heading">` — reaproveita-los
+direto dentro de um widget duplicaria o cabecalho (o `WidgetChrome` ja
+tem o dele). Em vez disso, extraidas variantes **sem cabecalho**
+(`WidgetChartFrame.jsx`, `WidgetList.jsx`, `WidgetBarList.jsx`) com a mesma
+logica/classes CSS.
+
+### Corte: `DashboardPage.jsx` fica no repositorio, so sai do `App.jsx`
+
+Ponto de troca foi uma linha so (`<DashboardWorkspace />` no lugar de
+`<DashboardPage />`) — `DashboardPage.jsx`, `useDashboardSummary.js` e o
+endpoint `/api/dashboard/summary` continuam existindo, testados,
+funcionais, so sem nenhum consumidor no frontend hoje. Reversao
+instantanea se algo grave aparecer. O corte deixou orfaos alguns estados
+de `App.jsx` que so alimentavam a tela antiga (`selectedDevice`/
+`selectDevice`, os setters de `search`/`status`, `summary` do
+`useDashboardData`) — removidos (ou elididos via destructuring quando o
+setter ainda era usado por outro lugar, caso de `setSelectedDevice`).
+
+### Validacoes
+
+- Servidor: `dashboardLayoutValidation.test.mjs` (15 casos: tipo
+  desconhecido, posicao/tier invalidos, limite de 30 widgets, refresh
+  minimo de 30s, titulo opcional), testes unitarios por familia de widget
+  (`assetWidgets`/`serviceOrderWidgets`/`alertWidgets`/`metricWidgets`,
+  cada fetchData com caso "com dado" e "sem dado"), teste de integracao
+  `dashboard-layout.test.mjs` (CRUD completo, permissao
+  view-mas-nao-customize via SQL direto num usuario de teste, rota
+  generica de preferencias continua bloqueada) e
+  `dashboard-widget-preview.test.mjs` (catalogo, preview de varios tipos
+  com dado real de heartbeat/OS, tipo desconhecido -> 400, ativo
+  inexistente -> 404 isolado, nenhum vazamento de token/senha na
+  resposta), mais um teste de drift (`widgetRegistry.test.mjs`) que le o
+  arquivo do registry do cliente como texto (import direto nao e viavel,
+  lados puxam runtimes incompativeis) e confere que os tipos batem
+  exatamente com o registry do servidor;
+- Cliente: `widgetGridMath.test.js` (matematica pura de grid),
+  `useWidgetData.test.js` (7 casos, incluindo abort real via
+  `AbortController` e refresh minimo de 30s — precisou trocar `waitFor` do
+  testing-library por `vi.advanceTimersByTimeAsync` porque os dois nao se
+  entendem sob fake timers, `waitFor` trava em timeout real de 5s),
+  `useDashboardLayout.test.js`, `DashboardWorkspace.test.jsx` (9 casos:
+  renderizar, entrar em modo edicao, permissao esconde o botao de editar,
+  adicionar/remover/redimensionar widget no draft sem persistir, cancelar
+  descarta, salvar e restaurar chamam a API certa);
+- `npm run lint`, `npm run check:architecture`,
+  `npm run test --workspace server` (497 testes),
+  `npm run test:integration --workspace server` (103 testes),
+  `npm run test --workspace client` (218 testes), `npm run build` —
+  todos passando;
+- verificacao ao vivo no navegador (servidor + cliente reais, seed de
+  demonstracao): logado, os 12 widgets do layout padrao renderizaram com
+  dado real (nenhum inventado — "Nenhum ativo cadastrado ainda" onde nao
+  ha ativo, contagens reais de OS do seed); modo edicao, redimensionar
+  (confirmado via `getComputedStyle` que o `grid-column` muda), adicionar
+  widget do catalogo (abriu o modal de configuracao sozinho para um tipo
+  que exige ativo, mostrou o erro real do backend por faltar `assetId`),
+  remover, salvar -> `PUT 200` -> recarregar a pagina -> layout persistiu
+  de verdade (12 widgets, redimensionamento mantido); "Restaurar padrao"
+  -> `POST 200` -> voltou ao tamanho original.
+
+### Pendencias conhecidas
+
+- **reordenar por arrastar nao foi confirmado ao vivo de ponta a ponta**:
+  o ambiente onde esta rodada foi feita nao consegue tirar screenshot nem
+  simular drag real (o painel do navegador nao fica visivel para o
+  compositor), e disparar eventos de ponteiro sinteticos via JS nao
+  aciona a maquina interna do dnd-kit (limitacao conhecida de simular
+  drag-and-drop sem input real de SO). Mitigado ao maximo possivel sem
+  isso: a matematica pura por tras do reordenar
+  (`arrayMove`+`reindexWidgetPositions`) esta testada, e `@dnd-kit/sortable`
+  e a mesma biblioteca (mesmo padrao de `PointerSensor` com
+  `activationConstraint`) ja usada com sucesso pelo Inventario neste
+  projeto — mas reserve um teste manual real (mouse de verdade) antes de
+  confiar nisso em producao;
+- Top Ativos por CPU/RAM/Disco ranqueiam pelo valor atual, nao uma
+  tendencia historica — aceito como limitacao documentada, nao bug;
+- widget de Assistencia Remota nao implementado, de proposito;
+- `DashboardPage.jsx`/`useDashboardSummary.js`/`/api/dashboard/summary`
+  ficam orfaos no codigo — limpeza definitiva e trabalho futuro, so depois
+  do sistema novo validado em producao por um tempo razoavel.
+
 ## 2026-08-23 - Historico visual de metricas nos cards do inventario
 
 ### Contexto

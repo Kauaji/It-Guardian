@@ -1,7 +1,9 @@
+import { averageMinutesBetween, isMetricCritical, isMetricWarning } from "../domain/assetMetricThresholds.js";
 import { calculateInfrastructureHealth } from "../domain/infrastructureHealth.js";
+import { buildIsFinalServiceOrderStatus, splitServiceOrdersBySla } from "../domain/serviceOrderAggregates.js";
 import { listAlerts } from "../repositories/alertRepository.js";
 import { listActiveMaintenanceRecordsMap } from "../repositories/assetLifecycleRepository.js";
-import { calculateServiceOrderSla, getServiceOrderSettings, listServiceOrders } from "../repositories/serviceOrderRepository.js";
+import { getServiceOrderSettings, listServiceOrders } from "../repositories/serviceOrderRepository.js";
 import { getSystemSettings } from "../repositories/systemSettingsRepository.js";
 import { getActiveAlertsWithAcknowledgements, getAlertCategory, getAlertCompactLabel } from "./alertService.js";
 import { listDevices } from "./monitoringService.js";
@@ -13,8 +15,6 @@ const statusLabels = { online: "Online", offline: "Offline", problem: "Erro", un
 const priorityLabels = { low: "Baixa", medium: "Media", high: "Alta", critical: "Critica" };
 const severityLabels = { critical: "Critica", high: "Alta", medium: "Media", low: "Baixa", warning: "Atencao" };
 
-const CRITICAL_METRIC_THRESHOLD = 90;
-const WARNING_METRIC_THRESHOLD = 85;
 const RECURRING_ALERT_THRESHOLD = 3;
 const RANKING_LIMIT = 5;
 
@@ -31,42 +31,6 @@ function dayKey(value) {
 function withinPeriod(value, sinceDate) {
   const time = Date.parse(value);
   return Number.isFinite(time) && time >= sinceDate.getTime();
-}
-
-// Computa o SLA de cada OS ainda aberta uma unica vez (evita recalcular a
-// mesma lista em buildOverview e buildServiceOrdersSection). Nao inventa
-// "vencida" pra OS sem sla_due_at - calculateServiceOrderSla ja retorna
-// not_applicable nesse caso.
-function splitServiceOrdersBySla(openOrders, settings) {
-  const overdueOrders = [];
-  const nearDueOrders = [];
-  for (const order of openOrders) {
-    const sla = calculateServiceOrderSla(order, settings);
-    if (sla.breached) overdueOrders.push({ ...order, sla });
-    else if (sla.nearDue) nearDueOrders.push({ ...order, sla });
-  }
-  return { overdueOrders, nearDueOrders };
-}
-
-function averageMinutesBetween(orders, startField, endField) {
-  const diffs = orders
-    .map((order) => {
-      const start = Date.parse(order[startField]);
-      const end = Date.parse(order[endField]);
-      return Number.isFinite(start) && Number.isFinite(end) && end >= start ? (end - start) / 60000 : null;
-    })
-    .filter((value) => value != null);
-
-  if (!diffs.length) return null;
-  return Math.round(diffs.reduce((sum, value) => sum + value, 0) / diffs.length);
-}
-
-function isMetricCritical(value) {
-  return Number.isFinite(value) && value >= CRITICAL_METRIC_THRESHOLD;
-}
-
-function isMetricWarning(value) {
-  return Number.isFinite(value) && value >= WARNING_METRIC_THRESHOLD;
 }
 
 function countBy(list, keyFn, labelFn = (key) => String(key)) {
@@ -389,8 +353,7 @@ export async function getDashboardSummaryReport({ period = defaultPeriod, user =
       getSystemSettings()
     ]);
 
-  const statusById = new Map(statusSettings.statuses.map((status) => [status.id, status]));
-  const isFinalStatus = (statusId) => statusById.get(statusId)?.isFinal ?? statusId === "closed";
+  const isFinalStatus = buildIsFinalServiceOrderStatus(statusSettings);
 
   const openOrders = serviceOrders.filter((order) => !isFinalStatus(order.status));
   const { overdueOrders, nearDueOrders } = splitServiceOrdersBySla(openOrders, statusSettings);

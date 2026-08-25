@@ -3,7 +3,8 @@ export const permissionGroups = [
     id: "dashboard",
     label: "Dashboard",
     permissions: [
-      { id: "dashboard.view", label: "Visualizar dashboard" }
+      { id: "dashboard.view", label: "Visualizar dashboard" },
+      { id: "dashboard.customize", label: "Personalizar widgets do dashboard" }
     ]
   },
   {
@@ -164,6 +165,7 @@ export const roleDefaultPermissions = {
   admin: allPermissionIds,
   operator: [
     "dashboard.view",
+    "dashboard.customize",
     "inventory.view",
     "inventory.create_asset",
     "inventory.edit_asset",

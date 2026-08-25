@@ -1964,6 +1964,25 @@ export async function listPendingScriptLogs() {
   }));
 }
 
+export async function listRecentScriptExecutionLogs({ limit = 10 } = {}) {
+  const result = await query(
+    `
+      SELECT logs.*,
+             scripts.name AS script_name
+      FROM script_execution_logs logs
+      LEFT JOIN maintenance_scripts scripts ON scripts.id = logs.script_id
+      ORDER BY logs.created_at DESC
+      LIMIT $1
+    `,
+    [limit]
+  );
+
+  return result.rows.map((row) => ({
+    ...fromLogRow(row),
+    scriptName: row.script_name || ""
+  }));
+}
+
 export async function findScriptLogById(id) {
   const result = await query(
     `
