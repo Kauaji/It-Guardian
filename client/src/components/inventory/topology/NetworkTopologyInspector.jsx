@@ -3,9 +3,82 @@ import { ExternalLink, Pin, PinOff, Trash2, X } from "lucide-react";
 import { assetTypeLabel } from "../assetTypes.js";
 import { getMachineSourceLabel } from "../agentPresentation.js";
 import { LINK_TYPE_OPTIONS } from "./networkTopologyFormatters.js";
-import { getStatusLabel, resolveAssetType } from "./networkTopologyModel.js";
+import { getAggregateStatusLabel } from "./networkTopologyHierarchy.js";
+import { getStatusLabel, isClusterNode, resolveAssetType, resolveEntityLabel } from "./networkTopologyModel.js";
 
-export function NetworkTopologyNodeInspector({ node, device, editMode, onOpenDetails, onTogglePinned, onRemoveNode, onClose }) {
+export function NetworkTopologyNodeInspector({
+  node,
+  device,
+  clusterInfo,
+  editMode,
+  onOpenDetails,
+  onOpenCluster,
+  onTogglePinned,
+  onRemoveNode,
+  onClose
+}) {
+  if (isClusterNode(node)) {
+    const missing = !clusterInfo;
+    const isGroup = node.nodeType === "group";
+    return (
+      <aside className="network-topology-inspector">
+        <div className="network-topology-inspector-header">
+          <h3>{isGroup ? "Grupo selecionado" : "Segmento selecionado"}</h3>
+          <button type="button" className="network-topology-inspector-close" onClick={onClose}>
+            <X size={16} />
+          </button>
+        </div>
+        {missing ? (
+          <p className="network-topology-inspector-empty">
+            Este {isGroup ? "grupo" : "segmento"} não existe mais no inventário. Remova o nó ou mantenha-o como
+            registro histórico do mapa.
+          </p>
+        ) : (
+          <dl className="network-topology-inspector-fields">
+            <div>
+              <dt>Nome</dt>
+              <dd>{clusterInfo.name}</dd>
+            </div>
+            <div>
+              <dt>Status</dt>
+              <dd>{getAggregateStatusLabel(clusterInfo.status)}</dd>
+            </div>
+            {isGroup ? (
+              <div>
+                <dt>Segmentos</dt>
+                <dd>{clusterInfo.segmentCount}</dd>
+              </div>
+            ) : null}
+            <div>
+              <dt>Ativos</dt>
+              <dd>{clusterInfo.deviceCount}</dd>
+            </div>
+          </dl>
+        )}
+        <div className="network-topology-inspector-actions">
+          {!missing ? (
+            <button type="button" className="network-topology-toolbar-button" onClick={() => onOpenCluster(node)}>
+              <ExternalLink size={15} />
+              Abrir mapa
+            </button>
+          ) : null}
+          {editMode ? (
+            <>
+              <button type="button" className="network-topology-toolbar-button" onClick={onTogglePinned}>
+                {node.pinned ? <PinOff size={15} /> : <Pin size={15} />}
+                {node.pinned ? "Desafixar" : "Fixar posição"}
+              </button>
+              <button type="button" className="network-topology-toolbar-button is-danger" onClick={onRemoveNode}>
+                <Trash2 size={15} />
+                Remover do mapa
+              </button>
+            </>
+          ) : null}
+        </div>
+      </aside>
+    );
+  }
+
   const missing = !device;
 
   return (
@@ -74,7 +147,7 @@ export function NetworkTopologyNodeInspector({ node, device, editMode, onOpenDet
   );
 }
 
-export function NetworkTopologyLinkInspector({ link, sourceDevice, targetDevice, editMode, onSave, onRemove, onClose }) {
+export function NetworkTopologyLinkInspector({ link, sourceEntity, targetEntity, editMode, onSave, onRemove, onClose }) {
   const [draft, setDraft] = useState({
     label: link.label || "",
     type: link.type,
@@ -94,7 +167,7 @@ export function NetworkTopologyLinkInspector({ link, sourceDevice, targetDevice,
         </button>
       </div>
       <p className="network-topology-inspector-connection-summary">
-        {sourceDevice?.name || "Ativo removido"} <span>↔</span> {targetDevice?.name || "Ativo removido"}
+        {resolveEntityLabel(link.sourceType, sourceEntity)} <span>↔</span> {resolveEntityLabel(link.targetType, targetEntity)}
       </p>
       {editMode ? (
         <form

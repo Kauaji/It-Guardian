@@ -126,7 +126,48 @@ test("mapa de rede por escopo: escopo nao suportado devolve 400", async (t) => {
   const cookie = await login(baseUrl);
 
   const response = await fetch(
-    `${baseUrl}/api/topology-maps/by-scope?scopeType=inventory_tab&scopeId=qualquer`,
+    `${baseUrl}/api/topology-maps/by-scope?scopeType=asset&scopeId=qualquer`,
+    { headers: { cookie } }
+  );
+  assert.equal(response.status, 400);
+});
+
+test("mapa de rede por escopo: mapa de aba e criado sob demanda e reaproveitado, sem tabela propria de aba", async (t) => {
+  const server = await listen(createApp({ initializeOnRequest: true }));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  const cookie = await login(baseUrl);
+
+  const tabId = `tab-by-scope-${Date.now()}`;
+
+  const firstResponse = await fetch(
+    `${baseUrl}/api/topology-maps/by-scope?scopeType=inventory_tab&scopeId=${tabId}&scopeName=${encodeURIComponent("Minha Aba")}`,
+    { headers: { cookie } }
+  );
+  const firstBody = await firstResponse.json();
+  assert.equal(firstResponse.status, 200, JSON.stringify(firstBody));
+  assert.equal(firstBody.map.scopeType, "inventory_tab");
+  assert.equal(firstBody.map.scopeId, tabId);
+  assert.equal(firstBody.map.name, "Minha Aba", "usa o nome mandado pelo cliente na primeira criacao");
+
+  const secondResponse = await fetch(
+    `${baseUrl}/api/topology-maps/by-scope?scopeType=inventory_tab&scopeId=${tabId}`,
+    { headers: { cookie } }
+  );
+  const secondBody = await secondResponse.json();
+  assert.equal(secondResponse.status, 200);
+  assert.equal(secondBody.map.id, firstBody.map.id, "segunda chamada reaproveita o mesmo mapa mesmo sem scopeName");
+  assert.equal(secondBody.map.name, "Minha Aba", "nome do mapa ja criado nao muda so por faltar scopeName depois");
+});
+
+test("mapa de rede por escopo: aba sem scopeId devolve 400", async (t) => {
+  const server = await listen(createApp({ initializeOnRequest: true }));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  const cookie = await login(baseUrl);
+
+  const response = await fetch(
+    `${baseUrl}/api/topology-maps/by-scope?scopeType=inventory_tab`,
     { headers: { cookie } }
   );
   assert.equal(response.status, 400);

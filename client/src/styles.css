@@ -19683,99 +19683,6 @@ button.dashboard-ranking-item.clickable:hover {
   padding-left: 24px;
 }
 
-/* Grade agregada (nivel Aba/Grupo) */
-
-.network-topology-aggregate-section-title {
-  margin: 0;
-  font-size: 0.78rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  color: var(--text-muted);
-}
-
-.network-topology-aggregate-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 12px;
-}
-
-.network-topology-aggregate-card {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-items: flex-start;
-  text-align: left;
-  padding: 14px;
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--aggregate-status-color, var(--border));
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  cursor: pointer;
-  transition: transform 140ms var(--ease-premium), box-shadow 140ms var(--ease-premium), border-color 140ms ease;
-}
-
-.network-topology-aggregate-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-sm);
-  border-color: var(--aggregate-status-color, var(--border-strong));
-}
-
-.network-topology-aggregate-card-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-}
-
-.network-topology-aggregate-card-icon {
-  display: inline-flex;
-  color: var(--aggregate-status-color, var(--text-soft));
-}
-
-.network-topology-aggregate-card-header strong {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.92rem;
-  color: var(--text);
-}
-
-.network-topology-aggregate-card-chevron {
-  color: var(--text-muted);
-  flex: 0 0 auto;
-}
-
-.network-topology-aggregate-card-status {
-  font-size: 0.72rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  color: var(--aggregate-status-color, var(--text-muted));
-}
-
-.network-topology-aggregate-card-counts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 10px;
-  font-size: 0.76rem;
-  color: var(--text-soft);
-}
-
-.network-topology-aggregate-card-counts .is-ok {
-  color: var(--topology-status-online);
-}
-
-.network-topology-aggregate-card-counts .is-warning {
-  color: var(--topology-status-warning);
-}
-
-.network-topology-aggregate-card-counts .is-danger {
-  color: var(--topology-status-critical);
-}
-
 @media (max-width: 900px) {
   .network-topology-hierarchy-layout {
     grid-template-columns: 1fr;
@@ -20165,6 +20072,25 @@ button.dashboard-ranking-item.clickable:hover {
 .network-topology-node-realname {
   font-style: italic;
   opacity: 0.85;
+}
+
+.network-topology-node-counts {
+  font-size: 0.64rem;
+  color: var(--text-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.network-topology-node.is-cluster .network-topology-node-icon {
+  width: 48px;
+  height: 48px;
+}
+
+.network-topology-node.is-cluster .network-topology-node-name {
+  font-size: 0.84rem;
+  font-weight: 600;
 }
 
 .network-topology-link-label {

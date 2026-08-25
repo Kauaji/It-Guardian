@@ -12,6 +12,33 @@ export function isAssetMissing(node, devicesById) {
   return !devicesById.has(node.assetId);
 }
 
+const NODE_DIMENSIONS = {
+  asset: { width: 116, height: 100 },
+  segment: { width: 148, height: 118 },
+  group: { width: 148, height: 118 }
+};
+
+export function getNodeDimensions(node) {
+  return NODE_DIMENSIONS[node?.nodeType] || NODE_DIMENSIONS.asset;
+}
+
+export function isClusterNode(node) {
+  return node?.nodeType === "segment" || node?.nodeType === "group";
+}
+
+const ENTITY_MISSING_LABELS = {
+  asset: "Ativo removido",
+  segment: "Segmento removido",
+  group: "Grupo removido"
+};
+
+// Rotulo generico pro inspector de conexao - funciona pra ativo (entity =
+// device) ou cluster (entity = resumo de segmento/grupo), sem assumir forma
+// de dispositivo.
+export function resolveEntityLabel(nodeType, entity) {
+  return entity?.name || ENTITY_MISSING_LABELS[nodeType] || ENTITY_MISSING_LABELS.asset;
+}
+
 export function resolveNodeLabel(node, device) {
   return node.labelOverride || device?.name || "Ativo removido";
 }
@@ -27,14 +54,37 @@ export function resolveNodeSecondaryName(node, device, label) {
   return device.technicalName !== label ? device.technicalName : null;
 }
 
+// Status agregado (networkTopologyHierarchy.js) -> vocabulario de status de
+// link, so pra dar uma cor com sentido a uma conexao entre clusters -
+// statusOverride sempre vence, entao isso e so uma sugestao visual.
+const AGGREGATE_TO_LINK_STATUS = {
+  critico: "critical",
+  atencao: "warning",
+  online: "online",
+  misto: "warning",
+  sem_dados: "unknown"
+};
+
 /**
- * Deriva o status de uma conexao a partir do status dos dois ativos que ela liga.
- * Nunca promete monitoramento real de link - e sempre uma leitura indireta do
- * status dos dois ativos, exceto quando o usuario define um status manual
- * (statusOverride), que sempre tem prioridade.
+ * Deriva o status de uma conexao a partir do status dos dois lados que ela
+ * liga. Nunca promete monitoramento real de link - e sempre uma leitura
+ * indireta do status dos dois lados, exceto quando o usuario define um
+ * status manual (statusOverride), que sempre tem prioridade.
+ * `clusterSummaryByRefId` (opcional) resolve o status quando o link liga
+ * dois nos de cluster (segmento/grupo) em vez de dois ativos.
  */
-export function deriveLinkStatus(link, devicesById) {
+export function deriveLinkStatus(link, devicesById, clusterSummaryByRefId) {
   if (link.statusOverride) return link.statusOverride;
+
+  if (link.sourceType && link.sourceType !== "asset") {
+    const source = clusterSummaryByRefId?.get(link.sourceAssetId);
+    const target = clusterSummaryByRefId?.get(link.targetAssetId);
+    if (!source || !target) return "unknown";
+    const worst = [source.status, target.status]
+      .map((status) => AGGREGATE_TO_LINK_STATUS[status] || "unknown")
+      .sort((a, b) => LINK_STATUS_SEVERITY.indexOf(a) - LINK_STATUS_SEVERITY.indexOf(b));
+    return worst[0];
+  }
 
   const source = devicesById.get(link.sourceAssetId);
   const target = devicesById.get(link.targetAssetId);
@@ -45,6 +95,8 @@ export function deriveLinkStatus(link, devicesById) {
   if (source.status === "online" && target.status === "online") return "online";
   return "unknown";
 }
+
+const LINK_STATUS_SEVERITY = ["critical", "offline", "warning", "online", "unknown"];
 
 const STATUS_COLOR_TOKENS = {
   online: "var(--topology-status-online)",

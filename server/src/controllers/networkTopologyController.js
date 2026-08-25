@@ -26,7 +26,7 @@ export async function listNetworkTopologyMapsController(req, res, next) {
 
 export async function getNetworkTopologyMapByScopeController(req, res, next) {
   try {
-    const bundle = await getMapByScope(req.query.scopeType, req.query.scopeId, req.user);
+    const bundle = await getMapByScope(req.query.scopeType, req.query.scopeId, req.user, req.query.scopeName);
     res.json(bundle);
   } catch (error) {
     next(error);

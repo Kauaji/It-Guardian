@@ -4,6 +4,7 @@ import { addLog } from "./logRepository.js";
 import { addAssetHistory } from "./assetHistoryRepository.js";
 
 export const TOPOLOGY_MAP_SCOPE_TYPES = new Set(["global", "inventory_tab", "group", "segment"]);
+export const TOPOLOGY_NODE_TYPES = new Set(["asset", "segment", "group"]);
 export const TOPOLOGY_LINK_TYPES = new Set(["ethernet", "wifi", "fiber", "logical", "unknown"]);
 export const TOPOLOGY_LINK_STATUS_OVERRIDES = new Set([
   "online",
@@ -55,28 +56,50 @@ export function normalizeMapPayload(payload = {}, existing = {}) {
 }
 
 export function normalizeNodePayload(payload = {}, existing = {}) {
-  const assetId = nullableText(payload.assetId ?? payload.asset_id ?? existing.assetId);
-  if (!assetId) {
-    throw makeHttpError("Informe o ativo a ser posicionado no mapa de rede.");
+  const nodeType = normalizeText(payload.nodeType ?? payload.node_type ?? existing.nodeType, "asset");
+  if (!TOPOLOGY_NODE_TYPES.has(nodeType)) {
+    throw makeHttpError("Tipo de no do mapa de rede nao suportado.");
   }
 
-  return {
-    assetId,
+  const shared = {
     x: finiteNumber(payload.x, existing.x ?? 0),
     y: finiteNumber(payload.y, existing.y ?? 0),
     pinned: Boolean(payload.pinned ?? existing.pinned ?? false),
     labelOverride: nullableText(payload.labelOverride ?? payload.label_override ?? existing.labelOverride)
   };
+
+  if (nodeType === "asset") {
+    const assetId = nullableText(payload.assetId ?? payload.asset_id ?? existing.assetId);
+    if (!assetId) {
+      throw makeHttpError("Informe o ativo a ser posicionado no mapa de rede.");
+    }
+    return { nodeType, assetId, refId: null, ...shared };
+  }
+
+  const refId = nullableText(payload.refId ?? payload.ref_id ?? existing.refId);
+  if (!refId) {
+    throw makeHttpError("Informe o segmento ou grupo a ser posicionado no mapa de rede.");
+  }
+  return { nodeType, assetId: null, refId, ...shared };
 }
 
 export function normalizeLinkPayload(payload = {}, existing = {}) {
+  const sourceType = normalizeText(payload.sourceType ?? payload.source_type ?? existing.sourceType, "asset");
+  const targetType = normalizeText(payload.targetType ?? payload.target_type ?? existing.targetType, "asset");
+  if (!TOPOLOGY_NODE_TYPES.has(sourceType) || !TOPOLOGY_NODE_TYPES.has(targetType)) {
+    throw makeHttpError("Tipo de no da conexao nao suportado.");
+  }
+  if (sourceType !== targetType) {
+    throw makeHttpError("Uma conexao so pode ligar dois nos do mesmo tipo.");
+  }
+
   const sourceAssetId = nullableText(payload.sourceAssetId ?? payload.source_asset_id ?? existing.sourceAssetId);
   const targetAssetId = nullableText(payload.targetAssetId ?? payload.target_asset_id ?? existing.targetAssetId);
   if (!sourceAssetId || !targetAssetId) {
-    throw makeHttpError("Informe os dois ativos da conexao.");
+    throw makeHttpError("Informe os dois lados da conexao.");
   }
   if (sourceAssetId === targetAssetId) {
-    throw makeHttpError("Um ativo nao pode se conectar com ele mesmo.");
+    throw makeHttpError("Um item nao pode se conectar com ele mesmo.");
   }
 
   const type = normalizeText(payload.type ?? existing.type, "unknown");
@@ -90,6 +113,8 @@ export function normalizeLinkPayload(payload = {}, existing = {}) {
   }
 
   return {
+    sourceType,
+    targetType,
     sourceAssetId,
     targetAssetId,
     label: nullableText(payload.label ?? existing.label),
@@ -117,7 +142,9 @@ function nodeFromRow(row) {
   return {
     id: row.id,
     mapId: row.map_id,
+    nodeType: row.node_type,
     assetId: row.asset_id,
+    refId: row.ref_id,
     x: Number(row.x),
     y: Number(row.y),
     pinned: Boolean(row.pinned),
@@ -132,6 +159,8 @@ function linkFromRow(row) {
   return {
     id: row.id,
     mapId: row.map_id,
+    sourceType: row.source_type,
+    targetType: row.target_type,
     sourceAssetId: row.source_asset_id,
     targetAssetId: row.target_asset_id,
     label: row.label,
@@ -186,42 +215,49 @@ async function ensureAssetsExist(assetIds, db = query) {
   }
 }
 
-async function ensureNodeAssetAvailable(mapId, assetId, excludeNodeId = null, db = query) {
+// Funciona pra ativo ou cluster porque a CHECK de consistencia da tabela
+// garante que so um de ref_id/asset_id esta preenchido por linha - o outro
+// e sempre NULL, entao COALESCE devolve exatamente o valor que importa.
+async function ensureNodeRefAvailable(mapId, nodeType, refValue, excludeNodeId = null, db = query) {
   const result = await db(
     `
       SELECT id
       FROM network_topology_nodes
       WHERE map_id = $1
-        AND asset_id = $2
-        AND ($3::text IS NULL OR id <> $3)
+        AND node_type = $2
+        AND COALESCE(ref_id, asset_id) = $3
+        AND ($4::text IS NULL OR id <> $4)
       LIMIT 1
     `,
-    [mapId, assetId, excludeNodeId]
+    [mapId, nodeType, refValue, excludeNodeId]
   );
 
   if (result.rows.length) {
-    throw makeHttpError("Este ativo ja esta posicionado neste mapa de rede.", 409);
+    throw makeHttpError(
+      nodeType === "asset" ? "Este ativo ja esta posicionado neste mapa de rede." : "Este item ja esta posicionado neste mapa de rede.",
+      409
+    );
   }
 }
 
-async function ensureLinkNotDuplicate(mapId, sourceAssetId, targetAssetId, excludeLinkId = null, db = query) {
+async function ensureLinkNotDuplicate(mapId, sourceType, targetType, sourceAssetId, targetAssetId, excludeLinkId = null, db = query) {
   const result = await db(
     `
       SELECT id
       FROM network_topology_links
       WHERE map_id = $1
-        AND ($3::text IS NULL OR id <> $3)
+        AND ($6::text IS NULL OR id <> $6)
         AND (
-          (source_asset_id = $2 AND target_asset_id = $4)
-          OR (source_asset_id = $4 AND target_asset_id = $2)
+          (source_type = $2 AND target_type = $3 AND source_asset_id = $4 AND target_asset_id = $5)
+          OR (source_type = $3 AND target_type = $2 AND source_asset_id = $5 AND target_asset_id = $4)
         )
       LIMIT 1
     `,
-    [mapId, sourceAssetId, excludeLinkId, targetAssetId]
+    [mapId, sourceType, targetType, sourceAssetId, targetAssetId, excludeLinkId]
   );
 
   if (result.rows.length) {
-    throw makeHttpError("Ja existe uma conexao entre estes dois ativos neste mapa.", 409);
+    throw makeHttpError("Ja existe uma conexao entre estes dois itens neste mapa.", 409);
   }
 }
 
@@ -410,36 +446,41 @@ export async function findNetworkTopologyReferencesForAsset(assetId) {
 export async function createNetworkTopologyNode(mapId, payload, user) {
   const data = normalizeNodePayload(payload);
   const id = randomUUID();
+  const refValue = data.assetId ?? data.refId;
 
   return withTransaction(async (db) => {
     await getMapOrThrow(mapId, db);
-    await ensureAssetsExist([data.assetId], db);
-    await ensureNodeAssetAvailable(mapId, data.assetId, null, db);
+    if (data.nodeType === "asset") {
+      await ensureAssetsExist([data.assetId], db);
+    }
+    await ensureNodeRefAvailable(mapId, data.nodeType, refValue, null, db);
 
     const result = await db(
       `
-        INSERT INTO network_topology_nodes (id, map_id, asset_id, x, y, pinned, label_override)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        INSERT INTO network_topology_nodes (id, map_id, node_type, asset_id, ref_id, x, y, pinned, label_override)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING *
       `,
-      [id, mapId, data.assetId, data.x, data.y, data.pinned, data.labelOverride]
+      [id, mapId, data.nodeType, data.assetId, data.refId, data.x, data.y, data.pinned, data.labelOverride]
     );
 
     await addLog({
       type: "inventory.network_topology.node.created",
-      message: `Ativo adicionado ao mapa de rede.`,
+      message: data.nodeType === "asset" ? `Ativo adicionado ao mapa de rede.` : `Item adicionado ao mapa de rede.`,
       userId: user?.id,
-      meta: { mapId, nodeId: id, assetId: data.assetId },
+      meta: { mapId, nodeId: id, nodeType: data.nodeType, assetId: data.assetId, refId: data.refId },
       db
     });
-    await addAssetHistory({
-      assetId: data.assetId,
-      eventType: "network_topology_node_added",
-      message: "Ativo adicionado a um mapa de rede.",
-      userId: user?.id,
-      userName: user?.name,
-      db
-    });
+    if (data.assetId) {
+      await addAssetHistory({
+        assetId: data.assetId,
+        eventType: "network_topology_node_added",
+        message: "Ativo adicionado a um mapa de rede.",
+        userId: user?.id,
+        userName: user?.name,
+        db
+      });
+    }
 
     return nodeFromRow(result.rows[0]);
   });
@@ -449,26 +490,30 @@ export async function updateNetworkTopologyNode(id, payload, user) {
   return withTransaction(async (db) => {
     const existing = await getNodeOrThrow(id, db);
     const data = normalizeNodePayload(payload, existing);
-    if (data.assetId !== existing.assetId) {
-      await ensureAssetsExist([data.assetId], db);
-      await ensureNodeAssetAvailable(existing.mapId, data.assetId, id, db);
+    const refValue = data.assetId ?? data.refId;
+    const existingRefValue = existing.assetId ?? existing.refId;
+    if (data.nodeType !== existing.nodeType || refValue !== existingRefValue) {
+      if (data.nodeType === "asset") {
+        await ensureAssetsExist([data.assetId], db);
+      }
+      await ensureNodeRefAvailable(existing.mapId, data.nodeType, refValue, id, db);
     }
 
     const result = await db(
       `
         UPDATE network_topology_nodes
-        SET asset_id = $2, x = $3, y = $4, pinned = $5, label_override = $6, updated_at = NOW()
+        SET node_type = $2, asset_id = $3, ref_id = $4, x = $5, y = $6, pinned = $7, label_override = $8, updated_at = NOW()
         WHERE id = $1
         RETURNING *
       `,
-      [id, data.assetId, data.x, data.y, data.pinned, data.labelOverride]
+      [id, data.nodeType, data.assetId, data.refId, data.x, data.y, data.pinned, data.labelOverride]
     );
 
     await addLog({
       type: "inventory.network_topology.node.updated",
-      message: `Ativo atualizado no mapa de rede.`,
+      message: data.nodeType === "asset" ? `Ativo atualizado no mapa de rede.` : `Item atualizado no mapa de rede.`,
       userId: user?.id,
-      meta: { mapId: existing.mapId, nodeId: id, assetId: data.assetId },
+      meta: { mapId: existing.mapId, nodeId: id, nodeType: data.nodeType, assetId: data.assetId, refId: data.refId },
       db
     });
 
@@ -520,19 +565,21 @@ export async function deleteNetworkTopologyNode(id, user) {
     await db("DELETE FROM network_topology_nodes WHERE id = $1", [id]);
     await addLog({
       type: "inventory.network_topology.node.deleted",
-      message: `Ativo removido do mapa de rede.`,
+      message: existing.assetId ? `Ativo removido do mapa de rede.` : `Item removido do mapa de rede.`,
       userId: user?.id,
-      meta: { mapId: existing.mapId, nodeId: id, assetId: existing.assetId },
+      meta: { mapId: existing.mapId, nodeId: id, nodeType: existing.nodeType, assetId: existing.assetId, refId: existing.refId },
       db
     });
-    await addAssetHistory({
-      assetId: existing.assetId,
-      eventType: "network_topology_node_removed",
-      message: "Ativo removido de um mapa de rede.",
-      userId: user?.id,
-      userName: user?.name,
-      db
-    });
+    if (existing.assetId) {
+      await addAssetHistory({
+        assetId: existing.assetId,
+        eventType: "network_topology_node_removed",
+        message: "Ativo removido de um mapa de rede.",
+        userId: user?.id,
+        userName: user?.name,
+        db
+      });
+    }
     return existing;
   });
 }
@@ -543,36 +590,51 @@ export async function createNetworkTopologyLink(mapId, payload, user) {
 
   return withTransaction(async (db) => {
     await getMapOrThrow(mapId, db);
-    await ensureAssetsExist([data.sourceAssetId, data.targetAssetId], db);
-    await ensureLinkNotDuplicate(mapId, data.sourceAssetId, data.targetAssetId, null, db);
+    if (data.sourceType === "asset") {
+      await ensureAssetsExist([data.sourceAssetId, data.targetAssetId], db);
+    }
+    await ensureLinkNotDuplicate(mapId, data.sourceType, data.targetType, data.sourceAssetId, data.targetAssetId, null, db);
 
     const result = await db(
       `
         INSERT INTO network_topology_links (
-          id, map_id, source_asset_id, target_asset_id, label, type, status_override, description
+          id, map_id, source_type, target_type, source_asset_id, target_asset_id, label, type, status_override, description
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         RETURNING *
       `,
-      [id, mapId, data.sourceAssetId, data.targetAssetId, data.label, data.type, data.statusOverride, data.description]
+      [
+        id,
+        mapId,
+        data.sourceType,
+        data.targetType,
+        data.sourceAssetId,
+        data.targetAssetId,
+        data.label,
+        data.type,
+        data.statusOverride,
+        data.description
+      ]
     );
 
     await addLog({
       type: "inventory.network_topology.link.created",
       message: `Conexao criada no mapa de rede.`,
       userId: user?.id,
-      meta: { mapId, linkId: id, sourceAssetId: data.sourceAssetId, targetAssetId: data.targetAssetId },
+      meta: { mapId, linkId: id, sourceType: data.sourceType, sourceAssetId: data.sourceAssetId, targetAssetId: data.targetAssetId },
       db
     });
-    for (const assetId of [data.sourceAssetId, data.targetAssetId]) {
-      await addAssetHistory({
-        assetId,
-        eventType: "network_topology_link_created",
-        message: "Conexao criada no mapa de rede envolvendo este ativo.",
-        userId: user?.id,
-        userName: user?.name,
-        db
-      });
+    if (data.sourceType === "asset") {
+      for (const assetId of [data.sourceAssetId, data.targetAssetId]) {
+        await addAssetHistory({
+          assetId,
+          eventType: "network_topology_link_created",
+          message: "Conexao criada no mapa de rede envolvendo este ativo.",
+          userId: user?.id,
+          userName: user?.name,
+          db
+        });
+      }
     }
 
     return linkFromRow(result.rows[0]);
@@ -583,20 +645,36 @@ export async function updateNetworkTopologyLink(id, payload, user) {
   return withTransaction(async (db) => {
     const existing = await getLinkOrThrow(id, db);
     const data = normalizeLinkPayload(payload, existing);
-    if (data.sourceAssetId !== existing.sourceAssetId || data.targetAssetId !== existing.targetAssetId) {
-      await ensureAssetsExist([data.sourceAssetId, data.targetAssetId], db);
-      await ensureLinkNotDuplicate(existing.mapId, data.sourceAssetId, data.targetAssetId, id, db);
+    if (
+      data.sourceType !== existing.sourceType ||
+      data.sourceAssetId !== existing.sourceAssetId ||
+      data.targetAssetId !== existing.targetAssetId
+    ) {
+      if (data.sourceType === "asset") {
+        await ensureAssetsExist([data.sourceAssetId, data.targetAssetId], db);
+      }
+      await ensureLinkNotDuplicate(existing.mapId, data.sourceType, data.targetType, data.sourceAssetId, data.targetAssetId, id, db);
     }
 
     const result = await db(
       `
         UPDATE network_topology_links
-        SET source_asset_id = $2, target_asset_id = $3, label = $4, type = $5,
-            status_override = $6, description = $7, updated_at = NOW()
+        SET source_type = $2, target_type = $3, source_asset_id = $4, target_asset_id = $5, label = $6, type = $7,
+            status_override = $8, description = $9, updated_at = NOW()
         WHERE id = $1
         RETURNING *
       `,
-      [id, data.sourceAssetId, data.targetAssetId, data.label, data.type, data.statusOverride, data.description]
+      [
+        id,
+        data.sourceType,
+        data.targetType,
+        data.sourceAssetId,
+        data.targetAssetId,
+        data.label,
+        data.type,
+        data.statusOverride,
+        data.description
+      ]
     );
 
     await addLog({
@@ -622,15 +700,17 @@ export async function deleteNetworkTopologyLink(id, user) {
       meta: { mapId: existing.mapId, linkId: id },
       db
     });
-    for (const assetId of [existing.sourceAssetId, existing.targetAssetId]) {
-      await addAssetHistory({
-        assetId,
-        eventType: "network_topology_link_removed",
-        message: "Conexao removida do mapa de rede envolvendo este ativo.",
-        userId: user?.id,
-        userName: user?.name,
-        db
-      });
+    if (existing.sourceType === "asset") {
+      for (const assetId of [existing.sourceAssetId, existing.targetAssetId]) {
+        await addAssetHistory({
+          assetId,
+          eventType: "network_topology_link_removed",
+          message: "Conexao removida do mapa de rede envolvendo este ativo.",
+          userId: user?.id,
+          userName: user?.name,
+          db
+        });
+      }
     }
     return existing;
   });
