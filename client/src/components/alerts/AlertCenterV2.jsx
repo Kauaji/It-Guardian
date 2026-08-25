@@ -31,9 +31,7 @@ import { hasRemoteAssistanceAgent, isRemoteAssistanceAssetFresh } from "../remot
 import PreventiveAutomationPanel from "../automation/PreventiveAutomationPanel.jsx";
 import { shouldShowAutomationManagement } from "../automation/automationUtils.js";
 import MaintenanceScriptsPanel from "../maintenance/MaintenanceScriptsPanel.jsx";
-import ScriptExecutionDiagnosticPanel from "../maintenance/ScriptExecutionDiagnosticPanel.jsx";
 import SummaryCard from "../ui/SummaryCard.jsx";
-import PulseDot from "../ui/PulseDot.jsx";
 import ViewLoadingState from "../ui/ViewLoadingState.jsx";
 import { formatDate, isMaintenanceSegmentName } from "../../utils/display.js";
 import {
@@ -69,15 +67,6 @@ import {
 } from "./alertUtils.js";
 
 const AutomationManagementView = lazy(() => import("../automation/AutomationManagementView.jsx"));
-
-const jobStatusLabels = {
-  queued: "Na fila, aguardando o agente",
-  claimed: "Executando agora no agente",
-  succeeded: "Concluída com sucesso",
-  failed: "Falhou",
-  timed_out: "Tempo limite excedido"
-};
-const activeJobStatuses = new Set(["queued", "claimed"]);
 
 export default function AlertCenterV2({
   token,
@@ -1380,7 +1369,6 @@ export default function AlertCenterV2({
                   const suggestionDevice = findSuggestionDevice(suggestion);
                   const suggestionAgentPresent = hasRemoteAssistanceAgent(suggestionDevice);
                   const suggestionAgentActive = suggestionAgentPresent && isRemoteAssistanceAssetFresh(suggestionDevice);
-                  const suggestionJobStatus = latestValidation?.job?.status || "";
 
                   return (
                     <article
@@ -1498,42 +1486,8 @@ export default function AlertCenterV2({
                               {openScriptMenuSuggestionId === suggestion.id && (
                                 <div className="suggestion-script-popover">
                                   <strong>Scripts disponíveis</strong>
-                                  <p className={`suggestion-agent-status ${suggestionAgentActive ? "active" : "inactive"}`}>
-                                    {suggestionAgentActive
-                                      ? "Agente ativo nesta máquina — execução real disponível."
-                                      : suggestionAgentPresent
-                                        ? "Agente desta máquina está offline ou desatualizado. Execução real indisponível agora."
-                                        : "Esta máquina não possui agente registrado. Execução real indisponível."}
-                                  </p>
                                   {!remoteScriptExecutionEnabled && (
                                     <p>Execução real desabilitada no servidor. Somente simulação e registro estão disponíveis.</p>
-                                  )}
-                                  {suggestionDevice?.id && (
-                                    <ScriptExecutionDiagnosticPanel token={token} assetId={suggestionDevice.id} context="alert" />
-                                  )}
-                                  {suggestionJobStatus && (
-                                    <p className="suggestion-job-status">
-                                      {activeJobStatuses.has(suggestionJobStatus) && (
-                                        <PulseDot
-                                          tone={suggestionJobStatus === "claimed" ? "ok" : "warning"}
-                                          title={jobStatusLabels[suggestionJobStatus]}
-                                        />
-                                      )}
-                                      Última execução: {jobStatusLabels[suggestionJobStatus] || suggestionJobStatus}
-                                    </p>
-                                  )}
-                                  {["succeeded", "failed", "timed_out"].includes(suggestionJobStatus) && latestValidation?.job && (
-                                    <>
-                                      {latestValidation.job.stdout && (
-                                        <p className="service-order-script-output">{latestValidation.job.stdout.slice(0, 400)}</p>
-                                      )}
-                                      {latestValidation.job.stderr && (
-                                        <p className="service-order-script-output error">{latestValidation.job.stderr.slice(0, 400)}</p>
-                                      )}
-                                      {latestValidation.job.errorMessage && (
-                                        <p className="service-order-script-output error">{latestValidation.job.errorMessage}</p>
-                                      )}
-                                    </>
                                   )}
                                   {recommendationLoading && <p>Carregando scripts...</p>}
                                   {recommendationError && <p>{recommendationError}</p>}
