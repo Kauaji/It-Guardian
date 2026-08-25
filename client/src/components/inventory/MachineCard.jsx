@@ -197,13 +197,13 @@ function MachineCardContent({
         </div>
       ) : (
         <div className="machine-metrics">
-          <MetricBadge metric="cpu" deviceId={machine.id} token={token} onOpenModal={setMetricModalTarget}>
+          <MetricBadge metric="cpu" onOpenModal={setMetricModalTarget}>
             <span><Cpu size={13} /> CPU</span>
             <strong className={metrics.cpu == null ? "" : metricTone(metrics.cpu)}>
               {metrics.cpu == null ? "--" : `${metrics.cpu}%`}
             </strong>
           </MetricBadge>
-          <MetricBadge metric="ram" deviceId={machine.id} token={token} onOpenModal={setMetricModalTarget}>
+          <MetricBadge metric="ram" onOpenModal={setMetricModalTarget}>
             <span><MemoryStick size={13} /> RAM</span>
             <strong className={metrics.ram == null ? "" : metricTone(metrics.ram)}>
               {metrics.ram == null ? "--" : `${metrics.ram}%`}
@@ -215,13 +215,7 @@ function MachineCardContent({
       {showDetails && (
         <div className="machine-card-actions">
           {!isManualAsset && metrics?.disk != null && (
-            <MetricBadge
-              metric="disk"
-              deviceId={machine.id}
-              token={token}
-              onOpenModal={setMetricModalTarget}
-              className="metric-badge--disk"
-            >
+            <MetricBadge metric="disk" onOpenModal={setMetricModalTarget} className="metric-badge--disk">
               <DiskIndicator value={metrics.disk} />
             </MetricBadge>
           )}
