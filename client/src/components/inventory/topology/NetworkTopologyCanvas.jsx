@@ -21,6 +21,8 @@ const NetworkTopologyCanvas = forwardRef(function NetworkTopologyCanvas(
     selectedNodeId,
     selectedLinkId,
     linkDraftSourceNodeId,
+    justAddedNodeId,
+    justCreatedLinkId,
     onNodeActivate,
     onNodeDrag,
     onNodeDragEnd,
@@ -233,6 +235,7 @@ const NetworkTopologyCanvas = forwardRef(function NetworkTopologyCanvas(
             targetNode={nodeByAssetId.get(link.targetAssetId)}
             devicesById={devicesById}
             selected={link.id === selectedLinkId}
+            justCreated={link.id === justCreatedLinkId}
             onClick={onSelectLink}
           />
         ))}
@@ -244,6 +247,7 @@ const NetworkTopologyCanvas = forwardRef(function NetworkTopologyCanvas(
             segmentName={segmentNameById.get(devicesById.get(node.assetId)?.segmentId)}
             selected={node.id === selectedNodeId}
             isLinkSource={node.id === linkDraftSourceNodeId}
+            isNew={node.id === justAddedNodeId}
             editMode={editMode}
             onPointerDown={handleNodePointerDown}
           />

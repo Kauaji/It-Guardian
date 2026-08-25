@@ -5,7 +5,10 @@ import {
   getStatusColorToken,
   isAssetMissing,
   isCentralAssetType,
-  resolveAssetType
+  resolveAssetType,
+  resolveNodeLabel,
+  resolveNodeSecondaryName,
+  resolveNodeStatusTone
 } from "./networkTopologyModel.js";
 
 describe("resolveAssetType", () => {
@@ -82,6 +85,49 @@ describe("getStatusColorToken", () => {
 
   it("status desconhecido cai no token 'unknown'", () => {
     expect(getStatusColorToken("qualquer-coisa")).toBe(getStatusColorToken("unknown"));
+  });
+});
+
+describe("resolveNodeLabel", () => {
+  it("labelOverride do no sempre vence", () => {
+    expect(resolveNodeLabel({ labelOverride: "Rótulo manual" }, { name: "Servidor" })).toBe("Rótulo manual");
+  });
+
+  it("sem override, usa o nome do dispositivo (ja decorado com o apelido)", () => {
+    expect(resolveNodeLabel({}, { name: "Apelido Legal" })).toBe("Apelido Legal");
+  });
+
+  it("sem dispositivo (ativo removido do inventario), cai num rotulo fixo", () => {
+    expect(resolveNodeLabel({}, undefined)).toBe("Ativo removido");
+  });
+});
+
+describe("resolveNodeSecondaryName", () => {
+  it("null quando o dispositivo nao tem nome tecnico registrado", () => {
+    expect(resolveNodeSecondaryName({}, { name: "Apelido" }, "Apelido")).toBeNull();
+  });
+
+  it("null quando o nome tecnico e igual ao rotulo exibido (sem apelido definido)", () => {
+    const device = { name: "PC-042", technicalName: "PC-042" };
+    expect(resolveNodeSecondaryName({}, device, "PC-042")).toBeNull();
+  });
+
+  it("devolve o nome tecnico quando ele difere do rotulo (apelido definido)", () => {
+    const device = { name: "Apelido Legal", technicalName: "PC-042" };
+    expect(resolveNodeSecondaryName({}, device, "Apelido Legal")).toBe("PC-042");
+  });
+});
+
+describe("resolveNodeStatusTone", () => {
+  it("mapeia online/offline/problem para os tons do PulseDot", () => {
+    expect(resolveNodeStatusTone({ status: "online" })).toBe("ok");
+    expect(resolveNodeStatusTone({ status: "offline" })).toBe("offline");
+    expect(resolveNodeStatusTone({ status: "problem" })).toBe("danger");
+  });
+
+  it("status desconhecido ou dispositivo ausente cai em 'offline'", () => {
+    expect(resolveNodeStatusTone({ status: "unknown" })).toBe("offline");
+    expect(resolveNodeStatusTone(undefined)).toBe("offline");
   });
 });
 

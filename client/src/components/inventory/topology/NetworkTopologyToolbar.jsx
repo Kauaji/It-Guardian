@@ -1,15 +1,14 @@
-import { useState } from "react";
 import {
   Crosshair,
   Link2,
   Maximize2,
   Pencil,
-  Plus,
   RotateCcw,
   Save,
   Sparkles,
   Eye
 } from "lucide-react";
+import NetworkTopologyAddAssetPicker from "./NetworkTopologyAddAssetPicker.jsx";
 import { getStatusColorToken, getStatusLabel } from "./networkTopologyModel.js";
 
 const LEGEND_STATUSES = ["online", "warning", "critical", "unknown", "manual"];
@@ -45,8 +44,6 @@ export default function NetworkTopologyToolbar({
   assetTypeOptions,
   canManage
 }) {
-  const [pickedAssetId, setPickedAssetId] = useState("");
-
   return (
     <div className="network-topology-toolbar">
       <div className="network-topology-toolbar-row">
@@ -112,37 +109,14 @@ export default function NetworkTopologyToolbar({
         ) : null}
 
         <div className="network-topology-toolbar-counters">
-          <span>{nodeCount} ativo(s)</span>
-          <span>{linkCount} conexão(ões)</span>
+          <span key={nodeCount} className="network-topology-toolbar-counter-pop">{nodeCount} ativo(s)</span>
+          <span key={`links-${linkCount}`} className="network-topology-toolbar-counter-pop">{linkCount} conexão(ões)</span>
         </div>
       </div>
 
       {editMode ? (
         <div className="network-topology-toolbar-row">
-          <select
-            className="network-topology-toolbar-select"
-            value={pickedAssetId}
-            onChange={(event) => setPickedAssetId(event.target.value)}
-          >
-            <option value="">Adicionar ativo ao mapa...</option>
-            {availableDevicesToAdd.map((device) => (
-              <option key={device.id} value={device.id}>
-                {device.name || device.id}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            className="network-topology-toolbar-button"
-            disabled={!pickedAssetId || addingAsset}
-            onClick={() => {
-              onAddAsset(pickedAssetId);
-              setPickedAssetId("");
-            }}
-          >
-            <Plus size={15} />
-            Adicionar
-          </button>
+          <NetworkTopologyAddAssetPicker devices={availableDevicesToAdd} onPick={onAddAsset} disabled={addingAsset} />
         </div>
       ) : null}
 

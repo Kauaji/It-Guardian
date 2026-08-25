@@ -52,6 +52,8 @@ export default function InventoryNetworkTopologyView({ token, notify, devices, s
   const [generatingLayout, setGeneratingLayout] = useState(false);
   const [addingAsset, setAddingAsset] = useState(false);
   const [creatingMap, setCreatingMap] = useState(false);
+  const [justAddedNodeId, setJustAddedNodeId] = useState(null);
+  const [justCreatedLinkId, setJustCreatedLinkId] = useState(null);
 
   const canvasRef = useRef(null);
 
@@ -158,6 +160,8 @@ export default function InventoryNetworkTopologyView({ token, notify, devices, s
         const point = jitteredCenter();
         const response = await createNetworkTopologyNode(token, activeMapId, { assetId, ...point });
         setBundle((current) => ({ ...current, nodes: [...current.nodes, response.node] }));
+        setJustAddedNodeId(response.node.id);
+        window.setTimeout(() => setJustAddedNodeId((current) => (current === response.node.id ? null : current)), 1400);
       } catch (createError) {
         notify?.("error", createError.message);
       } finally {
@@ -261,6 +265,8 @@ export default function InventoryNetworkTopologyView({ token, notify, devices, s
       try {
         const response = await createNetworkTopologyLink(token, activeMapId, { sourceAssetId, targetAssetId });
         setBundle((current) => ({ ...current, links: [...current.links, response.link] }));
+        setJustCreatedLinkId(response.link.id);
+        window.setTimeout(() => setJustCreatedLinkId((current) => (current === response.link.id ? null : current)), 800);
       } catch (createError) {
         notify?.("error", createError.message);
       }
@@ -419,6 +425,8 @@ export default function InventoryNetworkTopologyView({ token, notify, devices, s
           selectedNodeId={selectedNodeId}
           selectedLinkId={selectedLinkId}
           linkDraftSourceNodeId={linkDraftSourceNodeId}
+          justAddedNodeId={justAddedNodeId}
+          justCreatedLinkId={justCreatedLinkId}
           onNodeActivate={handleNodeActivate}
           onNodeDrag={handleNodeDrag}
           onNodeDragEnd={handleNodeDragEnd}

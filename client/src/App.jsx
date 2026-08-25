@@ -549,11 +549,13 @@ function Dashboard() {
           device.name ||
           device.hostname ||
           device.id;
+        const technicalName = device.name || device.hostname || device.agent?.hostname || device.id;
 
         return {
           ...device,
           name: displayName,
           displayName,
+          technicalName,
           backupRealSegmentId: device.backupOriginalSegmentId || rawSegmentId,
           backupRealSegmentName: device.backupOriginalSegmentName || rawSegmentName,
           segmentId: isAvailableBackup ? backupSegmentId : rawSegmentId,

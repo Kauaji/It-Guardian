@@ -1,6 +1,6 @@
 import { deriveLinkStatus, getStatusColorToken } from "./networkTopologyModel.js";
 
-export default function NetworkTopologyLink({ link, sourceNode, targetNode, devicesById, selected, onClick }) {
+export default function NetworkTopologyLink({ link, sourceNode, targetNode, devicesById, selected, justCreated, onClick }) {
   if (!sourceNode || !targetNode) return null;
 
   const status = deriveLinkStatus(link, devicesById);
@@ -9,7 +9,10 @@ export default function NetworkTopologyLink({ link, sourceNode, targetNode, devi
   const midY = (sourceNode.y + targetNode.y) / 2;
 
   return (
-    <g className={`network-topology-link ${selected ? "is-selected" : ""}`} onClick={() => onClick(link.id)}>
+    <g
+      className={["network-topology-link", selected && "is-selected", justCreated && "is-new"].filter(Boolean).join(" ")}
+      onClick={() => onClick(link.id)}
+    >
       <line
         x1={sourceNode.x}
         y1={sourceNode.y}

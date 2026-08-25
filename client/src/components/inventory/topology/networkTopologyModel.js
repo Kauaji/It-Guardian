@@ -12,6 +12,21 @@ export function isAssetMissing(node, devicesById) {
   return !devicesById.has(node.assetId);
 }
 
+export function resolveNodeLabel(node, device) {
+  return node.labelOverride || device?.name || "Ativo removido";
+}
+
+/**
+ * O nome exibido (device.name) ja pode ser o apelido/nome fantasia do
+ * ativo (decorado em App.jsx) - essa funcao devolve o nome tecnico/real so
+ * quando ele difere do que ja esta sendo mostrado, pra nao duplicar texto
+ * identico quando o ativo nao tem apelido.
+ */
+export function resolveNodeSecondaryName(node, device, label) {
+  if (!device?.technicalName) return null;
+  return device.technicalName !== label ? device.technicalName : null;
+}
+
 /**
  * Deriva o status de uma conexao a partir do status dos dois ativos que ela liga.
  * Nunca promete monitoramento real de link - e sempre uma leitura indireta do
@@ -55,6 +70,16 @@ const STATUS_LABELS = {
 
 export function getStatusLabel(status) {
   return STATUS_LABELS[status] || STATUS_LABELS.unknown;
+}
+
+const DEVICE_STATUS_PULSE_TONES = {
+  online: "ok",
+  offline: "offline",
+  problem: "danger"
+};
+
+export function resolveNodeStatusTone(device) {
+  return DEVICE_STATUS_PULSE_TONES[device?.status] || "offline";
 }
 
 export function buildFilterPredicate({ search = "", status = "", segmentId = "", assetType = "" } = {}) {
