@@ -1,9 +1,18 @@
 import { deriveLinkStatus, getStatusColorToken } from "./networkTopologyModel.js";
 
-export default function NetworkTopologyLink({ link, sourceNode, targetNode, devicesById, selected, justCreated, onClick }) {
+export default function NetworkTopologyLink({
+  link,
+  sourceNode,
+  targetNode,
+  devicesById,
+  clusterSummaryByRefId,
+  selected,
+  justCreated,
+  onClick
+}) {
   if (!sourceNode || !targetNode) return null;
 
-  const status = deriveLinkStatus(link, devicesById);
+  const status = deriveLinkStatus(link, devicesById, clusterSummaryByRefId);
   const color = getStatusColorToken(status);
   const midX = (sourceNode.x + targetNode.x) / 2;
   const midY = (sourceNode.y + targetNode.y) / 2;

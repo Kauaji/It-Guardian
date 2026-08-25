@@ -481,8 +481,10 @@ export function fetchNetworkTopologyMap(token, id) {
   return apiFetch(`/topology-maps/${id}`, { token });
 }
 
-export function fetchNetworkTopologyMapByScope(token, scopeType, scopeId) {
-  const query = new URLSearchParams({ scopeType, scopeId }).toString();
+export function fetchNetworkTopologyMapByScope(token, scopeType, scopeId, scopeName) {
+  const params = { scopeType, scopeId };
+  if (scopeName) params.scopeName = scopeName;
+  const query = new URLSearchParams(params).toString();
   return apiFetch(`/topology-maps/by-scope?${query}`, { token });
 }
 

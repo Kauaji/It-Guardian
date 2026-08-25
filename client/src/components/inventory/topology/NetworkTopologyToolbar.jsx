@@ -9,6 +9,7 @@ import {
   Eye
 } from "lucide-react";
 import NetworkTopologyAddAssetPicker from "./NetworkTopologyAddAssetPicker.jsx";
+import NetworkTopologyAddClusterPicker from "./NetworkTopologyAddClusterPicker.jsx";
 import { getStatusColorToken, getStatusLabel } from "./networkTopologyModel.js";
 
 const LEGEND_STATUSES = ["online", "warning", "critical", "unknown", "manual"];
@@ -35,6 +36,8 @@ export default function NetworkTopologyToolbar({
   onToggleLinkDraft,
   availableDevicesToAdd,
   onAddAsset,
+  availableClustersToAdd,
+  onAddCluster,
   addingAsset,
   nodeCount,
   linkCount,
@@ -43,7 +46,8 @@ export default function NetworkTopologyToolbar({
   segments,
   assetTypeOptions,
   canManage,
-  lockSegmentFilter = false
+  lockSegmentFilter = false,
+  isClusterLevel = false
 }) {
   return (
     <div className="network-topology-toolbar">
@@ -87,21 +91,23 @@ export default function NetworkTopologyToolbar({
               <RotateCcw size={15} />
               Resetar
             </button>
-            <button
-              type="button"
-              className="network-topology-toolbar-button"
-              onClick={onGenerateAutoLayout}
-              disabled={generatingLayout || nodeCount === 0}
-            >
-              <Sparkles size={15} />
-              {generatingLayout ? "Gerando..." : "Gerar automático"}
-            </button>
+            {!isClusterLevel ? (
+              <button
+                type="button"
+                className="network-topology-toolbar-button"
+                onClick={onGenerateAutoLayout}
+                disabled={generatingLayout || nodeCount === 0}
+              >
+                <Sparkles size={15} />
+                {generatingLayout ? "Gerando..." : "Gerar automático"}
+              </button>
+            ) : null}
             <button
               type="button"
               className={`network-topology-toolbar-button ${linkDraftActive ? "is-active" : ""}`}
               onClick={onToggleLinkDraft}
               disabled={nodeCount < 2}
-              title="Criar conexão entre dois ativos"
+              title="Criar conexão"
             >
               <Link2 size={15} />
               {linkDraftActive ? "Selecione o destino" : "Criar conexão"}
@@ -110,63 +116,71 @@ export default function NetworkTopologyToolbar({
         ) : null}
 
         <div className="network-topology-toolbar-counters">
-          <span key={nodeCount} className="network-topology-toolbar-counter-pop">{nodeCount} ativo(s)</span>
+          <span key={nodeCount} className="network-topology-toolbar-counter-pop">
+            {nodeCount} {isClusterLevel ? "item(ns)" : "ativo(s)"}
+          </span>
           <span key={`links-${linkCount}`} className="network-topology-toolbar-counter-pop">{linkCount} conexão(ões)</span>
         </div>
       </div>
 
       {editMode ? (
         <div className="network-topology-toolbar-row">
-          <NetworkTopologyAddAssetPicker devices={availableDevicesToAdd} onPick={onAddAsset} disabled={addingAsset} />
+          {isClusterLevel ? (
+            <NetworkTopologyAddClusterPicker items={availableClustersToAdd} onPick={onAddCluster} disabled={addingAsset} />
+          ) : (
+            <NetworkTopologyAddAssetPicker devices={availableDevicesToAdd} onPick={onAddAsset} disabled={addingAsset} />
+          )}
         </div>
       ) : null}
 
-      <div className="network-topology-toolbar-row">
-        <input
-          type="search"
-          className="network-topology-toolbar-input"
-          placeholder="Buscar por nome ou IP"
-          value={filters.search}
-          onChange={(event) => onFiltersChange({ ...filters, search: event.target.value })}
-        />
-        <select
-          className="network-topology-toolbar-select"
-          value={filters.status}
-          onChange={(event) => onFiltersChange({ ...filters, status: event.target.value })}
-        >
-          {STATUS_FILTER_OPTIONS.map((option) => (
-            <option key={option.value || "all"} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        {!lockSegmentFilter ? (
+      {!isClusterLevel ? (
+        <div className="network-topology-toolbar-row">
+          <input
+            type="search"
+            className="network-topology-toolbar-input"
+            placeholder="Buscar por nome ou IP"
+            value={filters.search}
+            onChange={(event) => onFiltersChange({ ...filters, search: event.target.value })}
+          />
           <select
             className="network-topology-toolbar-select"
-            value={filters.segmentId}
-            onChange={(event) => onFiltersChange({ ...filters, segmentId: event.target.value })}
+            value={filters.status}
+            onChange={(event) => onFiltersChange({ ...filters, status: event.target.value })}
           >
-            <option value="">Todos os segmentos</option>
-            {segments.map((segment) => (
-              <option key={segment.id} value={segment.id}>
-                {segment.name}
+            {STATUS_FILTER_OPTIONS.map((option) => (
+              <option key={option.value || "all"} value={option.value}>
+                {option.label}
               </option>
             ))}
           </select>
-        ) : null}
-        <select
-          className="network-topology-toolbar-select"
-          value={filters.assetType}
-          onChange={(event) => onFiltersChange({ ...filters, assetType: event.target.value })}
-        >
-          <option value="">Todos os tipos</option>
-          {assetTypeOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
+          {!lockSegmentFilter ? (
+            <select
+              className="network-topology-toolbar-select"
+              value={filters.segmentId}
+              onChange={(event) => onFiltersChange({ ...filters, segmentId: event.target.value })}
+            >
+              <option value="">Todos os segmentos</option>
+              {segments.map((segment) => (
+                <option key={segment.id} value={segment.id}>
+                  {segment.name}
+                </option>
+              ))}
+            </select>
+          ) : null}
+          <select
+            className="network-topology-toolbar-select"
+            value={filters.assetType}
+            onChange={(event) => onFiltersChange({ ...filters, assetType: event.target.value })}
+          >
+            <option value="">Todos os tipos</option>
+            {assetTypeOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
 
       <div className="network-topology-legend">
         {LEGEND_STATUSES.map((status) => (

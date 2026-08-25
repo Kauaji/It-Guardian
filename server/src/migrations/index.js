@@ -25,6 +25,7 @@ import { migration022ServiceOrderChecklists } from "./022-service-order-checklis
 import { migration023ServiceOrderAttachments } from "./023-service-order-attachments.js";
 import { migration024ServiceOrderFeedback } from "./024-service-order-feedback.js";
 import { migration025AssetMetricHistory } from "./025-asset-metric-history.js";
+import { migration026NetworkTopologyClusterNodes } from "./026-network-topology-cluster-nodes.js";
 
 export const migrations = [
   migration001RuntimeFoundation,
@@ -51,7 +52,8 @@ export const migrations = [
   migration022ServiceOrderChecklists,
   migration023ServiceOrderAttachments,
   migration024ServiceOrderFeedback,
-  migration025AssetMetricHistory
+  migration025AssetMetricHistory,
+  migration026NetworkTopologyClusterNodes
 ];
 
 export async function runMigrations() {

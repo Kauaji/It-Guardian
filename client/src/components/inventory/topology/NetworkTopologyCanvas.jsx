@@ -1,6 +1,7 @@
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from "react";
-import NetworkTopologyNode, { NODE_HEIGHT, NODE_WIDTH } from "./NetworkTopologyNode.jsx";
+import NetworkTopologyNode from "./NetworkTopologyNode.jsx";
 import NetworkTopologyLink from "./NetworkTopologyLink.jsx";
+import { getNodeDimensions } from "./networkTopologyModel.js";
 
 const DEFAULT_VIEWBOX = { x: 0, y: 0, width: 1600, height: 1000 };
 const MIN_WIDTH = 400;
@@ -17,6 +18,7 @@ const NetworkTopologyCanvas = forwardRef(function NetworkTopologyCanvas(
     links,
     devicesById,
     segmentNameById,
+    clusterSummaryByRefId,
     editMode,
     selectedNodeId,
     selectedLinkId,
@@ -26,6 +28,7 @@ const NetworkTopologyCanvas = forwardRef(function NetworkTopologyCanvas(
     onNodeActivate,
     onNodeDrag,
     onNodeDragEnd,
+    onNodeOpen,
     onSelectLink,
     onCanvasBackgroundClick
   },
@@ -69,15 +72,15 @@ const NetworkTopologyCanvas = forwardRef(function NetworkTopologyCanvas(
           setViewBox(DEFAULT_VIEWBOX);
           return;
         }
-        const bounds = nodes.reduce(
-          (acc, node) => ({
-            minX: Math.min(acc.minX, node.x - NODE_WIDTH / 2),
-            maxX: Math.max(acc.maxX, node.x + NODE_WIDTH / 2),
-            minY: Math.min(acc.minY, node.y - NODE_HEIGHT / 2),
-            maxY: Math.max(acc.maxY, node.y + NODE_HEIGHT / 2)
-          }),
-          { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity }
-        );
+        const bounds = nodes.reduce((acc, node) => {
+          const { width, height } = getNodeDimensions(node);
+          return {
+            minX: Math.min(acc.minX, node.x - width / 2),
+            maxX: Math.max(acc.maxX, node.x + width / 2),
+            minY: Math.min(acc.minY, node.y - height / 2),
+            maxY: Math.max(acc.maxY, node.y + height / 2)
+          };
+        }, { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity });
         fitToBounds(bounds);
       }
     }),
@@ -196,7 +199,7 @@ const NetworkTopologyCanvas = forwardRef(function NetworkTopologyCanvas(
     [getSvgPoint]
   );
 
-  const nodeByAssetId = useMemo(() => new Map(nodes.map((node) => [node.assetId, node])), [nodes]);
+  const nodeByRefKey = useMemo(() => new Map(nodes.map((node) => [node.assetId ?? node.refId, node])), [nodes]);
 
   return (
     <div className="network-topology-canvas-wrap">
@@ -231,9 +234,10 @@ const NetworkTopologyCanvas = forwardRef(function NetworkTopologyCanvas(
           <NetworkTopologyLink
             key={link.id}
             link={link}
-            sourceNode={nodeByAssetId.get(link.sourceAssetId)}
-            targetNode={nodeByAssetId.get(link.targetAssetId)}
+            sourceNode={nodeByRefKey.get(link.sourceAssetId)}
+            targetNode={nodeByRefKey.get(link.targetAssetId)}
             devicesById={devicesById}
+            clusterSummaryByRefId={clusterSummaryByRefId}
             selected={link.id === selectedLinkId}
             justCreated={link.id === justCreatedLinkId}
             onClick={onSelectLink}
@@ -244,12 +248,14 @@ const NetworkTopologyCanvas = forwardRef(function NetworkTopologyCanvas(
             key={node.id}
             node={node}
             device={devicesById.get(node.assetId)}
+            clusterInfo={clusterSummaryByRefId?.get(node.refId) ?? null}
             segmentName={segmentNameById.get(devicesById.get(node.assetId)?.segmentId)}
             selected={node.id === selectedNodeId}
             isLinkSource={node.id === linkDraftSourceNodeId}
             isNew={node.id === justAddedNodeId}
             editMode={editMode}
             onPointerDown={handleNodePointerDown}
+            onOpen={onNodeOpen}
           />
         ))}
       </svg>

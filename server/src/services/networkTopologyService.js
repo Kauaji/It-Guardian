@@ -21,12 +21,34 @@ import { findSegmentGroupById } from "../repositories/segmentGroupRepository.js"
 import { computeAutoLayout } from "./networkTopologyAutoLayout.js";
 import { broadcastSnapshot } from "./realtimeService.js";
 
+// "Aba" nao tem tabela propria no banco (e um conceito 100% client-side, em
+// localStorage - inventoryTabRepository.js existe no codigo mas referencia
+// uma coluna tab_id que nao existe no schema, nunca foi montado em app.js).
+// Por isso o escopo inventory_tab nao entra em SCOPE_LOOKUPS: nao ha entidade
+// pra buscar/validar. getMapByScope trata esse escopo num ramo a parte,
+// confiando no id (e no nome, mandado pelo cliente) sem checagem de FK - a
+// mesma politica ja usada por floor_plans.inventory_tab_id hoje.
 const SCOPE_LOOKUPS = {
   segment: { find: findSegmentById, notFoundMessage: "Segmento nao encontrado." },
   group: { find: findSegmentGroupById, notFoundMessage: "Grupo nao encontrado." }
 };
 
+// Subconjunto de SCOPE_LOOKUPS valido pra um no/ligacao do mapa (nao inclui
+// inventory_tab - uma aba nao vira no dentro de outro mapa, so e o escopo do
+// mapa do nivel Aba em si).
+const NODE_REF_LOOKUPS = { segment: SCOPE_LOOKUPS.segment, group: SCOPE_LOOKUPS.group };
+
 const CENTRAL_ASSET_TYPES = new Set(["server", "switch", "router", "nas"]);
+
+async function ensureNodeRefExists(nodeType, refId) {
+  if (!nodeType || nodeType === "asset") return; // ativo: ja validado pelo repository (ensureAssetsExist)
+  const lookup = NODE_REF_LOOKUPS[nodeType];
+  if (!lookup) return;
+  const entity = await lookup.find(refId);
+  if (!entity) {
+    throw notFoundError(lookup.notFoundMessage);
+  }
+}
 
 function notifySnapshot(context) {
   broadcastSnapshot().catch((error) => {
@@ -64,21 +86,29 @@ export async function getMapWithNodesAndLinks(id) {
  * por "abrir o mapa deste segmento/grupo", que ja existe ou acaba de ser
  * criado com o nome real do segmento/grupo.
  */
-export async function getMapByScope(scopeType, scopeId, user) {
-  const lookup = SCOPE_LOOKUPS[scopeType];
-  if (!lookup) {
-    throw badRequest("Escopo do mapa de rede nao suportado.");
-  }
+export async function getMapByScope(scopeType, scopeId, user, scopeName) {
   if (!scopeId) {
     throw badRequest("Informe o id do escopo do mapa de rede.");
   }
 
-  const scopeEntity = await lookup.find(scopeId);
-  if (!scopeEntity) {
-    throw notFoundError(lookup.notFoundMessage);
+  let defaultName;
+  if (scopeType === "inventory_tab") {
+    // Sem tabela/entidade pra validar (ver comentario acima de SCOPE_LOOKUPS) -
+    // o nome da aba, ja conhecido pelo cliente, so e usado na primeira criacao.
+    defaultName = String(scopeName || "").trim() || "Mapa da aba";
+  } else {
+    const lookup = SCOPE_LOOKUPS[scopeType];
+    if (!lookup) {
+      throw badRequest("Escopo do mapa de rede nao suportado.");
+    }
+    const scopeEntity = await lookup.find(scopeId);
+    if (!scopeEntity) {
+      throw notFoundError(lookup.notFoundMessage);
+    }
+    defaultName = scopeEntity.name;
   }
 
-  const map = await getOrCreateNetworkTopologyMapByScope(scopeType, scopeId, scopeEntity.name, user);
+  const map = await getOrCreateNetworkTopologyMapByScope(scopeType, scopeId, defaultName, user);
   const [nodes, links] = await Promise.all([
     listNetworkTopologyNodes(map.id),
     listNetworkTopologyLinks(map.id)
@@ -105,18 +135,20 @@ export async function removeMap(id, user) {
 }
 
 export async function addNode(mapId, payload, user) {
+  await ensureNodeRefExists(payload?.nodeType ?? payload?.node_type, payload?.refId ?? payload?.ref_id);
   const node = await withDuplicateRemap(
     () => createNetworkTopologyNode(mapId, payload, user),
-    "Este ativo ja esta posicionado neste mapa de rede."
+    "Este item ja esta posicionado neste mapa de rede."
   );
   notifySnapshot("network topology node create");
   return node;
 }
 
 export async function editNode(id, payload, user) {
+  await ensureNodeRefExists(payload?.nodeType ?? payload?.node_type, payload?.refId ?? payload?.ref_id);
   const node = await withDuplicateRemap(
     () => updateNetworkTopologyNode(id, payload, user),
-    "Este ativo ja esta posicionado neste mapa de rede."
+    "Este item ja esta posicionado neste mapa de rede."
   );
   notifySnapshot("network topology node update");
   return node;
@@ -138,18 +170,23 @@ export async function removeNode(id, user) {
 }
 
 export async function addLink(mapId, payload, user) {
+  const sourceType = payload?.sourceType ?? payload?.source_type;
+  await ensureNodeRefExists(sourceType, payload?.sourceAssetId ?? payload?.source_asset_id);
+  await ensureNodeRefExists(payload?.targetType ?? payload?.target_type, payload?.targetAssetId ?? payload?.target_asset_id);
   const link = await withDuplicateRemap(
     () => createNetworkTopologyLink(mapId, payload, user),
-    "Ja existe uma conexao entre estes dois ativos neste mapa."
+    "Ja existe uma conexao entre estes dois itens neste mapa."
   );
   notifySnapshot("network topology link create");
   return link;
 }
 
 export async function editLink(id, payload, user) {
+  await ensureNodeRefExists(payload?.sourceType ?? payload?.source_type, payload?.sourceAssetId ?? payload?.source_asset_id);
+  await ensureNodeRefExists(payload?.targetType ?? payload?.target_type, payload?.targetAssetId ?? payload?.target_asset_id);
   const link = await withDuplicateRemap(
     () => updateNetworkTopologyLink(id, payload, user),
-    "Ja existe uma conexao entre estes dois ativos neste mapa."
+    "Ja existe uma conexao entre estes dois itens neste mapa."
   );
   notifySnapshot("network topology link update");
   return link;

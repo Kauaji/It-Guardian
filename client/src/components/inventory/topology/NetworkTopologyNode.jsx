@@ -1,7 +1,16 @@
-import { AlertTriangle, Wrench } from "lucide-react";
+import { AlertTriangle, FolderTree, Layers, Wrench } from "lucide-react";
 import AssetTypeIcon from "../AssetTypeIcon.jsx";
 import PulseDot from "../../ui/PulseDot.jsx";
-import { resolveAssetType, resolveNodeLabel, resolveNodeSecondaryName, resolveNodeStatusTone } from "./networkTopologyModel.js";
+import { getAggregateStatusColorToken } from "./networkTopologyHierarchy.js";
+import {
+  getNodeDimensions,
+  isClusterNode,
+  resolveAssetType,
+  resolveEntityLabel,
+  resolveNodeLabel,
+  resolveNodeSecondaryName,
+  resolveNodeStatusTone
+} from "./networkTopologyModel.js";
 
 const NODE_WIDTH = 116;
 const NODE_HEIGHT = 100;
@@ -9,25 +18,39 @@ const NODE_HEIGHT = 100;
 export default function NetworkTopologyNode({
   node,
   device,
+  clusterInfo,
   segmentName,
   selected,
   editMode,
   isLinkSource,
   isNew,
-  onPointerDown
+  onPointerDown,
+  onOpen
 }) {
-  const missing = !device;
-  const label = resolveNodeLabel(node, device);
-  const secondaryName = resolveNodeSecondaryName(node, device, label);
-  const type = resolveAssetType(device);
+  const cluster = isClusterNode(node);
+  const { width, height } = getNodeDimensions(node);
+
+  const missing = cluster ? !clusterInfo : !device;
+  const label = cluster ? clusterInfo?.name || resolveEntityLabel(node.nodeType, null) : resolveNodeLabel(node, device);
+  const secondaryName = cluster ? null : resolveNodeSecondaryName(node, device, label);
+  const type = cluster ? null : resolveAssetType(device);
+  const statusColor = cluster
+    ? getAggregateStatusColorToken(clusterInfo?.status)
+    : `var(--topology-status-${device?.status || "unknown"})`;
+  const countsLabel = cluster && clusterInfo
+    ? node.nodeType === "group"
+      ? `${clusterInfo.segmentCount} segmento(s) · ${clusterInfo.deviceCount} ativo(s)`
+      : `${clusterInfo.deviceCount} ativo(s)`
+    : null;
 
   return (
-    <g transform={`translate(${node.x - NODE_WIDTH / 2}, ${node.y - NODE_HEIGHT / 2})`}>
-      <foreignObject width={NODE_WIDTH} height={NODE_HEIGHT} style={{ overflow: "visible" }}>
+    <g transform={`translate(${node.x - width / 2}, ${node.y - height / 2})`}>
+      <foreignObject width={width} height={height} style={{ overflow: "visible" }}>
         <div
           xmlns="http://www.w3.org/1999/xhtml"
           className={[
             "network-topology-node",
+            cluster && "is-cluster",
             selected && "is-selected",
             missing && "is-missing",
             editMode && "is-editable",
@@ -36,28 +59,44 @@ export default function NetworkTopologyNode({
           ]
             .filter(Boolean)
             .join(" ")}
-          style={{ "--node-status-color": `var(--topology-status-${device?.status || "unknown"})` }}
+          style={{ "--node-status-color": statusColor }}
           onPointerDown={(event) => onPointerDown(node.id, event)}
+          onDoubleClick={
+            cluster && onOpen
+              ? (event) => {
+                event.stopPropagation();
+                onOpen(node);
+              }
+              : undefined
+          }
           title={label}
         >
           <span className="network-topology-node-icon">
-            <AssetTypeIcon type={type} size={22} />
-            {!missing ? <PulseDot tone={resolveNodeStatusTone(device)} className="network-topology-node-pulse" /> : null}
-            {device?.status === "problem" ? (
+            {cluster ? (
+              node.nodeType === "group" ? <FolderTree size={22} /> : <Layers size={22} />
+            ) : (
+              <AssetTypeIcon type={type} size={22} />
+            )}
+            {!missing && !cluster ? (
+              <PulseDot tone={resolveNodeStatusTone(device)} className="network-topology-node-pulse" />
+            ) : null}
+            {!cluster && device?.status === "problem" ? (
               <AlertTriangle size={12} className="network-topology-node-badge is-critical" />
             ) : null}
-            {device?.maintenance ? (
+            {!cluster && device?.maintenance ? (
               <Wrench size={12} className="network-topology-node-badge is-maintenance" />
             ) : null}
           </span>
           <span className="network-topology-node-body">
             <strong className="network-topology-node-name">{label}</strong>
-            {missing ? (
+            {cluster ? (
+              countsLabel ? <span className="network-topology-node-counts">{countsLabel}</span> : null
+            ) : missing ? (
               <span className="network-topology-node-meta">Ativo removido</span>
             ) : secondaryName ? (
               <span className="network-topology-node-realname">{secondaryName}</span>
             ) : null}
-            {segmentName ? <span className="network-topology-node-segment">{segmentName}</span> : null}
+            {!cluster && segmentName ? <span className="network-topology-node-segment">{segmentName}</span> : null}
           </span>
         </div>
       </foreignObject>

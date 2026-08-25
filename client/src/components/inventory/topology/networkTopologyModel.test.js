@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   buildFilterPredicate,
   deriveLinkStatus,
+  getNodeDimensions,
   getStatusColorToken,
   isAssetMissing,
   isCentralAssetType,
+  isClusterNode,
   resolveAssetType,
+  resolveEntityLabel,
   resolveNodeLabel,
   resolveNodeSecondaryName,
   resolveNodeStatusTone
@@ -75,6 +78,60 @@ describe("deriveLinkStatus", () => {
   it("ativo removido do inventario -> sem dados, nunca promete monitoramento real", () => {
     const link = { sourceAssetId: "online-1", targetAssetId: "removido" };
     expect(deriveLinkStatus(link, devicesById)).toBe("unknown");
+  });
+
+  it("link entre clusters usa o status agregado dos dois lados, o pior vence", () => {
+    const clusterSummaryByRefId = new Map([
+      ["seg-a", { status: "online" }],
+      ["seg-b", { status: "critico" }]
+    ]);
+    const link = { sourceType: "segment", targetType: "segment", sourceAssetId: "seg-a", targetAssetId: "seg-b" };
+    expect(deriveLinkStatus(link, devicesById, clusterSummaryByRefId)).toBe("critical");
+  });
+
+  it("link entre clusters sem resumo disponivel (cluster removido) -> sem dados", () => {
+    const clusterSummaryByRefId = new Map([["seg-a", { status: "online" }]]);
+    const link = { sourceType: "segment", targetType: "segment", sourceAssetId: "seg-a", targetAssetId: "seg-removido" };
+    expect(deriveLinkStatus(link, devicesById, clusterSummaryByRefId)).toBe("unknown");
+  });
+
+  it("statusOverride manual vence mesmo num link de cluster", () => {
+    const link = { sourceType: "group", targetType: "group", sourceAssetId: "g1", targetAssetId: "g2", statusOverride: "manual" };
+    expect(deriveLinkStatus(link, devicesById, new Map())).toBe("manual");
+  });
+});
+
+describe("getNodeDimensions", () => {
+  it("ativo (ou sem nodeType) usa o tamanho padrao de hoje", () => {
+    expect(getNodeDimensions({ nodeType: "asset" })).toEqual({ width: 116, height: 100 });
+    expect(getNodeDimensions({})).toEqual({ width: 116, height: 100 });
+    expect(getNodeDimensions(undefined)).toEqual({ width: 116, height: 100 });
+  });
+
+  it("segmento e grupo usam um tamanho maior, igual entre si", () => {
+    expect(getNodeDimensions({ nodeType: "segment" })).toEqual(getNodeDimensions({ nodeType: "group" }));
+    expect(getNodeDimensions({ nodeType: "segment" }).width).toBeGreaterThan(116);
+  });
+});
+
+describe("isClusterNode", () => {
+  it("segmento e grupo sao cluster, ativo nao e", () => {
+    expect(isClusterNode({ nodeType: "segment" })).toBe(true);
+    expect(isClusterNode({ nodeType: "group" })).toBe(true);
+    expect(isClusterNode({ nodeType: "asset" })).toBe(false);
+    expect(isClusterNode({})).toBe(false);
+  });
+});
+
+describe("resolveEntityLabel", () => {
+  it("usa o nome da entidade quando presente", () => {
+    expect(resolveEntityLabel("segment", { name: "Financeiro" })).toBe("Financeiro");
+  });
+
+  it("sem entidade, cai num rotulo fixo por tipo", () => {
+    expect(resolveEntityLabel("asset", null)).toBe("Ativo removido");
+    expect(resolveEntityLabel("segment", null)).toBe("Segmento removido");
+    expect(resolveEntityLabel("group", null)).toBe("Grupo removido");
   });
 });
 
