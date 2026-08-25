@@ -1,4 +1,4 @@
-import { badRequest, conflict } from "../lib/errors.js";
+import { badRequest, conflict, notFoundError } from "../lib/errors.js";
 import {
   createNetworkTopologyLink,
   createNetworkTopologyMap,
@@ -8,6 +8,7 @@ import {
   deleteNetworkTopologyNode,
   bulkUpdateNetworkTopologyNodePositions,
   getNetworkTopologyMap,
+  getOrCreateNetworkTopologyMapByScope,
   listNetworkTopologyLinks,
   listNetworkTopologyMaps,
   listNetworkTopologyNodes,
@@ -15,8 +16,15 @@ import {
   updateNetworkTopologyMap,
   updateNetworkTopologyNode
 } from "../repositories/networkTopologyRepository.js";
+import { findSegmentById } from "../repositories/segmentRepository.js";
+import { findSegmentGroupById } from "../repositories/segmentGroupRepository.js";
 import { computeAutoLayout } from "./networkTopologyAutoLayout.js";
 import { broadcastSnapshot } from "./realtimeService.js";
+
+const SCOPE_LOOKUPS = {
+  segment: { find: findSegmentById, notFoundMessage: "Segmento nao encontrado." },
+  group: { find: findSegmentGroupById, notFoundMessage: "Grupo nao encontrado." }
+};
 
 const CENTRAL_ASSET_TYPES = new Set(["server", "switch", "router", "nas"]);
 
@@ -46,6 +54,34 @@ export async function getMapWithNodesAndLinks(id) {
     getNetworkTopologyMap(id),
     listNetworkTopologyNodes(id),
     listNetworkTopologyLinks(id)
+  ]);
+  return { map, nodes, links };
+}
+
+/**
+ * Um mapa por segmento ou grupo, criado sob demanda na primeira visita -
+ * reaproveita 100% do CRUD de no/link ja existente, so troca "criar mapa"
+ * por "abrir o mapa deste segmento/grupo", que ja existe ou acaba de ser
+ * criado com o nome real do segmento/grupo.
+ */
+export async function getMapByScope(scopeType, scopeId, user) {
+  const lookup = SCOPE_LOOKUPS[scopeType];
+  if (!lookup) {
+    throw badRequest("Escopo do mapa de rede nao suportado.");
+  }
+  if (!scopeId) {
+    throw badRequest("Informe o id do escopo do mapa de rede.");
+  }
+
+  const scopeEntity = await lookup.find(scopeId);
+  if (!scopeEntity) {
+    throw notFoundError(lookup.notFoundMessage);
+  }
+
+  const map = await getOrCreateNetworkTopologyMapByScope(scopeType, scopeId, scopeEntity.name, user);
+  const [nodes, links] = await Promise.all([
+    listNetworkTopologyNodes(map.id),
+    listNetworkTopologyLinks(map.id)
   ]);
   return { map, nodes, links };
 }

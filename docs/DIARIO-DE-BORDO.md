@@ -3897,3 +3897,64 @@ achado que passou despercebido.
   do commit;
 - `npm run build` do cliente concluido sem erros.
 
+## 2026-08-25 - Mapa de Rede hierarquico (Aba filtro, Grupo, Segmento)
+
+- pedido do usuario: reorganizar o Mapa de Rede como uma hierarquia
+  Aba/Ambiente -> Grupo -> Segmento -> Ativo, com navegacao por arvore
+  lateral e breadcrumb, em vez do canvas unico global de antes;
+- auditoria pedida explicitamente antes de mexer revelou que "aba" nao e
+  uma relacao real do banco - e um mecanismo 100% client-side/localStorage
+  (`inventoryTabMeta`) com tres ponteiros independentes (grupo, segmento,
+  dispositivo) que podem discordar entre si; o esqueleto de backend pra
+  aba (`inventoryTabRepository/Service/Controller/Routes.js`) e codigo
+  morto, nunca montado em `app.js`, referencia uma coluna `tab_id`
+  inexistente. Decisao: aba vira filtro, Grupo -> Segmento -> Ativo (real
+  no banco: `inventory_segments.group_id`, `device_segments`) e a
+  hierarquia de verdade;
+- outro achado da auditoria evitou uma migration inteira: a coluna
+  `scope_type` de `network_topology_maps` ja aceitava `segment`/`group`
+  desde a v1 (construida assim de proposito, documentado em
+  "Proximos passos" do doc do recurso), mas nada usava isso -
+  `listMaps()` ignorava escopo, nenhuma rota validava `scopeId`. Nova rota
+  `GET /api/topology-maps/by-scope` (get-or-create: cria o mapa do
+  segmento/grupo na primeira visita, com o nome real dele, reaproveita
+  depois) fecha essa lacuna sem tocar em schema;
+- corte de escopo deliberado, documentado (nao abandonado em silencio):
+  nivel Segmento usa canvas de verdade (100% do CRUD de no/link ja
+  existente, sem alteracao); niveis Grupo e Aba mostram grade agregada
+  computada (contagem e status reais, sem inventar dado), sem posicao
+  livre persistida - isso exigiria generalizar `network_topology_nodes`
+  pra um formato `node_type`/`ref_id`/`parent_id`, uma migration real bem
+  maior, fora desta rodada;
+- status agregado (critico/atencao/online/misto/sem_dados) calculado no
+  cliente a partir do status real dos ativos, nunca inventado - segmento
+  deriva dos seus ativos, grupo/aba derivam dos status dos filhos;
+- fluxo de mapa global anterior (multiplos mapas, dropdown) preservado
+  intacto atras de um link "Visao global (legado)" - nenhum mapa/no/link
+  criado antes desta mudanca foi perdido ou migrado;
+- correcao de um bug latente encontrado no caminho: a lista de
+  dispositivos que chegava no Mapa de Rede ja vinha implicitamente
+  filtrada pela aba ativa (herdada do Quadro), entao trocar de aba fazia
+  nos de outras abas aparecerem como "Ativo removido" fantasma; corrigido
+  construindo a view direto em `App.jsx` com os dados completos
+  (`decoratedAllDevices`/`decoratedSegments`/`decoratedSegmentGroups`),
+  mesmo padrao ja usado por `floorPlansView` - a propria arvore/breadcrumb
+  nova passa a ser dona explicita do filtro de aba.
+
+### Validacoes
+
+- `networkTopologyHierarchy.test.js` (18 testes novos: status agregado de
+  segmento/grupo/aba, montagem da arvore, contagens);
+- `network-topology-by-scope.test.mjs` (6 testes novos: get-or-create
+  idempotente pra segmento e grupo, 404 pra escopo inexistente, 400 pra
+  escopo nao suportado, 401 sem sessao, 403 sem permissao) - a suite de
+  integracao antiga (`network-topology-lifecycle.test.mjs`) continua
+  passando sem alteracao, caminho global intocado;
+- `npm run lint`, `npm run check:architecture` (489 arquivos), suites
+  completas de servidor (505 testes) e cliente (271 testes), `npm run
+  build` - tudo limpo;
+- sem verificacao visual no navegador (mesma limitacao ja registrada
+  nesta sessao: ambiente de dev sem login/dado real disponivel) -
+  confianca vem de leitura cuidadosa do codigo real antes de cada decisao
+  (nunca supondo a estrutura) e da suite de testes automatizados.
+

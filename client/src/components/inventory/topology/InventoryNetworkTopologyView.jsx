@@ -6,6 +6,7 @@ import {
   deleteNetworkTopologyLink,
   deleteNetworkTopologyNode,
   fetchNetworkTopologyMap,
+  fetchNetworkTopologyMapByScope,
   fetchNetworkTopologyMaps,
   generateNetworkTopologyAutoLayout,
   saveNetworkTopologyNodePositions,
@@ -20,6 +21,11 @@ import NetworkTopologyCanvas from "./NetworkTopologyCanvas.jsx";
 import NetworkTopologyToolbar from "./NetworkTopologyToolbar.jsx";
 import { NetworkTopologyLinkInspector, NetworkTopologyNodeInspector } from "./NetworkTopologyInspector.jsx";
 import { buildFilterPredicate, resolveAssetType } from "./networkTopologyModel.js";
+import { buildHierarchyTree } from "./networkTopologyHierarchy.js";
+import NetworkTopologyHierarchySidebar from "./NetworkTopologyHierarchySidebar.jsx";
+import NetworkTopologyBreadcrumb from "./NetworkTopologyBreadcrumb.jsx";
+import NetworkTopologyAggregateGrid from "./NetworkTopologyAggregateGrid.jsx";
+import NetworkTopologyLevelEmptyState from "./NetworkTopologyLevelEmptyState.jsx";
 
 const DEFAULT_FILTERS = { search: "", status: "", segmentId: "", assetType: "" };
 
@@ -30,11 +36,32 @@ function jitteredCenter() {
   };
 }
 
-export default function InventoryNetworkTopologyView({ token, notify, devices, segments, onOpenDetails }) {
+/**
+ * Roteador de nivel da hierarquia (Aba -> Grupo -> Segmento) do Mapa de
+ * Rede. So o nivel Segmento (e o modo "Visao Global (legado)", preservado
+ * intacto para nao perder mapas ja criados) usa mapa/canvas de verdade -
+ * Aba e Grupo sao grades agregadas computadas a partir dos dados reais de
+ * segmento/grupo/ativo, sem posicao propria persistida nesta rodada.
+ */
+export default function InventoryNetworkTopologyView({
+  token,
+  notify,
+  devices,
+  segments,
+  groups = [],
+  tabs = [],
+  activeTab,
+  onSelectTab,
+  onOpenDetails
+}) {
   const { can } = useAppSession();
   const canView = can("inventory.topology.view");
   const canManageMap = can("inventory.topology.manage");
   const canLinkAssets = can("inventory.topology.link_assets");
+
+  const [viewLevel, setViewLevel] = useState("tab");
+  const [selectedGroupId, setSelectedGroupId] = useState(null);
+  const [selectedSegmentId, setSelectedSegmentId] = useState(null);
 
   const [maps, setMaps] = useState(null);
   const [activeMapId, setActiveMapId] = useState(null);
@@ -57,6 +84,75 @@ export default function InventoryNetworkTopologyView({ token, notify, devices, s
 
   const canvasRef = useRef(null);
 
+  const goToTabLevel = useCallback(() => {
+    setViewLevel("tab");
+    setSelectedGroupId(null);
+    setSelectedSegmentId(null);
+  }, []);
+
+  const goToGroupLevel = useCallback((groupId) => {
+    setViewLevel("group");
+    setSelectedGroupId(groupId);
+    setSelectedSegmentId(null);
+  }, []);
+
+  const goToSegmentLevel = useCallback((segmentId, groupId = null) => {
+    setViewLevel("segment");
+    setSelectedSegmentId(segmentId);
+    setSelectedGroupId(groupId);
+  }, []);
+
+  const goToGlobalLegacy = useCallback(() => {
+    setViewLevel("global-legado");
+    setSelectedGroupId(null);
+    setSelectedSegmentId(null);
+  }, []);
+
+  // Grupos e segmentos da aba ativa - segmento padrao (tabId "shared") sempre
+  // aparece, o resto segue o mesmo pointer independente de aba ja usado em
+  // todo o Inventario (App.jsx).
+  const activeGroups = useMemo(
+    () => groups.filter((group) => group.tabId === activeTab?.id),
+    [groups, activeTab]
+  );
+  const activeSegments = useMemo(
+    () => segments.filter((segment) => segment.tabId === activeTab?.id || segment.isDefault),
+    [segments, activeTab]
+  );
+  const tree = useMemo(
+    () => buildHierarchyTree({ groups: activeGroups, segments: activeSegments, devices }),
+    [activeGroups, activeSegments, devices]
+  );
+  const selectedGroup = useMemo(
+    () => (selectedGroupId ? tree.groups.find((group) => group.id === selectedGroupId) : null),
+    [tree, selectedGroupId]
+  );
+  const selectedSegmentSummary = useMemo(() => {
+    if (!selectedSegmentId) return null;
+    return (
+      tree.groups.flatMap((group) => group.segments).find((segment) => segment.id === selectedSegmentId) ||
+      tree.ungroupedSegments.find((segment) => segment.id === selectedSegmentId) ||
+      null
+    );
+  }, [tree, selectedSegmentId]);
+
+  const crumbs = useMemo(() => {
+    if (viewLevel === "global-legado") {
+      return [
+        { label: activeTab?.name || "Aba", onClick: goToTabLevel },
+        { label: "Visão Global (legado)" }
+      ];
+    }
+    const list = [{ label: activeTab?.name || "Aba", onClick: viewLevel !== "tab" ? goToTabLevel : null }];
+    if (selectedGroup) {
+      list.push({ label: selectedGroup.name, onClick: viewLevel !== "group" ? () => goToGroupLevel(selectedGroup.id) : null });
+    }
+    if (viewLevel === "segment" && selectedSegmentSummary) {
+      list.push({ label: selectedSegmentSummary.name });
+    }
+    return list;
+  }, [viewLevel, activeTab, selectedGroup, selectedSegmentSummary, goToTabLevel, goToGroupLevel]);
+
   const loadMaps = useCallback(async () => {
     if (!canView) return;
     try {
@@ -69,39 +165,86 @@ export default function InventoryNetworkTopologyView({ token, notify, devices, s
   }, [token, canView]);
 
   useEffect(() => {
-    loadMaps();
-  }, [loadMaps]);
+    if (viewLevel === "global-legado" && maps === null) {
+      loadMaps();
+    }
+  }, [viewLevel, maps, loadMaps]);
 
+  // Nivel Segmento: mapa por segmento, criado sob demanda (get-or-create no
+  // servidor). Nivel "Visao Global (legado)": mesmo fluxo de sempre, por id
+  // escolhido na lista de mapas. Aba/Grupo nao precisam de bundle nenhum.
   useEffect(() => {
-    if (!activeMapId) {
-      setBundle(null);
-      return;
+    if (viewLevel === "segment") {
+      if (!selectedSegmentId) {
+        setBundle(null);
+        return undefined;
+      }
+      let cancelled = false;
+      setLoadingBundle(true);
+      setError("");
+      fetchNetworkTopologyMapByScope(token, "segment", selectedSegmentId)
+        .then((response) => {
+          if (cancelled) return;
+          setBundle(response);
+          setActiveMapId(response.map.id);
+          setDirtyPositions(new Map());
+          setSelectedNodeId(null);
+          setSelectedLinkId(null);
+          setLinkDraftActive(false);
+          setLinkDraftSourceNodeId(null);
+        })
+        .catch((fetchError) => {
+          if (!cancelled) setError(fetchError.message);
+        })
+        .finally(() => {
+          if (!cancelled) setLoadingBundle(false);
+        });
+      return () => {
+        cancelled = true;
+      };
     }
 
-    let cancelled = false;
-    setLoadingBundle(true);
-    setError("");
-    fetchNetworkTopologyMap(token, activeMapId)
-      .then((response) => {
-        if (cancelled) return;
-        setBundle(response);
-        setDirtyPositions(new Map());
-        setSelectedNodeId(null);
-        setSelectedLinkId(null);
-        setLinkDraftActive(false);
-        setLinkDraftSourceNodeId(null);
-      })
-      .catch((fetchError) => {
-        if (!cancelled) setError(fetchError.message);
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingBundle(false);
-      });
+    if (viewLevel === "global-legado") {
+      if (!activeMapId) {
+        setBundle(null);
+        return undefined;
+      }
+      let cancelled = false;
+      setLoadingBundle(true);
+      setError("");
+      fetchNetworkTopologyMap(token, activeMapId)
+        .then((response) => {
+          if (cancelled) return;
+          setBundle(response);
+          setDirtyPositions(new Map());
+          setSelectedNodeId(null);
+          setSelectedLinkId(null);
+          setLinkDraftActive(false);
+          setLinkDraftSourceNodeId(null);
+        })
+        .catch((fetchError) => {
+          if (!cancelled) setError(fetchError.message);
+        })
+        .finally(() => {
+          if (!cancelled) setLoadingBundle(false);
+        });
+      return () => {
+        cancelled = true;
+      };
+    }
 
-    return () => {
-      cancelled = true;
-    };
-  }, [token, activeMapId]);
+    setBundle(null);
+    return undefined;
+  }, [viewLevel, selectedSegmentId, activeMapId, token]);
+
+  // No nivel Segmento o filtro de segmento fica implicito (o mapa ja e so
+  // daquele segmento) - a Toolbar recebe lockSegmentFilter pra so esconder
+  // o controle, reaproveitando o mesmo filters.segmentId/buildFilterPredicate.
+  useEffect(() => {
+    if (viewLevel === "segment" && selectedSegmentId) {
+      setFilters((current) => (current.segmentId === selectedSegmentId ? current : { ...current, segmentId: selectedSegmentId }));
+    }
+  }, [viewLevel, selectedSegmentId]);
 
   const devicesById = useMemo(() => new Map(devices.map((device) => [device.id, device])), [devices]);
   const filterPredicate = useMemo(() => buildFilterPredicate(filters), [filters]);
@@ -351,113 +494,192 @@ export default function InventoryNetworkTopologyView({ token, notify, devices, s
     return <PermissionBlocked />;
   }
 
-  if (maps === null) {
-    return <ViewLoadingState />;
-  }
-
-  if (!activeMapId) {
-    return (
-      <div className="network-topology-empty-state">
-        <h3>Nenhum mapa de rede criado</h3>
-        <p>
-          Gere uma topologia inicial a partir dos ativos do inventário ou crie um mapa manual para começar a
-          desenhar as conexões da sua rede.
-        </p>
-        {canManageMap ? (
-          <button type="button" className="network-topology-toolbar-button" disabled={creatingMap} onClick={handleCreateMap}>
-            {creatingMap ? "Criando..." : "Criar mapa"}
-          </button>
-        ) : null}
-      </div>
-    );
-  }
-
-  if (loadingBundle || !bundle) {
-    return <ViewLoadingState />;
-  }
-
-  if (error) {
-    return (
-      <div className="network-topology-empty-state">
-        <h3>Não foi possível carregar o mapa de rede</h3>
-        <p>{error}</p>
-      </div>
-    );
-  }
-
   const selectedNode = selectedNodeId ? visibleNodes.find((node) => node.id === selectedNodeId) : null;
   const selectedLink = selectedLinkId ? visibleLinks.find((link) => link.id === selectedLinkId) : null;
 
+  function renderTabLevel() {
+    if (!tree.groups.length && !tree.ungroupedSegments.length) {
+      return <NetworkTopologyLevelEmptyState variant="tab-sem-grupos" />;
+    }
+    return (
+      <>
+        {tree.groups.length ? (
+          <NetworkTopologyAggregateGrid items={tree.groups} itemKind="group" onSelectItem={(group) => goToGroupLevel(group.id)} />
+        ) : null}
+        {tree.ungroupedSegments.length ? (
+          <>
+            <h4 className="network-topology-aggregate-section-title">Sem grupo</h4>
+            <NetworkTopologyAggregateGrid
+              items={tree.ungroupedSegments}
+              itemKind="segment"
+              onSelectItem={(segment) => goToSegmentLevel(segment.id, null)}
+            />
+          </>
+        ) : null}
+      </>
+    );
+  }
+
+  function renderGroupLevel() {
+    if (!selectedGroup) return <NetworkTopologyLevelEmptyState variant="group-sem-segmentos" />;
+    if (!selectedGroup.segments.length) return <NetworkTopologyLevelEmptyState variant="group-sem-segmentos" />;
+    return (
+      <NetworkTopologyAggregateGrid
+        items={selectedGroup.segments}
+        itemKind="segment"
+        onSelectItem={(segment) => goToSegmentLevel(segment.id, selectedGroup.id)}
+      />
+    );
+  }
+
+  function renderCanvasLevel() {
+    if (viewLevel === "global-legado" && maps === null) {
+      return <ViewLoadingState />;
+    }
+    if (viewLevel === "global-legado" && !activeMapId) {
+      return (
+        <div className="network-topology-empty-state">
+          <h3>Nenhum mapa de rede criado</h3>
+          <p>
+            Gere uma topologia inicial a partir dos ativos do inventário ou crie um mapa manual para começar a
+            desenhar as conexões da sua rede.
+          </p>
+          {canManageMap ? (
+            <button type="button" className="network-topology-toolbar-button" disabled={creatingMap} onClick={handleCreateMap}>
+              {creatingMap ? "Criando..." : "Criar mapa"}
+            </button>
+          ) : null}
+        </div>
+      );
+    }
+
+    if (loadingBundle || !bundle) {
+      return <ViewLoadingState />;
+    }
+
+    if (error) {
+      return (
+        <div className="network-topology-empty-state">
+          <h3>Não foi possível carregar o mapa de rede</h3>
+          <p>{error}</p>
+        </div>
+      );
+    }
+
+    if (viewLevel === "segment" && !bundle.nodes.length && !editMode) {
+      return <NetworkTopologyLevelEmptyState variant="segment-sem-ativos" />;
+    }
+
+    return (
+      <>
+        <NetworkTopologyToolbar
+          editMode={editMode && canManageMap}
+          onToggleEditMode={() => setEditMode((current) => !current)}
+          onCenterView={() => canvasRef.current?.centerView()}
+          onFitView={() => canvasRef.current?.fitToNodes()}
+          onSaveLayout={handleSaveLayout}
+          hasDirtyPositions={dirtyPositions.size > 0}
+          saving={saving}
+          onResetLayout={handleResetLayout}
+          onGenerateAutoLayout={handleGenerateAutoLayout}
+          generatingLayout={generatingLayout}
+          linkDraftActive={linkDraftActive && canLinkAssets}
+          onToggleLinkDraft={handleToggleLinkDraft}
+          availableDevicesToAdd={availableDevicesToAdd}
+          onAddAsset={handleAddAsset}
+          addingAsset={addingAsset}
+          nodeCount={visibleNodes.length}
+          linkCount={visibleLinks.length}
+          filters={filters}
+          onFiltersChange={setFilters}
+          segments={segments}
+          assetTypeOptions={assetTypeOptions}
+          canManage={canManageMap}
+          lockSegmentFilter={viewLevel === "segment"}
+        />
+        <div className={`network-topology-body ${selectedNode || selectedLink ? "has-inspector" : ""}`}>
+          <NetworkTopologyCanvas
+            ref={canvasRef}
+            nodes={visibleNodes}
+            links={visibleLinks}
+            devicesById={devicesById}
+            segmentNameById={new Map(segments.map((segment) => [segment.id, segment.name]))}
+            editMode={editMode && canManageMap}
+            selectedNodeId={selectedNodeId}
+            selectedLinkId={selectedLinkId}
+            linkDraftSourceNodeId={linkDraftSourceNodeId}
+            justAddedNodeId={justAddedNodeId}
+            justCreatedLinkId={justCreatedLinkId}
+            onNodeActivate={handleNodeActivate}
+            onNodeDrag={handleNodeDrag}
+            onNodeDragEnd={handleNodeDragEnd}
+            onSelectLink={(linkId) => {
+              setSelectedLinkId(linkId);
+              setSelectedNodeId(null);
+            }}
+            onCanvasBackgroundClick={handleCanvasBackgroundClick}
+          />
+          {selectedNode ? (
+            <NetworkTopologyNodeInspector
+              node={selectedNode}
+              device={devicesById.get(selectedNode.assetId)}
+              editMode={editMode && canManageMap}
+              onOpenDetails={onOpenDetails}
+              onTogglePinned={() => handleTogglePinned(selectedNode)}
+              onRemoveNode={() => handleRemoveNode(selectedNode.id)}
+              onClose={() => setSelectedNodeId(null)}
+            />
+          ) : null}
+          {selectedLink ? (
+            <NetworkTopologyLinkInspector
+              link={selectedLink}
+              sourceDevice={devicesById.get(selectedLink.sourceAssetId)}
+              targetDevice={devicesById.get(selectedLink.targetAssetId)}
+              editMode={editMode && canLinkAssets}
+              onSave={handleSaveLink}
+              onRemove={handleRemoveLink}
+              onClose={() => setSelectedLinkId(null)}
+            />
+          ) : null}
+        </div>
+      </>
+    );
+  }
+
   return (
     <div className="network-topology-view">
-      <NetworkTopologyToolbar
-        editMode={editMode && canManageMap}
-        onToggleEditMode={() => setEditMode((current) => !current)}
-        onCenterView={() => canvasRef.current?.centerView()}
-        onFitView={() => canvasRef.current?.fitToNodes()}
-        onSaveLayout={handleSaveLayout}
-        hasDirtyPositions={dirtyPositions.size > 0}
-        saving={saving}
-        onResetLayout={handleResetLayout}
-        onGenerateAutoLayout={handleGenerateAutoLayout}
-        generatingLayout={generatingLayout}
-        linkDraftActive={linkDraftActive && canLinkAssets}
-        onToggleLinkDraft={handleToggleLinkDraft}
-        availableDevicesToAdd={availableDevicesToAdd}
-        onAddAsset={handleAddAsset}
-        addingAsset={addingAsset}
-        nodeCount={visibleNodes.length}
-        linkCount={visibleLinks.length}
-        filters={filters}
-        onFiltersChange={setFilters}
-        segments={segments}
-        assetTypeOptions={assetTypeOptions}
-        canManage={canManageMap}
-      />
-      <div className={`network-topology-body ${selectedNode || selectedLink ? "has-inspector" : ""}`}>
-        <NetworkTopologyCanvas
-          ref={canvasRef}
-          nodes={visibleNodes}
-          links={visibleLinks}
-          devicesById={devicesById}
-          segmentNameById={new Map(segments.map((segment) => [segment.id, segment.name]))}
-          editMode={editMode && canManageMap}
-          selectedNodeId={selectedNodeId}
-          selectedLinkId={selectedLinkId}
-          linkDraftSourceNodeId={linkDraftSourceNodeId}
-          justAddedNodeId={justAddedNodeId}
-          justCreatedLinkId={justCreatedLinkId}
-          onNodeActivate={handleNodeActivate}
-          onNodeDrag={handleNodeDrag}
-          onNodeDragEnd={handleNodeDragEnd}
-          onSelectLink={(linkId) => {
-            setSelectedLinkId(linkId);
-            setSelectedNodeId(null);
+      <div className="network-topology-hierarchy-header">
+        <NetworkTopologyBreadcrumb crumbs={crumbs} />
+        <div className="network-topology-hierarchy-summary">
+          <span>{tree.groupCount} grupo(s)</span>
+          <span>{tree.segmentCount} segmento(s)</span>
+          <span>{tree.deviceCount} ativo(s)</span>
+        </div>
+        {viewLevel !== "global-legado" ? (
+          <button type="button" className="network-topology-legacy-link" onClick={goToGlobalLegacy}>
+            Visão global (legado)
+          </button>
+        ) : null}
+      </div>
+      <div className="network-topology-hierarchy-layout">
+        <NetworkTopologyHierarchySidebar
+          tabs={tabs}
+          activeTabId={activeTab?.id}
+          onSelectTab={(tabId) => {
+            onSelectTab?.(tabId);
+            goToTabLevel();
           }}
-          onCanvasBackgroundClick={handleCanvasBackgroundClick}
+          tree={tree}
+          selectedGroupId={selectedGroupId}
+          selectedSegmentId={selectedSegmentId}
+          onSelectGroup={goToGroupLevel}
+          onSelectSegment={goToSegmentLevel}
         />
-        {selectedNode ? (
-          <NetworkTopologyNodeInspector
-            node={selectedNode}
-            device={devicesById.get(selectedNode.assetId)}
-            editMode={editMode && canManageMap}
-            onOpenDetails={onOpenDetails}
-            onTogglePinned={() => handleTogglePinned(selectedNode)}
-            onRemoveNode={() => handleRemoveNode(selectedNode.id)}
-            onClose={() => setSelectedNodeId(null)}
-          />
-        ) : null}
-        {selectedLink ? (
-          <NetworkTopologyLinkInspector
-            link={selectedLink}
-            sourceDevice={devicesById.get(selectedLink.sourceAssetId)}
-            targetDevice={devicesById.get(selectedLink.targetAssetId)}
-            editMode={editMode && canLinkAssets}
-            onSave={handleSaveLink}
-            onRemove={handleRemoveLink}
-            onClose={() => setSelectedLinkId(null)}
-          />
-        ) : null}
+        <div className="network-topology-hierarchy-main">
+          {viewLevel === "tab" ? renderTabLevel() : null}
+          {viewLevel === "group" ? renderGroupLevel() : null}
+          {viewLevel === "segment" || viewLevel === "global-legado" ? renderCanvasLevel() : null}
+        </div>
       </div>
     </div>
   );

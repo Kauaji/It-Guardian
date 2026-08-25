@@ -5,6 +5,7 @@ import {
   editLink,
   editNode,
   generateAutoLayout,
+  getMapByScope,
   getMapWithNodesAndLinks,
   listMaps,
   removeLink,
@@ -18,6 +19,15 @@ export async function listNetworkTopologyMapsController(req, res, next) {
   try {
     const maps = await listMaps();
     res.json({ maps });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getNetworkTopologyMapByScopeController(req, res, next) {
+  try {
+    const bundle = await getMapByScope(req.query.scopeType, req.query.scopeId, req.user);
+    res.json(bundle);
   } catch (error) {
     next(error);
   }

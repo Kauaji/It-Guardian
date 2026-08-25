@@ -19394,6 +19394,361 @@ button.dashboard-ranking-item.clickable:hover {
   font-size: 1.05rem;
 }
 
+/* Hierarquia Aba -> Grupo -> Segmento -> Ativo */
+
+.network-topology-hierarchy-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+}
+
+.network-topology-hierarchy-summary {
+  display: flex;
+  gap: 12px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+.network-topology-legacy-link {
+  border: 0;
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 0.76rem;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+
+.network-topology-legacy-link:hover {
+  color: var(--accent);
+}
+
+.network-topology-breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 0.86rem;
+}
+
+.network-topology-breadcrumb-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.network-topology-breadcrumb-item button {
+  border: 0;
+  background: transparent;
+  color: var(--text-soft);
+  cursor: pointer;
+  font-size: inherit;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+}
+
+.network-topology-breadcrumb-item button:hover {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.network-topology-breadcrumb-item .is-current {
+  color: var(--text);
+  font-weight: 700;
+  padding: 2px 4px;
+}
+
+.network-topology-breadcrumb-separator {
+  color: var(--text-muted);
+}
+
+.network-topology-hierarchy-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 14px;
+  align-items: start;
+}
+
+.network-topology-hierarchy-main {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.network-topology-hierarchy-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  max-height: 720px;
+  overflow-y: auto;
+}
+
+.network-topology-tab-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.network-topology-tab-chips button {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  background: var(--surface-soft);
+  color: var(--text-soft);
+  cursor: pointer;
+}
+
+.network-topology-tab-chips button.active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+  color: var(--accent-strong, var(--accent));
+}
+
+.network-topology-hierarchy-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+  color: var(--text-soft);
+}
+
+.network-topology-hierarchy-search input {
+  flex: 1 1 auto;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.8rem;
+}
+
+.network-topology-hierarchy-search input:focus {
+  outline: none;
+}
+
+.network-topology-hierarchy-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.network-topology-hierarchy-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.network-topology-hierarchy-collapse-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.network-topology-hierarchy-collapse-toggle:hover {
+  background: var(--surface-soft);
+}
+
+.network-topology-hierarchy-collapse-toggle-spacer {
+  width: 20px;
+  flex: 0 0 20px;
+}
+
+.network-topology-hierarchy-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-soft);
+  padding: 5px 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.network-topology-hierarchy-item:hover:not(.is-heading) {
+  background: var(--surface-soft);
+  color: var(--text);
+}
+
+.network-topology-hierarchy-item.is-selected {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  color: var(--accent-strong, var(--accent));
+  font-weight: 700;
+}
+
+.network-topology-hierarchy-item.is-heading {
+  cursor: default;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.network-topology-hierarchy-item strong,
+.network-topology-hierarchy-item span:not(.network-topology-hierarchy-status-dot):not(.network-topology-hierarchy-count) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.network-topology-hierarchy-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  flex: 0 0 7px;
+}
+
+.network-topology-hierarchy-count {
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  background: var(--surface-soft);
+  border-radius: 999px;
+  padding: 1px 6px;
+}
+
+.network-topology-hierarchy-children {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 24px;
+}
+
+.network-topology-hierarchy-empty {
+  margin: 4px 0;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  padding-left: 24px;
+}
+
+/* Grade agregada (nivel Aba/Grupo) */
+
+.network-topology-aggregate-section-title {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+}
+
+.network-topology-aggregate-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.network-topology-aggregate-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+  text-align: left;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--aggregate-status-color, var(--border));
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  cursor: pointer;
+  transition: transform 140ms var(--ease-premium), box-shadow 140ms var(--ease-premium), border-color 140ms ease;
+}
+
+.network-topology-aggregate-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+  border-color: var(--aggregate-status-color, var(--border-strong));
+}
+
+.network-topology-aggregate-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.network-topology-aggregate-card-icon {
+  display: inline-flex;
+  color: var(--aggregate-status-color, var(--text-soft));
+}
+
+.network-topology-aggregate-card-header strong {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.92rem;
+  color: var(--text);
+}
+
+.network-topology-aggregate-card-chevron {
+  color: var(--text-muted);
+  flex: 0 0 auto;
+}
+
+.network-topology-aggregate-card-status {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--aggregate-status-color, var(--text-muted));
+}
+
+.network-topology-aggregate-card-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  font-size: 0.76rem;
+  color: var(--text-soft);
+}
+
+.network-topology-aggregate-card-counts .is-ok {
+  color: var(--topology-status-online);
+}
+
+.network-topology-aggregate-card-counts .is-warning {
+  color: var(--topology-status-warning);
+}
+
+.network-topology-aggregate-card-counts .is-danger {
+  color: var(--topology-status-critical);
+}
+
+@media (max-width: 900px) {
+  .network-topology-hierarchy-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .network-topology-hierarchy-sidebar {
+    max-height: 280px;
+  }
+}
+
 .network-topology-toolbar {
   display: flex;
   flex-direction: column;

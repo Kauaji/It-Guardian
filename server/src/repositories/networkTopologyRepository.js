@@ -305,6 +305,41 @@ export async function deleteNetworkTopologyMap(id, user) {
   });
 }
 
+// Get-or-create: um mapa por segmento/grupo, criado na primeira vez que o
+// tecnico abre aquele nivel na hierarquia, em vez de exigir um passo
+// separado de "criar mapa" como o fluxo global de hoje.
+export async function getOrCreateNetworkTopologyMapByScope(scopeType, scopeId, defaultName, user) {
+  return withTransaction(async (db) => {
+    const existing = await db(
+      "SELECT * FROM network_topology_maps WHERE scope_type = $1 AND scope_id = $2 LIMIT 1",
+      [scopeType, scopeId]
+    );
+    if (existing.rows[0]) {
+      return mapFromRow(existing.rows[0]);
+    }
+
+    const id = randomUUID();
+    const result = await db(
+      `
+        INSERT INTO network_topology_maps (id, name, scope_type, scope_id, created_by)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING *
+      `,
+      [id, defaultName, scopeType, scopeId, user?.id || null]
+    );
+
+    await addLog({
+      type: "inventory.network_topology.map.created",
+      message: `Mapa de rede criado automaticamente: ${defaultName}.`,
+      userId: user?.id,
+      meta: { mapId: id, scopeType, scopeId },
+      db
+    });
+
+    return mapFromRow(result.rows[0]);
+  });
+}
+
 export async function listNetworkTopologyNodes(mapId) {
   await getMapOrThrow(mapId);
   const result = await query(
