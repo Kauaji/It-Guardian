@@ -108,15 +108,16 @@ export default function InventoryNetworkTopologyView({
     setSelectedSegmentId(null);
   }, []);
 
-  // Grupos e segmentos da aba ativa - segmento padrao (tabId "shared") sempre
-  // aparece, o resto segue o mesmo pointer independente de aba ja usado em
-  // todo o Inventario (App.jsx).
+  // Grupos e segmentos da aba ativa. O segmento padrao ("Nao organizadas"/
+  // backup) fica de fora da hierarquia: so tem lugar no mapa quem o tecnico
+  // organizou de verdade (segmento real, com ou sem grupo) - dispositivos
+  // sem segmento continuam so no Inventario ate serem organizados.
   const activeGroups = useMemo(
     () => groups.filter((group) => group.tabId === activeTab?.id),
     [groups, activeTab]
   );
   const activeSegments = useMemo(
-    () => segments.filter((segment) => segment.tabId === activeTab?.id || segment.isDefault),
+    () => segments.filter((segment) => !segment.isDefault && segment.tabId === activeTab?.id),
     [segments, activeTab]
   );
   const tree = useMemo(
@@ -650,11 +651,6 @@ export default function InventoryNetworkTopologyView({
     <div className="network-topology-view">
       <div className="network-topology-hierarchy-header">
         <NetworkTopologyBreadcrumb crumbs={crumbs} />
-        <div className="network-topology-hierarchy-summary">
-          <span>{tree.groupCount} grupo(s)</span>
-          <span>{tree.segmentCount} segmento(s)</span>
-          <span>{tree.deviceCount} ativo(s)</span>
-        </div>
         {viewLevel !== "global-legado" ? (
           <button type="button" className="network-topology-legacy-link" onClick={goToGlobalLegacy}>
             Visão global (legado)

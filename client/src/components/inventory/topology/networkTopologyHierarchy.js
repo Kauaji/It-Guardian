@@ -84,6 +84,7 @@ export function summarizeSegment(segment, devicesBySegment) {
   const devices = devicesBySegment.get(segment.id) || [];
   return {
     ...segment,
+    devices,
     deviceCount: devices.length,
     onlineCount: devices.filter((device) => device?.status === "online").length,
     offlineCount: devices.filter((device) => device?.status === "offline").length,
