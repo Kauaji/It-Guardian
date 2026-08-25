@@ -116,6 +116,7 @@ import { useInventoryPersistence } from "./hooks/useInventoryPersistence.js";
 const InventoryBoard = lazy(() => import("./components/inventory/InventoryBoard.jsx"));
 const ServiceOrdersBoard = lazy(() => import("./components/serviceOrders/ServiceOrdersBoard.jsx"));
 const FloorPlansModule = lazy(() => import("./components/floorPlans/FloorPlansModule.jsx"));
+const InventoryNetworkTopologyView = lazy(() => import("./components/inventory/topology/InventoryNetworkTopologyView.jsx"));
 
 function readSystemMode() {
   return "local";
@@ -333,6 +334,7 @@ function Dashboard() {
   const canViewMachine = hasPermission(user, "inventory.view_machine");
   const canViewServiceOrders = hasPermission(user, "service_orders.view");
   const canViewFloorPlans = hasPermission(user, "floor_plans.view");
+  const canViewTopology = hasPermission(user, "inventory.topology.view");
   const {
     alertCorrelations,
     alertPriorityColors,
@@ -3124,6 +3126,18 @@ function Dashboard() {
                   delete: hasPermission(user, "floor_plans.delete"),
                   linkInventory: hasPermission(user, "floor_plans.link_inventory")
                 }}
+              />
+            ) : null}
+            topologyView={canViewTopology ? (
+              <InventoryNetworkTopologyView
+                token={token}
+                notify={notify}
+                devices={decoratedAllDevices}
+                segments={decoratedSegments}
+                groups={decoratedSegmentGroups}
+                tabs={inventoryTabs}
+                activeTab={activeInventoryTab}
+                onSelectTab={selectInventoryTab}
               />
             ) : null}
             />

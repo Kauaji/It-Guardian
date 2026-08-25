@@ -7,6 +7,7 @@ import {
   deleteNetworkTopologyMapController,
   deleteNetworkTopologyNodeController,
   generateNetworkTopologyAutoLayoutController,
+  getNetworkTopologyMapByScopeController,
   getNetworkTopologyMapController,
   listNetworkTopologyMapsController,
   saveNetworkTopologyNodePositionsController,
@@ -22,6 +23,8 @@ export const networkTopologyLinkRoutes = Router();
 
 router.use(requireAuth);
 router.get("/", requirePermission("inventory.topology.view"), listNetworkTopologyMapsController);
+// Precisa vir antes de "/:id" - senao o Express casa "by-scope" como o id.
+router.get("/by-scope", requirePermission("inventory.topology.view"), getNetworkTopologyMapByScopeController);
 router.get("/:id", requirePermission("inventory.topology.view"), getNetworkTopologyMapController);
 router.post("/", requirePermission("inventory.topology.manage"), createNetworkTopologyMapController);
 router.patch("/:id", requirePermission("inventory.topology.manage"), updateNetworkTopologyMapController);

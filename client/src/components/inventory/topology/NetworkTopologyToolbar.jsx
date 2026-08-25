@@ -42,7 +42,8 @@ export default function NetworkTopologyToolbar({
   onFiltersChange,
   segments,
   assetTypeOptions,
-  canManage
+  canManage,
+  lockSegmentFilter = false
 }) {
   return (
     <div className="network-topology-toolbar">
@@ -139,18 +140,20 @@ export default function NetworkTopologyToolbar({
             </option>
           ))}
         </select>
-        <select
-          className="network-topology-toolbar-select"
-          value={filters.segmentId}
-          onChange={(event) => onFiltersChange({ ...filters, segmentId: event.target.value })}
-        >
-          <option value="">Todos os segmentos</option>
-          {segments.map((segment) => (
-            <option key={segment.id} value={segment.id}>
-              {segment.name}
-            </option>
-          ))}
-        </select>
+        {!lockSegmentFilter ? (
+          <select
+            className="network-topology-toolbar-select"
+            value={filters.segmentId}
+            onChange={(event) => onFiltersChange({ ...filters, segmentId: event.target.value })}
+          >
+            <option value="">Todos os segmentos</option>
+            {segments.map((segment) => (
+              <option key={segment.id} value={segment.id}>
+                {segment.name}
+              </option>
+            ))}
+          </select>
+        ) : null}
         <select
           className="network-topology-toolbar-select"
           value={filters.assetType}

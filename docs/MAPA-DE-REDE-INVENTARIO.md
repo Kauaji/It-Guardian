@@ -44,6 +44,81 @@ monitoramento real do link.** Não ha, hoje, nenhuma integracao com
 OCS/Zabbix para status de enlace — isso e um proximo passo possivel, nao
 uma capacidade atual.
 
+## Organização hierárquica (Aba → Grupo → Segmento → Ativo)
+
+A partir desta rodada, o Mapa de Rede deixou de ser um canvas único e
+global e passou a navegar pela hierarquia real do Inventário:
+
+- **Aba** (nível inicial ao abrir a tela): mostra os grupos daquela aba
+  como uma grade de cards, com status e contagem agregados — sem posição
+  própria, é uma visão computada, não um canvas.
+- **Grupo**: clicar num card de grupo mostra a grade de segmentos daquele
+  grupo, também agregada.
+- **Segmento**: clicar num card de segmento (ou num segmento na árvore
+  lateral) abre o canvas de verdade daquele segmento — arrastar, salvar
+  layout, criar conexão, tudo funciona exatamente como antes, só que por
+  segmento em vez de um único mapa global.
+
+Um painel lateral (`NetworkTopologyHierarchySidebar`) mostra a árvore
+Grupo → Segmento da aba atual (com busca), e um breadcrumb no topo mostra
+a posição atual e permite voltar a qualquer nível. **Aba é um filtro, não
+um contêiner persistido** — ver "Por que aba não é uma relação real" logo
+abaixo.
+
+### Por que aba não é uma relação real
+
+Investigando o código antes de implementar, ficou confirmado que "aba" no
+Inventário **não tem relação nenhuma com o banco de dados** hoje. Segmento
+→ Grupo é real (`inventory_segments.group_id`), Ativo → Segmento é real
+(`device_segments`), mas o `tabId` de um grupo, de um segmento e de um
+dispositivo são três ponteiros **independentes**, guardados só no
+`localStorage` do navegador (`inventoryLocalState.js` +
+`inventoryTabMeta` em `App.jsx`) — podem discordar entre si, e nada no
+backend sabe o que é uma "aba". Existe um esqueleto de backend para abas
+(`inventoryTabRepository/Service/Controller/Routes.js`), mas é código
+morto: nunca foi montado em `app.js` e referencia uma coluna `tab_id` que
+não existe em nenhuma tabela.
+
+Por isso, o Mapa de Rede trata aba como **filtro** (reaproveitando
+exatamente o mesmo mecanismo que o resto do Inventário já usa), e não
+tenta inventar uma hierarquia de banco que não existe. Grupo → Segmento →
+Ativo é a hierarquia real e é o que fica persistido.
+
+### Status agregado
+
+Calculado no cliente (`networkTopologyHierarchy.js`), sempre a partir do
+status real dos ativos — nunca inventado:
+
+- **Segmento**: sem ativos → `sem_dados`; algum `problem` → `crítico`;
+  algum `offline` (sem `problem`) → `atenção`; todos `online` → `online`;
+  qualquer outra combinação → `sem_dados`.
+- **Grupo** e **Aba**: sem filhos → `sem_dados`; todos os filhos com o
+  mesmo status → herda esse status; algum filho `crítico` → `crítico`;
+  filhos discordando sem nenhum crítico → `misto`.
+
+### Mapa por segmento (get-or-create, sem migration)
+
+A coluna `scope_type` de `network_topology_maps` já aceitava
+`segment`/`group`/`inventory_tab` desde a v1, mas nenhum código usava isso
+— ver "Limitações conhecidas" da versão anterior deste documento. Agora,
+`GET /api/topology-maps/by-scope?scopeType=segment&scopeId=...` cria o
+mapa daquele segmento na primeira visita (nome = nome real do segmento) e
+reaproveita nas visitas seguintes — zero migration, 100% do CRUD de
+nó/link já existente reaproveitado sem alteração. O fluxo antigo (um único
+mapa "global", escolhido por dropdown) continua existindo, intacto, atrás
+do link "Visão global (legado)" no topo da tela — nenhum mapa/nó/link
+criado antes desta rodada foi apagado ou migrado.
+
+### Escopo desta rodada (o que fica para depois)
+
+Grupo e Aba mostram grades agregadas, **não** canvas com posição livre
+persistida. Fazer isso exigiria generalizar `network_topology_nodes` para
+um formato `node_type` (`asset`/`segment`/`group`) + `ref_id` + `parent_id`
+— uma migration real, mapeando as linhas existentes para
+`node_type = 'asset'` sem perder nada, mais um renderizador de nó
+generalizado. Ficou documentado como próximo passo (ver seção no fim
+deste documento), não implementado em silêncio.
+
 ## Onde fica
 
 No modulo Inventario, quarta aba do seletor de visualizacao:
@@ -81,6 +156,12 @@ mesma conexao).
 ## Endpoints
 
 - `GET/POST /api/topology-maps`
+- `GET /api/topology-maps/by-scope?scopeType=segment|group&scopeId=...` —
+  get-or-create: devolve o mapa daquele segmento/grupo, criando com o nome
+  real do segmento/grupo se ainda não existir. 404 se o segmento/grupo não
+  existir, 400 se `scopeType` não for `segment` nem `group`. Precisa estar
+  registrada antes de `GET /:id` no router, senão o Express casaria
+  `by-scope` como um id.
 - `GET/PATCH/DELETE /api/topology-maps/:id` — o `GET` retorna
   `{map, nodes, links}` num payload so.
 - `POST /api/topology-maps/:id/nodes`
@@ -114,10 +195,14 @@ estado vazio ("Nenhum mapa de rede criado") com o botao "Criar mapa".
 ## Como adicionar um ativo ao mapa
 
 Em modo edicao (botao "Editando"/"Visualizando" no canto esquerdo da
-barra de ferramentas), use o seletor "Adicionar ativo ao mapa..." — lista
-so ativos que ainda nao estao no mapa — e clique "Adicionar". A posicao
-inicial e proxima ao centro do canvas, com uma pequena variacao aleatoria
-para nao empilhar varios ativos exatamente no mesmo ponto.
+barra de ferramentas), use a lista buscavel "Adicionar ativo ao mapa..."
+— lista so ativos que ainda nao estao no mapa — e clique num resultado. A
+posicao inicial e proxima ao centro do canvas, com uma pequena variacao
+aleatoria para nao empilhar varios ativos exatamente no mesmo ponto.
+Dentro de um segmento (nivel Segmento da hierarquia), o filtro de
+segmento fica travado/oculto na barra (`lockSegmentFilter`) — só ativos
+daquele segmento aparecem na lista, sem precisar escolher o segmento toda
+vez.
 
 ## Como criar uma conexao
 
@@ -163,9 +248,11 @@ que ela liga estao visiveis.
 
 ## Limitacoes conhecidas
 
-- A v1 so cria mapas com `scope_type = "global"` — a coluna existe para
-  mapas por aba/segmento/grupo no futuro, mas a interface atual nao
-  oferece essa escolha.
+- Grupo e Aba mostram grade agregada, nao canvas com posicao livre — ver
+  "Escopo desta rodada" acima.
+- `scope_type = "inventory_tab"` continua sem uso — aba nao e uma relacao
+  real do banco (ver secao acima), entao nao faz sentido um mapa "por
+  aba" da mesma forma que existe "por segmento"/"por grupo".
 - Sem integracao real de monitoramento de link (ver secao acima).
 - Pan/zoom e drag-and-drop sao implementacao propria (SVG + `viewBox` +
   eventos de ponteiro), inspirados no padrao ja usado em Plantas, mas sem
@@ -179,9 +266,15 @@ que ela liga estao visiveis.
 
 ## Proximos passos
 
-- Mapas por aba/segmento/grupo (usar as colunas `scope_type`/`scope_id`
-  ja existentes).
+- Canvas com posicao livre persistida nos niveis Grupo e Aba: exige
+  generalizar `network_topology_nodes` para `node_type`
+  (`asset`/`segment`/`group`) + `ref_id` + `parent_id` (migration real,
+  mapeando linhas existentes para `node_type = 'asset'`), um renderizador
+  de no generalizado, e endpoints de posicao em lote por nivel.
 - Integracao de status de link com dado real de monitoramento
   (OCS/Zabbix), quando existir uma fonte de dado real para isso.
 - Alinhamento/guias de arrastar, marcacao em lote, e um modo de
   pre-visualizacao do layout automatico antes de confirmar.
+- Arrastar um ativo/segmento diretamente da arvore lateral para o canvas
+  (hoje a arvore so navega entre niveis; adicionar ainda usa a lista
+  buscavel da barra de ferramentas).
