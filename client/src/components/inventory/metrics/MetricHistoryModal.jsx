@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
 import { useModalLifecycle } from "../../../hooks/useModalLifecycle.js";
 import { formatDate } from "../../../utils/display.js";
@@ -33,6 +34,12 @@ function MetricTrendChart({ data, ...responsiveProps }) {
   );
 }
 
+/**
+ * Renderizado de dentro de cada machine-card no meio da grade do segmento
+ * (nao no nivel da view, como os outros modais do Inventario) - sem portal,
+ * o backdrop fixed fica confinado ao card que o abriu em vez de cobrir a
+ * tela toda, como qualquer .modal-backdrop normal faz.
+ */
 export default function MetricHistoryModal({ metric, deviceId, deviceName, token, onClose }) {
   const [period, setPeriod] = useState("24h");
   const dialogRef = useModalLifecycle(Boolean(metric), onClose);
@@ -53,7 +60,7 @@ export default function MetricHistoryModal({ metric, deviceId, deviceName, token
     value: point.value
   }));
 
-  return (
+  return createPortal(
     <div className="modal-backdrop" role="presentation">
       <section ref={dialogRef} className="modal-panel metric-history-modal" role="dialog" aria-modal="true" aria-label={`Historico de ${label}`}>
         <header>
@@ -102,6 +109,7 @@ export default function MetricHistoryModal({ metric, deviceId, deviceName, token
           </div>
         )}
       </section>
-    </div>
+    </div>,
+    document.body
   );
 }
