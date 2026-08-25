@@ -38,29 +38,36 @@ describe("snapMeasurementEndPoint", () => {
   it("sem constrainAngle, o angulo fica livre (nao trava em 45/15 graus)", () => {
     const start = { x: 0, y: 0 };
     const end = { x: 100, y: 37 };
-    const result = snapMeasurementEndPoint(start, end, 5, { constrainAngle: false });
+    const result = snapMeasurementEndPoint(start, end, { constrainAngle: false });
     const rawAngle = Math.atan2(37, 100) * 180 / Math.PI;
-    expect(result.angle).toBeCloseTo(rawAngle, 0);
+    expect(result.angle).toBeCloseTo(rawAngle, 5);
+  });
+
+  it("sem constrainAngle, o comprimento tambem fica livre (nao trava em grid)", () => {
+    const start = { x: 0, y: 0 };
+    const end = { x: 137, y: 0 };
+    const result = snapMeasurementEndPoint(start, end, {});
+    expect(result.length).toBeCloseTo(137, 5);
   });
 
   it("com constrainAngle, trava em passos de 15 graus", () => {
     const start = { x: 0, y: 0 };
     const end = { x: 100, y: 37 };
-    const result = snapMeasurementEndPoint(start, end, 5, { constrainAngle: true });
+    const result = snapMeasurementEndPoint(start, end, { constrainAngle: true });
     expect(result.angle % 15).toBe(0);
   });
 
   it("overrideLengthPx vence sobre a distancia bruta do mouse", () => {
     const start = { x: 0, y: 0 };
     const end = { x: 100, y: 0 };
-    const result = snapMeasurementEndPoint(start, end, 5, { overrideLengthPx: 250 });
+    const result = snapMeasurementEndPoint(start, end, { overrideLengthPx: 250 });
     expect(result.length).toBe(250);
   });
 
   it("comprimento minimo evita medidas de tamanho zero", () => {
     const start = { x: 0, y: 0 };
     const end = { x: 0, y: 0 };
-    const result = snapMeasurementEndPoint(start, end, 5);
+    const result = snapMeasurementEndPoint(start, end, {});
     expect(result.length).toBeGreaterThan(0);
   });
 });
@@ -72,8 +79,7 @@ describe("createMeasurementObjectFromPoints", () => {
       planId: "p1",
       floorId: "f1",
       start: { x: 0, y: 0 },
-      end: { x: 100, y: 0 },
-      gridSize: 25
+      end: { x: 100, y: 0 }
     });
     expect(object.objectType).toBe("measurement");
     expect(object.category).toBe("annotation");
@@ -89,7 +95,6 @@ describe("createMeasurementObjectFromPoints", () => {
       floorId: "f1",
       start: { x: 0, y: 0 },
       end: { x: 100, y: 0 },
-      gridSize: 25,
       overrideLengthPx: 320
     });
     expect(object.width).toBe(320);

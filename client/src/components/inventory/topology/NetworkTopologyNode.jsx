@@ -1,11 +1,10 @@
 import { AlertTriangle, Wrench } from "lucide-react";
 import AssetTypeIcon from "../AssetTypeIcon.jsx";
-import { assetTypeLabel } from "../assetTypes.js";
 import PulseDot from "../../ui/PulseDot.jsx";
 import { resolveAssetType, resolveNodeLabel, resolveNodeSecondaryName, resolveNodeStatusTone } from "./networkTopologyModel.js";
 
-const NODE_WIDTH = 176;
-const NODE_HEIGHT = 72;
+const NODE_WIDTH = 116;
+const NODE_HEIGHT = 100;
 
 export default function NetworkTopologyNode({
   node,
@@ -42,24 +41,23 @@ export default function NetworkTopologyNode({
           title={label}
         >
           <span className="network-topology-node-icon">
-            <AssetTypeIcon type={type} size={18} />
+            <AssetTypeIcon type={type} size={22} />
             {!missing ? <PulseDot tone={resolveNodeStatusTone(device)} className="network-topology-node-pulse" /> : null}
+            {device?.status === "problem" ? (
+              <AlertTriangle size={12} className="network-topology-node-badge is-critical" />
+            ) : null}
+            {device?.maintenance ? (
+              <Wrench size={12} className="network-topology-node-badge is-maintenance" />
+            ) : null}
           </span>
           <span className="network-topology-node-body">
             <strong className="network-topology-node-name">{label}</strong>
-            <span className="network-topology-node-meta">
-              {missing ? "Ativo removido do inventário" : device.ip || assetTypeLabel(type)}
-            </span>
-            {secondaryName ? <span className="network-topology-node-realname">{secondaryName}</span> : null}
+            {missing ? (
+              <span className="network-topology-node-meta">Ativo removido</span>
+            ) : secondaryName ? (
+              <span className="network-topology-node-realname">{secondaryName}</span>
+            ) : null}
             {segmentName ? <span className="network-topology-node-segment">{segmentName}</span> : null}
-          </span>
-          <span className="network-topology-node-badges">
-            {device?.status === "problem" ? (
-              <AlertTriangle size={14} className="network-topology-node-badge is-critical" />
-            ) : null}
-            {device?.maintenance ? (
-              <Wrench size={14} className="network-topology-node-badge is-maintenance" />
-            ) : null}
           </span>
         </div>
       </foreignObject>

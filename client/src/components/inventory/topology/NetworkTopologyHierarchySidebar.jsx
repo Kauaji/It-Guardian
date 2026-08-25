@@ -1,13 +1,16 @@
 import { ChevronDown, ChevronRight, FolderTree, Layers, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { searchCatalogItems } from "../../floorPlans/utils/catalogSearch.js";
+import AssetTypeIcon from "../AssetTypeIcon.jsx";
+import { resolveAssetType, resolveNodeStatusTone } from "./networkTopologyModel.js";
 import { getAggregateStatusColorToken } from "./networkTopologyHierarchy.js";
+import PulseDot from "../../ui/PulseDot.jsx";
 
 /**
- * Arvore Grupo -> Segmento da aba atual, para navegar a hierarquia sem
- * depender so do canvas. Ativos individuais nao aparecem aqui - uma vez
- * dentro de um segmento, a lista buscavel de ativos ja existente
- * (NetworkTopologyAddAssetPicker) cobre isso.
+ * Arvore Grupo -> Segmento -> Ativo da aba atual, para navegar a hierarquia
+ * sem depender so do canvas. Cada segmento pode ser expandido para ver os
+ * ativos que ja estao nele (so leitura - adicionar/remover ativo continua
+ * so dentro do mapa do segmento, via NetworkTopologyAddAssetPicker).
  */
 export default function NetworkTopologyHierarchySidebar({
   tabs,
@@ -21,6 +24,7 @@ export default function NetworkTopologyHierarchySidebar({
 }) {
   const [query, setQuery] = useState("");
   const [collapsedGroupIds, setCollapsedGroupIds] = useState(() => new Set());
+  const [expandedSegmentIds, setExpandedSegmentIds] = useState(() => new Set());
 
   const sections = useMemo(
     () => [
@@ -53,12 +57,70 @@ export default function NetworkTopologyHierarchySidebar({
     });
   }
 
+  function toggleSegmentExpanded(segmentId) {
+    setExpandedSegmentIds((current) => {
+      const next = new Set(current);
+      if (next.has(segmentId)) next.delete(segmentId);
+      else next.add(segmentId);
+      return next;
+    });
+  }
+
   const visibleGroups = matchedGroupIds
     ? tree.groups.filter((group) => matchedGroupIds.has(group.id) || group.segments.some((segment) => matchedSegmentIds.has(segment.id)))
     : tree.groups;
   const visibleUngrouped = matchedSegmentIds
     ? tree.ungroupedSegments.filter((segment) => matchedSegmentIds.has(segment.id))
     : tree.ungroupedSegments;
+
+  function renderSegmentRow(segment, groupId) {
+    const expanded = expandedSegmentIds.has(segment.id);
+    const devices = segment.devices || [];
+    return (
+      <div className="network-topology-hierarchy-segment" key={segment.id}>
+        <div className="network-topology-hierarchy-row">
+          <button
+            type="button"
+            className="network-topology-hierarchy-collapse-toggle"
+            onClick={() => toggleSegmentExpanded(segment.id)}
+            aria-label={expanded ? "Recolher segmento" : "Expandir segmento"}
+          >
+            {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          </button>
+          <button
+            type="button"
+            className={`network-topology-hierarchy-item ${selectedSegmentId === segment.id ? "is-selected" : ""}`}
+            onClick={() => onSelectSegment(segment.id, groupId)}
+          >
+            <Layers size={14} />
+            <span
+              className="network-topology-hierarchy-status-dot"
+              style={{ background: getAggregateStatusColorToken(segment.status) }}
+            />
+            <span>{segment.name}</span>
+            <span className="network-topology-hierarchy-count">{segment.deviceCount}</span>
+          </button>
+        </div>
+        {expanded ? (
+          <div className="network-topology-hierarchy-devices">
+            {devices.map((device) => (
+              <button
+                type="button"
+                key={device.id}
+                className="network-topology-hierarchy-device"
+                onClick={() => onSelectSegment(segment.id, groupId)}
+              >
+                <AssetTypeIcon type={resolveAssetType(device)} size={12} />
+                <PulseDot tone={resolveNodeStatusTone(device)} className="network-topology-hierarchy-device-pulse" />
+                <span>{device.name}</span>
+              </button>
+            ))}
+            {!devices.length ? <p className="network-topology-hierarchy-empty">Sem ativos.</p> : null}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <aside className="network-topology-hierarchy-sidebar">
@@ -119,22 +181,7 @@ export default function NetworkTopologyHierarchySidebar({
               </div>
               {!collapsed ? (
                 <div className="network-topology-hierarchy-children">
-                  {group.segments.map((segment) => (
-                    <button
-                      type="button"
-                      key={segment.id}
-                      className={`network-topology-hierarchy-item ${selectedSegmentId === segment.id ? "is-selected" : ""}`}
-                      onClick={() => onSelectSegment(segment.id, group.id)}
-                    >
-                      <Layers size={14} />
-                      <span
-                        className="network-topology-hierarchy-status-dot"
-                        style={{ background: getAggregateStatusColorToken(segment.status) }}
-                      />
-                      <span>{segment.name}</span>
-                      <span className="network-topology-hierarchy-count">{segment.deviceCount}</span>
-                    </button>
-                  ))}
+                  {group.segments.map((segment) => renderSegmentRow(segment, group.id))}
                   {!group.segments.length ? (
                     <p className="network-topology-hierarchy-empty">Sem segmentos.</p>
                   ) : null}
@@ -153,22 +200,7 @@ export default function NetworkTopologyHierarchySidebar({
               </span>
             </div>
             <div className="network-topology-hierarchy-children">
-              {visibleUngrouped.map((segment) => (
-                <button
-                  type="button"
-                  key={segment.id}
-                  className={`network-topology-hierarchy-item ${selectedSegmentId === segment.id ? "is-selected" : ""}`}
-                  onClick={() => onSelectSegment(segment.id, null)}
-                >
-                  <Layers size={14} />
-                  <span
-                    className="network-topology-hierarchy-status-dot"
-                    style={{ background: getAggregateStatusColorToken(segment.status) }}
-                  />
-                  <span>{segment.name}</span>
-                  <span className="network-topology-hierarchy-count">{segment.deviceCount}</span>
-                </button>
-              ))}
+              {visibleUngrouped.map((segment) => renderSegmentRow(segment, null))}
             </div>
           </div>
         ) : null}

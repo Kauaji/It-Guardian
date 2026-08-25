@@ -539,7 +539,7 @@ function WallPlacementPreview({ placement }) {
 
 function MeasurementPlacementPreview({ placement, plan }) {
   if (placement?.kind !== "measurement" || !placement.start || !placement.end) return null;
-  const snappedEnd = snapMeasurementEndPoint(placement.start, placement.end, placement.gridSize || 5, {
+  const snappedEnd = snapMeasurementEndPoint(placement.start, placement.end, {
     constrainAngle: placement.constrainAngle,
     overrideLengthPx: parseTypedLengthBuffer(placement.lengthBuffer, plan)
   });
@@ -1891,7 +1891,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
     setMode("2d");
     setSelectedTool("select");
     setSelected(null);
-    setPlacement({ kind: "measurement", start: null, end: null, constrainAngle: false, lengthBuffer: "", gridSize: getFineSnapSize(editor) });
+    setPlacement({ kind: "measurement", start: null, end: null, constrainAngle: false, lengthBuffer: "" });
   }, [activeFloorId, editor]);
 
   const buildCatalogPlacementPreview = useCallback((item, point) => {
@@ -2424,18 +2424,13 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
     }
     if (placement.kind === "measurement") {
       if (!placement.start) {
-        const snappedPoint = { x: snap(point.x, placement.gridSize || 5), y: snap(point.y, placement.gridSize || 5) };
-        const start = snapPointToWallEndpoints(snappedPoint, editor.objects || [], floor.id);
+        const start = snapPointToWallEndpoints(point, editor.objects || [], floor.id);
         setPlacement((current) => current ? { ...current, start, end: start } : current);
         return;
       }
       let createdMeasurementId = null;
       commitEditor((draft) => {
-        const snappedEndPoint = {
-          x: snap(point.x, placement.gridSize || 5),
-          y: snap(point.y, placement.gridSize || 5)
-        };
-        const end = snapPointToWallEndpoints(snappedEndPoint, draft.objects || [], floor.id);
+        const end = snapPointToWallEndpoints(point, draft.objects || [], floor.id);
         const overrideLengthPx = parseTypedLengthBuffer(placement.lengthBuffer, draft.plan);
         const measurement = createMeasurementObjectFromPoints({
           id: createId("object"),
@@ -2443,7 +2438,6 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
           floorId: floor.id,
           start: placement.start,
           end,
-          gridSize: placement.gridSize || 5,
           constrainAngle: placement.constrainAngle,
           overrideLengthPx
         });
@@ -3200,12 +3194,8 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
     }
     if (placement?.kind === "measurement" && placement.start) {
       const point = getSvgPoint(event);
-      const gridPoint = {
-        x: snapToGrid(point.x, editor?.plan?.snapSize || DEFAULT_PLAN_SIZE.snapSize),
-        y: snapToGrid(point.y, editor?.plan?.snapSize || DEFAULT_PLAN_SIZE.snapSize)
-      };
       const endpoint = snapPointToWallEndpoints(
-        gridPoint,
+        point,
         editor?.objects || [],
         activeFloorId,
         null,
@@ -3330,7 +3320,6 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
                 floorId: floor.id,
                 start: placement.start,
                 end: placement.end,
-                gridSize: placement.gridSize || 5,
                 constrainAngle: placement.constrainAngle,
                 overrideLengthPx
               });

@@ -2,13 +2,7 @@ import { metersToPx } from "./unitConversion.js";
 
 const MIN_MEASUREMENT_LENGTH = 8;
 const DISPLAY_THICKNESS = 6;
-const FREE_ANGLE_STEP = 1;
 const CONSTRAINED_ANGLE_STEP = 15;
-
-function snap(value, gridSize) {
-  const size = Math.max(1, Number(gridSize || 1));
-  return Math.round(Number(value || 0) / size) * size;
-}
 
 export function isMeasurementObject(object) {
   return object?.objectType === "measurement";
@@ -39,22 +33,21 @@ export function getMeasurementSegment(measurement) {
 }
 
 /**
- * Ao contrario de parede (sempre trava em passos de 45 graus), medida real
- * e frequentemente diagonal - angulo livre por padrao, so trava em passos
- * de 15 graus quando constrainAngle (Shift) esta ativo. Quando
- * overrideLengthPx vem preenchido (usuario digitou um comprimento
- * enquanto desenhava), ele vence sobre a distancia bruta do mouse.
+ * Regua livre: nem angulo nem comprimento travam num grid - o traco segue o
+ * mouse pixel a pixel, como uma trena de verdade. So trava em passos de 15
+ * graus quando constrainAngle (Shift) esta ativo. Quando overrideLengthPx
+ * vem preenchido (usuario digitou um comprimento enquanto desenhava), ele
+ * vence sobre a distancia bruta do mouse.
  */
-export function snapMeasurementEndPoint(start, end, gridSize = 5, { constrainAngle = false, overrideLengthPx = null } = {}) {
+export function snapMeasurementEndPoint(start, end, { constrainAngle = false, overrideLengthPx = null } = {}) {
   const deltaX = Number(end?.x || 0) - Number(start?.x || 0);
   const deltaY = Number(end?.y || 0) - Number(start?.y || 0);
   const rawLength = Math.hypot(deltaX, deltaY);
   const rawAngle = Math.atan2(deltaY, deltaX) * 180 / Math.PI;
-  const angleStep = constrainAngle ? CONSTRAINED_ANGLE_STEP : FREE_ANGLE_STEP;
-  const angle = Math.round(rawAngle / angleStep) * angleStep;
+  const angle = constrainAngle ? Math.round(rawAngle / CONSTRAINED_ANGLE_STEP) * CONSTRAINED_ANGLE_STEP : rawAngle;
   const length = overrideLengthPx != null
     ? Math.max(MIN_MEASUREMENT_LENGTH, overrideLengthPx)
-    : Math.max(MIN_MEASUREMENT_LENGTH, snap(rawLength, gridSize));
+    : Math.max(MIN_MEASUREMENT_LENGTH, rawLength);
   const radians = angle * Math.PI / 180;
   return {
     x: Number(start?.x || 0) + Math.cos(radians) * length,
@@ -64,11 +57,11 @@ export function snapMeasurementEndPoint(start, end, gridSize = 5, { constrainAng
   };
 }
 
-export function createMeasurementObjectFromPoints({ id, planId, floorId, start, end, gridSize = 5, constrainAngle = false, overrideLengthPx = null }) {
-  const snappedStart = { x: snap(Number(start?.x || 0), gridSize), y: snap(Number(start?.y || 0), gridSize) };
-  const snappedEnd = snapMeasurementEndPoint(snappedStart, end, gridSize, { constrainAngle, overrideLengthPx });
-  const centerX = (snappedStart.x + snappedEnd.x) / 2;
-  const centerY = (snappedStart.y + snappedEnd.y) / 2;
+export function createMeasurementObjectFromPoints({ id, planId, floorId, start, end, constrainAngle = false, overrideLengthPx = null }) {
+  const startPoint = { x: Number(start?.x || 0), y: Number(start?.y || 0) };
+  const snappedEnd = snapMeasurementEndPoint(startPoint, end, { constrainAngle, overrideLengthPx });
+  const centerX = (startPoint.x + snappedEnd.x) / 2;
+  const centerY = (startPoint.y + snappedEnd.y) / 2;
   return {
     id,
     planId,
@@ -89,7 +82,7 @@ export function createMeasurementObjectFromPoints({ id, planId, floorId, start, 
     color: "#334155",
     metadata: {
       geometryVersion: 1,
-      startPoint: snappedStart,
+      startPoint,
       endPoint: { x: snappedEnd.x, y: snappedEnd.y }
     }
   };
