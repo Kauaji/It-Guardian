@@ -613,7 +613,17 @@ function Dashboard() {
         segment.tabId === activeInventoryTab.id &&
         (!isMaintenanceSegmentName(segment.name) || activeMaintenanceSegmentIds.has(segment.id))
     );
-    const sharedDefaultSegments = decoratedSegments.filter((segment) => segment.isDefault);
+    // "Nao organizadas" e compartilhado entre abas (por isso fora do filtro
+    // de tabId acima) - mesma logica do segmento de manutencao: so aparece
+    // quando tem pelo menos uma maquina de verdade nele. Checa contra a
+    // lista de dispositivos ao vivo (nao segment.machineCount, que vem de
+    // uma chamada separada e pode ficar defasado) - useInventoryDragAndDrop
+    // reaproveita esse mesmo array pra montar machinesBySegment, entao os
+    // dois ficam sempre em sincronia (sem isso, um dispositivo cujo unico
+    // segmento sumiu da lista cairia no fallback "primeiro segmento" dali).
+    const sharedDefaultSegments = decoratedSegments.filter(
+      (segment) => segment.isDefault && decoratedAllDevices.some((device) => device.segmentId === segment.id)
+    );
     const backupSegment = decoratedAllDevices.some((device) => device.isBackup)
       ? [{
           id: backupSegmentId,
