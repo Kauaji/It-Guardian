@@ -5,6 +5,7 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { getRoomGeometry, getRoomInterior, isRoomZone } from "./utils/roomGeometry.js";
 import { isWallObject, syncAnchoredOpenings } from "./utils/wallGeometry.js";
+import { isMeasurementObject } from "./utils/measurementGeometry.js";
 import { getPaintCellSize, getPaintCells, getPaintRuns, isPaintAreaZone } from "./utils/paintAreaGeometry.js";
 import {
   getSceneBaseElevation,
@@ -242,7 +243,9 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
     const offsetX = floorWidth / 2;
     const offsetY = floorHeight / 2;
     const activeZones = (data.zones || []).filter((zone) => !activeFloorId || zone.floorId === activeFloorId);
-    const activeObjects = syncAnchoredOpenings(data.objects || []).filter((object) => !activeFloorId || object.floorId === activeFloorId);
+    const activeObjects = syncAnchoredOpenings(data.objects || [])
+      .filter((object) => !activeFloorId || object.floorId === activeFloorId)
+      .filter((object) => !isMeasurementObject(object));
     const activeRoutes = (data.cableRoutes || []).filter((route) => !activeFloorId || route.floorId === activeFloorId);
     const objectGroups = new Map();
     const modelLoader = !preview && modelQuality === MODEL_QUALITY_DETAILED ? new GLTFLoader() : null;

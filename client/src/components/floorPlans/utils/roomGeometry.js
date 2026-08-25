@@ -1,3 +1,5 @@
+import { pxToMeters } from "./unitConversion.js";
+
 export const ROOM_DEFAULTS = {
   shape: "rect",
   wallThickness: 10,
@@ -108,13 +110,14 @@ export function clampRoomGeometry(geometry, floor, snapSize = 25) {
 
 export function getRoomMeasurements(zone, plan = {}) {
   const geometry = getRoomGeometry(zone);
-  const gridSize = Number(plan.gridSize || 25);
   const metersPerGridCell = Number(getRoomMetadata(zone).metersPerGridCell || plan.metersPerGridCell || ROOM_DEFAULTS.metersPerGridCell);
-  const pxToMeters = (value) => (Number(value || 0) / gridSize) * metersPerGridCell;
+  const resolvedPlan = { ...plan, metersPerGridCell };
+  const widthMeters = pxToMeters(geometry.width, resolvedPlan);
+  const heightMeters = pxToMeters(geometry.height, resolvedPlan);
   return {
-    widthMeters: pxToMeters(geometry.width),
-    heightMeters: pxToMeters(geometry.height),
-    areaMeters: pxToMeters(geometry.width) * pxToMeters(geometry.height)
+    widthMeters,
+    heightMeters,
+    areaMeters: widthMeters * heightMeters
   };
 }
 

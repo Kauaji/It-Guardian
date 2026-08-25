@@ -5,6 +5,7 @@ import {
   MousePointer2,
   Pencil,
   Redo2,
+  Ruler,
   Save,
   Search,
   Trash2,
@@ -31,7 +32,9 @@ export function FloorPlanTopbar({
   zoomMode = false,
   onToggleZoom,
   onDeletePlan,
-  canDelete = false
+  canDelete = false,
+  measurementActive = false,
+  onStartMeasurement
 }) {
   return (
     <header className="floor-plan-editor-topbar">
@@ -81,6 +84,14 @@ export function FloorPlanTopbar({
           </button>
           <button className={showGrid ? "active" : ""} type="button" onClick={onToggleGrid} title="Mostrar ou ocultar grade">
             <Grid3X3 size={17} />
+          </button>
+          <button
+            className={measurementActive ? "active" : ""}
+            type="button"
+            onClick={onStartMeasurement}
+            title="Medir uma distancia real (desenhar e digitar a metragem)"
+          >
+            <Ruler size={17} />
           </button>
         </div>}
 
