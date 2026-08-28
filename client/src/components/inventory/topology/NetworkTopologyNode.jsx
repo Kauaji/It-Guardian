@@ -57,15 +57,14 @@ export default function NetworkTopologyNode({
             missing && "is-missing",
             editMode && "is-editable",
             isLinkSource && "is-link-source",
-            isNew && "is-new",
-            node.preview && "is-preview"
+            isNew && "is-new"
           ]
             .filter(Boolean)
             .join(" ")}
           style={{ "--node-status-color": statusColor }}
           role="button"
           tabIndex={0}
-          aria-label={`${label}, ver ${cluster ? (node.nodeType === "group" ? "grupo" : "segmento") : "ativo"}${node.preview ? ", prévia não salva" : ""}`}
+          aria-label={`${label}, ver ${cluster ? (node.nodeType === "group" ? "grupo" : "segmento") : "ativo"}`}
           aria-description={cluster
             ? "Um clique mostra máquinas e conexões. Dois cliques ou Alt+Enter abrem o mapa para edição."
             : "Selecione para ver os detalhes e as conexões deste ativo."}
@@ -112,7 +111,6 @@ export default function NetworkTopologyNode({
               <span className="network-topology-node-realname">{secondaryName}</span>
             ) : null}
             {!cluster && segmentName ? <span className="network-topology-node-segment">{segmentName}</span> : null}
-            {node.preview ? <span className="network-topology-preview-caption">Posição não salva</span> : null}
           </span>
         </div>
       </foreignObject>

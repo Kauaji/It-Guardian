@@ -124,49 +124,6 @@
   border-top: 1px solid var(--border);
 }
 
-.network-topology-inventory-preview {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-soft);
-  background: var(--surface);
-  font-size: 0.78rem;
-  line-height: 1.5;
-}
-
-.network-topology-inventory-preview p {
-  margin: 0;
-}
-
-.network-topology-inventory-preview strong {
-  color: var(--text);
-}
-
-.network-topology-inventory-preview svg {
-  flex-shrink: 0;
-  margin-top: 2px;
-  color: var(--accent);
-}
-
-.network-topology-node.is-preview {
-  border-style: dashed;
-  padding: 8px 6px;
-}
-
-.network-topology-node.is-preview .network-topology-node-icon {
-  width: 32px;
-  height: 32px;
-}
-
-.network-topology-preview-caption {
-  font-size: 0.61rem;
-  font-weight: 600;
-  color: var(--text-soft);
-}
-
 @keyframes topology-navigation-reveal {
   from { opacity: 0; transform: translateX(-8px); }
   to { opacity: 1; transform: translateX(0); }

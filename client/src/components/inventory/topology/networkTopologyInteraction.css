@@ -27,6 +27,52 @@
   outline-offset: 4px;
 }
 
+.network-topology-canvas-wrap {
+  position: relative;
+}
+
+.network-topology-canvas-back {
+  position: absolute;
+  z-index: 2;
+  inset-block-start: 12px;
+  inset-inline-start: 12px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text-soft);
+  box-shadow: 0 2px 6px rgb(15 23 42 / 6%);
+  cursor: pointer;
+}
+
+.network-topology-canvas-back:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.network-topology-canvas-back:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.network-topology-canvas-empty {
+  position: absolute;
+  inset: 60px 16px 16px;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.network-topology-canvas-empty .network-topology-empty-state {
+  min-height: 0;
+  max-width: 480px;
+  pointer-events: auto;
+}
+
 /* Editing controls must fit the workspace even with the inventory rail open. */
 @media (max-width: 900px) {
   .network-topology-view .network-topology-toolbar,

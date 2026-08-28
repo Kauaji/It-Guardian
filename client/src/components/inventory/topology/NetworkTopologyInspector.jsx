@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Cable, ExternalLink, Monitor, Pin, PinOff, Plus, Trash2, X } from "lucide-react";
+import { Cable, ExternalLink, Monitor, Pin, PinOff, Trash2, X } from "lucide-react";
 import { assetTypeLabel } from "../assetTypes.js";
 import { getMachineSourceLabel } from "../agentPresentation.js";
 import { LINK_TYPE_OPTIONS, linkTypeLabel } from "./networkTopologyFormatters.js";
@@ -104,23 +104,16 @@ function InspectorConnections({ connections, loading, error }) {
       ) : !loading && !error ? (
         <p className="network-topology-inspector-empty">Nenhuma conexão cadastrada para este item.</p>
       ) : null}
-      <p className="network-topology-inspector-note">Conexões informadas manualmente; não são detectadas automaticamente.</p>
     </section>
   );
 }
 
 function InspectorActions({
   node, device, missing, editMode, canEditCluster, onOpenDetails, onOpenCluster, onTogglePinned,
-  onRemoveNode, onAddToMap, addingToMap, onConnectNode, connecting, preservesConnectionsOnRemove
+  onRemoveNode, onConnectNode, connecting, preservesConnectionsOnRemove
 }) {
   return (
     <div className="network-topology-inspector-actions">
-      {onAddToMap ? (
-        <button type="button" className="network-topology-toolbar-button" onClick={onAddToMap} disabled={addingToMap}>
-          <Plus size={15} aria-hidden="true" />
-          {addingToMap ? "Adicionando..." : "Adicionar ao mapa"}
-        </button>
-      ) : null}
       {!missing && isClusterNode(node) && onOpenCluster ? (
         <button type="button" className="network-topology-toolbar-button is-inspector-primary" onClick={() => onOpenCluster(node)}>
           <ExternalLink size={15} aria-hidden="true" />
@@ -138,22 +131,22 @@ function InspectorActions({
           {connecting ? "Selecione o destino no mapa" : "Conectar a outro item"}
         </button>
       ) : null}
-      {editMode ? (
-        <>
-          <button type="button" className="network-topology-toolbar-button" onClick={onTogglePinned}>
-            {node.pinned ? <PinOff size={15} aria-hidden="true" /> : <Pin size={15} aria-hidden="true" />}
-            {node.pinned ? "Desafixar" : "Fixar posição"}
-          </button>
-          <button
-            type="button"
-            className="network-topology-toolbar-button is-danger"
-            onClick={onRemoveNode}
-            title={preservesConnectionsOnRemove ? "Remove a posição salva. O item e suas conexões continuam visíveis na prévia." : undefined}
-          >
-            <Trash2 size={15} aria-hidden="true" />
-            {preservesConnectionsOnRemove ? "Remover posição salva" : "Remover do mapa"}
-          </button>
-        </>
+      {editMode && onTogglePinned ? (
+        <button type="button" className="network-topology-toolbar-button" onClick={onTogglePinned}>
+          {node.pinned ? <PinOff size={15} aria-hidden="true" /> : <Pin size={15} aria-hidden="true" />}
+          {node.pinned ? "Desafixar" : "Fixar posição"}
+        </button>
+      ) : null}
+      {editMode && onRemoveNode ? (
+        <button
+          type="button"
+          className="network-topology-toolbar-button is-danger"
+          onClick={onRemoveNode}
+          title={preservesConnectionsOnRemove ? "Remove a posição salva. O item e suas conexões continuam visíveis na prévia." : undefined}
+        >
+          <Trash2 size={15} aria-hidden="true" />
+          {preservesConnectionsOnRemove ? "Remover posição salva" : "Remover do mapa"}
+        </button>
       ) : null}
     </div>
   );
@@ -162,7 +155,7 @@ function InspectorActions({
 export function NetworkTopologyNodeInspector({
   node, device, clusterInfo, clusterDevices = [], connections = [], connectionsLoading = false,
   connectionsError = "", canEditCluster = false, editMode, onOpenDetails, onOpenCluster,
-  onTogglePinned, onRemoveNode, onAddToMap, addingToMap = false, onConnectNode, connecting = false,
+  onTogglePinned, onRemoveNode, onConnectNode, connecting = false,
   preservesConnectionsOnRemove = false, onClose
 }) {
   const cluster = isClusterNode(node);
@@ -209,8 +202,6 @@ export function NetworkTopologyNodeInspector({
         onOpenCluster={onOpenCluster}
         onTogglePinned={onTogglePinned}
         onRemoveNode={onRemoveNode}
-        onAddToMap={onAddToMap}
-        addingToMap={addingToMap}
         onConnectNode={onConnectNode}
         connecting={connecting}
         preservesConnectionsOnRemove={preservesConnectionsOnRemove}
@@ -307,10 +298,6 @@ export function NetworkTopologyLinkInspector({ link, sourceEntity, targetEntity,
           </div>
         </dl>
       )}
-      <p className="network-topology-inspector-disclaimer">
-        Esta conexão representa uma relação lógica ou física informada manualmente. Sua existência não significa,
-        por si só, monitoramento real do link.
-      </p>
     </aside>
   );
 }

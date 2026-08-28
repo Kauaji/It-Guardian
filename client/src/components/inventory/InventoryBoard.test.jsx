@@ -26,12 +26,14 @@ function renderBoard(overrides = {}, onContext) {
     ...overrides
   };
 
-  return render(
+  const board = (nextProps) => (
     <DndContext>
       <DndProbe onContext={onContext} />
-      <InventoryBoard {...props} />
+      <InventoryBoard {...nextProps} />
     </DndContext>
   );
+  const result = render(board(props));
+  return { ...result, rerenderBoard: (nextProps) => result.rerender(board({ ...props, ...nextProps })) };
 }
 
 describe("InventoryBoard — manutenção independente", () => {
@@ -114,5 +116,77 @@ describe("InventoryBoard — manutenção independente", () => {
     fireEvent.click(screen.getByRole("button", { name: "Manutenção", exact: true }));
 
     expect(onSelectSegment).toHaveBeenCalledWith(maintenance.id);
+  });
+
+  it("oculta o cartão e seus filtros quando a contagem real chega a zero", () => {
+    renderBoard({
+      segments: [{ ...maintenance, machineCount: 2 }, regular],
+      devices: [],
+      machinesBySegment: new Map()
+    });
+    expect(screen.queryByRole("heading", { name: "Manutenção" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: regular.name })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Filtros do inventário" }));
+    expect(screen.queryByRole("button", { name: "Manutenção", exact: true })).not.toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "Manutenção" })).not.toBeInTheDocument();
+  });
+
+  it("some só após a última saída, preserva a máquina na origem e reaparece com o mesmo ID", () => {
+    const segment = Object.freeze({ ...maintenance, machineCount: 2 });
+    const secondMachine = { ...machine, id: "device-2", name: "Segundo computador" };
+    const sourceSegments = Object.freeze([segment, regular]);
+    const { container, rerenderBoard } = renderBoard({
+      segments: sourceSegments,
+      devices: [machine, secondMachine],
+      machinesBySegment: new Map([[maintenance.id, [machine, secondMachine]]])
+    });
+    expect(within(screen.getByRole("heading", { name: maintenance.name }).closest("section")).getByText("2 máquinas")).toBeInTheDocument();
+
+    rerenderBoard({ devices: [machine], machinesBySegment: new Map([[maintenance.id, [machine]]]) });
+    expect(screen.getByRole("heading", { name: maintenance.name })).toBeInTheDocument();
+    const returnedMachine = { ...machine, segmentId: regular.id, maintenance: false };
+    rerenderBoard({
+      devices: [returnedMachine],
+      machinesBySegment: new Map([[regular.id, [returnedMachine]]])
+    });
+    expect(screen.queryByRole("heading", { name: maintenance.name })).not.toBeInTheDocument();
+    expect(within(screen.getByRole("heading", { name: regular.name }).closest("section")).getByText(machine.name)).toBeInTheDocument();
+    expect(sourceSegments).toEqual([segment, regular]);
+    expect(segment.machineCount).toBe(2);
+
+    rerenderBoard({ devices: [machine], machinesBySegment: new Map([[maintenance.id, [machine]]]) });
+    expect(screen.getByRole("heading", { name: maintenance.name })).toBeInTheDocument();
+    expect(container.querySelectorAll("#inventory-segment-maintenance")).toHaveLength(1);
+  });
+
+  it("uma busca sem resultados não transforma uma manutenção ocupada em segmento vazio", () => {
+    const { rerenderBoard } = renderBoard({
+      devices: [machine],
+      search: "inexistente",
+      machinesBySegment: new Map()
+    });
+    expect(screen.queryByRole("heading", { name: maintenance.name })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Filtros do inventário" }));
+    expect(screen.getByRole("button", { name: maintenance.name, exact: true })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: maintenance.name })).toBeInTheDocument();
+    rerenderBoard({ devices: [machine], search: "", machinesBySegment: new Map([[maintenance.id, [machine]]]) });
+    expect(screen.getByRole("heading", { name: maintenance.name })).toBeInTheDocument();
+  });
+
+  it("não remove a manutenção vazia dos destinos de movimentação recebidos", () => {
+    const onMoveMachine = vi.fn();
+    const movingMachine = { ...machine, segmentId: regular.id };
+    renderBoard({
+      devices: [movingMachine],
+      machinesBySegment: new Map([[regular.id, [movingMachine]]]),
+      moveModal: movingMachine,
+      moveTarget: maintenance.id,
+      onMoveMachine
+    });
+    expect(screen.queryByRole("heading", { name: maintenance.name })).not.toBeInTheDocument();
+    const modal = screen.getByRole("dialog", { name: "Mover maquina" });
+    expect(within(modal).getByRole("option", { name: maintenance.name })).toHaveValue(maintenance.id);
+    fireEvent.click(within(modal).getByRole("button", { name: "Mover", exact: true }));
+    expect(onMoveMachine).toHaveBeenCalledExactlyOnceWith(movingMachine, maintenance.id);
   });
 });

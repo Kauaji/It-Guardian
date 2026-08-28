@@ -84,14 +84,40 @@ describe("NetworkTopologyCanvas", () => {
     vi.restoreAllMocks();
   });
 
-  it("não arrasta posições de prévia quando existem outros nós salvos no mapa", () => {
-    const { svg, props } = renderCanvas({ editMode: true, nodes: [{ ...nodes[0], preview: true }, nodes[1]] });
+  it("arrasta itens automáticos junto dos nós salvos sem precisar adicioná-los", () => {
+    const { svg, props } = renderCanvas({ editMode: true, nodes: [{ ...nodes[0], automatic: true }, nodes[1]] });
     pointer(screen.getByRole("button", { name: /^Servidor Alfa,/ }), "pointerdown");
     pointer(svg, "pointermove", { clientX: 160 });
     pointer(svg, "pointerup", { clientX: 160 });
+    expect(props.onNodeDrag).toHaveBeenCalledOnce();
+    expect(props.onNodeDragEnd).toHaveBeenCalledExactlyOnceWith("node-a");
+    expect(props.onNodeActivate).not.toHaveBeenCalled();
+  });
+
+  it("mostra a volta acima do canvas sem selecionar ou arrastar um item", () => {
+    const onNavigateBack = vi.fn();
+    const { container, props } = renderCanvas({ onNavigateBack, backLabel: "Voltar para Infraestrutura" });
+    const back = screen.getByRole("button", { name: "Voltar para Infraestrutura" });
+    expect(container.querySelector(".network-topology-canvas-wrap")).toContainElement(back);
+    fireEvent.click(back);
+    expect(onNavigateBack).toHaveBeenCalledOnce();
+    expect(props.onCanvasBackgroundClick).not.toHaveBeenCalled();
+    expect(props.onNodeActivate).not.toHaveBeenCalled();
     expect(props.onNodeDrag).not.toHaveBeenCalled();
-    expect(props.onNodeDragEnd).not.toHaveBeenCalled();
-    expect(props.onNodeActivate).toHaveBeenCalledExactlyOnceWith("node-a");
+  });
+
+  it("não mostra voltar na raiz e mantém a volta em mapas vazios", () => {
+    const { rerender, props } = renderCanvas();
+    expect(screen.queryByRole("button", { name: /^Voltar/ })).not.toBeInTheDocument();
+    rerender(<NetworkTopologyCanvas {...props} nodes={[]} onNavigateBack={vi.fn()} backLabel="Voltar para Grupo A" emptyState={<p>Nenhum ativo</p>} />);
+    expect(screen.getByRole("button", { name: "Voltar para Grupo A" })).toBeVisible();
+    expect(screen.getByText("Nenhum ativo")).toBeVisible();
+  });
+
+  it("não distingue o item automático com avisos de prévia", () => {
+    renderCanvas({ nodes: [{ ...nodes[0], automatic: true }] });
+    expect(screen.getByRole("button", { name: "Servidor Alfa, ver ativo" })).not.toHaveClass("is-preview");
+    expect(screen.queryByText(/não salva/i)).not.toBeInTheDocument();
   });
 
   it("aplica zoom suave ao redor do cursor sem rolar a página", () => {
@@ -302,11 +328,11 @@ describe("NetworkTopologyCanvas", () => {
     expect(props.onCanvasBackgroundClick).not.toHaveBeenCalled();
   });
 
-  it("resolve conexões reais por tipo e ID mesmo entre nós de prévia com IDs iguais", () => {
+  it("resolve conexões reais por tipo e ID mesmo entre nós automáticos com referências iguais", () => {
     const { svg } = renderCanvas({
       nodes: [
-        { id: "inventory-preview:asset:shared", assetId: "shared", nodeType: "asset", x: 800, y: 500, preview: true },
-        { id: "inventory-preview:group:shared", refId: "shared", nodeType: "group", x: 1050, y: 600, preview: true }
+        { id: "inventory-default:asset:shared", assetId: "shared", nodeType: "asset", x: 800, y: 500, automatic: true },
+        { id: "inventory-default:group:shared", refId: "shared", nodeType: "group", x: 1050, y: 600, automatic: true }
       ],
       devicesById: new Map([["shared", { name: "Servidor Alfa", type: "server", status: "online" }]]),
       clusterSummaryByRefId: new Map([["shared", { name: "Infraestrutura", status: "online", segmentCount: 1, deviceCount: 1 }]]),

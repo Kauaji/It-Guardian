@@ -4,9 +4,21 @@ function isStandaloneSegment(segment) {
   return Boolean(segment.isDefault) || isMaintenanceSegmentName(segment.name || "");
 }
 
+export function getOccupiedInventorySegmentIds({ devices, machinesBySegment = new Map() } = {}) {
+  // Prefer the live inventory before search/status filters. Summary machineCount
+  // can still include a machine that has just returned from maintenance.
+  if (Array.isArray(devices)) {
+    return new Set(devices.map((device) => device.segmentId).filter(Boolean));
+  }
+  return new Set(
+    [...machinesBySegment].filter(([, machines]) => machines.length > 0).map(([segmentId]) => segmentId)
+  );
+}
+
 export function buildInventoryBoardSections({
   segments = [],
   groups = [],
+  devices,
   machinesBySegment = new Map(),
   search = "",
   selectedGroupId = "all",
@@ -14,6 +26,10 @@ export function buildInventoryBoardSections({
 } = {}) {
   const segmentGroupIds = new Map();
   const searching = Boolean(search.trim());
+  const occupiedSegmentIds = getOccupiedInventorySegmentIds({ devices, machinesBySegment });
+  const availableSegments = segments.filter((segment) => (
+    !isMaintenanceSegmentName(segment.name || "") || occupiedSegmentIds.has(segment.id)
+  ));
 
   for (const group of groups) {
     for (const segmentId of group.segmentIds || []) {
@@ -25,7 +41,7 @@ export function buildInventoryBoardSections({
     if (segment.groupId) segmentGroupIds.set(segment.id, segment.groupId);
   }
 
-  const visibleSegments = segments.filter((segment) => {
+  const visibleSegments = availableSegments.filter((segment) => {
     if (searching) return (machinesBySegment.get(segment.id) || []).length > 0;
     if (selectedSegmentId !== "all") return segment.id === selectedSegmentId;
 
@@ -58,5 +74,5 @@ export function buildInventoryBoardSections({
     ...visibleSegments.filter((segment) => segment.isDefault)
   ];
 
-  return { groupedSections, ungroupedSegments, standaloneSegments };
+  return { availableSegments, groupedSections, ungroupedSegments, standaloneSegments };
 }

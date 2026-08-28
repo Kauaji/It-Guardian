@@ -1,4 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import NetworkTopologyNode from "./NetworkTopologyNode.jsx";
 import NetworkTopologyLink from "./NetworkTopologyLink.jsx";
 import { topologyLinkKey, topologyNodeKey } from "./networkTopologyConnections.js";
@@ -48,6 +49,9 @@ const NetworkTopologyCanvas = forwardRef(function NetworkTopologyCanvas(
     onNodeDrag,
     onNodeDragEnd,
     onNodeOpen,
+    onNavigateBack,
+    backLabel = "Voltar",
+    emptyState,
     onSelectLink,
     onCanvasBackgroundClick
   },
@@ -138,7 +142,7 @@ const NetworkTopologyCanvas = forwardRef(function NetworkTopologyCanvas(
       if (!node) return;
 
       clearPendingActivation();
-      if (linkDraftActive || ((!editMode || node.preview) && !isClusterNode(node))) {
+      if (linkDraftActive || (!editMode && !isClusterNode(node))) {
         activateNodeImmediately(nodeId);
         return;
       }
@@ -146,7 +150,7 @@ const NetworkTopologyCanvas = forwardRef(function NetworkTopologyCanvas(
       const inverseMatrix = svgRef.current?.getScreenCTM()?.inverse();
       const point = getSvgPoint(event.clientX, event.clientY, inverseMatrix);
       dragRef.current = {
-        type: editMode && !node.preview ? "node" : "select",
+        type: editMode ? "node" : "select",
         nodeId,
         pointerId: event.pointerId,
         captureTarget: event.currentTarget,
@@ -235,7 +239,7 @@ const NetworkTopologyCanvas = forwardRef(function NetworkTopologyCanvas(
 
     if (drag.type === "node") {
       if (drag.moved) {
-        onNodeDragEnd(drag.nodeId);
+        onNodeDragEnd?.(drag.nodeId);
       } else {
         activatePointerNode(drag.nodeId);
       }
@@ -298,6 +302,17 @@ const NetworkTopologyCanvas = forwardRef(function NetworkTopologyCanvas(
 
   return (
     <div className="network-topology-canvas-wrap">
+      {onNavigateBack ? (
+        <button
+          type="button"
+          className="network-topology-canvas-back"
+          onClick={onNavigateBack}
+          aria-label={backLabel}
+          title={backLabel}
+        >
+          <ArrowLeft size={18} aria-hidden="true" />
+        </button>
+      ) : null}
       <svg
         ref={svgRef}
         className="network-topology-canvas"
@@ -365,7 +380,7 @@ const NetworkTopologyCanvas = forwardRef(function NetworkTopologyCanvas(
             selected={node.id === selectedNodeId}
             isLinkSource={linkDraftActive && node.id === linkDraftSourceNodeId}
             isNew={node.id === justAddedNodeId}
-            editMode={editMode && !linkDraftActive && !node.preview}
+            editMode={editMode && !linkDraftActive}
             linkDraftActive={linkDraftActive}
             onPointerDown={handleNodePointerDown}
             onActivate={activateNodeImmediately}
@@ -373,6 +388,7 @@ const NetworkTopologyCanvas = forwardRef(function NetworkTopologyCanvas(
           />
         ))}
       </svg>
+      {emptyState ? <div className="network-topology-canvas-empty">{emptyState}</div> : null}
     </div>
   );
 });

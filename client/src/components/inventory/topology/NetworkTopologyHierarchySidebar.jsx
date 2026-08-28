@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, FolderTree, Layers, Search, Wrench } from "lucide-react";
+import { ChevronDown, ChevronRight, FolderTree, Layers, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { searchCatalogItems } from "../../floorPlans/utils/catalogSearch.js";
 import AssetTypeIcon from "../AssetTypeIcon.jsx";
@@ -38,8 +38,7 @@ export default function NetworkTopologyHierarchySidebar({
         label: "Segmentos",
         items: [
           ...tree.groups.flatMap((group) => group.segments.map((segment) => ({ id: segment.id, label: segment.name, tags: ["segmento", group.name] }))),
-          ...tree.ungroupedSegments.map((segment) => ({ id: segment.id, label: segment.name, tags: ["segmento"] })),
-          ...(tree.maintenanceSegments || []).map((segment) => ({ id: segment.id, label: segment.name, tags: ["segmento", "manutenção"] }))
+          ...tree.ungroupedSegments.map((segment) => ({ id: segment.id, label: segment.name, tags: ["segmento"] }))
         ]
       }
     ],
@@ -73,9 +72,6 @@ export default function NetworkTopologyHierarchySidebar({
   const visibleUngrouped = matchedSegmentIds
     ? tree.ungroupedSegments.filter((segment) => matchedSegmentIds.has(segment.id))
     : tree.ungroupedSegments;
-  const visibleMaintenance = matchedSegmentIds
-    ? (tree.maintenanceSegments || []).filter((segment) => matchedSegmentIds.has(segment.id))
-    : (tree.maintenanceSegments || []);
 
   function renderSegmentRow(segment, groupId) {
     const expanded = expandedSegmentIds.has(segment.id);
@@ -97,7 +93,7 @@ export default function NetworkTopologyHierarchySidebar({
             className={`network-topology-hierarchy-item ${selectedSegmentId === segment.id ? "is-selected" : ""}`}
             onClick={() => onSelectSegment(segment.id, groupId)}
           >
-            {segment.isMaintenanceSegment ? <Wrench size={14} /> : <Layers size={14} />}
+            <Layers size={14} />
             <span
               className="network-topology-hierarchy-status-dot"
               style={{ background: getAggregateStatusColorToken(segment.status) }}
@@ -212,13 +208,7 @@ export default function NetworkTopologyHierarchySidebar({
           </div>
         ) : null}
 
-        {visibleMaintenance.length ? (
-          <div className="network-topology-hierarchy-maintenance" aria-label="Segmentos de manutenção independentes">
-            {visibleMaintenance.map((segment) => renderSegmentRow(segment, null))}
-          </div>
-        ) : null}
-
-        {!visibleGroups.length && !visibleUngrouped.length && !visibleMaintenance.length ? (
+        {!visibleGroups.length && !visibleUngrouped.length ? (
           <p className="network-topology-hierarchy-empty">Nenhum grupo ou segmento encontrado.</p>
         ) : null}
       </div>

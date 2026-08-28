@@ -28,7 +28,7 @@ function SegmentGroupContainer({ groupId, color, className = "", children }) {
 }
 
 export default function InventoryBoard({
-  devices: _devices = [],
+  devices,
   segments,
   machinesBySegment,
   token,
@@ -102,19 +102,20 @@ export default function InventoryBoard({
     window.location.pathname.startsWith("/plantas") ? "floor-plans" : "board"
   ));
   const [selectedSegmentIds, setSelectedSegmentIds] = useState(new Set());
-  const maintenanceSegment = segments.find((segment) => isMaintenanceSegmentName(segment.name || ""));
-  const backupSegment = segments.find((segment) => segment.isBackupSegment || /backup/i.test(segment.name || ""));
-  const { groupedSections, ungroupedSegments, standaloneSegments } = useMemo(
+  const { availableSegments, groupedSections, ungroupedSegments, standaloneSegments } = useMemo(
     () => buildInventoryBoardSections({
       segments,
       groups,
+      devices,
       machinesBySegment,
       search,
       selectedGroupId,
       selectedSegmentId
     }),
-    [groups, machinesBySegment, search, segments, selectedGroupId, selectedSegmentId]
+    [devices, groups, machinesBySegment, search, segments, selectedGroupId, selectedSegmentId]
   );
+  const maintenanceSegment = availableSegments.find((segment) => isMaintenanceSegmentName(segment.name || ""));
+  const backupSegment = availableSegments.find((segment) => segment.isBackupSegment || /backup/i.test(segment.name || ""));
   const showUngroupedSection =
     ungroupedSegments.length > 0 &&
     (selectedGroupId === "all" || selectedGroupId === "ungrouped" || selectedSegmentId !== "all");
@@ -323,7 +324,7 @@ export default function InventoryBoard({
               aria-label="Filtrar por segmento"
             >
               <option value="all">Todos os segmentos</option>
-              {segments.map((segment) => (
+              {availableSegments.map((segment) => (
                 <option key={segment.id} value={segment.id}>{segment.name}</option>
               ))}
             </select>

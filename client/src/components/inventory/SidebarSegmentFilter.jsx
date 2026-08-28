@@ -73,10 +73,6 @@ export default function SidebarSegmentFilter({
 }) {
   const [ungroupedCollapsed, setUngroupedCollapsed] = useState(false);
   const visibleSegments = segments;
-  const maintenanceSegments = useMemo(
-    () => visibleSegments.filter((segment) => isMaintenanceSegmentName(segment.name || "")),
-    [visibleSegments]
-  );
   const countBySegment = useMemo(() => {
     const next = new Map();
     for (const device of devices) {
@@ -84,6 +80,12 @@ export default function SidebarSegmentFilter({
     }
     return next;
   }, [devices]);
+  const maintenanceSegments = useMemo(
+    () => visibleSegments.filter((segment) => (
+      isMaintenanceSegmentName(segment.name || "") && (countBySegment.get(segment.id) || 0) > 0
+    )),
+    [countBySegment, visibleSegments]
+  );
   const segmentsByGroupId = useMemo(() => {
     const next = new Map([["", []]]);
 

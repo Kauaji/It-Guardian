@@ -68,7 +68,7 @@ describe("NetworkTopologyNodeInspector", () => {
     expect(within(connections).getByText("Servidor de Arquivos")).toBeInTheDocument();
     expect(within(connections).getByText("Ethernet")).toBeInTheDocument();
     expect(within(connections).getByText("Dentro de Servidores")).toBeInTheDocument();
-    expect(within(connections).getByText(/Conexões informadas manualmente/)).toBeInTheDocument();
+    expect(within(connections).queryByText(/Conexões informadas manualmente/)).not.toBeInTheDocument();
     expect(within(connections).getAllByRole("listitem")).toHaveLength(1);
   });
 
@@ -130,20 +130,39 @@ describe("NetworkTopologyNodeInspector", () => {
     expect(onConnectNode).not.toHaveBeenCalled();
   });
 
-  it("preserva as ações de adicionar, fixar e remover nós", () => {
-    const onAddToMap = vi.fn();
-    const { props } = renderNode({ onAddToMap, editMode: true });
-    fireEvent.click(screen.getByRole("button", { name: "Adicionar ao mapa" }));
+  it("preserva as ações de fixar e remover quando disponíveis em edição", () => {
+    const { props } = renderNode({ editMode: true });
     fireEvent.click(screen.getByRole("button", { name: "Fixar posição" }));
     fireEvent.click(screen.getByRole("button", { name: "Remover do mapa" }));
-    expect(onAddToMap).toHaveBeenCalledOnce();
     expect(props.onTogglePinned).toHaveBeenCalledOnce();
     expect(props.onRemoveNode).toHaveBeenCalledOnce();
   });
 
-  it("desabilita a ação de adicionar enquanto salva uma prévia", () => {
-    renderNode({ onAddToMap: vi.fn(), addingToMap: true, node: { ...SEGMENT_NODE, preview: true } });
-    expect(screen.getByRole("button", { name: "Adicionando..." })).toBeDisabled();
+  it("não oferece adicionar manualmente um item automático do inventário", () => {
+    renderNode({ editMode: true, node: { ...SEGMENT_NODE, preview: true } });
+    expect(screen.queryByRole("button", { name: "Adicionar ao mapa" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Adicionando..." })).not.toBeInTheDocument();
+  });
+
+  it("mantém a fixação sem oferecer remoção quando onRemoveNode está ausente", () => {
+    const { props } = renderNode({ editMode: true, onRemoveNode: undefined, preservesConnectionsOnRemove: true });
+    const pin = screen.getByRole("button", { name: "Fixar posição" });
+    expect(screen.queryByRole("button", { name: /Remover (do mapa|posição salva)/ })).not.toBeInTheDocument();
+    fireEvent.click(pin);
+    expect(props.onTogglePinned).toHaveBeenCalledOnce();
+  });
+
+  it("não renderiza a fixação sem callback, mas mantém remoção autorizada do legado", () => {
+    const { props } = renderNode({ editMode: true, onTogglePinned: undefined });
+    expect(screen.queryByRole("button", { name: /Fixar posição|Desafixar/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Remover do mapa" }));
+    expect(props.onRemoveNode).toHaveBeenCalledOnce();
+  });
+
+  it("não mostra ações de posição sem callbacks mesmo em edição", () => {
+    renderNode({ editMode: true, onTogglePinned: undefined, onRemoveNode: undefined });
+    expect(screen.queryByRole("button", { name: /Fixar posição|Desafixar|Remover do mapa/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Abrir mapa" })).toBeInTheDocument();
   });
 
   it("explica que remover a posição não exclui uma conexão salva", () => {
@@ -213,7 +232,7 @@ describe("NetworkTopologyLinkInspector", () => {
     expect(screen.getByText("Ethernet")).toBeInTheDocument();
     expect(screen.getByText("Rack principal")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Salvar conexão" })).not.toBeInTheDocument();
-    expect(screen.getByText(/Sua existência não significa/)).toBeInTheDocument();
+    expect(screen.queryByText(/Sua existência não significa/)).not.toBeInTheDocument();
   });
 
   it("preserva edição e remoção de conexões", () => {

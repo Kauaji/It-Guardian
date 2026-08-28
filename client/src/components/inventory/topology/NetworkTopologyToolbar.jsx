@@ -1,7 +1,6 @@
 import {
   Crosshair,
   Link2,
-  Maximize2,
   Pencil,
   RotateCcw,
   Save,
@@ -25,7 +24,6 @@ export default function NetworkTopologyToolbar({
   editMode,
   onToggleEditMode,
   onCenterView,
-  onFitView,
   onSaveLayout,
   hasDirtyPositions,
   saving,
@@ -51,8 +49,11 @@ export default function NetworkTopologyToolbar({
   canLink = false,
   lockSegmentFilter = false,
   isClusterLevel = false,
-  isInventoryPreview = false
+  showManualAdd = false
 }) {
+  const layoutBusy = Boolean(saving || generatingLayout);
+  const manualAddBusy = Boolean(addingAsset || layoutBusy);
+
   return (
     <div className="network-topology-toolbar">
       <div className="network-topology-toolbar-row">
@@ -61,7 +62,7 @@ export default function NetworkTopologyToolbar({
             type="button"
             className={`network-topology-toolbar-button ${editMode ? "is-active" : ""}`}
             onClick={onToggleEditMode}
-            disabled={(!canManage && !canLink) || creatingLink}
+            disabled={(!canManage && !canLink) || creatingLink || layoutBusy}
             title={editMode ? "Voltar para modo visualização" : "Entrar em modo edição"}
           >
             {editMode ? <Pencil size={15} /> : <Eye size={15} />}
@@ -69,9 +70,6 @@ export default function NetworkTopologyToolbar({
           </button>
           <button type="button" className="network-topology-toolbar-button" onClick={onCenterView} title="Centralizar">
             <Crosshair size={15} />
-          </button>
-          <button type="button" className="network-topology-toolbar-button" onClick={onFitView} title="Ajustar à tela">
-            <Maximize2 size={15} />
           </button>
         </div>
 
@@ -81,7 +79,7 @@ export default function NetworkTopologyToolbar({
               type="button"
               className="network-topology-toolbar-button"
               onClick={onSaveLayout}
-              disabled={!hasDirtyPositions || saving}
+              disabled={!hasDirtyPositions || layoutBusy}
             >
               <Save size={15} />
               {saving ? "Salvando..." : "Salvar layout"}
@@ -90,7 +88,7 @@ export default function NetworkTopologyToolbar({
               type="button"
               className="network-topology-toolbar-button"
               onClick={onResetLayout}
-              disabled={!hasDirtyPositions}
+              disabled={!hasDirtyPositions || layoutBusy}
             >
               <RotateCcw size={15} />
               Resetar
@@ -100,7 +98,7 @@ export default function NetworkTopologyToolbar({
                 type="button"
                 className="network-topology-toolbar-button"
                 onClick={onGenerateAutoLayout}
-                disabled={generatingLayout || nodeCount === 0 || isInventoryPreview}
+                disabled={layoutBusy || nodeCount === 0}
               >
                 <Sparkles size={15} />
                 {generatingLayout ? "Gerando..." : "Gerar automático"}
@@ -110,7 +108,7 @@ export default function NetworkTopologyToolbar({
               type="button"
               className={`network-topology-toolbar-button ${linkDraftActive ? "is-active" : ""}`}
               onClick={onToggleLinkDraft}
-              disabled={nodeCount < 2 || creatingLink}
+              disabled={nodeCount < 2 || creatingLink || layoutBusy}
               aria-pressed={linkDraftActive}
               title={linkDraftActive ? "Cancelar conexão" : "Criar conexão manual entre dois itens"}
             >
@@ -129,14 +127,18 @@ export default function NetworkTopologyToolbar({
         </div>
       </div>
 
-      {editMode && canManage ? (
-        <div className="network-topology-toolbar-row">
+      {showManualAdd && editMode && canManage ? (
+        <fieldset
+          className="network-topology-toolbar-row"
+          disabled={manualAddBusy}
+          style={{ minWidth: 0, margin: 0, padding: 0, border: 0 }}
+        >
           {isClusterLevel ? (
-            <NetworkTopologyAddClusterPicker items={availableClustersToAdd} onPick={onAddCluster} disabled={addingAsset} />
+            <NetworkTopologyAddClusterPicker items={availableClustersToAdd} onPick={onAddCluster} disabled={manualAddBusy} />
           ) : (
-            <NetworkTopologyAddAssetPicker devices={availableDevicesToAdd} onPick={onAddAsset} disabled={addingAsset} />
+            <NetworkTopologyAddAssetPicker devices={availableDevicesToAdd} onPick={onAddAsset} disabled={manualAddBusy} />
           )}
-        </div>
+        </fieldset>
       ) : null}
 
       {!isClusterLevel ? (

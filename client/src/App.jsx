@@ -74,6 +74,7 @@ import SegmentFormModal from "./components/inventory/SegmentFormModal.jsx";
 import SegmentGroupFormModal from "./components/inventory/SegmentGroupFormModal.jsx";
 import SidebarSegmentFilter from "./components/inventory/SidebarSegmentFilter.jsx";
 import { useInventoryDragAndDrop } from "./components/inventory/useInventoryDragAndDrop.js";
+import { getOccupiedInventorySegmentIds } from "./components/inventory/inventoryBoardSections.js";
 import GeneralSettingsModal from "./components/settings/GeneralSettingsModal.jsx";
 import PublicSupportRequest from "./components/public/PublicSupportRequest.jsx";
 import PublicServiceOrderTracking from "./components/public/PublicServiceOrderTracking.jsx";
@@ -578,29 +579,9 @@ function Dashboard() {
     () => decoratedAllDevices.filter((device) => device.isGlobalBackup || device.isGlobalUnorganized || device.tabId === activeInventoryTab.id),
     [activeInventoryTab.id, decoratedAllDevices]
   );
-  const activeMaintenanceSegmentIds = useMemo(
-    () => {
-      const next = new Set(
-        activeAllDevices
-          .filter((device) => device.maintenance || isMaintenanceSegmentName(device.segmentName))
-          .map((device) => device.segmentId)
-          .filter(Boolean)
-      );
-
-      for (const segment of decoratedSegments) {
-        if (
-          !segment.isDefault &&
-          segment.tabId === activeInventoryTab.id &&
-          isMaintenanceSegmentName(segment.name) &&
-          Number(segment.machineCount || 0) > 0
-        ) {
-          next.add(segment.id);
-        }
-      }
-
-      return next;
-    },
-    [activeAllDevices, activeInventoryTab.id, decoratedSegments]
+  const occupiedActiveSegmentIds = useMemo(
+    () => getOccupiedInventorySegmentIds({ devices: activeAllDevices }),
+    [activeAllDevices]
   );
   const activeSegmentGroups = useMemo(
     () => decoratedSegmentGroups.filter((group) => group.tabId === activeInventoryTab.id),
@@ -611,7 +592,7 @@ function Dashboard() {
       (segment) =>
         !segment.isDefault &&
         segment.tabId === activeInventoryTab.id &&
-        (!isMaintenanceSegmentName(segment.name) || activeMaintenanceSegmentIds.has(segment.id))
+        (!isMaintenanceSegmentName(segment.name) || occupiedActiveSegmentIds.has(segment.id))
     );
     // "Nao organizadas" e compartilhado entre abas (por isso fora do filtro
     // de tabId acima) - mesma logica do segmento de manutencao: so aparece
@@ -637,7 +618,7 @@ function Dashboard() {
       : [];
 
     return [...backupSegment, ...sharedDefaultSegments, ...activeNonDefaultSegments];
-  }, [activeInventoryTab.id, activeMaintenanceSegmentIds, decoratedAllDevices, decoratedSegments]);
+  }, [activeInventoryTab.id, occupiedActiveSegmentIds, decoratedAllDevices, decoratedSegments]);
   const inventorySearchActive = Boolean(inventorySearch.trim());
   const inventorySearchSegments = useMemo(() => {
     const backupSegment = decoratedAllDevices.some((device) => device.isBackup)

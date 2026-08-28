@@ -93,7 +93,7 @@ async function withTopologyFixture(page, run) {
 }
 
 function mapNode(page, name, kind) {
-  return page.getByRole("button", { name: `${name}, ver ${kind}, prévia não salva`, exact: true });
+  return page.getByRole("button", { name: `${name}, ver ${kind}`, exact: true });
 }
 
 async function openMap(page) {
@@ -143,6 +143,9 @@ test("um clique inspeciona; dois cliques editam grupos e segmentos sem gravar po
       });
     }
     await openMap(page);
+    await expect(page.getByRole("button", { name: /^Voltar para / })).toHaveCount(0);
+    await expect(page.getByText(/Prévia do inventário|Posição não salva/)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Ajustar à tela", exact: true })).toHaveCount(0);
     const initialMaps = await apiJson(page, "/api/topology-maps");
     await mapNode(page, groups[0].name, "grupo").click();
     const groupInspector = page.getByRole("complementary", { name: "Detalhes do grupo", exact: true });
@@ -176,11 +179,17 @@ test("um clique inspeciona; dois cliques editam grupos e segmentos sem gravar po
     await expect(page.getByRole("button", { name: "Editando", exact: true })).toBeVisible();
     await expect(mapNode(page, devices[0].name, "ativo")).toBeVisible();
     await expect(page.getByRole("button", { name: /^Conexão entre .+: Backup entre servidores$/ })).toBeVisible();
+    await expect(page.getByPlaceholder("Adicionar ativo ao mapa...")).toHaveCount(0);
+    await page.getByRole("button", { name: "Voltar para " + groups[0].name, exact: true }).click();
+    await expect(mapNode(page, segments[0].name, "segmento")).toBeVisible();
+    await page.getByRole("button", { name: /^Voltar para / }).click();
+    await expect(mapNode(page, groups[0].name, "grupo")).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Voltar para / })).toHaveCount(0);
     expect(topologyWrites).toEqual([]);
   });
 });
 
-test("cria linha manual entre ativos da prévia, edita e mantém após recarregar", async ({ page }) => {
+test("cria conexão e salva posições de itens automáticos, mantendo tudo ao recarregar", async ({ page }) => {
   await withTopologyFixture(page, async ({ groups, segments, devices, topologyWrites }) => {
     await openSegment(page, groups[0], segments[0]);
     await expect(page.locator(".network-topology-link")).toHaveCount(0);
@@ -216,22 +225,45 @@ test("cria linha manual entre ativos da prévia, edita e mantém após recarrega
     expect(topologyWrites.filter((entry) => entry.method === "POST")).toHaveLength(1);
     expect(topologyWrites.some((entry) => /nodes|positions/.test(entry.path))).toBe(false);
     await page.getByRole("button", { name: "Fechar detalhes da conexão" }).click();
-    await mapNode(page, devices[0].name, "ativo").click();
+    const firstNode = mapNode(page, devices[0].name, "ativo");
+    await firstNode.click();
+    await expect(page.getByRole("complementary", { name: "Detalhes do ativo", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Adicionar ao mapa", exact: true })).toHaveCount(0);
+    await expect(page.getByText("Conexões informadas manualmente; não são detectadas automaticamente.")).toHaveCount(0);
+    await page.getByRole("button", { name: "Fechar detalhes do ativo", exact: true }).click();
+    await firstNode.scrollIntoViewIfNeeded();
+    const initialTransform = await firstNode.evaluate((element) => element.closest("g").getAttribute("transform"));
+    const nodeBox = await firstNode.boundingBox();
+    await page.mouse.move(nodeBox.x + nodeBox.width / 2, nodeBox.y + nodeBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(nodeBox.x + nodeBox.width / 2 + 75, nodeBox.y + nodeBox.height / 2 + 45, { steps: 8 });
+    await page.mouse.up();
+    await expect.poll(() => firstNode.evaluate((element) => element.closest("g").getAttribute("transform"))).not.toBe(initialTransform);
     const positionSaved = page.waitForResponse((response) =>
-      response.request().method() === "POST" && new URL(response.url()).pathname.endsWith("/nodes")
+      response.request().method() === "PATCH" && new URL(response.url()).pathname.endsWith("/nodes/positions")
     );
-    await page.getByRole("button", { name: "Adicionar ao mapa", exact: true }).click();
-    expect((await positionSaved).status()).toBe(201);
+    await page.getByRole("button", { name: "Salvar layout", exact: true }).click();
+    expect((await positionSaved).ok()).toBeTruthy();
+    await expect(page.getByRole("button", { name: "Salvar layout", exact: true })).toBeDisabled();
     await expect(mapNode(page, devices[1].name, "ativo")).toBeVisible();
     await expect(line).toBeVisible();
     bundle = await getScopedMap(page, "segment", segments[0].id);
     expect(bundle.nodes).toHaveLength(1);
     expect(bundle.nodes[0].assetId).toBe(devices[0].id);
     expect(bundle.links).toHaveLength(1);
+    const storedPosition = bundle.nodes[0];
+    await apiJson(page, `/api/devices/${devices[2].id}/segment`, {
+      method: "PATCH", data: { segmentId: segments[0].id }
+    });
     await page.reload();
     await openSegment(page, groups[0], segments[0]);
     await expect(mapNode(page, devices[1].name, "ativo")).toBeVisible();
+    await expect(mapNode(page, devices[2].name, "ativo")).toBeVisible();
     await expect(line).toBeVisible();
+    bundle = await getScopedMap(page, "segment", segments[0].id);
+    expect(bundle.nodes).toEqual([storedPosition]);
+    expect(topologyWrites.filter((entry) => entry.method === "POST" && entry.path.endsWith("/nodes"))).toHaveLength(1);
+    expect(topologyWrites.filter((entry) => entry.path.endsWith("/nodes/positions"))).toHaveLength(1);
     await line.scrollIntoViewIfNeeded();
     await page.screenshot({ path: test.info().outputPath("persisted-connection.png") });
     await page.setViewportSize({ width: 390, height: 844 });

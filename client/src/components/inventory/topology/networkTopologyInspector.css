@@ -246,16 +246,11 @@
   line-height: 1.6;
 }
 
-.network-topology-inspector-note,
 .network-topology-inspector-error {
   margin: 0;
-  color: var(--text-soft);
+  color: var(--status-danger);
   font-size: 0.67rem;
   line-height: 1.6;
-}
-
-.network-topology-inspector-error {
-  color: var(--status-danger);
 }
 
 .network-topology-inspector .network-topology-inspector-connection-summary {

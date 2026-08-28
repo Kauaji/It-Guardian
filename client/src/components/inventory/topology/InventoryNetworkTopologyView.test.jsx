@@ -57,9 +57,9 @@ function assertNoTopologyWrites() {
 }
 
 async function openSegment() {
-  fireEvent.keyDown(await screen.findByRole("button", { name: "Grupo A, ver grupo, prévia não salva" }), { key: "Enter", altKey: true });
-  fireEvent.keyDown(await screen.findByRole("button", { name: "Estações, ver segmento, prévia não salva" }), { key: "Enter", altKey: true });
-  return screen.findByRole("button", { name: "Desktop A, ver ativo, prévia não salva" });
+  fireEvent.keyDown(await screen.findByRole("button", { name: "Grupo A, ver grupo" }), { key: "Enter", altKey: true });
+  fireEvent.keyDown(await screen.findByRole("button", { name: "Estações, ver segmento" }), { key: "Enter", altKey: true });
+  return screen.findByRole("button", { name: "Desktop A, ver ativo" });
 }
 
 describe("InventoryNetworkTopologyView", () => {
@@ -81,7 +81,7 @@ describe("InventoryNetworkTopologyView", () => {
       links: [{ id: "inside", sourceType: "segment", targetType: "segment", sourceAssetId: "s1", targetAssetId: "s3", type: "fiber", label: "Backbone" }]
     });
     render(<InventoryNetworkTopologyView {...props} segments={[...props.segments, { id: "s3", name: "Arquivos", groupId: "g1", tabId: "t1" }]} />);
-    const group = await screen.findByRole("button", { name: "Grupo A, ver grupo, prévia não salva" });
+    const group = await screen.findByRole("button", { name: "Grupo A, ver grupo" });
     fireEvent.keyDown(group, { key: "Enter" });
     const inspector = await screen.findByRole("complementary", { name: "Detalhes do grupo" });
     expect(within(inspector).getByRole("button", { name: "Abrir ficha de Desktop A" })).toBeVisible();
@@ -97,16 +97,16 @@ describe("InventoryNetworkTopologyView", () => {
 
   it("dois cliques abrem grupo e segmento diretamente em edição sem salvar posições", async () => {
     render(<InventoryNetworkTopologyView {...props} />);
-    fireEvent.doubleClick(await screen.findByRole("button", { name: "Grupo A, ver grupo, prévia não salva" }));
-    const segment = await screen.findByRole("button", { name: "Estações, ver segmento, prévia não salva" });
+    fireEvent.doubleClick(await screen.findByRole("button", { name: "Grupo A, ver grupo" }));
+    const segment = await screen.findByRole("button", { name: "Estações, ver segmento" });
     expect(screen.getByRole("button", { name: "Editando" })).toBeVisible();
     fireEvent.doubleClick(segment);
-    expect(await screen.findByRole("button", { name: "Desktop A, ver ativo, prévia não salva" })).toBeVisible();
+    expect(await screen.findByRole("button", { name: "Desktop A, ver ativo" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Editando" })).toBeVisible();
     assertNoTopologyWrites();
   });
 
-  it("cria e desenha linha entre prévias usando somente IDs reais", async () => {
+  it("cria e desenha linha entre itens automáticos usando somente IDs reais", async () => {
     api.createNetworkTopologyLink.mockImplementation(async (_token, mapId, payload) => ({
       link: { id: "new-link", mapId, ...payload, type: "ethernet" }
     }));
@@ -115,7 +115,7 @@ describe("InventoryNetworkTopologyView", () => {
     fireEvent.click(screen.getByRole("button", { name: "Criar conexão" }));
     fireEvent.keyDown(first, { key: "Enter" });
     expect(screen.getByText(/Origem selecionada/)).toBeVisible();
-    fireEvent.keyDown(screen.getByRole("button", { name: "Desktop B, ver ativo, prévia não salva" }), { key: "Enter" });
+    fireEvent.keyDown(screen.getByRole("button", { name: "Desktop B, ver ativo" }), { key: "Enter" });
     expect(await screen.findByRole("button", { name: "Conexão entre Desktop A e Desktop B" })).toBeInTheDocument();
     expect(screen.getByText("1 conexão(ões)")).toBeVisible();
     expect(api.createNetworkTopologyLink).toHaveBeenCalledExactlyOnceWith("test-token", "map-segment-s1", {
@@ -146,12 +146,12 @@ describe("InventoryNetworkTopologyView", () => {
     expect(screen.queryByRole("button", { name: "Salvar layout" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Criar conexão" }));
     fireEvent.keyDown(first, { key: "Enter" });
-    fireEvent.keyDown(screen.getByRole("button", { name: "Desktop B, ver ativo, prévia não salva" }), { key: "Enter" });
+    fireEvent.keyDown(screen.getByRole("button", { name: "Desktop B, ver ativo" }), { key: "Enter" });
     await waitFor(() => expect(api.createNetworkTopologyLink).toHaveBeenCalledTimes(1));
     expect(api.createNetworkTopologyNode).not.toHaveBeenCalled();
   });
 
-  it("salvar uma posição não oculta o outro endpoint nem a conexão da prévia", async () => {
+  it("fixar um item automático mantém os outros itens e a conexão", async () => {
     api.fetchNetworkTopologyMapByScope.mockImplementation(async (_token, scopeType, scopeId) => ({
       map: { id: `map-${scopeId}`, scopeType, scopeId },
       nodes: [],
@@ -160,15 +160,19 @@ describe("InventoryNetworkTopologyView", () => {
     api.createNetworkTopologyNode.mockImplementation(async (_token, _mapId, payload) => ({
       node: { id: "saved-a", ...payload }
     }));
+    api.updateNetworkTopologyNode.mockResolvedValue({
+      node: { id: "saved-a", assetId: "d1", nodeType: "asset", x: 685, y: 500, pinned: true }
+    });
     render(<InventoryNetworkTopologyView {...props} />);
     const first = await openSegment();
     fireEvent.keyDown(first, { key: "Enter" });
-    fireEvent.click(screen.getByRole("button", { name: "Adicionar ao mapa" }));
-    await screen.findByRole("button", { name: "Desktop A, ver ativo", exact: true });
-    expect(screen.getByRole("button", { name: "Desktop B, ver ativo, prévia não salva" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Fixar posição" }));
+    await waitFor(() => expect(api.updateNetworkTopologyNode).toHaveBeenCalledWith("test-token", "saved-a", { pinned: true }));
+    expect(await screen.findByRole("button", { name: "Desafixar", exact: true })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Desktop B, ver ativo" })).toBeVisible();
     expect(screen.getByRole("button", { name: /^Conexão entre Desktop A e Desktop B/ })).toBeVisible();
-    expect(screen.getByText("Algumas posições ainda não foram salvas.")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Remover posição salva" })).toBeVisible();
+    expect(screen.queryByText("Algumas posições ainda não foram salvas.")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Remover.*mapa|Remover posição salva/ })).not.toBeInTheDocument();
     expect(api.createNetworkTopologyNode).toHaveBeenCalledTimes(1);
     expect(api.createNetworkTopologyLink).not.toHaveBeenCalled();
     expect(api.saveNetworkTopologyNodePositions).not.toHaveBeenCalled();
@@ -184,10 +188,12 @@ describe("InventoryNetworkTopologyView", () => {
     assertNoTopologyWrites();
   });
 
-  it("carrega o escopo do ambiente ativo uma vez e exibe a prévia sem gravações", async () => {
+  it("carrega o ambiente uma vez e exibe seus itens sem avisos ou gravações", async () => {
     render(<InventoryNetworkTopologyView {...props} />);
-    expect(await screen.findByRole("button", { name: "Grupo A, ver grupo, prévia não salva" })).toBeVisible();
-    expect(screen.getByText("Prévia do inventário · não salva.")).toBeVisible();
+    expect(await screen.findByRole("button", { name: "Grupo A, ver grupo" })).toBeVisible();
+    expect(screen.queryByText("Prévia do inventário · não salva.")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Ajustar à tela" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Voltar para/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Grupo B, ver grupo/ })).not.toBeInTheDocument();
     expect(api.fetchNetworkTopologyMapByScope).toHaveBeenCalledExactlyOnceWith("test-token", "inventory_tab", "t1", "Ambiente A");
     assertNoTopologyWrites();
@@ -196,7 +202,7 @@ describe("InventoryNetworkTopologyView", () => {
   it("mostra máquinas de um segmento sem nós salvos, sem pedir modo de edição", async () => {
     render(<InventoryNetworkTopologyView {...props} />);
     expect(await openSegment()).toBeVisible();
-    expect(screen.getByRole("button", { name: "Desktop B, ver ativo, prévia não salva" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Desktop B, ver ativo" })).toBeVisible();
     expect(screen.queryByRole("button", { name: /Desktop C, ver ativo/ })).not.toBeInTheDocument();
     expect(screen.getByText("2 ativo(s)")).toBeVisible();
     expect(screen.getByRole("button", { name: "Editando" })).toBeVisible();
@@ -205,7 +211,7 @@ describe("InventoryNetworkTopologyView", () => {
     assertNoTopologyWrites();
   });
 
-  it("a prévia permite filtrar por status e abrir os detalhes reais da máquina", async () => {
+  it("permite filtrar por status e abrir os detalhes reais da máquina", async () => {
     render(<InventoryNetworkTopologyView {...props} />);
     const device = await openSegment();
     fireEvent.keyDown(device, { key: " " });
@@ -218,32 +224,37 @@ describe("InventoryNetworkTopologyView", () => {
     assertNoTopologyWrites();
   });
 
-  it("manutenção fica independente na hierarquia e abre seus próprios ativos", async () => {
-    render(<InventoryNetworkTopologyView {...props} />);
-    const maintenance = await screen.findByRole("button", { name: "Manutenção, ver segmento, prévia não salva" });
+  it("omite Manutenção e Backup mesmo com posições antigas salvas, sem alterar registros", async () => {
+    api.fetchNetworkTopologyMapByScope.mockResolvedValue({
+      map: { id: "root-map" }, links: [],
+      nodes: [
+        { id: "maintenance-node", nodeType: "segment", refId: "m1", x: 100, y: 100 },
+        { id: "backup-node", nodeType: "segment", refId: "b1", x: 300, y: 100 }
+      ]
+    });
+    render(<InventoryNetworkTopologyView {...props} segments={[...props.segments, { id: "b1", name: "Backup", tabId: "t1" }]} />);
+    expect(await screen.findByRole("button", { name: "Grupo A, ver grupo" })).toHaveTextContent("1 segmento(s) · 2 ativo(s)");
+    expect(screen.queryByRole("button", { name: /Manutenção, ver segmento|Backup, ver segmento/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Abrir navegação do mapa" }));
     const navigation = screen.getByRole("navigation", { name: "Hierarquia do inventário" });
-    expect(within(navigation).queryByText("Sem grupo")).not.toBeInTheDocument();
-    const groupRow = within(navigation).getByText("Grupo A").closest(".network-topology-hierarchy-group");
-    expect(within(groupRow).queryByText("Manutenção")).not.toBeInTheDocument();
-    expect(navigation.querySelector(".network-topology-hierarchy-maintenance")).toHaveTextContent("Manutenção");
-    fireEvent.keyDown(maintenance, { key: "Enter", altKey: true });
-    expect(await screen.findByRole("button", { name: /Desktop em reparo, ver ativo/ })).toBeVisible();
-    const breadcrumbs = screen.getByRole("navigation", { name: "Navegação da hierarquia do mapa de rede" });
-    expect(breadcrumbs).not.toHaveTextContent("Grupo A");
+    expect(within(navigation).queryByText("Manutenção")).not.toBeInTheDocument();
+    expect(within(navigation).queryByText("Backup")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Desktop em reparo, ver ativo/ })).not.toBeInTheDocument();
     assertNoTopologyWrites();
   });
 
   it("preserva nós, posições, rótulos e conexões já salvos", async () => {
-    api.fetchNetworkTopologyMapByScope.mockResolvedValue({
-      map: { id: "map-saved" },
-      nodes: [
+    api.fetchNetworkTopologyMapByScope.mockImplementation(async (_token, scopeType, scopeId) => ({
+      map: { id: "map-" + scopeType + "-" + scopeId },
+      nodes: scopeType === "segment" ? [
         { id: "n1", assetId: "d1", x: -800, y: 4500, pinned: true, labelOverride: "Meu PC" },
         { id: "n2", assetId: "d2", x: 300, y: 100, pinned: false }
-      ],
-      links: [{ id: "l1", sourceAssetId: "d1", targetAssetId: "d2", label: "Rede física", type: "ethernet" }]
-    });
+      ] : [],
+      links: scopeType === "segment" ? [{ id: "l1", sourceAssetId: "d1", targetAssetId: "d2", label: "Rede física", type: "ethernet" }] : []
+    }));
     render(<InventoryNetworkTopologyView {...props} />);
+    fireEvent.doubleClick(await screen.findByRole("button", { name: "Grupo A, ver grupo" }));
+    fireEvent.doubleClick(await screen.findByRole("button", { name: "Estações, ver segmento" }));
     const node = await screen.findByRole("button", { name: "Meu PC, ver ativo" });
     expect(node.closest("g")).toHaveAttribute("transform", "translate(-858, 4450)");
     expect(screen.getByText("Rede física")).toBeInTheDocument();
@@ -253,20 +264,40 @@ describe("InventoryNetworkTopologyView", () => {
     assertNoTopologyWrites();
   });
 
-  it("persiste um item da prévia só após edição e clique explícito, usando o ID real", async () => {
+  it("salva a posição arrastada de um item automático usando o ID real", async () => {
     api.createNetworkTopologyNode.mockImplementation(async (_token, _mapId, payload) => ({ node: { id: "persisted-node", ...payload } }));
+    api.saveNetworkTopologyNodePositions.mockImplementation(async (_token, _mapId, positions) => ({
+      nodes: positions.map(({ nodeId, x, y }) => ({ id: nodeId, assetId: "d1", nodeType: "asset", x, y, pinned: false }))
+    }));
     render(<InventoryNetworkTopologyView {...props} />);
     const device = await openSegment();
     fireEvent.keyDown(device, { key: " " });
     expect(screen.getByRole("button", { name: "Criar conexão" })).toBeEnabled();
     expect(screen.queryByRole("button", { name: "Remover do mapa" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Adicionar ao mapa" })).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("Adicionar ativo ao mapa...")).not.toBeInTheDocument();
     assertNoTopologyWrites();
-    fireEvent.click(screen.getByRole("button", { name: "Adicionar ao mapa" }));
-    await waitFor(() => expect(api.createNetworkTopologyNode).toHaveBeenCalledTimes(1));
+    const svg = device.closest("svg");
+    svg.createSVGPoint = () => ({ x: 0, y: 0, matrixTransform() { return { x: this.x, y: this.y }; } });
+    svg.getScreenCTM = () => ({ inverse: () => ({}) });
+    const pointer = (target, type, clientX, clientY) => {
+      const event = new MouseEvent(type, { bubbles: true, button: 0, clientX, clientY });
+      Object.defineProperty(event, "pointerId", { value: 1 });
+      fireEvent(target, event);
+    };
+    pointer(device, "pointerdown", 100, 100);
+    pointer(svg, "pointermove", 160, 140);
+    pointer(svg, "pointerup", 160, 140);
+    assertNoTopologyWrites();
+    fireEvent.click(screen.getByRole("button", { name: "Salvar layout" }));
+    await waitFor(() => expect(api.saveNetworkTopologyNodePositions).toHaveBeenCalledExactlyOnceWith(
+      "test-token", "map-segment-s1", [{ nodeId: "persisted-node", x: 745, y: 540 }]
+    ));
     const [_token, mapId, payload] = api.createNetworkTopologyNode.mock.calls[0];
     expect(mapId).toBe("map-segment-s1");
-    expect(payload).toEqual({ assetId: "d1", x: 685, y: 500 });
+    expect(payload).toEqual({ nodeType: "asset", assetId: "d1", x: 685, y: 500, pinned: false });
     expect(await screen.findByRole("button", { name: "Desktop A, ver ativo" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Desktop B, ver ativo" })).toBeVisible();
     expect(screen.queryByText("Prévia do inventário · não salva.")).not.toBeInTheDocument();
     expect(api.createNetworkTopologyLink).not.toHaveBeenCalled();
     expect(api.fetchNetworkTopologyMapByScope).toHaveBeenCalledTimes(3);
@@ -276,9 +307,51 @@ describe("InventoryNetworkTopologyView", () => {
     const { rerender } = render(<InventoryNetworkTopologyView {...props} />);
     await openSegment();
     rerender(<InventoryNetworkTopologyView {...props} activeTab={tabs[1]} />);
-    expect(await screen.findByRole("button", { name: "Grupo B, ver grupo, prévia não salva" })).toBeVisible();
+    expect(await screen.findByRole("button", { name: "Grupo B, ver grupo" })).toBeVisible();
     expect(screen.queryByRole("button", { name: /Desktop A, ver ativo/ })).not.toBeInTheDocument();
     expect(api.fetchNetworkTopologyMapByScope).toHaveBeenLastCalledWith("test-token", "inventory_tab", "t2", "Ambiente B");
+    assertNoTopologyWrites();
+  });
+
+  it("volta do segmento para o grupo e depois para a visão raiz", async () => {
+    render(<InventoryNetworkTopologyView {...props} />);
+    await openSegment();
+    const back = screen.getByRole("button", { name: "Voltar para Grupo A" });
+    expect(back.closest(".network-topology-canvas-wrap")).not.toBeNull();
+    fireEvent.click(back);
+    expect(await screen.findByRole("button", { name: "Estações, ver segmento" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Voltar para Ambiente A" }));
+    expect(await screen.findByRole("button", { name: "Grupo A, ver grupo" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: /^Voltar para/ })).not.toBeInTheDocument();
+    assertNoTopologyWrites();
+  });
+
+  it("um segmento vazio sem grupo também permite voltar à raiz", async () => {
+    render(<InventoryNetworkTopologyView {...props} segments={[
+      ...props.segments, { id: "standalone", name: "Laboratório", groupId: null, tabId: "t1" }
+    ]} />);
+    fireEvent.doubleClick(await screen.findByRole("button", { name: "Laboratório, ver segmento" }));
+    expect(await screen.findByText("Não há ativos neste segmento")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Voltar para Ambiente A" }));
+    expect(await screen.findByRole("button", { name: "Grupo A, ver grupo" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: /^Voltar para/ })).not.toBeInTheDocument();
+    assertNoTopologyWrites();
+  });
+
+  it("mantém itens novos visíveis quando o mapa tem uma única posição salva sem conexões", async () => {
+    api.fetchNetworkTopologyMapByScope.mockImplementation(async (_token, scopeType, scopeId) => ({
+      map: { id: "map-" + scopeType + "-" + scopeId }, links: [],
+      nodes: scopeType === "segment" ? [{ id: "saved-a", assetId: "d1", x: 600, y: 400, pinned: true }] : []
+    }));
+    const { rerender } = render(<InventoryNetworkTopologyView {...props} />);
+    await openSegment();
+    expect(screen.getByRole("button", { name: "Desktop B, ver ativo" })).toBeVisible();
+    rerender(<InventoryNetworkTopologyView {...props} devices={[
+      ...props.devices, { id: "new-machine", name: "Desktop novo", segmentId: "s1", tabId: "t1", status: "online" }
+    ]} />);
+    expect(await screen.findByRole("button", { name: "Desktop novo, ver ativo" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Desktop A, ver ativo" }).closest("g")).toHaveAttribute("transform", "translate(542, 350)");
+    expect(screen.getByText("3 ativo(s)")).toBeVisible();
     assertNoTopologyWrites();
   });
 
@@ -286,8 +359,8 @@ describe("InventoryNetworkTopologyView", () => {
     render(<InventoryNetworkTopologyView {...props} />);
     await openSegment();
     fireEvent.click(within(screen.getByRole("navigation", { name: "Navegação da hierarquia do mapa de rede" })).getByRole("button", { name: "Ambiente A" }));
-    expect(await screen.findByRole("button", { name: "Grupo A, ver grupo, prévia não salva" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Manutenção, ver segmento, prévia não salva" })).toBeVisible();
+    expect(await screen.findByRole("button", { name: "Grupo A, ver grupo" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Manutenção, ver segmento" })).not.toBeInTheDocument();
     assertNoTopologyWrites();
   });
 

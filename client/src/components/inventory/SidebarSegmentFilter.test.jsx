@@ -22,7 +22,7 @@ function DndProbe({ onContext }) {
 }
 
 function renderFilter(overrides = {}, onContext) {
-  return render(
+  const filter = (nextProps) => (
     <DndContext>
       <DndProbe onContext={onContext} />
       <SidebarSegmentFilter
@@ -32,10 +32,12 @@ function renderFilter(overrides = {}, onContext) {
         selectedSegmentId="all"
         onSelectGroup={vi.fn()}
         onSelectSegment={vi.fn()}
-        {...overrides}
+        {...nextProps}
       />
     </DndContext>
   );
+  const result = render(filter(overrides));
+  return { ...result, rerenderFilter: (nextProps) => result.rerender(filter({ ...overrides, ...nextProps })) };
 }
 
 function buttonForLabel(label) {
@@ -143,5 +145,30 @@ describe("SidebarSegmentFilter — manutenção independente", () => {
     expect(buttonForLabel("Manutenção").querySelector(".sidebar-segment-drag-handle")).toHaveAttribute("aria-disabled", "true");
     fireEvent.click(buttonForLabel("Estações"));
     expect(onSelectSegment).toHaveBeenCalledExactlyOnceWith(regular.id);
+  });
+
+  it("oculta manutenção vazia mesmo com resumo positivo sem ocultar grupos ou segmentos comuns", () => {
+    renderFilter({
+      segments: [regular, ungrouped, { ...maintenance, machineCount: 10 }],
+      devices: devices.slice(0, 2)
+    });
+
+    expect(screen.queryByText(maintenance.name)).not.toBeInTheDocument();
+    expect(buttonForLabel(regular.name)).toBeInTheDocument();
+    expect(buttonForLabel(group.name).querySelector("small")).toHaveTextContent("1");
+    expect(buttonForLabel("Todos").querySelector("small")).toHaveTextContent("2");
+  });
+
+  it("reage à última saída e à próxima entrada mantendo o ID de seleção e o grupo original", () => {
+    const onSelectSegment = vi.fn();
+    const { rerenderFilter } = renderFilter({ devices: [devices[2]], onSelectSegment });
+    expect(buttonForLabel(maintenance.name)).toBeInTheDocument();
+    rerenderFilter({ devices: [{ ...devices[2], segmentId: regular.id }] });
+    expect(screen.queryByText(maintenance.name)).not.toBeInTheDocument();
+    expect(buttonForLabel(group.name).querySelector("small")).toHaveTextContent("1");
+    rerenderFilter({ devices: [devices[2]] });
+    fireEvent.click(buttonForLabel(maintenance.name));
+    expect(onSelectSegment).toHaveBeenCalledExactlyOnceWith(maintenance.id);
+    expect(maintenance.groupId).toBe(group.id);
   });
 });
