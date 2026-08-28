@@ -33,6 +33,8 @@ export default function NetworkTopologyToolbar({
   onGenerateAutoLayout,
   generatingLayout,
   linkDraftActive,
+  linkDraftSourceNodeId,
+  creatingLink = false,
   onToggleLinkDraft,
   availableDevicesToAdd,
   onAddAsset,
@@ -46,6 +48,7 @@ export default function NetworkTopologyToolbar({
   segments,
   assetTypeOptions,
   canManage,
+  canLink = false,
   lockSegmentFilter = false,
   isClusterLevel = false,
   isInventoryPreview = false
@@ -58,7 +61,7 @@ export default function NetworkTopologyToolbar({
             type="button"
             className={`network-topology-toolbar-button ${editMode ? "is-active" : ""}`}
             onClick={onToggleEditMode}
-            disabled={!canManage}
+            disabled={(!canManage && !canLink) || creatingLink}
             title={editMode ? "Voltar para modo visualização" : "Entrar em modo edição"}
           >
             {editMode ? <Pencil size={15} /> : <Eye size={15} />}
@@ -74,7 +77,7 @@ export default function NetworkTopologyToolbar({
 
         {editMode ? (
           <div className="network-topology-toolbar-group">
-            <button
+            {canManage ? <><button
               type="button"
               className="network-topology-toolbar-button"
               onClick={onSaveLayout}
@@ -102,17 +105,19 @@ export default function NetworkTopologyToolbar({
                 <Sparkles size={15} />
                 {generatingLayout ? "Gerando..." : "Gerar automático"}
               </button>
-            ) : null}
-            <button
+            ) : null}</> : null}
+            {canLink ? <button
               type="button"
               className={`network-topology-toolbar-button ${linkDraftActive ? "is-active" : ""}`}
               onClick={onToggleLinkDraft}
-              disabled={nodeCount < 2 || isInventoryPreview}
-              title="Criar conexão"
+              disabled={nodeCount < 2 || creatingLink}
+              aria-pressed={linkDraftActive}
+              title={linkDraftActive ? "Cancelar conexão" : "Criar conexão manual entre dois itens"}
             >
               <Link2 size={15} />
-              {linkDraftActive ? "Selecione o destino" : "Criar conexão"}
-            </button>
+              {creatingLink ? "Salvando conexão…" : linkDraftActive
+                ? (linkDraftSourceNodeId ? "Escolha o destino" : "Escolha a origem") : "Criar conexão"}
+            </button> : null}
           </div>
         ) : null}
 
@@ -124,7 +129,7 @@ export default function NetworkTopologyToolbar({
         </div>
       </div>
 
-      {editMode ? (
+      {editMode && canManage ? (
         <div className="network-topology-toolbar-row">
           {isClusterLevel ? (
             <NetworkTopologyAddClusterPicker items={availableClustersToAdd} onPick={onAddCluster} disabled={addingAsset} />

@@ -22,6 +22,7 @@ export default function NetworkTopologyNode({
   segmentName,
   selected,
   editMode,
+  linkDraftActive = false,
   isLinkSource,
   isNew,
   onPointerDown,
@@ -64,16 +65,19 @@ export default function NetworkTopologyNode({
           style={{ "--node-status-color": statusColor }}
           role="button"
           tabIndex={0}
-          aria-label={`${label}${cluster ? ", abrir mapa" : ", ver ativo"}${node.preview ? ", prévia não salva" : ""}`}
+          aria-label={`${label}, ver ${cluster ? (node.nodeType === "group" ? "grupo" : "segmento") : "ativo"}${node.preview ? ", prévia não salva" : ""}`}
+          aria-description={cluster
+            ? "Um clique mostra máquinas e conexões. Dois cliques ou Alt+Enter abrem o mapa para edição."
+            : "Selecione para ver os detalhes e as conexões deste ativo."}
           onKeyDown={(event) => {
             if (event.key !== "Enter" && event.key !== " ") return;
             event.preventDefault();
-            if (cluster && event.key === "Enter") onOpen?.(node);
+            if (cluster && event.key === "Enter" && event.altKey && !linkDraftActive) onOpen?.(node);
             else onActivate?.(node.id);
           }}
           onPointerDown={(event) => onPointerDown(node.id, event)}
           onDoubleClick={
-            cluster && onOpen
+            cluster && onOpen && !linkDraftActive
               ? (event) => {
                 event.stopPropagation();
                 onOpen(node);
@@ -108,7 +112,7 @@ export default function NetworkTopologyNode({
               <span className="network-topology-node-realname">{secondaryName}</span>
             ) : null}
             {!cluster && segmentName ? <span className="network-topology-node-segment">{segmentName}</span> : null}
-            {node.preview ? <span className="network-topology-preview-caption">Não salvo</span> : null}
+            {node.preview ? <span className="network-topology-preview-caption">Posição não salva</span> : null}
           </span>
         </div>
       </foreignObject>

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Info } from "lucide-react";
 import {
-  createNetworkTopologyLink,
   createNetworkTopologyMap,
   createNetworkTopologyNode,
   deleteNetworkTopologyLink,
@@ -28,6 +27,10 @@ import NetworkTopologyBreadcrumb from "./NetworkTopologyBreadcrumb.jsx";
 import NetworkTopologyLevelEmptyState from "./NetworkTopologyLevelEmptyState.jsx";
 import NetworkTopologyNavigation from "./NetworkTopologyNavigation.jsx";
 import { buildInventoryTopologyPreview, getTopologySegments, resolveTopologyDisplayNodes } from "./networkTopologyProjection.js";
+import { clusterDevices, inspectorConnections, topologyLinkKey, topologyNodeKey } from "./networkTopologyConnections.js";
+import useTopologyInspectorConnections from "./useTopologyInspectorConnections.js";
+import useTopologyLinkCreation from "./useTopologyLinkCreation.js";
+import "./networkTopologyInteraction.css";
 
 const DEFAULT_FILTERS = { search: "", status: "", segmentId: "", assetType: "" };
 
@@ -58,6 +61,7 @@ export default function InventoryNetworkTopologyView({
   const canView = can("inventory.topology.view");
   const canManageMap = can("inventory.topology.manage");
   const canLinkAssets = can("inventory.topology.link_assets");
+  const canEditMap = canManageMap || canLinkAssets;
 
   const [viewLevel, setViewLevel] = useState("tab");
   const [selectedGroupId, setSelectedGroupId] = useState(null);
@@ -72,8 +76,6 @@ export default function InventoryNetworkTopologyView({
   const [editMode, setEditMode] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [selectedLinkId, setSelectedLinkId] = useState(null);
-  const [linkDraftActive, setLinkDraftActive] = useState(false);
-  const [linkDraftSourceNodeId, setLinkDraftSourceNodeId] = useState(null);
   const [dirtyPositions, setDirtyPositions] = useState(new Map());
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [saving, setSaving] = useState(false);
@@ -84,26 +86,31 @@ export default function InventoryNetworkTopologyView({
   const [justCreatedLinkId, setJustCreatedLinkId] = useState(null);
 
   const canvasRef = useRef(null);
+  const editIntentRef = useRef(null);
 
   const goToTabLevel = useCallback(() => {
+    editIntentRef.current = null;
     setViewLevel("tab");
     setSelectedGroupId(null);
     setSelectedSegmentId(null);
   }, []);
 
-  const goToGroupLevel = useCallback((groupId) => {
+  const goToGroupLevel = useCallback((groupId, { edit = false } = {}) => {
+    editIntentRef.current = edit ? { scopeType: "group", scopeId: groupId } : null;
     setViewLevel("group");
     setSelectedGroupId(groupId);
     setSelectedSegmentId(null);
   }, []);
 
-  const goToSegmentLevel = useCallback((segmentId, groupId = null) => {
+  const goToSegmentLevel = useCallback((segmentId, groupId = null, { edit = false } = {}) => {
+    editIntentRef.current = edit ? { scopeType: "segment", scopeId: segmentId } : null;
     setViewLevel("segment");
     setSelectedSegmentId(segmentId);
     setSelectedGroupId(groupId);
   }, []);
 
   const goToGlobalLegacy = useCallback(() => {
+    editIntentRef.current = null;
     setViewLevel("global-legado");
     setSelectedGroupId(null);
     setSelectedSegmentId(null);
@@ -179,6 +186,7 @@ export default function InventoryNetworkTopologyView({
   // Updating the scoped map's id must not refetch its bundle and discard
   // unsaved edits. Only the legacy view selects a map directly by id.
   const legacyMapId = viewLevel === "global-legado" ? legacyActiveMapId : null;
+  const scopeKey = JSON.stringify([activeTab?.id, viewLevel, selectedGroupId, selectedSegmentId, legacyMapId]);
   useEffect(() => {
     if (!canView) return undefined;
     const scopeType = viewLevel === "tab" ? "inventory_tab" : viewLevel;
@@ -193,8 +201,8 @@ export default function InventoryNetworkTopologyView({
     setDirtyPositions(new Map());
     setSelectedNodeId(null);
     setSelectedLinkId(null);
-    setLinkDraftActive(false);
-    setLinkDraftSourceNodeId(null);
+    const openForEditing = canEditMap && editIntentRef.current?.scopeType === scopeType && editIntentRef.current?.scopeId === scopeId;
+    editIntentRef.current = null;
     const request = viewLevel === "global-legado"
       ? fetchNetworkTopologyMap(token, legacyMapId)
       : fetchNetworkTopologyMapByScope(token, scopeType, scopeId, viewLevel === "tab" ? activeTab?.name : undefined);
@@ -203,6 +211,7 @@ export default function InventoryNetworkTopologyView({
         if (cancelled) return;
         setBundle(response);
         setActiveMapId(response.map.id);
+        setEditMode(openForEditing);
       })
       .catch((fetchError) => {
         if (!cancelled) setError(fetchError.message);
@@ -211,7 +220,7 @@ export default function InventoryNetworkTopologyView({
         if (!cancelled) setLoadingBundle(false);
       });
     return () => { cancelled = true; };
-  }, [viewLevel, selectedSegmentId, selectedGroupId, activeTab?.id, activeTab?.name, legacyMapId, token, canView]);
+  }, [viewLevel, selectedSegmentId, selectedGroupId, activeTab?.id, activeTab?.name, legacyMapId, token, canView, canEditMap]);
 
   // No nivel Segmento o filtro de segmento fica implicito (o mapa ja e so
   // daquele segmento) - a Toolbar recebe lockSegmentFilter pra so esconder
@@ -240,9 +249,10 @@ export default function InventoryNetworkTopologyView({
   );
   const isInventoryPreview = Boolean(bundle && !bundle.nodes.length && inventoryPreviewNodes.length);
   const displayNodes = useMemo(
-    () => bundle ? resolveTopologyDisplayNodes(bundle.nodes, inventoryPreviewNodes) : [],
+    () => bundle ? resolveTopologyDisplayNodes(bundle.nodes, inventoryPreviewNodes, bundle.links) : [],
     [bundle, inventoryPreviewNodes]
   );
+  const hasPreviewPositions = displayNodes.some((node) => node.preview);
 
   const visibleNodes = useMemo(() => {
     if (!bundle) return [];
@@ -263,13 +273,13 @@ export default function InventoryNetworkTopologyView({
 
   const visibleLinks = useMemo(() => {
     if (!bundle) return [];
-    const nodeIdByRefKey = new Map(bundle.nodes.map((node) => [node.assetId ?? node.refId, node.id]));
+    const nodeIdByRefKey = new Map(displayNodes.map((node) => [topologyNodeKey(node), node.id]));
     return bundle.links.filter((link) => {
-      const sourceNodeId = nodeIdByRefKey.get(link.sourceAssetId);
-      const targetNodeId = nodeIdByRefKey.get(link.targetAssetId);
+      const sourceNodeId = nodeIdByRefKey.get(topologyLinkKey(link, "source"));
+      const targetNodeId = nodeIdByRefKey.get(topologyLinkKey(link, "target"));
       return visibleNodeIds.has(sourceNodeId) && visibleNodeIds.has(targetNodeId);
     });
-  }, [bundle, visibleNodeIds]);
+  }, [bundle, displayNodes, visibleNodeIds]);
 
   const availableDevicesToAdd = useMemo(() => {
     if (!bundle) return [];
@@ -284,6 +294,35 @@ export default function InventoryNetworkTopologyView({
     () => new Map([...tree.groups, ...getTopologySegments(tree)].map((entry) => [entry.id, entry])),
     [tree]
   );
+
+  const selectedNode = selectedNodeId ? visibleNodes.find((node) => node.id === selectedNodeId) : null;
+  const selectedLink = selectedLinkId ? visibleLinks.find((link) => link.id === selectedLinkId) : null;
+  const selectedClusterInfo = clusterSummaryByRefId.get(selectedNode?.refId) || null;
+  const internalConnections = useTopologyInspectorConnections({
+    token, node: selectedNode, scopeKey, enabled: canView && Boolean(selectedClusterInfo)
+  });
+  const selectedConnections = inspectorConnections({
+    node: selectedNode, links: bundle?.links, internalLinks: internalConnections.links,
+    devicesById, clustersById: clusterSummaryByRefId, clusterName: selectedClusterInfo?.name
+  });
+
+  const handleLinkCreated = useCallback((mapId, link, isNew) => {
+    setBundle((current) => current?.map.id === mapId ? {
+      ...current, links: [...current.links.filter((entry) => entry.id !== link.id), link]
+    } : current);
+    setSelectedNodeId(null);
+    setSelectedLinkId(link.id);
+    if (isNew) {
+      setJustCreatedLinkId(link.id);
+      window.setTimeout(() => setJustCreatedLinkId((current) => current === link.id ? null : current), 800);
+    }
+  }, []);
+
+  const linkCreation = useTopologyLinkCreation({
+    token, mapId: bundle?.map.id, scopeKey, enabled: editMode && canLinkAssets,
+    nodes: visibleNodes, links: bundle?.links || [], onCreated: handleLinkCreated, notify
+  });
+  const { active: linkDraftActive, sourceNodeId: linkDraftSourceNodeId, busy: creatingLink } = linkCreation;
 
   // Segmentos/grupos que existem na hierarquia mas ainda nao tem no no mapa
   // - alimenta o picker de adicionar cluster, equivalente ao
@@ -449,74 +488,40 @@ export default function InventoryNetworkTopologyView({
     [token, notify]
   );
 
-  const handleCreateLink = useCallback(
-    async (sourceNode, targetNode) => {
-      try {
-        const response = await createNetworkTopologyLink(token, activeMapId, {
-          sourceAssetId: sourceNode.assetId ?? sourceNode.refId,
-          targetAssetId: targetNode.assetId ?? targetNode.refId,
-          sourceType: sourceNode.nodeType || "asset",
-          targetType: targetNode.nodeType || "asset"
-        });
-        setBundle((current) => ({ ...current, links: [...current.links, response.link] }));
-        setJustCreatedLinkId(response.link.id);
-        window.setTimeout(() => setJustCreatedLinkId((current) => (current === response.link.id ? null : current)), 800);
-      } catch (createError) {
-        notify?.("error", createError.message);
-      }
-    },
-    [token, activeMapId, notify]
-  );
-
   const handleNodeActivate = useCallback(
     (nodeId) => {
-      if (linkDraftActive) {
-        if (!linkDraftSourceNodeId) {
-          setLinkDraftSourceNodeId(nodeId);
-          return;
-        }
-        if (linkDraftSourceNodeId === nodeId) return;
-        const sourceNode = bundle?.nodes.find((node) => node.id === linkDraftSourceNodeId);
-        const targetNode = bundle?.nodes.find((node) => node.id === nodeId);
-        if (sourceNode && targetNode) {
-          handleCreateLink(sourceNode, targetNode);
-        }
-        setLinkDraftActive(false);
-        setLinkDraftSourceNodeId(null);
-        return;
-      }
-
+      if (linkCreation.activate(visibleNodes.find((node) => node.id === nodeId))) return;
       setSelectedNodeId(nodeId);
       setSelectedLinkId(null);
     },
-    [linkDraftActive, linkDraftSourceNodeId, bundle, handleCreateLink]
+    [linkCreation, visibleNodes]
   );
 
   // Duplo-clique (ou "Abrir mapa" no inspector) num no-cluster leva pro
   // canvas de dentro dele - mesma navegacao ja usada pela sidebar/breadcrumb.
   const handleNodeOpen = useCallback(
     (node) => {
+      if (linkDraftActive || creatingLink || !clusterSummaryByRefId.has(node.refId)) return;
       if (node.nodeType === "group") {
-        goToGroupLevel(node.refId);
+        goToGroupLevel(node.refId, { edit: canEditMap });
       } else if (node.nodeType === "segment") {
-        goToSegmentLevel(node.refId, clusterSummaryByRefId.get(node.refId)?.groupId || null);
+        goToSegmentLevel(node.refId, clusterSummaryByRefId.get(node.refId)?.groupId || null, { edit: canEditMap });
       }
     },
-    [goToGroupLevel, goToSegmentLevel, clusterSummaryByRefId]
+    [goToGroupLevel, goToSegmentLevel, clusterSummaryByRefId, linkDraftActive, creatingLink, canEditMap]
   );
 
   const handleToggleLinkDraft = useCallback(() => {
-    if (!canLinkAssets || !editMode || isInventoryPreview) return;
-    setLinkDraftActive((current) => !current);
-    setLinkDraftSourceNodeId(null);
-  }, [canLinkAssets, editMode, isInventoryPreview]);
+    setSelectedNodeId(null);
+    setSelectedLinkId(null);
+    linkCreation.toggle();
+  }, [linkCreation]);
 
   const handleCanvasBackgroundClick = useCallback(() => {
     setSelectedNodeId(null);
     setSelectedLinkId(null);
-    setLinkDraftActive(false);
-    setLinkDraftSourceNodeId(null);
-  }, []);
+    linkCreation.reset();
+  }, [linkCreation]);
 
   const handleSaveLink = useCallback(
     async (payload) => {
@@ -526,12 +531,14 @@ export default function InventoryNetworkTopologyView({
         const response = await updateNetworkTopologyLink(token, selectedLinkId, {
           sourceAssetId: link.sourceAssetId,
           targetAssetId: link.targetAssetId,
+          sourceType: link.sourceType || "asset",
+          targetType: link.targetType || "asset",
           ...payload
         });
-        setBundle((current) => ({
+        setBundle((current) => current?.map.id === bundle.map.id ? ({
           ...current,
           links: current.links.map((entry) => (entry.id === selectedLinkId ? response.link : entry))
-        }));
+        }) : current);
         notify?.("success", "Conexão atualizada.");
       } catch (updateError) {
         notify?.("error", updateError.message);
@@ -558,9 +565,6 @@ export default function InventoryNetworkTopologyView({
   if (!canView) {
     return <PermissionBlocked />;
   }
-
-  const selectedNode = selectedNodeId ? visibleNodes.find((node) => node.id === selectedNodeId) : null;
-  const selectedLink = selectedLinkId ? visibleLinks.find((link) => link.id === selectedLinkId) : null;
 
   function renderCanvasLevel() {
     // A failed first load has no bundle; report it before the loading guard.
@@ -609,11 +613,10 @@ export default function InventoryNetworkTopologyView({
     return (
       <>
         <NetworkTopologyToolbar
-          editMode={editMode && canManageMap}
+          editMode={editMode && canEditMap}
           onToggleEditMode={() => {
             setEditMode((current) => !current);
-            setLinkDraftActive(false);
-            setLinkDraftSourceNodeId(null);
+            linkCreation.reset();
           }}
           onCenterView={() => canvasRef.current?.centerView()}
           onFitView={() => canvasRef.current?.fitToNodes()}
@@ -624,6 +627,8 @@ export default function InventoryNetworkTopologyView({
           onGenerateAutoLayout={handleGenerateAutoLayout}
           generatingLayout={generatingLayout}
           linkDraftActive={linkDraftActive && canLinkAssets}
+          linkDraftSourceNodeId={linkDraftSourceNodeId}
+          creatingLink={creatingLink}
           onToggleLinkDraft={handleToggleLinkDraft}
           availableDevicesToAdd={availableDevicesToAdd}
           onAddAsset={handleAddAsset}
@@ -637,23 +642,41 @@ export default function InventoryNetworkTopologyView({
           segments={segments}
           assetTypeOptions={assetTypeOptions}
           canManage={canManageMap}
+          canLink={canLinkAssets}
           lockSegmentFilter={viewLevel === "segment"}
           isClusterLevel={isClusterLevel}
           isInventoryPreview={isInventoryPreview}
         />
-        {isInventoryPreview ? (
+        {hasPreviewPositions ? (
           <div className="network-topology-inventory-preview" role="status">
             <Info size={16} aria-hidden="true" />
             <p>
-              <strong>Prévia do inventário · não salva.</strong>{" "}
-              {isClusterLevel ? "Selecione um grupo ou segmento para abrir seu mapa." : "Estes são os ativos reais deste segmento."}{" "}
-              {canManageMap ? (editMode
-                ? "Selecione um item e use Adicionar ao mapa para salvar sua posição."
-                : "Edite o mapa para salvar posições e adicionar conexões manualmente.") : "Nenhuma conexão é presumida nesta prévia."}
+              <strong>{isInventoryPreview ? "Prévia do inventário · não salva." : "Algumas posições ainda não foram salvas."}</strong>{" "}
+              {isClusterLevel ? "Um clique mostra os detalhes; dois cliques abrem o mapa para edição." : "Estes são os ativos reais deste segmento."}{" "}
+              {canEditMap ? (editMode
+                ? "Use Criar conexão e escolha dois itens do mesmo tipo. As conexões ficam salvas; as posições desta prévia ainda não."
+                : "Entre em edição para criar conexões manualmente.") : "Nenhuma conexão é presumida nesta prévia."}
             </p>
           </div>
         ) : null}
-        <div className={`network-topology-body ${selectedNode || selectedLink ? "has-inspector" : ""}`}>
+        {(linkDraftActive || creatingLink) ? (
+          <div className="network-topology-connection-guide" role="status">
+            <span>{creatingLink ? "Salvando conexão…" : linkDraftSourceNodeId
+              ? "Origem selecionada. Clique no destino para salvar a conexão."
+              : "Clique no primeiro item para escolher a origem da conexão."}</span>
+            {!creatingLink ? <button type="button" className="network-topology-toolbar-button" onClick={linkCreation.reset}>Cancelar conexão</button> : null}
+          </div>
+        ) : null}
+        {linkCreation.error ? <p className="network-topology-connection-error" role="alert">{linkCreation.error}</p> : null}
+        <div
+          className={`network-topology-body ${selectedNode || selectedLink ? "has-inspector" : ""}`}
+          onKeyDown={(event) => {
+            if (event.key === "Escape" && linkDraftActive && !creatingLink && !event.defaultPrevented) {
+              event.preventDefault();
+              linkCreation.reset();
+            }
+          }}
+        >
           {!displayNodes.length && viewLevel !== "global-legado" ? (
             <NetworkTopologyLevelEmptyState variant={viewLevel === "segment" ? "segment-sem-ativos" : viewLevel === "group" ? "group-sem-segmentos" : "tab-sem-grupos"} />
           ) : (
@@ -665,10 +688,11 @@ export default function InventoryNetworkTopologyView({
               devicesById={devicesById}
               segmentNameById={new Map(segments.map((segment) => [segment.id, segment.name]))}
               clusterSummaryByRefId={clusterSummaryByRefId}
-              editMode={editMode && canManageMap && !isInventoryPreview}
+              editMode={editMode && canManageMap}
               selectedNodeId={selectedNodeId}
               selectedLinkId={selectedLinkId}
               linkDraftSourceNodeId={linkDraftSourceNodeId}
+              linkDraftActive={linkDraftActive || creatingLink}
               justAddedNodeId={justAddedNodeId}
               justCreatedLinkId={justCreatedLinkId}
               onNodeActivate={handleNodeActivate}
@@ -687,7 +711,22 @@ export default function InventoryNetworkTopologyView({
               node={selectedNode}
               device={devicesById.get(selectedNode.assetId)}
               clusterInfo={clusterSummaryByRefId.get(selectedNode.refId) ?? null}
+              clusterDevices={clusterDevices(selectedClusterInfo, selectedNode.nodeType)}
+              connections={selectedConnections}
+              connectionsLoading={internalConnections.loading}
+              connectionsError={internalConnections.error}
+              canEditCluster={canEditMap}
+              connecting={linkDraftActive || creatingLink}
+              onConnectNode={editMode && canLinkAssets && visibleNodes.length > 1 ? (node) => {
+                setSelectedNodeId(null);
+                setSelectedLinkId(null);
+                linkCreation.start(node);
+              } : undefined}
               editMode={editMode && canManageMap && !selectedNode.preview}
+              preservesConnectionsOnRemove={viewLevel !== "global-legado" && bundle.links.some((link) =>
+                topologyLinkKey(link, "source") === topologyNodeKey(selectedNode) ||
+                topologyLinkKey(link, "target") === topologyNodeKey(selectedNode)
+              )}
               addingToMap={addingAsset}
               onAddToMap={selectedNode.preview && canManageMap && editMode ? () => {
                 const position = { x: selectedNode.x, y: selectedNode.y };

@@ -60,4 +60,22 @@ describe("buildInventoryTopologyPreview", () => {
     expect(resolveTopologyDisplayNodes(saved, preview)).toBe(saved);
     expect(saved).toEqual([{ id: "saved", assetId: "d1", x: -800, y: 4500, pinned: true, labelOverride: "Meu PC" }]);
   });
+
+  it("mantém os endpoints de conexões salvas ao persistir somente uma posição", () => {
+    const saved = [{ id: "saved", assetId: "d1", x: -800, y: 4500, pinned: true }];
+    const preview = buildInventoryTopologyPreview({ tree, viewLevel: "segment", selectedSegmentId: "s1" });
+    const unrelated = { id: "unrelated", assetId: "d3", nodeType: "asset", preview: true };
+    const links = [{ sourceAssetId: "d1", targetAssetId: "d2" }];
+    const result = resolveTopologyDisplayNodes(saved, [...preview, unrelated], links);
+    expect(result).toEqual([saved[0], preview[1]]);
+    expect(result[0]).toBe(saved[0]);
+    expect(saved).toHaveLength(1);
+  });
+
+  it("não confunde tipos de endpoint nem inventa itens que saíram do escopo", () => {
+    const saved = [{ id: "saved", nodeType: "group", refId: "g1", x: 800, y: 500 }];
+    const preview = [{ id: "preview", nodeType: "segment", refId: "g2", preview: true }];
+    const links = [{ sourceType: "group", targetType: "group", sourceAssetId: "g1", targetAssetId: "g2" }];
+    expect(resolveTopologyDisplayNodes(saved, preview, links)).toBe(saved);
+  });
 });

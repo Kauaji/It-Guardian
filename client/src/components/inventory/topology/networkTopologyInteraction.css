@@ -1,0 +1,75 @@
+.network-topology-connection-guide {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+  border-inline-start: 3px solid var(--accent);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.85rem;
+}
+
+.network-topology-connection-error {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 8px;
+  color: var(--danger, #d64545);
+  background: color-mix(in srgb, var(--danger, #d64545) 8%, var(--surface));
+  font-size: 0.85rem;
+}
+
+.network-topology-node[aria-description]:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 4px;
+}
+
+/* Editing controls must fit the workspace even with the inventory rail open. */
+@media (max-width: 900px) {
+  .network-topology-view .network-topology-toolbar,
+  .network-topology-view .network-topology-toolbar-row,
+  .network-topology-view .network-topology-toolbar-group {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .network-topology-view .network-topology-toolbar-group,
+  .network-topology-view .network-topology-toolbar-counters {
+    flex-wrap: wrap;
+  }
+
+  .network-topology-view .network-topology-toolbar-button {
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .network-topology-view .network-topology-toolbar-button > svg,
+  .network-topology-view .network-topology-add-asset-input-wrap > svg {
+    flex-shrink: 0;
+  }
+
+  .network-topology-view .network-topology-add-asset,
+  .network-topology-view .network-topology-add-asset-input-wrap,
+  .network-topology-view .network-topology-add-asset-item,
+  .network-topology-view .network-topology-toolbar-input,
+  .network-topology-view .network-topology-toolbar-select {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .network-topology-view .network-topology-add-asset {
+    width: 100%;
+  }
+
+  .network-topology-view .network-topology-toolbar-counters,
+  .network-topology-view .network-topology-connection-guide > span {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+}

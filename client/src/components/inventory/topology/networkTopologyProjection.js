@@ -1,3 +1,5 @@
+import { topologyLinkKey, topologyNodeKey } from "./networkTopologyConnections.js";
+
 /**
  * An empty saved map is not an empty inventory. These local-only nodes make
  * existing groups, segments and devices navigable before a layout is saved.
@@ -40,7 +42,17 @@ export function buildInventoryTopologyPreview({ tree, viewLevel, selectedGroupId
   }));
 }
 
-export function resolveTopologyDisplayNodes(savedNodes, previewNodes) {
-  // Never merge the preview into a user's saved map or overwrite its layout.
-  return savedNodes.length ? savedNodes : previewNodes;
+export function resolveTopologyDisplayNodes(savedNodes, previewNodes, links = []) {
+  if (!savedNodes.length) return previewNodes;
+  // A saved connection is independent of saved positions. Keep only its
+  // missing, real inventory endpoints visible; never insert unrelated items
+  // into a saved map, overwrite positions or persist these local previews.
+  const savedKeys = new Set(savedNodes.map(topologyNodeKey));
+  const linkedKeys = new Set(links.flatMap((link) => [
+    topologyLinkKey(link, "source"), topologyLinkKey(link, "target")
+  ]));
+  const endpoints = previewNodes.filter((node) =>
+    !savedKeys.has(topologyNodeKey(node)) && linkedKeys.has(topologyNodeKey(node))
+  );
+  return endpoints.length ? [...savedNodes, ...endpoints] : savedNodes;
 }
