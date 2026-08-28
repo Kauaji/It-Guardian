@@ -2,6 +2,8 @@ import { X } from "lucide-react";
 import { useState } from "react";
 import { useModalLifecycle } from "../../../hooks/useModalLifecycle.js";
 import AssetPickerField from "./AssetPickerField.jsx";
+import WidgetBody from "./WidgetBody.jsx";
+import { resolveVisualization, visualizationLabels, widgetVisualizations } from "./widgetVisualizations.js";
 import { widgetRegistry } from "./widgetRegistry.js";
 
 const periodOptions = [
@@ -21,6 +23,7 @@ export default function DashboardWidgetConfigModal({ token, widget, onSave, onCl
   if (!widget) return null;
   const entry = widgetRegistry[widget.type];
   const configFields = entry?.configFields || [];
+  const visualizations = widgetVisualizations(widget.type);
 
   function updateConfig(patch) {
     setConfig((current) => ({ ...current, ...patch }));
@@ -46,6 +49,7 @@ export default function DashboardWidgetConfigModal({ token, widget, onSave, onCl
           </button>
         </header>
         <form onSubmit={handleSubmit}>
+          <div className="dashboard-widget-config-fields">
           <label>
             Titulo
             <input
@@ -56,6 +60,15 @@ export default function DashboardWidgetConfigModal({ token, widget, onSave, onCl
               maxLength={60}
             />
           </label>
+
+          {visualizations.length > 1 && (
+            <label>
+              Visualização
+              <select value={resolveVisualization(widget.type, config.chartType)} onChange={(event) => updateConfig({ chartType: event.target.value })}>
+                {visualizations.map((variant) => <option key={variant} value={variant}>{visualizationLabels[variant]}</option>)}
+              </select>
+            </label>
+          )}
 
           {configFields.includes("asset") && (
             <AssetPickerField token={token} value={config.assetId} onChange={(assetId) => updateConfig({ assetId })} />
@@ -95,9 +108,15 @@ export default function DashboardWidgetConfigModal({ token, widget, onSave, onCl
             </select>
           </label>
 
+          </div>
+          <section className="dashboard-widget-config-preview" aria-label="Prévia do widget">
+            <div className="dashboard-config-preview-heading"><strong>{title || entry?.label}</strong><small>Prévia com dados reais · sem filtros do dashboard</small></div>
+            <div className="dashboard-widget-card-body"><WidgetBody token={token} widget={{ ...widget, config }} ignoreDashboardFilters /></div>
+          </section>
+
           <div className="dashboard-widget-config-actions">
             <button type="button" className="secondary-action" onClick={onClose}>Cancelar</button>
-            <button type="submit" className="primary-action">Salvar</button>
+            <button type="submit" className="primary-action" disabled={configFields.includes("asset") && !config.assetId}>Salvar</button>
           </div>
         </form>
       </section>

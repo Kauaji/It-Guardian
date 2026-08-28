@@ -5,6 +5,8 @@
  * "sem_dados", nunca num valor "bonito" inventado.
  */
 
+import { isMaintenanceSegmentName } from "../../../utils/display.js";
+
 const STATUS_ORDER = ["critico", "atencao", "misto", "online", "sem_dados"];
 
 export function computeSegmentStatus(devices = []) {
@@ -99,7 +101,7 @@ export function summarizeSegment(segment, devicesBySegment) {
  */
 export function summarizeGroup(group, segments, devicesBySegment) {
   const groupSegments = segments
-    .filter((segment) => (segment.groupId || "") === group.id)
+    .filter((segment) => !isMaintenanceSegmentName(segment.name) && (segment.groupId || "") === group.id)
     .map((segment) => summarizeSegment(segment, devicesBySegment));
   const deviceCount = groupSegments.reduce((total, segment) => total + segment.deviceCount, 0);
   return {
@@ -119,21 +121,29 @@ export function summarizeGroup(group, segments, devicesBySegment) {
  */
 export function buildHierarchyTree({ groups = [], segments = [], devices = [] }) {
   const devicesBySegment = groupDevicesBySegment(devices);
+  const groupIds = new Set(groups.map((group) => group.id));
   const groupSummaries = groups.map((group) => summarizeGroup(group, segments, devicesBySegment));
   const ungroupedSegments = segments
-    .filter((segment) => !segment.groupId)
+    .filter((segment) => !isMaintenanceSegmentName(segment.name) && !groupIds.has(segment.groupId))
     .map((segment) => summarizeSegment(segment, devicesBySegment));
+  // Manutenção é uma área operacional independente, inclusive quando uma
+  // associação antiga ainda existe no banco. Não modifica os registros.
+  const maintenanceSegments = segments
+    .filter((segment) => isMaintenanceSegmentName(segment.name))
+    .map((segment) => ({ ...summarizeSegment(segment, devicesBySegment), groupId: null, isMaintenanceSegment: true }));
+  const standaloneSegments = [...ungroupedSegments, ...maintenanceSegments];
 
   return {
     groups: groupSummaries,
     ungroupedSegments,
+    maintenanceSegments,
     tabStatus: computeTabStatus([
       ...groupSummaries.map((group) => group.status),
-      ...ungroupedSegments.map((segment) => segment.status)
+      ...standaloneSegments.map((segment) => segment.status)
     ]),
     groupCount: groupSummaries.length,
-    segmentCount: groupSummaries.reduce((total, group) => total + group.segmentCount, 0) + ungroupedSegments.length,
+    segmentCount: groupSummaries.reduce((total, group) => total + group.segmentCount, 0) + standaloneSegments.length,
     deviceCount: groupSummaries.reduce((total, group) => total + group.deviceCount, 0)
-      + ungroupedSegments.reduce((total, segment) => total + segment.deviceCount, 0)
+      + standaloneSegments.reduce((total, segment) => total + segment.deviceCount, 0)
   };
 }

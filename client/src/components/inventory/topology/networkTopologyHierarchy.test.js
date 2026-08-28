@@ -123,6 +123,40 @@ describe("summarizeGroup", () => {
 });
 
 describe("buildHierarchyTree", () => {
+  it("mantém manutenção independente sem alterar a associação armazenada", () => {
+    const groups = [{ id: "g1", name: "Recepção" }];
+    const segments = [
+      { id: "s1", name: "Atendimento", groupId: "g1" },
+      { id: "m1", name: "Manutenção", groupId: "g1" },
+      { id: "m2", name: "Manutencao", groupId: "" }
+    ];
+    const devices = [
+      { id: "d1", segmentId: "s1", status: "online" },
+      { id: "d2", segmentId: "m1", status: "problem" },
+      { id: "d3", segmentId: "m2", status: "offline" }
+    ];
+    const tree = buildHierarchyTree({ groups, segments, devices });
+    expect(tree.groups[0].segments.map((segment) => segment.id)).toEqual(["s1"]);
+    expect(tree.groups[0].deviceCount).toBe(1);
+    expect(tree.groups[0].status).toBe("online");
+    expect(tree.ungroupedSegments).toEqual([]);
+    expect(tree.maintenanceSegments.map((segment) => segment.id)).toEqual(["m1", "m2"]);
+    expect(tree.maintenanceSegments.every((segment) => segment.groupId === null)).toBe(true);
+    expect(tree.deviceCount).toBe(3);
+    expect(tree.segmentCount).toBe(3);
+    expect(tree.tabStatus).toBe("critico");
+    expect(segments[1].groupId).toBe("g1");
+  });
+
+  it("não perde ativos se o grupo do segmento já não está disponível", () => {
+    const tree = buildHierarchyTree({
+      segments: [{ id: "s1", name: "Laboratório", groupId: "grupo-antigo" }],
+      devices: [{ id: "d1", segmentId: "s1", status: "online" }]
+    });
+    expect(tree.ungroupedSegments[0].id).toBe("s1");
+    expect(tree.deviceCount).toBe(1);
+  });
+
   it("monta grupos com seus segmentos e separa segmentos sem grupo", () => {
     const groups = [{ id: "g1", name: "Recepcao" }];
     const segments = [

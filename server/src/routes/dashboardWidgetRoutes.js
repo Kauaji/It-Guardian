@@ -22,7 +22,8 @@ const layoutWriteLimiter = createRateLimiter({
 });
 const widgetPreviewLimiter = createRateLimiter({
   windowMs: 60 * 1000,
-  max: 60,
+  // A cross-filter refreshes multiple widgets, not just the clicked chart.
+  max: 240,
   keyGenerator: (req) => req.user?.id || req.ip,
   name: "dashboard-widget-preview"
 });

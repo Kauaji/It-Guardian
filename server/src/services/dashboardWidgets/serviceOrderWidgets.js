@@ -11,11 +11,10 @@ function countByStatus(serviceOrders, statusSettings) {
   const statusById = new Map(statusSettings.statuses.map((status) => [status.id, status]));
   const counts = new Map();
   for (const order of serviceOrders) {
-    const label = statusById.get(order.status)?.name || order.status;
-    counts.set(label, (counts.get(label) || 0) + 1);
+    counts.set(order.status, (counts.get(order.status) || 0) + 1);
   }
   return Array.from(counts.entries())
-    .map(([label, count]) => ({ label, count }))
+    .map(([status, count]) => ({ status, label: statusById.get(status)?.name || status, count }))
     .sort((a, b) => b.count - a.count);
 }
 

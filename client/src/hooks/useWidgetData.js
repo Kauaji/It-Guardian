@@ -3,19 +3,14 @@ import { previewDashboardWidget } from "../api.js";
 
 const MIN_REFRESH_MS = 30000;
 
-/**
- * Um hook por widget renderizado (nao um por dashboard inteiro) -- cada
- * widget tem seu proprio refreshIntervalSeconds configurado, entao cada um
- * agenda seu proprio poll. O controller "atual" e sempre abortado na
- * limpeza (desmonte ou troca de type/config/enabled), mesmo se estiver no
- * meio de uma requisicao -- evita que uma resposta lenta de uma config
- * antiga (widget reconfigurado) sobrescreva o estado da config nova.
- */
-export function useWidgetData({ token, type, config, refreshIntervalSeconds, enabled = true }) {
-  const [data, setData] = useState(null);
+/** Polling is scoped to the exact query. A previous scope is never shown as
+ * the result of a new selection, even while that selection is loading. */
+export function useWidgetData({ token, type, config, filters, refreshIntervalSeconds, enabled = true }) {
+  const [snapshot, setSnapshot] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const configKey = JSON.stringify(config || {});
+  const filtersKey = JSON.stringify(filters || {});
+  const requestKey = JSON.stringify([token, type, configKey, filtersKey]);
 
   useEffect(() => {
     if (!enabled || !token || !type) {
@@ -32,13 +27,18 @@ export function useWidgetData({ token, type, config, refreshIntervalSeconds, ena
       currentController = new AbortController();
       setLoading(true);
       try {
-        const result = await previewDashboardWidget(token, { type, config }, { signal: currentController.signal });
+        const params = { type, config };
+        if (Object.keys(filters || {}).length) params.filters = filters;
+        const result = await previewDashboardWidget(token, params, { signal: currentController.signal });
         if (cancelled) return;
-        setData(result.data);
-        setError("");
+        setSnapshot({ requestKey, data: result.data, error: "" });
       } catch (fetchError) {
         if (fetchError.name === "AbortError" || cancelled) return;
-        setError(fetchError.message || "Nao foi possivel carregar este widget.");
+        setSnapshot((current) => ({
+          requestKey,
+          data: current?.requestKey === requestKey ? current.data : null,
+          error: fetchError.message || "Não foi possível carregar este widget."
+        }));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -46,13 +46,17 @@ export function useWidgetData({ token, type, config, refreshIntervalSeconds, ena
     }
 
     poll();
-
     return () => {
       cancelled = true;
       if (timer) window.clearTimeout(timer);
       currentController?.abort();
     };
-  }, [enabled, token, type, configKey, refreshIntervalSeconds]);
+  }, [enabled, requestKey, refreshIntervalSeconds]);
 
-  return { data, loading, error };
+  const current = snapshot?.requestKey === requestKey ? snapshot : null;
+  return {
+    data: current?.data ?? null,
+    loading: Boolean(enabled && token && type && (loading || !current)),
+    error: current?.error || ""
+  };
 }

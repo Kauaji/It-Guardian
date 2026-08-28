@@ -25,6 +25,7 @@ export default function NetworkTopologyNode({
   isLinkSource,
   isNew,
   onPointerDown,
+  onActivate,
   onOpen
 }) {
   const cluster = isClusterNode(node);
@@ -55,11 +56,21 @@ export default function NetworkTopologyNode({
             missing && "is-missing",
             editMode && "is-editable",
             isLinkSource && "is-link-source",
-            isNew && "is-new"
+            isNew && "is-new",
+            node.preview && "is-preview"
           ]
             .filter(Boolean)
             .join(" ")}
           style={{ "--node-status-color": statusColor }}
+          role="button"
+          tabIndex={0}
+          aria-label={`${label}${cluster ? ", abrir mapa" : ", ver ativo"}${node.preview ? ", prévia não salva" : ""}`}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            if (cluster && event.key === "Enter") onOpen?.(node);
+            else onActivate?.(node.id);
+          }}
           onPointerDown={(event) => onPointerDown(node.id, event)}
           onDoubleClick={
             cluster && onOpen
@@ -97,6 +108,7 @@ export default function NetworkTopologyNode({
               <span className="network-topology-node-realname">{secondaryName}</span>
             ) : null}
             {!cluster && segmentName ? <span className="network-topology-node-segment">{segmentName}</span> : null}
+            {node.preview ? <span className="network-topology-preview-caption">Não salvo</span> : null}
           </span>
         </div>
       </foreignObject>

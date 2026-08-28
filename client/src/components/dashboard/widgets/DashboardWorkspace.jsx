@@ -3,9 +3,11 @@ import { useState } from "react";
 import { useDashboardLayout } from "../../../hooks/useDashboardLayout.js";
 import { formatDateTime } from "../dashboardFormatters.js";
 import DashboardWidgetConfigModal from "./DashboardWidgetConfigModal.jsx";
+import { DashboardFilterBar, DashboardFilterProvider } from "./DashboardFilterContext.jsx";
 import WidgetCatalogPanel from "./catalog/WidgetCatalogPanel.jsx";
 import { reindexWidgetPositions } from "./widgetGridMath.js";
 import WidgetGrid from "./WidgetGrid.jsx";
+import "./dashboardAnalytics.css";
 
 const DEFAULT_SIZE = { w: "m", h: "s" };
 const DEFAULT_REFRESH_SECONDS = 60;
@@ -80,7 +82,7 @@ export default function DashboardWorkspace({ token, canCustomize, notify }) {
       w: catalogItem.defaultSize?.w || DEFAULT_SIZE.w,
       h: catalogItem.defaultSize?.h || DEFAULT_SIZE.h,
       refreshIntervalSeconds: DEFAULT_REFRESH_SECONDS,
-      config: {}
+      config: catalogItem.config || {}
     };
     setDraftWidgets((current) => [...current, newWidget]);
     setCatalogOpen(false);
@@ -109,6 +111,7 @@ export default function DashboardWorkspace({ token, canCustomize, notify }) {
   }
 
   return (
+    <DashboardFilterProvider key={token} enabled={!editing}>
     <div className="dashboard-workspace">
       <div className="dashboard-workspace-toolbar">
         <span className="dashboard-workspace-status">
@@ -146,6 +149,7 @@ export default function DashboardWorkspace({ token, canCustomize, notify }) {
         </div>
       </div>
 
+      <DashboardFilterBar />
       <WidgetGrid
         key={refreshNonce}
         token={token}
@@ -157,7 +161,7 @@ export default function DashboardWorkspace({ token, canCustomize, notify }) {
         onConfigure={setConfiguringWidget}
       />
 
-      <WidgetCatalogPanel token={token} open={catalogOpen} onClose={() => setCatalogOpen(false)} onAddWidget={addWidgetFromCatalog} />
+      <WidgetCatalogPanel token={token} open={catalogOpen} onClose={() => setCatalogOpen(false)} onAddWidget={addWidgetFromCatalog} remainingSlots={Math.max(0, 30 - draftWidgets.length)} />
       {configuringWidget && (
         <DashboardWidgetConfigModal
           token={token}
@@ -167,5 +171,6 @@ export default function DashboardWorkspace({ token, canCustomize, notify }) {
         />
       )}
     </div>
+    </DashboardFilterProvider>
   );
 }

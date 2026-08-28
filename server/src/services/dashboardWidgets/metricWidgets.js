@@ -1,4 +1,4 @@
-import { getDeviceMetricHistory } from "../assetMetricHistoryService.js";
+import { getDeviceMetricHistory, resolvePeriod } from "../assetMetricHistoryService.js";
 
 /**
  * Widgets de metrica exigem config.assetId (o usuario escolhe o ativo ao
@@ -14,10 +14,16 @@ export function validateAssetMetricConfig(config) {
 }
 
 function buildMetricHistoryFetcher(metric) {
-  return async function fetchMetricHistory(config) {
+  return async function fetchMetricHistory(config, ctx) {
     const assetId = config?.assetId;
     if (!assetId) {
       return { metric, assetId: null, period: null, points: [], summary: null, warnings: ["missing_asset"] };
+    }
+    if (ctx?.hasFilters && !(await ctx.getScopedAssetIds()).has(String(assetId))) {
+      return {
+        metric, assetId, period: resolvePeriod(config?.period), points: [], summary: null,
+        warnings: ["filtered_out"]
+      };
     }
     // getDeviceMetricHistory ja lanca 404 (notFoundError) se o ativo nao
     // existir mais -- deixado propagar: o preview desse widget falha
@@ -42,7 +48,10 @@ function buildMetricGaugeFetcher(metricKey) {
 
     const devices = await ctx.getDevices();
     const device = devices.find((candidate) => String(candidate.id) === String(assetId));
-    if (!device) return { metric: metricKey, assetId, available: false, value: null, status: null };
+    if (!device) return {
+      metric: metricKey, assetId, available: false, value: null, status: null,
+      ...(ctx.hasFilters ? { warnings: ["filtered_out"] } : {})
+    };
 
     const value = device.metrics?.[metricKey];
     return {

@@ -45,6 +45,7 @@ export async function previewWidgetData(req, res, next) {
     const result = await previewWidget({
       type: req.body?.type,
       config: req.body?.config,
+      filters: req.body?.filters,
       user: req.user
     });
     res.json(result);

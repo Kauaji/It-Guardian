@@ -1,19 +1,7 @@
-const statusLabels = { online: "Online", offline: "Offline", problem: "Erro", unknown: "Sem dados" };
-const statusTones = { online: "ok", offline: "warning", problem: "danger", unknown: "" };
+import WidgetCategoryChart from "../WidgetCategoryChart.jsx";
+import { assetStatusColors, assetStatusLabels, resolveVisualization } from "../widgetVisualizations.js";
 
-export default function AssetAvailabilityWidget({ data }) {
-  if (!data.total) {
-    return <p className="dashboard-empty-state">Nenhum ativo cadastrado ainda.</p>;
-  }
-
-  return (
-    <dl className="dashboard-widget-stat-grid">
-      {Object.entries(data.byStatus).map(([status, count]) => (
-        <div key={status} className={statusTones[status]}>
-          <dt>{statusLabels[status] || status}</dt>
-          <dd>{count}</dd>
-        </div>
-      ))}
-    </dl>
-  );
+export default function AssetAvailabilityWidget({ data, config }) {
+  const rows = Object.entries(data.byStatus || {}).map(([id, value]) => ({ id, value, label: assetStatusLabels[id] || id, color: assetStatusColors[id] }));
+  return <WidgetCategoryChart rows={rows} dimension="assetStatus" variant={resolveVisualization("asset_availability", config?.chartType)} emptyMessage="Nenhum ativo neste recorte." />;
 }

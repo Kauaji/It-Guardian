@@ -69,7 +69,7 @@ ids únicos.
 `server/src/services/dashboardWidgets/widgetRegistry.js` — registry, não um
 switch gigante: cada tipo mapeia para `{ label, category, defaultSize,
 fetchData }`. `GET /widgets/catalog` serializa essa mesma lista para o
-frontend; `POST /widgets/preview` (`{ type, config }`) despacha para o
+frontend; `POST /widgets/preview` (`{ type, config, filters? }`) despacha para o
 `fetchData` do tipo pedido. Um contexto por requisição
 (`dashboardWidgets/widgetContext.js`) memoiza as fontes compartilhadas
 (`listDevices`, `listServiceOrders`, alertas) — vários widgets pedem a
@@ -99,6 +99,61 @@ Remota** — não existe consulta multi-sessão em
 módulo que essa rodada foi orientada a não alterar. Fica para uma rodada
 futura, com autorização explícita.
 
+## Prévias e formatos de visualização
+
+O catálogo permite buscar por nome, filtrar por categoria e escolher o
+formato antes de adicionar. As miniaturas são identificadas como **prévias
+ilustrativas**; não representam valores do ambiente. Já a prévia do modal
+de configuração usa a mesma API de dados reais do widget.
+
+O formato fica em `config.chartType`, junto do layout do usuário:
+
+- disponibilidade: indicadores, barras, colunas, pizza ou rosca;
+- alertas por severidade e OS por status: barras, colunas, pizza ou rosca;
+- rankings de ativos: barras, colunas ou lista (percentuais individuais
+  de utilização não são fatias de um total);
+- histórico de CPU/RAM/disco: linha, área ou colunas.
+
+Layouts anteriores, sem `chartType`, continuam válidos. Um formato não
+suportado pelo tipo usa o padrão definido em `widgetVisualizations.js`.
+O grid adapta as colunas à largura disponível; títulos, indicadores e
+gráficos usam o espaço interno do card, e listas extensas têm rolagem local.
+
+## Filtros interativos entre widgets
+
+Em modo de visualização, clicar em uma categoria, indicador ou ativo
+selecionável atualiza os demais widgets. A barra de filtros mostra o
+recorte aplicado e permite remover uma seleção ou limpar todas. Clicar
+novamente na mesma seleção também a remove. Há uma seleção por dimensão;
+dimensões diferentes se combinam por interseção (AND).
+
+As dimensões aceitas por `POST /widgets/preview` são `assetStatus`,
+`assetId`, `alertSeverity`, `serviceOrderStatus` e `overdue`. Por exemplo:
+
+```json
+{
+  "type": "asset_availability",
+  "config": { "chartType": "donut" },
+  "filters": { "assetStatus": "offline" }
+}
+```
+
+Os filtros são temporários, não alteram o layout nem os registros de
+inventário. No modo edição, os cliques de seleção ficam desabilitados.
+Uma seleção global de ativo pode recortar um gráfico de métricas sem
+substituir o `assetId` salvo na configuração desse gráfico.
+
+O backend valida os filtros e cruza fontes por IDs reais, mantendo as
+permissões de leitura das OS. Registros sem vínculo com um ativo não são
+associados por nome. OS sem ativo continuam presentes quando o recorte é
+somente de OS. Eventos e scripts usam uma janela dos 500 registros mais
+recentes antes do filtro; o widget informa essa limitação explicitamente.
+Um ativo excluído pelo recorte não exibe métricas de outro escopo.
+
+As seleções têm debounce de 180 ms, e respostas antigas são abortadas ou
+descartadas ao mudar o recorte. O limite da rota de preview é de 240
+requisições por minuto; os demais limites não foram alterados.
+
 ## Componentização (frontend)
 
 `client/src/components/dashboard/widgets/`:
@@ -114,6 +169,10 @@ futura, com autorização explícita.
   configurar/redimensionar/remover, só visíveis em modo edição);
 - `WidgetBody.jsx` — busca os dados do widget (`useWidgetData`) e trata os
   estados genéricos (carregando/erro/tipo desconhecido) uma única vez;
+- `DashboardFilterContext.jsx` — seleções temporárias, debounce e barra
+  de filtros compartilhada pelos widgets;
+- `WidgetCategoryChart.jsx`/`WidgetPreview.jsx` — gráficos categóricos
+  interativos com controles acessíveis e miniaturas ilustrativas;
 - `widgetRegistry.js` — espelha o registry do servidor pelas mesmas chaves
   de `type`; `widgetRegistry.test.mjs` (lado servidor) confere que os dois
   catálogos batem;
@@ -219,9 +278,10 @@ por padrão.
 
 ## Performance
 
-- Um contexto por requisição memoiza fontes compartilhadas entre widgets
-  (`listDevices`/`listServiceOrders`/alertas) — N widgets que leem a mesma
-  lista geram uma consulta real só, não N;
+- Um contexto por requisição de preview memoiza as fontes compartilhadas
+  (`listDevices`/`listServiceOrders`/alertas), inclusive entre o cálculo dos
+  filtros e o widget. Requisições de widgets distintos têm contextos
+  separados;
 - cada widget agenda seu próprio refresh, nunca abaixo de 30s;
 - `useWidgetData` aborta a requisição em andamento ao desmontar ou trocar de
   configuração, para uma resposta lenta de uma config antiga não sobrescrever
@@ -238,6 +298,9 @@ por padrão.
   bate, matemática de grade pura, `DashboardWorkspace` — adicionar/remover/
   redimensionar/salvar/cancelar/restaurar, `useWidgetData` respeita
   intervalo mínimo e aborta ao desmontar);
+- Fluxos completos: `npx playwright test tests/e2e/dashboard.spec.js`
+  (prévia, formato persistido após recarregar, filtros entre widgets e
+  encaixe do resumo em desktop compacto/celular, com API local de teste);
 - Visual: `npm run dev:server` + `npm run dev`, logar com
   `admin@itguardian.local` / `123456`, entrar em modo edição, adicionar um
   widget do catálogo, configurar um widget de métrica (exige um ativo real

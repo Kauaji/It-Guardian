@@ -7,6 +7,8 @@ import MachineDetailsModal from "./MachineDetailsModal.jsx";
 import BulkActionsBar from "./BulkActionsBar.jsx";
 import InventoryTabs from "./InventoryTabs.jsx";
 import ColorPickerSegment from "./ColorPickerSegment.jsx";
+import { buildInventoryBoardSections } from "./inventoryBoardSections.js";
+import { isMaintenanceSegmentName } from "../../utils/display.js";
 
 function SegmentGroupContainer({ groupId, color, className = "", children }) {
   const { isOver, setNodeRef } = useDroppable({
@@ -34,7 +36,7 @@ export default function InventoryBoard({
   search,
   setSearch,
   selectedGroupId = "all",
-  selectedSegmentId,
+  selectedSegmentId = "all",
   selectedAssetIds = new Set(),
   isBulkSelectionDragging = false,
   bulkMoveTarget,
@@ -100,67 +102,23 @@ export default function InventoryBoard({
     window.location.pathname.startsWith("/plantas") ? "floor-plans" : "board"
   ));
   const [selectedSegmentIds, setSelectedSegmentIds] = useState(new Set());
-  const maintenanceSegment = segments.find((segment) => /manuten/i.test(segment.name || ""));
+  const maintenanceSegment = segments.find((segment) => isMaintenanceSegmentName(segment.name || ""));
   const backupSegment = segments.find((segment) => segment.isBackupSegment || /backup/i.test(segment.name || ""));
-  const segmentGroupIdMap = useMemo(() => {
-    const next = new Map();
-
-    for (const group of groups) {
-      for (const segmentId of group.segmentIds || []) {
-        next.set(segmentId, group.id);
-      }
-    }
-
-    for (const segment of segments) {
-      if (segment.groupId) next.set(segment.id, segment.groupId);
-    }
-
-    return next;
-  }, [groups, segments]);
-  const visibleSegments = useMemo(() => segments.filter((segment) => {
-    if (search.trim()) return (machinesBySegment.get(segment.id) || []).length > 0;
-    if (selectedSegmentId !== "all") return segment.id === selectedSegmentId;
-
-    const groupId = segmentGroupIdMap.get(segment.id) || "";
-    if (selectedGroupId === "ungrouped") return !groupId;
-    if (selectedGroupId !== "all") return groupId === selectedGroupId;
-    return true;
-  }), [machinesBySegment, search, segmentGroupIdMap, segments, selectedGroupId, selectedSegmentId]);
-  const groupedSections = useMemo(
-    () =>
-      groups
-        .map((group) => ({
-          ...group,
-          segments: visibleSegments.filter((segment) => (segmentGroupIdMap.get(segment.id) || "") === group.id)
-        }))
-        .filter((group) => {
-          if (selectedGroupId !== "all" && selectedGroupId !== group.id) return false;
-          if (search.trim() && !group.segments.length) return false;
-          return selectedSegmentId === "all" || group.segments.length;
-        }),
-    [groups, search, segmentGroupIdMap, selectedGroupId, selectedSegmentId, visibleSegments]
-  );
-  const ungroupedSegments = useMemo(
-    () => visibleSegments.filter((segment) => !(segmentGroupIdMap.get(segment.id) || "")),
-    [segmentGroupIdMap, visibleSegments]
-  );
-  const defaultUngroupedSegments = useMemo(
-    () =>
-      segments.filter((segment) => {
-        if (!segment.isDefault) return false;
-        if (search.trim() && !(machinesBySegment.get(segment.id) || []).length) return false;
-        if (selectedSegmentId !== "all") return selectedSegmentId === segment.id;
-        return selectedGroupId === "all" || selectedGroupId === "ungrouped";
-      }),
-    [machinesBySegment, search, segments, selectedGroupId, selectedSegmentId]
-  );
-  const regularUngroupedSegments = useMemo(
-    () => ungroupedSegments.filter((segment) => !segment.isDefault),
-    [ungroupedSegments]
+  const { groupedSections, ungroupedSegments, standaloneSegments } = useMemo(
+    () => buildInventoryBoardSections({
+      segments,
+      groups,
+      machinesBySegment,
+      search,
+      selectedGroupId,
+      selectedSegmentId
+    }),
+    [groups, machinesBySegment, search, segments, selectedGroupId, selectedSegmentId]
   );
   const showUngroupedSection =
-    regularUngroupedSegments.length > 0 &&
+    ungroupedSegments.length > 0 &&
     (selectedGroupId === "all" || selectedGroupId === "ungrouped" || selectedSegmentId !== "all");
+  const hasVisibleSections = groupedSections.length > 0 || showUngroupedSection || standaloneSegments.length > 0;
 
   async function handleSelectedTypeChange(assetType) {
     if (!selectedMachine) return;
@@ -429,7 +387,7 @@ export default function InventoryBoard({
                 <span className="segment-filter-dot group" style={{ backgroundColor: group.color || activeTab?.color || "#8b9bb0" }} />
                 <div className="group-title-copy">
                   <strong>{group.name}</strong>
-                  <span>{group.segments.length} segmentos</span>
+                  <span>{group.segments.length} {group.segments.length === 1 ? "segmento" : "segmentos"}</span>
                 </div>
               </div>
               <div className="group-header-actions">
@@ -577,11 +535,11 @@ export default function InventoryBoard({
                 <span className="segment-filter-dot group" />
                 <div className="group-title-copy">
                   <strong>Sem grupo</strong>
-                  <span>{regularUngroupedSegments.length} segmentos</span>
+                  <span>{ungroupedSegments.length} {ungroupedSegments.length === 1 ? "segmento" : "segmentos"}</span>
                 </div>
               </div>
             </header>
-            {regularUngroupedSegments.map((segment, segmentIndex) => (
+            {ungroupedSegments.map((segment, segmentIndex) => (
               <SegmentCard
                 key={segment.id}
                 segment={segment}
@@ -603,7 +561,7 @@ export default function InventoryBoard({
                 onMoveSegmentToGroup={onMoveSegmentToGroup}
                 onMoveSegmentOrder={onMoveSegmentOrder}
                 canMoveSegmentUp={segmentIndex > 0}
-                canMoveSegmentDown={segmentIndex < regularUngroupedSegments.length - 1}
+                canMoveSegmentDown={segmentIndex < ungroupedSegments.length - 1}
                 selected={selectedSegmentIds.has(segment.id)}
                 onSelectSegment={handleSelectSegment}
                 onAddPeripheral={onAddPeripheral}
@@ -617,7 +575,7 @@ export default function InventoryBoard({
             ))}
           </SegmentGroupContainer>
         )}
-        {defaultUngroupedSegments.map((segment) => (
+        {standaloneSegments.map((segment) => (
           <SegmentCard
             key={segment.id}
             segment={segment}
@@ -652,7 +610,7 @@ export default function InventoryBoard({
             notify={notify}
           />
         ))}
-        {!visibleSegments.length && (
+        {!hasVisibleSections && (
           <section className="segment-card empty-only">
             <Database size={24} />
             <p>Nenhum segmento encontrado.</p>

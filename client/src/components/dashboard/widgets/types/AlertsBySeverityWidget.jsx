@@ -1,13 +1,9 @@
-import WidgetBarList from "../WidgetBarList.jsx";
+import WidgetCategoryChart from "../WidgetCategoryChart.jsx";
+import { resolveVisualization } from "../widgetVisualizations.js";
 
-const toneByLabel = { Critica: "danger", Alta: "danger", Media: "warning", Atencao: "warning", Baixa: "" };
+const severityColors = { critical: "#d64545", high: "#e57842", medium: "#d69a21", warning: "#d69a21", low: "#3974cc", info: "#75869e" };
 
-export default function AlertsBySeverityWidget({ data }) {
-  return (
-    <WidgetBarList
-      rows={data.rows}
-      emptyMessage="Nenhum alerta ativo no momento."
-      toneFor={(label) => toneByLabel[label] || ""}
-    />
-  );
+export default function AlertsBySeverityWidget({ data, config }) {
+  const rows = (data.rows || []).map((row) => ({ id: row.severity, label: row.label, value: row.count, color: severityColors[row.severity] }));
+  return <WidgetCategoryChart rows={rows} dimension="alertSeverity" variant={resolveVisualization("alerts_by_severity", config?.chartType)} emptyMessage="Nenhum alerta ativo neste recorte." />;
 }

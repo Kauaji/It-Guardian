@@ -1,5 +1,5 @@
-const WIDTH_COLUMNS = { s: 3, m: 4, l: 6, xl: 12 };
-const HEIGHT_ROWS = { s: 2, m: 4, l: 6 };
+const WIDTH_COLUMNS = { s: 3, m: 4, l: 8, xl: 12 };
+const HEIGHT_ROWS = { s: 2, m: 3, l: 4 };
 const DEFAULT_WIDTH_TIER = "m";
 const DEFAULT_HEIGHT_TIER = "s";
 

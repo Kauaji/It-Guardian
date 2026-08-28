@@ -1,9 +1,9 @@
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from "react";
 import NetworkTopologyNode from "./NetworkTopologyNode.jsx";
 import NetworkTopologyLink from "./NetworkTopologyLink.jsx";
-import { getNodeDimensions } from "./networkTopologyModel.js";
+import { DEFAULT_TOPOLOGY_VIEWBOX, fitTopologyViewBox } from "./networkTopologyViewport.js";
 
-const DEFAULT_VIEWBOX = { x: 0, y: 0, width: 1600, height: 1000 };
+const DEFAULT_VIEWBOX = DEFAULT_TOPOLOGY_VIEWBOX;
 const MIN_WIDTH = 400;
 const MAX_WIDTH = 6000;
 const DRAG_THRESHOLD = 3;
@@ -36,7 +36,7 @@ const NetworkTopologyCanvas = forwardRef(function NetworkTopologyCanvas(
 ) {
   const svgRef = useRef(null);
   const dragRef = useRef(null);
-  const [viewBox, setViewBox] = useState(DEFAULT_VIEWBOX);
+  const [viewBox, setViewBox] = useState(() => fitTopologyViewBox(nodes));
 
   const getSvgPoint = useCallback((clientX, clientY) => {
     const svg = svgRef.current;
@@ -50,41 +50,17 @@ const NetworkTopologyCanvas = forwardRef(function NetworkTopologyCanvas(
     return { x: transformed.x, y: transformed.y };
   }, []);
 
-  const fitToBounds = useCallback((bounds) => {
-    if (!bounds) {
-      setViewBox(DEFAULT_VIEWBOX);
-      return;
-    }
-    const padding = 120;
-    const width = Math.max(bounds.maxX - bounds.minX + padding * 2, MIN_WIDTH);
-    const height = width * (DEFAULT_VIEWBOX.height / DEFAULT_VIEWBOX.width);
-    const centerX = (bounds.minX + bounds.maxX) / 2;
-    const centerY = (bounds.minY + bounds.maxY) / 2;
-    setViewBox({ x: centerX - width / 2, y: centerY - height / 2, width, height });
-  }, []);
-
   useImperativeHandle(
     ref,
     () => ({
       centerView: () => setViewBox(DEFAULT_VIEWBOX),
       fitToNodes: () => {
-        if (!nodes.length) {
-          setViewBox(DEFAULT_VIEWBOX);
-          return;
-        }
-        const bounds = nodes.reduce((acc, node) => {
-          const { width, height } = getNodeDimensions(node);
-          return {
-            minX: Math.min(acc.minX, node.x - width / 2),
-            maxX: Math.max(acc.maxX, node.x + width / 2),
-            minY: Math.min(acc.minY, node.y - height / 2),
-            maxY: Math.max(acc.maxY, node.y + height / 2)
-          };
-        }, { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity });
-        fitToBounds(bounds);
+        const svg = svgRef.current;
+        const ratio = svg?.clientWidth && svg?.clientHeight ? svg.clientWidth / svg.clientHeight : 1.6;
+        setViewBox(fitTopologyViewBox(nodes, ratio));
       }
     }),
-    [nodes, fitToBounds]
+    [nodes]
   );
 
   const handleNodePointerDown = useCallback(
@@ -229,6 +205,7 @@ const NetworkTopologyCanvas = forwardRef(function NetworkTopologyCanvas(
           width={viewBox.width + 1600}
           height={viewBox.height + 1600}
           fill="url(#network-topology-grid)"
+          pointerEvents="none"
         />
         {links.map((link) => (
           <NetworkTopologyLink
@@ -255,6 +232,7 @@ const NetworkTopologyCanvas = forwardRef(function NetworkTopologyCanvas(
             isNew={node.id === justAddedNodeId}
             editMode={editMode}
             onPointerDown={handleNodePointerDown}
+            onActivate={onNodeActivate}
             onOpen={onNodeOpen}
           />
         ))}

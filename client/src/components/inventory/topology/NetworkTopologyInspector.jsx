@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ExternalLink, Pin, PinOff, Trash2, X } from "lucide-react";
+import { ExternalLink, Pin, PinOff, Plus, Trash2, X } from "lucide-react";
 import { assetTypeLabel } from "../assetTypes.js";
 import { getMachineSourceLabel } from "../agentPresentation.js";
 import { LINK_TYPE_OPTIONS } from "./networkTopologyFormatters.js";
@@ -15,6 +15,8 @@ export function NetworkTopologyNodeInspector({
   onOpenCluster,
   onTogglePinned,
   onRemoveNode,
+  onAddToMap,
+  addingToMap = false,
   onClose
 }) {
   if (isClusterNode(node)) {
@@ -24,7 +26,7 @@ export function NetworkTopologyNodeInspector({
       <aside className="network-topology-inspector">
         <div className="network-topology-inspector-header">
           <h3>{isGroup ? "Grupo selecionado" : "Segmento selecionado"}</h3>
-          <button type="button" className="network-topology-inspector-close" onClick={onClose}>
+          <button type="button" className="network-topology-inspector-close" aria-label="Fechar detalhes do item" onClick={onClose}>
             <X size={16} />
           </button>
         </div>
@@ -56,6 +58,12 @@ export function NetworkTopologyNodeInspector({
           </dl>
         )}
         <div className="network-topology-inspector-actions">
+          {onAddToMap ? (
+            <button type="button" className="network-topology-toolbar-button" onClick={onAddToMap} disabled={addingToMap}>
+              <Plus size={15} />
+              {addingToMap ? "Adicionando..." : "Adicionar ao mapa"}
+            </button>
+          ) : null}
           {!missing ? (
             <button type="button" className="network-topology-toolbar-button" onClick={() => onOpenCluster(node)}>
               <ExternalLink size={15} />
@@ -85,7 +93,7 @@ export function NetworkTopologyNodeInspector({
     <aside className="network-topology-inspector">
       <div className="network-topology-inspector-header">
         <h3>Ativo selecionado</h3>
-        <button type="button" className="network-topology-inspector-close" onClick={onClose}>
+        <button type="button" className="network-topology-inspector-close" aria-label="Fechar detalhes do ativo" onClick={onClose}>
           <X size={16} />
         </button>
       </div>
@@ -124,6 +132,12 @@ export function NetworkTopologyNodeInspector({
         </dl>
       )}
       <div className="network-topology-inspector-actions">
+        {onAddToMap ? (
+          <button type="button" className="network-topology-toolbar-button" onClick={onAddToMap} disabled={addingToMap}>
+            <Plus size={15} />
+            {addingToMap ? "Adicionando..." : "Adicionar ao mapa"}
+          </button>
+        ) : null}
         {!missing ? (
           <button type="button" className="network-topology-toolbar-button" onClick={() => onOpenDetails(device)}>
             <ExternalLink size={15} />
@@ -162,7 +176,7 @@ export function NetworkTopologyLinkInspector({ link, sourceEntity, targetEntity,
     <aside className="network-topology-inspector">
       <div className="network-topology-inspector-header">
         <h3>Conexão selecionada</h3>
-        <button type="button" className="network-topology-inspector-close" onClick={onClose}>
+        <button type="button" className="network-topology-inspector-close" aria-label="Fechar detalhes da conexão" onClick={onClose}>
           <X size={16} />
         </button>
       </div>

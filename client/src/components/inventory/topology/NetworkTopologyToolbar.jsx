@@ -47,7 +47,8 @@ export default function NetworkTopologyToolbar({
   assetTypeOptions,
   canManage,
   lockSegmentFilter = false,
-  isClusterLevel = false
+  isClusterLevel = false,
+  isInventoryPreview = false
 }) {
   return (
     <div className="network-topology-toolbar">
@@ -96,7 +97,7 @@ export default function NetworkTopologyToolbar({
                 type="button"
                 className="network-topology-toolbar-button"
                 onClick={onGenerateAutoLayout}
-                disabled={generatingLayout || nodeCount === 0}
+                disabled={generatingLayout || nodeCount === 0 || isInventoryPreview}
               >
                 <Sparkles size={15} />
                 {generatingLayout ? "Gerando..." : "Gerar automático"}
@@ -106,7 +107,7 @@ export default function NetworkTopologyToolbar({
               type="button"
               className={`network-topology-toolbar-button ${linkDraftActive ? "is-active" : ""}`}
               onClick={onToggleLinkDraft}
-              disabled={nodeCount < 2}
+              disabled={nodeCount < 2 || isInventoryPreview}
               title="Criar conexão"
             >
               <Link2 size={15} />

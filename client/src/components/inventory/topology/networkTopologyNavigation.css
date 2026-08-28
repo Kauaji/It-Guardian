@@ -1,0 +1,202 @@
+/* The inventory's existing palette and type scale, with one compact hover rail. */
+.network-topology-view .network-topology-hierarchy-layout {
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 12px;
+  position: relative;
+}
+
+.network-topology-navigation {
+  align-self: stretch;
+  position: relative;
+  min-width: 0;
+  z-index: 4;
+}
+
+.network-topology-navigation-trigger {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 44px;
+  min-height: 148px;
+  padding: 14px 8px;
+  color: var(--text-soft);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.network-topology-navigation-trigger span {
+  writing-mode: vertical-rl;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.network-topology-navigation-trigger:hover,
+.network-topology-navigation.is-open .network-topology-navigation-trigger {
+  color: var(--accent-strong, var(--accent));
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+}
+
+.network-topology-navigation-panel {
+  position: absolute;
+  inset: 0 auto auto 44px;
+  width: min(310px, calc(100vw - 142px));
+  max-height: min(720px, 78dvh);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--text) 16%, transparent);
+  overflow: hidden;
+  animation: topology-navigation-reveal 150ms ease-out;
+}
+
+.network-topology-navigation-panel[hidden] {
+  display: none;
+}
+
+.network-topology-navigation-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 12px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.network-topology-navigation-heading > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.network-topology-navigation-heading strong {
+  color: var(--text);
+  font-size: 0.87rem;
+}
+
+.network-topology-navigation-heading span {
+  color: var(--text-soft);
+  font-size: 0.7rem;
+}
+
+.network-topology-navigation-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  color: var(--text-soft);
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.network-topology-navigation .network-topology-hierarchy-sidebar {
+  border: 0;
+  border-radius: 0;
+  max-height: none;
+  min-height: 0;
+}
+
+.network-topology-navigation .network-topology-hierarchy-search input {
+  min-width: 0;
+}
+
+.network-topology-navigation :is(button, input):focus-visible,
+.network-topology-node:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.network-topology-hierarchy-maintenance {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.network-topology-inventory-preview {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-soft);
+  background: var(--surface);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.network-topology-inventory-preview p {
+  margin: 0;
+}
+
+.network-topology-inventory-preview strong {
+  color: var(--text);
+}
+
+.network-topology-inventory-preview svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--accent);
+}
+
+.network-topology-node.is-preview {
+  border-style: dashed;
+  padding: 8px 6px;
+}
+
+.network-topology-node.is-preview .network-topology-node-icon {
+  width: 32px;
+  height: 32px;
+}
+
+.network-topology-preview-caption {
+  font-size: 0.61rem;
+  font-weight: 600;
+  color: var(--text-soft);
+}
+
+@keyframes topology-navigation-reveal {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@media (max-width: 560px) {
+  .network-topology-view .network-topology-hierarchy-layout {
+    gap: 8px;
+    grid-template-columns: 40px minmax(0, 1fr);
+  }
+
+  .network-topology-navigation-trigger {
+    width: 40px;
+  }
+
+  .network-topology-navigation-panel {
+    left: 40px;
+  }
+
+  .network-topology-view .network-topology-body {
+    min-height: 380px;
+  }
+
+  .network-topology-view .network-topology-canvas-wrap {
+    min-height: 380px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .network-topology-navigation-panel {
+    animation: none;
+  }
+}

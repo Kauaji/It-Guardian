@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Info } from "lucide-react";
 import {
   createNetworkTopologyLink,
   createNetworkTopologyMap,
@@ -25,6 +26,8 @@ import { buildHierarchyTree } from "./networkTopologyHierarchy.js";
 import NetworkTopologyHierarchySidebar from "./NetworkTopologyHierarchySidebar.jsx";
 import NetworkTopologyBreadcrumb from "./NetworkTopologyBreadcrumb.jsx";
 import NetworkTopologyLevelEmptyState from "./NetworkTopologyLevelEmptyState.jsx";
+import NetworkTopologyNavigation from "./NetworkTopologyNavigation.jsx";
+import { buildInventoryTopologyPreview, getTopologySegments, resolveTopologyDisplayNodes } from "./networkTopologyProjection.js";
 
 const DEFAULT_FILTERS = { search: "", status: "", segmentId: "", assetType: "" };
 
@@ -37,10 +40,8 @@ function jitteredCenter() {
 
 /**
  * Roteador de nivel da hierarquia (Aba -> Grupo -> Segmento) do Mapa de
- * Rede. So o nivel Segmento (e o modo "Visao Global (legado)", preservado
- * intacto para nao perder mapas ja criados) usa mapa/canvas de verdade -
- * Aba e Grupo sao grades agregadas computadas a partir dos dados reais de
- * segmento/grupo/ativo, sem posicao propria persistida nesta rodada.
+ * Rede. Cada nível preserva seu mapa salvo. Quando ainda não há nós,
+ * uma prévia local do inventário permite navegar sem precisar editar.
  */
 export default function InventoryNetworkTopologyView({
   token,
@@ -64,6 +65,7 @@ export default function InventoryNetworkTopologyView({
 
   const [maps, setMaps] = useState(null);
   const [activeMapId, setActiveMapId] = useState(null);
+  const [legacyActiveMapId, setLegacyActiveMapId] = useState(null);
   const [bundle, setBundle] = useState(null);
   const [loadingBundle, setLoadingBundle] = useState(false);
   const [error, setError] = useState("");
@@ -127,14 +129,17 @@ export default function InventoryNetworkTopologyView({
     () => (selectedGroupId ? tree.groups.find((group) => group.id === selectedGroupId) : null),
     [tree, selectedGroupId]
   );
-  const selectedSegmentSummary = useMemo(() => {
-    if (!selectedSegmentId) return null;
-    return (
-      tree.groups.flatMap((group) => group.segments).find((segment) => segment.id === selectedSegmentId) ||
-      tree.ungroupedSegments.find((segment) => segment.id === selectedSegmentId) ||
-      null
-    );
-  }, [tree, selectedSegmentId]);
+  const selectedSegmentSummary = useMemo(
+    () => getTopologySegments(tree).find((segment) => segment.id === selectedSegmentId) || null,
+    [tree, selectedSegmentId]
+  );
+  const previousTabId = useRef(activeTab?.id);
+  useEffect(() => {
+    if (previousTabId.current !== activeTab?.id) {
+      previousTabId.current = activeTab?.id;
+      goToTabLevel();
+    }
+  }, [activeTab?.id, goToTabLevel]);
 
   const crumbs = useMemo(() => {
     if (viewLevel === "global-legado") {
@@ -158,7 +163,8 @@ export default function InventoryNetworkTopologyView({
     try {
       const response = await fetchNetworkTopologyMaps(token);
       setMaps(response.maps);
-      setActiveMapId((current) => current || response.maps[0]?.id || null);
+      const legacyMaps = response.maps.filter((map) => !map.scopeType || map.scopeType === "global");
+      setLegacyActiveMapId((current) => legacyMaps.some((map) => map.id === current) ? current : legacyMaps[0]?.id || null);
     } catch (fetchError) {
       setError(fetchError.message);
     }
@@ -170,106 +176,42 @@ export default function InventoryNetworkTopologyView({
     }
   }, [viewLevel, maps, loadMaps]);
 
-  // Nivel Segmento/Grupo: mapa por segmento/grupo, criado sob demanda
-  // (get-or-create no servidor). Nivel Aba: mesma ideia, escopo
-  // "inventory_tab" - a aba nao tem tabela propria (e so localStorage), por
-  // isso manda o nome junto (so usado na primeira criacao do mapa). Nivel
-  // "Visao Global (legado)": mesmo fluxo de sempre, por id escolhido na
-  // lista de mapas.
+  // Updating the scoped map's id must not refetch its bundle and discard
+  // unsaved edits. Only the legacy view selects a map directly by id.
+  const legacyMapId = viewLevel === "global-legado" ? legacyActiveMapId : null;
   useEffect(() => {
-    if (viewLevel === "segment" || viewLevel === "group") {
-      const scopeId = viewLevel === "segment" ? selectedSegmentId : selectedGroupId;
-      if (!scopeId) {
-        setBundle(null);
-        return undefined;
-      }
-      let cancelled = false;
-      setLoadingBundle(true);
-      setError("");
-      fetchNetworkTopologyMapByScope(token, viewLevel, scopeId)
-        .then((response) => {
-          if (cancelled) return;
-          setBundle(response);
-          setActiveMapId(response.map.id);
-          setDirtyPositions(new Map());
-          setSelectedNodeId(null);
-          setSelectedLinkId(null);
-          setLinkDraftActive(false);
-          setLinkDraftSourceNodeId(null);
-        })
-        .catch((fetchError) => {
-          if (!cancelled) setError(fetchError.message);
-        })
-        .finally(() => {
-          if (!cancelled) setLoadingBundle(false);
-        });
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    if (viewLevel === "tab") {
-      if (!activeTab?.id) {
-        setBundle(null);
-        return undefined;
-      }
-      let cancelled = false;
-      setLoadingBundle(true);
-      setError("");
-      fetchNetworkTopologyMapByScope(token, "inventory_tab", activeTab.id, activeTab.name)
-        .then((response) => {
-          if (cancelled) return;
-          setBundle(response);
-          setActiveMapId(response.map.id);
-          setDirtyPositions(new Map());
-          setSelectedNodeId(null);
-          setSelectedLinkId(null);
-          setLinkDraftActive(false);
-          setLinkDraftSourceNodeId(null);
-        })
-        .catch((fetchError) => {
-          if (!cancelled) setError(fetchError.message);
-        })
-        .finally(() => {
-          if (!cancelled) setLoadingBundle(false);
-        });
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    if (viewLevel === "global-legado") {
-      if (!activeMapId) {
-        setBundle(null);
-        return undefined;
-      }
-      let cancelled = false;
-      setLoadingBundle(true);
-      setError("");
-      fetchNetworkTopologyMap(token, activeMapId)
-        .then((response) => {
-          if (cancelled) return;
-          setBundle(response);
-          setDirtyPositions(new Map());
-          setSelectedNodeId(null);
-          setSelectedLinkId(null);
-          setLinkDraftActive(false);
-          setLinkDraftSourceNodeId(null);
-        })
-        .catch((fetchError) => {
-          if (!cancelled) setError(fetchError.message);
-        })
-        .finally(() => {
-          if (!cancelled) setLoadingBundle(false);
-        });
-      return () => {
-        cancelled = true;
-      };
-    }
-
+    if (!canView) return undefined;
+    const scopeType = viewLevel === "tab" ? "inventory_tab" : viewLevel;
+    const scopeId = viewLevel === "tab" ? activeTab?.id
+      : viewLevel === "segment" ? selectedSegmentId : selectedGroupId;
     setBundle(null);
-    return undefined;
-  }, [viewLevel, selectedSegmentId, selectedGroupId, activeTab, activeMapId, token]);
+    if (viewLevel === "global-legado" ? !legacyMapId : !scopeId) return undefined;
+    let cancelled = false;
+    setLoadingBundle(true);
+    setError("");
+    setEditMode(false);
+    setDirtyPositions(new Map());
+    setSelectedNodeId(null);
+    setSelectedLinkId(null);
+    setLinkDraftActive(false);
+    setLinkDraftSourceNodeId(null);
+    const request = viewLevel === "global-legado"
+      ? fetchNetworkTopologyMap(token, legacyMapId)
+      : fetchNetworkTopologyMapByScope(token, scopeType, scopeId, viewLevel === "tab" ? activeTab?.name : undefined);
+    request
+      .then((response) => {
+        if (cancelled) return;
+        setBundle(response);
+        setActiveMapId(response.map.id);
+      })
+      .catch((fetchError) => {
+        if (!cancelled) setError(fetchError.message);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingBundle(false);
+      });
+    return () => { cancelled = true; };
+  }, [viewLevel, selectedSegmentId, selectedGroupId, activeTab?.id, activeTab?.name, legacyMapId, token, canView]);
 
   // No nivel Segmento o filtro de segmento fica implicito (o mapa ja e so
   // daquele segmento) - a Toolbar recebe lockSegmentFilter pra so esconder
@@ -284,7 +226,7 @@ export default function InventoryNetworkTopologyView({
   // pra nao herdar um filtro de segmento/status deixado no nivel Segmento e
   // esconder sem querer os nos-cluster (visibleNodes usa o mesmo predicate).
   useEffect(() => {
-    if (viewLevel === "tab" || viewLevel === "group") {
+    if (viewLevel === "tab" || viewLevel === "group" || viewLevel === "global-legado") {
       setFilters(DEFAULT_FILTERS);
     }
   }, [viewLevel]);
@@ -292,10 +234,19 @@ export default function InventoryNetworkTopologyView({
   const devicesById = useMemo(() => new Map(devices.map((device) => [device.id, device])), [devices]);
   const filterPredicate = useMemo(() => buildFilterPredicate(filters), [filters]);
   const hasActiveFilter = Boolean(filters.search || filters.status || filters.segmentId || filters.assetType);
+  const inventoryPreviewNodes = useMemo(
+    () => buildInventoryTopologyPreview({ tree, viewLevel, selectedGroupId, selectedSegmentId }),
+    [tree, viewLevel, selectedGroupId, selectedSegmentId]
+  );
+  const isInventoryPreview = Boolean(bundle && !bundle.nodes.length && inventoryPreviewNodes.length);
+  const displayNodes = useMemo(
+    () => bundle ? resolveTopologyDisplayNodes(bundle.nodes, inventoryPreviewNodes) : [],
+    [bundle, inventoryPreviewNodes]
+  );
 
   const visibleNodes = useMemo(() => {
     if (!bundle) return [];
-    return bundle.nodes
+    return displayNodes
       .filter((node) => {
         if (node.nodeType && node.nodeType !== "asset") return true;
         const device = devicesById.get(node.assetId);
@@ -306,7 +257,7 @@ export default function InventoryNetworkTopologyView({
         const dirty = dirtyPositions.get(node.id);
         return dirty ? { ...node, x: dirty.x, y: dirty.y } : node;
       });
-  }, [bundle, devicesById, filterPredicate, hasActiveFilter, dirtyPositions]);
+  }, [bundle, displayNodes, devicesById, filterPredicate, hasActiveFilter, dirtyPositions]);
 
   const visibleNodeIds = useMemo(() => new Set(visibleNodes.map((node) => node.id)), [visibleNodes]);
 
@@ -329,17 +280,10 @@ export default function InventoryNetworkTopologyView({
   // Resumo ao vivo (nome/status/contagem) de cada no-cluster persistido no
   // mapa, casado por refId - vem da mesma arvore (buildHierarchyTree) que
   // ja alimenta a sidebar, sem duplicar logica de agregacao.
-  const clusterSummaryByRefId = useMemo(() => {
-    if (viewLevel === "tab") {
-      const map = new Map(tree.groups.map((group) => [group.id, group]));
-      for (const segment of tree.ungroupedSegments) map.set(segment.id, segment);
-      return map;
-    }
-    if (viewLevel === "group" && selectedGroup) {
-      return new Map(selectedGroup.segments.map((segment) => [segment.id, segment]));
-    }
-    return new Map();
-  }, [viewLevel, tree, selectedGroup]);
+  const clusterSummaryByRefId = useMemo(
+    () => new Map([...tree.groups, ...getTopologySegments(tree)].map((entry) => [entry.id, entry])),
+    [tree]
+  );
 
   // Segmentos/grupos que existem na hierarquia mas ainda nao tem no no mapa
   // - alimenta o picker de adicionar cluster, equivalente ao
@@ -352,7 +296,8 @@ export default function InventoryNetworkTopologyView({
     if (viewLevel === "tab") {
       return [
         ...tree.groups.filter((group) => !used.has(group.id)).map((group) => ({ ...group, nodeType: "group" })),
-        ...tree.ungroupedSegments.filter((segment) => !used.has(segment.id)).map((segment) => ({ ...segment, nodeType: "segment" }))
+        ...[...tree.ungroupedSegments, ...tree.maintenanceSegments]
+          .filter((segment) => !used.has(segment.id)).map((segment) => ({ ...segment, nodeType: "segment" }))
       ];
     }
     if (viewLevel === "group" && selectedGroup) {
@@ -367,6 +312,7 @@ export default function InventoryNetworkTopologyView({
       const response = await createNetworkTopologyMap(token, { name: "Mapa de Rede" });
       setMaps((current) => [response.map, ...(current || [])]);
       setActiveMapId(response.map.id);
+      setLegacyActiveMapId(response.map.id);
     } catch (createError) {
       notify?.("error", createError.message);
     } finally {
@@ -375,14 +321,15 @@ export default function InventoryNetworkTopologyView({
   }, [token, notify]);
 
   const handleAddAsset = useCallback(
-    async (assetId) => {
-      if (!assetId || !activeMapId) return;
+    async (assetId, position) => {
+      if (!assetId || !activeMapId || !canManageMap || addingAsset) return;
       setAddingAsset(true);
       try {
-        const point = jitteredCenter();
+        const point = position || jitteredCenter();
         const response = await createNetworkTopologyNode(token, activeMapId, { assetId, ...point });
-        setBundle((current) => ({ ...current, nodes: [...current.nodes, response.node] }));
+        setBundle((current) => current?.map.id === activeMapId ? { ...current, nodes: [...current.nodes, response.node] } : current);
         setJustAddedNodeId(response.node.id);
+        setSelectedNodeId(response.node.id);
         window.setTimeout(() => setJustAddedNodeId((current) => (current === response.node.id ? null : current)), 1400);
       } catch (createError) {
         notify?.("error", createError.message);
@@ -390,18 +337,19 @@ export default function InventoryNetworkTopologyView({
         setAddingAsset(false);
       }
     },
-    [token, activeMapId, notify]
+    [token, activeMapId, notify, canManageMap, addingAsset]
   );
 
   const handleAddCluster = useCallback(
-    async (nodeType, refId) => {
-      if (!refId || !activeMapId) return;
+    async (nodeType, refId, position) => {
+      if (!refId || !activeMapId || !canManageMap || addingAsset) return;
       setAddingAsset(true);
       try {
-        const point = jitteredCenter();
+        const point = position || jitteredCenter();
         const response = await createNetworkTopologyNode(token, activeMapId, { nodeType, refId, ...point });
-        setBundle((current) => ({ ...current, nodes: [...current.nodes, response.node] }));
+        setBundle((current) => current?.map.id === activeMapId ? { ...current, nodes: [...current.nodes, response.node] } : current);
         setJustAddedNodeId(response.node.id);
+        setSelectedNodeId(response.node.id);
         window.setTimeout(() => setJustAddedNodeId((current) => (current === response.node.id ? null : current)), 1400);
       } catch (createError) {
         notify?.("error", createError.message);
@@ -409,7 +357,7 @@ export default function InventoryNetworkTopologyView({
         setAddingAsset(false);
       }
     },
-    [token, activeMapId, notify]
+    [token, activeMapId, notify, canManageMap, addingAsset]
   );
 
   const handleNodeDrag = useCallback((nodeId, x, y) => {
@@ -551,16 +499,17 @@ export default function InventoryNetworkTopologyView({
       if (node.nodeType === "group") {
         goToGroupLevel(node.refId);
       } else if (node.nodeType === "segment") {
-        goToSegmentLevel(node.refId, viewLevel === "group" ? selectedGroupId : null);
+        goToSegmentLevel(node.refId, clusterSummaryByRefId.get(node.refId)?.groupId || null);
       }
     },
-    [goToGroupLevel, goToSegmentLevel, viewLevel, selectedGroupId]
+    [goToGroupLevel, goToSegmentLevel, clusterSummaryByRefId]
   );
 
   const handleToggleLinkDraft = useCallback(() => {
+    if (!canLinkAssets || !editMode || isInventoryPreview) return;
     setLinkDraftActive((current) => !current);
     setLinkDraftSourceNodeId(null);
-  }, []);
+  }, [canLinkAssets, editMode, isInventoryPreview]);
 
   const handleCanvasBackgroundClick = useCallback(() => {
     setSelectedNodeId(null);
@@ -614,19 +563,20 @@ export default function InventoryNetworkTopologyView({
   const selectedLink = selectedLinkId ? visibleLinks.find((link) => link.id === selectedLinkId) : null;
 
   function renderCanvasLevel() {
-    // Niveis de cluster com a hierarquia vazia nao tem o que desenhar - nem
-    // vale esperar o bundle carregar, mostra a orientacao direto.
-    if (viewLevel === "tab" && !tree.groups.length && !tree.ungroupedSegments.length) {
-      return <NetworkTopologyLevelEmptyState variant="tab-sem-grupos" />;
-    }
-    if (viewLevel === "group" && (!selectedGroup || !selectedGroup.segments.length)) {
-      return <NetworkTopologyLevelEmptyState variant="group-sem-segmentos" />;
+    // A failed first load has no bundle; report it before the loading guard.
+    if (error) {
+      return (
+        <div className="network-topology-empty-state" role="alert">
+          <h3>Não foi possível carregar o mapa de rede</h3>
+          <p>{error}</p>
+        </div>
+      );
     }
 
     if (viewLevel === "global-legado" && maps === null) {
       return <ViewLoadingState />;
     }
-    if (viewLevel === "global-legado" && !activeMapId) {
+    if (viewLevel === "global-legado" && !legacyActiveMapId) {
       return (
         <div className="network-topology-empty-state">
           <h3>Nenhum mapa de rede criado</h3>
@@ -647,19 +597,6 @@ export default function InventoryNetworkTopologyView({
       return <ViewLoadingState />;
     }
 
-    if (error) {
-      return (
-        <div className="network-topology-empty-state">
-          <h3>Não foi possível carregar o mapa de rede</h3>
-          <p>{error}</p>
-        </div>
-      );
-    }
-
-    if (viewLevel === "segment" && !bundle.nodes.length && !editMode) {
-      return <NetworkTopologyLevelEmptyState variant="segment-sem-ativos" />;
-    }
-
     const isClusterLevel = viewLevel === "tab" || viewLevel === "group";
     // sourceAssetId/targetAssetId carregam o valor generico (asset id OU
     // segment/group id) independente do tipo - ver decisao de nao renomear
@@ -673,7 +610,11 @@ export default function InventoryNetworkTopologyView({
       <>
         <NetworkTopologyToolbar
           editMode={editMode && canManageMap}
-          onToggleEditMode={() => setEditMode((current) => !current)}
+          onToggleEditMode={() => {
+            setEditMode((current) => !current);
+            setLinkDraftActive(false);
+            setLinkDraftSourceNodeId(null);
+          }}
           onCenterView={() => canvasRef.current?.centerView()}
           onFitView={() => canvasRef.current?.fitToNodes()}
           onSaveLayout={handleSaveLayout}
@@ -698,37 +639,61 @@ export default function InventoryNetworkTopologyView({
           canManage={canManageMap}
           lockSegmentFilter={viewLevel === "segment"}
           isClusterLevel={isClusterLevel}
+          isInventoryPreview={isInventoryPreview}
         />
+        {isInventoryPreview ? (
+          <div className="network-topology-inventory-preview" role="status">
+            <Info size={16} aria-hidden="true" />
+            <p>
+              <strong>Prévia do inventário · não salva.</strong>{" "}
+              {isClusterLevel ? "Selecione um grupo ou segmento para abrir seu mapa." : "Estes são os ativos reais deste segmento."}{" "}
+              {canManageMap ? (editMode
+                ? "Selecione um item e use Adicionar ao mapa para salvar sua posição."
+                : "Edite o mapa para salvar posições e adicionar conexões manualmente.") : "Nenhuma conexão é presumida nesta prévia."}
+            </p>
+          </div>
+        ) : null}
         <div className={`network-topology-body ${selectedNode || selectedLink ? "has-inspector" : ""}`}>
-          <NetworkTopologyCanvas
-            ref={canvasRef}
-            nodes={visibleNodes}
-            links={visibleLinks}
-            devicesById={devicesById}
-            segmentNameById={new Map(segments.map((segment) => [segment.id, segment.name]))}
-            clusterSummaryByRefId={clusterSummaryByRefId}
-            editMode={editMode && canManageMap}
-            selectedNodeId={selectedNodeId}
-            selectedLinkId={selectedLinkId}
-            linkDraftSourceNodeId={linkDraftSourceNodeId}
-            justAddedNodeId={justAddedNodeId}
-            justCreatedLinkId={justCreatedLinkId}
-            onNodeActivate={handleNodeActivate}
-            onNodeDrag={handleNodeDrag}
-            onNodeDragEnd={handleNodeDragEnd}
-            onNodeOpen={handleNodeOpen}
-            onSelectLink={(linkId) => {
-              setSelectedLinkId(linkId);
-              setSelectedNodeId(null);
-            }}
-            onCanvasBackgroundClick={handleCanvasBackgroundClick}
-          />
+          {!displayNodes.length && viewLevel !== "global-legado" ? (
+            <NetworkTopologyLevelEmptyState variant={viewLevel === "segment" ? "segment-sem-ativos" : viewLevel === "group" ? "group-sem-segmentos" : "tab-sem-grupos"} />
+          ) : (
+            <NetworkTopologyCanvas
+              key={bundle.map.id}
+              ref={canvasRef}
+              nodes={visibleNodes}
+              links={visibleLinks}
+              devicesById={devicesById}
+              segmentNameById={new Map(segments.map((segment) => [segment.id, segment.name]))}
+              clusterSummaryByRefId={clusterSummaryByRefId}
+              editMode={editMode && canManageMap && !isInventoryPreview}
+              selectedNodeId={selectedNodeId}
+              selectedLinkId={selectedLinkId}
+              linkDraftSourceNodeId={linkDraftSourceNodeId}
+              justAddedNodeId={justAddedNodeId}
+              justCreatedLinkId={justCreatedLinkId}
+              onNodeActivate={handleNodeActivate}
+              onNodeDrag={handleNodeDrag}
+              onNodeDragEnd={handleNodeDragEnd}
+              onNodeOpen={handleNodeOpen}
+              onSelectLink={(linkId) => {
+                setSelectedLinkId(linkId);
+                setSelectedNodeId(null);
+              }}
+              onCanvasBackgroundClick={handleCanvasBackgroundClick}
+            />
+          )}
           {selectedNode ? (
             <NetworkTopologyNodeInspector
               node={selectedNode}
               device={devicesById.get(selectedNode.assetId)}
               clusterInfo={clusterSummaryByRefId.get(selectedNode.refId) ?? null}
-              editMode={editMode && canManageMap}
+              editMode={editMode && canManageMap && !selectedNode.preview}
+              addingToMap={addingAsset}
+              onAddToMap={selectedNode.preview && canManageMap && editMode ? () => {
+                const position = { x: selectedNode.x, y: selectedNode.y };
+                if (selectedNode.nodeType === "asset") handleAddAsset(selectedNode.assetId, position);
+                else handleAddCluster(selectedNode.nodeType, selectedNode.refId, position);
+              } : undefined}
               onOpenDetails={onOpenDetails}
               onOpenCluster={handleNodeOpen}
               onTogglePinned={() => handleTogglePinned(selectedNode)}
@@ -763,19 +728,21 @@ export default function InventoryNetworkTopologyView({
         ) : null}
       </div>
       <div className="network-topology-hierarchy-layout">
-        <NetworkTopologyHierarchySidebar
-          tabs={tabs}
-          activeTabId={activeTab?.id}
-          onSelectTab={(tabId) => {
-            onSelectTab?.(tabId);
-            goToTabLevel();
-          }}
-          tree={tree}
-          selectedGroupId={selectedGroupId}
-          selectedSegmentId={selectedSegmentId}
-          onSelectGroup={goToGroupLevel}
-          onSelectSegment={goToSegmentLevel}
-        />
+        <NetworkTopologyNavigation>
+          <NetworkTopologyHierarchySidebar
+            tabs={tabs}
+            activeTabId={activeTab?.id}
+            onSelectTab={(tabId) => {
+              onSelectTab?.(tabId);
+              goToTabLevel();
+            }}
+            tree={tree}
+            selectedGroupId={selectedGroupId}
+            selectedSegmentId={selectedSegmentId}
+            onSelectGroup={goToGroupLevel}
+            onSelectSegment={goToSegmentLevel}
+          />
+        </NetworkTopologyNavigation>
         <div className="network-topology-hierarchy-main">{renderCanvasLevel()}</div>
       </div>
     </div>

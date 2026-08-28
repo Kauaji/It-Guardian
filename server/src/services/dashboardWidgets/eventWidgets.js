@@ -1,4 +1,4 @@
-import { listLogs } from "../../repositories/logRepository.js";
+import { filterDashboardEvents } from "./widgetFilters.js";
 
 function clampLimit(value, fallback = 10, max = 50) {
   const number = Number(value);
@@ -6,12 +6,18 @@ function clampLimit(value, fallback = 10, max = 50) {
   return Math.min(max, Math.max(1, Math.round(number)));
 }
 
-export async function fetchRecentEvents(config) {
-  const logs = await listLogs();
+export async function fetchRecentEvents(config, ctx) {
+  const logs = await ctx.getRecentEventLogs();
+  const scopedLogs = ctx.hasFilters
+    ? filterDashboardEvents(logs, await ctx.getScopedEventReferences())
+    : logs;
   const limit = clampLimit(config?.limit);
   return {
-    total: logs.length,
-    rows: logs.slice(0, limit).map((log) => ({
+    // The repository reads the latest 500 audit events. Filtering this bounded
+    // window is explicit; it must not be presented as a complete event history.
+    ...(ctx.hasFilters ? { filterScope: "asset", warnings: ["recent_window_only"], windowLimit: 500 } : {}),
+    total: scopedLogs.length,
+    rows: scopedLogs.slice(0, limit).map((log) => ({
       id: log.id,
       type: log.type,
       message: log.message,

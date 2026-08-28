@@ -5,11 +5,11 @@ describe("widthColumns / heightRows", () => {
   it("mapeia cada tier discreto para um numero de colunas/linhas fixo", () => {
     expect(widthColumns("s")).toBe(3);
     expect(widthColumns("m")).toBe(4);
-    expect(widthColumns("l")).toBe(6);
+    expect(widthColumns("l")).toBe(8);
     expect(widthColumns("xl")).toBe(12);
     expect(heightRows("s")).toBe(2);
-    expect(heightRows("m")).toBe(4);
-    expect(heightRows("l")).toBe(6);
+    expect(heightRows("m")).toBe(3);
+    expect(heightRows("l")).toBe(4);
   });
 
   it("cai num tier padrao seguro para um valor desconhecido, nunca quebra", () => {
@@ -21,7 +21,7 @@ describe("widthColumns / heightRows", () => {
 
 describe("widgetGridStyle", () => {
   it("gera o span de coluna/linha a partir dos tiers do widget", () => {
-    expect(widgetGridStyle({ w: "l", h: "m" })).toEqual({ gridColumn: "span 6", gridRow: "span 4" });
+    expect(widgetGridStyle({ w: "l", h: "m" })).toEqual({ gridColumn: "span 8", gridRow: "span 3" });
   });
 
   it("nao quebra com um widget sem w/h definidos", () => {

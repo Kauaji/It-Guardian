@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, FolderTree, Layers, Search } from "lucide-react";
+import { ChevronDown, ChevronRight, FolderTree, Layers, Search, Wrench } from "lucide-react";
 import { useMemo, useState } from "react";
 import { searchCatalogItems } from "../../floorPlans/utils/catalogSearch.js";
 import AssetTypeIcon from "../AssetTypeIcon.jsx";
@@ -38,7 +38,8 @@ export default function NetworkTopologyHierarchySidebar({
         label: "Segmentos",
         items: [
           ...tree.groups.flatMap((group) => group.segments.map((segment) => ({ id: segment.id, label: segment.name, tags: ["segmento", group.name] }))),
-          ...tree.ungroupedSegments.map((segment) => ({ id: segment.id, label: segment.name, tags: ["segmento"] }))
+          ...tree.ungroupedSegments.map((segment) => ({ id: segment.id, label: segment.name, tags: ["segmento"] })),
+          ...(tree.maintenanceSegments || []).map((segment) => ({ id: segment.id, label: segment.name, tags: ["segmento", "manutenção"] }))
         ]
       }
     ],
@@ -72,6 +73,9 @@ export default function NetworkTopologyHierarchySidebar({
   const visibleUngrouped = matchedSegmentIds
     ? tree.ungroupedSegments.filter((segment) => matchedSegmentIds.has(segment.id))
     : tree.ungroupedSegments;
+  const visibleMaintenance = matchedSegmentIds
+    ? (tree.maintenanceSegments || []).filter((segment) => matchedSegmentIds.has(segment.id))
+    : (tree.maintenanceSegments || []);
 
   function renderSegmentRow(segment, groupId) {
     const expanded = expandedSegmentIds.has(segment.id);
@@ -83,7 +87,8 @@ export default function NetworkTopologyHierarchySidebar({
             type="button"
             className="network-topology-hierarchy-collapse-toggle"
             onClick={() => toggleSegmentExpanded(segment.id)}
-            aria-label={expanded ? "Recolher segmento" : "Expandir segmento"}
+            aria-label={`${expanded ? "Recolher" : "Expandir"} segmento ${segment.name}`}
+            aria-expanded={expanded}
           >
             {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
           </button>
@@ -92,7 +97,7 @@ export default function NetworkTopologyHierarchySidebar({
             className={`network-topology-hierarchy-item ${selectedSegmentId === segment.id ? "is-selected" : ""}`}
             onClick={() => onSelectSegment(segment.id, groupId)}
           >
-            <Layers size={14} />
+            {segment.isMaintenanceSegment ? <Wrench size={14} /> : <Layers size={14} />}
             <span
               className="network-topology-hierarchy-status-dot"
               style={{ background: getAggregateStatusColorToken(segment.status) }}
@@ -123,7 +128,7 @@ export default function NetworkTopologyHierarchySidebar({
   }
 
   return (
-    <aside className="network-topology-hierarchy-sidebar">
+    <nav className="network-topology-hierarchy-sidebar" aria-label="Hierarquia do inventário">
       {tabs?.length > 1 ? (
         <div className="network-topology-tab-chips" role="tablist" aria-label="Abas do inventário">
           {tabs.map((tab) => (
@@ -145,6 +150,7 @@ export default function NetworkTopologyHierarchySidebar({
         <Search size={14} />
         <input
           type="search"
+          aria-label="Buscar grupo ou segmento"
           placeholder="Buscar grupo ou segmento..."
           value={query}
           onChange={(event) => setQuery(event.target.value)}
@@ -161,7 +167,8 @@ export default function NetworkTopologyHierarchySidebar({
                   type="button"
                   className="network-topology-hierarchy-collapse-toggle"
                   onClick={() => toggleGroupCollapsed(group.id)}
-                  aria-label={collapsed ? "Expandir grupo" : "Recolher grupo"}
+                  aria-label={`${collapsed ? "Expandir" : "Recolher"} grupo ${group.name}`}
+                  aria-expanded={!collapsed}
                 >
                   {collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
                 </button>
@@ -176,7 +183,7 @@ export default function NetworkTopologyHierarchySidebar({
                     style={{ background: getAggregateStatusColorToken(group.status) }}
                   />
                   <strong>{group.name}</strong>
-                  <span className="network-topology-hierarchy-count">{group.segmentCount}</span>
+                  <span className="network-topology-hierarchy-count" title={`${group.deviceCount} ativo(s) em ${group.segmentCount} segmento(s)`}>{group.deviceCount}</span>
                 </button>
               </div>
               {!collapsed ? (
@@ -205,10 +212,16 @@ export default function NetworkTopologyHierarchySidebar({
           </div>
         ) : null}
 
-        {!visibleGroups.length && !visibleUngrouped.length ? (
+        {visibleMaintenance.length ? (
+          <div className="network-topology-hierarchy-maintenance" aria-label="Segmentos de manutenção independentes">
+            {visibleMaintenance.map((segment) => renderSegmentRow(segment, null))}
+          </div>
+        ) : null}
+
+        {!visibleGroups.length && !visibleUngrouped.length && !visibleMaintenance.length ? (
           <p className="network-topology-hierarchy-empty">Nenhum grupo ou segmento encontrado.</p>
         ) : null}
       </div>
-    </aside>
+    </nav>
   );
 }
