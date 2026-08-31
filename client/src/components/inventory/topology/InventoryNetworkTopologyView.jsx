@@ -23,13 +23,31 @@ import NetworkTopologyBreadcrumb from "./NetworkTopologyBreadcrumb.jsx";
 import NetworkTopologyLevelEmptyState from "./NetworkTopologyLevelEmptyState.jsx";
 import NetworkTopologyNavigation from "./NetworkTopologyNavigation.jsx";
 import { buildInventoryTopologyNodes, getTopologySegments, resolveTopologyDisplayNodes } from "./networkTopologyProjection.js";
-import { clusterDevices, inspectorConnections, topologyLinkKey, topologyNodeKey } from "./networkTopologyConnections.js";
+import {
+  clusterDevices,
+  hasTopologyConnectionPair,
+  hasTopologyConnectionPartner,
+  inspectorConnections,
+  topologyLinkKey,
+  topologyNodeKey
+} from "./networkTopologyConnections.js";
 import useTopologyInspectorConnections from "./useTopologyInspectorConnections.js";
 import useTopologyLinkCreation from "./useTopologyLinkCreation.js";
 import useTopologyLayout from "./useTopologyLayout.js";
 import "./networkTopologyInteraction.css";
 
 const DEFAULT_FILTERS = { search: "", status: "", segmentId: "", assetType: "" };
+const CONNECTION_ITEM_LABELS_BY_TYPE = {
+  group: { singular: "grupo", plural: "grupos", title: "Grupo" },
+  segment: { singular: "segmento", plural: "segmentos", title: "Segmento" },
+  asset: { singular: "ativo", plural: "ativos", title: "Ativo" }
+};
+const MIXED_CONNECTION_ITEM_LABELS = {
+  singular: "item",
+  destination: "item do mesmo tipo",
+  plural: "itens do mesmo tipo",
+  title: "Item"
+};
 
 function jitteredCenter() {
   return {
@@ -298,6 +316,17 @@ export default function InventoryNetworkTopologyView({
       });
   }, [bundle, displayNodes, devicesById, filterPredicate, hasActiveFilter, dirtyPositions]);
 
+  const connectionItemLabels = useMemo(() => {
+    const nodeTypes = new Set(visibleNodes.map((node) => node.nodeType || "asset"));
+    if (nodeTypes.size === 1) {
+      return CONNECTION_ITEM_LABELS_BY_TYPE[[...nodeTypes][0]] || CONNECTION_ITEM_LABELS_BY_TYPE.asset;
+    }
+    if (nodeTypes.size > 1) return MIXED_CONNECTION_ITEM_LABELS;
+    const fallbackType = viewLevel === "tab" ? "group" : viewLevel === "group" ? "segment" : "asset";
+    return CONNECTION_ITEM_LABELS_BY_TYPE[fallbackType];
+  }, [visibleNodes, viewLevel]);
+  const canStartLink = useMemo(() => hasTopologyConnectionPair(visibleNodes), [visibleNodes]);
+
   const visibleNodeIds = useMemo(() => new Set(visibleNodes.map((node) => node.id)), [visibleNodes]);
 
   const visibleLinks = useMemo(() => {
@@ -348,10 +377,16 @@ export default function InventoryNetworkTopologyView({
   }, []);
 
   const linkCreation = useTopologyLinkCreation({
-    token, mapId: bundle?.map.id, scopeKey, enabled: editMode && canLinkAssets && !layoutBusy,
+    token, mapId: bundle?.map.id, scopeKey, enabled: canLinkAssets && !layoutBusy,
     nodes: visibleNodes, links: bundle?.links || [], onCreated: handleLinkCreated, notify
   });
   const { active: linkDraftActive, sourceNodeId: linkDraftSourceNodeId, busy: creatingLink } = linkCreation;
+  const linkDraftSourceNode = linkDraftSourceNodeId
+    ? visibleNodes.find((node) => node.id === linkDraftSourceNodeId)
+    : null;
+  const connectionGuideItemLabels = linkDraftSourceNode
+    ? CONNECTION_ITEM_LABELS_BY_TYPE[linkDraftSourceNode.nodeType || "asset"]
+    : connectionItemLabels;
 
   const handleCreateMap = useCallback(async () => {
     setCreatingMap(true);
@@ -431,8 +466,13 @@ export default function InventoryNetworkTopologyView({
   const handleToggleLinkDraft = useCallback(() => {
     setSelectedNodeId(null);
     setSelectedLinkId(null);
-    linkCreation.toggle();
-  }, [linkCreation]);
+    if (linkDraftActive) {
+      linkCreation.reset();
+      return;
+    }
+    setEditMode(true);
+    linkCreation.start();
+  }, [linkCreation, linkDraftActive]);
 
   const handleCanvasBackgroundClick = useCallback(() => {
     setSelectedNodeId(null);
@@ -558,14 +598,16 @@ export default function InventoryNetworkTopologyView({
           assetTypeOptions={assetTypeOptions}
           canManage={canManageMap}
           canLink={canLinkAssets}
+          canStartLink={canStartLink}
+          linkItemLabel={connectionItemLabels.plural}
           lockSegmentFilter={viewLevel === "segment"}
           isClusterLevel={isClusterLevel}
         />
         {(linkDraftActive || creatingLink) ? (
           <div className="network-topology-connection-guide" role="status">
-            <span>{creatingLink ? "Salvando conexão…" : linkDraftSourceNodeId
-              ? "Origem selecionada. Clique no destino para salvar a conexão."
-              : "Clique no primeiro item para escolher a origem da conexão."}</span>
+            <span>{creatingLink ? `Salvando conexão entre ${connectionGuideItemLabels.plural}…` : linkDraftSourceNodeId
+              ? `${connectionGuideItemLabels.title} de origem selecionado. Clique no ${connectionGuideItemLabels.singular} de destino para salvar a conexão.`
+              : `Clique no primeiro ${connectionGuideItemLabels.singular} para escolher a origem da conexão.`}</span>
             {!creatingLink ? <button type="button" className="network-topology-toolbar-button" onClick={linkCreation.reset}>Cancelar conexão</button> : null}
           </div>
         ) : null}
@@ -619,7 +661,7 @@ export default function InventoryNetworkTopologyView({
               connectionsError={internalConnections.error}
               canEditCluster={canEditMap}
               connecting={linkDraftActive || creatingLink}
-              onConnectNode={editMode && canLinkAssets && !layoutBusy && visibleNodes.length > 1 ? (node) => {
+              onConnectNode={editMode && canLinkAssets && !layoutBusy && hasTopologyConnectionPartner(visibleNodes, selectedNode) ? (node) => {
                 setSelectedNodeId(null);
                 setSelectedLinkId(null);
                 linkCreation.start(node);

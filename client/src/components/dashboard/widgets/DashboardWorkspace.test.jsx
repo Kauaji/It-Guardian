@@ -205,7 +205,7 @@ describe("DashboardWorkspace", () => {
   });
 
   it("cruza status entre os widgets, combina ativo e remove filtros sem persistir o layout", async () => {
-    const widgets = [widget({ config: { chartType: "bars" } }), widget({ id: "w2", type: "top_assets_cpu" })];
+    const widgets = [widget({ config: { chartType: "bars" } }), widget({ id: "w2", type: "top_assets_cpu", config: { chartType: "bars" } })];
     fetchDashboardLayout.mockResolvedValue({ widgets });
     previewDashboardWidget.mockImplementation(async (_token, { type, filters }) => ({
       type,

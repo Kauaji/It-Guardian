@@ -25,6 +25,14 @@ export default function WidgetPreview({ variant = "bars" }) {
           </g>
         ) : variant === "gauge" ? (
           <g fill="none" strokeWidth="11"><circle cx="120" cy="52" r="34" stroke="currentColor" opacity=".1" /><circle cx="120" cy="52" r="34" stroke={colors[0]} strokeDasharray="154 60" transform="rotate(-90 120 52)" /></g>
+        ) : variant === "radial" ? (
+          <g fill="none" transform="rotate(-90 86 52)">
+            {[35, 27, 19, 11].map((radius, index) => <g key={radius}><circle cx="86" cy="52" r={radius} stroke="currentColor" strokeWidth="6" opacity=".1" /><circle cx="86" cy="52" r={radius} stroke={colors[index]} strokeWidth="6" strokeLinecap="round" strokeDasharray={`${Math.round(2 * Math.PI * radius * ([.88, .67, .52, .34][index]))} 260`} /></g>)}
+          </g>
+        ) : variant === "heatmap" ? (
+          <g>
+            {[0, 1, 2, 3, 4, 5].map((index) => <g key={index} transform={`translate(${18 + (index % 3) * 71} ${12 + Math.floor(index / 3) * 44})`}><rect width="62" height="36" rx="5" fill={colors[index % colors.length]} opacity={.12 + index * .09} /><rect x="8" y="8" width={35 - (index % 3) * 5} height="4" rx="2" fill="currentColor" opacity=".3" /><g transform="translate(8 23)">{[0, 1, 2, 3, 4].map((cell) => <rect key={cell} x={cell * 9} width="7" height="5" rx="1.5" fill={colors[index % colors.length]} opacity={cell <= index % 5 ? 1 : .18} />)}</g></g>)}
+          </g>
         ) : variant === "stats" ? (
           <g>{[0, 1, 2, 3, 4, 5].map((index) => <g key={index} transform={"translate(" + (18 + (index % 3) * 71) + " " + (12 + Math.floor(index / 3) * 44) + ")"}><rect width="62" height="36" rx="5" fill={colors[0]} opacity=".09" /><rect x="9" y="9" width="32" height="4" rx="2" fill="currentColor" opacity=".25" /><rect x="9" y="20" width="19" height="7" rx="2" fill={colors[0]} /></g>)}</g>
         ) : (

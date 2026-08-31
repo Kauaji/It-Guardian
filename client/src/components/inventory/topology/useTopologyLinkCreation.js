@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createNetworkTopologyLink, fetchNetworkTopologyMap } from "../../../api.js";
-import { buildTopologyLinkPayload, linkConnectsNodes, topologyNodeKey } from "./networkTopologyConnections.js";
+import {
+  buildTopologyLinkPayload,
+  hasTopologyConnectionPair,
+  hasTopologyConnectionPartner,
+  linkConnectsNodes,
+  topologyNodeKey
+} from "./networkTopologyConnections.js";
 
 export default function useTopologyLinkCreation({ token, mapId, scopeKey, enabled, nodes, links, onCreated, notify }) {
   const [active, setActive] = useState(false);
@@ -31,13 +37,19 @@ export default function useTopologyLinkCreation({ token, mapId, scopeKey, enable
   useEffect(() => { if (!enabled) reset(); }, [enabled, reset]);
 
   const start = useCallback((node = null) => {
-    if (!enabled || !mapId || busyRef.current || nodes.length < 2) return;
+    if (
+      !enabled ||
+      !mapId ||
+      busyRef.current ||
+      !hasTopologyConnectionPair(nodes) ||
+      (node && !hasTopologyConnectionPartner(nodes, node))
+    ) return;
     activeRef.current = true;
     sourceRef.current = node;
     setActive(true);
     setSourceNodeId(node?.id || null);
     setError("");
-  }, [enabled, mapId, nodes.length]);
+  }, [enabled, mapId, nodes]);
 
   const toggle = useCallback(() => {
     if (busyRef.current) return;
@@ -50,6 +62,10 @@ export default function useTopologyLinkCreation({ token, mapId, scopeKey, enable
     if (busyRef.current) return true;
     const source = sourceRef.current;
     if (!source) {
+      if (!hasTopologyConnectionPartner(nodes, node)) {
+        setError("Não há outro item do mesmo tipo visível para conectar.");
+        return true;
+      }
       sourceRef.current = node;
       setSourceNodeId(node.id);
       setError("");
@@ -111,7 +127,7 @@ export default function useTopologyLinkCreation({ token, mapId, scopeKey, enable
     }
     save();
     return true;
-  }, [enabled, links, mapId, token, onCreated, notify, reset]);
+  }, [enabled, links, mapId, token, nodes, onCreated, notify, reset]);
 
   return { active, sourceNodeId, busy, error, start, toggle, activate, reset };
 }

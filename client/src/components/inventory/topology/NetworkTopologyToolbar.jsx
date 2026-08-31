@@ -47,12 +47,15 @@ export default function NetworkTopologyToolbar({
   assetTypeOptions,
   canManage,
   canLink = false,
+  canStartLink,
+  linkItemLabel = "itens",
   lockSegmentFilter = false,
   isClusterLevel = false,
   showManualAdd = false
 }) {
   const layoutBusy = Boolean(saving || generatingLayout);
   const manualAddBusy = Boolean(addingAsset || layoutBusy);
+  const linkActionAvailable = canStartLink ?? nodeCount >= 2;
 
   return (
     <div className="network-topology-toolbar">
@@ -68,6 +71,21 @@ export default function NetworkTopologyToolbar({
             {editMode ? <Pencil size={15} /> : <Eye size={15} />}
             {editMode ? "Editando" : "Visualizando"}
           </button>
+          {canLink ? <button
+            type="button"
+            className={`network-topology-toolbar-button is-link-action ${linkDraftActive ? "is-active" : ""}`}
+            onClick={onToggleLinkDraft}
+            disabled={!linkActionAvailable || creatingLink || layoutBusy}
+            aria-pressed={linkDraftActive}
+            title={!linkActionAvailable
+              ? `É preciso ter pelo menos dois ${linkItemLabel} neste mapa`
+              : linkDraftActive ? "Cancelar conexão" : `Criar conexão manual entre dois ${linkItemLabel}`}
+          >
+            <Link2 size={15} />
+            {creatingLink ? "Salvando conexão…" : linkDraftActive
+              ? (linkDraftSourceNodeId ? "Escolha o destino" : "Escolha a origem")
+              : `Conectar ${linkItemLabel}`}
+          </button> : null}
           <button type="button" className="network-topology-toolbar-button" onClick={onCenterView} title="Centralizar">
             <Crosshair size={15} />
           </button>
@@ -104,18 +122,6 @@ export default function NetworkTopologyToolbar({
                 {generatingLayout ? "Gerando..." : "Gerar automático"}
               </button>
             ) : null}</> : null}
-            {canLink ? <button
-              type="button"
-              className={`network-topology-toolbar-button ${linkDraftActive ? "is-active" : ""}`}
-              onClick={onToggleLinkDraft}
-              disabled={nodeCount < 2 || creatingLink || layoutBusy}
-              aria-pressed={linkDraftActive}
-              title={linkDraftActive ? "Cancelar conexão" : "Criar conexão manual entre dois itens"}
-            >
-              <Link2 size={15} />
-              {creatingLink ? "Salvando conexão…" : linkDraftActive
-                ? (linkDraftSourceNodeId ? "Escolha o destino" : "Escolha a origem") : "Criar conexão"}
-            </button> : null}
           </div>
         ) : null}
 

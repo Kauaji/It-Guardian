@@ -8,6 +8,7 @@ function renderToolbar(overrides = {}) {
     editMode: true,
     canManage: true,
     canLink: true,
+    linkItemLabel: "ativos",
     nodeCount: 2,
     linkCount: 1,
     onToggleEditMode: vi.fn(),
@@ -40,6 +41,32 @@ describe("NetworkTopologyToolbar", () => {
     expect(screen.queryByTitle("Ajustar à tela")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTitle("Centralizar"));
     expect(props.onCenterView).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ["grupos", true],
+    ["segmentos", true],
+    ["ativos", false]
+  ])("mantém Conectar %s visível fora do modo de edição", (linkItemLabel, isClusterLevel) => {
+    const { props } = renderToolbar({ editMode: false, linkItemLabel, isClusterLevel });
+    const action = screen.getByRole("button", { name: `Conectar ${linkItemLabel}` });
+    expect(action).toBeVisible();
+    fireEvent.click(action);
+    expect(props.onToggleLinkDraft).toHaveBeenCalledOnce();
+  });
+
+  it("explica uma aba mista e bloqueia a ação sem dois itens compatíveis", () => {
+    const { props } = renderToolbar({
+      editMode: false,
+      nodeCount: 2,
+      canStartLink: false,
+      linkItemLabel: "itens do mesmo tipo",
+      isClusterLevel: true
+    });
+    const action = screen.getByRole("button", { name: "Conectar itens do mesmo tipo" });
+    expect(action).toBeDisabled();
+    fireEvent.click(action);
+    expect(props.onToggleLinkDraft).not.toHaveBeenCalled();
   });
 
   it.each([false, true])("não mostra inserção manual por padrão, mesmo editando (clusters: %s)", (isClusterLevel) => {
@@ -81,7 +108,7 @@ describe("NetworkTopologyToolbar", () => {
     fireEvent.click(screen.getByRole("button", { name: "Salvar layout" }));
     fireEvent.click(screen.getByRole("button", { name: "Resetar" }));
     fireEvent.click(screen.getByRole("button", { name: "Gerar automático" }));
-    fireEvent.click(screen.getByRole("button", { name: "Criar conexão" }));
+    fireEvent.click(screen.getByRole("button", { name: "Conectar ativos" }));
     expect(props.onSaveLayout).toHaveBeenCalledOnce();
     expect(props.onResetLayout).toHaveBeenCalledOnce();
     expect(props.onGenerateAutoLayout).toHaveBeenCalledOnce();
@@ -92,7 +119,7 @@ describe("NetworkTopologyToolbar", () => {
 
   it("permissão de conectar não concede controles de layout ou inserção", () => {
     renderToolbar({ canManage: false, showManualAdd: true });
-    expect(screen.getByRole("button", { name: "Criar conexão" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Conectar ativos" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Salvar layout" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Gerar automático" })).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText("Adicionar ativo ao mapa...")).not.toBeInTheDocument();
@@ -109,7 +136,7 @@ describe("NetworkTopologyToolbar", () => {
   it("mantém controles de edição bloqueados em somente leitura", () => {
     renderToolbar({ editMode: false, canManage: false, canLink: false, showManualAdd: true });
     expect(screen.getByRole("button", { name: "Visualizando" })).toBeDisabled();
-    expect(screen.queryByRole("button", { name: "Criar conexão" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Conectar ativos" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Salvar layout" })).not.toBeInTheDocument();
   });
 
@@ -123,7 +150,7 @@ describe("NetworkTopologyToolbar", () => {
       screen.getByRole("button", { name: busyProps.saving ? "Salvando..." : "Salvar layout" }),
       screen.getByRole("button", { name: "Resetar" }),
       screen.getByRole("button", { name: busyProps.generatingLayout ? "Gerando..." : "Gerar automático" }),
-      screen.getByRole("button", { name: "Criar conexão" })
+      screen.getByRole("button", { name: "Conectar ativos" })
     ];
     for (const control of controls) {
       expect(control).toBeDisabled();

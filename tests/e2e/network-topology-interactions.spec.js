@@ -193,7 +193,7 @@ test("cria conexão e salva posições de itens automáticos, mantendo tudo ao r
   await withTopologyFixture(page, async ({ groups, segments, devices, topologyWrites }) => {
     await openSegment(page, groups[0], segments[0]);
     await expect(page.locator(".network-topology-link")).toHaveCount(0);
-    await page.getByRole("button", { name: "Criar conexão", exact: true }).click();
+    await page.getByRole("button", { name: "Conectar ativos", exact: true }).click();
     await mapNode(page, devices[0].name, "ativo").click();
     await expect(page.getByRole("button", { name: "Escolha o destino", exact: true })).toBeVisible();
     await mapNode(page, devices[1].name, "ativo").hover();
@@ -274,11 +274,12 @@ test("cria conexão e salva posições de itens automáticos, mantendo tudo ao r
   });
 });
 
-test("grupos têm conexões editáveis e zoom suave sem rolar a página", async ({ page }) => {
-  await withTopologyFixture(page, async ({ groups }) => {
+test("grupos e segmentos têm ação de conexão explícita, editável e zoom suave", async ({ page }) => {
+  await withTopologyFixture(page, async ({ groups, segments }) => {
     await openMap(page);
-    await page.getByRole("button", { name: "Visualizando", exact: true }).click();
-    await page.getByRole("button", { name: "Criar conexão", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Visualizando", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Conectar grupos", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Editando", exact: true })).toBeVisible();
     await mapNode(page, groups[0].name, "grupo").click();
     const created = waitForLinkWrite(page, "POST");
     await mapNode(page, groups[1].name, "grupo").click();
@@ -291,6 +292,7 @@ test("grupos têm conexões editáveis e zoom suave sem rolar a página", async 
     expect(link).toMatchObject({ sourceType: "group", targetType: "group", label: "Uplink de ambientes" });
     await inspector.getByRole("button", { name: "Fechar detalhes da conexão" }).click();
     await expect(page.getByRole("button", { name: /^Conexão entre .+: Uplink de ambientes$/ })).toBeVisible();
+
     const canvas = page.locator(".network-topology-canvas");
     await canvas.scrollIntoViewIfNeeded();
     const before = (await canvas.getAttribute("viewBox")).split(" ").map(Number);
@@ -303,5 +305,23 @@ test("grupos têm conexões editáveis e zoom suave sem rolar a página", async 
     expect(after[2] / before[2]).toBeGreaterThan(1.02);
     expect(after[2] / before[2]).toBeLessThan(1.08);
     expect(await page.evaluate(() => window.scrollY)).toBe(scrollBefore);
+
+    await mapNode(page, groups[0].name, "grupo").dblclick();
+    await expect(page.getByRole("button", { name: "Conectar segmentos", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Editando", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Visualizando", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Conectar segmentos", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Editando", exact: true })).toBeVisible();
+    await mapNode(page, segments[0].name, "segmento").click();
+    const segmentLinkCreated = waitForLinkWrite(page, "POST");
+    await mapNode(page, segments[1].name, "segmento").click();
+    expect((await segmentLinkCreated).status()).toBe(201);
+    await inspector.getByLabel("Rótulo", { exact: true }).fill("Uplink entre segmentos");
+    const segmentLinkSaved = waitForLinkWrite(page, "PATCH");
+    await inspector.getByRole("button", { name: "Salvar conexão", exact: true }).click();
+    const { link: segmentLink } = await (await segmentLinkSaved).json();
+    expect(segmentLink).toMatchObject({ sourceType: "segment", targetType: "segment", label: "Uplink entre segmentos" });
+    await inspector.getByRole("button", { name: "Fechar detalhes da conexão" }).click();
+    await expect(page.getByRole("button", { name: /^Conexão entre .+: Uplink entre segmentos$/ })).toBeVisible();
   });
 });

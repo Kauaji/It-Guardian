@@ -134,6 +134,7 @@ test("dashboard mostra os widgets atuais, indicadores e gráficos sem erros de e
     await expect(page.locator(".dashboard-widget-grid")).toBeVisible();
     await expect(page.locator(".dashboard-widget-card")).toHaveCount(defaultLayout.widgets.length);
     await expect(widgetCards(page, availabilityLabel).getByRole("button", { name: /^Filtrar por Offline: \d+$/ })).toBeVisible();
+    await expect(widgetCards(page, availabilityLabel).locator(".dashboard-chart-percentage")).toHaveCount(4);
     await expect(widgetCards(page, "OS por Status")).toBeVisible();
     await expect(page.getByRole("region", { name: "Filtros do dashboard" })).toBeVisible();
     await expect(page.locator(".dashboard-widget-error")).toHaveCount(0);
@@ -164,6 +165,16 @@ test("catálogo mostra prévias de pizza, colunas, barras, rosca e linha antes d
     const historyCard = catalogCard(page, catalog, "Grafico Historico de CPU");
     await historyCard.getByRole("combobox", { name: "Visualização de Grafico Historico de CPU", exact: true }).selectOption("line");
     await expect(historyCard.getByRole("img", { name: "Prévia ilustrativa: Linha", exact: true })).toBeVisible();
+
+    for (const [label, value, preview] of [
+      ["Top Ativos por CPU", "columns", "Colunas"],
+      ["Top Ativos por RAM", "radial", "Anéis radiais"],
+      ["Top Ativos por Disco", "heatmap", "Mapa de calor"]
+    ]) {
+      const rankingCard = catalogCard(page, catalog, label);
+      await expect(rankingCard.getByRole("combobox", { name: `Visualização de ${label}`, exact: true })).toHaveValue(value);
+      await expect(rankingCard.getByRole("img", { name: `Prévia ilustrativa: ${preview}`, exact: true })).toBeVisible();
+    }
 
     await page.keyboard.press("Escape");
     await expect(catalog).toBeHidden();
@@ -270,6 +281,7 @@ test("resumo cabe no próprio card em desktop compacto e celular", async ({ page
       await expect(overview.getByText("Alertas críticos", { exact: true })).toBeVisible();
       await expect.poll(() => overview.locator(".dashboard-widget-card-body").evaluate((body) => body.scrollHeight - body.clientHeight)).toBeLessThanOrEqual(1);
       await expect.poll(() => overview.evaluate((card) => card.scrollWidth - card.clientWidth)).toBeLessThanOrEqual(1);
+      await expect.poll(() => page.locator(".dashboard-widget-card").evaluateAll((cards) => Math.max(...cards.map((card) => card.scrollWidth - card.clientWidth), 0))).toBeLessThanOrEqual(1);
       await expect.poll(() => page.locator("html").evaluate((root) => root.scrollWidth - root.clientWidth)).toBeLessThanOrEqual(1);
     }
   });

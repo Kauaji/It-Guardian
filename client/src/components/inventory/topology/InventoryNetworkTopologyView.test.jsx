@@ -112,9 +112,9 @@ describe("InventoryNetworkTopologyView", () => {
     }));
     render(<InventoryNetworkTopologyView {...props} />);
     const first = await openSegment();
-    fireEvent.click(screen.getByRole("button", { name: "Criar conexão" }));
+    fireEvent.click(screen.getByRole("button", { name: "Conectar ativos" }));
     fireEvent.keyDown(first, { key: "Enter" });
-    expect(screen.getByText(/Origem selecionada/)).toBeVisible();
+    expect(screen.getByText(/Ativo de origem selecionado/)).toBeVisible();
     fireEvent.keyDown(screen.getByRole("button", { name: "Desktop B, ver ativo" }), { key: "Enter" });
     expect(await screen.findByRole("button", { name: "Conexão entre Desktop A e Desktop B" })).toBeInTheDocument();
     expect(screen.getByText("1 conexão(ões)")).toBeVisible();
@@ -123,6 +123,74 @@ describe("InventoryNetworkTopologyView", () => {
     });
     expect(api.createNetworkTopologyNode).not.toHaveBeenCalled();
     expect(api.saveNetworkTopologyNodePositions).not.toHaveBeenCalled();
+  });
+
+  it("expõe Conectar grupos enquanto visualiza e inicia a seleção em modo de edição", async () => {
+    api.createNetworkTopologyLink.mockImplementation(async (_token, mapId, payload) => ({
+      link: { id: "group-link", mapId, ...payload, type: "ethernet" }
+    }));
+    render(<InventoryNetworkTopologyView {...props} groups={[
+      props.groups[0],
+      { id: "g3", name: "Grupo C", tabId: "t1" },
+      props.groups[1]
+    ]} />);
+
+    expect(await screen.findByRole("button", { name: "Visualizando" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Conectar grupos" }));
+    expect(screen.getByRole("button", { name: "Editando" })).toBeVisible();
+    fireEvent.keyDown(screen.getByRole("button", { name: "Grupo A, ver grupo" }), { key: "Enter" });
+    expect(screen.getByText(/Grupo de origem selecionado/)).toBeVisible();
+    fireEvent.keyDown(screen.getByRole("button", { name: "Grupo C, ver grupo" }), { key: "Enter" });
+
+    await waitFor(() => expect(api.createNetworkTopologyLink).toHaveBeenCalledExactlyOnceWith(
+      "test-token", "map-inventory_tab-t1", {
+        sourceType: "group", targetType: "group", sourceAssetId: "g1", targetAssetId: "g3"
+      }
+    ));
+    expect(screen.getByRole("button", { name: "Conexão entre Grupo A e Grupo C" })).toBeVisible();
+  });
+
+  it("expõe Conectar segmentos enquanto visualiza e persiste segmento com segmento", async () => {
+    api.createNetworkTopologyLink.mockImplementation(async (_token, mapId, payload) => ({
+      link: { id: "segment-link", mapId, ...payload, type: "fiber" }
+    }));
+    render(<InventoryNetworkTopologyView {...props} segments={[
+      ...props.segments,
+      { id: "s3", name: "Arquivos", groupId: "g1", tabId: "t1" }
+    ]} />);
+
+    fireEvent.doubleClick(await screen.findByRole("button", { name: "Grupo A, ver grupo" }));
+    expect(await screen.findByRole("button", { name: "Estações, ver segmento" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Editando" }));
+    expect(screen.getByRole("button", { name: "Visualizando" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Conectar segmentos" }));
+    expect(screen.getByRole("button", { name: "Editando" })).toBeVisible();
+    fireEvent.keyDown(screen.getByRole("button", { name: "Estações, ver segmento" }), { key: "Enter" });
+    expect(screen.getByText(/Segmento de origem selecionado/)).toBeVisible();
+    fireEvent.keyDown(screen.getByRole("button", { name: "Arquivos, ver segmento" }), { key: "Enter" });
+
+    await waitFor(() => expect(api.createNetworkTopologyLink).toHaveBeenCalledExactlyOnceWith(
+      "test-token", "map-group-g1", {
+        sourceType: "segment", targetType: "segment", sourceAssetId: "s1", targetAssetId: "s3"
+      }
+    ));
+    expect(screen.getByRole("button", { name: "Conexão entre Estações e Arquivos" })).toBeVisible();
+  });
+
+  it("trata aba com grupo e segmento avulso como mista sem oferecer um par impossível", async () => {
+    render(<InventoryNetworkTopologyView
+      {...props}
+      groups={[props.groups[0]]}
+      segments={[
+        ...props.segments,
+        { id: "standalone", name: "Laboratório", groupId: null, tabId: "t1" }
+      ]}
+    />);
+
+    expect(await screen.findByRole("button", { name: "Grupo A, ver grupo" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Laboratório, ver segmento" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Conectar itens do mesmo tipo" })).toBeDisabled();
+    assertNoTopologyWrites();
   });
 
   it("exibe vínculos salvos mesmo quando as posições ainda são prévias", async () => {
@@ -141,11 +209,13 @@ describe("InventoryNetworkTopologyView", () => {
     permissions.manage = false;
     api.createNetworkTopologyLink.mockResolvedValue({ link: { id: "permitted", sourceAssetId: "d1", targetAssetId: "d2", type: "ethernet" } });
     render(<InventoryNetworkTopologyView {...props} />);
-    const first = await openSegment();
+    await openSegment();
     expect(screen.getByRole("button", { name: "Editando" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Salvar layout" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Criar conexão" }));
-    fireEvent.keyDown(first, { key: "Enter" });
+    fireEvent.click(screen.getByRole("button", { name: "Conectar ativos" }));
+    expect(screen.getByText(/Clique no primeiro ativo/)).toBeVisible();
+    fireEvent.keyDown(screen.getByRole("button", { name: "Desktop A, ver ativo" }), { key: "Enter" });
+    expect(screen.getByText(/Ativo de origem selecionado/)).toBeVisible();
     fireEvent.keyDown(screen.getByRole("button", { name: "Desktop B, ver ativo" }), { key: "Enter" });
     await waitFor(() => expect(api.createNetworkTopologyLink).toHaveBeenCalledTimes(1));
     expect(api.createNetworkTopologyNode).not.toHaveBeenCalled();
@@ -184,7 +254,7 @@ describe("InventoryNetworkTopologyView", () => {
     render(<InventoryNetworkTopologyView {...props} />);
     await openSegment();
     expect(screen.getByRole("button", { name: "Visualizando" })).toBeDisabled();
-    expect(screen.queryByRole("button", { name: "Criar conexão" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Conectar ativos" })).not.toBeInTheDocument();
     assertNoTopologyWrites();
   });
 
@@ -272,7 +342,7 @@ describe("InventoryNetworkTopologyView", () => {
     render(<InventoryNetworkTopologyView {...props} />);
     const device = await openSegment();
     fireEvent.keyDown(device, { key: " " });
-    expect(screen.getByRole("button", { name: "Criar conexão" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Conectar ativos" })).toBeEnabled();
     expect(screen.queryByRole("button", { name: "Remover do mapa" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Adicionar ao mapa" })).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText("Adicionar ativo ao mapa...")).not.toBeInTheDocument();

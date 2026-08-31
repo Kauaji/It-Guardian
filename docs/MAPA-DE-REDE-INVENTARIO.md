@@ -3,9 +3,9 @@
 ## Objetivo
 
 O Mapa de Rede e uma quarta visualizacao do Inventario, ao lado de Quadro,
-Plantas e Mapa 3D: ativos reais do inventario aparecem como nos num canvas
-SVG, com conexoes manuais entre eles, cor por status, arrastar-para-
-posicionar e um layout automatico inicial. E inspirado conceitualmente em
+Plantas e Mapa 3D: grupos, segmentos e ativos reais aparecem como nos num
+canvas SVG em seus respectivos niveis, com conexoes manuais entre itens do
+mesmo tipo, cor por status e posicoes livres. E inspirado conceitualmente em
 ferramentas de mapa de rede como o Zabbix Maps — nenhum asset, icone,
 texto ou layout foi copiado; a interface segue a identidade visual e os
 componentes ja existentes do IT Guardian (`AssetTypeIcon`, tokens de cor,
@@ -50,14 +50,19 @@ A partir desta rodada, o Mapa de Rede deixou de ser um canvas único e
 global e passou a navegar pela hierarquia real do Inventário:
 
 - **Aba** (nível inicial ao abrir a tela): mostra os grupos daquela aba
-  como uma grade de cards, com status e contagem agregados — sem posição
-  própria, é uma visão computada, não um canvas.
-- **Grupo**: clicar num card de grupo mostra a grade de segmentos daquele
-  grupo, também agregada.
-- **Segmento**: clicar num card de segmento (ou num segmento na árvore
-  lateral) abre o canvas de verdade daquele segmento — arrastar, salvar
-  layout, criar conexão, tudo funciona exatamente como antes, só que por
-  segmento em vez de um único mapa global.
+  como nos de canvas, com status e contagem agregados. Neste nível a ação
+  **Conectar grupos** cria linhas manuais entre dois grupos co-visíveis.
+  Segmentos sem grupo tambem aparecem nesse canvas; quando os dois tipos
+  coexistem, a acao passa a se chamar **Conectar itens do mesmo tipo**.
+- **Grupo**: mostra os segmentos daquele grupo como nos de canvas. A ação
+  **Conectar segmentos** cria linhas manuais entre dois segmentos daquele
+  grupo.
+- **Segmento**: mostra os ativos do segmento. A ação **Conectar ativos**
+  preserva o fluxo original de ligação entre duas máquinas ou equipamentos.
+
+Os itens do Inventário aparecem automaticamente em cada nível; salvar uma
+posição materializa apenas o no movido. Assim, uma conexão pode ser criada
+sem antes gravar posições artificiais para todos os itens.
 
 Um painel lateral (`NetworkTopologyHierarchySidebar`) mostra a árvore
 Grupo → Segmento da aba atual (com busca), e um breadcrumb no topo mostra
@@ -96,28 +101,27 @@ status real dos ativos — nunca inventado:
   mesmo status → herda esse status; algum filho `crítico` → `crítico`;
   filhos discordando sem nenhum crítico → `misto`.
 
-### Mapa por segmento (get-or-create, sem migration)
+### Mapa por nivel (get-or-create)
 
 A coluna `scope_type` de `network_topology_maps` já aceitava
 `segment`/`group`/`inventory_tab` desde a v1, mas nenhum código usava isso
 — ver "Limitações conhecidas" da versão anterior deste documento. Agora,
-`GET /api/topology-maps/by-scope?scopeType=segment&scopeId=...` cria o
-mapa daquele segmento na primeira visita (nome = nome real do segmento) e
-reaproveita nas visitas seguintes — zero migration, 100% do CRUD de
-nó/link já existente reaproveitado sem alteração. O fluxo antigo (um único
+`GET /api/topology-maps/by-scope` cria ou reaproveita um mapa para o escopo
+`inventory_tab`, `group` ou `segment`. A migration
+`026-network-topology-cluster-nodes` estendeu nos e links com tipos
+`group`/`segment`, mantendo `asset` como padrao para todos os registros
+anteriores. O fluxo antigo (um único
 mapa "global", escolhido por dropdown) continua existindo, intacto, atrás
 do link "Visão global (legado)" no topo da tela — nenhum mapa/nó/link
 criado antes desta rodada foi apagado ou migrado.
 
-### Escopo desta rodada (o que fica para depois)
+### Compatibilidade dos nos e links tipados
 
-Grupo e Aba mostram grades agregadas, **não** canvas com posição livre
-persistida. Fazer isso exigiria generalizar `network_topology_nodes` para
-um formato `node_type` (`asset`/`segment`/`group`) + `ref_id` + `parent_id`
-— uma migration real, mapeando as linhas existentes para
-`node_type = 'asset'` sem perder nada, mais um renderizador de nó
-generalizado. Ficou documentado como próximo passo (ver seção no fim
-deste documento), não implementado em silêncio.
+`network_topology_nodes.node_type` distingue `asset`, `segment` e `group`;
+ativos continuam usando `asset_id`, enquanto clusters usam `ref_id`.
+Links usam `source_type`/`target_type` e exigem os dois lados do mesmo tipo.
+Os nomes históricos `source_asset_id`/`target_asset_id` foram preservados
+como campos genéricos de referência para evitar uma migração destrutiva.
 
 ## Onde fica
 
@@ -128,13 +132,14 @@ Mapa 3D nao baixa o codigo do Mapa de Rede.
 
 ## Persistencia
 
-- `network_topology_maps`: nome, escopo (`scope_type`/`scope_id`, hoje só
-  `global` é usado pela interface — ver Limitacoes), autor, auditoria.
-- `network_topology_nodes`: `map_id`, `asset_id` (sem chave estrangeira —
-  ver justificativa abaixo), `x`/`y`, `pinned`, rotulo opcional.
-- `network_topology_links`: `map_id`, `source_asset_id`/`target_asset_id`
-  (sem chave estrangeira), rotulo, tipo (`ethernet`/`wifi`/`fiber`/
-  `logical`/`unknown`), status manual opcional, descricao.
+- `network_topology_maps`: nome, escopo (`global`, `inventory_tab`, `group`
+  ou `segment` em `scope_type`/`scope_id`), autor e auditoria.
+- `network_topology_nodes`: `map_id`, `node_type`, `asset_id` para ativos ou
+  `ref_id` para grupo/segmento, `x`/`y`, `pinned`, rotulo opcional.
+- `network_topology_links`: `map_id`, `source_type`/`target_type`,
+  `source_asset_id`/`target_asset_id` como referencias genericas, rotulo,
+  tipo (`ethernet`/`wifi`/`fiber`/`logical`/`unknown`), status manual
+  opcional e descricao.
 
 **Por que `asset_id` nao tem `REFERENCES`**: ativos do IT Guardian vem de
 fontes diferentes (agente Windows, cadastro manual, OCS, Zabbix) sem uma
@@ -147,21 +152,17 @@ devices — exatamente a regra de negocio pedida ("remover um ativo do
 inventario nao deve quebrar o mapa"; o no aparece marcado como "Ativo
 removido do inventário").
 
-Duplicidade e bloqueada em duas camadas: indice unico `(map_id,
-asset_id)` para nos, e `(map_id, source_asset_id, target_asset_id)` mais
-uma checagem na camada de servico (`ensureLinkNotDuplicate`) que tambem
-recusa a mesma conexao na ordem invertida (A→B e B→A contam como a
-mesma conexao).
+Duplicidade e bloqueada em duas camadas: restricoes por mapa/tipo/referencia
+para nos e uma checagem na camada de servico (`ensureLinkNotDuplicate`) que
+considera tambem o tipo de cada ponta e recusa a mesma conexao na ordem
+invertida (A→B e B→A contam como a mesma conexao).
 
 ## Endpoints
 
 - `GET/POST /api/topology-maps`
-- `GET /api/topology-maps/by-scope?scopeType=segment|group&scopeId=...` —
-  get-or-create: devolve o mapa daquele segmento/grupo, criando com o nome
-  real do segmento/grupo se ainda não existir. 404 se o segmento/grupo não
-  existir, 400 se `scopeType` não for `segment` nem `group`. Precisa estar
-  registrada antes de `GET /:id` no router, senão o Express casaria
-  `by-scope` como um id.
+- `GET /api/topology-maps/by-scope?scopeType=inventory_tab|group|segment&scopeId=...`
+  — get-or-create por nivel. Grupo e segmento sao validados no banco; aba
+  usa o id/nome do filtro local do Inventario, que nao possui tabela propria.
 - `GET/PATCH/DELETE /api/topology-maps/:id` — o `GET` retorna
   `{map, nodes, links}` num payload so.
 - `POST /api/topology-maps/:id/nodes`
@@ -206,10 +207,16 @@ vez.
 
 ## Como criar uma conexao
 
-Em modo edicao, clique "Criar conexao", depois clique no ativo de origem
-e no ativo de destino (dois cliques, nessa ordem). O botao mostra
-"Selecione o destino" enquanto aguarda o segundo clique. Clicar em
-qualquer lugar vazio do canvas cancela o modo de criacao de conexao.
+A acao fica sempre visivel quando o usuario tem permissao e existem pelo
+menos dois itens: **Conectar grupos** na aba, **Conectar segmentos** dentro
+do grupo e **Conectar ativos** dentro do segmento. Clicar nela entra em
+edicao e pede dois cliques, origem e destino. A barra e o guia contextual
+mostram qual ponta falta; `Escape`, o botao "Cancelar conexao" ou um clique
+no fundo do canvas cancelam a selecao. Depois de salvar, clicar na linha
+abre o inspetor para editar rotulo, tipo, status/descricao ou remover a
+conexao. Em uma aba mista (grupos e segmentos avulsos), so pares do mesmo
+tipo sao aceitos; a acao fica desabilitada se nenhum tipo tiver ao menos
+dois nos visiveis.
 
 ## Como salvar o layout
 
@@ -248,11 +255,9 @@ que ela liga estao visiveis.
 
 ## Limitacoes conhecidas
 
-- Grupo e Aba mostram grade agregada, nao canvas com posicao livre — ver
-  "Escopo desta rodada" acima.
-- `scope_type = "inventory_tab"` continua sem uso — aba nao e uma relacao
-  real do banco (ver secao acima), entao nao faz sentido um mapa "por
-  aba" da mesma forma que existe "por segmento"/"por grupo".
+- Aba continua sendo um filtro local, sem entidade/FK propria no banco;
+  `scope_type = "inventory_tab"` persiste o mapa usando esse identificador
+  local, com a mesma politica ja adotada por Plantas.
 - Sem integracao real de monitoramento de link (ver secao acima).
 - Pan/zoom e drag-and-drop sao implementacao propria (SVG + `viewBox` +
   eventos de ponteiro), inspirados no padrao ja usado em Plantas, mas sem
@@ -266,11 +271,6 @@ que ela liga estao visiveis.
 
 ## Proximos passos
 
-- Canvas com posicao livre persistida nos niveis Grupo e Aba: exige
-  generalizar `network_topology_nodes` para `node_type`
-  (`asset`/`segment`/`group`) + `ref_id` + `parent_id` (migration real,
-  mapeando linhas existentes para `node_type = 'asset'`), um renderizador
-  de no generalizado, e endpoints de posicao em lote por nivel.
 - Integracao de status de link com dado real de monitoramento
   (OCS/Zabbix), quando existir uma fonte de dado real para isso.
 - Alinhamento/guias de arrastar, marcacao em lote, e um modo de

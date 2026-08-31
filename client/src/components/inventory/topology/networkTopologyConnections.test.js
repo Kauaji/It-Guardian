@@ -1,7 +1,14 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as api from "../../../api.js";
-import { buildTopologyLinkPayload, clusterDevices, linkConnectsNodes, topologyNodeKey } from "./networkTopologyConnections.js";
+import {
+  buildTopologyLinkPayload,
+  clusterDevices,
+  hasTopologyConnectionPair,
+  hasTopologyConnectionPartner,
+  linkConnectsNodes,
+  topologyNodeKey
+} from "./networkTopologyConnections.js";
 import useTopologyLinkCreation from "./useTopologyLinkCreation.js";
 
 vi.mock("../../../api.js", () => ({ createNetworkTopologyLink: vi.fn(), fetchNetworkTopologyMap: vi.fn() }));
@@ -23,6 +30,14 @@ describe("identidade das conexões", () => {
     const b = { id: "b", name: "Servidor B" };
     expect(clusterDevices({ segments: [{ devices: [b, a] }, { devices: [a] }] }, "group")).toEqual([a, b]);
     expect(clusterDevices(null, "group")).toEqual([]);
+  });
+  it("só considera conectável um conjunto com dois itens do mesmo tipo", () => {
+    const segment = { id: "preview-segment-a", nodeType: "segment", refId: "s1", preview: true };
+    expect(hasTopologyConnectionPair([group, segment])).toBe(false);
+    expect(hasTopologyConnectionPair([group, segment, { ...group, id: "preview-group-b", refId: "b" }])).toBe(true);
+    expect(hasTopologyConnectionPair([first, second])).toBe(true);
+    expect(hasTopologyConnectionPartner([group, segment], group)).toBe(false);
+    expect(hasTopologyConnectionPartner([first, second, group], first)).toBe(true);
   });
 });
 
@@ -105,6 +120,22 @@ describe("criação manual de conexões", () => {
     const { result } = renderHook(() => useTopologyLinkCreation({ ...options, enabled: false }));
     connect(result);
     expect(result.current.active).toBe(false);
+    expect(api.createNetworkTopologyLink).not.toHaveBeenCalled();
+  });
+  it("não inicia quando os únicos itens visíveis têm tipos diferentes", () => {
+    const { result } = renderHook(() => useTopologyLinkCreation({ ...options, nodes: [first, group] }));
+    act(() => result.current.start());
+    expect(result.current.active).toBe(false);
+    expect(api.createNetworkTopologyLink).not.toHaveBeenCalled();
+  });
+  it("rejeita como origem um item sem par, mas mantém a seleção ativa", () => {
+    const segment = { id: "preview-segment", nodeType: "segment", refId: "s1", preview: true };
+    const { result } = renderHook(() => useTopologyLinkCreation({ ...options, nodes: [first, second, segment] }));
+    act(() => result.current.start());
+    act(() => result.current.activate(segment));
+    expect(result.current.active).toBe(true);
+    expect(result.current.sourceNodeId).toBeNull();
+    expect(result.current.error).toMatch(/mesmo tipo visível/);
     expect(api.createNetworkTopologyLink).not.toHaveBeenCalled();
   });
 });

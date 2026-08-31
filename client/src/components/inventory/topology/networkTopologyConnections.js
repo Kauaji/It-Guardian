@@ -17,6 +17,28 @@ export function linkConnectsNodes(link, first, second) {
   return (source === a && target === b) || (source === b && target === a);
 }
 
+export function hasTopologyConnectionPair(nodes = []) {
+  const countsByType = new Map();
+  for (const node of nodes) {
+    const type = node?.nodeType || "asset";
+    const nextCount = (countsByType.get(type) || 0) + 1;
+    if (nextCount >= 2) return true;
+    countsByType.set(type, nextCount);
+  }
+  return false;
+}
+
+export function hasTopologyConnectionPartner(nodes = [], node) {
+  if (!node) return false;
+  const type = node.nodeType || "asset";
+  const key = topologyNodeKey(node);
+  return nodes.some((candidate) =>
+    candidate &&
+    (candidate.nodeType || "asset") === type &&
+    topologyNodeKey(candidate) !== key
+  );
+}
+
 export function buildTopologyLinkPayload(first, second) {
   // Connections are undirected. A stable endpoint order also avoids creating
   // the same pair in reverse from two clients using this flow.
