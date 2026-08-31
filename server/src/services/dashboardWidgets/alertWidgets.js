@@ -1,6 +1,6 @@
 import { getAlertCompactLabel } from "../alertService.js";
 
-const severityLabels = { critical: "Critica", high: "Alta", medium: "Media", low: "Baixa", warning: "Atencao" };
+const severityLabels = { critical: "Critica", high: "Alta", medium: "Media", low: "Baixa", warning: "Atencao", info: "Informativa" };
 
 function clampLimit(value, fallback = 5, max = 20) {
   const number = Number(value);
@@ -30,11 +30,10 @@ export async function fetchAlertsBySeverity(config, ctx) {
   const activeAlerts = await ctx.getActiveAlerts();
   const counts = new Map();
   for (const alert of activeAlerts) {
-    const label = severityLabels[alert.severity] || alert.severity;
-    counts.set(label, (counts.get(label) || 0) + 1);
+    counts.set(alert.severity, (counts.get(alert.severity) || 0) + 1);
   }
   const rows = Array.from(counts.entries())
-    .map(([label, count]) => ({ label, count }))
+    .map(([severity, count]) => ({ severity, label: severityLabels[severity] || severity, count }))
     .sort((a, b) => b.count - a.count);
   return { total: activeAlerts.length, rows };
 }

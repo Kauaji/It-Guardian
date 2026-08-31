@@ -1,7 +1,10 @@
 import { listAlerts } from "../../repositories/alertRepository.js";
+import { listLogs } from "../../repositories/logRepository.js";
+import { listRecentScriptExecutionLogs } from "../../repositories/maintenanceScriptRepository.js";
 import { getServiceOrderSettings, listServiceOrders } from "../../repositories/serviceOrderRepository.js";
 import { getActiveAlertsWithAcknowledgements } from "../alertService.js";
 import { listDevices } from "../monitoringService.js";
+import { withDashboardFilters } from "./widgetFilters.js";
 
 /**
  * Varios widgets recontam as mesmas listas (dispositivos, alertas, ordens de
@@ -11,7 +14,7 @@ import { listDevices } from "../monitoringService.js";
  * se 5 widgets pedirem listDevices() na mesma preview/layout render, so uma
  * consulta real acontece.
  */
-export function createWidgetContext({ user } = {}) {
+export function createWidgetContext({ user, filters = {} } = {}) {
   const cache = new Map();
 
   function memo(key, loader) {
@@ -19,11 +22,13 @@ export function createWidgetContext({ user } = {}) {
     return cache.get(key);
   }
 
-  return {
+  return withDashboardFilters({
     getDevices: () => memo("devices", () => listDevices({})),
     getActiveAlerts: () => memo("activeAlerts", () => getActiveAlertsWithAcknowledgements()),
     getAllAlerts: () => memo("allAlerts", () => listAlerts({})),
     getServiceOrders: () => memo("serviceOrders", () => listServiceOrders(user)),
-    getServiceOrderSettings: () => memo("serviceOrderSettings", () => getServiceOrderSettings())
-  };
+    getServiceOrderSettings: () => memo("serviceOrderSettings", () => getServiceOrderSettings()),
+    getRecentEventLogs: () => memo("eventLogs", () => listLogs()),
+    getRecentScriptExecutionLogs: (limit) => memo(`scriptLogs:${limit}`, () => listRecentScriptExecutionLogs({ limit }))
+  }, filters);
 }

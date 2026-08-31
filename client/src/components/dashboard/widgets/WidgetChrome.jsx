@@ -28,7 +28,7 @@ export default function WidgetChrome({ widget, editing, label, onRemove, onConfi
   };
 
   return (
-    <article ref={setNodeRef} style={style} className={`dashboard-widget-card ${editing ? "editing" : ""}`}>
+    <article ref={setNodeRef} style={style} data-widget-type={widget.type} data-width={widget.w || "m"} data-height={widget.h || "s"} aria-label={label} className={`dashboard-widget-card ${editing ? "editing" : ""}`}>
       <header className="dashboard-widget-card-header">
         {editing && (
           <button
@@ -41,7 +41,7 @@ export default function WidgetChrome({ widget, editing, label, onRemove, onConfi
             <GripVertical size={16} />
           </button>
         )}
-        <h4>{label}</h4>
+        <h4 title={label}>{label}</h4>
         {editing && (
           <div className="dashboard-widget-menu">
             <button

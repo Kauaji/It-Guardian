@@ -1,5 +1,5 @@
-import { closestCenter, DndContext, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
-import { arrayMove, rectSortingStrategy, SortableContext } from "@dnd-kit/sortable";
+import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { arrayMove, rectSortingStrategy, SortableContext, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import WidgetBody from "./WidgetBody.jsx";
 import WidgetChrome from "./WidgetChrome.jsx";
 import { widgetRegistry } from "./widgetRegistry.js";
@@ -12,7 +12,7 @@ import { reindexWidgetPositions, sortWidgetsByPosition } from "./widgetGridMath.
  * aqui nunca interfere no do Inventario e vice-versa.
  */
 export default function WidgetGrid({ token, widgets, editing, onReorder, onRemove, onResize, onConfigure }) {
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
   const ordered = sortWidgetsByPosition(widgets);
 
   function handleDragEnd(event) {

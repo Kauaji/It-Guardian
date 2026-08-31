@@ -91,8 +91,7 @@ describe("DashboardWorkspace", () => {
     fireEvent.click(screen.getByText("Adicionar widget"));
 
     await waitFor(() => expect(screen.getAllByText("Ultimos Eventos Tecnicos").length).toBeGreaterThan(0));
-    const catalogCard = screen.getAllByText("Ultimos Eventos Tecnicos")[0].closest("button");
-    fireEvent.click(catalogCard);
+    fireEvent.click(screen.getByRole("button", { name: "Adicionar Ultimos Eventos Tecnicos" }));
 
     await waitFor(() => {
       const titles = screen.getAllByText("Ultimos Eventos Tecnicos");
@@ -183,5 +182,65 @@ describe("DashboardWorkspace", () => {
 
     expect(getComputedStyle(card).gridColumn).toBe("span 12");
     expect(saveDashboardLayout).not.toHaveBeenCalled();
+  });
+
+  it("permite pré-visualizar pizza antes de adicionar e salva a visualização escolhida", async () => {
+    fetchDashboardLayout.mockResolvedValue({ widgets: [] });
+    fetchDashboardWidgetCatalog.mockResolvedValue({ widgets: baseCatalog() });
+    previewDashboardWidget.mockResolvedValue({ data: { total: 0, byStatus: {} } });
+    saveDashboardLayout.mockImplementation(async (_token, layout) => layout);
+    render(<DashboardWorkspace token="tok" canCustomize />);
+    await screen.findByRole("button", { name: "Editar dashboard" });
+    fireEvent.click(screen.getByRole("button", { name: "Editar dashboard" }));
+    fireEvent.click(screen.getByRole("button", { name: "Adicionar widget" }));
+    const selector = await screen.findByRole("combobox", { name: "Visualização de Disponibilidade de Ativos" });
+    fireEvent.change(selector, { target: { value: "pie" } });
+    expect(screen.getByRole("img", { name: "Prévia ilustrativa: Pizza" })).toBeTruthy();
+    expect(saveDashboardLayout).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Adicionar Disponibilidade de Ativos" }));
+    fireEvent.click(screen.getByRole("button", { name: "Salvar layout" }));
+    await waitFor(() => expect(saveDashboardLayout).toHaveBeenCalledWith("tok", {
+      widgets: [expect.objectContaining({ type: "asset_availability", config: { chartType: "pie" } })]
+    }));
+  });
+
+  it("cruza status entre os widgets, combina ativo e remove filtros sem persistir o layout", async () => {
+    const widgets = [widget({ config: { chartType: "bars" } }), widget({ id: "w2", type: "top_assets_cpu", config: { chartType: "bars" } })];
+    fetchDashboardLayout.mockResolvedValue({ widgets });
+    previewDashboardWidget.mockImplementation(async (_token, { type, filters }) => ({
+      type,
+      data: type === "asset_availability"
+        ? { total: filters?.assetStatus ? 1 : 3, byStatus: { online: filters?.assetStatus ? 0 : 2, offline: 1 } }
+        : { metric: "cpu", rows: [{ id: "asset-1", name: "Servidor A", value: 62 }] }
+    }));
+    render(<DashboardWorkspace token="tok" canCustomize />);
+    fireEvent.click(await screen.findByRole("button", { name: "Filtrar por Offline: 1" }));
+    expect(screen.getByRole("button", { name: "Remover filtro Status: Offline" })).toBeTruthy();
+    await waitFor(() => expect(previewDashboardWidget).toHaveBeenCalledWith("tok", expect.objectContaining({
+      type: "top_assets_cpu", filters: { assetStatus: "offline" }
+    }), expect.anything()));
+    fireEvent.click(await screen.findByRole("button", { name: "Filtrar por Servidor A: 62%" }));
+    await waitFor(() => expect(previewDashboardWidget).toHaveBeenCalledWith("tok", expect.objectContaining({
+      type: "asset_availability", filters: { assetStatus: "offline", assetId: "asset-1" }
+    }), expect.anything()));
+    fireEvent.click(screen.getByRole("button", { name: "Remover filtro Status: Offline" }));
+    await waitFor(() => expect(previewDashboardWidget).toHaveBeenCalledWith("tok", expect.objectContaining({
+      type: "asset_availability", filters: { assetId: "asset-1" }
+    }), expect.anything()));
+    fireEvent.click(screen.getByRole("button", { name: "Limpar filtros" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: /Remover filtro/ })).toBeNull());
+    expect(saveDashboardLayout).not.toHaveBeenCalled();
+  });
+
+  it("repete clique para remover seleção e pausa filtros por clique durante edição", async () => {
+    fetchDashboardLayout.mockResolvedValue({ widgets: [widget({ config: { chartType: "bars" } })] });
+    previewDashboardWidget.mockResolvedValue({ data: { total: 1, byStatus: { offline: 1 } } });
+    render(<DashboardWorkspace token="tok" canCustomize />);
+    fireEvent.click(await screen.findByRole("button", { name: "Filtrar por Offline: 1" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Filtrar por Offline: 1" })).toHaveAttribute("aria-pressed", "true"));
+    fireEvent.click(screen.getByRole("button", { name: "Filtrar por Offline: 1" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Remover filtro Status: Offline" })).toBeNull());
+    fireEvent.click(screen.getByRole("button", { name: "Editar dashboard" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Filtrar por Offline: 1" })).toBeDisabled());
   });
 });

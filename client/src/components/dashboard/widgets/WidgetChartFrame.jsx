@@ -7,7 +7,7 @@ import { useSettledWidthKey } from "../../../hooks/useSettledWidthKey.js";
  * primeiro paint) mas sem o <section>/panel-heading proprio -- o titulo ja
  * vem do WidgetChrome dentro de um widget.
  */
-export default function WidgetChartFrame({ empty, emptyMessage, height = 200, children }) {
+export default function WidgetChartFrame({ empty, emptyMessage, height, children }) {
   const settledWidthKey = useSettledWidthKey();
 
   if (empty) {
@@ -15,8 +15,8 @@ export default function WidgetChartFrame({ empty, emptyMessage, height = 200, ch
   }
 
   return (
-    <div className="chart-box" style={{ height }}>
-      <ResponsiveContainer key={settledWidthKey} width="100%" height="100%">
+    <div className="chart-box dashboard-widget-chart-frame" style={height ? { height } : undefined}>
+      <ResponsiveContainer key={settledWidthKey} width="100%" height="100%" minWidth={0} debounce={80}>
         {children}
       </ResponsiveContainer>
     </div>

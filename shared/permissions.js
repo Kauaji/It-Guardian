@@ -37,7 +37,7 @@ export const permissionGroups = [
     permissions: [
       { id: "inventory.topology.view", label: "Visualizar mapa de rede" },
       { id: "inventory.topology.manage", label: "Gerenciar mapas e ativos" },
-      { id: "inventory.topology.link_assets", label: "Conectar ativos no mapa" }
+      { id: "inventory.topology.link_assets", label: "Conectar itens no mapa" }
     ]
   },
   {

@@ -243,11 +243,11 @@ export function fetchDashboardWidgetCatalog(token) {
   return apiFetch("/dashboard/widgets/catalog", { token });
 }
 
-export function previewDashboardWidget(token, { type, config }, { signal } = {}) {
+export function previewDashboardWidget(token, { type, config, filters }, { signal } = {}) {
   return apiFetch("/dashboard/widgets/preview", {
     token,
     method: "POST",
-    body: JSON.stringify({ type, config }),
+    body: JSON.stringify({ type, config, ...(filters ? { filters } : {}) }),
     signal
   });
 }

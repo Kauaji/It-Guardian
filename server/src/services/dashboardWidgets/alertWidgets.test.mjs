@@ -31,7 +31,7 @@ test("fetchAlertsBySeverity agrupa pela severidade real, ordenado do maior para 
   );
   assert.equal(result.total, 3);
   assert.deepEqual(result.rows, [
-    { label: "Critica", count: 2 },
-    { label: "Baixa", count: 1 }
+    { severity: "critical", label: "Critica", count: 2 },
+    { severity: "low", label: "Baixa", count: 1 }
   ]);
 });

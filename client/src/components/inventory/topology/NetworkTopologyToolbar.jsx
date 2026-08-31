@@ -1,7 +1,6 @@
 import {
   Crosshair,
   Link2,
-  Maximize2,
   Pencil,
   RotateCcw,
   Save,
@@ -25,7 +24,6 @@ export default function NetworkTopologyToolbar({
   editMode,
   onToggleEditMode,
   onCenterView,
-  onFitView,
   onSaveLayout,
   hasDirtyPositions,
   saving,
@@ -33,6 +31,8 @@ export default function NetworkTopologyToolbar({
   onGenerateAutoLayout,
   generatingLayout,
   linkDraftActive,
+  linkDraftSourceNodeId,
+  creatingLink = false,
   onToggleLinkDraft,
   availableDevicesToAdd,
   onAddAsset,
@@ -46,9 +46,17 @@ export default function NetworkTopologyToolbar({
   segments,
   assetTypeOptions,
   canManage,
+  canLink = false,
+  canStartLink,
+  linkItemLabel = "itens",
   lockSegmentFilter = false,
-  isClusterLevel = false
+  isClusterLevel = false,
+  showManualAdd = false
 }) {
+  const layoutBusy = Boolean(saving || generatingLayout);
+  const manualAddBusy = Boolean(addingAsset || layoutBusy);
+  const linkActionAvailable = canStartLink ?? nodeCount >= 2;
+
   return (
     <div className="network-topology-toolbar">
       <div className="network-topology-toolbar-row">
@@ -57,27 +65,39 @@ export default function NetworkTopologyToolbar({
             type="button"
             className={`network-topology-toolbar-button ${editMode ? "is-active" : ""}`}
             onClick={onToggleEditMode}
-            disabled={!canManage}
+            disabled={(!canManage && !canLink) || creatingLink || layoutBusy}
             title={editMode ? "Voltar para modo visualização" : "Entrar em modo edição"}
           >
             {editMode ? <Pencil size={15} /> : <Eye size={15} />}
             {editMode ? "Editando" : "Visualizando"}
           </button>
+          {canLink ? <button
+            type="button"
+            className={`network-topology-toolbar-button is-link-action ${linkDraftActive ? "is-active" : ""}`}
+            onClick={onToggleLinkDraft}
+            disabled={!linkActionAvailable || creatingLink || layoutBusy}
+            aria-pressed={linkDraftActive}
+            title={!linkActionAvailable
+              ? `É preciso ter pelo menos dois ${linkItemLabel} neste mapa`
+              : linkDraftActive ? "Cancelar conexão" : `Criar conexão manual entre dois ${linkItemLabel}`}
+          >
+            <Link2 size={15} />
+            {creatingLink ? "Salvando conexão…" : linkDraftActive
+              ? (linkDraftSourceNodeId ? "Escolha o destino" : "Escolha a origem")
+              : `Conectar ${linkItemLabel}`}
+          </button> : null}
           <button type="button" className="network-topology-toolbar-button" onClick={onCenterView} title="Centralizar">
             <Crosshair size={15} />
-          </button>
-          <button type="button" className="network-topology-toolbar-button" onClick={onFitView} title="Ajustar à tela">
-            <Maximize2 size={15} />
           </button>
         </div>
 
         {editMode ? (
           <div className="network-topology-toolbar-group">
-            <button
+            {canManage ? <><button
               type="button"
               className="network-topology-toolbar-button"
               onClick={onSaveLayout}
-              disabled={!hasDirtyPositions || saving}
+              disabled={!hasDirtyPositions || layoutBusy}
             >
               <Save size={15} />
               {saving ? "Salvando..." : "Salvar layout"}
@@ -86,7 +106,7 @@ export default function NetworkTopologyToolbar({
               type="button"
               className="network-topology-toolbar-button"
               onClick={onResetLayout}
-              disabled={!hasDirtyPositions}
+              disabled={!hasDirtyPositions || layoutBusy}
             >
               <RotateCcw size={15} />
               Resetar
@@ -96,22 +116,12 @@ export default function NetworkTopologyToolbar({
                 type="button"
                 className="network-topology-toolbar-button"
                 onClick={onGenerateAutoLayout}
-                disabled={generatingLayout || nodeCount === 0}
+                disabled={layoutBusy || nodeCount === 0}
               >
                 <Sparkles size={15} />
                 {generatingLayout ? "Gerando..." : "Gerar automático"}
               </button>
-            ) : null}
-            <button
-              type="button"
-              className={`network-topology-toolbar-button ${linkDraftActive ? "is-active" : ""}`}
-              onClick={onToggleLinkDraft}
-              disabled={nodeCount < 2}
-              title="Criar conexão"
-            >
-              <Link2 size={15} />
-              {linkDraftActive ? "Selecione o destino" : "Criar conexão"}
-            </button>
+            ) : null}</> : null}
           </div>
         ) : null}
 
@@ -123,14 +133,18 @@ export default function NetworkTopologyToolbar({
         </div>
       </div>
 
-      {editMode ? (
-        <div className="network-topology-toolbar-row">
+      {showManualAdd && editMode && canManage ? (
+        <fieldset
+          className="network-topology-toolbar-row"
+          disabled={manualAddBusy}
+          style={{ minWidth: 0, margin: 0, padding: 0, border: 0 }}
+        >
           {isClusterLevel ? (
-            <NetworkTopologyAddClusterPicker items={availableClustersToAdd} onPick={onAddCluster} disabled={addingAsset} />
+            <NetworkTopologyAddClusterPicker items={availableClustersToAdd} onPick={onAddCluster} disabled={manualAddBusy} />
           ) : (
-            <NetworkTopologyAddAssetPicker devices={availableDevicesToAdd} onPick={onAddAsset} disabled={addingAsset} />
+            <NetworkTopologyAddAssetPicker devices={availableDevicesToAdd} onPick={onAddAsset} disabled={manualAddBusy} />
           )}
-        </div>
+        </fieldset>
       ) : null}
 
       {!isClusterLevel ? (

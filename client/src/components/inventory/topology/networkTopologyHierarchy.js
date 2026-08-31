@@ -5,7 +5,17 @@
  * "sem_dados", nunca num valor "bonito" inventado.
  */
 
+import { normalizeMaintenanceName } from "../../../utils/display.js";
+
 const STATUS_ORDER = ["critico", "atencao", "misto", "online", "sem_dados"];
+
+export function isTopologySegmentEligible(segment) {
+  if (!segment || segment.isDefault || segment.isMaintenanceSegment || segment.isBackupSegment) return false;
+  const systemSegment = normalizeMaintenanceName(String(segment.systemSegment || ""));
+  if (["maintenance", "manutencao", "backup"].includes(systemSegment)) return false;
+  const name = normalizeMaintenanceName(String(segment.name || ""));
+  return name !== "manutencao" && name !== "backup";
+}
 
 export function computeSegmentStatus(devices = []) {
   if (!devices.length) return "sem_dados";
@@ -99,7 +109,7 @@ export function summarizeSegment(segment, devicesBySegment) {
  */
 export function summarizeGroup(group, segments, devicesBySegment) {
   const groupSegments = segments
-    .filter((segment) => (segment.groupId || "") === group.id)
+    .filter((segment) => isTopologySegmentEligible(segment) && (segment.groupId || "") === group.id)
     .map((segment) => summarizeSegment(segment, devicesBySegment));
   const deviceCount = groupSegments.reduce((total, segment) => total + segment.deviceCount, 0);
   return {
@@ -118,15 +128,23 @@ export function summarizeGroup(group, segments, devicesBySegment) {
  * reais do banco (group_id, segmentId), sem repetir logica de filtro de aba.
  */
 export function buildHierarchyTree({ groups = [], segments = [], devices = [] }) {
-  const devicesBySegment = groupDevicesBySegment(devices);
-  const groupSummaries = groups.map((group) => summarizeGroup(group, segments, devicesBySegment));
-  const ungroupedSegments = segments
-    .filter((segment) => !segment.groupId)
+  const eligibleSegments = segments.filter(isTopologySegmentEligible);
+  const eligibleSegmentIds = new Set(eligibleSegments.map((segment) => segment.id));
+  const devicesBySegment = groupDevicesBySegment(
+    devices.filter((device) => eligibleSegmentIds.has(device.segmentId))
+  );
+  const groupIds = new Set(groups.map((group) => group.id));
+  const groupSummaries = groups.map((group) => summarizeGroup(group, eligibleSegments, devicesBySegment));
+  const ungroupedSegments = eligibleSegments
+    .filter((segment) => !groupIds.has(segment.groupId))
     .map((segment) => summarizeSegment(segment, devicesBySegment));
 
   return {
     groups: groupSummaries,
     ungroupedSegments,
+    // Kept only as an empty compatibility field; operational queues are not
+    // topology segments, and no inventory record is changed by this filter.
+    maintenanceSegments: [],
     tabStatus: computeTabStatus([
       ...groupSummaries.map((group) => group.status),
       ...ungroupedSegments.map((segment) => segment.status)

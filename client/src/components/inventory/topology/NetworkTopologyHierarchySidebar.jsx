@@ -83,7 +83,8 @@ export default function NetworkTopologyHierarchySidebar({
             type="button"
             className="network-topology-hierarchy-collapse-toggle"
             onClick={() => toggleSegmentExpanded(segment.id)}
-            aria-label={expanded ? "Recolher segmento" : "Expandir segmento"}
+            aria-label={`${expanded ? "Recolher" : "Expandir"} segmento ${segment.name}`}
+            aria-expanded={expanded}
           >
             {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
           </button>
@@ -123,7 +124,7 @@ export default function NetworkTopologyHierarchySidebar({
   }
 
   return (
-    <aside className="network-topology-hierarchy-sidebar">
+    <nav className="network-topology-hierarchy-sidebar" aria-label="Hierarquia do inventário">
       {tabs?.length > 1 ? (
         <div className="network-topology-tab-chips" role="tablist" aria-label="Abas do inventário">
           {tabs.map((tab) => (
@@ -145,6 +146,7 @@ export default function NetworkTopologyHierarchySidebar({
         <Search size={14} />
         <input
           type="search"
+          aria-label="Buscar grupo ou segmento"
           placeholder="Buscar grupo ou segmento..."
           value={query}
           onChange={(event) => setQuery(event.target.value)}
@@ -161,7 +163,8 @@ export default function NetworkTopologyHierarchySidebar({
                   type="button"
                   className="network-topology-hierarchy-collapse-toggle"
                   onClick={() => toggleGroupCollapsed(group.id)}
-                  aria-label={collapsed ? "Expandir grupo" : "Recolher grupo"}
+                  aria-label={`${collapsed ? "Expandir" : "Recolher"} grupo ${group.name}`}
+                  aria-expanded={!collapsed}
                 >
                   {collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
                 </button>
@@ -176,7 +179,7 @@ export default function NetworkTopologyHierarchySidebar({
                     style={{ background: getAggregateStatusColorToken(group.status) }}
                   />
                   <strong>{group.name}</strong>
-                  <span className="network-topology-hierarchy-count">{group.segmentCount}</span>
+                  <span className="network-topology-hierarchy-count" title={`${group.deviceCount} ativo(s) em ${group.segmentCount} segmento(s)`}>{group.deviceCount}</span>
                 </button>
               </div>
               {!collapsed ? (
@@ -209,6 +212,6 @@ export default function NetworkTopologyHierarchySidebar({
           <p className="network-topology-hierarchy-empty">Nenhum grupo ou segmento encontrado.</p>
         ) : null}
       </div>
-    </aside>
+    </nav>
   );
 }

@@ -28,8 +28,8 @@ test("fetchServiceOrdersByStatus agrupa pelo nome real do status configurado", a
   );
   assert.equal(result.total, 3);
   assert.deepEqual(result.rows, [
-    { label: "Aberta", count: 2 },
-    { label: "Finalizada", count: 1 }
+    { status: "open", label: "Aberta", count: 2 },
+    { status: "closed", label: "Finalizada", count: 1 }
   ]);
 });
 
@@ -38,6 +38,19 @@ test("fetchServiceOrdersSla nao inventa tempo medio quando nenhuma OS tem os doi
   assert.equal(result.openCount, 1);
   assert.equal(result.averageResolutionMinutes, null);
   assert.equal(result.averageFirstResponseMinutes, null);
+});
+
+test("status com nomes iguais preservam IDs distintos para selecao sem ambiguidade", async () => {
+  const result = await fetchServiceOrdersByStatus({}, fakeCtx({
+    serviceOrders: [order({ status: "waiting_a" }), order({ id: "os-2", status: "waiting_b" })],
+    serviceOrderSettings: {
+      statuses: [{ id: "waiting_a", name: "Aguardando" }, { id: "waiting_b", name: "Aguardando" }]
+    }
+  }));
+  assert.deepEqual(result.rows, [
+    { status: "waiting_a", label: "Aguardando", count: 1 },
+    { status: "waiting_b", label: "Aguardando", count: 1 }
+  ]);
 });
 
 test("fetchServiceOrdersSla calcula o tempo medio de resolucao real quando ha OS finalizadas", async () => {

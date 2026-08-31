@@ -19743,6 +19743,12 @@ button.dashboard-ranking-item.clickable:hover {
   color: var(--accent);
 }
 
+.network-topology-toolbar-button.is-link-action:not(.is-active) {
+  background: color-mix(in srgb, var(--accent) 5%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
+  color: var(--accent);
+}
+
 .network-topology-toolbar-button.is-danger {
   color: var(--status-danger);
 }

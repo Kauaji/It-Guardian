@@ -1,4 +1,4 @@
-import { deriveLinkStatus, getStatusColorToken } from "./networkTopologyModel.js";
+import { deriveLinkStatus, getStatusColorToken, resolveEntityLabel } from "./networkTopologyModel.js";
 
 export default function NetworkTopologyLink({
   link,
@@ -16,11 +16,25 @@ export default function NetworkTopologyLink({
   const color = getStatusColorToken(status);
   const midX = (sourceNode.x + targetNode.x) / 2;
   const midY = (sourceNode.y + targetNode.y) / 2;
+  const endpointName = (side) => {
+    const type = link[`${side}Type`] || "asset";
+    const id = link[`${side}AssetId`];
+    return resolveEntityLabel(type, type === "asset" ? devicesById.get(id) : clusterSummaryByRefId?.get(id));
+  };
 
   return (
     <g
       className={["network-topology-link", selected && "is-selected", justCreated && "is-new"].filter(Boolean).join(" ")}
-      onClick={() => onClick(link.id)}
+      role="button"
+      tabIndex={0}
+      aria-label={`Conexão entre ${endpointName("source")} e ${endpointName("target")}${link.label ? `: ${link.label}` : ""}`}
+      onClick={(event) => { event.stopPropagation(); onClick(link.id); }}
+      onKeyDown={(event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        event.stopPropagation();
+        onClick(link.id);
+      }}
     >
       <line
         x1={sourceNode.x}

@@ -1,8 +1,10 @@
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { useEffect, useMemo, useState } from "react";
+import { isMaintenanceSegmentName } from "../../utils/display.js";
 import { getSegmentGroupId } from "./inventoryUtils.js";
 
 function SidebarSegmentDropItem({ segment, selected, count, machineDragActive, onSelectSegment }) {
+  const isMaintenance = isMaintenanceSegmentName(segment.name || "");
   const { isOver, setNodeRef } = useDroppable({
     id: `sidebar-segment-${segment.id}`,
     data: { type: "sidebar-segment", segmentId: segment.id }
@@ -15,7 +17,7 @@ function SidebarSegmentDropItem({ segment, selected, count, machineDragActive, o
   } = useDraggable({
     id: `sidebar-segment-drag-${segment.id}`,
     data: { type: "segment", segmentId: segment.id, origin: "sidebar" },
-    disabled: segment.isDefault || machineDragActive
+    disabled: segment.isDefault || isMaintenance || machineDragActive
   });
 
   return (
@@ -28,7 +30,7 @@ function SidebarSegmentDropItem({ segment, selected, count, machineDragActive, o
       <span
         ref={setDragNodeRef}
         className={`sidebar-segment-drag-handle ${isDragging ? "dragging" : ""}`}
-        title={segment.isDefault ? "Segmento padrao nao pode ser movido" : "Mover segmento"}
+        title={isMaintenance ? "Manutenção não pertence a grupos" : segment.isDefault ? "Segmento padrao nao pode ser movido" : "Mover segmento"}
         {...attributes}
         {...listeners}
       >
@@ -78,6 +80,12 @@ export default function SidebarSegmentFilter({
     }
     return next;
   }, [devices]);
+  const maintenanceSegments = useMemo(
+    () => visibleSegments.filter((segment) => (
+      isMaintenanceSegmentName(segment.name || "") && (countBySegment.get(segment.id) || 0) > 0
+    )),
+    [countBySegment, visibleSegments]
+  );
   const segmentsByGroupId = useMemo(() => {
     const next = new Map([["", []]]);
 
@@ -86,6 +94,7 @@ export default function SidebarSegmentFilter({
     }
 
     for (const segment of visibleSegments) {
+      if (isMaintenanceSegmentName(segment.name || "")) continue;
       const groupId = getSegmentGroupId(segment, groups);
       const list = next.get(groupId) || [];
       list.push(segment);
@@ -193,6 +202,16 @@ export default function SidebarSegmentFilter({
           ))}
         </SidebarGroupDropSection>
       )}
+      {maintenanceSegments.map((segment) => (
+        <SidebarSegmentDropItem
+          key={segment.id}
+          segment={segment}
+          selected={selectedSegmentId === segment.id}
+          count={countBySegment.get(segment.id) || 0}
+          machineDragActive={machineDragActive}
+          onSelectSegment={onSelectSegment}
+        />
+      ))}
     </div>
   );
 }
