@@ -24,6 +24,7 @@ import { migration021ServiceOrderReopen } from "./021-service-order-reopen.js";
 import { migration022ServiceOrderChecklists } from "./022-service-order-checklists.js";
 import { migration023ServiceOrderAttachments } from "./023-service-order-attachments.js";
 import { migration024ServiceOrderFeedback } from "./024-service-order-feedback.js";
+import { migration025ReportExports } from "./025-report-exports.js";
 import { migration025AssetMetricHistory } from "./025-asset-metric-history.js";
 import { migration026NetworkTopologyClusterNodes } from "./026-network-topology-cluster-nodes.js";
 import { migration027CalendarEvents } from "./027-calendar-events.js";
@@ -56,6 +57,7 @@ export const migrations = [
   migration022ServiceOrderChecklists,
   migration023ServiceOrderAttachments,
   migration024ServiceOrderFeedback,
+  migration025ReportExports,
   migration025AssetMetricHistory,
   migration026NetworkTopologyClusterNodes,
   migration027CalendarEvents,

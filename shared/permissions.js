@@ -165,6 +165,20 @@ export const permissionGroups = [
     ]
   },
   {
+    id: "reports",
+    label: "Relatórios",
+    permissions: [
+      { id: "reports.view", label: "Visualizar relatórios" },
+      { id: "reports.export", label: "Exportar relatórios (CSV)" },
+      { id: "reports.view_service_orders", label: "Ver relatório de Ordens de Serviço" },
+      { id: "reports.view_assets", label: "Ver relatório de Ativos" },
+      { id: "reports.view_alerts", label: "Ver relatório de Avisos" },
+      { id: "reports.view_scripts", label: "Ver relatório de Scripts" },
+      { id: "reports.view_remote_assistance", label: "Ver relatório de Assistência Remota" },
+      { id: "reports.manage", label: "Gerenciar histórico de exportações" }
+    ]
+  },
+  {
     id: "admin",
     label: "Admin",
     permissions: [
@@ -264,7 +278,11 @@ export const roleDefaultPermissions = {
     "preventive_automation.manage_asset_override",
     "preventive_automation.run_prepare",
     "settings.view",
-    "settings.appearance"
+    "settings.appearance",
+    "reports.view",
+    "reports.view_service_orders",
+    "reports.view_assets",
+    "reports.view_alerts"
   ],
   viewer: []
 };

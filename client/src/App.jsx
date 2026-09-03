@@ -4,6 +4,7 @@ import {
   Activity,
   AlertTriangle,
   Database,
+  FileBarChart,
   LogOut,
   Moon,
   PanelLeftClose,
@@ -120,6 +121,7 @@ const InventoryBoard = lazy(() => import("./components/inventory/InventoryBoard.
 const ServiceOrdersBoard = lazy(() => import("./components/serviceOrders/ServiceOrdersBoard.jsx"));
 const TechnicalCalendarPage = lazy(() => import("./components/calendar/TechnicalCalendarPage.jsx"));
 const PartsInventoryPage = lazy(() => import("./components/partsInventory/PartsInventoryPage.jsx"));
+const ReportsPage = lazy(() => import("./components/reports/ReportsPage.jsx"));
 const FloorPlansModule = lazy(() => import("./components/floorPlans/FloorPlansModule.jsx"));
 const InventoryNetworkTopologyView = lazy(() => import("./components/inventory/topology/InventoryNetworkTopologyView.jsx"));
 
@@ -136,6 +138,9 @@ function readInitialActiveView() {
   }
   if (typeof window !== "undefined" && window.location.pathname.startsWith("/plantas")) {
     return "inventory";
+  }
+  if (typeof window !== "undefined" && window.location.pathname.startsWith("/relatorios")) {
+    return "reports";
   }
 
   return "dashboard";
@@ -347,6 +352,7 @@ function Dashboard() {
   const canViewServiceOrders = hasPermission(user, "service_orders.view");
   const canViewCalendar = hasPermission(user, "calendar.view");
   const canViewPartsInventory = hasPermission(user, "parts_inventory.view");
+  const canViewReports = hasPermission(user, "reports.view");
   const canViewFloorPlans = hasPermission(user, "floor_plans.view");
   const canViewTopology = hasPermission(user, "inventory.topology.view");
   const {
@@ -432,8 +438,9 @@ function Dashboard() {
     if (canViewCalendar) views.push("calendar");
     if (canViewPartsInventory) views.push("parts-inventory");
     if (canViewInventory) views.push("inventory");
+    if (canViewReports) views.push("reports");
     return views;
-  }, [canViewAlerts, canViewCalendar, canViewDashboard, canViewInventory, canViewPartsInventory, canViewPreventiveAutomation, canViewPreventivePlans, canViewScripts, canViewServiceOrders]);
+  }, [canViewAlerts, canViewCalendar, canViewDashboard, canViewInventory, canViewPartsInventory, canViewPreventiveAutomation, canViewPreventivePlans, canViewReports, canViewScripts, canViewServiceOrders]);
   const canManageInventory =
     hasPermission(user, "inventory.create_asset") ||
     hasPermission(user, "inventory.edit_asset") ||
@@ -2901,6 +2908,11 @@ function Dashboard() {
               <CalendarDays size={18} /> <span className="nav-label">Agenda Técnica</span>
             </button>
           )}
+          {canViewReports && (
+            <button className={activeView === "reports" ? "nav-active" : ""} onClick={() => { window.history.replaceState({}, "", "/relatorios"); setActiveView("reports"); }}>
+              <FileBarChart size={18} /> <span className="nav-label">Relatórios</span>
+            </button>
+          )}
           {canViewInventory && (
             <button
               className={activeView === "inventory" ? "nav-active" : ""}
@@ -3247,6 +3259,14 @@ function Dashboard() {
               registerSimulation: hasPermission(user, "scripts.register_simulation")
             }}
             />
+          </Suspense>
+          </ViewErrorBoundary>
+        )}
+
+        {activeView === "reports" && canViewReports && (
+          <ViewErrorBoundary label="Relatórios" resetKey={activeView}>
+          <Suspense fallback={<ViewLoadingState />}>
+            <ReportsPage token={token} user={user} notify={notify} />
           </Suspense>
           </ViewErrorBoundary>
         )}
