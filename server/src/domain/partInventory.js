@@ -26,3 +26,11 @@ export function validatePartMovement(payload = {}) {
   if (["consumption", "assignment"].includes(movementType) && !text(payload.assetId) && !text(payload.serviceOrderId)) invalid("Vincule o consumo a um ativo ou Ordem de Serviço.");
   return { movementType, quantity, assetId: text(payload.assetId) || null, serviceOrderId: text(payload.serviceOrderId) || null, notes: text(payload.notes).slice(0, 1000) || null };
 }
+
+export function validatePartCategory(payload = {}) {
+  const name = text(payload.name);
+  if (name.length < 2 || name.length > 80) invalid("Informe um nome de categoria válido.");
+  const color = text(payload.color) || "#475569";
+  if (!/^#[0-9a-f]{6}$/i.test(color)) invalid("Informe uma cor hexadecimal válida.");
+  return { name, color };
+}

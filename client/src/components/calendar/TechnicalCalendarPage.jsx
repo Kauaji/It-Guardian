@@ -2,10 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, Clock3, Plus, RefreshCw, Search, UserRoundCheck } from "lucide-react";
 import { cancelCalendarEvent, createCalendarEvent, deleteCalendarEvent, fetchCalendarEvents, fetchCalendarSummary, fetchTechnicians, updateCalendarEvent } from "../../api.js";
 import CalendarEventModal from "./CalendarEventModal.jsx";
-import { buildCalendarDays, dateKey, EVENT_STATUS_LABELS, EVENT_TYPE_META, eventsByDay, getCalendarRange } from "./calendarModel.js";
+import { buildCalendarDays, dateKey, EVENT_STATUS_LABELS, EVENT_TYPE_META, eventsByDay, getCalendarRange, PRIORITY_META } from "./calendarModel.js";
 import "./technicalCalendar.css";
 
 const WEEK_DAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const normalizedName = (value = "") => String(value).normalize("NFD").replace(/\p{Diacritic}/gu, "").trim().toLowerCase();
+const isMaintenanceSegment = (segment) => normalizedName(segment?.name) === "manutencao";
 
 function formatHeader(anchor, view) {
   if (view === "day") return anchor.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
@@ -15,10 +17,11 @@ function formatHeader(anchor, view) {
 
 function CalendarEvent({ event, onClick }) {
   const meta = EVENT_TYPE_META[event.eventType] || EVENT_TYPE_META.other;
-  return <button type="button" className={`calendar-event status-${event.status}`} style={{ "--event-color": meta.color }} onClick={(e) => { e.stopPropagation(); onClick(event); }} title={`${meta.label} · ${event.technicianName || "Sem técnico"}`}><time>{event.allDay ? "Dia" : new Date(event.startAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</time><span>{event.serviceOrderNumber ? `${event.serviceOrderNumber} · ` : ""}{event.title}</span></button>;
+  const priority = PRIORITY_META[event.priority] || PRIORITY_META.normal;
+  return <button type="button" className={`calendar-event status-${event.status} priority-${event.priority || "normal"}`} style={{ "--event-color": priority.color }} onClick={(e) => { e.stopPropagation(); onClick(event); }} title={`${meta.label} · prioridade ${priority.label.toLowerCase()} · ${event.technicianName || "Sem técnico"}`}><time>{event.allDay ? "Dia" : new Date(event.startAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</time><span>{event.serviceOrderNumber ? `${event.serviceOrderNumber} · ` : ""}{event.title}</span></button>;
 }
 
-export default function TechnicalCalendarPage({ token, notify, serviceOrders = [], devices = [], segments = [], groups = [], permissions = {}, focusServiceOrder, onFocusHandled }) {
+export default function TechnicalCalendarPage({ token, notify, serviceOrders = [], devices = [], segments = [], groups = [], tabs = [], permissions = {}, focusServiceOrder, onFocusHandled }) {
   const [view, setView] = useState("month");
   const [anchor, setAnchor] = useState(() => new Date());
   const [events, setEvents] = useState([]);
@@ -29,9 +32,9 @@ export default function TechnicalCalendarPage({ token, notify, serviceOrders = [
   const [modal, setModal] = useState(null);
   const [filters, setFilters] = useState({ technicianId: "", eventType: "", status: "", priority: "", groupId: "", segmentId: "", serviceOrderId: "", search: "" });
   const range = useMemo(() => getCalendarRange(anchor, view), [anchor, view]);
-  const filterSegments = filters.groupId
-    ? segments.filter((segment) => !segment.groupId || segment.groupId === filters.groupId)
-    : segments;
+  const filterSegments = segments
+    .filter((segment) => !segment.isDefault && !isMaintenanceSegment(segment))
+    .filter((segment) => !filters.groupId || !segment.groupId || segment.groupId === filters.groupId);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -98,9 +101,9 @@ export default function TechnicalCalendarPage({ token, notify, serviceOrders = [
     </div>
     <div className={`calendar-surface view-${view} ${loading ? "is-loading" : ""}`}>
       {view !== "day" ? <div className="calendar-weekday-row">{(view === "week" ? days : WEEK_DAYS).slice(0, 7).map((item, index) => <span key={dateKey(item instanceof Date ? item : new Date(2026, 0, index + 4))}>{item instanceof Date ? <><small>{WEEK_DAYS[item.getDay()]}</small>{item.getDate()}</> : item}</span>)}</div> : null}
-      <div className="calendar-day-grid">{days.map((day) => { const dayEvents = grouped.get(dateKey(day)) || []; const outside = view === "month" && day.getMonth() !== anchor.getMonth(); return <button type="button" className={`calendar-day-cell ${outside ? "outside" : ""} ${dateKey(day) === dateKey(new Date()) ? "today" : ""}`} key={dateKey(day)} onClick={() => permissions.create && setModal({ date: day })}><span className="calendar-day-number">{view === "day" ? day.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" }) : day.getDate()}</span><div className="calendar-day-events">{dayEvents.slice(0, view === "month" ? 3 : 12).map((event) => <CalendarEvent key={event.id} event={event} onClick={(selected) => setModal({ event: selected })} />)}{view === "month" && dayEvents.length > 3 ? <span className="calendar-more-events">+ {dayEvents.length - 3} eventos</span> : null}</div></button>; })}</div>
+      <div className="calendar-day-grid">{days.map((day) => { const dayEvents = grouped.get(dateKey(day)) || []; const outside = view === "month" && day.getMonth() !== anchor.getMonth(); const past = day < new Date(new Date().setHours(0, 0, 0, 0)); const dayPriority = dayEvents.reduce((highest, event) => (PRIORITY_META[event.priority]?.rank || 0) > (PRIORITY_META[highest]?.rank || 0) ? event.priority : highest, ""); const dayColor = dayPriority ? PRIORITY_META[dayPriority].color : "transparent"; const openDay = () => permissions.create && setModal({ date: day }); return <div role="button" tabIndex={permissions.create ? 0 : -1} className={`calendar-day-cell ${outside ? "outside" : ""} ${past ? "past" : ""} ${dayEvents.length ? "has-events" : ""} ${dateKey(day) === dateKey(new Date()) ? "today" : ""}`} style={{ "--day-priority-color": dayColor }} key={dateKey(day)} onClick={openDay} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openDay(); } }}><span className="calendar-day-number">{view === "day" ? day.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" }) : day.getDate()}</span><div className="calendar-day-events">{dayEvents.slice(0, view === "month" ? 2 : 12).map((event) => <CalendarEvent key={event.id} event={event} onClick={(selected) => setModal({ event: selected })} />)}{view === "month" && dayEvents.length > 2 ? <span className="calendar-more-events">+ {dayEvents.length - 2} eventos</span> : null}</div></div>; })}</div>
       {!loading && !visibleEvents.length ? <div className="calendar-empty-state"><CalendarDays size={30} /><strong>Nenhum agendamento neste período</strong><span>Clique em uma data para planejar o próximo atendimento.</span></div> : null}
     </div>
-    {modal ? <CalendarEventModal event={modal.event} selectedDate={modal.date} defaults={modal.defaults} technicians={technicians} serviceOrders={serviceOrders} devices={devices} segments={segments} groups={groups} permissions={permissions} saving={saving} onClose={() => setModal(null)} onSave={save} onCancel={cancel} onDelete={remove} /> : null}
+    {modal ? <CalendarEventModal event={modal.event} selectedDate={modal.date} defaults={modal.defaults} technicians={technicians} serviceOrders={serviceOrders} devices={devices} segments={segments} groups={groups} tabs={tabs} permissions={permissions} saving={saving} onClose={() => setModal(null)} onSave={save} onCancel={cancel} onDelete={remove} /> : null}
   </section>;
 }

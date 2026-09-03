@@ -19,6 +19,9 @@ export default function ServiceOrderCard({
   const slaStatus = order.sla?.status;
   const showSlaBadge = slaStatus && SLA_CARD_BADGE_STATUSES.has(slaStatus);
   const originLabel = getServiceOrderOriginLabel(order);
+  const technicianLabel = order.assignedTechnicianNames?.length
+    ? order.assignedTechnicianNames.join(", ")
+    : order.technicianName || order.assignedTechnicianName || "Sem técnico";
 
   return (
     <button
@@ -51,7 +54,7 @@ export default function ServiceOrderCard({
         {secondaryContext && <em>{secondaryContext}</em>}
       </div>
       <footer>
-        <span><UserRound size={14} />{order.technicianName || "Sem técnico"}</span>
+        <span><UserRound size={14} />{technicianLabel}</span>
         <span>{formatDate(order.createdAt)}</span>
       </footer>
     </button>

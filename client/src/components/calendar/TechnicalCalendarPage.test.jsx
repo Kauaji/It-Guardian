@@ -32,4 +32,17 @@ describe("TechnicalCalendarPage", () => {
     expect(document.querySelector(".calendar-surface.view-week")).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector(".calendar-surface.view-week")).not.toHaveClass("is-loading"));
   });
+
+  it("abre edição sem disparar novo agendamento e colore o dia pela prioridade", async () => {
+    const startAt = new Date();
+    startAt.setHours(10, 0, 0, 0);
+    api.fetchCalendarEvents.mockResolvedValue({ events: [{ id: "event-1", title: "Visita urgente", eventType: "technical_visit", status: "scheduled", priority: "urgent", startAt: startAt.toISOString() }] });
+    render(<TechnicalCalendarPage token="token" permissions={{ create: true, update: true, delete: true }} />);
+    await screen.findByText("Visita urgente");
+    const eventButton = document.querySelector(".calendar-event");
+    expect(eventButton.closest(".calendar-day-cell")).toHaveClass("has-events");
+    fireEvent.click(eventButton);
+    expect(screen.getByRole("form", { name: "Editar agendamento" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Excluir" })).toBeInTheDocument();
+  });
 });

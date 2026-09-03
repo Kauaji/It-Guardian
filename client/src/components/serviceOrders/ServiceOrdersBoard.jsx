@@ -141,7 +141,7 @@ export default function ServiceOrdersBoard({
       return monthFilteredServiceOrders.filter((order) =>
         (user?.sectorId && orderBelongsToSector(order, user.sectorId)) ||
         orderBelongsToSector(order, generalSector.id) ||
-        order.assignedTechnicianName === user?.name ||
+        (order.assignedTechnicianNames || [order.assignedTechnicianName]).includes(user?.name) ||
         order.createdBy === user?.id
       );
     }
@@ -160,7 +160,7 @@ export default function ServiceOrdersBoard({
 
     if (technicianFilter !== "all") {
       const technician = normalizeSearchText(technicianFilter);
-      orders = orders.filter((order) => normalizeSearchText(order.assignedTechnicianName) === technician);
+      orders = orders.filter((order) => (order.assignedTechnicianNames || [order.assignedTechnicianName]).some((name) => normalizeSearchText(name) === technician));
     }
 
     if (statusFilter !== "all") {
@@ -210,6 +210,7 @@ export default function ServiceOrdersBoard({
         order.priority,
         order.requesterName,
         order.assignedTechnicianName,
+        ...(order.assignedTechnicianNames || []),
         order.environmentName,
         order.sectorName,
         order.serviceCode,

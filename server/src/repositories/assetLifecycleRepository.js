@@ -101,31 +101,40 @@ async function getCurrentDeviceSegment(assetId) {
   };
 }
 
-async function ensureMaintenanceSegment(groupId = null, userId = null) {
+async function ensureMaintenanceSegment(userId = null) {
   const result = await query(
     `
       SELECT id, name, color, group_id
       FROM inventory_segments
-      WHERE COALESCE(group_id, '') = COALESCE($1, '')
+      WHERE lower(name) IN ('manutencao', 'manutenção')
       ORDER BY created_at ASC
+      LIMIT 1
     `,
-    [groupId || null]
+    []
   );
-  const existing = result.rows.find((row) => normalizeReservedName(row.name) === "manutencao");
+  const existing = result.rows[0];
 
   if (existing) {
     return { id: existing.id, name: existing.name, groupId: existing.group_id || null
     };
   }
 
-  const insert = await query(
-    `
-      INSERT INTO inventory_segments (id, name, color, group_id, created_by)
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING id, name, color, group_id
-    `,
-    [randomUUID(), "Manutenção", "#f59e0b", groupId || null, userId]
-  );
+  let insert;
+  try {
+    insert = await query(
+      `
+        INSERT INTO inventory_segments (id, name, color, group_id, created_by)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id, name, color, group_id
+      `,
+      [randomUUID(), "Manutenção", "#f59e0b", null, userId]
+    );
+  } catch (error) {
+    if (error.code !== "23505") throw error;
+    const concurrent = await query("SELECT id, name, color, group_id FROM inventory_segments WHERE lower(name) IN ('manutencao', 'manutenção') ORDER BY created_at ASC LIMIT 1");
+    if (concurrent.rowCount) return { id: concurrent.rows[0].id, name: concurrent.rows[0].name, groupId: concurrent.rows[0].group_id || null };
+    throw error;
+  }
 
   return { id: insert.rows[0].id, name: insert.rows[0].name, groupId: insert.rows[0].group_id || null
   };
@@ -199,7 +208,7 @@ export async function startMaintenanceForAsset({
     throw conflict("Esta máquina já está no segmento de manutenção.");
   }
 
-  const maintenanceSegment = await ensureMaintenanceSegment(currentSegment.groupId, user.id || null);
+  const maintenanceSegment = await ensureMaintenanceSegment(user.id || null);
   await updateDeviceSegment({ deviceId: assetId, segmentId: maintenanceSegment.id, userId: user.id || null
   });
 

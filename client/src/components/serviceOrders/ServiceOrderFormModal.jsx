@@ -39,6 +39,7 @@ export default function ServiceOrderFormModal({
     environmentId: "",
     requesterName: "",
     assignedTechnicianName: "",
+    assignedTechnicianNames: [],
     sectorId: "sector-geral",
     autoPriorityEnabled: Boolean(serviceOrderSettings?.autoPriority?.enabled),
     category: ""
@@ -67,6 +68,7 @@ export default function ServiceOrderFormModal({
       assetId: "",
       requesterName: "",
       assignedTechnicianName: "",
+      assignedTechnicianNames: [],
       sectorId: "sector-geral",
       autoPriorityEnabled: Boolean(serviceOrderSettings?.autoPriority?.enabled),
       category: ""
@@ -110,6 +112,17 @@ export default function ServiceOrderFormModal({
   function toggleThirdPartyRequester(checked) {
     setThirdPartyRequester(checked);
     setForm((current) => ({ ...current, requesterName: "" }));
+    setFormError("");
+  }
+
+  function toggleAssignedTechnician(name) {
+    setForm((current) => {
+      const selected = current.assignedTechnicianNames || [];
+      const assignedTechnicianNames = selected.includes(name)
+        ? selected.filter((item) => item !== name)
+        : [...selected, name];
+      return { ...current, assignedTechnicianNames, assignedTechnicianName: assignedTechnicianNames[0] || "" };
+    });
     setFormError("");
   }
 
@@ -158,7 +171,8 @@ export default function ServiceOrderFormModal({
       title,
       description,
       requesterName,
-      assignedTechnicianName: "",
+      assignedTechnicianName: form.assignedTechnicianNames[0] || "",
+      assignedTechnicianNames: form.assignedTechnicianNames,
       category,
       notes: "",
       sectorId: selectedSector?.id || "sector-geral",
@@ -230,15 +244,16 @@ export default function ServiceOrderFormModal({
         </label>
 
         <label>
-          {environmentLabel}
+          {businessMode ? environmentLabel : "Aba do inventário (opcional)"}
           <select value={form.environmentId} onChange={(event) => updateField("environmentId", event.target.value)}>
-            <option value="">{businessMode ? "Selecione um cliente" : "Sem ambiente definido"}</option>
+            <option value="">{businessMode ? "Selecione um cliente" : "Usar a aba atual"}</option>
             {(businessMode ? clients : tabs).map((item) => (
               <option key={item.id} value={item.id}>
                 {businessMode ? item.tradeName || item.legalName : item.name || "Novo ambiente"}
               </option>
             ))}
           </select>
+          {!businessMode ? <small className="service-order-field-help">Define em qual aba do inventário a OS será contextualizada.</small> : null}
         </label>
 
         <label>
@@ -265,6 +280,25 @@ export default function ServiceOrderFormModal({
             </span>
           </div>
         )}
+
+        <fieldset className="service-order-technician-picker service-order-wide">
+          <legend>Técnicos responsáveis</legend>
+          <p>Selecione um ou mais técnicos para atender esta ordem.</p>
+          {technicians.length ? (
+            <div>
+              {technicians.map((technician) => {
+                const checked = form.assignedTechnicianNames.includes(technician.name);
+                return (
+                  <label key={technician.id} className={checked ? "selected" : ""}>
+                    <input type="checkbox" checked={checked} onChange={() => toggleAssignedTechnician(technician.name)} />
+                    <span>{technician.name}</span>
+                    {technician.specialty ? <small>{technician.specialty}</small> : null}
+                  </label>
+                );
+              })}
+            </div>
+          ) : <div className="service-order-inline-empty">Não existem técnicos cadastrados.</div>}
+        </fieldset>
 
         <label>
           Solicitante

@@ -10327,6 +10327,70 @@ table strong,
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
 }
 
+.service-order-field-help {
+  color: var(--text-soft);
+  font-size: 0.72rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.service-order-technician-picker {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  margin: 0;
+  padding: 13px;
+  border: 1px solid var(--border-strong);
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--accent) 3%, var(--surface));
+}
+
+.service-order-technician-picker legend {
+  padding: 0 5px;
+  color: var(--text-strong);
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.service-order-technician-picker > p {
+  font-size: 0.75rem;
+}
+
+.service-order-technician-picker > div {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.service-order-technician-picker label {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 2px 8px;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.service-order-technician-picker label.selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 9%, transparent);
+}
+
+.service-order-technician-picker label input {
+  grid-row: 1 / span 2;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  accent-color: var(--accent);
+}
+
+.service-order-technician-picker label span { color: var(--text-strong); font-weight: 850; }
+.service-order-technician-picker label small { color: var(--text-soft); font-size: 0.68rem; }
+
 .service-order-asset-preview {
   display: grid;
   gap: 4px;

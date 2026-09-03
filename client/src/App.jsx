@@ -543,7 +543,7 @@ function Dashboard() {
       segments
         .map((segment, index) => ({
           ...segment,
-          tabId: segment.isDefault ? "shared" : itemTabId("segments", segment.id),
+          tabId: segment.isDefault || isMaintenanceSegmentName(segment.name) ? "shared" : itemTabId("segments", segment.id),
           order: itemOrder("segments", segment.id, index)
         }))
         .sort((left, right) => left.order - right.order),
@@ -606,7 +606,7 @@ function Dashboard() {
     const activeNonDefaultSegments = decoratedSegments.filter(
       (segment) =>
         !segment.isDefault &&
-        segment.tabId === activeInventoryTab.id &&
+        (segment.tabId === activeInventoryTab.id || isMaintenanceSegmentName(segment.name)) &&
         (!isMaintenanceSegmentName(segment.name) || occupiedActiveSegmentIds.has(segment.id))
     );
     // "Nao organizadas" e compartilhado entre abas (por isso fora do filtro
@@ -1637,38 +1637,27 @@ function Dashboard() {
     setSelectedDevice((current) => (current?.id === machineId ? update(current) : current));
   }
 
-  async function getOrCreateMaintenanceSegment(sourceGroupId = "", targetTabId = activeInventoryTab.id) {
+  async function getOrCreateMaintenanceSegment() {
     const existingActive = decoratedSegments.find(
       (segment) =>
         !segment.isDefault &&
-        segment.tabId === targetTabId &&
-        isMaintenanceSegmentName(segment.name) &&
-        getSegmentGroupId(segment, decoratedSegmentGroups) === sourceGroupId
+        isMaintenanceSegmentName(segment.name)
     );
     if (existingActive) return existingActive;
 
     const response = await createSegment(token, {
       name: "Manutenção",
       color: "#f59e0b",
-      groupId: sourceGroupId || null,
+      groupId: null,
       systemSegment: "maintenance"
     });
-    const nextSegment = { ...response.segment, groupId: response.segment.groupId || sourceGroupId };
-    const targetSiblings = decoratedSegments.filter(
-      (segment) =>
-        !segment.isDefault &&
-        segment.tabId === targetTabId &&
-        getSegmentGroupId(segment, decoratedSegmentGroups) === sourceGroupId
-    );
+    const nextSegment = { ...response.segment, groupId: null };
 
     setSegments((current) => upsertSegmentList(current, nextSegment));
     updateInventoryMeta("segments", response.segment.id, {
-      tabId: targetTabId,
-      order: targetSiblings.length
+      tabId: "shared",
+      order: -1
     });
-    if (sourceGroupId) {
-      saveSegmentGroups(assignSegmentToGroup(segmentGroups, response.segment.id, sourceGroupId));
-    }
 
     return nextSegment;
   }
@@ -3173,6 +3162,7 @@ function Dashboard() {
                 devices={decoratedAllDevices}
                 segments={decoratedSegments}
                 groups={decoratedSegmentGroups}
+                tabs={inventoryTabs}
                 focusServiceOrder={calendarFocusOrder}
                 onFocusHandled={() => setCalendarFocusOrder(null)}
                 permissions={{
@@ -3200,7 +3190,10 @@ function Dashboard() {
                   create: hasPermission(user, "parts_inventory.create"),
                   update: hasPermission(user, "parts_inventory.update"),
                   moveStock: hasPermission(user, "parts_inventory.move_stock"),
-                  assignAssets: hasPermission(user, "parts_inventory.assign_assets")
+                  assignAssets: hasPermission(user, "parts_inventory.assign_assets"),
+                  manageCategories: hasPermission(user, "parts_inventory.manage_categories"),
+                  importInvoice: hasPermission(user, "parts_inventory.import_invoice"),
+                  reconcileHardware: hasPermission(user, "parts_inventory.reconcile_hardware")
                 }}
               />
             </Suspense>

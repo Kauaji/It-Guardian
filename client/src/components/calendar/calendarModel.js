@@ -10,6 +10,12 @@ export const EVENT_TYPE_META = {
 
 export const EVENT_STATUS_LABELS = { scheduled: "Agendado", in_progress: "Em andamento", completed: "Concluído", cancelled: "Cancelado", missed: "Não realizado" };
 export const PRIORITY_LABELS = { low: "Baixa", normal: "Normal", high: "Alta", urgent: "Urgente" };
+export const PRIORITY_META = {
+  low: { label: "Baixa", color: "#64748b", rank: 1 },
+  normal: { label: "Normal", color: "#2878c8", rank: 2 },
+  high: { label: "Alta", color: "#d97706", rank: 3 },
+  urgent: { label: "Urgente", color: "#dc2626", rank: 4 }
+};
 
 export function startOfDay(date) { const value = new Date(date); value.setHours(0, 0, 0, 0); return value; }
 export function addDays(date, amount) { const value = new Date(date); value.setDate(value.getDate() + amount); return value; }

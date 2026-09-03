@@ -274,10 +274,16 @@ export function canViewServiceOrder(user = {}, order = {}) {
   if (order.createdBy && order.createdBy === user.id) return true;
   if (order.sectorId && user.sectorId && order.sectorId === user.sectorId) return true;
   if (normalizeText(order.sectorName) && normalizeText(order.sectorName) === normalizeText(user.sectorName)) return true;
+  const assignedNames = order.assignedTechnicianNames?.length
+    ? order.assignedTechnicianNames
+    : order.assignedTechnicianName
+      ? [order.assignedTechnicianName]
+      : [];
   if (
-    normalizeText(order.assignedTechnicianName) &&
-    (normalizeText(order.assignedTechnicianName) === normalizeText(user.name) ||
-      normalizeText(order.assignedTechnicianName) === normalizeText(user.email))
+    assignedNames.some((name) => (
+      normalizeText(name) === normalizeText(user.name) ||
+      normalizeText(name) === normalizeText(user.email)
+    ))
   ) {
     return true;
   }
@@ -784,6 +790,10 @@ function fromOrderRow(row, history = [], items = [], settings = null, feedback =
     location: row.location,
     source: row.source,
     assignedTechnicianName: row.assigned_technician_name,
+    assignedTechnicianNames: (() => {
+      const names = parseJsonArray(row.assigned_technician_names);
+      return names.length ? names : row.assigned_technician_name ? [row.assigned_technician_name] : [];
+    })(),
     autoPriorityEnabled: row.auto_priority_enabled,
     workNotes: row.work_notes,
     diagnosis: row.diagnosis,
@@ -838,6 +848,28 @@ function parseJsonObject(value, fallback = {}) {
   } catch {
     return fallback;
   }
+}
+
+function parseJsonArray(value) {
+  if (Array.isArray(value)) return value.map((item) => String(item || "").trim()).filter(Boolean);
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.map((item) => String(item || "").trim()).filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
+
+function resolveAssignedTechnicianNames(payload = {}, current = null) {
+  const hasList = Object.prototype.hasOwnProperty.call(payload, "assignedTechnicianNames");
+  const hasSingle = Object.prototype.hasOwnProperty.call(payload, "assignedTechnicianName");
+  const source = hasList
+    ? payload.assignedTechnicianNames
+    : hasSingle
+      ? [payload.assignedTechnicianName]
+      : current?.assignedTechnicianNames || (current?.assignedTechnicianName ? [current.assignedTechnicianName] : []);
+  return [...new Set((Array.isArray(source) ? source : []).map((item) => String(item || "").trim()).filter(Boolean))].slice(0, 12);
 }
 
 function settingsFromDedicatedRow(row, statuses = []) {
@@ -1295,6 +1327,7 @@ export async function createServiceOrder({ payload, user, db = query }) {
   const totalValue = Math.round((serviceValue + totalPartsValue) * 100) / 100;
   const priority = await calculateConfiguredPriority(payload, sector, service);
   const slaDueAt = computeServiceOrderSlaDueAt(priority, settings, new Date());
+  const assignedTechnicianNames = resolveAssignedTechnicianNames(payload);
   let id = randomUUID();
   let insertedRow = null;
 
@@ -1341,7 +1374,7 @@ export async function createServiceOrder({ payload, user, db = query }) {
           payload.machineScope || null,
           payload.location || null,
           payload.source || null,
-          payload.assignedTechnicianName || null,
+          assignedTechnicianNames[0] || payload.assignedTechnicianName || null,
           payload.autoPriorityEnabled ?? settings.autoPriority.enabled,
           payload.notes || null,
           payload.servicePerformed || null,
@@ -1361,6 +1394,11 @@ export async function createServiceOrder({ payload, user, db = query }) {
         ]
       );
       insertedRow = result.rows[0];
+      const assignedResult = await db(
+        "UPDATE service_orders SET assigned_technician_names = $2::jsonb WHERE id = $1 RETURNING *",
+        [id, JSON.stringify(assignedTechnicianNames)]
+      );
+      insertedRow = assignedResult.rows[0] || insertedRow;
       break;
     } catch (error) {
       if (attempt < 4 && isDuplicateServiceOrderNumberError(error)) continue;
@@ -1422,6 +1460,7 @@ export async function updateServiceOrder({ id, payload, user }) {
   const totalPartsValue = sumServiceOrderItems(nextItems);
   const totalValue = Math.round((serviceValue + totalPartsValue) * 100) / 100;
   const itemsChanged = hasItemsPayload && itemsSignature(current.items || []) !== itemsSignature(nextItems);
+  const assignedTechnicianNames = resolveAssignedTechnicianNames(payload, current);
 
   const result = await query(
     `
@@ -1487,7 +1526,7 @@ export async function updateServiceOrder({ id, payload, user }) {
       payload.machineScope ?? current.machineScope,
       payload.location ?? current.location,
       payload.source ?? current.source,
-      payload.assignedTechnicianName ?? current.assignedTechnicianName,
+      assignedTechnicianNames[0] || null,
       payload.autoPriorityEnabled ?? current.autoPriorityEnabled,
       payload.workNotes ?? current.workNotes,
       payload.diagnosis ?? current.diagnosis,
@@ -1515,7 +1554,14 @@ export async function updateServiceOrder({ id, payload, user }) {
     await replaceServiceOrderItems(id, nextItems);
   }
 
-  const updatedRow = result.rows[0];
+  let updatedRow = result.rows[0];
+  if (Object.prototype.hasOwnProperty.call(payload, "assignedTechnicianNames") || Object.prototype.hasOwnProperty.call(payload, "assignedTechnicianName")) {
+    const assignedResult = await query(
+      "UPDATE service_orders SET assigned_technician_names = $2::jsonb WHERE id = $1 RETURNING *",
+      [id, JSON.stringify(assignedTechnicianNames)]
+    );
+    updatedRow = assignedResult.rows[0] || updatedRow;
+  }
   const nextAssetId = updatedRow.asset_id || null;
   const changes = [
     ["title", "Título alterado.", current.title, payload.title],
@@ -1524,7 +1570,7 @@ export async function updateServiceOrder({ id, payload, user }) {
     ["priority", "Prioridade alterada.", current.priority, payload.priority],
     ["category", "Categoria alterada.", current.category, payload.category],
     ["problem_type", "Tipo de problema alterado.", current.problemType, payload.problemType],
-    ["assigned", "Técnico responsável alterado.", current.assignedTechnicianName, payload.assignedTechnicianName],
+    ["assigned", "Técnicos responsáveis alterados.", (current.assignedTechnicianNames || []).join(", "), Object.prototype.hasOwnProperty.call(payload, "assignedTechnicianNames") ? assignedTechnicianNames.join(", ") : payload.assignedTechnicianName],
     ["asset", "Máquina vinculada à Ordem de Serviço.", current.assetId, Object.prototype.hasOwnProperty.call(payload, "assetId") ? nextAssetId : undefined],
     ["backup", "Máquina Backup vinculada à OS.", current.backupAssetId, payload.backupAssetId],
     ["environment", "Ambiente alterado.", current.environmentName, payload.environmentName],

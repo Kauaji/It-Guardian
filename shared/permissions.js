@@ -28,7 +28,10 @@ export const permissionGroups = [
       { id: "parts_inventory.create", label: "Cadastrar peças" },
       { id: "parts_inventory.update", label: "Editar peças" },
       { id: "parts_inventory.move_stock", label: "Movimentar e consumir estoque" },
-      { id: "parts_inventory.assign_assets", label: "Vincular peças a ativos e OS" }
+      { id: "parts_inventory.assign_assets", label: "Vincular peças a ativos e OS" },
+      { id: "parts_inventory.manage_categories", label: "Configurar categorias de peças" },
+      { id: "parts_inventory.import_invoice", label: "Importar compras por NF-e" },
+      { id: "parts_inventory.reconcile_hardware", label: "Conciliar hardware coletado pelo agente" }
     ]
   },
   {
@@ -204,6 +207,9 @@ export const roleDefaultPermissions = {
     "parts_inventory.update",
     "parts_inventory.move_stock",
     "parts_inventory.assign_assets",
+    "parts_inventory.manage_categories",
+    "parts_inventory.import_invoice",
+    "parts_inventory.reconcile_hardware",
     "floor_plans.view",
     "floor_plans.create",
     "floor_plans.update",
