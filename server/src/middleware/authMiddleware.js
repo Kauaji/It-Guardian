@@ -86,3 +86,10 @@ export function requirePermission(permission) {
     return res.status(403).json({ message: "Voce nao possui permissao para acessar este modulo." });
   };
 }
+
+export function requireAnyPermission(...permissions) {
+  return (req, res, next) => {
+    if (permissions.some((permission) => hasPermission(req.user, permission))) return next();
+    return res.status(403).json({ message: "Voce nao possui permissao para acessar este modulo." });
+  };
+}

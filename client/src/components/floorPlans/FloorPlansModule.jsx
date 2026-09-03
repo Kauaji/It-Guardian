@@ -22,6 +22,9 @@ import {
   Unlock,
   Eraser,
   Monitor,
+  Upload,
+  Flame,
+  LayoutDashboard,
   X
 } from "lucide-react";
 import {
@@ -30,9 +33,15 @@ import {
   duplicateFloorPlan,
   fetchFloorPlan,
   fetchFloorPlans,
+  fetchFloorPlanAssetHeatmap,
+  fetchFloorPlanBackgroundBlob,
+  fetchFloorPlanServiceOrderHeatmap,
+  fetchFloorPlanSummary,
   linkFloorPlanObjectToAsset,
   saveFloorPlanEditorData,
-  updateFloorPlan
+  updateFloorPlan,
+  uploadFloorPlanBackground,
+  deleteFloorPlanBackground
 } from "../../api.js";
 import { FLOOR_PLAN_CATALOG, getCatalogItem } from "./floorPlanCatalog.js";
 import { getFloorPlanLibraryAsset } from "./assets/floorPlanLibrary.js";
@@ -127,6 +136,7 @@ import { formatLength, metersToPx, pxToMeters } from "./utils/unitConversion.js"
 import "./floorPlanStudio.css";
 
 const FloorPlanScene3D = lazy(() => import("./FloorPlanScene3D.jsx"));
+const EMPTY_HEATMAP = new Map();
 
 const FLOOR_PLAN_LAYER_OPTIONS = [
   { id: "rooms", label: "Comodos" },
@@ -763,7 +773,11 @@ function FloorPlanCanvas({
   isPanning = false,
   spacePressed = false,
   showGrid = true,
-  visibleLayers = DEFAULT_FLOOR_PLAN_LAYERS
+  visibleLayers = DEFAULT_FLOOR_PLAN_LAYERS,
+  backgroundSrc = "",
+  backgroundSettings = {},
+  heatmapByObject = EMPTY_HEATMAP,
+  heatmapMode = "normal"
 }) {
   const floor = getActiveFloor(editor, activeFloorId);
   const gridSize = editor?.plan?.gridSize || DEFAULT_PLAN_SIZE.gridSize;
@@ -821,6 +835,19 @@ function FloorPlanCanvas({
           </pattern>
         </defs>
         <rect x="0" y="0" width={width} height={height} fill="#fbfdff" />
+        {backgroundSrc ? (
+          <image
+            className="floor-plan-background-image"
+            href={backgroundSrc}
+            x={Number(backgroundSettings.x || 0)}
+            y={Number(backgroundSettings.y || 0)}
+            width={Number(backgroundSettings.width || width)}
+            height={Number(backgroundSettings.height || height)}
+            opacity={Number(backgroundSettings.opacity ?? 0.72)}
+            preserveAspectRatio={backgroundSettings.fit === "stretch" ? "none" : "xMidYMid meet"}
+            pointerEvents="none"
+          />
+        ) : null}
         {showGrid ? (
           <>
             <rect x="0" y="0" width={width} height={height} fill="url(#floor-grid-fine)" />
@@ -938,6 +965,7 @@ function FloorPlanCanvas({
           const wallOpenings = isWallObject(object)
             ? objects.filter((candidate) => candidate.metadata?.parentObjectId === object.id && isOpeningObject(candidate))
             : [];
+          const heatmap = heatmapByObject.get(object.id);
           return (
             <g
               key={object.id}
@@ -950,6 +978,7 @@ function FloorPlanCanvas({
               }}
             >
               <g transform={`rotate(${object.rotation || 0} ${objectWidth / 2} ${objectHeight / 2})`}>
+                {heatmapMode.startsWith("heatmap-") && heatmap ? <rect className={`floor-plan-heatmap-halo severity-${heatmap.severity}`} x="-12" y="-12" width={objectWidth + 24} height={objectHeight + 24} rx="18" /> : null}
                 <rect
                   className="floor-plan-object-hit-target"
                   x="-3"
@@ -969,6 +998,7 @@ function FloorPlanCanvas({
                 {objectSelected ? <rect className="floor-plan-object-selection-outline" x="-3" y="-3" width={objectWidth + 6} height={objectHeight + 6} rx="5" /> : null}
               </g>
               {!hideObjectLabel ? <text className="floor-plan-object-label" x={objectWidth / 2} y={objectHeight + 15} textAnchor="middle">{object.label}</text> : null}
+              {heatmapMode.startsWith("heatmap-") && heatmap ? <title>{heatmapMode === "heatmap-os" ? `${heatmap.totalServiceOrders} OS · ${heatmap.openServiceOrders} abertas · ${heatmap.overdueServiceOrders} vencidas` : `${heatmap.status || "Sem agente"} · pontuação ${heatmap.score}`}</title> : null}
             </g>
           );
         })}
@@ -1021,7 +1051,7 @@ function FloorPlanCanvas({
   );
 }
 
-function FloorPlanInspector({ editor, selected, onChangeSelected, onClearSelected, devices, permissions, onLinkObject }) {
+function FloorPlanInspector({ editor, selected, onChangeSelected, onClearSelected, devices, groups, segments, permissions, onLinkObject }) {
   const [showLinkPicker, setShowLinkPicker] = useState(false);
   const selectedEntity = useMemo(() => {
     if (!editor || !selected) return null;
@@ -1065,6 +1095,9 @@ function FloorPlanInspector({ editor, selected, onChangeSelected, onClearSelecte
     ? linkedDevice.tags
     : String(linkedDevice?.tags || "").split(",").map((tag) => tag.trim()).filter(Boolean);
   const AssetIcon = getObjectIcon(selectedEntity.objectType) || Monitor;
+  const semanticSegments = selectedEntity.groupId
+    ? segments.filter((segment) => !segment.groupId || segment.groupId === selectedEntity.groupId)
+    : segments;
 
   return (
     <aside className="floor-plan-inspector">
@@ -1093,6 +1126,71 @@ function FloorPlanInspector({ editor, selected, onChangeSelected, onClearSelecte
               {!linkedDevice ? <small>Sem vinculo com o inventario</small> : null}
             </span>
           </div>
+          <label>
+            Nome no mapa
+            <input value={selectedEntity.label || ""} onChange={(event) => onChangeSelected({ label: event.target.value })} />
+          </label>
+          <label>
+            Descrição técnica
+            <textarea
+              rows="2"
+              value={selectedEntity.metadata?.description || ""}
+              placeholder="Função, localização ou observação útil"
+              onChange={(event) => onChangeSelected({ metadata: { ...(selectedEntity.metadata || {}), description: event.target.value } })}
+            />
+          </label>
+          <div className="floor-plan-inspector-grid">
+            <label>
+              Grupo
+              <select
+                value={selectedEntity.groupId || ""}
+                onChange={(event) => {
+                  const groupId = event.target.value || null;
+                  const segmentStillValid = !selectedEntity.segmentId || segments.some((segment) => (
+                    segment.id === selectedEntity.segmentId && (!groupId || !segment.groupId || segment.groupId === groupId)
+                  ));
+                  onChangeSelected({ groupId, segmentId: segmentStillValid ? selectedEntity.segmentId : null });
+                }}
+              >
+                <option value="">Sem grupo</option>
+                {groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
+              </select>
+            </label>
+            <label>
+              Segmento
+              <select value={selectedEntity.segmentId || ""} onChange={(event) => onChangeSelected({ segmentId: event.target.value || null })}>
+                <option value="">Sem segmento</option>
+                {semanticSegments.map((segment) => <option key={segment.id} value={segment.id}>{segment.name}</option>)}
+              </select>
+            </label>
+          </div>
+          <label>
+            Criticidade
+            <select
+              value={selectedEntity.metadata?.criticality || "normal"}
+              onChange={(event) => onChangeSelected({ metadata: { ...(selectedEntity.metadata || {}), criticality: event.target.value } })}
+            >
+              <option value="low">Baixa</option>
+              <option value="normal">Normal</option>
+              <option value="high">Alta</option>
+              <option value="critical">Crítica</option>
+            </select>
+          </label>
+          {!linkedDevice ? (
+            <label>
+              Status manual
+              <select
+                value={selectedEntity.metadata?.manualStatus || "no_data"}
+                onChange={(event) => onChangeSelected({ metadata: { ...(selectedEntity.metadata || {}), manualStatus: event.target.value } })}
+              >
+                <option value="online">Online</option>
+                <option value="offline">Offline</option>
+                <option value="warning">Atenção</option>
+                <option value="critical">Crítico</option>
+                <option value="no_data">Sem dados</option>
+              </select>
+            </label>
+          ) : null}
           {linkedDevice ? (
             <button
               className="floor-plan-unlink-action"
@@ -1446,6 +1544,121 @@ function FloorPlanInspector({ editor, selected, onChangeSelected, onClearSelecte
   );
 }
 
+export function InfrastructureModeBar({
+  mode,
+  onModeChange,
+  metric,
+  onMetricChange,
+  period,
+  onPeriodChange,
+  groupId,
+  onGroupChange,
+  segmentId,
+  onSegmentChange,
+  groups,
+  segments,
+  floor,
+  hasBackground,
+  backgroundBusy,
+  canUpload,
+  canViewHeatmaps,
+  onUpload,
+  onRemoveBackground,
+  backgroundSettings,
+  onBackgroundSettings
+}) {
+  const compatibleSegments = groupId
+    ? segments.filter((segment) => !segment.groupId || segment.groupId === groupId)
+    : segments;
+  const backgroundScale = Number(backgroundSettings.scale || 1);
+  const updateScale = (scale) => onBackgroundSettings({
+    ...backgroundSettings,
+    scale,
+    width: Number(floor?.width || DEFAULT_PLAN_SIZE.width) * scale,
+    height: Number(floor?.height || DEFAULT_PLAN_SIZE.height) * scale
+  });
+
+  return (
+    <div className="infrastructure-mode-bar">
+      <div className="infrastructure-mode-switch" aria-label="Modo do mapa de infraestrutura">
+        <button type="button" className={mode === "normal" ? "active" : ""} onClick={() => onModeChange("normal")}><Monitor size={15} /> Planta</button>
+        <button type="button" disabled={!canViewHeatmaps} className={mode === "heatmap-os" ? "active" : ""} onClick={() => onModeChange("heatmap-os")}><Flame size={15} /> Calor de OS</button>
+        <button type="button" disabled={!canViewHeatmaps} className={mode === "heatmap-assets" ? "active" : ""} onClick={() => onModeChange("heatmap-assets")}><Layers3 size={15} /> Calor de ativos</button>
+        <button type="button" disabled={!canViewHeatmaps} className={mode === "dashboard" ? "active" : ""} onClick={() => onModeChange("dashboard")}><LayoutDashboard size={15} /> Resumo</button>
+      </div>
+      <div className="infrastructure-context-actions">
+        {mode !== "normal" ? (
+          <>
+            <select aria-label="Filtrar por grupo" value={groupId} onChange={(event) => onGroupChange(event.target.value)}>
+              <option value="">Todos os grupos</option>
+              {groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
+            </select>
+            <select aria-label="Filtrar por segmento" value={segmentId} onChange={(event) => onSegmentChange(event.target.value)}>
+              <option value="">Todos os segmentos</option>
+              {compatibleSegments.map((segment) => <option key={segment.id} value={segment.id}>{segment.name}</option>)}
+            </select>
+          </>
+        ) : null}
+        {mode === "heatmap-os" ? (
+          <select aria-label="Período do mapa de OS" value={period} onChange={(event) => onPeriodChange(event.target.value)}>
+            <option value="7">Últimos 7 dias</option>
+            <option value="30">Últimos 30 dias</option>
+            <option value="current_month">Mês atual</option>
+            <option value="previous_month">Mês anterior</option>
+          </select>
+        ) : null}
+        {mode === "heatmap-assets" ? <select aria-label="Métrica do mapa de ativos" value={metric} onChange={(event) => onMetricChange(event.target.value)}><option value="availability">Disponibilidade</option><option value="cpu">CPU</option><option value="ram">RAM</option><option value="disk">Disco</option><option value="alerts">Alertas</option><option value="service_orders">Chamados</option></select> : null}
+        {hasBackground ? (
+          <details className="floor-plan-background-controls">
+            <summary>Ajustar fundo</summary>
+            <div>
+              <label>Opacidade <input type="range" min="0.15" max="1" step="0.05" value={backgroundSettings.opacity ?? 0.72} onChange={(event) => onBackgroundSettings({ ...backgroundSettings, opacity: Number(event.target.value) })} /></label>
+              <label>Escala <input type="range" min="0.5" max="1.5" step="0.05" value={backgroundScale} onChange={(event) => updateScale(Number(event.target.value))} /></label>
+              <label>X <input type="number" step="5" value={Number(backgroundSettings.x || 0)} onChange={(event) => onBackgroundSettings({ ...backgroundSettings, x: Number(event.target.value) })} /></label>
+              <label>Y <input type="number" step="5" value={Number(backgroundSettings.y || 0)} onChange={(event) => onBackgroundSettings({ ...backgroundSettings, y: Number(event.target.value) })} /></label>
+              <label>Encaixe <select value={backgroundSettings.fit || "contain"} onChange={(event) => onBackgroundSettings({ ...backgroundSettings, fit: event.target.value })}><option value="contain">Conter</option><option value="stretch">Preencher</option></select></label>
+            </div>
+          </details>
+        ) : null}
+        {canUpload ? <button type="button" className="secondary-action" disabled={backgroundBusy} onClick={onUpload}>{backgroundBusy ? <Loader2 className="spin" size={15} /> : <Upload size={15} />} {hasBackground ? "Trocar planta" : "Enviar planta"}</button> : null}
+        {canUpload && hasBackground ? <button type="button" className="icon-button danger" disabled={backgroundBusy} title="Remover imagem de fundo" onClick={onRemoveBackground}><Trash2 size={16} /></button> : null}
+      </div>
+    </div>
+  );
+}
+
+function InfrastructureSummary({ summary = {} }) {
+  const entries = [
+    ["Componentes", summary.totalComponents], ["Ativos vinculados", summary.linkedAssets], ["Online", summary.onlineAssets],
+    ["Offline", summary.offlineAssets], ["Sem agente", summary.assetsWithoutAgent], ["OS abertas", summary.openServiceOrders],
+    ["OS vencidas", summary.overdueServiceOrders], ["Alertas críticos", summary.criticalAlerts], ["Segmentos", summary.segmentsRepresented], ["Grupos", summary.groupsRepresented]
+  ];
+  return <section className="infrastructure-summary-panel"><header><div><span>Leitura operacional da planta</span><h3>Dashboard da Infraestrutura</h3></div><p>Indicadores calculados apenas sobre componentes realmente posicionados e vinculados.</p></header><div>{entries.map(([label, value]) => <article key={label}><small>{label}</small><strong>{value || 0}</strong></article>)}</div></section>;
+}
+
+function InfrastructureObjectPanel({ object, device, heatmap, mode, onClose }) {
+  if (!object) return null;
+  const metrics = device?.metrics || {};
+  return <aside className="infrastructure-object-panel"><header><div><small>Componente semântico</small><strong>{object.label}</strong></div><button type="button" className="icon-button" aria-label="Fechar detalhes" onClick={onClose}><X size={16} /></button></header>{object.metadata?.description ? <p>{object.metadata.description}</p> : null}<dl><div><dt>Tipo</dt><dd>{object.objectType}</dd></div><div><dt>Criticidade</dt><dd>{object.metadata?.criticality || "normal"}</dd></div><div><dt>Ativo</dt><dd>{device ? device.alias || device.hostname || device.name : object.linkedAssetId || "Não vinculado"}</dd></div><div><dt>Status</dt><dd>{device?.status || heatmap?.status || object.metadata?.manualStatus || "Sem dados"}</dd></div><div><dt>CPU / RAM / Disco</dt><dd>{[metrics.cpu, metrics.ram, metrics.disk].map((value) => value == null ? "—" : `${value}%`).join(" · ")}</dd></div>{mode === "heatmap-os" ? <><div><dt>OS no período</dt><dd>{heatmap?.totalServiceOrders || 0}</dd></div><div><dt>Abertas / vencidas</dt><dd>{heatmap?.openServiceOrders || 0} / {heatmap?.overdueServiceOrders || 0}</dd></div></> : null}</dl></aside>;
+}
+
+export function getInfrastructurePeriodRange(period) {
+  const end = new Date();
+  const start = new Date(end);
+  if (period === "current_month") {
+    start.setDate(1);
+    start.setHours(0, 0, 0, 0);
+  } else if (period === "previous_month") {
+    start.setMonth(start.getMonth() - 1, 1);
+    start.setHours(0, 0, 0, 0);
+    end.setDate(1);
+    end.setHours(0, 0, 0, 0);
+  } else {
+    start.setDate(start.getDate() - Number(period || 30));
+  }
+  return { startDate: start.toISOString(), endDate: end.toISOString() };
+}
+
 export default function FloorPlansModule({ token, devices = [], segments = [], groups = [], activeTab, notify, permissions = {} }) {
   const [plans, setPlans] = useState([]);
   const [plansLoading, setPlansLoading] = useState(false);
@@ -1474,6 +1687,15 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
   const [spacePressed, setSpacePressed] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
   const [paintDraft, setPaintDraft] = useState(null);
+  const [infrastructureMode, setInfrastructureMode] = useState("normal");
+  const [heatmapMetric, setHeatmapMetric] = useState("availability");
+  const [heatmapPeriod, setHeatmapPeriod] = useState("30");
+  const [infrastructureGroupId, setInfrastructureGroupId] = useState("");
+  const [infrastructureSegmentId, setInfrastructureSegmentId] = useState("");
+  const [heatmap, setHeatmap] = useState({ components: [] });
+  const [infrastructureSummary, setInfrastructureSummary] = useState({});
+  const [backgroundSrc, setBackgroundSrc] = useState("");
+  const [backgroundBusy, setBackgroundBusy] = useState(false);
   const dragRef = useRef(null);
   const paintPointerRef = useRef(false);
   const svgRef = useRef(null);
@@ -1485,8 +1707,45 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
   const saveInFlightRef = useRef(null);
   const saveQueuedRef = useRef(false);
   const persistEditorRef = useRef(null);
+  const backgroundInputRef = useRef(null);
 
   editorRef.current = editor;
+
+  const activeFloorRecord = useMemo(() => getActiveFloor(editor, activeFloorId), [activeFloorId, editor]);
+  const backgroundSettings = activeFloorRecord?.metadata?.backgroundSettings || {};
+  const heatmapByObject = useMemo(() => new Map((heatmap.components || []).map((item) => [item.componentId, item])), [heatmap.components]);
+  const infrastructureFilters = useMemo(() => ({
+    ...(infrastructureGroupId ? { groupId: infrastructureGroupId } : {}),
+    ...(infrastructureSegmentId ? { segmentId: infrastructureSegmentId } : {})
+  }), [infrastructureGroupId, infrastructureSegmentId]);
+
+  useEffect(() => {
+    let objectUrl = "";
+    let active = true;
+    if (!editor?.plan?.id || !activeFloorRecord?.id || !activeFloorRecord.backgroundUrl) {
+      setBackgroundSrc("");
+      return undefined;
+    }
+    fetchFloorPlanBackgroundBlob(token, editor.plan.id, activeFloorRecord.id)
+      .then((blob) => { if (!active) return; objectUrl = URL.createObjectURL(blob); setBackgroundSrc(objectUrl); })
+      .catch(() => { if (active) setBackgroundSrc(""); });
+    return () => { active = false; if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [activeFloorRecord?.backgroundUrl, activeFloorRecord?.id, editor?.plan?.id, token]);
+
+  useEffect(() => {
+    if (!editor?.plan?.id || !permissions.viewHeatmaps || infrastructureMode === "normal") return undefined;
+    let active = true;
+    const request = infrastructureMode === "dashboard"
+      ? fetchFloorPlanSummary(token, editor.plan.id, infrastructureFilters)
+      : infrastructureMode === "heatmap-assets"
+        ? fetchFloorPlanAssetHeatmap(token, editor.plan.id, heatmapMetric, infrastructureFilters)
+        : (() => {
+          const range = getInfrastructurePeriodRange(heatmapPeriod);
+          return fetchFloorPlanServiceOrderHeatmap(token, editor.plan.id, range.startDate, range.endDate, infrastructureFilters);
+        })();
+    request.then((payload) => { if (!active) return; if (payload.summary) setInfrastructureSummary(payload.summary); if (payload.heatmap) setHeatmap(payload.heatmap); }).catch((requestError) => notify?.(requestError.message, "danger"));
+    return () => { active = false; };
+  }, [editor?.plan?.id, heatmapMetric, heatmapPeriod, infrastructureFilters, infrastructureMode, notify, permissions.viewHeatmaps, token]);
 
   const savedGroupAreas = useMemo(() => (editor?.zones || []).filter((zone) => (
     zone.floorId === activeFloorId && zone.zoneType === "group" && isPaintAreaZone(zone)
@@ -3452,6 +3711,50 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
     }
   }, [devices, notify, permissions.linkInventory, token, updateSelectedEntity]);
 
+  const updateBackgroundSettings = useCallback((nextSettings) => {
+    commitEditor((draft) => {
+      draft.floors = (draft.floors || []).map((entry) => entry.id === activeFloorId
+        ? { ...entry, metadata: { ...(entry.metadata || {}), backgroundSettings: nextSettings } }
+        : entry);
+      return draft;
+    }, { track: false });
+  }, [activeFloorId, commitEditor]);
+
+  const handleBackgroundUpload = useCallback(async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !editor?.plan?.id || !activeFloorId) return;
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type) || file.size > 8 * 1024 * 1024) {
+      notify?.("Envie uma imagem PNG, JPG ou WEBP de até 8 MB.", "danger");
+      return;
+    }
+    setBackgroundBusy(true);
+    try {
+      const payload = await uploadFloorPlanBackground(token, editor.plan.id, activeFloorId, file);
+      setEditor((current) => ({ ...current, floors: (current?.floors || []).map((entry) => entry.id === activeFloorId ? { ...entry, backgroundUrl: payload.background.backgroundUrl } : entry) }));
+      notify?.("Planta de fundo enviada com segurança.", "ok");
+    } catch (requestError) {
+      notify?.(requestError.message, "danger");
+    } finally {
+      setBackgroundBusy(false);
+    }
+  }, [activeFloorId, editor?.plan?.id, notify, token]);
+
+  const handleBackgroundRemove = useCallback(async () => {
+    if (!editor?.plan?.id || !activeFloorId || !window.confirm("Remover a imagem de fundo desta planta? Os componentes posicionados serão preservados.")) return;
+    setBackgroundBusy(true);
+    try {
+      await deleteFloorPlanBackground(token, editor.plan.id, activeFloorId);
+      setEditor((current) => ({ ...current, floors: (current?.floors || []).map((entry) => entry.id === activeFloorId ? { ...entry, backgroundUrl: null } : entry) }));
+      setBackgroundSrc("");
+      notify?.("Imagem de fundo removida; o mapa técnico foi preservado.", "ok");
+    } catch (requestError) {
+      notify?.(requestError.message, "danger");
+    } finally {
+      setBackgroundBusy(false);
+    }
+  }, [activeFloorId, editor?.plan?.id, notify, token]);
+
   if (view === "list") {
     return (
       <>
@@ -3486,6 +3789,12 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
     || Boolean(singleActionObject && !isAnchoredOpening(singleActionObject));
   const canRotateSelection = selected?.type === "zone" || hasUnlockedActionObject;
   const canDeleteSelection = selected?.type !== "object" || hasUnlockedActionObject;
+  const selectedOperationalObject = selected?.type === "object"
+    ? (editor?.objects || []).find((entry) => entry.id === selected.id)
+    : null;
+  const selectedOperationalDevice = selectedOperationalObject?.linkedAssetId
+    ? devices.find((entry) => entry.id === selectedOperationalObject.linkedAssetId)
+    : null;
 
   return (
     <section className="floor-plan-editor-shell">
@@ -3516,6 +3825,38 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
         measurementActive={placement?.kind === "measurement"}
         onStartMeasurement={startMeasurementTool}
       />
+
+      <InfrastructureModeBar
+        mode={infrastructureMode}
+        onModeChange={(nextMode) => { setInfrastructureMode(nextMode); if (nextMode !== "normal") setMode("2d"); }}
+        metric={heatmapMetric}
+        onMetricChange={setHeatmapMetric}
+        period={heatmapPeriod}
+        onPeriodChange={setHeatmapPeriod}
+        groupId={infrastructureGroupId}
+        onGroupChange={(groupId) => {
+          setInfrastructureGroupId(groupId);
+          if (infrastructureSegmentId && !segments.some((segment) => segment.id === infrastructureSegmentId && (!groupId || !segment.groupId || segment.groupId === groupId))) {
+            setInfrastructureSegmentId("");
+          }
+        }}
+        segmentId={infrastructureSegmentId}
+        onSegmentChange={setInfrastructureSegmentId}
+        groups={groups}
+        segments={segments}
+        floor={floor}
+        hasBackground={Boolean(activeFloorRecord?.backgroundUrl)}
+        backgroundBusy={backgroundBusy}
+        canUpload={Boolean(permissions.uploadBackground && isEditing)}
+        canViewHeatmaps={Boolean(permissions.viewHeatmaps)}
+        onUpload={() => backgroundInputRef.current?.click()}
+        onRemoveBackground={handleBackgroundRemove}
+        backgroundSettings={backgroundSettings}
+        onBackgroundSettings={updateBackgroundSettings}
+      />
+      <input ref={backgroundInputRef} className="floor-plan-background-input" type="file" accept="image/png,image/jpeg,image/webp" onChange={handleBackgroundUpload} disabled={backgroundBusy} />
+
+      {infrastructureMode === "dashboard" ? <InfrastructureSummary summary={infrastructureSummary} /> : null}
 
       <div className={`floor-plan-editor-layout ${isEditing ? "editing" : "view-only"}`}>
         <main className="floor-plan-canvas-panel">
@@ -3570,12 +3911,12 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
                 data={editor}
                 editor={editor}
                 activeFloorId={activeFloorId}
-                selected={isEditing ? selected : null}
+                selected={selected}
                 selectedObjectIds={isEditing ? selectedObjectIds : []}
                 selectionBox={isEditing ? selectionBox : null}
                 alignmentGuides={isEditing ? alignmentGuides : []}
                 selectedTool={zoomMode ? "zoom" : selectedTool}
-                onSelect={isEditing ? handleEntitySelect : () => {}}
+                onSelect={handleEntitySelect}
                 onPointerDown={isEditing ? beginDrag : () => {}}
                 onCanvasPointerDown={handleCanvasPointerDown}
                 onPointerMove={handleCanvasPointerMove}
@@ -3595,6 +3936,10 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
                 spacePressed={spacePressed}
                 showGrid={showGrid}
                 visibleLayers={visibleLayers}
+                backgroundSrc={backgroundSrc}
+                backgroundSettings={backgroundSettings}
+                heatmapByObject={heatmapByObject}
+                heatmapMode={infrastructureMode}
               />
             ) : (
               <Suspense fallback={<div className="floor-plan-loading">Carregando 3D...</div>}>
@@ -3644,9 +3989,20 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
                 setSelectedObjectIds([]);
               }}
               devices={devices}
+              groups={groups}
+              segments={segments}
               permissions={permissions}
               onLinkObject={linkObject}
             />}
+            {!isEditing && selected?.type === "object" ? (
+              <InfrastructureObjectPanel
+                object={selectedOperationalObject}
+                device={selectedOperationalDevice}
+                heatmap={heatmapByObject.get(selected.id)}
+                mode={infrastructureMode}
+                onClose={() => setSelected(null)}
+              />
+            ) : null}
           </div>
 
           {isEditing && <FloorPlanCatalog

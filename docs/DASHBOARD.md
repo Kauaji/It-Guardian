@@ -340,3 +340,6 @@ Todo novo tipo de widget precisa de:
 4. `configFields` correto no registry do cliente, se o widget precisar de
    `asset`/`period`/`limit` no modal de configuração;
 5. entrada no `docs/DASHBOARD.md` (tabela de catálogo acima).
+# Organização do layout
+
+Ao entrar em **Editar dashboard**, use **Organizar posições** para ativar o arraste dos cards. Essa separação evita movimentos acidentais enquanto largura, altura ou conteúdo são configurados. Apenas um menu de configuração permanece aberto; clicar em outro card, fora do menu ou pressionar `Esc` fecha o anterior. As posições são persistidas ao usar **Salvar layout**.

@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { query, withTransaction } from "../database.js";
 import { validateFloorPlanEditorData } from "../domain/floorPlanValidation.js";
 import { addAssetHistory } from "./assetHistoryRepository.js";
@@ -445,6 +445,7 @@ function normalizeEditorChildren(planId, data) {
 
 async function replaceEditorChildren(db, planId, data) {
   const { floors, zones, objects, connectionPoints, cableRoutes, fallbackFloorId } = normalizeEditorChildren(planId, data);
+  const backgroundResult = await db("SELECT * FROM floor_plan_backgrounds WHERE plan_id = $1", [planId]);
 
   await db("DELETE FROM floor_plan_cable_routes WHERE plan_id = $1", [planId]);
   await db("DELETE FROM floor_plan_connection_points WHERE plan_id = $1", [planId]);
@@ -453,6 +454,31 @@ async function replaceEditorChildren(db, planId, data) {
   await db("DELETE FROM floor_plan_floors WHERE plan_id = $1", [planId]);
 
   for (const floor of floors) await insertFloor(db, planId, floor);
+  const retainedFloorIds = new Set(floors.map((floor) => floor.id));
+  for (const background of backgroundResult.rows.filter((item) => retainedFloorIds.has(item.floor_id))) {
+    await db(
+      `
+        INSERT INTO floor_plan_backgrounds (
+          id, plan_id, floor_id, file_name, mime_type, byte_size, sha256, file_data,
+          created_by, created_at, updated_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      `,
+      [
+        background.id,
+        planId,
+        background.floor_id,
+        background.file_name,
+        background.mime_type,
+        background.byte_size,
+        background.sha256,
+        background.file_data,
+        background.created_by,
+        background.created_at,
+        background.updated_at
+      ]
+    );
+  }
   for (const zone of zones) await insertZone(db, zone);
   for (const object of objects) await insertObject(db, object);
   for (const point of connectionPoints) await insertConnectionPoint(db, point);
@@ -797,4 +823,196 @@ export async function linkFloorPlanObject(objectId, payload = {}, user = {}) {
     });
     return updated;
   });
+}
+
+const BACKGROUND_MIME_SIGNATURES = {
+  "image/png": (buffer) => buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])),
+  "image/jpeg": (buffer) => buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff,
+  "image/webp": (buffer) => buffer.length >= 12 && buffer.subarray(0, 4).toString("ascii") === "RIFF" && buffer.subarray(8, 12).toString("ascii") === "WEBP"
+};
+
+export function validateFloorPlanBackground(buffer, mimeType, fileName = "planta") {
+  if (!Buffer.isBuffer(buffer) || buffer.length === 0) throw makeHttpError(400, "Selecione uma imagem para a planta.");
+  if (buffer.length > 8 * 1024 * 1024) throw makeHttpError(413, "A imagem deve ter no máximo 8 MB.");
+  const normalizedMime = String(mimeType || "").split(";", 1)[0].trim().toLowerCase();
+  if (!BACKGROUND_MIME_SIGNATURES[normalizedMime]?.(buffer)) throw makeHttpError(400, "Arquivo inválido. Envie PNG, JPG ou WEBP verdadeiro.");
+  const extension = normalizedMime === "image/png" ? ".png" : normalizedMime === "image/webp" ? ".webp" : ".jpg";
+  const base = String(fileName || "planta").normalize("NFD").replace(/\p{Diacritic}/gu, "").replace(/[^a-z0-9._-]+/gi, "-").replace(/\.(png|jpe?g|webp)$/i, "").slice(0, 100) || "planta";
+  return { mimeType: normalizedMime, fileName: `${base}${extension}` };
+}
+
+export async function saveFloorPlanBackground(planId, floorId, buffer, mimeType, fileName, user = {}) {
+  const clean = validateFloorPlanBackground(buffer, mimeType, fileName);
+  const floor = await query("SELECT id FROM floor_plan_floors WHERE id=$1 AND plan_id=$2", [floorId, planId]);
+  if (!floor.rowCount) throw makeHttpError(404, "Andar da planta não encontrado.");
+  const id = randomUUID();
+  const sha256 = createHash("sha256").update(buffer).digest("hex");
+  await query(`INSERT INTO floor_plan_backgrounds (id,plan_id,floor_id,file_name,mime_type,byte_size,sha256,file_data,created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT (floor_id) DO UPDATE SET file_name=EXCLUDED.file_name,mime_type=EXCLUDED.mime_type,byte_size=EXCLUDED.byte_size,sha256=EXCLUDED.sha256,file_data=EXCLUDED.file_data,created_by=EXCLUDED.created_by,updated_at=NOW()`, [id,planId,floorId,clean.fileName,clean.mimeType,buffer.length,sha256,buffer,getUserId(user)]);
+  await query("UPDATE floor_plan_floors SET background_url=$2, updated_at=NOW() WHERE id=$1", [floorId, `/api/floor-plans/${planId}/floors/${floorId}/background`]);
+  await addLog({
+    type: "floor_plan.background_uploaded",
+    message: `Imagem de fundo da planta ${planId} atualizada.`,
+    userId: getUserId(user),
+    meta: { planId, floorId, mimeType: clean.mimeType, byteSize: buffer.length, sha256 }
+  });
+  return { floorId, fileName: clean.fileName, mimeType: clean.mimeType, byteSize: buffer.length, sha256, backgroundUrl: `/api/floor-plans/${planId}/floors/${floorId}/background` };
+}
+
+export async function getFloorPlanBackground(planId, floorId) {
+  const result = await query("SELECT file_name,mime_type,byte_size,sha256,file_data,updated_at FROM floor_plan_backgrounds WHERE plan_id=$1 AND floor_id=$2", [planId,floorId]);
+  if (!result.rowCount) throw makeHttpError(404, "Imagem de fundo não encontrada.");
+  return result.rows[0];
+}
+
+export async function removeFloorPlanBackground(planId, floorId, user = {}) {
+  const result = await query("DELETE FROM floor_plan_backgrounds WHERE plan_id=$1 AND floor_id=$2 RETURNING floor_id", [planId,floorId]);
+  if (!result.rowCount) throw makeHttpError(404, "Imagem de fundo não encontrada.");
+  await query("UPDATE floor_plan_floors SET background_url=NULL, updated_at=NOW() WHERE id=$1 AND plan_id=$2", [floorId,planId]);
+  await addLog({
+    type: "floor_plan.background_removed",
+    message: `Imagem de fundo da planta ${planId} removida.`,
+    userId: getUserId(user),
+    meta: { planId, floorId }
+  });
+  return { floorId };
+}
+
+async function infrastructureRows(planId) {
+  await getPlanRowOrThrow(planId);
+  const [objects, assets, alerts, orders] = await Promise.all([
+    query("SELECT id,label,linked_asset_id,group_id,segment_id,category,object_type FROM floor_plan_objects WHERE plan_id=$1", [planId]),
+    query("SELECT asset_id,hostname,machine_alias,cpu_usage_percent,memory_total_bytes,memory_used_bytes,disk_total_bytes,disk_free_bytes,last_seen_at,interval_seconds FROM agent_assets"),
+    query("SELECT asset_id,severity,status FROM alerts WHERE status='active'"),
+    query("SELECT asset_id,status,priority,sla_due_at,created_at,closed_at FROM service_orders WHERE asset_id IS NOT NULL")
+  ]);
+  return { objects: objects.rows, assets: assets.rows, alerts: alerts.rows, orders: orders.rows };
+}
+
+function assetHeatmapSeverity(metric, value, status) {
+  if (metric === "availability") {
+    return status === "online" ? "low" : status === "offline" ? "critical" : "medium";
+  }
+  if (metric === "alerts" || metric === "service_orders") {
+    return value >= 5 ? "critical" : value >= 3 ? "high" : value >= 1 ? "medium" : "low";
+  }
+  return value >= 85 ? "critical" : value >= 65 ? "high" : value >= 35 ? "medium" : "low";
+}
+
+function assetSnapshot(asset) {
+  if (!asset) return { status: "no_agent", cpu: null, ram: null, disk: null, lastSeenAt: null };
+  const ram = Number(asset.memory_total_bytes) > 0 ? Math.round(Number(asset.memory_used_bytes || 0) / Number(asset.memory_total_bytes) * 100) : null;
+  const disk = Number(asset.disk_total_bytes) > 0 ? Math.round((1 - Number(asset.disk_free_bytes || 0) / Number(asset.disk_total_bytes)) * 100) : null;
+  const age = Date.now() - new Date(asset.last_seen_at).getTime();
+  const status = age <= Math.max(180_000, Number(asset.interval_seconds || 60) * 3_000) ? "online" : "offline";
+  return { status, cpu: asset.cpu_usage_percent == null ? null : Number(asset.cpu_usage_percent), ram, disk, lastSeenAt: asset.last_seen_at, name: asset.machine_alias || asset.hostname };
+}
+
+function filterInfrastructureObjects(objects, { groupId, segmentId } = {}) {
+  return objects.filter((item) => (
+    (!groupId || item.group_id === groupId)
+    && (!segmentId || item.segment_id === segmentId)
+  ));
+}
+
+export async function getFloorPlanAssetHeatmap(planId, metric = "availability", filters = {}) {
+  const allowedMetrics = new Set(["availability", "cpu", "ram", "disk", "alerts", "service_orders"]);
+  if (!allowedMetrics.has(metric)) throw makeHttpError(400, "Métrica de ativos inválida.");
+  const data = await infrastructureRows(planId);
+  const assetMap = new Map(data.assets.map((item) => [item.asset_id, item]));
+  const alertsByAsset = new Map();
+  for (const alert of data.alerts) {
+    alertsByAsset.set(alert.asset_id, (alertsByAsset.get(alert.asset_id) || 0) + 1);
+  }
+  const ordersByAsset = new Map();
+  for (const order of data.orders) {
+    ordersByAsset.set(order.asset_id, (ordersByAsset.get(order.asset_id) || 0) + 1);
+  }
+  const components = filterInfrastructureObjects(data.objects, filters)
+    .filter((item) => item.linked_asset_id)
+    .map((item) => {
+      const snapshot = assetSnapshot(assetMap.get(item.linked_asset_id));
+      const value = metric === "cpu" ? snapshot.cpu
+        : metric === "ram" ? snapshot.ram
+          : metric === "disk" ? snapshot.disk
+            : metric === "alerts" ? (alertsByAsset.get(item.linked_asset_id) || 0)
+              : metric === "service_orders" ? (ordersByAsset.get(item.linked_asset_id) || 0)
+                : snapshot.status === "online" ? 0 : snapshot.status === "offline" ? 100 : 50;
+      return {
+        componentId: item.id,
+        assetId: item.linked_asset_id,
+        label: item.label,
+        ...snapshot,
+        alerts: alertsByAsset.get(item.linked_asset_id) || 0,
+        serviceOrders: ordersByAsset.get(item.linked_asset_id) || 0,
+        score: value ?? 0,
+        severity: assetHeatmapSeverity(metric, value ?? 0, snapshot.status)
+      };
+    });
+  return { metric, filters: { groupId: filters.groupId || null, segmentId: filters.segmentId || null }, components };
+}
+
+export async function getFloorPlanServiceOrderHeatmap(planId, startDate, endDate, filters = {}) {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start || (end - start) > 366 * 86400000) {
+    throw makeHttpError(400, "Informe um período válido de até 366 dias.");
+  }
+  const data = await infrastructureRows(planId);
+  const byAsset = new Map();
+  for (const order of data.orders) {
+    const created = new Date(order.created_at);
+    if (created < start || created >= end) continue;
+    const list = byAsset.get(order.asset_id) || [];
+    list.push(order);
+    byAsset.set(order.asset_id, list);
+  }
+  const components = filterInfrastructureObjects(data.objects, filters)
+    .filter((item) => item.linked_asset_id)
+    .map((item) => {
+      const orders = byAsset.get(item.linked_asset_id) || [];
+      const open = orders.filter((order) => !order.closed_at).length;
+      const overdue = orders.filter((order) => !order.closed_at && order.sla_due_at && new Date(order.sla_due_at) < new Date()).length;
+      const score = orders.length + open * 2 + overdue * 3;
+      return {
+        componentId: item.id,
+        assetId: item.linked_asset_id,
+        label: item.label,
+        totalServiceOrders: orders.length,
+        openServiceOrders: open,
+        overdueServiceOrders: overdue,
+        score,
+        severity: score >= 10 ? "critical" : score >= 6 ? "high" : score >= 3 ? "medium" : "low"
+      };
+    });
+  return {
+    period: { startDate: start.toISOString(), endDate: end.toISOString() },
+    filters: { groupId: filters.groupId || null, segmentId: filters.segmentId || null },
+    components,
+    summary: {
+      totalServiceOrders: components.reduce((sum, item) => sum + item.totalServiceOrders, 0),
+      openServiceOrders: components.reduce((sum, item) => sum + item.openServiceOrders, 0),
+      overdueServiceOrders: components.reduce((sum, item) => sum + item.overdueServiceOrders, 0)
+    }
+  };
+}
+
+export async function getFloorPlanInfrastructureSummary(planId, filters = {}) {
+  const data = await infrastructureRows(planId);
+  const objects = filterInfrastructureObjects(data.objects, filters);
+  const assetMap = new Map(data.assets.map((item) => [item.asset_id, item]));
+  const linked = objects.filter((item) => item.linked_asset_id);
+  const snapshots = linked.map((item) => assetSnapshot(assetMap.get(item.linked_asset_id)));
+  const linkedIds = new Set(linked.map((item) => item.linked_asset_id));
+  return {
+    totalComponents: objects.length,
+    linkedAssets: linked.length,
+    onlineAssets: snapshots.filter((item) => item.status === "online").length,
+    offlineAssets: snapshots.filter((item) => item.status === "offline").length,
+    assetsWithoutAgent: snapshots.filter((item) => item.status === "no_agent").length,
+    openServiceOrders: data.orders.filter((item) => linkedIds.has(item.asset_id) && !item.closed_at).length,
+    overdueServiceOrders: data.orders.filter((item) => linkedIds.has(item.asset_id) && !item.closed_at && item.sla_due_at && new Date(item.sla_due_at) < new Date()).length,
+    criticalAlerts: data.alerts.filter((item) => linkedIds.has(item.asset_id) && ["critical", "high"].includes(item.severity)).length,
+    segmentsRepresented: new Set(objects.map((item) => item.segment_id).filter(Boolean)).size,
+    groupsRepresented: new Set(objects.map((item) => item.group_id).filter(Boolean)).size
+  };
 }

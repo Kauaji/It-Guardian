@@ -3140,7 +3140,9 @@ function Dashboard() {
                   create: hasPermission(user, "floor_plans.create"),
                   update: hasPermission(user, "floor_plans.update"),
                   delete: hasPermission(user, "floor_plans.delete"),
-                  linkInventory: hasPermission(user, "floor_plans.link_inventory")
+                  linkInventory: hasPermission(user, "floor_plans.link_inventory"),
+                  uploadBackground: hasPermission(user, "floor_plans.upload_background"),
+                  viewHeatmaps: hasPermission(user, "floor_plans.view_heatmaps")
                 }}
               />
             ) : null}
@@ -3178,7 +3180,8 @@ function Dashboard() {
                   update: hasPermission(user, "calendar.update"),
                   cancel: hasPermission(user, "calendar.cancel"),
                   delete: hasPermission(user, "calendar.delete"),
-                  assignTechnician: hasPermission(user, "calendar.assign_technician")
+                  assignTechnician: hasPermission(user, "calendar.assign_technician"),
+                  viewAllTechnicians: hasPermission(user, "calendar.view_all_technicians")
                 }}
               />
             </Suspense>

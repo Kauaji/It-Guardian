@@ -4,6 +4,17 @@ Registro cronologico das entregas relevantes do IT Guardian. Toda consolidacao
 funcional, mudanca operacional, migracao ou liberacao deve acrescentar uma
 entrada neste arquivo com data, escopo, validacoes e pendencias conhecidas.
 
+## 2026-09-03 - Agenda Técnica, Inventário de Peças e Mapa de Infraestrutura
+
+- a navegação passou a distinguir Inventário de Ativos, Inventário de Peças e Agenda Técnica;
+- criado calendário persistente com mês, semana e dia, filtros, permissões, vínculos com OS/ativo/técnico/grupo/segmento e seção Agenda dentro da OS;
+- criado estoque de peças com códigos técnicos, saldo mínimo, vínculo a ativo/OS e movimentos auditáveis;
+- dashboard recebeu modo explícito de organização por arrastar e menus exclusivos, fechados ao clicar fora;
+- corrigidos expansão da barra lateral, pulso de status e distribuição compacta das OS;
+- Planta ganhou upload autenticado de PNG/JPG/WEBP, ajuste de fundo, componente semântico, filtros, resumo e mapas de calor de OS/ativos com dados persistidos;
+- migrations `027-calendar-events`, `028-parts-inventory` e `029-floor-plan-infrastructure` adicionadas;
+- limitações mantidas: sem sincronização externa de calendário, sem recorrência avançada, sem PDF/SVG/OCR/IA na planta e sem storage externo nesta V1.
+
 ## 2026-08-24 - Dashboard configuravel por widgets (inspirado no Zabbix)
 
 ### Contexto

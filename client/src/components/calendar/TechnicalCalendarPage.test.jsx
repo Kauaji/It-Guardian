@@ -10,6 +10,7 @@ vi.mock("../../api.js", () => api);
 
 describe("TechnicalCalendarPage", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     api.fetchCalendarEvents.mockResolvedValue({ events: [] });
     api.fetchCalendarSummary.mockResolvedValue({ summary: {} });
     api.fetchTechnicians.mockResolvedValue({ technicians: [] });
@@ -26,7 +27,9 @@ describe("TechnicalCalendarPage", () => {
 
   it("troca para a visão semanal", async () => {
     render(<TechnicalCalendarPage token="token" permissions={{ create: true }} />);
+    await waitFor(() => expect(document.querySelector(".calendar-surface")).not.toHaveClass("is-loading"));
     fireEvent.click(await screen.findByRole("button", { name: "Semana" }));
     expect(document.querySelector(".calendar-surface.view-week")).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector(".calendar-surface.view-week")).not.toHaveClass("is-loading"));
   });
 });

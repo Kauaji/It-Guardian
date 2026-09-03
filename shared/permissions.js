@@ -39,7 +39,9 @@ export const permissionGroups = [
       { id: "floor_plans.create", label: "Criar plantas" },
       { id: "floor_plans.update", label: "Editar plantas" },
       { id: "floor_plans.delete", label: "Excluir plantas" },
-      { id: "floor_plans.link_inventory", label: "Vincular ativos do inventario" }
+      { id: "floor_plans.link_inventory", label: "Vincular ativos do inventario" },
+      { id: "floor_plans.upload_background", label: "Enviar planta de fundo" },
+      { id: "floor_plans.view_heatmaps", label: "Visualizar mapas de calor e resumo" }
     ]
   },
   {
@@ -207,6 +209,8 @@ export const roleDefaultPermissions = {
     "floor_plans.update",
     "floor_plans.delete",
     "floor_plans.link_inventory",
+    "floor_plans.upload_background",
+    "floor_plans.view_heatmaps",
     "inventory.topology.view",
     "inventory.topology.manage",
     "inventory.topology.link_assets",

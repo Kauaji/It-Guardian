@@ -28,6 +28,7 @@ import { migration025AssetMetricHistory } from "./025-asset-metric-history.js";
 import { migration026NetworkTopologyClusterNodes } from "./026-network-topology-cluster-nodes.js";
 import { migration027CalendarEvents } from "./027-calendar-events.js";
 import { migration028PartsInventory } from "./028-parts-inventory.js";
+import { migration029FloorPlanInfrastructure } from "./029-floor-plan-infrastructure.js";
 
 export const migrations = [
   migration001RuntimeFoundation,
@@ -57,7 +58,8 @@ export const migrations = [
   migration025AssetMetricHistory,
   migration026NetworkTopologyClusterNodes,
   migration027CalendarEvents,
-  migration028PartsInventory
+  migration028PartsInventory,
+  migration029FloorPlanInfrastructure
 ];
 
 export async function runMigrations() {

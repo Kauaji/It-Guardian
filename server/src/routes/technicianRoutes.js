@@ -1,12 +1,12 @@
 import { Router } from "express";
 import { technicianController } from "../controllers/settingsController.js";
-import { requireAuth, requirePermission } from "../middleware/authMiddleware.js";
+import { requireAnyPermission, requireAuth, requirePermission } from "../middleware/authMiddleware.js";
 
 const router = Router();
 
 router.use(requireAuth);
-router.get("/", requirePermission("service_orders.view"), technicianController.list);
-router.get("/:id", requirePermission("service_orders.view"), technicianController.details);
+router.get("/", requireAnyPermission("service_orders.view", "calendar.view"), technicianController.list);
+router.get("/:id", requireAnyPermission("service_orders.view", "calendar.view"), technicianController.details);
 router.post("/", requirePermission("service_orders.settings"), technicianController.create);
 router.patch("/:id", requirePermission("service_orders.settings"), technicianController.update);
 router.delete("/:id", requirePermission("service_orders.settings"), technicianController.remove);

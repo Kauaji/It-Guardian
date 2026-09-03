@@ -96,7 +96,7 @@ export function getInventoryLinkPatch(device, label) {
   return {
     linkedAssetId: device?.id || null,
     label: device ? label : undefined,
-    groupId: device?.groupId || null,
+    groupId: device?.groupId || device?.segmentGroupId || null,
     segmentId: device?.segmentId || null
   };
 }
