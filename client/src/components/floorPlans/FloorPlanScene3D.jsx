@@ -1,7 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Box, Grid3X3, House, Maximize2, Move3D, Orbit, Sparkles } from "lucide-react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { getRoomGeometry, getRoomInterior, isRoomZone } from "./utils/roomGeometry.js";
 import { isWallObject, syncAnchoredOpenings } from "./utils/wallGeometry.js";
@@ -16,6 +18,112 @@ import {
   MODEL_QUALITY_DETAILED,
   resolveInventoryMapAssetMode
 } from "./assets/inventoryMapAssetRegistry.js";
+import "./floorPlanStudio.css";
+
+const CAMERA_VIEW_ISOMETRIC = "isometric";
+const CAMERA_VIEW_TOP = "top";
+const CAMERA_VIEW_FRONT = "front";
+const CAMERA_DRAG_THRESHOLD = 5;
+
+export function getFloorPlanContentFrame(data, activeFloorId, floorWidth, floorHeight) {
+  const bounds = [];
+  const matchesFloor = (entry) => !activeFloorId || entry?.floorId === activeFloorId;
+  const addRect = (x, y, width, height) => {
+    const rectWidth = Math.max(0, Number(width || 0));
+    const rectHeight = Math.max(0, Number(height || 0));
+    if (!rectWidth && !rectHeight) return;
+    bounds.push({
+      minX: Number(x || 0),
+      minY: Number(y || 0),
+      maxX: Number(x || 0) + rectWidth,
+      maxY: Number(y || 0) + rectHeight
+    });
+  };
+
+  (data?.zones || []).filter(matchesFloor).forEach((zone) => {
+    const geometry = zone.geometry || {};
+    addRect(geometry.x, geometry.y, geometry.width, geometry.height);
+  });
+  (data?.objects || []).filter(matchesFloor).forEach((object) => {
+    if (!isMeasurementObject(object)) addRect(object.x, object.y, object.width, object.height);
+  });
+  (data?.cableRoutes || []).filter(matchesFloor).forEach((route) => {
+    (route.path || []).forEach((point) => addRect(point.x, point.y, 1, 1));
+  });
+
+  const safeFloorWidth = Math.max(1, Number(floorWidth || 0));
+  const safeFloorHeight = Math.max(1, Number(floorHeight || 0));
+  if (!bounds.length) {
+    return { width: safeFloorWidth, height: safeFloorHeight, centerX: 0, centerZ: 0 };
+  }
+
+  const minX = Math.min(...bounds.map((bound) => bound.minX));
+  const minY = Math.min(...bounds.map((bound) => bound.minY));
+  const maxX = Math.max(...bounds.map((bound) => bound.maxX));
+  const maxY = Math.max(...bounds.map((bound) => bound.maxY));
+  const contentWidth = Math.max(1, maxX - minX);
+  const contentHeight = Math.max(1, maxY - minY);
+  const padding = Math.max(48, Math.max(contentWidth, contentHeight) * 0.12);
+
+  return {
+    width: Math.min(safeFloorWidth, Math.max(420, contentWidth + padding * 2)),
+    height: Math.min(safeFloorHeight, Math.max(320, contentHeight + padding * 2)),
+    centerX: (minX + maxX) / 2 - safeFloorWidth / 2,
+    centerZ: (minY + maxY) / 2 - safeFloorHeight / 2
+  };
+}
+
+export function getFloorPlanCameraPreset(
+  view,
+  floorWidth,
+  floorHeight,
+  aspect = 1,
+  fieldOfView = 42,
+  targetX = 0,
+  targetZ = 0
+) {
+  const safeWidth = Math.max(1, Number(floorWidth || 0));
+  const safeHeight = Math.max(1, Number(floorHeight || 0));
+  const safeAspect = Math.max(0.2, Number(aspect || 1));
+  const verticalFov = THREE.MathUtils.degToRad(fieldOfView);
+  const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * safeAspect);
+  const fitWidthDistance = safeWidth / 2 / Math.tan(horizontalFov / 2);
+  const fitDepthDistance = safeHeight / 2 / Math.tan(verticalFov / 2);
+  const fitDistance = Math.max(280, fitWidthDistance, fitDepthDistance) * 1.08;
+  const target = new THREE.Vector3(Number(targetX || 0), 28, Number(targetZ || 0));
+
+  if (view === CAMERA_VIEW_TOP) {
+    return {
+      position: target.clone().add(new THREE.Vector3(0, fitDistance, 0.01)),
+      target
+    };
+  }
+
+  if (view === CAMERA_VIEW_FRONT) {
+    return {
+      position: target.clone().add(new THREE.Vector3(0, fitDistance * 0.42, fitDistance * 1.02)),
+      target
+    };
+  }
+
+  const direction = new THREE.Vector3(0.64, 0.72, 0.82).normalize();
+  return {
+    position: target.clone().add(direction.multiplyScalar(fitDistance * 1.12)),
+    target
+  };
+}
+
+function easeCamera(progress) {
+  return progress < 0.5
+    ? 4 * progress * progress * progress
+    : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+}
+
+function roundedGeometry(width, height, depth) {
+  const smallestSide = Math.max(0.5, Math.min(width, height, depth));
+  const radius = Math.min(2.4, smallestSide * 0.16);
+  return new RoundedBoxGeometry(width, height, depth, 2, radius);
+}
 
 function toColor(value, fallback = "#1f7a61") {
   return /^#[0-9a-f]{6}$/i.test(String(value || "")) ? value : fallback;
@@ -141,31 +249,107 @@ function createSurfaceTexture(preset, kind = "floor") {
   return texture;
 }
 
-export default function FloorPlanScene3D({ data, activeFloorId, selected, onSelect, onMoveObject, preview = false }) {
+export default function FloorPlanScene3D({
+  data,
+  activeFloorId,
+  selected,
+  onSelect,
+  onMoveObject,
+  preview = false,
+  editable = false,
+  showGrid = true,
+  onGridChange
+}) {
   const containerRef = useRef(null);
+  const sceneApiRef = useRef(null);
+  const callbacksRef = useRef({ onMoveObject, onSelect });
+  const editableRef = useRef(editable);
+  const cameraViewRef = useRef(CAMERA_VIEW_ISOMETRIC);
+  const showGridRef = useRef(showGrid);
+  const selectedRef = useRef(selected);
+  const [cameraView, setCameraView] = useState(CAMERA_VIEW_ISOMETRIC);
+  const [sceneReady, setSceneReady] = useState(false);
+  const [pendingModels, setPendingModels] = useState(0);
   const modelQuality = MODEL_QUALITY_DETAILED;
+
+  callbacksRef.current = { onMoveObject, onSelect };
+  editableRef.current = editable;
+  cameraViewRef.current = cameraView;
+  showGridRef.current = showGrid;
+  selectedRef.current = selected;
+
+  const changeCameraView = useCallback((nextView) => {
+    setCameraView(nextView);
+    sceneApiRef.current?.setCameraView(nextView);
+  }, []);
+
+  const fitScene = useCallback(() => {
+    sceneApiRef.current?.setCameraView(cameraView);
+  }, [cameraView]);
+
+  const toggleGrid = useCallback(() => {
+    onGridChange?.(!showGrid);
+  }, [onGridChange, showGrid]);
+
+  const handleSceneKeyDown = useCallback((event) => {
+    const key = event.key.toLowerCase();
+    if (key === "home" || key === "1") {
+      event.preventDefault();
+      changeCameraView(CAMERA_VIEW_ISOMETRIC);
+    } else if (key === "2") {
+      event.preventDefault();
+      changeCameraView(CAMERA_VIEW_TOP);
+    } else if (key === "3") {
+      event.preventDefault();
+      changeCameraView(CAMERA_VIEW_FRONT);
+    } else if (key === "f") {
+      event.preventDefault();
+      fitScene();
+    } else if (key === "g") {
+      event.preventDefault();
+      toggleGrid();
+    }
+  }, [changeCameraView, fitScene, toggleGrid]);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container || !data) return undefined;
 
-    const width = Math.max(container.clientWidth, 320);
-    const height = Math.max(container.clientHeight, 260);
+    setSceneReady(false);
+    setPendingModels(0);
+
+    const width = Math.max(container.clientWidth || 0, 1);
+    const height = Math.max(container.clientHeight || 0, 260);
     const floor = data.floors?.find((entry) => entry.id === activeFloorId) || data.floors?.[0];
+    const floorWidth = Number(floor?.width || data.plan?.width || 1280);
+    const floorHeight = Number(floor?.height || data.plan?.height || 820);
+    const sceneSpan = Math.max(floorWidth, floorHeight, 420);
+    const contentFrame = getFloorPlanContentFrame(data, activeFloorId, floorWidth, floorHeight);
+    const frameSpan = Math.max(contentFrame.width, contentFrame.height, 320);
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color("#e8eef4");
-    scene.fog = new THREE.Fog("#e8eef4", 1250, 2500);
+    scene.background = null;
+    scene.fog = new THREE.Fog("#c8d6de", sceneSpan * 1.9, sceneSpan * 4.2);
 
-    const camera = new THREE.PerspectiveCamera(44, width / height, 1, 5000);
-    camera.position.set(0, 720, 780);
-    camera.lookAt(0, 0, 0);
+    const initialView = getFloorPlanCameraPreset(
+      cameraViewRef.current,
+      contentFrame.width,
+      contentFrame.height,
+      width / height,
+      42,
+      contentFrame.centerX,
+      contentFrame.centerZ
+    );
+    const camera = new THREE.PerspectiveCamera(42, width / height, 0.5, Math.max(5000, sceneSpan * 6));
+    camera.position.copy(initialView.position);
+    camera.lookAt(initialView.target);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(preview ? 1 : Math.min(window.devicePixelRatio || 1, 2));
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+    renderer.setClearColor(0x000000, 0);
+    renderer.setPixelRatio(preview ? 1 : Math.min(window.devicePixelRatio || 1, width < 700 ? 1.5 : 2));
     renderer.setSize(width, height);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.06;
+    renderer.toneMappingExposure = 0.94;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(renderer.domElement);
@@ -175,34 +359,47 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
     scene.environment = environmentTexture;
 
     const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = false;
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
+    controls.enableDamping = !reducedMotion;
+    controls.dampingFactor = 0.075;
     controls.enabled = !preview;
-    controls.enableZoom = false;
-    controls.minDistance = 360;
-    controls.maxDistance = 1900;
-    controls.maxPolarAngle = Math.PI / 2.15;
-    controls.target.set(0, 0, 0);
+    controls.enableZoom = !preview;
+    controls.zoomSpeed = 0.62;
+    controls.rotateSpeed = 0.58;
+    controls.panSpeed = 0.72;
+    controls.screenSpacePanning = true;
+    controls.minDistance = Math.max(140, frameSpan * 0.2);
+    controls.maxDistance = Math.max(1900, sceneSpan * 2.4);
+    controls.maxPolarAngle = Math.PI / 2.06;
+    controls.target.copy(initialView.target);
 
-    const hemisphere = new THREE.HemisphereLight("#eaf4ff", "#63705f", 1.05);
+    const hemisphere = new THREE.HemisphereLight("#eef8fc", "#52625b", 0.82);
     scene.add(hemisphere);
 
-    const sun = new THREE.DirectionalLight("#fff4df", 2.1);
-    sun.position.set(-360, 720, 420);
+    const sun = new THREE.DirectionalLight("#fff1d8", 1.58);
+    sun.position.set(-sceneSpan * 0.34, sceneSpan * 0.82, sceneSpan * 0.42);
     sun.castShadow = true;
-    sun.shadow.mapSize.set(2048, 2048);
-    sun.shadow.camera.left = -900;
-    sun.shadow.camera.right = 900;
-    sun.shadow.camera.top = 900;
-    sun.shadow.camera.bottom = -900;
-    sun.shadow.camera.near = 20;
-    sun.shadow.camera.far = 1800;
+    sun.shadow.mapSize.set(width < 700 ? 1024 : 2048, width < 700 ? 1024 : 2048);
+    sun.shadow.camera.left = -sceneSpan;
+    sun.shadow.camera.right = sceneSpan;
+    sun.shadow.camera.top = sceneSpan;
+    sun.shadow.camera.bottom = -sceneSpan;
+    sun.shadow.camera.near = 10;
+    sun.shadow.camera.far = sceneSpan * 2.8;
     sun.shadow.bias = -0.0004;
+    sun.shadow.normalBias = 0.035;
     scene.add(sun);
 
-    const floorWidth = Number(floor?.width || data.plan?.width || 1280);
-    const floorHeight = Number(floor?.height || data.plan?.height || 820);
+    const fill = new THREE.DirectionalLight("#b9dcf4", 0.42);
+    fill.position.set(sceneSpan * 0.52, sceneSpan * 0.38, -sceneSpan * 0.62);
+    scene.add(fill);
+
     const surfaceTextures = new Map();
     const physicalTextures = new Map();
+    const proceduralGeometries = new Map();
+    const proceduralMaterials = new Map();
+    const sharedProceduralGeometries = new Set();
+    const sharedProceduralMaterials = new Set();
     const textureLoader = new THREE.TextureLoader();
     const getSurfaceTexture = (preset, kind) => {
       const key = `${kind}:${preset || "default"}`;
@@ -229,9 +426,18 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
       normalMap: getPhysicalTexture(preset, "normalMap", kind),
       roughnessMap: getPhysicalTexture(preset, "roughnessMap", kind)
     });
+    const getRoundedGeometry = (partWidth, partHeight, partDepth) => {
+      const key = [partWidth, partHeight, partDepth].map((value) => Number(value).toFixed(2)).join(":");
+      if (!proceduralGeometries.has(key)) {
+        const geometry = roundedGeometry(partWidth, partHeight, partDepth);
+        proceduralGeometries.set(key, geometry);
+        sharedProceduralGeometries.add(geometry);
+      }
+      return proceduralGeometries.get(key);
+    };
     const baseGeometry = new THREE.BoxGeometry(floorWidth, 10, floorHeight);
     const baseMaterial = new THREE.MeshStandardMaterial({
-      color: "#d8e0e7",
+      color: "#c8d2da",
       map: getSurfaceTexture("concrete", "floor"),
       roughness: 0.88,
       metalness: 0
@@ -239,6 +445,22 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
     const base = new THREE.Mesh(baseGeometry, baseMaterial);
     base.receiveShadow = true;
     scene.add(base);
+
+    const baseEdges = new THREE.LineSegments(
+      new THREE.EdgesGeometry(baseGeometry, 34),
+      new THREE.LineBasicMaterial({ color: "#8fa1af", transparent: true, opacity: 0.58 })
+    );
+    baseEdges.position.copy(base.position);
+    scene.add(baseEdges);
+
+    const groundShadow = new THREE.Mesh(
+      new THREE.PlaneGeometry(floorWidth * 1.24, floorHeight * 1.24),
+      new THREE.ShadowMaterial({ color: "#15283a", opacity: 0.13 })
+    );
+    groundShadow.rotation.x = -Math.PI / 2;
+    groundShadow.position.y = -6;
+    groundShadow.receiveShadow = true;
+    scene.add(groundShadow);
 
     const offsetX = floorWidth / 2;
     const offsetY = floorHeight / 2;
@@ -252,6 +474,12 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
     const modelScenePromises = new Map();
     const warnedModelUrls = new Set();
     let disposed = false;
+    let pendingModelCount = 0;
+
+    const updatePendingModels = (delta) => {
+      pendingModelCount = Math.max(0, pendingModelCount + delta);
+      if (!disposed) setPendingModels(pendingModelCount);
+    };
 
     const loadModelScene = (url) => {
       if (!modelLoader) return Promise.reject(new Error("Model loader is disabled"));
@@ -269,9 +497,12 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
 
     const disposeObject3D = (root) => {
       root?.traverse?.((child) => {
-        child.geometry?.dispose?.();
-        if (Array.isArray(child.material)) child.material.forEach((material) => material.dispose?.());
-        else child.material?.dispose?.();
+        if (child.geometry && !sharedProceduralGeometries.has(child.geometry)) child.geometry.dispose?.();
+        if (Array.isArray(child.material)) {
+          child.material.forEach((material) => {
+            if (!sharedProceduralMaterials.has(material)) material.dispose?.();
+          });
+        } else if (child.material && !sharedProceduralMaterials.has(child.material)) child.material.dispose?.();
       });
     };
 
@@ -308,20 +539,32 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
       return mesh;
     };
 
-    const createMaterial = (color, opacity = 1, metalness = 0.04, texturePreset = null, textureKind = "object") => {
+    const createMaterial = (color, opacity = 1, metalness = 0.04, texturePreset = null, textureKind = "object", options = {}) => {
       const normalizedTextureKind = textureKind === "wall" ? "wall" : "floor";
+      const materialKey = JSON.stringify({ color, opacity, metalness, texturePreset, normalizedTextureKind, ...options });
+      if (proceduralMaterials.has(materialKey)) return proceduralMaterials.get(materialKey);
       const textureMaps = texturePreset
         ? getMaterialTextureMaps(texturePreset, normalizedTextureKind)
         : {};
-      return new THREE.MeshStandardMaterial({
+      const Material = options.glass ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
+      const material = new Material({
         color: toColor(color, "#1f7a61"),
         ...textureMaps,
         transparent: opacity < 1,
         opacity,
-        roughness: metalness > 0.2 ? 0.34 : 0.64,
+        roughness: options.roughness ?? (metalness > 0.2 ? 0.34 : 0.64),
         metalness,
-        normalScale: textureMaps.normalMap ? new THREE.Vector2(0.38, 0.38) : undefined
+        normalScale: textureMaps.normalMap ? new THREE.Vector2(0.38, 0.38) : undefined,
+        emissive: options.emissive ? new THREE.Color(options.emissive) : undefined,
+        emissiveIntensity: Number(options.emissiveIntensity || 0),
+        transmission: options.glass ? 0.28 : undefined,
+        thickness: options.glass ? 0.6 : undefined,
+        depthWrite: !options.glass,
+        envMapIntensity: options.glass ? 1.18 : 0.82
       });
+      proceduralMaterials.set(materialKey, material);
+      sharedProceduralMaterials.add(material);
+      return material;
     };
 
     const addModelPart = (group, {
@@ -335,11 +578,18 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
       opacity = 1,
       metalness = 0.04,
       texturePreset = null,
-      textureKind = "object"
+      textureKind = "object",
+      emissive = null,
+      emissiveIntensity = 0,
+      glass = false
     }) => {
       const mesh = new THREE.Mesh(
-        new THREE.BoxGeometry(partWidth, partHeight, partDepth),
-        createMaterial(color, opacity, metalness, texturePreset, textureKind)
+        getRoundedGeometry(partWidth, partHeight, partDepth),
+        createMaterial(color, opacity, metalness, texturePreset, textureKind, {
+          emissive,
+          emissiveIntensity,
+          glass
+        })
       );
       mesh.position.set(x, y + partHeight / 2, z);
       mesh.castShadow = opacity >= 0.5;
@@ -493,13 +743,13 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
         });
       } else if (["pc", "notebook"].includes(type)) {
         if (type === "pc") {
-          addModelPart(group, { x: -objectWidth * 0.15, width: objectWidth * 0.5, depth: 7, height: 32, y: 8, color: "#2563eb" });
+          addModelPart(group, { x: -objectWidth * 0.15, width: objectWidth * 0.5, depth: 7, height: 32, y: 8, color: "#2563eb", emissive: "#0f5fff", emissiveIntensity: 0.34 });
           addModelPart(group, { x: -objectWidth * 0.15, z: -2, width: objectWidth * 0.62, depth: 4, height: 40, y: 6, color: "#111827", opacity: 0.92 });
           addModelPart(group, { x: objectWidth * 0.28, width: 13, depth: objectDepth * 0.42, height: 42, y: 0, color: "#1f2937", metalness: 0.18 });
           addModelPart(group, { x: -objectWidth * 0.15, z: objectDepth * 0.18, width: objectWidth * 0.35, depth: 12, height: 5, y: 0, color: "#475569" });
         } else {
           addModelPart(group, { width: objectWidth * 0.72, depth: objectDepth * 0.52, height: 5, y: 0, color: "#334155" });
-          addModelPart(group, { z: -objectDepth * 0.18, width: objectWidth * 0.7, depth: 5, height: 30, y: 3, color: "#1d4ed8" });
+          addModelPart(group, { z: -objectDepth * 0.18, width: objectWidth * 0.7, depth: 5, height: 30, y: 3, color: "#1d4ed8", emissive: "#0f5fff", emissiveIntensity: 0.28 });
         }
       } else if (type === "printer") {
         addModelPart(group, { width: objectWidth * 0.88, depth: objectDepth * 0.74, height: 24, y: 0, color: neutral, metalness: 0.1 });
@@ -531,13 +781,15 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
               depth: 2,
               height: 2.4,
               color: index < Math.ceil((workingPorts / totalPorts) * visiblePorts) ? "#22c55e" : "#ef4444",
-              metalness: 0.12
+              metalness: 0.12,
+              emissive: index < Math.ceil((workingPorts / totalPorts) * visiblePorts) ? "#16a34a" : "#dc2626",
+              emissiveIntensity: 0.72
             });
           }
         }
       } else if (["switch", "firewall", "router"].includes(type)) {
         addModelPart(group, { width: objectWidth * 0.88, depth: objectDepth * 0.64, height: 14, y: 18, color: "#334155", metalness: 0.18 });
-        addModelPart(group, { z: -objectDepth * 0.32, width: objectWidth * 0.7, depth: 3, height: 4, y: 28, color });
+        addModelPart(group, { z: -objectDepth * 0.32, width: objectWidth * 0.7, depth: 3, height: 4, y: 28, color, emissive: color, emissiveIntensity: 0.38 });
       } else if (type === "access_point") {
         addCylinderPart(group, { radius: Math.min(objectWidth, objectDepth) * 0.28, height: 9, y: 22, color: neutral });
         addCylinderPart(group, { radius: Math.min(objectWidth, objectDepth) * 0.11, height: 11, y: 28, color });
@@ -563,7 +815,9 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
           height: screenHeight * 0.58,
           y: screenHeight * 0.27,
           color: "#2563eb",
-          opacity: 0.88
+          opacity: 0.92,
+          emissive: "#0f5fff",
+          emissiveIntensity: 0.42
         });
         addModelPart(group, { width: 5, depth: 5, height: screenHeight * 0.18, y: 2, color: "#334155", metalness: 0.45 });
         addModelPart(group, { width: objectWidth * 0.34, depth: objectDepth * 0.36, height: 4, y: 0, color: "#334155", metalness: 0.45 });
@@ -665,7 +919,7 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
           group.add(leaf);
         }
       } else if (type === "window") {
-        addModelPart(group, { width: objectWidth, depth: 5, height: 42, y: 22, color: "#bfdbfe", opacity: 0.72 });
+        addModelPart(group, { width: objectWidth, depth: 5, height: 42, y: 22, color: "#bfdbfe", opacity: 0.58, glass: true });
         addModelPart(group, { width: objectWidth, depth: 7, height: 5, y: 22, color: "#64748b" });
       } else if (["outlet", "power_cable", "stabilizer_600", "stabilizer_1000", "extension_cord", "power_strip"].includes(type)) {
         const isStrip = ["power_strip", "extension_cord", "power_cable"].includes(type);
@@ -684,6 +938,7 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
       const preserveConfiguredRack = type === "rack" && object.metadata?.switchInstalled;
       const preserveDoorVariant = type === "door";
       if (assetMode.mode === "composite" && modelLoader) {
+        updatePendingModels(1);
         Promise.all(assetMode.parts.map(async (part) => ({
           part,
           scene: await loadModelScene(part.url)
@@ -725,8 +980,9 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
             warnedModelUrls.add(compositeKey);
             console.warn("Modelos 3D compostos indisponiveis; usando fallback procedural.", error);
           }
-        });
+        }).finally(() => updatePendingModels(-1));
       } else if (assetMode.mode === "model" && modelLoader && !preserveConfiguredRack && !preserveDoorVariant) {
+        updatePendingModels(1);
         loadModelScene(assetMode.url).then((sourceScene) => {
           if (disposed || !sourceScene) return;
           group.children.forEach(disposeObject3D);
@@ -772,7 +1028,7 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
             warnedModelUrls.add(assetMode.url);
             console.warn(`Modelo 3D local indisponivel; usando fallback procedural: ${assetMode.url}`, error);
           }
-        });
+        }).finally(() => updatePendingModels(-1));
       }
       return group;
     };
@@ -852,38 +1108,136 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
     const grid = new THREE.GridHelper(Math.max(floorWidth, floorHeight), 32, "#94a3b8", "#cbd5e1");
     grid.position.y = 6;
     grid.material.transparent = true;
-    grid.material.opacity = 0.34;
+    grid.material.opacity = 0.24;
+    grid.visible = showGridRef.current;
     scene.add(grid);
 
     let selectionHelper = null;
-    const selectedGroup = selected?.type === "object" ? objectGroups.get(selected.id) : null;
-    if (selectedGroup) {
-      selectionHelper = new THREE.BoxHelper(selectedGroup, "#2563eb");
-      scene.add(selectionHelper);
-    }
+    let hoverHelper = null;
+    let hoveredObjectId = null;
+    let dampingFrameId = null;
+    let cameraFrameId = null;
+    let dampingUntil = 0;
 
     const render = () => {
       selectionHelper?.update();
+      hoverHelper?.update();
       renderer.render(scene, camera);
     };
-    controls.addEventListener("change", render);
 
-    const handleWheel = (event) => {
-      if (!event.ctrlKey) return;
-      event.preventDefault();
-      const offset = camera.position.clone().sub(controls.target);
-      const zoomFactor = event.deltaY < 0 ? 0.88 : 1.12;
-      const nextDistance = THREE.MathUtils.clamp(
-        offset.length() * zoomFactor,
-        controls.minDistance,
-        controls.maxDistance
-      );
-      offset.setLength(nextDistance);
-      camera.position.copy(controls.target).add(offset);
-      camera.updateProjectionMatrix();
-      controls.update();
+    const clearSelectionHelper = () => {
+      if (!selectionHelper) return;
+      scene.remove(selectionHelper);
+      selectionHelper.geometry?.dispose?.();
+      selectionHelper.material?.dispose?.();
+      selectionHelper = null;
+    };
+
+    const applySelection = (nextSelection) => {
+      clearSelectionHelper();
+      const selectedGroup = nextSelection?.type === "object" ? objectGroups.get(nextSelection.id) : null;
+      if (selectedGroup) {
+        selectionHelper = new THREE.BoxHelper(selectedGroup, "#16a3c7");
+        selectionHelper.material.transparent = true;
+        selectionHelper.material.opacity = 0.96;
+        scene.add(selectionHelper);
+      }
       render();
     };
+
+    const clearHover = () => {
+      if (hoverHelper) {
+        scene.remove(hoverHelper);
+        hoverHelper.geometry?.dispose?.();
+        hoverHelper.material?.dispose?.();
+        hoverHelper = null;
+      }
+      hoveredObjectId = null;
+      renderer.domElement.classList.remove("is-object-hovered");
+    };
+
+    const applyHover = (objectId) => {
+      if (objectId === hoveredObjectId) return;
+      clearHover();
+      const root = objectGroups.get(objectId);
+      if (!root) {
+        render();
+        return;
+      }
+      hoveredObjectId = objectId;
+      hoverHelper = new THREE.BoxHelper(root, "#50bfa5");
+      hoverHelper.material.transparent = true;
+      hoverHelper.material.opacity = 0.58;
+      scene.add(hoverHelper);
+      renderer.domElement.classList.add("is-object-hovered");
+      render();
+    };
+
+    const stopCameraTween = () => {
+      if (cameraFrameId != null) cancelAnimationFrame(cameraFrameId);
+      cameraFrameId = null;
+    };
+
+    const runDamping = () => {
+      dampingFrameId = null;
+      if (disposed) return;
+      controls.update();
+      render();
+      if (performance.now() < dampingUntil) dampingFrameId = requestAnimationFrame(runDamping);
+    };
+
+    const startDamping = (duration = 760) => {
+      if (reducedMotion) return;
+      dampingUntil = Math.max(dampingUntil, performance.now() + duration);
+      if (dampingFrameId == null) dampingFrameId = requestAnimationFrame(runDamping);
+    };
+
+    const setCameraView = (nextView) => {
+      const preset = getFloorPlanCameraPreset(
+        nextView,
+        contentFrame.width,
+        contentFrame.height,
+        camera.aspect,
+        camera.fov,
+        contentFrame.centerX,
+        contentFrame.centerZ
+      );
+      stopCameraTween();
+
+      if (reducedMotion || preview) {
+        camera.position.copy(preset.position);
+        controls.target.copy(preset.target);
+        controls.update();
+        render();
+        return;
+      }
+
+      const originPosition = camera.position.clone();
+      const originTarget = controls.target.clone();
+      const startedAt = performance.now();
+      const duration = 520;
+      const animateCamera = (timestamp) => {
+        if (disposed) return;
+        const progress = THREE.MathUtils.clamp((timestamp - startedAt) / duration, 0, 1);
+        const eased = easeCamera(progress);
+        camera.position.lerpVectors(originPosition, preset.position, eased);
+        controls.target.lerpVectors(originTarget, preset.target, eased);
+        controls.update();
+        render();
+        if (progress < 1) cameraFrameId = requestAnimationFrame(animateCamera);
+        else cameraFrameId = null;
+      };
+      cameraFrameId = requestAnimationFrame(animateCamera);
+    };
+
+    const handleControlStart = () => {
+      stopCameraTween();
+      startDamping(1400);
+    };
+    const handleControlEnd = () => startDamping(900);
+    controls.addEventListener("start", handleControlStart);
+    controls.addEventListener("change", render);
+    controls.addEventListener("end", handleControlEnd);
 
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
@@ -897,37 +1251,52 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
       raycaster.setFromCamera(pointer, camera);
     };
 
+    const hitObject = () => {
+      const hits = raycaster.intersectObjects([...objectGroups.values()], true);
+      return hits.find((entry) => entry.object?.userData?.objectId) || null;
+    };
+
     const handlePointerDown = (event) => {
       if (event.button !== 0) return;
       setPointer(event);
-      const hits = raycaster.intersectObjects([...objectGroups.values()], true);
-      const hit = hits.find((entry) => entry.object?.userData?.objectId);
+      const hit = hitObject();
       if (!hit) return;
       const objectId = hit.object.userData.objectId;
       const object = activeObjects.find((entry) => entry.id === objectId);
       const root = objectGroups.get(objectId);
       if (!object || !root) return;
-      onSelect?.({ type: "object", id: object.id });
-      if (object.metadata?.locked) {
-        event.preventDefault();
-        return;
-      }
+      callbacksRef.current.onSelect?.({ type: "object", id: object.id });
+      event.stopPropagation();
+      event.preventDefault();
+      if (!editableRef.current || object.metadata?.locked) return;
       const groundPoint = new THREE.Vector3();
       if (!raycaster.ray.intersectPlane(groundPlane, groundPoint)) return;
       dragState = {
         object,
         root,
         start: groundPoint.clone(),
-        origin: root.position.clone()
+        origin: root.position.clone(),
+        pointerX: event.clientX,
+        pointerY: event.clientY,
+        moved: false
       };
-      controls.enabled = false;
       renderer.domElement.setPointerCapture?.(event.pointerId);
-      event.preventDefault();
     };
 
     const handlePointerMove = (event) => {
-      if (!dragState) return;
       setPointer(event);
+      if (!dragState) {
+        applyHover(hitObject()?.object?.userData?.objectId || null);
+        return;
+      }
+      event.stopPropagation();
+      const pointerDistance = Math.hypot(event.clientX - dragState.pointerX, event.clientY - dragState.pointerY);
+      if (!dragState.moved && pointerDistance < CAMERA_DRAG_THRESHOLD) return;
+      if (!dragState.moved) {
+        dragState.moved = true;
+        controls.enabled = false;
+        renderer.domElement.classList.add("is-object-dragging");
+      }
       const groundPoint = new THREE.Vector3();
       if (!raycaster.ray.intersectPlane(groundPlane, groundPoint)) return;
       dragState.root.position.x = dragState.origin.x + groundPoint.x - dragState.start.x;
@@ -937,64 +1306,197 @@ export default function FloorPlanScene3D({ data, activeFloorId, selected, onSele
 
     const handlePointerUp = (event) => {
       if (!dragState) return;
-      const { object, root } = dragState;
-      onSelect?.({ type: "object", id: object.id });
-      onMoveObject?.(object.id, {
-        x: root.position.x + offsetX - Number(object.width || 0) / 2,
-        y: root.position.z + offsetY - Number(object.height || 0) / 2
-      });
+      const { object, root, moved } = dragState;
+      callbacksRef.current.onSelect?.({ type: "object", id: object.id });
+      if (moved) {
+        callbacksRef.current.onMoveObject?.(object.id, {
+          x: root.position.x + offsetX - Number(object.width || 0) / 2,
+          y: root.position.z + offsetY - Number(object.height || 0) / 2
+        });
+      }
       dragState = null;
       controls.enabled = true;
       renderer.domElement.releasePointerCapture?.(event.pointerId);
+      renderer.domElement.classList.remove("is-object-dragging");
       render();
     };
 
+    const handlePointerCancel = (event) => {
+      if (!dragState) return;
+      dragState.root.position.copy(dragState.origin);
+      dragState = null;
+      controls.enabled = true;
+      renderer.domElement.releasePointerCapture?.(event.pointerId);
+      renderer.domElement.classList.remove("is-object-dragging");
+      render();
+    };
+
+    const handlePointerLeave = () => {
+      if (!dragState) clearHover();
+    };
+
     if (!preview) {
-      renderer.domElement.addEventListener("pointerdown", handlePointerDown);
-      renderer.domElement.addEventListener("pointermove", handlePointerMove);
+      renderer.domElement.addEventListener("pointerdown", handlePointerDown, true);
+      renderer.domElement.addEventListener("pointermove", handlePointerMove, true);
       renderer.domElement.addEventListener("pointerup", handlePointerUp);
-      renderer.domElement.addEventListener("pointercancel", handlePointerUp);
-      renderer.domElement.addEventListener("wheel", handleWheel, { passive: false });
+      renderer.domElement.addEventListener("pointercancel", handlePointerCancel);
+      renderer.domElement.addEventListener("pointerleave", handlePointerLeave);
     }
 
     const resizeObserver = new ResizeObserver(() => {
-      const nextWidth = Math.max(container.clientWidth, 320);
-      const nextHeight = Math.max(container.clientHeight, 260);
+      const nextWidth = Math.max(container.clientWidth || 0, 1);
+      const nextHeight = Math.max(container.clientHeight || 0, 260);
       camera.aspect = nextWidth / nextHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(nextWidth, nextHeight);
       render();
     });
     resizeObserver.observe(container);
+    sceneApiRef.current = {
+      applySelection,
+      render,
+      setCameraView,
+      setGridVisible(visible) {
+        grid.visible = Boolean(visible);
+        render();
+      }
+    };
+    applySelection(selectedRef.current);
     render();
+    setSceneReady(true);
 
     return () => {
       disposed = true;
       resizeObserver.disconnect();
+      if (sceneApiRef.current?.render === render) sceneApiRef.current = null;
+      if (dampingFrameId != null) cancelAnimationFrame(dampingFrameId);
+      stopCameraTween();
+      controls.removeEventListener("start", handleControlStart);
       controls.removeEventListener("change", render);
-      renderer.domElement.removeEventListener("pointerdown", handlePointerDown);
-      renderer.domElement.removeEventListener("pointermove", handlePointerMove);
+      controls.removeEventListener("end", handleControlEnd);
+      renderer.domElement.removeEventListener("pointerdown", handlePointerDown, true);
+      renderer.domElement.removeEventListener("pointermove", handlePointerMove, true);
       renderer.domElement.removeEventListener("pointerup", handlePointerUp);
-      renderer.domElement.removeEventListener("pointercancel", handlePointerUp);
-      renderer.domElement.removeEventListener("wheel", handleWheel);
+      renderer.domElement.removeEventListener("pointercancel", handlePointerCancel);
+      renderer.domElement.removeEventListener("pointerleave", handlePointerLeave);
       controls.dispose();
       environmentTexture.dispose();
       pmremGenerator.dispose();
+      const disposedGeometries = new Set();
+      const disposedMaterials = new Set();
+      scene.traverse((item) => {
+        if (item.geometry && !disposedGeometries.has(item.geometry)) {
+          disposedGeometries.add(item.geometry);
+          item.geometry.dispose?.();
+        }
+        const materials = Array.isArray(item.material) ? item.material : item.material ? [item.material] : [];
+        materials.forEach((material) => {
+          if (disposedMaterials.has(material)) return;
+          disposedMaterials.add(material);
+          material.dispose?.();
+        });
+      });
       surfaceTextures.forEach((texture) => texture.dispose());
       physicalTextures.forEach((texture) => texture.dispose());
       renderer.dispose();
-      container.removeChild(renderer.domElement);
-      scene.traverse((item) => {
-        if (item.geometry) item.geometry.dispose();
-        if (Array.isArray(item.material)) item.material.forEach((material) => material.dispose?.());
-        else if (item.material) item.material.dispose?.();
-      });
+      if (container.contains(renderer.domElement)) container.removeChild(renderer.domElement);
     };
-  }, [activeFloorId, data, modelQuality, onMoveObject, onSelect, preview, selected]);
+  }, [activeFloorId, data, modelQuality, preview]);
+
+  useEffect(() => {
+    sceneApiRef.current?.applySelection(selected);
+  }, [selected]);
+
+  useEffect(() => {
+    sceneApiRef.current?.setGridVisible(showGrid);
+  }, [showGrid]);
+
+  const activeFloor = data?.floors?.find((entry) => entry.id === activeFloorId) || data?.floors?.[0];
+  const sceneStatus = !sceneReady
+    ? "Preparando ambiente"
+    : pendingModels > 0
+      ? `Refinando ${pendingModels} ${pendingModels === 1 ? "modelo" : "modelos"}`
+      : "Cena pronta";
 
   return (
-    <div className={`floor-plan-scene-shell ${preview ? "preview" : ""}`}>
-      <div className="floor-plan-scene-3d" ref={containerRef} aria-label="Visualizacao 3D interativa da planta" />
+    <div
+      className={`floor-plan-scene-shell floor-plan-studio-scene ${preview ? "preview" : ""} ${sceneReady ? "is-ready" : "is-loading"}`}
+      data-scene-ready={sceneReady && pendingModels === 0 ? "true" : "false"}
+    >
+      <div
+        className="floor-plan-scene-3d"
+        ref={containerRef}
+        role="region"
+        tabIndex={preview ? -1 : 0}
+        onKeyDown={handleSceneKeyDown}
+        aria-label={`Visualizacao 3D da planta${activeFloor?.name ? `, ${activeFloor.name}` : ""}. Arraste o fundo para girar, use a roda ou pinca para aproximar e clique em um item para selecionar.`}
+      />
+
+      {!preview ? (
+        <>
+          <div className="floor-plan-scene-status" role="status" aria-live="polite">
+            <span className="floor-plan-scene-status-icon" aria-hidden="true">
+              {pendingModels > 0 || !sceneReady ? <Sparkles size={15} /> : <Box size={15} />}
+            </span>
+            <span>
+              <strong>{activeFloor?.name || "Ambiente 3D"}</strong>
+              <small>{sceneStatus}</small>
+            </span>
+          </div>
+
+          <div className="floor-plan-scene-toolbar" role="toolbar" aria-label="Vistas e controles 3D">
+            <div className="floor-plan-scene-view-switch" role="group" aria-label="Escolher vista">
+              <button
+                type="button"
+                className={cameraView === CAMERA_VIEW_ISOMETRIC ? "active" : ""}
+                onClick={() => changeCameraView(CAMERA_VIEW_ISOMETRIC)}
+                aria-pressed={cameraView === CAMERA_VIEW_ISOMETRIC}
+                title="Vista isometrica"
+              >
+                <Box size={17} aria-hidden="true" />
+                <span>Perspectiva</span>
+              </button>
+              <button
+                type="button"
+                className={cameraView === CAMERA_VIEW_TOP ? "active" : ""}
+                onClick={() => changeCameraView(CAMERA_VIEW_TOP)}
+                aria-pressed={cameraView === CAMERA_VIEW_TOP}
+                title="Vista superior"
+              >
+                <Move3D size={17} aria-hidden="true" />
+                <span>Superior</span>
+              </button>
+              <button
+                type="button"
+                className={cameraView === CAMERA_VIEW_FRONT ? "active" : ""}
+                onClick={() => changeCameraView(CAMERA_VIEW_FRONT)}
+                aria-pressed={cameraView === CAMERA_VIEW_FRONT}
+                title="Vista frontal"
+              >
+                <House size={17} aria-hidden="true" />
+                <span>Frontal</span>
+              </button>
+            </div>
+            <span className="floor-plan-scene-toolbar-divider" aria-hidden="true" />
+            <button type="button" onClick={toggleGrid} aria-pressed={showGrid} title={showGrid ? "Ocultar grade" : "Mostrar grade"}>
+              <Grid3X3 size={17} aria-hidden="true" />
+              <span>Grade</span>
+            </button>
+            <button type="button" onClick={fitScene} title="Enquadrar planta">
+              <Maximize2 size={17} aria-hidden="true" />
+              <span>Enquadrar</span>
+            </button>
+          </div>
+
+          <div className="floor-plan-scene-help" aria-hidden="true">
+            <Orbit size={16} />
+            <span><strong>Arraste</strong> para orbitar</span>
+            <i />
+            <span><strong>Roda ou pinca</strong> para aproximar</span>
+            {editable ? <><i /><span><strong>Arraste um item</strong> para mover</span></> : null}
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }

@@ -1,0 +1,408 @@
+.floor-plan-editor-shell {
+  --floor-plan-hud: rgba(248, 251, 253, 0.9);
+  --floor-plan-hud-border: rgba(120, 145, 159, 0.32);
+  --floor-plan-hud-ink: #173042;
+  --floor-plan-hud-muted: #5e7482;
+  --floor-plan-hud-accent: #16866f;
+  --floor-plan-hud-accent-soft: #dff3ed;
+}
+
+.floor-plan-editor-shell .floor-plan-editor-identity > div {
+  align-items: center;
+  display: flex;
+  gap: 9px;
+  min-width: 0;
+}
+
+.floor-plan-editor-shell .floor-plan-editor-identity strong {
+  min-width: 0;
+}
+
+.floor-plan-editor-shell .floor-plan-save-state {
+  flex: 0 0 auto;
+  font-size: 0.64rem;
+  gap: 5px;
+  min-height: 26px;
+  padding: 4px 8px;
+}
+
+.floor-plan-editor-shell .floor-plan-save-state i {
+  background: currentColor;
+  border-radius: 50%;
+  height: 6px;
+  width: 6px;
+}
+
+.floor-plan-editor-shell .floor-plan-save-state.saving i {
+  animation: floor-plan-status-breathe 1s ease-in-out infinite;
+}
+
+.floor-plan-editor-shell .floor-plan-quick-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(270px, calc(100% - 24px));
+}
+
+.floor-plan-editor-shell .floor-plan-stage.floor-plan-stage-3d {
+  min-height: clamp(520px, calc(100dvh - 190px), 780px);
+}
+
+.floor-plan-editor-shell .floor-plan-stage.floor-plan-stage-3d > .floor-plan-scene-shell {
+  min-height: inherit;
+}
+
+.floor-plan-studio-scene {
+  background:
+    radial-gradient(circle at 16% 10%, rgba(255, 255, 255, 0.86), transparent 32%),
+    radial-gradient(circle at 86% 88%, rgba(99, 150, 163, 0.2), transparent 38%),
+    linear-gradient(145deg, #cad9e0 0%, #e5ecef 48%, #c3d3da 100%);
+  border: 1px solid rgba(124, 149, 163, 0.38);
+  border-radius: 12px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -28px 64px rgba(52, 83, 98, 0.08),
+    0 18px 44px rgba(36, 61, 75, 0.1);
+  container-name: floor-plan-scene;
+  container-type: inline-size;
+  isolation: isolate;
+  min-height: clamp(520px, calc(100dvh - 190px), 780px);
+  overflow: hidden;
+  position: relative;
+}
+
+.floor-plan-studio-scene::before {
+  background-image:
+    linear-gradient(rgba(73, 104, 121, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(73, 104, 121, 0.035) 1px, transparent 1px);
+  background-size: 32px 32px;
+  content: "";
+  inset: 0;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.5), transparent 70%);
+  pointer-events: none;
+  position: absolute;
+  z-index: 0;
+}
+
+.floor-plan-studio-scene .floor-plan-scene-3d,
+.floor-plan-studio-scene .floor-plan-scene-3d canvas {
+  height: 100% !important;
+  min-height: inherit;
+  position: relative;
+  width: 100% !important;
+  z-index: 1;
+}
+
+.floor-plan-studio-scene .floor-plan-scene-3d {
+  outline: none;
+}
+
+.floor-plan-studio-scene .floor-plan-scene-3d:focus-visible {
+  box-shadow: inset 0 0 0 3px rgba(22, 134, 111, 0.55);
+}
+
+.floor-plan-studio-scene .floor-plan-scene-3d canvas {
+  cursor: grab;
+  touch-action: none;
+}
+
+.floor-plan-studio-scene .floor-plan-scene-3d canvas.is-object-hovered {
+  cursor: pointer;
+}
+
+.floor-plan-studio-scene .floor-plan-scene-3d canvas.is-object-dragging {
+  cursor: grabbing;
+}
+
+.floor-plan-scene-status,
+.floor-plan-scene-toolbar,
+.floor-plan-scene-help {
+  -webkit-backdrop-filter: blur(16px) saturate(1.08);
+  backdrop-filter: blur(16px) saturate(1.08);
+  background: var(--floor-plan-hud);
+  border: 1px solid var(--floor-plan-hud-border);
+  box-shadow: 0 12px 32px rgba(23, 48, 66, 0.13);
+  position: absolute;
+  z-index: 8;
+}
+
+.floor-plan-scene-status {
+  align-items: center;
+  border-radius: 9px;
+  display: flex;
+  gap: 9px;
+  left: 12px;
+  max-width: min(260px, calc(100% - 24px));
+  padding: 7px 10px 7px 7px;
+  top: 48px;
+}
+
+.floor-plan-scene-status-icon {
+  align-items: center;
+  background: var(--floor-plan-hud-accent-soft);
+  border: 1px solid rgba(22, 134, 111, 0.2);
+  border-radius: 7px;
+  color: var(--floor-plan-hud-accent);
+  display: inline-flex;
+  flex: 0 0 30px;
+  height: 30px;
+  justify-content: center;
+}
+
+.floor-plan-studio-scene.is-loading .floor-plan-scene-status-icon svg {
+  animation: floor-plan-status-breathe 1.3s ease-in-out infinite;
+}
+
+.floor-plan-scene-status > span:last-child {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.floor-plan-scene-status strong,
+.floor-plan-scene-status small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.floor-plan-scene-status strong {
+  color: var(--floor-plan-hud-ink);
+  font-size: 0.75rem;
+  font-weight: 850;
+}
+
+.floor-plan-scene-status small {
+  color: var(--floor-plan-hud-muted);
+  font-size: 0.64rem;
+  font-weight: 700;
+}
+
+.floor-plan-scene-toolbar {
+  align-items: center;
+  border-radius: 10px;
+  display: flex;
+  gap: 3px;
+  padding: 4px;
+  right: 12px;
+  top: 12px;
+  transition: right 180ms ease;
+}
+
+.floor-plan-stage:has(> .floor-plan-inspector) .floor-plan-scene-toolbar {
+  right: 270px;
+}
+
+.floor-plan-scene-view-switch {
+  align-items: center;
+  display: flex;
+  gap: 2px;
+}
+
+.floor-plan-scene-toolbar button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  color: #405766;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 800;
+  gap: 6px;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 9px;
+  transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+  white-space: nowrap;
+}
+
+.floor-plan-scene-toolbar button:hover {
+  background: rgba(220, 237, 232, 0.72);
+  color: #116954;
+}
+
+.floor-plan-scene-toolbar button:active {
+  transform: translateY(1px);
+}
+
+.floor-plan-scene-toolbar button.active,
+.floor-plan-scene-toolbar button[aria-pressed="true"] {
+  background: var(--floor-plan-hud-accent-soft);
+  box-shadow: inset 0 0 0 1px rgba(22, 134, 111, 0.2);
+  color: #0f6c57;
+}
+
+.floor-plan-scene-toolbar button:focus-visible {
+  outline: 2px solid #16866f;
+  outline-offset: 2px;
+}
+
+.floor-plan-scene-toolbar-divider {
+  background: rgba(95, 119, 133, 0.22);
+  height: 24px;
+  margin-inline: 2px;
+  width: 1px;
+}
+
+.floor-plan-scene-help {
+  align-items: center;
+  border-radius: 999px;
+  bottom: 12px;
+  color: var(--floor-plan-hud-muted);
+  display: flex;
+  font-size: 0.65rem;
+  font-weight: 650;
+  gap: 8px;
+  left: 50%;
+  max-width: calc(100% - 32px);
+  padding: 7px 11px;
+  pointer-events: none;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.floor-plan-scene-help > svg {
+  color: var(--floor-plan-hud-accent);
+  flex: 0 0 auto;
+}
+
+.floor-plan-scene-help strong {
+  color: var(--floor-plan-hud-ink);
+  font-weight: 850;
+}
+
+.floor-plan-scene-help i {
+  background: rgba(94, 116, 130, 0.3);
+  border-radius: 50%;
+  height: 3px;
+  width: 3px;
+}
+
+@keyframes floor-plan-status-breathe {
+  0%, 100% { opacity: 0.55; transform: scale(0.92); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+@container floor-plan-scene (max-width: 760px) {
+  .floor-plan-scene-toolbar button {
+    min-height: 42px;
+    min-width: 42px;
+    padding-inline: 10px;
+  }
+
+  .floor-plan-scene-toolbar button span {
+    display: none;
+  }
+
+  .floor-plan-scene-help span:nth-of-type(n + 2),
+  .floor-plan-scene-help i {
+    display: none;
+  }
+}
+
+@container floor-plan-scene (max-width: 430px) {
+  .floor-plan-scene-toolbar {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(42px, 1fr));
+    left: 8px;
+    overflow: visible;
+    right: 8px;
+  }
+
+  .floor-plan-scene-view-switch {
+    display: contents;
+  }
+
+  .floor-plan-scene-toolbar-divider {
+    display: none;
+  }
+
+  .floor-plan-scene-toolbar button {
+    min-width: 0;
+    padding-inline: 0;
+  }
+
+  .floor-plan-scene-status {
+    left: 8px;
+    top: 62px;
+  }
+
+  .floor-plan-scene-help {
+    bottom: 8px;
+  }
+}
+
+@media (max-width: 760px) {
+  .floor-plan-editor-shell .floor-plan-stage.floor-plan-stage-3d,
+  .floor-plan-studio-scene {
+    min-height: clamp(430px, calc(100dvh - 178px), 640px);
+  }
+
+  .floor-plan-editor-shell .floor-plan-editor-topbar {
+    border-radius: 10px;
+  }
+
+  .floor-plan-editor-shell .floor-plan-stage-3d .floor-plan-dimensions-badge {
+    display: none;
+  }
+
+  .floor-plan-editor-shell .floor-plan-editor-identity > div {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .floor-plan-editor-shell .floor-plan-editor-actions .icon-button,
+  .floor-plan-editor-shell .floor-plan-top-tools button,
+  .floor-plan-editor-shell .floor-plan-mode-switch button {
+    min-height: 42px;
+    min-width: 42px;
+  }
+
+  .floor-plan-editor-shell .floor-plan-stage > .floor-plan-inspector,
+  .floor-plan-editor-shell .floor-plan-editor-layout.editing .floor-plan-stage > .floor-plan-inspector {
+    border-radius: 14px 14px 0 0;
+    bottom: 0;
+    box-shadow: 0 -18px 50px rgba(15, 23, 42, 0.22);
+    left: 0;
+    max-height: min(58%, 470px);
+    right: 0;
+    top: auto;
+    width: auto;
+  }
+
+  .floor-plan-stage:has(> .floor-plan-inspector) .floor-plan-scene-toolbar {
+    right: 8px;
+  }
+
+  .floor-plan-editor-shell .floor-plan-quick-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .floor-plan-editor-shell .floor-plan-canvas-panel {
+    padding: 6px;
+  }
+
+  .floor-plan-editor-shell .floor-plan-editor-actions {
+    overscroll-behavior-inline: contain;
+    scroll-padding-inline: 8px;
+    scroll-snap-type: x proximity;
+  }
+
+  .floor-plan-editor-shell .floor-plan-editor-actions > * {
+    scroll-snap-align: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .floor-plan-studio-scene *,
+  .floor-plan-studio-scene *::before,
+  .floor-plan-studio-scene *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

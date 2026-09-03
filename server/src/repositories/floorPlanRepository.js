@@ -234,7 +234,7 @@ function normalizeObjectPayload(item = {}, planId, validFloorIds, fallbackFloorI
     height: normalizeNumber(item.height, 64, { min: 8, max: 3000 }),
     rotation: normalizeNumber(item.rotation, 0, { min: -360, max: 360 }),
     z: normalizeNumber(item.z, 0, { min: -1000, max: 1000 }),
-    height3d: normalizeNumber(item.height3d ?? item.height_3d, 1, { min: 0.1, max: 80 }),
+    height3d: normalizeNumber(item.height3d ?? item.height_3d, 1, { min: 0.1, max: 600 }),
     color: normalizeColor(item.color, "#2563eb"),
     metadata: normalizeMetadata(item.metadata)
   };

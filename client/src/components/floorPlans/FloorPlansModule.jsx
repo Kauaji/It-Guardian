@@ -35,6 +35,7 @@ import {
   updateFloorPlan
 } from "../../api.js";
 import { FLOOR_PLAN_CATALOG, getCatalogItem } from "./floorPlanCatalog.js";
+import { getFloorPlanLibraryAsset } from "./assets/floorPlanLibrary.js";
 import { normalizeCatalogSearch, searchCatalogItems } from "./utils/catalogSearch.js";
 import {
   FloorPlanQuickActions,
@@ -123,6 +124,7 @@ import {
   snapMeasurementEndPoint
 } from "./utils/measurementGeometry.js";
 import { formatLength, metersToPx, pxToMeters } from "./utils/unitConversion.js";
+import "./floorPlanStudio.css";
 
 const FloorPlanScene3D = lazy(() => import("./FloorPlanScene3D.jsx"));
 
@@ -143,6 +145,15 @@ const DEFAULT_FLOOR_PLAN_LAYERS = FLOOR_PLAN_LAYER_OPTIONS.reduce((layers, optio
 function createId(prefix) {
   if (typeof crypto !== "undefined" && crypto.randomUUID) return `${prefix}-${crypto.randomUUID()}`;
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function resolveCatalogHeight3d(item = {}) {
+  const libraryAsset = getFloorPlanLibraryAsset(item.objectType || item.id);
+  const declaredHeight = Number(item.height3d ?? libraryAsset?.dimensions?.height);
+  if (Number.isFinite(declaredHeight) && declaredHeight > 0) return declaredHeight;
+  if (item.category === "asset") return 56;
+  if (item.category === "structure") return 92;
+  return 42;
 }
 
 function planStatusLabel(status) {
@@ -1469,6 +1480,13 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
   const stageRef = useRef(null);
   const catalogRef = useRef(null);
   const autosaveRef = useRef(null);
+  const editorRef = useRef(null);
+  const editorRevisionRef = useRef(0);
+  const saveInFlightRef = useRef(null);
+  const saveQueuedRef = useRef(false);
+  const persistEditorRef = useRef(null);
+
+  editorRef.current = editor;
 
   const savedGroupAreas = useMemo(() => (editor?.zones || []).filter((zone) => (
     zone.floorId === activeFloorId && zone.zoneType === "group" && isPaintAreaZone(zone)
@@ -1617,7 +1635,13 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
   }, [activeCatalog, isEditing, selected]);
 
   const markDirty = useCallback(() => {
-    setSaveState((current) => (current === "saving" ? "saving" : "dirty"));
+    editorRevisionRef.current += 1;
+    if (saveInFlightRef.current) {
+      saveQueuedRef.current = true;
+      setSaveState("saving");
+      return;
+    }
+    setSaveState("dirty");
   }, []);
 
   const commitEditor = useCallback((updater, { track = true } = {}) => {
@@ -1638,21 +1662,50 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
   }, [markDirty]);
 
   const persistEditor = useCallback(async () => {
-    if (!editor?.plan?.id || !permissions.update) return;
-    setSaveState("saving");
-    try {
-      const payload = await saveFloorPlanEditorData(token, editor.plan.id, buildEditorPayload(editor));
-      const updated = normalizeResponsePlan(payload);
-      setEditor(updated);
-      setActiveFloorId((current) => current || updated?.plan?.activeFloorId || updated?.floors?.[0]?.id || "");
-      setPlans((current) => current.map((plan) => (plan.id === updated.plan.id ? { ...plan, ...updated.plan } : plan)));
-      setSaveState("saved");
-    } catch (requestError) {
-      setSaveState("error");
-      setError(requestError.message);
-      notify?.(requestError.message, "danger");
+    const snapshot = editorRef.current;
+    if (!snapshot?.plan?.id || !permissions.update) return;
+    if (saveInFlightRef.current) {
+      saveQueuedRef.current = true;
+      return saveInFlightRef.current;
     }
-  }, [editor, notify, permissions.update, token]);
+
+    const snapshotRevision = editorRevisionRef.current;
+    setSaveState("saving");
+    const saveRequest = (async () => {
+      try {
+        const payload = await saveFloorPlanEditorData(token, snapshot.plan.id, buildEditorPayload(snapshot));
+        const updated = normalizeResponsePlan(payload);
+        const samePlanStillOpen = editorRef.current?.plan?.id === snapshot.plan.id;
+        const hasNewerLocalRevision = editorRevisionRef.current !== snapshotRevision;
+
+        if (samePlanStillOpen && !hasNewerLocalRevision) {
+          editorRef.current = updated;
+          setEditor(updated);
+          setActiveFloorId((current) => current || updated?.plan?.activeFloorId || updated?.floors?.[0]?.id || "");
+          setSaveState("saved");
+        } else if (samePlanStillOpen) {
+          saveQueuedRef.current = true;
+          setSaveState("saving");
+        }
+
+        setPlans((current) => current.map((plan) => (plan.id === updated.plan.id ? { ...plan, ...updated.plan } : plan)));
+      } catch (requestError) {
+        setSaveState("error");
+        setError(requestError.message);
+        notify?.(requestError.message, "danger");
+      } finally {
+        saveInFlightRef.current = null;
+        if (saveQueuedRef.current) {
+          saveQueuedRef.current = false;
+          window.setTimeout(() => persistEditorRef.current?.(), 0);
+        }
+      }
+    })();
+    saveInFlightRef.current = saveRequest;
+    return saveRequest;
+  }, [notify, permissions.update, token]);
+
+  persistEditorRef.current = persistEditor;
 
   useEffect(() => {
     if (saveState !== "dirty" || !editor?.plan?.id) return undefined;
@@ -1669,6 +1722,9 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
     try {
       const payload = await fetchFloorPlan(token, id);
       const loaded = normalizeResponsePlan(payload);
+      editorRef.current = loaded;
+      editorRevisionRef.current = 0;
+      saveQueuedRef.current = false;
       setEditor(loaded);
       setActiveFloorId(loaded?.plan?.activeFloorId || loaded?.floors?.[0]?.id || "");
       setSelected(null);
@@ -2043,27 +2099,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
         height: item.height || 56,
         rotation: 0,
         z: 0,
-        height3d: {
-          desk: 46,
-          meeting_table: 46,
-          chair: 78,
-          cabinet: 96,
-          shelf: 92,
-          pc: 68,
-          notebook: 42,
-          printer: 46,
-          switch: 16,
-          rack: 112,
-          access_point: 12,
-          server: 104,
-          router: 20,
-          tv: 52,
-          camera: 34,
-          stabilizer_600: 36,
-          stabilizer_1000: 44,
-          extension_cord: 10,
-          power_strip: 10
-        }[item.objectType] || (item.category === "asset" ? 56 : item.category === "structure" ? 92 : 42),
+        height3d: resolveCatalogHeight3d(item),
         color: item.color || "#1f7a61",
         metadata: { ...(item.metadata || {}), parentRoomId }
       };
@@ -3456,6 +3492,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
       <FloorPlanTopbar
         title={`Planta ${activeTab?.name || editor?.plan?.name || "principal"}`}
         onSave={persistEditor}
+        saveState={saveState}
         mode={mode}
         onModeChange={(nextMode) => {
           setMode(nextMode);
@@ -3492,7 +3529,7 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
             onCancel={cancelPaintArea}
           />}
 
-          <div className="floor-plan-stage" ref={stageRef}>
+          <div className={`floor-plan-stage floor-plan-stage-${mode}`} ref={stageRef}>
             <span className="floor-plan-dimensions-badge">
               <span>{Math.round(floor?.width || DEFAULT_PLAN_SIZE.width)} x {Math.round(floor?.height || DEFAULT_PLAN_SIZE.height)}</span>
               {isEditing ? (
@@ -3565,9 +3602,11 @@ export default function FloorPlansModule({ token, devices = [], segments = [], g
                   data={editor}
                   activeFloorId={activeFloorId}
                   selected={isEditing ? selected : null}
-                  onSelect={isEditing ? handleEntitySelect : () => {}}
-                  onMoveObject={isEditing && selectedTool !== "delete" ? moveObjectFrom3D : () => {}}
-                  onRotateSelected={rotateSelectedRoom}
+                  onSelect={isEditing ? handleEntitySelect : undefined}
+                  onMoveObject={isEditing && selectedTool !== "delete" ? moveObjectFrom3D : undefined}
+                  editable={Boolean(isEditing && selectedTool !== "delete")}
+                  showGrid={showGrid}
+                  onGridChange={setShowGrid}
                 />
               </Suspense>
             )}

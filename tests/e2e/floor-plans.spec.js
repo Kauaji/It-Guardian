@@ -182,7 +182,16 @@ async function assertCanvasHasRenderedPixels(page) {
 }
 
 test("editor de plantas renderiza 2D e 3D em desktop e mobile", async ({ page, context }) => {
+  test.setTimeout(90_000);
   await mkdir(OUTPUT_DIR, { recursive: true });
+  const pageErrors = [];
+  const failedModelResponses = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  page.on("response", (response) => {
+    if (response.url().includes("/assets/3d-library/") && !response.ok()) {
+      failedModelResponses.push(`${response.status()} ${response.url()}`);
+    }
+  });
   await login(page);
 
   const createResponse = await context.request.post("http://127.0.0.1:4100/api/floor-plans", {
@@ -195,6 +204,8 @@ test("editor de plantas renderiza 2D e 3D em desktop e mobile", async ({ page, c
   const created = JSON.parse(createBody);
   const planId = created?.plan?.plan?.id;
   expect(planId).toBeTruthy();
+  const persistedChair = created?.plan?.objects?.find((object) => object.objectType === "office_chair");
+  expect(persistedChair?.height3d).toBe(92);
 
   try {
     await page.goto(`/plantas/${planId}/editor`);
@@ -208,19 +219,41 @@ test("editor de plantas renderiza 2D e 3D em desktop e mobile", async ({ page, c
     await page.getByRole("button", { name: "3D", exact: true }).click();
     const canvas3d = page.locator(".floor-plan-scene-3d canvas");
     await expect(canvas3d).toBeVisible({ timeout: 15_000 });
-    await page.waitForTimeout(1_500);
+    const sceneShell = page.locator(".floor-plan-studio-scene");
+    await expect(sceneShell).toHaveAttribute("data-scene-ready", "true", { timeout: 15_000 });
+    await expect(page.getByRole("toolbar", { name: "Vistas e controles 3D" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Perspectiva" })).toHaveAttribute("aria-pressed", "true");
+    await canvas3d.evaluate((canvas) => { canvas.dataset.stabilityMarker = "same-canvas"; });
+    await page.getByRole("button", { name: "Superior" }).click();
+    await expect(page.getByRole("button", { name: "Superior" })).toHaveAttribute("aria-pressed", "true");
+    await expect(canvas3d).toHaveAttribute("data-stability-marker", "same-canvas");
+    await page.getByRole("button", { name: "Perspectiva" }).click();
     await assertCanvasHasRenderedPixels(page);
     await page.locator(".floor-plan-stage").screenshot({ path: `${OUTPUT_DIR}/floor-plan-desktop-3d.png` });
 
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.locator(".floor-plan-editor-topbar")).toBeVisible();
     await expect(canvas3d).toBeVisible();
+    await expect(sceneShell).toHaveAttribute("data-scene-ready", "true");
+    const controlSizes = await page.locator(".floor-plan-scene-toolbar button").evaluateAll((buttons) => buttons.map((button) => {
+      const box = button.getBoundingClientRect();
+      return { width: box.width, height: box.height };
+    }));
+    expect(controlSizes.length).toBeGreaterThanOrEqual(5);
+    expect(controlSizes.every(({ width, height }) => width >= 40 && height >= 40)).toBeTruthy();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBeTruthy();
     await assertCanvasHasRenderedPixels(page);
     await page.screenshot({ path: `${OUTPUT_DIR}/floor-plan-mobile-3d.png`, fullPage: true });
 
     await page.getByRole("button", { name: "2D", exact: true }).click();
     await expect(editor2d).toBeVisible();
     await page.screenshot({ path: `${OUTPUT_DIR}/floor-plan-mobile-2d.png`, fullPage: true });
+    await page.getByRole("button", { name: "3D", exact: true }).click();
+    await expect(page.locator(".floor-plan-scene-3d canvas")).toHaveCount(1);
+    await expect(page.locator(".floor-plan-studio-scene")).toHaveAttribute("data-scene-ready", "true", { timeout: 15_000 });
+
+    expect(failedModelResponses).toEqual([]);
+    expect(pageErrors).toEqual([]);
   } finally {
     await context.request.delete(`http://127.0.0.1:4100/api/floor-plans/${planId}`, {
       headers: { Origin: "http://127.0.0.1:5174" }

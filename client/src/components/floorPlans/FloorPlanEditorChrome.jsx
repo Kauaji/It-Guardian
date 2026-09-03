@@ -1,7 +1,6 @@
 import {
   Cable,
   Grid3X3,
-  Layers3,
   MousePointer2,
   Pencil,
   Redo2,
@@ -13,9 +12,17 @@ import {
   Zap
 } from "lucide-react";
 
+const SAVE_STATE_LABELS = {
+  saved: "Salvo",
+  saving: "Salvando",
+  dirty: "Alteracoes pendentes",
+  error: "Falha ao salvar"
+};
+
 export function FloorPlanTopbar({
   title,
   onSave,
+  saveState = "saved",
   mode,
   onModeChange,
   canUndo,
@@ -39,16 +46,22 @@ export function FloorPlanTopbar({
   return (
     <header className="floor-plan-editor-topbar">
       <div className="floor-plan-editor-identity">
-        <strong>{title || "Planta"}</strong>
+        <div>
+          <strong>{title || "Planta"}</strong>
+          <span className={`floor-plan-save-state ${saveState}`} role="status" aria-live="polite">
+            <i aria-hidden="true" />
+            {SAVE_STATE_LABELS[saveState] || SAVE_STATE_LABELS.saved}
+          </span>
+        </div>
       </div>
 
       <div className="floor-plan-editor-actions">
         {isEditing && (
           <>
-            <button className="icon-button" type="button" onClick={onUndo} disabled={!canUndo} title="Desfazer">
+            <button className="icon-button" type="button" onClick={onUndo} disabled={!canUndo} title="Desfazer" aria-label="Desfazer">
               <Undo2 size={17} />
             </button>
-            <button className="icon-button" type="button" onClick={onRedo} disabled={!canRedo} title="Refazer">
+            <button className="icon-button" type="button" onClick={onRedo} disabled={!canRedo} title="Refazer" aria-label="Refazer">
               <Redo2 size={17} />
             </button>
           </>
@@ -65,13 +78,14 @@ export function FloorPlanTopbar({
             onClick={onToggleZoom}
             title={zoomMode ? "Desativar zoom" : "Ativar zoom"}
             aria-pressed={zoomMode}
+            aria-label={zoomMode ? "Desativar zoom" : "Ativar zoom"}
           >
             <Search size={17} />
           </button>
         ) : null}
 
         {isEditing && <div className="floor-plan-top-tools" aria-label="Ferramentas da planta">
-          <button className={selectedTool === "select" ? "active" : ""} type="button" onClick={() => onToolChange("select")} title="Selecionar">
+          <button className={selectedTool === "select" ? "active" : ""} type="button" onClick={() => onToolChange("select")} title="Selecionar" aria-label="Selecionar" aria-pressed={selectedTool === "select"}>
             <MousePointer2 size={17} />
           </button>
           <button
@@ -79,10 +93,12 @@ export function FloorPlanTopbar({
             type="button"
             onClick={() => onToolChange(selectedTool === "delete" ? "select" : "delete")}
             title="Excluir itens ao clicar"
+            aria-label="Excluir itens ao clicar"
+            aria-pressed={selectedTool === "delete"}
           >
             <Trash2 size={17} />
           </button>
-          <button className={showGrid ? "active" : ""} type="button" onClick={onToggleGrid} title="Mostrar ou ocultar grade">
+          <button className={showGrid ? "active" : ""} type="button" onClick={onToggleGrid} title="Mostrar ou ocultar grade" aria-label="Mostrar ou ocultar grade" aria-pressed={showGrid}>
             <Grid3X3 size={17} />
           </button>
           <button
@@ -90,17 +106,19 @@ export function FloorPlanTopbar({
             type="button"
             onClick={onStartMeasurement}
             title="Medir uma distancia real (desenhar e digitar a metragem)"
+            aria-label="Medir uma distancia real"
+            aria-pressed={measurementActive}
           >
             <Ruler size={17} />
           </button>
         </div>}
 
         {isEditing ? (
-          <button className="icon-button floor-plan-save-action" type="button" onClick={onSave} title="Salvar planta">
+          <button className="icon-button floor-plan-save-action" type="button" onClick={onSave} title="Salvar planta" aria-label="Salvar planta">
             <Save size={18} />
           </button>
         ) : canEdit ? (
-          <button className="icon-button" type="button" onClick={onEdit} title="Editar planta">
+          <button className="icon-button" type="button" onClick={onEdit} title="Editar planta" aria-label="Editar planta">
             <Pencil size={18} />
           </button>
         ) : null}
@@ -110,6 +128,7 @@ export function FloorPlanTopbar({
             type="button"
             onClick={onDeletePlan}
             title="Excluir planta"
+            aria-label="Excluir planta"
           >
             <Trash2 size={18} />
           </button>
@@ -124,11 +143,7 @@ export function FloorPlanQuickActions({ activeSection, onSectionChange }) {
     <div className="floor-plan-quick-actions" aria-label="Acoes rapidas de infraestrutura">
       <button className={activeSection === "network" ? "active" : ""} type="button" onClick={() => onSectionChange("network")}>
         <Cable size={17} />
-        <span>Passagem de cabos</span>
-      </button>
-      <button className={activeSection === "network" ? "active" : ""} type="button" onClick={() => onSectionChange("network")}>
-        <Layers3 size={17} />
-        <span>Pontos de rede</span>
+        <span>Rede e cabeamento</span>
       </button>
       <button className={activeSection === "energy" ? "active" : ""} type="button" onClick={() => onSectionChange("energy")}>
         <Zap size={17} />
