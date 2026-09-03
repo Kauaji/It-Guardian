@@ -1,7 +1,6 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, MoreVertical, Settings, Trash2 } from "lucide-react";
-import { useState } from "react";
 import { HEIGHT_TIERS, WIDTH_TIERS, widgetGridStyle } from "./widgetGridMath.js";
 
 const widthTierLabels = { s: "P", m: "M", l: "G", xl: "Largo" };
@@ -13,12 +12,11 @@ const heightTierLabels = { s: "P", m: "M", l: "G" };
  * titulo, o corpo real fica limpo. Redimensionar e por tier discreto (P/M/G/
  * Largo), nao drag de pixel livre.
  */
-export default function WidgetChrome({ widget, editing, label, onRemove, onConfigure, onResize, children }) {
+export default function WidgetChrome({ widget, editing, arranging, menuOpen, onToggleMenu, onCloseMenu, label, onRemove, onConfigure, onResize, children }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: widget.id,
-    disabled: !editing
+    disabled: !editing || !arranging
   });
-  const [menuOpen, setMenuOpen] = useState(false);
 
   const style = {
     ...widgetGridStyle(widget),
@@ -30,7 +28,7 @@ export default function WidgetChrome({ widget, editing, label, onRemove, onConfi
   return (
     <article ref={setNodeRef} style={style} data-widget-type={widget.type} data-width={widget.w || "m"} data-height={widget.h || "s"} aria-label={label} className={`dashboard-widget-card ${editing ? "editing" : ""}`}>
       <header className="dashboard-widget-card-header">
-        {editing && (
+        {editing && arranging && (
           <button
             type="button"
             className="dashboard-widget-drag-handle"
@@ -47,8 +45,10 @@ export default function WidgetChrome({ widget, editing, label, onRemove, onConfi
             <button
               type="button"
               className="icon-button"
-              onClick={() => setMenuOpen((value) => !value)}
+              onClick={onToggleMenu}
               title="Opcoes do widget"
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
             >
               <MoreVertical size={16} />
             </button>
@@ -58,7 +58,7 @@ export default function WidgetChrome({ widget, editing, label, onRemove, onConfi
                   <button
                     type="button"
                     onClick={() => {
-                      setMenuOpen(false);
+                      onCloseMenu();
                       onConfigure();
                     }}
                   >
@@ -95,7 +95,7 @@ export default function WidgetChrome({ widget, editing, label, onRemove, onConfi
                   type="button"
                   className="danger"
                   onClick={() => {
-                    setMenuOpen(false);
+                    onCloseMenu();
                     onRemove();
                   }}
                 >

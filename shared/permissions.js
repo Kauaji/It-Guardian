@@ -21,6 +21,17 @@ export const permissionGroups = [
     ]
   },
   {
+    id: "parts_inventory",
+    label: "Inventário de Peças",
+    permissions: [
+      { id: "parts_inventory.view", label: "Visualizar estoque de peças" },
+      { id: "parts_inventory.create", label: "Cadastrar peças" },
+      { id: "parts_inventory.update", label: "Editar peças" },
+      { id: "parts_inventory.move_stock", label: "Movimentar e consumir estoque" },
+      { id: "parts_inventory.assign_assets", label: "Vincular peças a ativos e OS" }
+    ]
+  },
+  {
     id: "floor_plans",
     label: "Plantas e Infraestrutura",
     permissions: [
@@ -38,6 +49,19 @@ export const permissionGroups = [
       { id: "inventory.topology.view", label: "Visualizar mapa de rede" },
       { id: "inventory.topology.manage", label: "Gerenciar mapas e ativos" },
       { id: "inventory.topology.link_assets", label: "Conectar itens no mapa" }
+    ]
+  },
+  {
+    id: "calendar",
+    label: "Agenda Técnica",
+    permissions: [
+      { id: "calendar.view", label: "Visualizar agenda" },
+      { id: "calendar.create", label: "Criar agendamentos" },
+      { id: "calendar.update", label: "Editar agendamentos" },
+      { id: "calendar.cancel", label: "Cancelar agendamentos" },
+      { id: "calendar.delete", label: "Excluir agendamentos" },
+      { id: "calendar.assign_technician", label: "Atribuir técnicos" },
+      { id: "calendar.view_all_technicians", label: "Visualizar agenda de todos os técnicos" }
     ]
   },
   {
@@ -173,6 +197,11 @@ export const roleDefaultPermissions = {
     "inventory.manage_segments",
     "inventory.view_machine",
     "inventory.print_qrcode",
+    "parts_inventory.view",
+    "parts_inventory.create",
+    "parts_inventory.update",
+    "parts_inventory.move_stock",
+    "parts_inventory.assign_assets",
     "floor_plans.view",
     "floor_plans.create",
     "floor_plans.update",
@@ -181,6 +210,12 @@ export const roleDefaultPermissions = {
     "inventory.topology.view",
     "inventory.topology.manage",
     "inventory.topology.link_assets",
+    "calendar.view",
+    "calendar.create",
+    "calendar.update",
+    "calendar.cancel",
+    "calendar.assign_technician",
+    "calendar.view_all_technicians",
     "service_orders.view",
     "service_orders.create",
     "service_orders.edit",

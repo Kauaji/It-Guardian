@@ -3958,3 +3958,10 @@ achado que passou despercebido.
   confianca vem de leitura cuidadosa do codigo real antes de cada decisao
   (nunca supondo a estrutura) e da suite de testes automatizados.
 
+# 02/09/2026 — Agenda Técnica, peças e refinamentos de interface
+
+- Criado o módulo persistente de Agenda Técnica com visões mês/semana/dia, filtros, resumo, vínculos e permissões.
+- Integrada a agenda à ficha de Ordem de Serviço.
+- Separado o Inventário de Ativos do novo Inventário de Peças, com movimentos transacionais e histórico.
+- Adicionado modo explícito de organização por arrastar no dashboard e fechamento exclusivo dos menus.
+- Corrigidos deslocamento da sidebar, pulso de status e aproveitamento horizontal dos cards no modo vertical de OS.

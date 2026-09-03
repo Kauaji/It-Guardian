@@ -32,6 +32,8 @@ import maintenanceScriptRoutes from "./routes/maintenanceScriptRoutes.js";
 import preventivePlanRoutes from "./routes/preventivePlanRoutes.js";
 import preventiveAutomationRoutes from "./routes/preventiveAutomationRoutes.js";
 import floorPlanRoutes from "./routes/floorPlanRoutes.js";
+import calendarRoutes from "./routes/calendarRoutes.js";
+import partInventoryRoutes from "./routes/partInventoryRoutes.js";
 import networkTopologyRoutes, {
   networkTopologyLinkRoutes,
   networkTopologyNodeRoutes
@@ -166,6 +168,8 @@ export function createApp({ initializeOnRequest = false } = {}) {
   app.use("/api/preventive-plans", preventivePlanRoutes);
   app.use("/api/preventive-automation-plans", preventiveAutomationRoutes);
   app.use("/api/floor-plans", floorPlanRoutes);
+  app.use("/api/calendar", calendarRoutes);
+  app.use("/api/parts", partInventoryRoutes);
   app.use("/api/topology-maps", networkTopologyRoutes);
   app.use("/api/topology-map-nodes", networkTopologyNodeRoutes);
   app.use("/api/topology-map-links", networkTopologyLinkRoutes);

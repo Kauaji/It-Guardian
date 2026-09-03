@@ -1433,6 +1433,41 @@ export function deleteTechnician(token, id) {
   });
 }
 
+export function fetchCalendarEvents(token, params = {}) {
+  const search = new URLSearchParams(params).toString();
+  return apiFetch(`/calendar/events${search ? `?${search}` : ""}`, { token });
+}
+
+export function fetchCalendarSummary(token, params = {}) {
+  const search = new URLSearchParams(params).toString();
+  return apiFetch(`/calendar/summary${search ? `?${search}` : ""}`, { token });
+}
+
+export function createCalendarEvent(token, payload) {
+  return apiFetch("/calendar/events", { token, method: "POST", body: JSON.stringify(payload) });
+}
+
+export function updateCalendarEvent(token, id, payload) {
+  return apiFetch(`/calendar/events/${id}`, { token, method: "PATCH", body: JSON.stringify(payload) });
+}
+
+export function cancelCalendarEvent(token, id, reason) {
+  return apiFetch(`/calendar/events/${id}/cancel`, { token, method: "POST", body: JSON.stringify({ reason }) });
+}
+
+export function deleteCalendarEvent(token, id) {
+  return apiFetch(`/calendar/events/${id}`, { token, method: "DELETE" });
+}
+
+export function fetchPartsInventory(token, params = {}) {
+  const search = new URLSearchParams(params).toString();
+  return apiFetch(`/parts${search ? `?${search}` : ""}`, { token });
+}
+export function fetchPartInventoryItem(token, id) { return apiFetch(`/parts/${id}`, { token }); }
+export function createPartInventoryItem(token, payload) { return apiFetch("/parts", { token, method: "POST", body: JSON.stringify(payload) }); }
+export function updatePartInventoryItem(token, id, payload) { return apiFetch(`/parts/${id}`, { token, method: "PATCH", body: JSON.stringify(payload) }); }
+export function createPartInventoryMovement(token, id, payload) { return apiFetch(`/parts/${id}/movements`, { token, method: "POST", body: JSON.stringify(payload) }); }
+
 export function fetchProblemTypes(token, params = {}) {
   const search = new URLSearchParams(params).toString();
   return apiFetch(`/problem-types${search ? `?${search}` : ""}`, { token });

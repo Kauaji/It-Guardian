@@ -1,5 +1,6 @@
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { arrayMove, rectSortingStrategy, SortableContext, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import { useEffect, useState } from "react";
 import WidgetBody from "./WidgetBody.jsx";
 import WidgetChrome from "./WidgetChrome.jsx";
 import { widgetRegistry } from "./widgetRegistry.js";
@@ -11,9 +12,29 @@ import { reindexWidgetPositions, sortWidgetsByPosition } from "./widgetGridMath.
  * aninhados como superficies de arrastar independentes, entao um arrasto
  * aqui nunca interfere no do Inventario e vice-versa.
  */
-export default function WidgetGrid({ token, widgets, editing, onReorder, onRemove, onResize, onConfigure }) {
+export default function WidgetGrid({ token, widgets, editing, arranging, onReorder, onRemove, onResize, onConfigure }) {
+  const [openMenuWidgetId, setOpenMenuWidgetId] = useState(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
   const ordered = sortWidgetsByPosition(widgets);
+
+  useEffect(() => {
+    if (!editing) setOpenMenuWidgetId(null);
+  }, [editing]);
+
+  useEffect(() => {
+    function closeOpenMenu(event) {
+      if (event.key === "Escape" || (event.type === "pointerdown" && !event.target.closest?.(".dashboard-widget-menu"))) {
+        setOpenMenuWidgetId(null);
+      }
+    }
+
+    document.addEventListener("pointerdown", closeOpenMenu);
+    document.addEventListener("keydown", closeOpenMenu);
+    return () => {
+      document.removeEventListener("pointerdown", closeOpenMenu);
+      document.removeEventListener("keydown", closeOpenMenu);
+    };
+  }, []);
 
   function handleDragEnd(event) {
     const { active, over } = event;
@@ -41,6 +62,10 @@ export default function WidgetGrid({ token, widgets, editing, onReorder, onRemov
               key={widget.id}
               widget={widget}
               editing={editing}
+              arranging={arranging}
+              menuOpen={openMenuWidgetId === widget.id}
+              onToggleMenu={() => setOpenMenuWidgetId((current) => current === widget.id ? null : widget.id)}
+              onCloseMenu={() => setOpenMenuWidgetId(null)}
               label={widget.title || widgetRegistry[widget.type]?.label || widget.type}
               onRemove={() => onRemove(widget.id)}
               onResize={(sizePatch) => onResize(widget.id, sizePatch)}

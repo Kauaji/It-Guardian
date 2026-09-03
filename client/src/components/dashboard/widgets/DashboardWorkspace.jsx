@@ -1,4 +1,4 @@
-import { Grid3x3, Pencil, Plus, RefreshCw, RotateCcw, Save, X } from "lucide-react";
+import { Grid3x3, Move, Pencil, Plus, RefreshCw, RotateCcw, Save, X } from "lucide-react";
 import { useState } from "react";
 import { useDashboardLayout } from "../../../hooks/useDashboardLayout.js";
 import { formatDateTime } from "../dashboardFormatters.js";
@@ -32,17 +32,20 @@ export default function DashboardWorkspace({ token, canCustomize, notify }) {
   const [saving, setSaving] = useState(false);
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [lastLoadedAt, setLastLoadedAt] = useState(null);
+  const [arranging, setArranging] = useState(false);
 
   const activeWidgets = editing ? draftWidgets : layout?.widgets || [];
 
   function enterEditMode() {
     setDraftWidgets(layout?.widgets || []);
     setEditing(true);
+    setArranging(false);
   }
 
   function cancelEditing() {
     setEditing(false);
     setDraftWidgets([]);
+    setArranging(false);
   }
 
   async function persistDraft() {
@@ -51,6 +54,7 @@ export default function DashboardWorkspace({ token, canCustomize, notify }) {
       await saveLayout({ widgets: draftWidgets });
       setLastLoadedAt(new Date().toISOString());
       setEditing(false);
+      setArranging(false);
       notify?.("Layout do dashboard salvo.", "ok");
     } catch (saveError) {
       notify?.(saveError.message || "Nao foi possivel salvar o layout.", "danger");
@@ -135,6 +139,14 @@ export default function DashboardWorkspace({ token, canCustomize, notify }) {
               <button type="button" className="secondary-action" onClick={() => setCatalogOpen(true)}>
                 <Plus size={16} /> Adicionar widget
               </button>
+              <button
+                type="button"
+                className={`secondary-action dashboard-arrange-toggle ${arranging ? "active" : ""}`}
+                aria-pressed={arranging}
+                onClick={() => setArranging((current) => !current)}
+              >
+                <Move size={16} /> {arranging ? "Finalizar organização" : "Organizar posições"}
+              </button>
               <button type="button" className="secondary-action" onClick={restoreDefault} disabled={saving}>
                 <RotateCcw size={16} /> Restaurar padrao
               </button>
@@ -150,11 +162,17 @@ export default function DashboardWorkspace({ token, canCustomize, notify }) {
       </div>
 
       <DashboardFilterBar />
+      {editing && arranging ? (
+        <p className="dashboard-arrange-hint" role="status">
+          Arraste cada gráfico pela alça pontilhada. A nova ordem só é aplicada ao salvar o layout.
+        </p>
+      ) : null}
       <WidgetGrid
         key={refreshNonce}
         token={token}
         widgets={activeWidgets}
         editing={editing}
+        arranging={arranging}
         onReorder={setDraftWidgets}
         onRemove={removeWidget}
         onResize={resizeWidget}

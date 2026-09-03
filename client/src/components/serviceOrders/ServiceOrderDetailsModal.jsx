@@ -22,6 +22,7 @@ import ServiceOrderChecklistTab from "./tabs/ServiceOrderChecklistTab.jsx";
 import ServiceOrderFeedbackTab from "./tabs/ServiceOrderFeedbackTab.jsx";
 import ServiceOrderScriptsTab from "./tabs/ServiceOrderScriptsTab.jsx";
 import ServiceOrderSlaTab from "./tabs/ServiceOrderSlaTab.jsx";
+import ServiceOrderAgendaTab from "./tabs/ServiceOrderAgendaTab.jsx";
 
 const fallbackStatusLabels = {
   open: "Aberta",
@@ -42,6 +43,7 @@ const tabs = [
   { id: "attendance", label: "Atendimento" },
   { id: "asset", label: "Máquina" },
   { id: "sla", label: "SLA" },
+  { id: "agenda", label: "Agenda" },
   { id: "checklist", label: "Checklist" },
   { id: "scripts", label: "Scripts" },
   { id: "attachments", label: "Anexos" },
@@ -151,6 +153,7 @@ export default function ServiceOrderDetailsModal({
   onSelectBackup,
   onReleaseBackup,
   onReopen,
+  onOpenCalendar,
   permissions = {},
   canChangeSector = false,
   remoteScriptExecutionEnabled = false
@@ -1278,6 +1281,10 @@ export default function ServiceOrderDetailsModal({
           )}
 
           {activeTab === "sla" && <ServiceOrderSlaTab serviceOrder={serviceOrder} />}
+
+          {activeTab === "agenda" && (
+            <ServiceOrderAgendaTab token={token} serviceOrder={serviceOrder} canCreate={permissions.schedule ?? true} onOpenCalendar={onOpenCalendar} />
+          )}
 
           {activeTab === "checklist" && (
             <ServiceOrderChecklistTab

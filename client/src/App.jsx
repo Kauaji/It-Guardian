@@ -8,6 +8,8 @@ import {
   Moon,
   PanelLeftClose,
   ClipboardList,
+  CalendarDays,
+  PackageSearch,
   RefreshCw,
   Settings as SettingsIcon,
   ShieldCheck,
@@ -116,6 +118,8 @@ import { useInventoryPersistence } from "./hooks/useInventoryPersistence.js";
 
 const InventoryBoard = lazy(() => import("./components/inventory/InventoryBoard.jsx"));
 const ServiceOrdersBoard = lazy(() => import("./components/serviceOrders/ServiceOrdersBoard.jsx"));
+const TechnicalCalendarPage = lazy(() => import("./components/calendar/TechnicalCalendarPage.jsx"));
+const PartsInventoryPage = lazy(() => import("./components/partsInventory/PartsInventoryPage.jsx"));
 const FloorPlansModule = lazy(() => import("./components/floorPlans/FloorPlansModule.jsx"));
 const InventoryNetworkTopologyView = lazy(() => import("./components/inventory/topology/InventoryNetworkTopologyView.jsx"));
 
@@ -124,6 +128,12 @@ function readSystemMode() {
 }
 
 function readInitialActiveView() {
+  if (typeof window !== "undefined" && window.location.pathname.startsWith("/agenda")) {
+    return "calendar";
+  }
+  if (typeof window !== "undefined" && window.location.pathname.startsWith("/pecas")) {
+    return "parts-inventory";
+  }
   if (typeof window !== "undefined" && window.location.pathname.startsWith("/plantas")) {
     return "inventory";
   }
@@ -325,6 +335,7 @@ function Dashboard() {
   const [segmentSaving, setSegmentSaving] = useState(false);
   const [serviceOrderSaving, setServiceOrderSaving] = useState(false);
   const [generalSettingsOpen, setGeneralSettingsOpen] = useState(false);
+  const [calendarFocusOrder, setCalendarFocusOrder] = useState(null);
   const canViewDashboard = hasPermission(user, "dashboard.view");
   const canCustomizeDashboard = hasPermission(user, "dashboard.customize");
   const canViewAlerts = hasPermission(user, "alerts.view");
@@ -334,6 +345,8 @@ function Dashboard() {
   const canViewInventory = hasPermission(user, "inventory.view");
   const canViewMachine = hasPermission(user, "inventory.view_machine");
   const canViewServiceOrders = hasPermission(user, "service_orders.view");
+  const canViewCalendar = hasPermission(user, "calendar.view");
+  const canViewPartsInventory = hasPermission(user, "parts_inventory.view");
   const canViewFloorPlans = hasPermission(user, "floor_plans.view");
   const canViewTopology = hasPermission(user, "inventory.topology.view");
   const {
@@ -416,9 +429,11 @@ function Dashboard() {
     if (canViewDashboard) views.push("dashboard");
     if (canViewAlerts || canViewScripts || canViewPreventivePlans || canViewPreventiveAutomation) views.push("alerts");
     if (canViewServiceOrders) views.push("service-orders");
+    if (canViewCalendar) views.push("calendar");
+    if (canViewPartsInventory) views.push("parts-inventory");
     if (canViewInventory) views.push("inventory");
     return views;
-  }, [canViewAlerts, canViewDashboard, canViewInventory, canViewPreventiveAutomation, canViewPreventivePlans, canViewScripts, canViewServiceOrders]);
+  }, [canViewAlerts, canViewCalendar, canViewDashboard, canViewInventory, canViewPartsInventory, canViewPreventiveAutomation, canViewPreventivePlans, canViewScripts, canViewServiceOrders]);
   const canManageInventory =
     hasPermission(user, "inventory.create_asset") ||
     hasPermission(user, "inventory.edit_asset") ||
@@ -2892,6 +2907,11 @@ function Dashboard() {
               <ClipboardList size={18} /> <span className="nav-label">Ordens de Serviço</span>
             </button>
           )}
+          {canViewCalendar && (
+            <button className={activeView === "calendar" ? "nav-active" : ""} onClick={() => { window.history.replaceState({}, "", "/agenda"); setActiveView("calendar"); }}>
+              <CalendarDays size={18} /> <span className="nav-label">Agenda Técnica</span>
+            </button>
+          )}
           {canViewInventory && (
             <button
               className={activeView === "inventory" ? "nav-active" : ""}
@@ -2904,7 +2924,12 @@ function Dashboard() {
                 }, 0);
               }}
             >
-              <Database size={18} /> <span className="nav-label">Inventário</span>
+              <Database size={18} /> <span className="nav-label">Inventário de Ativos</span>
+            </button>
+          )}
+          {canViewPartsInventory && (
+            <button className={activeView === "parts-inventory" ? "nav-active" : ""} onClick={() => { window.history.replaceState({}, "", "/pecas"); setActiveView("parts-inventory"); }}>
+              <PackageSearch size={18} /> <span className="nav-label">Inventário de Peças</span>
             </button>
           )}
           {activeView === "inventory" && sidebarExpanded && (
@@ -3136,6 +3161,49 @@ function Dashboard() {
           </ViewErrorBoundary>
         )}
 
+        {activeView === "calendar" && canViewCalendar && (
+          <ViewErrorBoundary label="a Agenda Técnica" resetKey={activeView}>
+            <Suspense fallback={<ViewLoadingState />}>
+              <TechnicalCalendarPage
+                token={token}
+                notify={notify}
+                serviceOrders={serviceOrders}
+                devices={decoratedAllDevices}
+                segments={decoratedSegments}
+                groups={decoratedSegmentGroups}
+                focusServiceOrder={calendarFocusOrder}
+                onFocusHandled={() => setCalendarFocusOrder(null)}
+                permissions={{
+                  create: hasPermission(user, "calendar.create"),
+                  update: hasPermission(user, "calendar.update"),
+                  cancel: hasPermission(user, "calendar.cancel"),
+                  delete: hasPermission(user, "calendar.delete"),
+                  assignTechnician: hasPermission(user, "calendar.assign_technician")
+                }}
+              />
+            </Suspense>
+          </ViewErrorBoundary>
+        )}
+
+        {activeView === "parts-inventory" && canViewPartsInventory && (
+          <ViewErrorBoundary label="o Inventário de Peças" resetKey={activeView}>
+            <Suspense fallback={<ViewLoadingState />}>
+              <PartsInventoryPage
+                token={token}
+                notify={notify}
+                devices={decoratedAllDevices}
+                serviceOrders={serviceOrders}
+                permissions={{
+                  create: hasPermission(user, "parts_inventory.create"),
+                  update: hasPermission(user, "parts_inventory.update"),
+                  moveStock: hasPermission(user, "parts_inventory.move_stock"),
+                  assignAssets: hasPermission(user, "parts_inventory.assign_assets")
+                }}
+              />
+            </Suspense>
+          </ViewErrorBoundary>
+        )}
+
         {activeView === "service-orders" && canViewServiceOrders && (
           <ViewErrorBoundary label="Ordens de Serviço" resetKey={activeView}>
           <Suspense fallback={<ViewLoadingState />}>
@@ -3158,6 +3226,11 @@ function Dashboard() {
             onSelectBackup={handleSelectBackupForServiceOrder}
             onReleaseBackup={releaseBackupForServiceOrder}
             onReopen={handleReopenServiceOrder}
+            onOpenCalendar={(order, createEvent) => {
+              setCalendarFocusOrder(createEvent ? order : null);
+              window.history.replaceState({}, "", "/agenda");
+              setActiveView("calendar");
+            }}
             user={user}
             remoteScriptExecutionEnabled={remoteScriptExecutionEnabledEffective}
             permissions={{
@@ -3174,6 +3247,7 @@ function Dashboard() {
               reopen: hasPermission(user, "service_orders.reopen"),
               manageChecklists: hasPermission(user, "service_orders.manage_checklists"),
               runScripts: hasPermission(user, "service_orders.run_scripts"),
+              schedule: hasPermission(user, "calendar.create"),
               registerSimulation: hasPermission(user, "scripts.register_simulation")
             }}
             />

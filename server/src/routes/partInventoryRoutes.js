@@ -1,0 +1,10 @@
+import { Router } from "express";
+import { create, details, list, movement, update } from "../controllers/partInventoryController.js";
+import { requireAuth, requirePermission } from "../middleware/authMiddleware.js";
+const router=Router(); router.use(requireAuth);
+router.get("/",requirePermission("parts_inventory.view"),list);
+router.post("/",requirePermission("parts_inventory.create"),create);
+router.get("/:id",requirePermission("parts_inventory.view"),details);
+router.patch("/:id",requirePermission("parts_inventory.update"),update);
+router.post("/:id/movements",requirePermission("parts_inventory.move_stock"),movement);
+export default router;

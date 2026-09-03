@@ -72,6 +72,7 @@ export default function ServiceOrdersBoard({
   onSelectBackup,
   onReleaseBackup,
   onReopen,
+  onOpenCalendar,
   permissions = {},
   user = null,
   remoteScriptExecutionEnabled = false
@@ -1328,6 +1329,7 @@ export default function ServiceOrdersBoard({
         onSelectBackup={onSelectBackup}
         onReleaseBackup={onReleaseBackup}
         onReopen={onReopen}
+        onOpenCalendar={onOpenCalendar}
         permissions={permissions}
         canChangeSector={canChangeSector}
         remoteScriptExecutionEnabled={remoteScriptExecutionEnabled}
