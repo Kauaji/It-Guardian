@@ -3976,3 +3976,24 @@ achado que passou despercebido.
 - Separado o Inventário de Ativos do novo Inventário de Peças, com movimentos transacionais e histórico.
 - Adicionado modo explícito de organização por arrastar no dashboard e fechamento exclusivo dos menus.
 - Corrigidos deslocamento da sidebar, pulso de status e aproveitamento horizontal dos cards no modo vertical de OS.
+
+# 03/09/2026 — Consolidação, Relatórios e saúde real por segmento
+
+- Integrada a última feature remota que ainda estava fora do conjunto principal: o módulo de Relatórios V1, incluindo visualização, filtros, exportação CSV, permissões, migration e testes.
+- Resolvidos os conflitos de integração preservando simultaneamente Dashboard configurável, Agenda Técnica, Inventário de Peças, métricas históricas e Relatórios.
+- Corrigida a configuração de deploy que levava `client/.env` e `.env` locais ao Vercel; builds públicos agora usam a API da mesma origem e rejeitam URLs privadas como `localhost`.
+- Adicionada nota de saúde de 0 a 100 em cada segmento do Inventário de Ativos. A nota é calculada a partir do estado real das máquinas monitoradas, indisponibilidade, CPU/RAM críticos, disco crítico e ausência prolongada de contato.
+- Segmentos sem telemetria observável exibem “—”, evitando atribuir nota máxima inventada. O indicador informa cobertura e descontos no hover ou foco de teclado.
+- A fórmula de saúde foi movida para `shared/infrastructureHealth.js`, garantindo que Dashboard e segmentos usem a mesma regra testável.
+
+### Validações desta rodada
+
+- testes específicos de saúde da infraestrutura e dos segmentos aprovados;
+- testes específicos do módulo de Relatórios aprovados;
+- `npm run test --workspace server`: 582 testes, 580 aprovados e 2 ignorados, sem falhas;
+- `npm run test:integration --workspace server`: 139 testes, 137 aprovados e 2 ignorados, sem falhas;
+- `npm run test:client`: 649 testes aprovados em 59 arquivos, sem falhas;
+- lint do código versionado (`client/src`, `server/src`, `shared` e `scripts`) aprovado sem avisos; o comando amplo `npm run lint` encontrou apenas uma configuração ESLint incompatível dentro da pasta local não versionada `CondoHub/`, que não pertence ao IT Guardian e foi preservada;
+- `npm run check:architecture` aprovado para 578 arquivos-fonte;
+- `npm run build` aprovado com API pública em mesma origem (`/api`) e WebSocket desabilitado no build público;
+- `git diff --check` aprovado.

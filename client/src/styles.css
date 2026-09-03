@@ -5272,6 +5272,61 @@ tbody tr.selected {
   cursor: default;
 }
 
+.segment-health-score {
+  --health-tone: #64748b;
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 72px;
+  padding: 6px 9px;
+  border: 1px solid color-mix(in srgb, var(--health-tone) 38%, var(--border));
+  border-left: 3px solid var(--health-tone);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--health-tone) 9%, var(--surface));
+  color: var(--health-tone);
+  box-shadow: 0 5px 14px color-mix(in srgb, var(--health-tone) 9%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+
+.segment-health-score > span {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.segment-health-score > strong {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.segment-health-score.healthy {
+  --health-tone: #15803d;
+}
+
+.segment-health-score.attention {
+  --health-tone: #b45309;
+}
+
+.segment-health-score.critical {
+  --health-tone: #c2410c;
+}
+
+.segment-health-score.emergency {
+  --health-tone: #b91c1c;
+}
+
+.segment-health-score.no-data {
+  --health-tone: #64748b;
+}
+
+.segment-health-score:focus-visible {
+  outline: 0;
+  box-shadow: var(--focus-ring);
+}
+
 .segment-color-mark {
   width: 18px;
   height: 18px;

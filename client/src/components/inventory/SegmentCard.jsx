@@ -3,6 +3,7 @@ import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { useState } from "react";
 import MachineCard from "./MachineCard.jsx";
 import ColorPickerSegment from "./ColorPickerSegment.jsx";
+import { calculateSegmentHealth, describeSegmentHealth } from "./segmentHealth.js";
 
 export default function SegmentCard({
   segment,
@@ -53,6 +54,8 @@ export default function SegmentCard({
   const color = isBackupSegment ? "#f97316" : isDefaultSegment ? "#111827" : segment.color || "#1f7a61";
   const actionsMenuId = `segment-actions-${segment.id}`;
   const actionsOpen = activePopoverId === actionsMenuId;
+  const health = calculateSegmentHealth(machines);
+  const healthDescription = describeSegmentHealth(health);
   const sectionStyle = {
     "--segment-color": color,
     opacity: isSegmentDragging ? 0.62 : undefined
@@ -100,6 +103,15 @@ export default function SegmentCard({
               <span>{machines.length} {machines.length === 1 ? "máquina" : "máquinas"}</span>
             </span>
           </button>
+          <span
+            className={`segment-health-score ${health.classification}`}
+            aria-label={`Nota de saúde do segmento ${segment.name}: ${health.score ?? "sem dados"}`}
+            title={healthDescription}
+            tabIndex={0}
+          >
+            <span>Nota</span>
+            <strong>{health.score ?? "—"}</strong>
+          </span>
         </div>
 
         <div className="segment-header-tools">

@@ -47,6 +47,7 @@ describe("InventoryBoard — manutenção independente", () => {
     expect(within(ungrouped).getByText("1 segmento")).toBeInTheDocument();
     expect(within(ungrouped).queryByRole("heading", { name: "Manutenção" })).toBeNull();
     expect(within(maintenanceCard).getByText(machine.name)).toBeInTheDocument();
+    expect(within(maintenanceCard).getByLabelText("Nota de saúde do segmento Manutenção: 60")).toBeInTheDocument();
     expect(container.querySelectorAll(`#inventory-segment-${maintenance.id}`)).toHaveLength(1);
   });
 
