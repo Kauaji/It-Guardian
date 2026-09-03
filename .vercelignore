@@ -2,6 +2,10 @@ node_modules/
 dist/
 .git/
 .vercel/
+.env
+.env.local
+client/.env
+client/.env.local
 .claude/
 CLAUDE.md
 CondoHub/
