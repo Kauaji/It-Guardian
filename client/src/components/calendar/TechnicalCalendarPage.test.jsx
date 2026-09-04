@@ -25,12 +25,15 @@ describe("TechnicalCalendarPage", () => {
     expect(screen.getByRole("form", { name: "Novo agendamento" })).toBeInTheDocument();
   });
 
-  it("troca para a visão semanal", async () => {
+  it("mantém uma agenda mensal enxuta sem controles redundantes", async () => {
     render(<TechnicalCalendarPage token="token" permissions={{ create: true }} />);
     await waitFor(() => expect(document.querySelector(".calendar-surface")).not.toHaveClass("is-loading"));
-    fireEvent.click(await screen.findByRole("button", { name: "Semana" }));
-    expect(document.querySelector(".calendar-surface.view-week")).toBeInTheDocument();
-    await waitFor(() => expect(document.querySelector(".calendar-surface.view-week")).not.toHaveClass("is-loading"));
+    expect(document.querySelector(".calendar-surface.view-month")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Hoje" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Mês" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Semana" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Dia" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /atualizar/i })).not.toBeInTheDocument();
   });
 
   it("abre edição sem disparar novo agendamento e colore o dia pela prioridade", async () => {
@@ -44,5 +47,16 @@ describe("TechnicalCalendarPage", () => {
     fireEvent.click(eventButton);
     expect(screen.getByRole("form", { name: "Editar agendamento" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Excluir" })).toBeInTheDocument();
+  });
+
+  it("permite concluir manualmente um evento", async () => {
+    const startAt = new Date();
+    startAt.setHours(10, 0, 0, 0);
+    api.fetchCalendarEvents.mockResolvedValue({ events: [{ id: "event-2", title: "Revisão concluível", eventType: "technical_visit", status: "scheduled", priority: "medium", startAt: startAt.toISOString() }] });
+    api.updateCalendarEvent.mockResolvedValue({ event: { id: "event-2", status: "completed" } });
+    render(<TechnicalCalendarPage token="token" permissions={{ create: true, update: true }} />);
+    fireEvent.click(await screen.findByText("Revisão concluível"));
+    fireEvent.click(screen.getByRole("button", { name: /concluir evento/i }));
+    await waitFor(() => expect(api.updateCalendarEvent).toHaveBeenCalledWith("token", "event-2", { status: "completed" }));
   });
 });

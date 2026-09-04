@@ -160,12 +160,14 @@ export default function InventoryBoard({
   }, []);
 
   useEffect(() => {
-    function openInventoryBoard() {
+    function openInventoryBoard(event) {
       setInventoryViewMode("board");
+      const assetId = event?.detail?.assetId;
+      if (assetId) setSelectedMachine(devices.find((device) => device.id === assetId) || null);
     }
     window.addEventListener("it-guardian:open-inventory-board", openInventoryBoard);
     return () => window.removeEventListener("it-guardian:open-inventory-board", openInventoryBoard);
-  }, []);
+  }, [devices]);
 
   useEffect(() => {
     setActivePopoverId(null);

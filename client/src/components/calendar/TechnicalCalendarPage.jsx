@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, Clock3, Plus, RefreshCw, Search, UserRoundCheck } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Clock3, Plus, Search, UserRoundCheck } from "lucide-react";
 import { cancelCalendarEvent, createCalendarEvent, deleteCalendarEvent, fetchCalendarEvents, fetchCalendarSummary, fetchTechnicians, updateCalendarEvent } from "../../api.js";
 import CalendarEventModal from "./CalendarEventModal.jsx";
 import { buildCalendarDays, dateKey, EVENT_STATUS_LABELS, EVENT_TYPE_META, eventsByDay, getCalendarRange, PRIORITY_META } from "./calendarModel.js";
@@ -9,9 +9,7 @@ const WEEK_DAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const normalizedName = (value = "") => String(value).normalize("NFD").replace(/\p{Diacritic}/gu, "").trim().toLowerCase();
 const isMaintenanceSegment = (segment) => normalizedName(segment?.name) === "manutencao";
 
-function formatHeader(anchor, view) {
-  if (view === "day") return anchor.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-  if (view === "week") { const { start, end } = getCalendarRange(anchor, view); return `${start.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} – ${new Date(end.getTime() - 1).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}`; }
+function formatHeader(anchor) {
   return anchor.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 }
 
@@ -22,7 +20,6 @@ function CalendarEvent({ event, onClick }) {
 }
 
 export default function TechnicalCalendarPage({ token, notify, serviceOrders = [], devices = [], segments = [], groups = [], tabs = [], permissions = {}, focusServiceOrder, onFocusHandled }) {
-  const [view, setView] = useState("month");
   const [anchor, setAnchor] = useState(() => new Date());
   const [events, setEvents] = useState([]);
   const [summary, setSummary] = useState({});
@@ -31,7 +28,7 @@ export default function TechnicalCalendarPage({ token, notify, serviceOrders = [
   const [saving, setSaving] = useState(false);
   const [modal, setModal] = useState(null);
   const [filters, setFilters] = useState({ technicianId: "", eventType: "", status: "", priority: "", groupId: "", segmentId: "", serviceOrderId: "", search: "" });
-  const range = useMemo(() => getCalendarRange(anchor, view), [anchor, view]);
+  const range = useMemo(() => getCalendarRange(anchor, "month"), [anchor]);
   const filterSegments = segments
     .filter((segment) => !segment.isDefault && !isMaintenanceSegment(segment))
     .filter((segment) => !filters.groupId || !segment.groupId || segment.groupId === filters.groupId);
@@ -67,9 +64,9 @@ export default function TechnicalCalendarPage({ token, notify, serviceOrders = [
     return search ? events.filter((event) => [event.title, event.description, event.serviceOrderNumber, event.technicianName].some((value) => String(value || "").toLocaleLowerCase("pt-BR").includes(search))) : events;
   }, [events, filters.search]);
   const grouped = useMemo(() => eventsByDay(visibleEvents), [visibleEvents]);
-  const days = useMemo(() => buildCalendarDays(anchor, view), [anchor, view]);
+  const days = useMemo(() => buildCalendarDays(anchor, "month"), [anchor]);
 
-  function move(direction) { setAnchor((current) => { const next = new Date(current); if (view === "month") next.setMonth(next.getMonth() + direction); else next.setDate(next.getDate() + direction * (view === "week" ? 7 : 1)); return next; }); }
+  function move(direction) { setAnchor((current) => { const next = new Date(current); next.setMonth(next.getMonth() + direction); return next; }); }
   async function save(payload) {
     setSaving(true);
     try { if (modal?.event) await updateCalendarEvent(token, modal.event.id, payload); else await createCalendarEvent(token, payload); notify?.(modal?.event ? "Agendamento atualizado." : "Agendamento criado.", "ok"); setModal(null); await load(); }
@@ -77,6 +74,7 @@ export default function TechnicalCalendarPage({ token, notify, serviceOrders = [
     finally { setSaving(false); }
   }
   async function cancel(event) { const reason = window.prompt("Motivo do cancelamento (opcional):", ""); if (reason === null) return; await cancelCalendarEvent(token, event.id, reason); setModal(null); notify?.("Agendamento cancelado.", "ok"); load(); }
+  async function complete(event) { setSaving(true); try { await updateCalendarEvent(token, event.id, { status: "completed" }); setModal(null); notify?.("Agendamento concluído.", "ok"); await load(); } catch (error) { notify?.(error.message || "Não foi possível concluir o agendamento.", "danger"); } finally { setSaving(false); } }
   async function remove(event) { if (!window.confirm(`Excluir definitivamente "${event.title}"?`)) return; await deleteCalendarEvent(token, event.id); setModal(null); notify?.("Agendamento excluído.", "ok"); load(); }
 
   return <section className="technical-calendar-page">
@@ -85,25 +83,25 @@ export default function TechnicalCalendarPage({ token, notify, serviceOrders = [
       <div><CalendarDays size={17} /><span>Hoje<strong>{summary.today || 0}</strong></span></div><div><Clock3 size={17} /><span>Atrasados<strong>{summary.overdue || 0}</strong></span></div><div><UserRoundCheck size={17} /><span>Técnicos ocupados<strong>{summary.busyTechnicians || 0}</strong></span></div><div><span>OS agendadas<strong>{summary.serviceOrders || 0}</strong></span></div><div><span>Preventivas<strong>{summary.preventiveMaintenance || 0}</strong></span></div>
     </div>
     <div className="calendar-toolbar">
-      <div className="calendar-navigation"><button type="button" className="secondary-action" onClick={() => setAnchor(new Date())}>Hoje</button><button type="button" className="icon-button" onClick={() => move(-1)} aria-label="Período anterior"><ChevronLeft /></button><button type="button" className="icon-button" onClick={() => move(1)} aria-label="Próximo período"><ChevronRight /></button><h3>{formatHeader(anchor, view)}</h3></div>
-      <div className="calendar-view-switch" aria-label="Visualização">{["month", "week", "day"].map((id) => <button key={id} type="button" className={view === id ? "active" : ""} onClick={() => setView(id)}>{id === "month" ? "Mês" : id === "week" ? "Semana" : "Dia"}</button>)}</div>
+      <div className="calendar-navigation"><button type="button" className="icon-button" onClick={() => move(-1)} aria-label="Mês anterior"><ChevronLeft /></button><h3>{formatHeader(anchor)}</h3><button type="button" className="icon-button" onClick={() => move(1)} aria-label="Próximo mês"><ChevronRight /></button></div>
     </div>
     <div className="calendar-filters">
-      <label><Search size={16} /><input value={filters.search} onChange={(e) => setFilters((current) => ({ ...current, search: e.target.value }))} placeholder="Buscar título, OS ou técnico" /></label>
-      <select aria-label="Filtrar por técnico" value={filters.technicianId} onChange={(e) => setFilters((current) => ({ ...current, technicianId: e.target.value }))}><option value="">Todos os técnicos</option>{technicians.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
-      <select aria-label="Filtrar por tipo" value={filters.eventType} onChange={(e) => setFilters((current) => ({ ...current, eventType: e.target.value }))}><option value="">Todos os tipos</option>{Object.entries(EVENT_TYPE_META).map(([id, meta]) => <option key={id} value={id}>{meta.label}</option>)}</select>
-      <select aria-label="Filtrar por status" value={filters.status} onChange={(e) => setFilters((current) => ({ ...current, status: e.target.value }))}><option value="">Todos os status</option>{Object.entries(EVENT_STATUS_LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select>
-      <select aria-label="Filtrar por prioridade" value={filters.priority} onChange={(e) => setFilters((current) => ({ ...current, priority: e.target.value }))}><option value="">Todas as prioridades</option><option value="low">Baixa</option><option value="normal">Normal</option><option value="high">Alta</option><option value="urgent">Urgente</option></select>
-      <select aria-label="Filtrar por grupo" value={filters.groupId} onChange={(e) => setFilters((current) => ({ ...current, groupId: e.target.value, segmentId: "" }))}><option value="">Todos os grupos</option>{groups.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
-      <select aria-label="Filtrar por segmento" value={filters.segmentId} onChange={(e) => setFilters((current) => ({ ...current, segmentId: e.target.value }))}><option value="">Todos os segmentos</option>{filterSegments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
-      <select aria-label="Filtrar por OS" value={filters.serviceOrderId} onChange={(e) => setFilters((current) => ({ ...current, serviceOrderId: e.target.value }))}><option value="">Todas as OS</option>{serviceOrders.map((item) => <option key={item.id} value={item.id}>{item.number} · {item.title}</option>)}</select>
-      <button type="button" className="icon-button" onClick={load} title="Atualizar"><RefreshCw size={16} /></button>
+      <label className="calendar-search"><Search size={17} /><input value={filters.search} onChange={(e) => setFilters((current) => ({ ...current, search: e.target.value }))} placeholder="Pesquisar evento, OS ou técnico" /></label>
+      <div className="calendar-filter-rail">
+        <label><span>Técnico</span><select aria-label="Filtrar por técnico" value={filters.technicianId} onChange={(e) => setFilters((current) => ({ ...current, technicianId: e.target.value }))}><option value="">Todos</option>{technicians.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+        <label><span>Tipo</span><select aria-label="Filtrar por tipo" value={filters.eventType} onChange={(e) => setFilters((current) => ({ ...current, eventType: e.target.value }))}><option value="">Todos</option>{Object.entries(EVENT_TYPE_META).map(([id, meta]) => <option key={id} value={id}>{meta.label}</option>)}</select></label>
+        <label><span>Status</span><select aria-label="Filtrar por status" value={filters.status} onChange={(e) => setFilters((current) => ({ ...current, status: e.target.value }))}><option value="">Todos</option>{Object.entries(EVENT_STATUS_LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>
+        <label><span>Prioridade</span><select aria-label="Filtrar por prioridade" value={filters.priority} onChange={(e) => setFilters((current) => ({ ...current, priority: e.target.value }))}><option value="">Todas</option><option value="low">Baixa</option><option value="normal">Normal</option><option value="high">Alta</option><option value="urgent">Urgente</option></select></label>
+        <label><span>Grupo</span><select aria-label="Filtrar por grupo" value={filters.groupId} onChange={(e) => setFilters((current) => ({ ...current, groupId: e.target.value, segmentId: "" }))}><option value="">Todos</option>{groups.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+        <label><span>Segmento</span><select aria-label="Filtrar por segmento" value={filters.segmentId} onChange={(e) => setFilters((current) => ({ ...current, segmentId: e.target.value }))}><option value="">Todos</option>{filterSegments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+        <label><span>OS</span><select aria-label="Filtrar por OS" value={filters.serviceOrderId} onChange={(e) => setFilters((current) => ({ ...current, serviceOrderId: e.target.value }))}><option value="">Todas</option>{serviceOrders.map((item) => <option key={item.id} value={item.id}>{item.number} · {item.title}</option>)}</select></label>
+      </div>
     </div>
-    <div className={`calendar-surface view-${view} ${loading ? "is-loading" : ""}`}>
-      {view !== "day" ? <div className="calendar-weekday-row">{(view === "week" ? days : WEEK_DAYS).slice(0, 7).map((item, index) => <span key={dateKey(item instanceof Date ? item : new Date(2026, 0, index + 4))}>{item instanceof Date ? <><small>{WEEK_DAYS[item.getDay()]}</small>{item.getDate()}</> : item}</span>)}</div> : null}
-      <div className="calendar-day-grid">{days.map((day) => { const dayEvents = grouped.get(dateKey(day)) || []; const outside = view === "month" && day.getMonth() !== anchor.getMonth(); const past = day < new Date(new Date().setHours(0, 0, 0, 0)); const dayPriority = dayEvents.reduce((highest, event) => (PRIORITY_META[event.priority]?.rank || 0) > (PRIORITY_META[highest]?.rank || 0) ? event.priority : highest, ""); const dayColor = dayPriority ? PRIORITY_META[dayPriority].color : "transparent"; const openDay = () => permissions.create && setModal({ date: day }); return <div role="button" tabIndex={permissions.create ? 0 : -1} className={`calendar-day-cell ${outside ? "outside" : ""} ${past ? "past" : ""} ${dayEvents.length ? "has-events" : ""} ${dateKey(day) === dateKey(new Date()) ? "today" : ""}`} style={{ "--day-priority-color": dayColor }} key={dateKey(day)} onClick={openDay} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openDay(); } }}><span className="calendar-day-number">{view === "day" ? day.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" }) : day.getDate()}</span><div className="calendar-day-events">{dayEvents.slice(0, view === "month" ? 2 : 12).map((event) => <CalendarEvent key={event.id} event={event} onClick={(selected) => setModal({ event: selected })} />)}{view === "month" && dayEvents.length > 2 ? <span className="calendar-more-events">+ {dayEvents.length - 2} eventos</span> : null}</div></div>; })}</div>
+    <div className={`calendar-surface view-month ${loading ? "is-loading" : ""}`}>
+      <div className="calendar-weekday-row">{WEEK_DAYS.map((item) => <span key={item}>{item}</span>)}</div>
+      <div className="calendar-day-grid">{days.map((day) => { const dayEvents = grouped.get(dateKey(day)) || []; const outside = day.getMonth() !== anchor.getMonth(); const past = day < new Date(new Date().setHours(0, 0, 0, 0)); const dayPriority = dayEvents.reduce((highest, event) => (PRIORITY_META[event.priority]?.rank || 0) > (PRIORITY_META[highest]?.rank || 0) ? event.priority : highest, ""); const dayColor = dayPriority ? PRIORITY_META[dayPriority].color : "transparent"; const openDay = () => permissions.create && setModal({ date: day }); return <div role="button" tabIndex={permissions.create ? 0 : -1} className={`calendar-day-cell ${outside ? "outside" : ""} ${past ? "past" : ""} ${dayEvents.length ? "has-events" : ""} ${dateKey(day) === dateKey(new Date()) ? "today" : ""}`} style={{ "--day-priority-color": dayColor }} key={dateKey(day)} onClick={openDay} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openDay(); } }}><span className="calendar-day-number">{day.getDate()}</span><div className="calendar-day-events">{dayEvents.slice(0, 2).map((event) => <CalendarEvent key={event.id} event={event} onClick={(selected) => setModal({ event: selected })} />)}{dayEvents.length > 2 ? <span className="calendar-more-events">+ {dayEvents.length - 2} eventos</span> : null}</div></div>; })}</div>
       {!loading && !visibleEvents.length ? <div className="calendar-empty-state"><CalendarDays size={30} /><strong>Nenhum agendamento neste período</strong><span>Clique em uma data para planejar o próximo atendimento.</span></div> : null}
     </div>
-    {modal ? <CalendarEventModal event={modal.event} selectedDate={modal.date} defaults={modal.defaults} technicians={technicians} serviceOrders={serviceOrders} devices={devices} segments={segments} groups={groups} tabs={tabs} permissions={permissions} saving={saving} onClose={() => setModal(null)} onSave={save} onCancel={cancel} onDelete={remove} /> : null}
+    {modal ? <CalendarEventModal event={modal.event} selectedDate={modal.date} defaults={modal.defaults} technicians={technicians} serviceOrders={serviceOrders} devices={devices} segments={segments} groups={groups} tabs={tabs} permissions={permissions} saving={saving} onClose={() => setModal(null)} onSave={save} onCancel={cancel} onComplete={complete} onDelete={remove} /> : null}
   </section>;
 }

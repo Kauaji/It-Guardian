@@ -1609,62 +1609,6 @@ export function deletePriorityRule(token, id) {
   });
 }
 
-const REPORT_TYPE_PATHS = {
-  monthly: "monthly",
-  service_orders: "service-orders",
-  sla: "sla",
-  assets: "assets",
-  alerts: "alerts",
-  scripts: "scripts",
-  remote_assistance: "remote-assistance"
-};
-
-function reportQueryString(params = {}) {
-  const search = new URLSearchParams(
-    Object.fromEntries(Object.entries(params).filter(([, value]) => value !== "" && value != null))
-  ).toString();
-  return search ? `?${search}` : "";
-}
-
-export function fetchReportPreview(token, type, params = {}) {
-  const path = REPORT_TYPE_PATHS[type];
-  return apiFetch(`/reports/${path}/preview${reportQueryString(params)}`, { token });
-}
-
-/**
- * Nao reaproveita `apiFetch` porque a resposta e `text/csv`, nao JSON - mas
- * aplica o mesmo header de autorizacao e o mesmo evento de expiracao de
- * sessao no 401, para o resto do app continuar reagindo do mesmo jeito.
- */
-export async function fetchReportCsv(token, type, params = {}) {
-  const path = REPORT_TYPE_PATHS[type];
-  let response;
-
-  try {
-    response = await fetch(buildApiUrl(`/reports/${path}/export.csv${reportQueryString(params)}`), {
-      credentials: "include",
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
-    });
-  } catch (error) {
-    throw new Error("Não foi possível conectar ao servidor.", { cause: error });
-  }
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    const message = data.message || "Não foi possível exportar o relatório.";
-
-    if (response.status === 401 && token && typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("it-guardian:auth-expired", { detail: { message } }));
-    }
-
-    const error = new Error(message);
-    error.statusCode = response.status;
-    throw error;
-  }
-
-  return response.text();
-}
-
 export function createMonitoringSocket() {
   const wsUrl = buildWsUrl();
   if (!wsUrl) return null;

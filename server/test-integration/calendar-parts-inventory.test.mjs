@@ -32,6 +32,15 @@ test("agenda e inventario de pecas persistem fluxos operacionais", async (t) => 
   assert.equal(listed.status, 200);
   assert.ok((await listed.json()).events.some((item) => item.id === event.id));
 
+  const elapsedStartAt = new Date(Date.now() - 7_200_000).toISOString();
+  const elapsedEndAt = new Date(Date.now() - 3_600_000).toISOString();
+  const elapsedResponse = await fetch(`${baseUrl}/api/calendar/events`, { method: "POST", headers, body: JSON.stringify({ title: "Evento encerrado", eventType: "technical_visit", startAt: elapsedStartAt, endAt: elapsedEndAt }) });
+  assert.equal(elapsedResponse.status, 201);
+  const elapsedEvent = (await elapsedResponse.json()).event;
+  const afterElapsed = await fetch(`${baseUrl}/api/calendar/events?startDate=${encodeURIComponent(rangeStart)}&endDate=${encodeURIComponent(rangeEnd)}`, { headers: { cookie } });
+  assert.equal(afterElapsed.status, 200);
+  assert.equal((await afterElapsed.json()).events.find((item) => item.id === elapsedEvent.id)?.status, "completed");
+
   const createdPart = await fetch(`${baseUrl}/api/parts`, { method: "POST", headers, body: JSON.stringify({ name: "SSD NVMe 1 TB", internalCode: "SSD-001", quantity: 3, minimumStock: 1, unit: "un" }) });
   assert.equal(createdPart.status, 201);
   const part = (await createdPart.json()).part;

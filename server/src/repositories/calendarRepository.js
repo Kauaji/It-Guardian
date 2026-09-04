@@ -72,6 +72,14 @@ export async function assertCalendarReferences(payload) {
 }
 
 export async function listCalendarEvents(filters, user, canViewAll) {
+  await query(`
+    UPDATE calendar_events
+    SET status = 'completed', updated_at = NOW()
+    WHERE status IN ('scheduled', 'in_progress')
+      AND all_day = FALSE
+      AND end_at IS NOT NULL
+      AND end_at <= NOW()
+  `);
   const where = ["ce.start_at < $2", "COALESCE(ce.end_at, ce.start_at) >= $1"];
   const params = [filters.startDate, filters.endDate];
   const fields = { technicianId: "ce.technician_id", eventType: "ce.event_type", status: "ce.status", priority: "ce.priority", serviceOrderId: "ce.service_order_id", assetId: "ce.asset_id", segmentId: "ce.segment_id", groupId: "ce.group_id" };

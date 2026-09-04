@@ -4,13 +4,12 @@
 
 A Agenda Técnica centraliza compromissos operacionais do IT Guardian sem substituir o fluxo de Ordens de Serviço. Ela organiza OS agendadas, manutenções preventivas, visitas, tarefas internas, verificações de ativos, lembretes e outros eventos.
 
-## Visualizações e fluxo
+## Visualização e fluxo
 
-- **Mês:** visão ampla com até três eventos por dia e indicador dos demais.
-- **Semana:** sete colunas com a agenda do período.
-- **Dia:** foco em todos os compromissos de uma data.
+- **Mês:** visão única e ampla, com até três eventos por dia e indicador dos demais.
 - Um clique em uma data abre `Novo agendamento` com a data preenchida.
 - Um clique em um evento abre os detalhes para editar, concluir, cancelar ou excluir conforme a permissão do usuário.
+- Eventos com hora final configurada são concluídos automaticamente quando esse horário passa. Eventos sem término continuam dependendo da conclusão manual.
 
 O formulário aceita título, período, dia inteiro, tipo, status, prioridade, técnico, OS, ativo, segmento, grupo, ambiente e descrição. A data final, quando preenchida, deve ser posterior à inicial.
 

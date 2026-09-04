@@ -3997,3 +3997,25 @@ achado que passou despercebido.
 - `npm run check:architecture` aprovado para 578 arquivos-fonte;
 - `npm run build` aprovado com API pública em mesma origem (`/api`) e WebSocket desabilitado no build público;
 - `git diff --check` aprovado.
+
+# 04/09/2026 — Inventário físico por famílias e agenda operacional enxuta
+
+- Reorganizado o Inventário de Peças por famílias físicas: placas-mãe, processadores, placas de vídeo, memórias, HD/SSD/NVMe, fontes, mouses, teclados, monitores e diversos. Cada família recebeu identidade visual própria para reduzir a predominância de verde e facilitar a leitura do catálogo.
+- A coleta automática deixou de cadastrar adaptadores de rede, drivers e dispositivos virtuais como peças. A migration `031-inventory-families-remove-reports` normaliza os cadastros existentes e desativa esses registros técnicos indevidos sem apagar o histórico dos produtos.
+- Criada a visualização **Kits por computador**, montada somente com componentes instalados e ativos reais, com atalho para abrir a máquina correspondente no Inventário de Ativos.
+- Removido o botão manual de conciliação; a mesma operação agora é executada automaticamente ao abrir o Inventário de Peças. O aviso de incongruência filtra as peças divergentes, explica o problema e oferece acesso direto à máquina afetada.
+- Simplificado o cabeçalho de importação de NF-e para uma única ação e transformado o filtro de disponibilidade em um controle compacto, exibindo apenas a seta quando fechado.
+- Reformulada a Agenda Técnica como calendário mensal único. Foram retirados os controles redundantes de Hoje, Mês, Semana, Dia e atualização manual; os filtros passaram a seguir o padrão visual operacional das Ordens de Serviço.
+- Adicionada conclusão manual de eventos. Eventos que possuem hora final e não são de dia inteiro passam automaticamente de agendados/em andamento para concluídos assim que uma listagem da agenda confirma que o horário terminou.
+- Removido o módulo de Relatórios conforme solicitação: item da navegação, página, permissões, API, rotas, serviços, repositório, testes e documentação. A migration remove a tabela exclusiva de histórico de exportações; as migrations antigas permanecem versionadas para preservar a reconstrução cronológica de bancos novos.
+
+### Validações desta rodada
+
+- testes focados de inventário e agenda: 10 aprovados;
+- suíte de servidor: 555 testes, 553 aprovados e 2 ignorados, sem falhas;
+- suíte de integração: 128 testes, 126 aprovados e 2 ignorados, sem falhas;
+- suíte do cliente: 635 testes aprovados em 56 arquivos, sem falhas;
+- lint do código versionado (`client/src`, `server/src`, `shared` e `scripts`) aprovado sem avisos;
+- verificação de arquitetura aprovada para 562 arquivos-fonte;
+- build de produção e preparação da saída Vercel concluídos sem erros;
+- `git diff --check` aprovado.

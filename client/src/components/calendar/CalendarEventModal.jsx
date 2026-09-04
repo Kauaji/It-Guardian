@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CalendarClock, Trash2, X } from "lucide-react";
+import { CalendarClock, CheckCircle2, Trash2, X } from "lucide-react";
 import { EVENT_STATUS_LABELS, EVENT_TYPE_META, PRIORITY_LABELS, toLocalInput } from "./calendarModel.js";
 
 function normalizedName(value = "") {
@@ -30,7 +30,7 @@ function initialForm(event, selectedDate, defaults = {}) {
   };
 }
 
-export default function CalendarEventModal({ event, selectedDate, defaults, technicians, serviceOrders, devices, segments, groups, tabs, permissions, saving, onClose, onSave, onCancel, onDelete }) {
+export default function CalendarEventModal({ event, selectedDate, defaults, technicians, serviceOrders, devices, segments, groups, tabs, permissions, saving, onClose, onSave, onCancel, onComplete, onDelete }) {
   const [form, setForm] = useState(() => initialForm(event, selectedDate, defaults));
   useEffect(() => setForm(initialForm(event, selectedDate, defaults)), [defaults, event, selectedDate]);
   const set = (field) => (e) => setForm((current) => ({ ...current, [field]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
@@ -111,7 +111,7 @@ export default function CalendarEventModal({ event, selectedDate, defaults, tech
           <label className="calendar-field-wide">Descrição<textarea value={form.description} onChange={set("description")} rows={4} placeholder="Contexto, materiais e orientações para o atendimento" /></label>
         </div>
         <footer>
-          <div className="calendar-destructive-actions">{event && permissions.cancel ? <button type="button" className="secondary-action" onClick={() => onCancel(event)}>Cancelar evento</button> : null}{event && permissions.delete ? <button type="button" className="danger-action" onClick={() => onDelete(event)}><Trash2 size={15} /> Excluir</button> : null}</div>
+          <div className="calendar-destructive-actions">{event && permissions.update && !["completed", "cancelled"].includes(event.status) ? <button type="button" className="calendar-complete-action" onClick={() => onComplete(event)} disabled={saving}><CheckCircle2 size={15} /> Concluir evento</button> : null}{event && permissions.cancel && event.status !== "cancelled" ? <button type="button" className="secondary-action" onClick={() => onCancel(event)}>Cancelar evento</button> : null}{event && permissions.delete ? <button type="button" className="danger-action" onClick={() => onDelete(event)}><Trash2 size={15} /> Excluir</button> : null}</div>
           <div><button type="button" className="secondary-action" onClick={onClose}>Voltar</button><button type="submit" className="primary-action" disabled={saving || (event ? !permissions.update : !permissions.create)}>{saving ? "Salvando..." : event ? "Salvar alterações" : "Criar agendamento"}</button></div>
         </footer>
       </form>

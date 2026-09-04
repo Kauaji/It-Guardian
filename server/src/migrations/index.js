@@ -31,6 +31,7 @@ import { migration027CalendarEvents } from "./027-calendar-events.js";
 import { migration028PartsInventory } from "./028-parts-inventory.js";
 import { migration029FloorPlanInfrastructure } from "./029-floor-plan-infrastructure.js";
 import { migration030OperationalRefinements } from "./030-operational-refinements.js";
+import { migration031InventoryFamiliesRemoveReports } from "./031-inventory-families-remove-reports.js";
 
 export const migrations = [
   migration001RuntimeFoundation,
@@ -63,7 +64,8 @@ export const migrations = [
   migration027CalendarEvents,
   migration028PartsInventory,
   migration029FloorPlanInfrastructure,
-  migration030OperationalRefinements
+  migration030OperationalRefinements,
+  migration031InventoryFamiliesRemoveReports
 ];
 
 export async function runMigrations() {
