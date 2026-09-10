@@ -4028,6 +4028,7 @@ achado que passou despercebido.
 - O classificador do agente passou a aceitar somente placas de vídeo e discos físicos reconhecíveis e a rejeitar dispositivos virtuais, drivers e descrições genéricas do Windows para mouse, teclado e monitor.
 - A migration `032-physical-hardware-filter` limpa do catálogo os registros antigos reconhecidos como ruído; as conciliações seguintes mantêm essa limpeza automaticamente.
 - Clicar em uma peça instalada abre a visualização de kits e destaca diretamente o computador correspondente.
+- Corrigido um erro de lint preexistente no teste E2E da Planta de Infraestrutura: a verificação executada dentro do navegador agora referencia explicitamente o escopo `globalThis`, sem alterar o comportamento testado.
 
 ### Validações desta rodada
 
@@ -4039,3 +4040,4 @@ achado que passou despercebido.
 - verificação de arquitetura aprovada para 563 arquivos-fonte;
 - build de produção e preparação da saída Vercel concluídos sem erros;
 - `git diff --check` aprovado.
+- O deploy automático do Vercel confirmou `success` para o primeiro commit da rodada; o workflow Quality do GitHub revelou o erro de lint preexistente acima, corrigido antes do fechamento.

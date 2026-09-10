@@ -241,7 +241,7 @@ test("editor de plantas renderiza 2D e 3D em desktop e mobile", async ({ page, c
     }));
     expect(controlSizes.length).toBeGreaterThanOrEqual(5);
     expect(controlSizes.every(({ width, height }) => width >= 40 && height >= 40)).toBeTruthy();
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBeTruthy();
+    expect(await page.evaluate(() => globalThis.document.documentElement.scrollWidth <= globalThis.innerWidth + 1)).toBeTruthy();
     await assertCanvasHasRenderedPixels(page);
     await page.screenshot({ path: `${OUTPUT_DIR}/floor-plan-mobile-3d.png`, fullPage: true });
 
