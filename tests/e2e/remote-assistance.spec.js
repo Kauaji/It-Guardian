@@ -178,5 +178,5 @@ test("sessao ativa mostra metricas, pausa a visualizacao e reconecta pelo viewer
   await expect(remoteDialog.getByRole("button", { name: "Pausar" })).toBeVisible();
 
   await remoteDialog.getByRole("button", { name: "Encerrar" }).click();
-  await expect(remoteDialog).toContainText("Atendimento encerrado");
+  await expect(page.getByText("Atendimento remoto encerrado.")).toBeVisible();
 });

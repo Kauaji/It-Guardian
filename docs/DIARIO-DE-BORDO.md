@@ -4033,6 +4033,7 @@ achado que passou despercebido.
 - Atualizados seletores E2E para distinguir explicitamente Inventário de Peças e Inventário de Ativos, excluído o indicador largo de disco da verificação de botões quadrados e ampliada a janela de inicialização do canvas 3D em runners mais lentos.
 - O limite de tentativas de login continua em 12 por janela na aplicação, mas passou a aceitar configuração explícita; o Playwright usa um teto alto apenas no servidor E2E para que repetições automáticas não provoquem bloqueios 429 em cascata entre cenários.
 - O workflow E2E foi serializado em um worker no CI porque os arquivos compartilham o mesmo banco em memória e suas limpezas paralelas removiam fixtures ainda usadas por outro cenário; isso elimina 404 e repetições flakey sem mascarar falhas.
+- A validação E2E do encerramento de assistência remota passou a observar a confirmação global exibida ao usuário, sem depender de o diálogo continuar montado depois que a sessão termina e o inventário é atualizado.
 
 ### Validações desta rodada
 
@@ -4047,4 +4048,4 @@ achado que passou despercebido.
 - verificação de arquitetura aprovada para 563 arquivos-fonte;
 - build de produção e preparação da saída Vercel concluídos sem erros;
 - `git diff --check` aprovado.
-- O deploy automático do Vercel confirmou `success` para o primeiro commit da rodada; o workflow Quality do GitHub revelou os dois problemas preexistentes acima, corrigidos antes do fechamento.
+- Os deploys automáticos do Vercel confirmaram `success`; os problemas preexistentes revelados pelo workflow Quality do GitHub foram corrigidos antes do fechamento.
