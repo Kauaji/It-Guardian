@@ -22,7 +22,7 @@ test("migrações são idempotentes e transações revertem no PostgreSQL real",
   );
   assert.deepEqual(
     applied.rows.map((row) => row.id),
-    migrations.map((migration) => migration.id)
+    migrations.map((migration) => migration.id).sort()
   );
 
   const preferencesTable = await query(

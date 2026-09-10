@@ -4029,6 +4029,7 @@ achado que passou despercebido.
 - A migration `032-physical-hardware-filter` limpa do catálogo os registros antigos reconhecidos como ruído; as conciliações seguintes mantêm essa limpeza automaticamente.
 - Clicar em uma peça instalada abre a visualização de kits e destaca diretamente o computador correspondente.
 - Corrigido um erro de lint preexistente no teste E2E da Planta de Infraestrutura: a verificação executada dentro do navegador agora referencia explicitamente o escopo `globalThis`, sem alterar o comportamento testado.
+- Corrigida a expectativa do teste PostgreSQL de migrations para comparar, de forma determinística, a mesma ordenação alfabética usada pela consulta SQL; as duas migrations históricas de prefixo `025` tinham ordens diferentes entre banco e lista em memória.
 
 ### Validações desta rodada
 
@@ -4037,7 +4038,8 @@ achado que passou despercebido.
 - 3 testes direcionados do classificador físico aprovados;
 - suíte completa do servidor: 556 testes, 554 aprovados e 2 ignorados, sem falhas;
 - suíte completa do cliente: 637 testes aprovados em 56 arquivos, sem falhas;
+- suíte de integração local: 128 testes, 126 aprovados e 2 ignorados, sem falhas;
 - verificação de arquitetura aprovada para 563 arquivos-fonte;
 - build de produção e preparação da saída Vercel concluídos sem erros;
 - `git diff --check` aprovado.
-- O deploy automático do Vercel confirmou `success` para o primeiro commit da rodada; o workflow Quality do GitHub revelou o erro de lint preexistente acima, corrigido antes do fechamento.
+- O deploy automático do Vercel confirmou `success` para o primeiro commit da rodada; o workflow Quality do GitHub revelou os dois problemas preexistentes acima, corrigidos antes do fechamento.
