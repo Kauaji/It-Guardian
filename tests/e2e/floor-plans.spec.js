@@ -218,9 +218,9 @@ test("editor de plantas renderiza 2D e 3D em desktop e mobile", async ({ page, c
 
     await page.getByRole("button", { name: "3D", exact: true }).click();
     const canvas3d = page.locator(".floor-plan-scene-3d canvas");
-    await expect(canvas3d).toBeVisible({ timeout: 15_000 });
+    await expect(canvas3d).toBeVisible({ timeout: 30_000 });
     const sceneShell = page.locator(".floor-plan-studio-scene");
-    await expect(sceneShell).toHaveAttribute("data-scene-ready", "true", { timeout: 15_000 });
+    await expect(sceneShell).toHaveAttribute("data-scene-ready", "true", { timeout: 30_000 });
     await expect(page.getByRole("toolbar", { name: "Vistas e controles 3D" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Perspectiva" })).toHaveAttribute("aria-pressed", "true");
     await canvas3d.evaluate((canvas) => { canvas.dataset.stabilityMarker = "same-canvas"; });

@@ -63,7 +63,7 @@ test("Inventario abre o fluxo visual seguro de assistencia remota", async ({ pag
   await connectLabAgent(page);
   await page.reload();
 
-  await page.getByRole("navigation").getByRole("button", { name: /Invent.rio/ }).click();
+  await page.getByRole("navigation").getByRole("button", { name: "Inventário de Ativos", exact: true }).click();
   const machineCard = page.locator(".machine-card").filter({ hasText: "Notebook remoto E2E" });
   await expect(machineCard).toBeVisible();
   const remoteButton = machineCard.getByRole("button", { name: "Atendimento remoto" });
@@ -72,7 +72,7 @@ test("Inventario abre o fluxo visual seguro de assistencia remota", async ({ pag
   const cardLayout = await machineCard.evaluate((card) => {
     const actions = card.querySelector(".machine-card-actions");
     const buttons = actions
-      ? actions.querySelectorAll(":scope > button, :scope > .details-menu > button, :scope > .move-menu > button")
+      ? actions.querySelectorAll(":scope > button:not(.metric-badge--disk), :scope > .details-menu > button, :scope > .move-menu > button")
       : [];
 
     return {
@@ -111,7 +111,7 @@ test("sessao ativa mostra metricas, pausa a visualizacao e reconecta pelo viewer
   const enrollment = await connectLabAgent(page);
   await page.reload();
 
-  await page.getByRole("navigation").getByRole("button", { name: /Invent.rio/ }).click();
+  await page.getByRole("navigation").getByRole("button", { name: "Inventário de Ativos", exact: true }).click();
   const machineCard = page.locator(".machine-card").filter({ hasText: "Notebook remoto E2E" });
   await expect(machineCard).toBeVisible();
   const remoteButton = machineCard.getByRole("button", { name: "Atendimento remoto" });

@@ -4030,6 +4030,7 @@ achado que passou despercebido.
 - Clicar em uma peça instalada abre a visualização de kits e destaca diretamente o computador correspondente.
 - Corrigido um erro de lint preexistente no teste E2E da Planta de Infraestrutura: a verificação executada dentro do navegador agora referencia explicitamente o escopo `globalThis`, sem alterar o comportamento testado.
 - Corrigida a expectativa do teste PostgreSQL de migrations para comparar, de forma determinística, a mesma ordenação alfabética usada pela consulta SQL; as duas migrations históricas de prefixo `025` tinham ordens diferentes entre banco e lista em memória.
+- Atualizados seletores E2E para distinguir explicitamente Inventário de Peças e Inventário de Ativos, excluído o indicador largo de disco da verificação de botões quadrados e ampliada a janela de inicialização do canvas 3D em runners mais lentos.
 
 ### Validações desta rodada
 
@@ -4039,6 +4040,7 @@ achado que passou despercebido.
 - suíte completa do servidor: 556 testes, 554 aprovados e 2 ignorados, sem falhas;
 - suíte completa do cliente: 637 testes aprovados em 56 arquivos, sem falhas;
 - suíte de integração local: 128 testes, 126 aprovados e 2 ignorados, sem falhas;
+- subconjunto E2E afetado (Plantas 3D, Mapa de Rede e Assistência Remota): 6 cenários aprovados no Chromium;
 - verificação de arquitetura aprovada para 563 arquivos-fonte;
 - build de produção e preparação da saída Vercel concluídos sem erros;
 - `git diff --check` aprovado.
