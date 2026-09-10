@@ -5,6 +5,7 @@ export default defineConfig({
   timeout: 30_000,
   expect: { timeout: 8_000 },
   fullyParallel: false,
+  workers: process.env.CI ? 1 : undefined,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? "github" : "list",
   use: {
@@ -27,6 +28,7 @@ export default defineConfig({
       env: {
         DATABASE_URL: "memory",
         ENABLE_DEMO_SEED: "true",
+        AUTH_RATE_LIMIT_MAX: "1000",
         JWT_SECRET: "e2e-only-secret-with-at-least-32-characters",
         CLIENT_ORIGIN: "http://127.0.0.1:5174",
         ENABLE_REMOTE_ASSISTANCE: "true",

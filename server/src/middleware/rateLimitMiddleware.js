@@ -58,6 +58,11 @@ function createRedisLimiterStore(redisClient, limiterName) {
 
 let limiterInstanceCounter = 0;
 
+function positiveInteger(value, fallback) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isInteger(parsed) && parsed > 0 ? Math.min(parsed, 10_000) : fallback;
+}
+
 export function createRateLimiter({
   windowMs = 15 * 60 * 1000,
   max = 10,
@@ -101,7 +106,7 @@ export function createRateLimiter({
 
 export const authRateLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000,
-  max: 12,
+  max: positiveInteger(process.env.AUTH_RATE_LIMIT_MAX, 12),
   keyGenerator: (req) => `${req.ip}:${String(req.body?.email || "").trim().toLowerCase()}`,
   name: "auth"
 });
