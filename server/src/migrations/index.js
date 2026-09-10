@@ -32,6 +32,7 @@ import { migration028PartsInventory } from "./028-parts-inventory.js";
 import { migration029FloorPlanInfrastructure } from "./029-floor-plan-infrastructure.js";
 import { migration030OperationalRefinements } from "./030-operational-refinements.js";
 import { migration031InventoryFamiliesRemoveReports } from "./031-inventory-families-remove-reports.js";
+import { migration032PhysicalHardwareFilter } from "./032-physical-hardware-filter.js";
 
 export const migrations = [
   migration001RuntimeFoundation,
@@ -65,7 +66,8 @@ export const migrations = [
   migration028PartsInventory,
   migration029FloorPlanInfrastructure,
   migration030OperationalRefinements,
-  migration031InventoryFamiliesRemoveReports
+  migration031InventoryFamiliesRemoveReports,
+  migration032PhysicalHardwareFilter
 ];
 
 export async function runMigrations() {

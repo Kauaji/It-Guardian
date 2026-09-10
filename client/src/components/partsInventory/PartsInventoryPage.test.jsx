@@ -37,4 +37,13 @@ describe("PartsInventoryPage", () => {
     expect(await screen.findByText("PC Financeiro")).toBeInTheDocument();
     expect(screen.getByText("Processadores")).toBeInTheDocument();
   });
+
+  it("leva uma peça instalada diretamente ao kit da máquina", async () => {
+    api.fetchPartsInventory.mockResolvedValue({ parts: [{ id: "p3", name: "B550M Pro", category: "Placa-mãe", inventoryState: "in_use", assignedAssetId: "asset-2", discrepancyStatus: "ok", quantity: 1, unit: "un", stockStatus: "ok" }] });
+    render(<PartsInventoryPage token="token" devices={[{ id: "asset-2", alias: "PC Projetos", segmentName: "Engenharia" }]} permissions={{}} />);
+    fireEvent.click((await screen.findByText("B550M Pro")).closest("button"));
+    expect(await screen.findByText("PC Projetos")).toBeInTheDocument();
+    expect(document.querySelector(".computer-kit-card.is-focused")).toBeInTheDocument();
+    expect(api.fetchPartInventoryItem).not.toHaveBeenCalled();
+  });
 });

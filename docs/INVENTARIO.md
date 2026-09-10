@@ -9,7 +9,9 @@ O sistema separa dois contextos para evitar ambiguidade:
 
 Cada peça possui saldo, estoque mínimo, condição, valor, unidade e identificação técnica. A busca considera nome, código interno, part number, número de série e MAC.
 
-O catálogo é apresentado por famílias físicas: placas-mãe, processadores, placas de vídeo, memórias, HD/SSD/NVMe, fontes, mouses, teclados, monitores e diversos. Adaptadores de rede, drivers e dispositivos virtuais coletados pelo agente não entram no inventário de peças. A visualização **Kits por computador** reúne os componentes instalados em cada ativo e oferece um atalho direto para a máquina no Inventário de Ativos.
+O catálogo é apresentado por famílias físicas: placas-mãe, processadores, placas de vídeo, memórias, HD/SSD/NVMe, fontes, mouses, teclados, monitores e diversos. Adaptadores de rede, drivers, dispositivos virtuais e nomes genéricos publicados pelo Windows (como HID, PS/2 genérico, monitor PnP genérico e adaptadores de vídeo básicos) não entram no inventário de peças. A conciliação também desativa automaticamente registros antigos que se enquadrem nesses casos.
+
+A visualização **Kits por computador** reúne os componentes instalados em cada ativo e oferece um atalho direto para a máquina no Inventário de Ativos. Ao clicar em uma peça que está em uso, a página muda para os kits e destaca automaticamente o computador onde ela está instalada.
 
 A conciliação com o hardware monitorado acontece automaticamente ao abrir a página. Quando houver divergência, o aviso filtra as peças afetadas; a ficha da peça identifica o problema e permite localizar o computador correspondente.
 

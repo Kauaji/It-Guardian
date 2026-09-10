@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, Clock3, Plus, Search, UserRoundCheck } from "lucide-react";
+import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Clock3, Plus, Search, UserRoundCheck } from "lucide-react";
 import { cancelCalendarEvent, createCalendarEvent, deleteCalendarEvent, fetchCalendarEvents, fetchCalendarSummary, fetchTechnicians, updateCalendarEvent } from "../../api.js";
 import CalendarEventModal from "./CalendarEventModal.jsx";
 import { buildCalendarDays, dateKey, EVENT_STATUS_LABELS, EVENT_TYPE_META, eventsByDay, getCalendarRange, PRIORITY_META } from "./calendarModel.js";
@@ -27,6 +27,7 @@ export default function TechnicalCalendarPage({ token, notify, serviceOrders = [
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [modal, setModal] = useState(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [filters, setFilters] = useState({ technicianId: "", eventType: "", status: "", priority: "", groupId: "", segmentId: "", serviceOrderId: "", search: "" });
   const range = useMemo(() => getCalendarRange(anchor, "month"), [anchor]);
   const filterSegments = segments
@@ -65,6 +66,7 @@ export default function TechnicalCalendarPage({ token, notify, serviceOrders = [
   }, [events, filters.search]);
   const grouped = useMemo(() => eventsByDay(visibleEvents), [visibleEvents]);
   const days = useMemo(() => buildCalendarDays(anchor, "month"), [anchor]);
+  const activeFilterCount = Object.entries(filters).filter(([key, value]) => key !== "search" && value).length;
 
   function move(direction) { setAnchor((current) => { const next = new Date(current); next.setMonth(next.getMonth() + direction); return next; }); }
   async function save(payload) {
@@ -78,15 +80,21 @@ export default function TechnicalCalendarPage({ token, notify, serviceOrders = [
   async function remove(event) { if (!window.confirm(`Excluir definitivamente "${event.title}"?`)) return; await deleteCalendarEvent(token, event.id); setModal(null); notify?.("Agendamento excluído.", "ok"); load(); }
 
   return <section className="technical-calendar-page">
-    <header className="calendar-page-heading"><div><span className="calendar-eyebrow"><CalendarDays size={16} /> Planejamento operacional</span><h2>Agenda Técnica</h2><p>OS, visitas, preventivas e verificações organizadas em uma única linha do tempo.</p></div>{permissions.create ? <button type="button" className="primary-action" onClick={() => setModal({ date: new Date() })}><Plus size={17} /> Novo agendamento</button> : null}</header>
+    <header className="calendar-page-heading">
+      <div className="calendar-heading-copy"><span className="calendar-eyebrow"><CalendarDays size={16} /> Planejamento operacional</span><h2>Agenda Técnica</h2><p>OS, visitas, preventivas e verificações organizadas em uma única linha do tempo.</p></div>
+      <div className="calendar-command-bar">
+        <label className="calendar-search"><Search size={18} /><input value={filters.search} onChange={(e) => setFilters((current) => ({ ...current, search: e.target.value }))} placeholder="Pesquisar evento, OS ou técnico" /></label>
+        <div className="calendar-command-actions">
+          <div className="calendar-navigation"><button type="button" className="icon-button" onClick={() => move(-1)} aria-label="Mês anterior"><ChevronLeft /></button><span><CalendarDays size={17} /><strong>{formatHeader(anchor)}</strong></span><button type="button" className="icon-button" onClick={() => move(1)} aria-label="Próximo mês"><ChevronRight /></button></div>
+          {permissions.create ? <button type="button" className="primary-action calendar-add-action" onClick={() => setModal({ date: new Date() })} aria-label="Novo agendamento" title="Novo agendamento"><Plus size={20} /></button> : null}
+          <button type="button" className={`calendar-filter-toggle ${filtersOpen ? "active" : ""}`} onClick={() => setFiltersOpen((open) => !open)} aria-expanded={filtersOpen} aria-controls="calendar-filter-panel" aria-label={filtersOpen ? "Ocultar filtros" : "Mostrar filtros"} title={filtersOpen ? "Ocultar filtros" : "Mostrar filtros"}><ChevronDown size={19} />{activeFilterCount ? <span>{activeFilterCount}</span> : null}</button>
+        </div>
+      </div>
+    </header>
     <div className="calendar-summary-strip">
       <div><CalendarDays size={17} /><span>Hoje<strong>{summary.today || 0}</strong></span></div><div><Clock3 size={17} /><span>Atrasados<strong>{summary.overdue || 0}</strong></span></div><div><UserRoundCheck size={17} /><span>Técnicos ocupados<strong>{summary.busyTechnicians || 0}</strong></span></div><div><span>OS agendadas<strong>{summary.serviceOrders || 0}</strong></span></div><div><span>Preventivas<strong>{summary.preventiveMaintenance || 0}</strong></span></div>
     </div>
-    <div className="calendar-toolbar">
-      <div className="calendar-navigation"><button type="button" className="icon-button" onClick={() => move(-1)} aria-label="Mês anterior"><ChevronLeft /></button><h3>{formatHeader(anchor)}</h3><button type="button" className="icon-button" onClick={() => move(1)} aria-label="Próximo mês"><ChevronRight /></button></div>
-    </div>
-    <div className="calendar-filters">
-      <label className="calendar-search"><Search size={17} /><input value={filters.search} onChange={(e) => setFilters((current) => ({ ...current, search: e.target.value }))} placeholder="Pesquisar evento, OS ou técnico" /></label>
+    {filtersOpen ? <div className="calendar-filters" id="calendar-filter-panel">
       <div className="calendar-filter-rail">
         <label><span>Técnico</span><select aria-label="Filtrar por técnico" value={filters.technicianId} onChange={(e) => setFilters((current) => ({ ...current, technicianId: e.target.value }))}><option value="">Todos</option>{technicians.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
         <label><span>Tipo</span><select aria-label="Filtrar por tipo" value={filters.eventType} onChange={(e) => setFilters((current) => ({ ...current, eventType: e.target.value }))}><option value="">Todos</option>{Object.entries(EVENT_TYPE_META).map(([id, meta]) => <option key={id} value={id}>{meta.label}</option>)}</select></label>
@@ -96,7 +104,7 @@ export default function TechnicalCalendarPage({ token, notify, serviceOrders = [
         <label><span>Segmento</span><select aria-label="Filtrar por segmento" value={filters.segmentId} onChange={(e) => setFilters((current) => ({ ...current, segmentId: e.target.value }))}><option value="">Todos</option>{filterSegments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
         <label><span>OS</span><select aria-label="Filtrar por OS" value={filters.serviceOrderId} onChange={(e) => setFilters((current) => ({ ...current, serviceOrderId: e.target.value }))}><option value="">Todas</option>{serviceOrders.map((item) => <option key={item.id} value={item.id}>{item.number} · {item.title}</option>)}</select></label>
       </div>
-    </div>
+    </div> : null}
     <div className={`calendar-surface view-month ${loading ? "is-loading" : ""}`}>
       <div className="calendar-weekday-row">{WEEK_DAYS.map((item) => <span key={item}>{item}</span>)}</div>
       <div className="calendar-day-grid">{days.map((day) => { const dayEvents = grouped.get(dateKey(day)) || []; const outside = day.getMonth() !== anchor.getMonth(); const past = day < new Date(new Date().setHours(0, 0, 0, 0)); const dayPriority = dayEvents.reduce((highest, event) => (PRIORITY_META[event.priority]?.rank || 0) > (PRIORITY_META[highest]?.rank || 0) ? event.priority : highest, ""); const dayColor = dayPriority ? PRIORITY_META[dayPriority].color : "transparent"; const openDay = () => permissions.create && setModal({ date: day }); return <div role="button" tabIndex={permissions.create ? 0 : -1} className={`calendar-day-cell ${outside ? "outside" : ""} ${past ? "past" : ""} ${dayEvents.length ? "has-events" : ""} ${dateKey(day) === dateKey(new Date()) ? "today" : ""}`} style={{ "--day-priority-color": dayColor }} key={dateKey(day)} onClick={openDay} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openDay(); } }}><span className="calendar-day-number">{day.getDate()}</span><div className="calendar-day-events">{dayEvents.slice(0, 2).map((event) => <CalendarEvent key={event.id} event={event} onClick={(selected) => setModal({ event: selected })} />)}{dayEvents.length > 2 ? <span className="calendar-more-events">+ {dayEvents.length - 2} eventos</span> : null}</div></div>; })}</div>

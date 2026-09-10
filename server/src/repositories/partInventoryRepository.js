@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { query, withTransaction } from "../database.js";
-import { collectHardwareParts } from "../domain/hardwarePartInventory.js";
+import { collectHardwareParts, isSupportedPhysicalPartRecord } from "../domain/hardwarePartInventory.js";
 
 function missing() { const error = new Error("Peça não encontrada."); error.statusCode = 404; return error; }
 function mapPart(row) { return { id: row.id, name: row.name, category: row.category, brand: row.brand, model: row.model, internalCode: row.internal_code, assetTag: row.asset_tag, manufacturerPartNumber: row.manufacturer_part_number, serialNumber: row.serial_number, macAddress: row.mac_address, location: row.location, quantity: Number(row.quantity || 0), minimumStock: Number(row.minimum_stock || 0), unitPrice: Number(row.unit_price || 0), unit: row.unit, notes: row.notes, conditionStatus: row.condition_status, assignedAssetId: row.assigned_asset_id, inventoryState: row.inventory_state || "available", source: row.source || "manual", sourceAssetId: row.source_asset_id, hardwareKey: row.hardware_key, supplierName: row.supplier_name, supplierTaxId: row.supplier_tax_id, supplierProductCode: row.supplier_product_code, lastVerifiedAt: row.last_verified_at, discrepancyStatus: row.discrepancy_status || "ok", discrepancyDetails: row.discrepancy_details || {}, active: row.active, stockStatus: Number(row.quantity || 0) <= 0 ? "out" : Number(row.quantity || 0) <= Number(row.minimum_stock || 0) ? "low" : "ok", createdAt: row.created_at, updatedAt: row.updated_at }; }
@@ -94,9 +94,13 @@ export async function syncAgentHardwareParts(user) {
         updated += 1;
       }
     }
-    const tracked = await db("SELECT id, source_asset_id, hardware_key FROM products WHERE source='agent' AND active=TRUE");
+    const tracked = await db("SELECT id, name, category, metadata_json, source_asset_id, hardware_key FROM products WHERE source='agent' AND active=TRUE");
     for (const item of tracked.rows) {
       if (!observed.get(item.source_asset_id)?.has(item.hardware_key)) {
+        if (!isSupportedPhysicalPartRecord(item)) {
+          await db("UPDATE products SET active=FALSE, discrepancy_status='ok', discrepancy_details='{}'::jsonb, updated_at=NOW() WHERE id=$1", [item.id]);
+          continue;
+        }
         await db("UPDATE products SET discrepancy_status='missing', discrepancy_details=$2::jsonb, updated_at=NOW() WHERE id=$1", [item.id, JSON.stringify({ detectedAt: new Date().toISOString(), reason: "Componente não foi localizado na coleta atual." })]);
         discrepancies += 1;
       }

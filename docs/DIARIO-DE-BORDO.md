@@ -4019,3 +4019,23 @@ achado que passou despercebido.
 - verificação de arquitetura aprovada para 562 arquivos-fonte;
 - build de produção e preparação da saída Vercel concluídos sem erros;
 - `git diff --check` aprovado.
+
+# 10/09/2026 — Comando compacto da Agenda e inventário físico depurado
+
+- A Agenda Técnica passou a seguir o mesmo padrão operacional da tela de Ordens de Serviço: busca, mês atual, criação e expansão de filtros formam uma única barra de comando.
+- Os filtros da agenda agora iniciam recolhidos e aparecem ao clicar na seta; filtros ativos continuam contabilizados no próprio controle.
+- O Inventário de Peças foi reposicionado acima do Inventário de Ativos na barra lateral.
+- O classificador do agente passou a aceitar somente placas de vídeo e discos físicos reconhecíveis e a rejeitar dispositivos virtuais, drivers e descrições genéricas do Windows para mouse, teclado e monitor.
+- A migration `032-physical-hardware-filter` limpa do catálogo os registros antigos reconhecidos como ruído; as conciliações seguintes mantêm essa limpeza automaticamente.
+- Clicar em uma peça instalada abre a visualização de kits e destaca diretamente o computador correspondente.
+
+### Validações desta rodada
+
+- lint direcionado dos arquivos alterados aprovado sem avisos;
+- 9 testes direcionados do cliente aprovados;
+- 3 testes direcionados do classificador físico aprovados;
+- suíte completa do servidor: 556 testes, 554 aprovados e 2 ignorados, sem falhas;
+- suíte completa do cliente: 637 testes aprovados em 56 arquivos, sem falhas;
+- verificação de arquitetura aprovada para 563 arquivos-fonte;
+- build de produção e preparação da saída Vercel concluídos sem erros;
+- `git diff --check` aprovado.

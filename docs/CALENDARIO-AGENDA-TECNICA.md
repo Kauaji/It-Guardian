@@ -7,6 +7,7 @@ A Agenda Técnica centraliza compromissos operacionais do IT Guardian sem substi
 ## Visualização e fluxo
 
 - **Mês:** visão única e ampla, com até três eventos por dia e indicador dos demais.
+- A barra de comando mantém busca, mês atual, criação e filtros no mesmo bloco. Os filtros ficam recolhidos por padrão e são exibidos pela seta, que também informa quantos filtros estão ativos.
 - Um clique em uma data abre `Novo agendamento` com a data preenchida.
 - Um clique em um evento abre os detalhes para editar, concluir, cancelar ou excluir conforme a permissão do usuário.
 - Eventos com hora final configurada são concluídos automaticamente quando esse horário passa. Eventos sem término continuam dependendo da conclusão manual.

@@ -2900,6 +2900,11 @@ function Dashboard() {
               <CalendarDays size={18} /> <span className="nav-label">Agenda Técnica</span>
             </button>
           )}
+          {canViewPartsInventory && (
+            <button className={activeView === "parts-inventory" ? "nav-active" : ""} onClick={() => { window.history.replaceState({}, "", "/pecas"); setActiveView("parts-inventory"); }}>
+              <PackageSearch size={18} /> <span className="nav-label">Inventário de Peças</span>
+            </button>
+          )}
           {canViewInventory && (
             <button
               className={activeView === "inventory" ? "nav-active" : ""}
@@ -2913,11 +2918,6 @@ function Dashboard() {
               }}
             >
               <Database size={18} /> <span className="nav-label">Inventário de Ativos</span>
-            </button>
-          )}
-          {canViewPartsInventory && (
-            <button className={activeView === "parts-inventory" ? "nav-active" : ""} onClick={() => { window.history.replaceState({}, "", "/pecas"); setActiveView("parts-inventory"); }}>
-              <PackageSearch size={18} /> <span className="nav-label">Inventário de Peças</span>
             </button>
           )}
           {activeView === "inventory" && sidebarExpanded && (

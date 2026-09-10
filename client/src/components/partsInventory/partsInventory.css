@@ -257,6 +257,7 @@
 .parts-empty { display: grid; place-items: center; gap: 5px; min-height: 260px; color: var(--text-soft); border: 1px dashed var(--border-strong); border-radius: 15px; background: color-mix(in srgb, var(--surface) 72%, transparent); }
 .computer-kits-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 13px; }
 .computer-kit-card { overflow: hidden; border: 1px solid color-mix(in srgb, #2563eb 24%, var(--border)); border-radius: 16px; background: var(--surface); box-shadow: var(--shadow-sm); }
+.computer-kit-card.is-focused { border-color: #2563eb; outline: 3px solid color-mix(in srgb, #2563eb 18%, transparent); scroll-margin: 24px; animation: kit-target-pulse .7s ease-out; }
 .computer-kit-card > header { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; padding: 13px; background: linear-gradient(120deg, color-mix(in srgb, #2563eb 11%, var(--surface)), var(--surface)); }
 .computer-kit-card > header > span { display: grid; place-items: center; width: 39px; height: 39px; border-radius: 11px; background: #2563eb; color: #fff; }
 .computer-kit-card header div { display: grid; min-width: 0; }
@@ -267,6 +268,10 @@
 .computer-kit-card section:last-child { border: 0; }
 .computer-kit-card section span { color: var(--family-color); font-size: 10px; font-weight: 900; text-transform: uppercase; }
 .computer-kit-card section strong { overflow: hidden; color: var(--text); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+@keyframes kit-target-pulse {
+  from { transform: translateY(4px); box-shadow: 0 0 0 8px color-mix(in srgb, #2563eb 14%, transparent); }
+  to { transform: translateY(0); box-shadow: var(--shadow-sm); }
+}
 .parts-modal-backdrop { position: fixed; inset: 0; z-index: var(--dialog-backdrop-layer); display: grid; place-items: center; padding: 20px; background: rgba(9, 20, 34, .56); backdrop-filter: blur(6px); }
 .parts-form-modal { width: min(820px, 100%); max-height: 92dvh; overflow: auto; border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border)); border-radius: 19px; background: var(--surface); box-shadow: 0 28px 70px rgba(9, 20, 34, .32); }
 .parts-form-modal > header, .parts-form-modal > footer { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid var(--border); }
@@ -310,4 +315,7 @@
   .parts-category-create { grid-template-columns: 1fr; }
 }
 
-@media (prefers-reduced-motion: reduce) { .part-card { transition: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .part-card { transition: none; }
+  .computer-kit-card.is-focused { animation: none; }
+}

@@ -36,6 +36,16 @@ describe("TechnicalCalendarPage", () => {
     expect(screen.queryByRole("button", { name: /atualizar/i })).not.toBeInTheDocument();
   });
 
+  it("mantém os filtros recolhidos e abre as opções pela seta", async () => {
+    render(<TechnicalCalendarPage token="token" permissions={{ create: true }} />);
+    await waitFor(() => expect(document.querySelector(".calendar-surface")).not.toHaveClass("is-loading"));
+    expect(screen.queryByRole("combobox", { name: "Filtrar por técnico" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Mostrar filtros" }));
+    expect(screen.getByRole("combobox", { name: "Filtrar por técnico" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Ocultar filtros" }));
+    expect(screen.queryByRole("combobox", { name: "Filtrar por técnico" })).not.toBeInTheDocument();
+  });
+
   it("abre edição sem disparar novo agendamento e colore o dia pela prioridade", async () => {
     const startAt = new Date();
     startAt.setHours(10, 0, 0, 0);
