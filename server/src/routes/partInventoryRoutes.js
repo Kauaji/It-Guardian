@@ -1,6 +1,6 @@
 import { Router } from "express";
 import express from "express";
-import { categories, create, createCategory, deleteCategory, details, importInvoice, list, movement, syncHardware, update } from "../controllers/partInventoryController.js";
+import { categories, create, createCategory, deleteCategory, details, importInvoice, list, movement, reviewDiscrepancy, syncHardware, update } from "../controllers/partInventoryController.js";
 import { requireAuth, requirePermission } from "../middleware/authMiddleware.js";
 const router=Router(); router.use(requireAuth);
 router.get("/",requirePermission("parts_inventory.view"),list);
@@ -12,5 +12,6 @@ router.post("/sync-assets",requirePermission("parts_inventory.reconcile_hardware
 router.post("/import-invoice",requirePermission("parts_inventory.import_invoice"),express.raw({type:["application/xml","text/xml"],limit:"2mb"}),importInvoice);
 router.get("/:id",requirePermission("parts_inventory.view"),details);
 router.patch("/:id",requirePermission("parts_inventory.update"),update);
+router.post("/:id/discrepancy",requirePermission("parts_inventory.reconcile_hardware"),reviewDiscrepancy);
 router.post("/:id/movements",requirePermission("parts_inventory.move_stock"),movement);
 export default router;

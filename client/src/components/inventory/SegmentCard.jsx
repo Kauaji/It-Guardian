@@ -4,6 +4,7 @@ import { useState } from "react";
 import MachineCard from "./MachineCard.jsx";
 import ColorPickerSegment from "./ColorPickerSegment.jsx";
 import { calculateSegmentHealth, describeSegmentHealth } from "./segmentHealth.js";
+import { formatSegmentName } from "../../utils/display.js";
 
 export default function SegmentCard({
   segment,
@@ -56,6 +57,7 @@ export default function SegmentCard({
   const actionsOpen = activePopoverId === actionsMenuId;
   const health = calculateSegmentHealth(machines);
   const healthDescription = describeSegmentHealth(health);
+  const segmentDisplayName = formatSegmentName(segment.name);
   const sectionStyle = {
     "--segment-color": color,
     opacity: isSegmentDragging ? 0.62 : undefined
@@ -99,13 +101,13 @@ export default function SegmentCard({
           >
             <span className="segment-color-mark" aria-hidden="true" />
             <span className="segment-title-copy">
-              <h3>{segment.name}</h3>
+              <h3>{segmentDisplayName}</h3>
               <span>{machines.length} {machines.length === 1 ? "máquina" : "máquinas"}</span>
             </span>
           </button>
           <span
             className={`segment-health-score ${health.classification}`}
-            aria-label={`Nota de saúde do segmento ${segment.name}: ${health.score ?? "sem dados"}`}
+            aria-label={`Nota de saúde do segmento ${segmentDisplayName}: ${health.score ?? "sem dados"}`}
             title={healthDescription}
             tabIndex={0}
           >

@@ -34,3 +34,9 @@ export function validatePartCategory(payload = {}) {
   if (!/^#[0-9a-f]{6}$/i.test(color)) invalid("Informe uma cor hexadecimal válida.");
   return { name, color };
 }
+
+export function validatePartDiscrepancyDecision(payload = {}) {
+  const action = text(payload.action);
+  if (!["keep", "dismiss"].includes(action)) invalid("Decisão de incongruência inválida.");
+  return { action };
+}

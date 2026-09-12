@@ -20,3 +20,10 @@ export function normalizeMaintenanceName(name = "") {
 export function isMaintenanceSegmentName(name = "") {
   return normalizeMaintenanceName(name) === "manutencao";
 }
+
+export function formatSegmentName(name = "") {
+  const normalized = normalizeMaintenanceName(name);
+  if (normalized === "nao organizadas" || normalized === "sem segmento") return "Não organizadas";
+  if (normalized === "manutencao") return "Manutenção";
+  return String(name || "Não organizadas").trim();
+}

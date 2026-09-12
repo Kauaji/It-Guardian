@@ -53,7 +53,10 @@ export function buildComputerKits(parts = [], devices = []) {
       kits.set(assetId, {
         assetId,
         name: device?.alias || device?.hostname || device?.name || "Máquina não localizada",
-        segmentName: device?.segmentName || "Sem segmento",
+        segmentId: device?.segmentId || "",
+        segmentName: device?.segmentName || "Não organizadas",
+        tabId: device?.tabId || "",
+        isGlobalUnorganized: Boolean(device?.isGlobalUnorganized),
         parts: []
       });
     }
@@ -61,4 +64,50 @@ export function buildComputerKits(parts = [], devices = []) {
   }
 
   return [...kits.values()].sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+}
+
+export function summarizeKitFamily(family) {
+  if (family.id !== "memory") return family.parts.map((part) => part.name).join(" · ");
+  const capacities = family.parts
+    .map((part) => Number(part.metadata?.collectedValue?.capacityGb))
+    .filter((value) => Number.isFinite(value) && value > 0);
+  if (!capacities.length) return family.parts.map((part) => part.name).join(" · ");
+  const total = capacities.reduce((sum, value) => sum + value, 0);
+  const modules = capacities.map((value) => `${value.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} GB`).join(" + ");
+  return `${total.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} GB (${modules})`;
+}
+
+export function buildKitHierarchy(kits = [], { tabs = [], groups = [], segments = [], activeTabId = "" } = {}) {
+  const segmentById = new Map(segments.map((segment) => [segment.id, segment]));
+  const groupBySegmentId = new Map();
+  groups.forEach((group) => (group.segmentIds || []).forEach((segmentId) => groupBySegmentId.set(segmentId, group.id)));
+  segments.forEach((segment) => {
+    if (segment.groupId) groupBySegmentId.set(segment.id, segment.groupId);
+  });
+  const visible = kits.filter((kit) => !activeTabId || kit.tabId === activeTabId || kit.isGlobalUnorganized);
+  const segmentKits = new Map();
+  visible.forEach((kit) => {
+    const key = kit.segmentId || "unorganized";
+    segmentKits.set(key, [...(segmentKits.get(key) || []), kit]);
+  });
+  const visibleGroups = groups
+    .filter((group) => !activeTabId || group.tabId === activeTabId)
+    .map((group) => ({
+      ...group,
+      segments: segments
+        .filter((segment) => {
+          const name = normalize(segment.name);
+          return !segment.isDefault && name !== "manutencao" && groupBySegmentId.get(segment.id) === group.id && segmentKits.has(segment.id);
+        })
+        .map((segment) => ({ ...segment, kits: segmentKits.get(segment.id) }))
+    }))
+    .filter((group) => group.segments.length);
+  const groupedSegmentIds = new Set(visibleGroups.flatMap((group) => group.segments.map((segment) => segment.id)));
+  const standaloneSegments = [...segmentKits.entries()]
+    .filter(([segmentId]) => !groupedSegmentIds.has(segmentId))
+    .map(([segmentId, segmentItems]) => ({
+      ...(segmentById.get(segmentId) || { id: segmentId, name: segmentItems[0]?.segmentName || "Não organizadas", color: "#334155" }),
+      kits: segmentItems
+    }));
+  return { tabs, groups: visibleGroups, standaloneSegments };
 }

@@ -16,8 +16,8 @@ using System.Windows.Forms;
 [assembly: System.Reflection.AssemblyDescription("Inventario e presenca do IT Guardian")]
 [assembly: System.Reflection.AssemblyCompany("IT Guardian")]
 [assembly: System.Reflection.AssemblyProduct("IT Guardian")]
-[assembly: System.Reflection.AssemblyVersion("1.6.3.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.6.3.0")]
+[assembly: System.Reflection.AssemblyVersion("1.6.4.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.6.4.0")]
 
 namespace ITGuardian.Windows
 {
@@ -88,7 +88,7 @@ namespace ITGuardian.Windows
 
     internal static class Program
     {
-        private const string AgentVersion = "1.6.3";
+        private const string AgentVersion = "1.6.4";
         private const int MaxInventoryPayloadBytes = 1024 * 1024;
         private const int MaximumOutputLength = 65536;
         // Codigo de saida nao-zero de proposito: RestartCount/RestartInterval, ja
@@ -892,7 +892,7 @@ namespace ITGuardian.Windows
             try
             {
                 using (ManagementObjectSearcher searcher = new ManagementObjectSearcher(
-                    "SELECT Name, AdapterRAM, DriverVersion, VideoProcessor, Status, CurrentHorizontalResolution, CurrentVerticalResolution FROM Win32_VideoController"
+                    "SELECT Name, AdapterRAM, DriverVersion, VideoProcessor, Status, PNPDeviceID, DeviceID, CurrentHorizontalResolution, CurrentVerticalResolution FROM Win32_VideoController"
                 ))
                 using (ManagementObjectCollection rows = searcher.Get())
                 {
@@ -904,6 +904,8 @@ namespace ITGuardian.Windows
                         adapter["memoryBytes"] = ToLong(Value(row, "AdapterRAM"));
                         adapter["driverVersion"] = Text(row, "DriverVersion");
                         adapter["status"] = Text(row, "Status");
+                        adapter["pnpDeviceId"] = Text(row, "PNPDeviceID");
+                        adapter["deviceId"] = Text(row, "DeviceID");
                         adapter["resolution"] = ToInt(Value(row, "CurrentHorizontalResolution")) > 0
                             ? ToInt(Value(row, "CurrentHorizontalResolution")) + "x" +
                               ToInt(Value(row, "CurrentVerticalResolution"))
@@ -982,10 +984,16 @@ namespace ITGuardian.Windows
         {
             List<Dictionary<string, object>> peripherals = new List<Dictionary<string, object>>();
             HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            List<Dictionary<string, object>> identifiedMonitors = CollectActiveMonitorIdentities();
+            foreach (Dictionary<string, object> monitor in identifiedMonitors)
+            {
+                peripherals.Add(monitor);
+                seen.Add(Convert.ToString(monitor["id"]));
+            }
             try
             {
                 using (ManagementObjectSearcher searcher = new ManagementObjectSearcher(
-                    "SELECT Name, Manufacturer, PNPClass, DeviceID, Status FROM Win32_PnPEntity"
+                    "SELECT Name, Manufacturer, PNPClass, DeviceID, PNPDeviceID, Status, ConfigManagerErrorCode FROM Win32_PnPEntity"
                 ))
                 using (ManagementObjectCollection rows = searcher.Get())
                 {
@@ -995,17 +1003,25 @@ namespace ITGuardian.Windows
                         string pnpClass = Text(row, "PNPClass").Trim();
                         string type = ResolvePeripheralType(name, pnpClass);
                         if (string.IsNullOrWhiteSpace(type) || string.IsNullOrWhiteSpace(name)) continue;
-                        string deviceId = Text(row, "DeviceID");
-                        string key = string.IsNullOrWhiteSpace(deviceId) ? type + "|" + name : deviceId;
+                        if (type == "Monitor" && identifiedMonitors.Count > 0) continue;
+                        int configError = ToInt(Value(row, "ConfigManagerErrorCode"));
+                        string status = Text(row, "Status").Trim();
+                        if (configError != 0 || (!string.IsNullOrWhiteSpace(status) && !status.Equals("OK", StringComparison.OrdinalIgnoreCase))) continue;
+                        if (IsGenericPeripheralInterface(name)) continue;
+                        string deviceId = Text(row, "PNPDeviceID");
+                        if (string.IsNullOrWhiteSpace(deviceId)) deviceId = Text(row, "DeviceID");
+                        string key = NormalizePeripheralDeviceKey(type, name, Text(row, "Manufacturer"), deviceId);
                         if (!seen.Add(key)) continue;
 
                         Dictionary<string, object> peripheral = new Dictionary<string, object>();
                         peripheral["id"] = key;
+                        peripheral["deviceId"] = deviceId;
                         peripheral["type"] = type;
                         peripheral["name"] = name;
+                        peripheral["model"] = name;
                         peripheral["brand"] = Text(row, "Manufacturer");
                         peripheral["assetTag"] = "";
-                        peripheral["status"] = Text(row, "Status");
+                        peripheral["status"] = status;
                         peripherals.Add(peripheral);
                         if (peripherals.Count >= 100) break;
                     }
@@ -1013,6 +1029,100 @@ namespace ITGuardian.Windows
             }
             catch { }
             return peripherals;
+        }
+
+        private static List<Dictionary<string, object>> CollectActiveMonitorIdentities()
+        {
+            List<Dictionary<string, object>> monitors = new List<Dictionary<string, object>>();
+            try
+            {
+                ManagementScope scope = new ManagementScope(@"\\.\root\wmi");
+                scope.Connect();
+                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher(
+                    scope,
+                    new ObjectQuery("SELECT Active, InstanceName, ManufacturerName, ProductCodeID, SerialNumberID, UserFriendlyName FROM WmiMonitorID")
+                ))
+                using (ManagementObjectCollection rows = searcher.Get())
+                {
+                    foreach (ManagementObject row in rows)
+                    {
+                        object activeValue = Value(row, "Active");
+                        if (activeValue != null && !Convert.ToBoolean(activeValue)) continue;
+                        string manufacturer = ResolveMonitorManufacturer(DecodeWmiText(Value(row, "ManufacturerName")));
+                        string productCode = DecodeWmiText(Value(row, "ProductCodeID"));
+                        string friendlyName = DecodeWmiText(Value(row, "UserFriendlyName"));
+                        string serial = DecodeWmiText(Value(row, "SerialNumberID"));
+                        string instanceName = Text(row, "InstanceName");
+                        string model = !string.IsNullOrWhiteSpace(friendlyName) ? friendlyName : productCode;
+                        if (string.IsNullOrWhiteSpace(model)) continue;
+                        Dictionary<string, object> monitor = new Dictionary<string, object>();
+                        monitor["id"] = "monitor|" + (!string.IsNullOrWhiteSpace(instanceName) ? instanceName : manufacturer + "|" + model + "|" + serial);
+                        monitor["deviceId"] = instanceName;
+                        monitor["type"] = "Monitor";
+                        monitor["name"] = model;
+                        monitor["model"] = model;
+                        monitor["brand"] = manufacturer;
+                        monitor["serialNumber"] = serial;
+                        monitor["assetTag"] = "";
+                        monitor["status"] = "OK";
+                        monitors.Add(monitor);
+                    }
+                }
+            }
+            catch { }
+            return monitors;
+        }
+
+        private static string DecodeWmiText(object value)
+        {
+            Array values = value as Array;
+            if (values == null) return "";
+            StringBuilder result = new StringBuilder();
+            foreach (object character in values)
+            {
+                int code = Convert.ToInt32(character);
+                if (code > 0) result.Append((char)code);
+            }
+            return result.ToString().Trim();
+        }
+
+        private static string ResolveMonitorManufacturer(string code)
+        {
+            Dictionary<string, string> manufacturers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "GSM", "LG" }, { "DEL", "Dell" }, { "SAM", "Samsung" }, { "ACR", "Acer" },
+                { "AOC", "AOC" }, { "HWP", "HP" }, { "HPN", "HP" }, { "LEN", "Lenovo" },
+                { "APP", "Apple" }, { "AUS", "ASUS" }, { "ACI", "ASUS" }, { "MSI", "MSI" },
+                { "BNQ", "BenQ" }, { "PHL", "Philips" }, { "VSC", "ViewSonic" }
+            };
+            string manufacturer;
+            return manufacturers.TryGetValue(code ?? "", out manufacturer) ? manufacturer : code;
+        }
+
+        private static bool IsGenericPeripheralInterface(string name)
+        {
+            string value = (name ?? "").Trim().ToLowerInvariant();
+            return value.Contains("hid keyboard device") ||
+                value.Contains("dispositivo de teclado hid") ||
+                value.Contains("hid-compliant mouse") ||
+                value.Contains("mouse compatível com hid") ||
+                value.Contains("mouse compativel com hid") ||
+                value.Contains("standard ps/2") ||
+                value.Contains("padrão ps/2") ||
+                value.Contains("padrao ps/2") ||
+                value.Contains("usb input device") ||
+                value.Contains("dispositivo de entrada usb") ||
+                value.Contains("audio gateway service") ||
+                value.Contains("camera dfu") ||
+                value.Contains("firmware update");
+        }
+
+        private static string NormalizePeripheralDeviceKey(string type, string name, string manufacturer, string deviceId)
+        {
+            string normalizedId = (deviceId ?? "").Trim().ToLowerInvariant();
+            int interfaceIndex = normalizedId.IndexOf("&mi_", StringComparison.OrdinalIgnoreCase);
+            if (interfaceIndex >= 0) normalizedId = normalizedId.Substring(0, interfaceIndex);
+            return (type + "|" + name + "|" + manufacturer + "|" + normalizedId).ToLowerInvariant();
         }
 
         private static string ResolvePeripheralType(string name, string pnpClass)
@@ -1185,7 +1295,7 @@ namespace ITGuardian.Windows
             try
             {
                 using (ManagementObjectSearcher searcher = new ManagementObjectSearcher(
-                    "SELECT Model, SerialNumber, Size, Status, MediaType, InterfaceType FROM Win32_DiskDrive"
+                    "SELECT Model, SerialNumber, Size, Status, MediaType, InterfaceType, DeviceID, Index FROM Win32_DiskDrive"
                 ))
                 using (ManagementObjectCollection rows = searcher.Get())
                 {
@@ -1201,6 +1311,8 @@ namespace ITGuardian.Windows
                         disk["name"] = disk["label"];
                         disk["model"] = Text(row, "Model");
                         disk["serialNumber"] = Text(row, "SerialNumber").Trim();
+                        disk["deviceId"] = Text(row, "DeviceID");
+                        disk["index"] = ToInt(Value(row, "Index"));
                         disk["sizeGb"] = Math.Round(size / 1073741824d, 1);
                         disk["totalBytes"] = size;
                         disk["freeBytes"] = index == 0 ? systemFree : 0L;

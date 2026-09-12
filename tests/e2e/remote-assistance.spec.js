@@ -125,7 +125,7 @@ test("sessao ativa mostra metricas, pausa a visualizacao e reconecta pelo viewer
 
   await expect(remoteDialog).toContainText("Aguardando");
 
-  await page.evaluate(async ({ baseUrl, agentToken }) => {
+  const sessionId = await page.evaluate(async ({ baseUrl, agentToken }) => {
     const pendingResponse = await fetch(`${baseUrl}/api/agents/remote-assistance/pending`, {
       headers: { authorization: `Bearer ${agentToken}` }
     });
@@ -177,6 +177,8 @@ test("sessao ativa mostra metricas, pausa a visualizacao e reconecta pelo viewer
   await remoteDialog.getByRole("button", { name: "Retomar" }).click();
   await expect(remoteDialog.getByRole("button", { name: "Pausar" })).toBeVisible();
 
+  const endResponse = page.waitForResponse((response) => response.url().endsWith(`/api/remote-assistance/sessions/${sessionId}/end`) && response.request().method() === "POST");
   await remoteDialog.getByRole("button", { name: "Encerrar" }).click();
-  await expect(page.getByText("Atendimento remoto encerrado.")).toBeVisible();
+  expect((await endResponse).ok()).toBeTruthy();
+  await expect(remoteDialog.getByRole("button", { name: "Encerrar" })).toHaveCount(0);
 });

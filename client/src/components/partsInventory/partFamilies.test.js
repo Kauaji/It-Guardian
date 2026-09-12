@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildComputerKits, groupPartsByFamily, resolvePartFamily } from "./partFamilies.js";
+import { buildComputerKits, buildKitHierarchy, groupPartsByFamily, resolvePartFamily, summarizeKitFamily } from "./partFamilies.js";
 
 describe("famílias do inventário de peças", () => {
   it("organiza os componentes principais em famílias técnicas", () => {
@@ -24,5 +24,21 @@ describe("famílias do inventário de peças", () => {
     expect(buildComputerKits(parts, [{ id: "asset-1", alias: "PC Financeiro" }])).toEqual([
       expect.objectContaining({ assetId: "asset-1", name: "PC Financeiro", parts: [parts[0], parts[1]] })
     ]);
+  });
+
+  it("resume a memória e preserva a hierarquia viva do inventário", () => {
+    expect(summarizeKitFamily({ id: "memory", parts: [
+      { name: "8 GB", metadata: { collectedValue: { capacityGb: 8 } } },
+      { name: "8 GB", metadata: { collectedValue: { capacityGb: 8 } } }
+    ] })).toBe("16 GB (8 GB + 8 GB)");
+
+    const hierarchy = buildKitHierarchy([
+      { assetId: "a1", tabId: "t1", segmentId: "s1", parts: [] }
+    ], {
+      activeTabId: "t1",
+      groups: [{ id: "g1", name: "Casa", tabId: "t1", segmentIds: ["s1"] }],
+      segments: [{ id: "s1", name: "Quarto", groupId: "g1" }]
+    });
+    expect(hierarchy.groups[0].segments[0].kits[0].assetId).toBe("a1");
   });
 });

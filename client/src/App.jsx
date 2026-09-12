@@ -3184,6 +3184,9 @@ function Dashboard() {
                 token={token}
                 notify={notify}
                 devices={decoratedAllDevices}
+                tabs={inventoryTabs}
+                groups={decoratedSegmentGroups}
+                segments={decoratedSegments}
                 serviceOrders={serviceOrders}
                 onOpenAsset={(assetId) => {
                   window.history.replaceState({}, "", "/");

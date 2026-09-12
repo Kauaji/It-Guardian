@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { validatePart, validatePartMovement } from "../src/domain/partInventory.js";
+import { validatePart, validatePartDiscrepancyDecision, validatePartMovement } from "../src/domain/partInventory.js";
 
 test("valida cadastro rastreavel de peca", () => {
   const part = validatePart({ name: "Memoria DDR5", quantity: 4, minimumStock: 2, serialNumber: "SN-1" });
@@ -14,4 +14,10 @@ test("rejeita estoque negativo", () => {
 
 test("consumo exige vinculo operacional", () => {
   assert.throws(() => validatePartMovement({ movementType: "consumption", quantity: 1 }), /Vincule o consumo/);
+});
+
+test("aceita somente decisoes conhecidas para incongruencias", () => {
+  assert.deepEqual(validatePartDiscrepancyDecision({ action: "keep" }), { action: "keep" });
+  assert.deepEqual(validatePartDiscrepancyDecision({ action: "dismiss" }), { action: "dismiss" });
+  assert.throws(() => validatePartDiscrepancyDecision({ action: "approve" }), /Decisão de incongruência inválida/);
 });

@@ -14,7 +14,10 @@ function isSyntheticHardware(item) {
 function isPhysicalGraphicsAdapter(item) {
   const identity = hardwareIdentity(item);
   if (!identity || isSyntheticHardware(item)) return false;
-  return /nvidia|geforce|quadro|tesla|\bamd\b|radeon|intel.*(?:graphics|arc|iris|uhd|hd)|matrox|aspeed/.test(identity);
+  // O Windows também publica a GPU integrada ao processador como um adaptador.
+  // O inventário patrimonial deve listar somente placas discretas substituíveis.
+  if (/radeon\(tm\) graphics|radeon graphics|intel.*(?:uhd|iris|\bhd\b).*graphics|vega \d+ graphics/.test(identity)) return false;
+  return /nvidia|geforce|quadro|tesla|radeon (?:rx|pro)|firepro|intel arc [ab]\d|matrox|aspeed/.test(identity);
 }
 function isPhysicalStorage(item) {
   const identity = hardwareIdentity(item);
@@ -32,10 +35,36 @@ function peripheralType(item = {}) {
 function isPhysicalPeripheral(item) {
   const identity = hardwareIdentity(item);
   if (!peripheralType(item) || isSyntheticHardware(item)) return false;
-  return !/hid-compliant|compativel com hid|dispositivo hid|usb input device|dispositivo de entrada usb|standard ps\/2|padrao ps\/2|generic (?:non-)?pnp monitor|monitor (?:nao )?pnp generico|dispositivo de controle do consumidor/.test(identity);
+  return !/hid-compliant|compativel com hid|dispositivo hid|hid keyboard device|dispositivo de teclado hid|hid mouse device|dispositivo de mouse hid|usb input device|dispositivo de entrada usb|standard ps\/2|padrao ps\/2|generic (?:non-)?pnp monitor|monitor (?:nao )?pnp generico|dispositivo de controle do consumidor|audio gateway service|servico de gateway de audio|camera dfu|firmware update/.test(identity);
+}
+function peripheralIdentity(item = {}) {
+  const type = peripheralType(item);
+  const serial = text(item.serialNumber, item.serial, item.macAddress, item.mac);
+  if (serial) return `${type}|${normalized(serial)}`;
+  const deviceId = normalized(text(item.deviceId, item.pnpDeviceId, item.id) || "").replace(/&mi_[0-9a-f]{2}.*/, "");
+  const vidPid = deviceId.match(/vid_[0-9a-f]{4}.*pid_[0-9a-f]{4}/)?.[0];
+  return [type, normalized(text(item.name, item.model, item.product)), normalized(text(item.manufacturer, item.brand, item.vendor)), vidPid].filter(Boolean).join("|");
+}
+function uniquePhysicalPeripherals(items = []) {
+  const seen = new Set();
+  return items.filter((item) => {
+    if (!isPhysicalPeripheral(item)) return false;
+    const identity = peripheralIdentity(item);
+    if (!identity || seen.has(identity)) return false;
+    seen.add(identity);
+    return true;
+  });
+}
+function memoryModuleName(item, index) {
+  const capacity = Number(item.capacityGb);
+  if (Number.isFinite(capacity) && capacity > 0) return `${capacity.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} GB`;
+  return `Módulo de memória ${index + 1}`;
 }
 function stableKey(assetId, type, item, index) {
-  const identity = text(item.serialNumber, item.serial, item.macAddress, item.mac, item.partNumber, item.deviceId, item.pnpDeviceId, item.id, item.name, item.model, index);
+  const deviceIdentity = ["mouse", "keyboard", "monitor", "peripheral"].includes(type)
+    ? text(item.deviceId, item.pnpDeviceId, item.id)
+    : null;
+  const identity = text(item.serialNumber, item.serial, item.macAddress, item.mac, item.partNumber, deviceIdentity, item.name, item.model, index);
   return createHash("sha256").update(`${assetId}|${type}|${identity}`).digest("hex").slice(0, 32);
 }
 
@@ -52,7 +81,7 @@ function descriptor(asset, type, category, item, index, fallbackName) {
     manufacturerPartNumber: text(item.partNumber, item.sku),
     serialNumber: text(item.serialNumber, item.serial),
     macAddress: text(item.macAddress, item.mac),
-    metadata: { hardwareType: type, collectedValue: item }
+    metadata: { hardwareType: type, collectionIndex: index, collectedValue: item }
   };
 }
 
@@ -67,12 +96,12 @@ export function collectHardwareParts(asset) {
   const motherboard = object(details.motherboard);
   if (asset.cpu_model || Object.keys(cpu).length) add("cpu", "Processador", cpu, 0, asset.cpu_model);
   if (Object.keys(motherboard).length) add("motherboard", "Placa-mãe", motherboard, 0, null);
-  array(details.memoryHealth?.moduleDetails || details.memoryModules).forEach((item, index) => add("memory", "Memória", item, index, `Módulo de memória ${index + 1}`));
+  array(details.memoryHealth?.moduleDetails || details.memoryModules).forEach((item, index) => add("memory", "Memória", item, index, memoryModuleName(item, index)));
   array(details.disks).filter(isPhysicalStorage).forEach((item, index) => add("disk", "Armazenamento", item, index, `Disco ${index + 1}`));
   array(details.graphics).filter(isPhysicalGraphicsAdapter).forEach((item, index) => add("graphics", "Placa de vídeo", item, index, `Placa de vídeo ${index + 1}`));
   const powerSupply = object(details.powerSupply || details.psu);
   if (Object.keys(powerSupply).length) add("power_supply", "Fonte", powerSupply, 0, "Fonte de alimentação");
-  array(details.peripherals).filter(isPhysicalPeripheral).forEach((item, index) => {
+  uniquePhysicalPeripherals(array(details.peripherals)).forEach((item, index) => {
     const type = peripheralType(item);
     if (type === "mouse") add("mouse", "Mouse", item, index, `Mouse ${index + 1}`);
     else if (type === "keyboard") add("keyboard", "Teclado", item, index, `Teclado ${index + 1}`);
@@ -91,4 +120,9 @@ export function isSupportedPhysicalPartRecord(part = {}) {
   if (type === "disk") return isPhysicalStorage(collected);
   if (["mouse", "keyboard", "monitor", "peripheral"].includes(type)) return isPhysicalPeripheral({ ...collected, type });
   return ["cpu", "motherboard", "memory", "power_supply"].includes(type) || !isSyntheticHardware(collected);
+}
+
+export function isCoreHardwarePartRecord(part = {}) {
+  const metadata = object(part.metadata || part.metadata_json);
+  return ["cpu", "motherboard", "memory", "disk", "graphics", "power_supply"].includes(normalized(metadata.hardwareType));
 }

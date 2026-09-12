@@ -1,4 +1,4 @@
-import { addPartCategory, createPartInventoryItem, createPartMovement, getPartCategories, getPartInventoryItem, importPurchaseInvoice, listPartInventory, reconcileAgentHardware, removePartCategory, updatePartInventoryItem } from "../services/partInventoryService.js";
+import { addPartCategory, createPartInventoryItem, createPartMovement, decidePartDiscrepancy, getPartCategories, getPartInventoryItem, importPurchaseInvoice, listPartInventory, reconcileAgentHardware, removePartCategory, updatePartInventoryItem } from "../services/partInventoryService.js";
 export async function list(req,res,next){try{res.json({parts:await listPartInventory(req.query)});}catch(error){next(error);}}
 export async function details(req,res,next){try{res.json({part:await getPartInventoryItem(req.params.id)});}catch(error){next(error);}}
 export async function create(req,res,next){try{res.status(201).json({part:await createPartInventoryItem(req.body,req.user)});}catch(error){next(error);}}
@@ -9,3 +9,4 @@ export async function createCategory(req,res,next){try{res.status(201).json({cat
 export async function deleteCategory(req,res,next){try{await removePartCategory(req.params.id);res.status(204).end();}catch(error){next(error);}}
 export async function syncHardware(req,res,next){try{res.json({summary:await reconcileAgentHardware(req.user)});}catch(error){next(error);}}
 export async function importInvoice(req,res,next){try{res.status(201).json({summary:await importPurchaseInvoice(req.body,req.user)});}catch(error){next(error);}}
+export async function reviewDiscrepancy(req,res,next){try{res.json({part:await decidePartDiscrepancy(req.params.id,req.body,req.user)});}catch(error){next(error);}}

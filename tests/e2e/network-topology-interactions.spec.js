@@ -155,8 +155,13 @@ test("um clique inspeciona; dois cliques editam grupos e segmentos sem gravar po
     }
     await expect(groupInspector.getByText("Uplink entre segmentos", { exact: true })).toBeVisible();
     await expect(page.getByRole("navigation", { name: breadcrumbLabel })).not.toContainText(groups[0].name);
-    expect((await apiJson(page, "/api/topology-maps")).maps.map((map) => map.id).sort())
-      .toEqual(initialMaps.maps.map((map) => map.id).sort());
+    const fixtureScopeIds = new Set([...groups, ...segments].map((item) => item.id));
+    const fixtureMapIds = (maps) => maps
+      .filter((map) => fixtureScopeIds.has(map.scopeId))
+      .map((map) => map.id)
+      .sort();
+    expect(fixtureMapIds((await apiJson(page, "/api/topology-maps")).maps))
+      .toEqual(fixtureMapIds(initialMaps.maps));
     const drawerBox = await groupInspector.boundingBox();
     const canvasBox = await page.locator(".network-topology-canvas-wrap").boundingBox();
     expect(drawerBox.y).toBeLessThan(canvasBox.y + 24);

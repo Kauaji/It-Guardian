@@ -4049,3 +4049,35 @@ achado que passou despercebido.
 - build de produção e preparação da saída Vercel concluídos sem erros;
 - `git diff --check` aprovado.
 - Os deploys automáticos do Vercel confirmaram `success`; os problemas preexistentes revelados pelo workflow Quality do GitHub foram corrigidos antes do fechamento.
+
+# 12/09/2026 — Kits hierárquicos e identidade física confiável
+
+- Os kits por computador passaram a acompanhar as mesmas abas, grupos e segmentos do Inventário de Ativos. Mudanças nessa hierarquia refletem diretamente no Inventário de Peças, sem uma segunda configuração paralela.
+- Os cartões de kits agora iniciam recolhidos e exibem somente o nome fantasia; o clique expande os componentes e o atalho para o ativo. A navegação iniciada por uma peça abre automaticamente o kit correto.
+- Módulos de memória passaram a usar capacidade real e resumo do conjunto, como `16 GB (8 GB + 8 GB)`, no lugar de rótulos genéricos como “Módulo de memória 1”.
+- Vídeo integrado ao processador deixou de ser tratado como placa física. A migration `033-physical-component-refinement` remove os registros antigos conhecidos e limpa alertas indevidos de periféricos.
+- A coleta de periféricos foi endurecida: interfaces HID genéricas, serviços de áudio/firmware e duplicatas do mesmo dispositivo são ignorados. O agente Windows 1.6.4 tenta obter modelo, fabricante e série dos monitores ativos pelo EDID/WMI.
+- Incongruências ficaram restritas a CPU, placa-mãe, memória, armazenamento, GPU discreta e fonte. A revisão mostra estado anterior e coleta atual e permite manter o caso pendente ou descartá-lo.
+- O texto do segmento padrão agora é apresentado como “Não organizadas”.
+- A prova E2E de encerramento remoto passou a validar a resposta oficial da API e a remoção da ação de encerramento, evitando depender do tempo de exibição de uma notificação transitória.
+- A prova E2E de inspeção da topologia passou a comparar somente os mapas pertencentes à própria fixture, evitando interferência de mapas criados por cenários paralelos sem reduzir a cobertura funcional.
+
+### Auditoria crítica da nota dos segmentos
+
+- Estado estimado: **55% concluído** para uma nota operacional confiável em produção. O MVP é honesto ao não inventar nota sem telemetria, usa uma função compartilhada e possui testes de limites e deduções.
+- A nota do segmento ainda é calculada somente no cliente e usa disponibilidade, CPU, RAM e disco. Ela não recebe alertas críticos, OS vencidas nem reincidência, embora a fórmula global suporte esses sinais.
+- O status `problem` sofre desconto duplo no segmento (indisponibilidade e contato atrasado), enquanto o cálculo global separa essas contagens. Pesos e limite crítico de 90% também são fixos, sem calibração por tipo de ativo ou janela de tempo.
+- Ainda faltam persistência histórica, tendência, cobertura mínima, explicação clicável, configuração de pesos/limiares, agregação autoritativa no backend e validação contra incidentes reais. Esses pontos formam o caminho principal dos 45% restantes.
+
+### Validações desta rodada
+
+- 9 testes direcionados de domínio e 10 testes direcionados da interface aprovados;
+- suíte E2E completa: 14 cenários aprovados no Chromium, sem falhas;
+- suíte completa do servidor: 559 testes, 557 aprovados e 2 ignorados, sem falhas;
+- suíte completa do cliente: 640 testes aprovados em 56 arquivos, sem falhas;
+- suíte de integração: 128 testes, 126 aprovados e 2 ignorados, sem falhas;
+- agente Windows 1.6.4 compilado com sucesso no compilador .NET Framework x64 usado pelo instalador;
+- lint direcionado dos arquivos alterados aprovado sem avisos;
+- verificação de arquitetura aprovada para 564 arquivos-fonte;
+- build de produção e preparação da saída Vercel concluídos sem erros;
+- `git diff --check` aprovado.

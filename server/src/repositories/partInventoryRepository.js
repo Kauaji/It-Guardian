@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { query, withTransaction } from "../database.js";
-import { collectHardwareParts, isSupportedPhysicalPartRecord } from "../domain/hardwarePartInventory.js";
+import { collectHardwareParts, isCoreHardwarePartRecord, isSupportedPhysicalPartRecord } from "../domain/hardwarePartInventory.js";
 
 function missing() { const error = new Error("Peça não encontrada."); error.statusCode = 404; return error; }
-function mapPart(row) { return { id: row.id, name: row.name, category: row.category, brand: row.brand, model: row.model, internalCode: row.internal_code, assetTag: row.asset_tag, manufacturerPartNumber: row.manufacturer_part_number, serialNumber: row.serial_number, macAddress: row.mac_address, location: row.location, quantity: Number(row.quantity || 0), minimumStock: Number(row.minimum_stock || 0), unitPrice: Number(row.unit_price || 0), unit: row.unit, notes: row.notes, conditionStatus: row.condition_status, assignedAssetId: row.assigned_asset_id, inventoryState: row.inventory_state || "available", source: row.source || "manual", sourceAssetId: row.source_asset_id, hardwareKey: row.hardware_key, supplierName: row.supplier_name, supplierTaxId: row.supplier_tax_id, supplierProductCode: row.supplier_product_code, lastVerifiedAt: row.last_verified_at, discrepancyStatus: row.discrepancy_status || "ok", discrepancyDetails: row.discrepancy_details || {}, active: row.active, stockStatus: Number(row.quantity || 0) <= 0 ? "out" : Number(row.quantity || 0) <= Number(row.minimum_stock || 0) ? "low" : "ok", createdAt: row.created_at, updatedAt: row.updated_at }; }
+function mapPart(row) { return { id: row.id, name: row.name, category: row.category, brand: row.brand, model: row.model, internalCode: row.internal_code, assetTag: row.asset_tag, manufacturerPartNumber: row.manufacturer_part_number, serialNumber: row.serial_number, macAddress: row.mac_address, location: row.location, quantity: Number(row.quantity || 0), minimumStock: Number(row.minimum_stock || 0), unitPrice: Number(row.unit_price || 0), unit: row.unit, notes: row.notes, conditionStatus: row.condition_status, assignedAssetId: row.assigned_asset_id, inventoryState: row.inventory_state || "available", source: row.source || "manual", sourceAssetId: row.source_asset_id, hardwareKey: row.hardware_key, supplierName: row.supplier_name, supplierTaxId: row.supplier_tax_id, supplierProductCode: row.supplier_product_code, lastVerifiedAt: row.last_verified_at, discrepancyStatus: row.discrepancy_status || "ok", discrepancyDetails: row.discrepancy_details || {}, metadata: row.metadata_json || {}, active: row.active, stockStatus: Number(row.quantity || 0) <= 0 ? "out" : Number(row.quantity || 0) <= Number(row.minimum_stock || 0) ? "low" : "ok", createdAt: row.created_at, updatedAt: row.updated_at }; }
 function mapMovement(row) { return { id: row.id, partId: row.part_id, movementType: row.movement_type, quantity: Number(row.quantity), previousQuantity: Number(row.previous_quantity), resultingQuantity: Number(row.resulting_quantity), serviceOrderId: row.service_order_id, serviceOrderNumber: row.service_order_number, assetId: row.asset_id, notes: row.notes, performedBy: row.performed_by, performedByName: row.performed_by_name, createdAt: row.created_at }; }
 
 export async function listParts({ search = "", stockStatus = "", inventoryState = "", discrepancyStatus = "", assignedAssetId = "" } = {}) {
@@ -17,7 +17,8 @@ export async function listParts({ search = "", stockStatus = "", inventoryState 
   if (discrepancyStatus === "open") where.push("p.discrepancy_status <> 'ok'");
   if (assignedAssetId) { params.push(assignedAssetId); where.push(`p.assigned_asset_id = $${params.length}`); }
   const result = await query(`SELECT p.* FROM products p WHERE ${where.join(" AND ")} ORDER BY p.name`, params);
-  return result.rows.map(mapPart);
+  const parts = result.rows.map(mapPart);
+  return discrepancyStatus === "open" ? parts.filter(isCoreHardwarePartRecord) : parts;
 }
 
 export async function getPart(id) {
@@ -60,7 +61,40 @@ export async function deletePartCategory(id) {
 }
 
 function partFingerprint(part) {
-  return JSON.stringify([part.name, part.brand, part.model, part.manufacturerPartNumber, part.serialNumber, part.macAddress]);
+  const type = part.metadata?.hardwareType;
+  return JSON.stringify([
+    type === "memory" ? null : part.name,
+    part.brand,
+    part.model,
+    part.manufacturerPartNumber,
+    part.serialNumber,
+    part.macAddress,
+    type === "memory" ? part.metadata?.collectedValue?.capacityGb : null
+  ]);
+}
+
+function partSnapshot(part) {
+  return {
+    name: part.name || null,
+    brand: part.brand || null,
+    model: part.model || null,
+    manufacturerPartNumber: part.manufacturerPartNumber || null,
+    serialNumber: part.serialNumber || null,
+    macAddress: part.macAddress || null,
+    capacityGb: part.metadata?.collectedValue?.capacityGb || null
+  };
+}
+
+function replacementSlot(part) {
+  const type = part.metadata?.hardwareType;
+  if (!["cpu", "motherboard", "memory", "disk", "graphics", "power_supply"].includes(type)) return "";
+  if (["cpu", "motherboard", "power_supply"].includes(type)) return type;
+  const bank = type === "memory" ? String(part.metadata?.collectedValue?.bank || "").trim().toLowerCase() : "";
+  if (bank) return `${type}|${bank}`;
+  const index = Number(part.metadata?.collectionIndex);
+  if (Number.isInteger(index)) return `${type}|${index}`;
+  const deviceId = ["disk", "graphics"].includes(type) ? String(part.metadata?.collectedValue?.deviceId || "").trim().toLowerCase() : "";
+  return deviceId ? `${type}|${deviceId}` : type;
 }
 
 export async function syncAgentHardwareParts(user) {
@@ -72,10 +106,20 @@ export async function syncAgentHardwareParts(user) {
     const observed = new Map();
     for (const asset of assets.rows) {
       const keys = new Set();
+      const matchedExistingIds = new Set();
       observed.set(asset.asset_id, keys);
       for (const hardware of collectHardwareParts(asset)) {
         keys.add(hardware.hardwareKey);
-        const currentResult = await db("SELECT * FROM products WHERE source_asset_id=$1 AND hardware_key=$2 FOR UPDATE", [asset.asset_id, hardware.hardwareKey]);
+        let currentResult = await db("SELECT * FROM products WHERE source_asset_id=$1 AND hardware_key=$2 FOR UPDATE", [asset.asset_id, hardware.hardwareKey]);
+        if (!currentResult.rowCount && isCoreHardwarePartRecord(hardware)) {
+          const candidates = await db("SELECT * FROM products WHERE source='agent' AND source_asset_id=$1 AND active=TRUE FOR UPDATE", [asset.asset_id]);
+          const sameType = candidates.rows
+            .map(mapPart)
+            .filter((candidate) => !matchedExistingIds.has(candidate.id) && candidate.metadata?.hardwareType === hardware.metadata?.hardwareType);
+          const slot = replacementSlot(hardware);
+          const replacement = sameType.find((candidate) => replacementSlot(candidate) === slot) || (sameType.length === 1 ? sameType[0] : null);
+          if (replacement) currentResult = { rowCount: 1, rows: [candidates.rows.find((row) => row.id === replacement.id)] };
+        }
         if (!currentResult.rowCount) {
           const id = randomUUID();
           await db(`INSERT INTO products (id,name,category,brand,model,internal_code,manufacturer_part_number,serial_number,mac_address,location,quantity,minimum_stock,unit_price,unit,notes,condition_status,assigned_asset_id,active,metadata_json,inventory_state,source,source_asset_id,hardware_key,last_verified_at,discrepancy_status,discrepancy_details)
@@ -86,27 +130,60 @@ export async function syncAgentHardwareParts(user) {
           continue;
         }
         const current = mapPart(currentResult.rows[0]);
+        matchedExistingIds.add(current.id);
         const changed = partFingerprint(current) !== partFingerprint(hardware);
-        const discrepancyStatus = changed ? "unverified_change" : current.discrepancyStatus === "missing" ? "ok" : current.discrepancyStatus;
-        if (changed) discrepancies += 1;
-        await db(`UPDATE products SET name=$2,category=$3,brand=$4,model=$5,manufacturer_part_number=$6,serial_number=$7,mac_address=$8,assigned_asset_id=$9,quantity=1,inventory_state='in_use',last_verified_at=NOW(),discrepancy_status=$10,discrepancy_details=$11::jsonb,metadata_json=$12::jsonb,active=TRUE,updated_at=NOW() WHERE id=$1`,
-          [current.id,hardware.name,hardware.category,hardware.brand,hardware.model,hardware.manufacturerPartNumber,hardware.serialNumber,hardware.macAddress,asset.asset_id,discrepancyStatus,JSON.stringify(changed?{previous:partFingerprint(current),detectedAt:new Date().toISOString()}:{}),JSON.stringify(hardware.metadata)]);
+        const coreHardware = isCoreHardwarePartRecord(hardware);
+        const discrepancyStatus = changed && coreHardware ? "unverified_change" : current.discrepancyStatus === "missing" || !coreHardware ? "ok" : current.discrepancyStatus;
+        const discrepancyDetails = changed && coreHardware
+          ? { reason: "O agente detectou uma alteração no componente físico.", previous: partSnapshot(current), current: partSnapshot(hardware), detectedAt: new Date().toISOString() }
+          : discrepancyStatus === "ok" ? {} : current.discrepancyDetails;
+        if (changed && coreHardware) discrepancies += 1;
+        await db(`UPDATE products SET name=$2,category=$3,brand=$4,model=$5,manufacturer_part_number=$6,serial_number=$7,mac_address=$8,assigned_asset_id=$9,quantity=1,inventory_state='in_use',last_verified_at=NOW(),discrepancy_status=$10,discrepancy_details=$11::jsonb,metadata_json=$12::jsonb,hardware_key=$13,active=TRUE,updated_at=NOW() WHERE id=$1`,
+          [current.id,hardware.name,hardware.category,hardware.brand,hardware.model,hardware.manufacturerPartNumber,hardware.serialNumber,hardware.macAddress,asset.asset_id,discrepancyStatus,JSON.stringify(discrepancyDetails),JSON.stringify(hardware.metadata),hardware.hardwareKey]);
         updated += 1;
       }
     }
-    const tracked = await db("SELECT id, name, category, metadata_json, source_asset_id, hardware_key FROM products WHERE source='agent' AND active=TRUE");
+    const tracked = await db("SELECT * FROM products WHERE source='agent' AND active=TRUE");
     for (const item of tracked.rows) {
       if (!observed.get(item.source_asset_id)?.has(item.hardware_key)) {
-        if (!isSupportedPhysicalPartRecord(item)) {
+        if (!isSupportedPhysicalPartRecord(item) || !isCoreHardwarePartRecord(item)) {
           await db("UPDATE products SET active=FALSE, discrepancy_status='ok', discrepancy_details='{}'::jsonb, updated_at=NOW() WHERE id=$1", [item.id]);
           continue;
         }
-        await db("UPDATE products SET discrepancy_status='missing', discrepancy_details=$2::jsonb, updated_at=NOW() WHERE id=$1", [item.id, JSON.stringify({ detectedAt: new Date().toISOString(), reason: "Componente não foi localizado na coleta atual." })]);
+        await db("UPDATE products SET discrepancy_status='missing', discrepancy_details=$2::jsonb, updated_at=NOW() WHERE id=$1", [item.id, JSON.stringify({ detectedAt: new Date().toISOString(), reason: "Componente não foi localizado na coleta atual.", previous: partSnapshot(mapPart(item)), current: null })]);
         discrepancies += 1;
       }
     }
     return { assets: assets.rowCount, created, updated, discrepancies };
   });
+}
+
+export async function reviewPartDiscrepancy(id, decision, user) {
+  const result = await query("SELECT * FROM products WHERE id=$1", [id]);
+  if (!result.rowCount) throw missing();
+  const current = mapPart(result.rows[0]);
+  if (!isCoreHardwarePartRecord(current)) {
+    const error = new Error("Somente incongruências de hardware principal podem ser revisadas.");
+    error.statusCode = 409;
+    throw error;
+  }
+  if (current.discrepancyStatus === "ok") {
+    const error = new Error("Esta incongruência já foi resolvida.");
+    error.statusCode = 409;
+    throw error;
+  }
+  const details = {
+    ...current.discrepancyDetails,
+    reviewedAt: new Date().toISOString(),
+    reviewedBy: user.id,
+    decision: decision.action
+  };
+  const dismissMissing = decision.action === "dismiss" && current.discrepancyStatus === "missing";
+  await query(
+    "UPDATE products SET discrepancy_status=$2, discrepancy_details=$3::jsonb, active=CASE WHEN $4 THEN FALSE ELSE active END, updated_at=NOW() WHERE id=$1",
+    [id, decision.action === "dismiss" ? "ok" : current.discrepancyStatus, JSON.stringify(details), dismissMissing]
+  );
+  return getPart(id);
 }
 
 export async function importPartInvoice(invoice, user) {

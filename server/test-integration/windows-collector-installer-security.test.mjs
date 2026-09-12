@@ -213,6 +213,6 @@ test("agente nativo mantem trabalhos remotos bloqueados por padrao e controlados
   assert.match(nativeCollector, /CollectOfficeFromUninstallRegistry/);
   assert.match(nativeCollector, /RegistryHive\.Users/);
   assert.match(nativeCollector, /Microsoft 365|Microsoft Office/);
-  assert.match(nativeCollector, /AgentVersion = "1\.6\.3"/);
+  assert.match(nativeCollector, /AgentVersion = "1\.6\.4"/);
   assert.match(nativeCollector, /Falhas de telemetria local nunca podem encerrar o coletor/);
 });
