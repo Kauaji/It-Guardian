@@ -21,6 +21,39 @@ export function assertWebrtcEnabled(config) {
   throw error;
 }
 
+/**
+ * Transporte RustDesk fica inativo ate REMOTE_ASSISTANCE_RUSTDESK_ENABLED=true
+ * com um relay proprio configurado (nunca cai no relay publico do RustDesk).
+ */
+export function assertRustdeskEnabled(config) {
+  assertRemoteAssistanceEnabled(config);
+  if (config?.rustdesk?.enabled) return;
+  const error = new Error("O transporte RustDesk nao esta habilitado neste ambiente.");
+  error.statusCode = 409;
+  error.expose = true;
+  throw error;
+}
+
+const RUSTDESK_PASSWORD_ALPHABET =
+  "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+
+/**
+ * Senha de sessao do RustDesk: gerada por sessao (nunca fixa, nunca
+ * compartilhada entre maquinas), fora do alfabeto de caracteres ambiguos
+ * (0/O, 1/l/I) para reduzir erro de digitacao no lado do tecnico -- o valor
+ * so e digitado manualmente no cliente RustDesk, nunca via URL (evita
+ * vazamento por historico de navegador/logs de sistema operacional).
+ */
+export function generateRustdeskSessionPassword(config, randomBytes) {
+  const length = config?.rustdesk?.passwordLength || 16;
+  const bytes = randomBytes(length);
+  let password = "";
+  for (let i = 0; i < length; i += 1) {
+    password += RUSTDESK_PASSWORD_ALPHABET[bytes[i] % RUSTDESK_PASSWORD_ALPHABET.length];
+  }
+  return password;
+}
+
 const MAX_SDP_LENGTH = 20000;
 
 /**

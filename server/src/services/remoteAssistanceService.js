@@ -3,9 +3,11 @@ import { getRemoteAssistanceConfig } from "../config/environment.js";
 import { withTransaction } from "../database.js";
 import {
   assertRemoteAssistanceEnabled,
+  assertRustdeskEnabled,
   assertWebrtcEnabled,
   canRelayInput,
   deriveConnectionState,
+  generateRustdeskSessionPassword,
   isAgentFresh,
   isSessionActive,
   normalizeRequestedMode,
@@ -17,7 +19,8 @@ import { resolveIceServers } from "./meteredTurnService.js";
 import {
   authenticateAgentToken,
   findAgentAssetByEnrollmentId,
-  findAgentAssetById
+  findAgentAssetById,
+  setAgentAssetRustdeskId
 } from "../repositories/agentRepository.js";
 import { addAssetHistory } from "../repositories/assetHistoryRepository.js";
 import {
@@ -46,7 +49,9 @@ import {
 import {
   appendRelayChatMessage,
   clearRelay,
+  clearRelayRustdeskCredential,
   computeRelayMetrics,
+  consumeRelayRustdeskCredential,
   drainRelayCommands,
   enqueueRelayCommand,
   getRelay,
@@ -57,6 +62,7 @@ import {
   setRelayAgentState,
   setRelayControlEngaged,
   setRelayFrame,
+  setRelayRustdeskCredential,
   setRelayViewerPaused,
   setRelayWebrtcAnswer,
   setRelayWebrtcOffer,
@@ -176,7 +182,28 @@ async function assertManagedSession(user, sessionId) {
   return session;
 }
 
+/**
+ * Melhor esforco: pede ao agente para trocar a senha do RustDesk por uma
+ * gerada localmente e nao reportada a lugar nenhum, antes de limpar o relay.
+ * E "melhor esforco" porque a fila de comandos so e drenada quando a sessao
+ * ainda esta ativa (ver getRemoteAssistanceCommandsForAgent) -- se o agente
+ * nao chegar a fazer mais nenhum poll antes de a sessao sair de "active",
+ * este comando nunca sera entregue. A garantia real de revogacao e o TTL
+ * aplicado localmente pelo proprio agente (ver issueRustdeskSessionPassword),
+ * nao este aviso.
+ */
+async function revokeRustdeskPasswordBestEffort(session, config) {
+  if (config.transport !== "rustdesk") return;
+  await enqueueRelayCommand(
+    session.id,
+    { id: randomUUID(), type: "rustdesk_clear_password" },
+    config.maxQueuedCommands
+  );
+  await clearRelayRustdeskCredential(session.id);
+}
+
 async function auditAutomaticallyClosedSessions(sessions, message, eventType = "session_failed") {
+  const config = getRemoteAssistanceConfig();
   for (const session of sessions) {
     await addAudit({
       session,
@@ -185,6 +212,7 @@ async function auditAutomaticallyClosedSessions(sessions, message, eventType = "
       actorType: "system",
       metadata: { endReason: session.endReason, status: session.status }
     });
+    await revokeRustdeskPasswordBestEffort(session, config);
     await clearRelay(session.id);
   }
 }
@@ -312,8 +340,37 @@ export async function getRemoteAssistancePublicConfig() {
     idleTimeoutSeconds: config.idleTimeoutSeconds,
     reconnectGraceSeconds: config.reconnectGraceSeconds,
     webrtcEnabled: config.webrtc.enabled,
-    iceServers
+    iceServers,
+    rustdeskEnabled: config.rustdesk.enabled,
+    rustdeskPasswordTtlSeconds: config.rustdesk.passwordTtlSeconds
   };
+}
+
+/**
+ * O agente relata o id RustDesk local (lido do config do cliente instalado
+ * pelo coletor) igual como relata heartbeat/inventario: autenticado pelo
+ * proprio token de enrollment, nunca pelo tecnico. O id nao e segredo --
+ * serve so para o painel do tecnico saber com quem conectar.
+ */
+export async function reportAgentRustdeskId({ bearerToken, rustdeskId }) {
+  const enrollment = await authenticateAgentToken(bearerToken);
+  if (!enrollment) throw publicError("Token do agente invalido.", 401);
+  const asset = await findAgentAssetByEnrollmentId(enrollment.id);
+  if (!asset) throw publicError("Maquina do agente nao encontrada.", 404);
+  const normalized = String(rustdeskId || "").trim().slice(0, 32);
+  if (!normalized) throw publicError("Id RustDesk invalido.");
+  if (normalized !== asset.rustdeskId) {
+    const updated = await setAgentAssetRustdeskId({ assetId: asset.id, rustdeskId: normalized });
+    await addAssetHistory({
+      assetId: asset.id,
+      eventType: "rustdesk_id_updated",
+      message: "Id RustDesk desta maquina foi atualizado pelo agente.",
+      newValue: JSON.stringify({ rustdeskId: normalized }),
+      userName: "Agente IT Guardian"
+    });
+    return { rustdeskId: updated?.rustdeskId || normalized };
+  }
+  return { rustdeskId: asset.rustdeskId };
 }
 
 export async function startRemoteAssistanceSession({
@@ -428,7 +485,15 @@ export async function startRemoteAssistanceSession({
     width: config.maxWidth,
     height: config.maxHeight
   });
-  return { session: safeSession(session, relay, config), viewerToken };
+  return {
+    session: safeSession(session, relay, config),
+    viewerToken,
+    // Exposto cedo (antes mesmo do consentimento) so para o frontend decidir
+    // se mostra o aviso "esta maquina ainda nao relatou um id RustDesk" --
+    // nao e segredo, e a senha de sessao continua so chegando depois do
+    // consentimento local (issueRustdeskSessionPassword).
+    rustdeskId: config.transport === "rustdesk" ? asset.rustdeskId || null : undefined
+  };
 }
 
 export async function getRemoteAssistanceSession({ user, sessionId }) {
@@ -594,6 +659,7 @@ export async function updateRemoteAssistanceControl({ user, sessionId, viewerTok
 }
 
 export async function endRemoteAssistanceByTechnician({ user, sessionId, viewerToken }) {
+  const config = getRemoteAssistanceConfig();
   const session = await assertManagedSession(user, sessionId);
   await assertViewerToken(session, viewerToken);
   const ended = await endRemoteAssistanceSession(session.id, "technician_ended");
@@ -606,6 +672,7 @@ export async function endRemoteAssistanceByTechnician({ user, sessionId, viewerT
     user,
     metadata: { endReason: "technician_ended" }
   });
+  await revokeRustdeskPasswordBestEffort(ended, config);
   await clearRelay(ended.id);
   return safeSession(ended, null);
 }
@@ -699,10 +766,88 @@ export async function respondToRemoteAssistanceConsent({
         connectionMode: session.connectionMode
       }
     });
+    if (config.transport === "rustdesk") {
+      await issueRustdeskSessionPassword(updated, config);
+    }
   }
   if (!granted) await clearRelay(updated.id);
   const relay = granted ? await getRelay(updated.id) : null;
   return { session: safeSession(updated, relay) };
+}
+
+/**
+ * Gera a senha de sessao do RustDesk e a envia ao agente pela mesma fila de
+ * comandos ja usada para input de mouse/teclado -- nao existe um segundo
+ * canal. A senha nunca e persistida em banco (so no relay efemero) e carrega
+ * seu proprio prazo de expiracao: se o comando de revogacao no encerramento
+ * se perder (agente offline, rede caiu), o proprio agente aplica o TTL
+ * recebido e reverte a senha local sem depender do servidor.
+ */
+async function issueRustdeskSessionPassword(session, config) {
+  const password = generateRustdeskSessionPassword(config, (length) => randomBytes(length));
+  const expiresAt = new Date(Date.now() + config.rustdesk.passwordTtlSeconds * 1000).toISOString();
+  await setRelayRustdeskCredential(session.id, { password, expiresAt });
+  await enqueueRelayCommand(
+    session.id,
+    {
+      id: randomUUID(),
+      type: "rustdesk_set_password",
+      password,
+      ttlSeconds: config.rustdesk.passwordTtlSeconds
+    },
+    config.maxQueuedCommands
+  );
+  await addAudit({
+    session,
+    eventType: "rustdesk_password_issued",
+    message: `Senha de sessao RustDesk gerada, valida por ate ${Math.round(config.rustdesk.passwordTtlSeconds / 60)} minutos.`,
+    actorType: "system",
+    metadata: { ttlSeconds: config.rustdesk.passwordTtlSeconds }
+  });
+}
+
+/**
+ * Revela a credencial RustDesk da sessao ativa ao tecnico responsavel: id do
+ * dispositivo (do card da maquina) + senha de sessao (do relay efemero,
+ * nunca do banco). Cada chamada fica registrada na auditoria -- diferente do
+ * frame/comandos do snapshot polling, aqui o IT Guardian perde visibilidade
+ * do que acontece depois que o tecnico abre o cliente RustDesk nativo, entao
+ * saber quem pediu a credencial e quando e o unico rastro que sobra deste
+ * ponto em diante.
+ */
+export async function getRemoteAssistanceRustdeskCredentials({ user, sessionId, viewerToken }) {
+  const config = getRemoteAssistanceConfig();
+  assertRustdeskEnabled(config);
+  const session = await assertManagedSession(user, sessionId);
+  await assertViewerToken(session, viewerToken);
+  if (!isSessionActive(session.status)) {
+    throw publicError("A sessao remota nao esta mais ativa.", 409);
+  }
+  const asset = await findAgentAssetById(session.assetId);
+  if (!asset?.rustdeskId) {
+    throw publicError("Esta maquina ainda nao relatou um id RustDesk.", 409);
+  }
+  const relay = await getRelay(session.id);
+  if (!relay?.rustdeskPassword || !relay.rustdeskPasswordExpiresAt) {
+    throw publicError("A senha desta sessao ainda nao foi emitida pelo agente.", 409);
+  }
+  if (new Date(relay.rustdeskPasswordExpiresAt).getTime() <= Date.now()) {
+    throw publicError("A senha desta sessao expirou. Peca ao usuario para autorizar novamente.", 409);
+  }
+  await consumeRelayRustdeskCredential(session.id);
+  await addAudit({
+    session,
+    eventType: "rustdesk_credentials_revealed",
+    message: `${user.name} visualizou a credencial de conexao RustDesk desta sessao.`,
+    actorType: "technician",
+    user,
+    metadata: { revealCount: (relay.rustdeskPasswordRevealCount || 0) + 1 }
+  });
+  return {
+    rustdeskId: asset.rustdeskId,
+    password: relay.rustdeskPassword,
+    expiresAt: relay.rustdeskPasswordExpiresAt
+  };
 }
 
 function decodeFrame(dataUrl, maxFrameBytes) {
@@ -884,6 +1029,7 @@ export async function getRemoteAssistanceWebrtcAnswer({ user, sessionId, viewerT
 }
 
 export async function endRemoteAssistanceByAgent({ bearerToken, sessionId, sessionToken }) {
+  const config = getRemoteAssistanceConfig();
   const { session } = await authenticateAgentForSession({ bearerToken, sessionId, sessionToken });
   const ended = await endRemoteAssistanceSession(session.id, "local_user_ended");
   if (ended) {
@@ -894,6 +1040,10 @@ export async function endRemoteAssistanceByAgent({ bearerToken, sessionId, sessi
       actorType: "agent",
       metadata: { endReason: "local_user_ended" }
     });
+    // O proprio agente que esta encerrando ja sabe que deve derrubar a senha
+    // local (mesmo caminho de codigo do fim de TTL); isto so cobre o caso de
+    // um segundo agente/instancia consultando o mesmo relay.
+    await revokeRustdeskPasswordBestEffort(ended, config);
     await clearRelay(ended.id);
   }
   return { session: safeSession(ended || session, null) };

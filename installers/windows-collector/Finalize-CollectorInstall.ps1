@@ -247,4 +247,39 @@ if (-not $trayStarted) {
   Write-InstallLog "AVISO: o icone de bandeja nao foi confirmado rodando apos 3 tentativas nesta sessao; a chave HKLM Run ja registrada vai inicia-lo no proximo logon (deslogar/logar de novo ou reiniciar resolve)."
 }
 
+# --- Instalacao opcional do cliente RustDesk (transporte alternativo) ------
+# So roda quando o instalador foi gerado com um instalador do RustDesk
+# empacotado (ver installers/windows-collector/README.md e build-installer.ps1,
+# variavel RustdeskInstallerPath). Falha aqui nunca derruba a instalacao do
+# coletor -- so registra aviso; o transporte RustDesk fica indisponivel ate
+# alguem instalar o RustDesk manualmente ou reexecutar este instalador com o
+# pacote presente. O id do dispositivo criado por este install e reportado
+# sozinho ao IT Guardian no primeiro heartbeat com "enableRemoteAssistance"
+# ligado (ver ReportRustdeskIdIfChanged em agent/windows/ITGuardian.Windows.cs).
+$rustdeskInstallerPath = Join-Path $resolvedDirectory "rustdesk-installer.exe"
+if (Test-Path -LiteralPath $rustdeskInstallerPath) {
+  try {
+    # NOTA DE VERIFICACAO (nao testado neste ambiente): "--silent-install" e o
+    # flag documentado publicamente pelo projeto RustDesk nas versoes
+    # disponiveis ate a escrita deste script. O RustDesk nao e mantido pelo IT
+    # Guardian -- confirme esse flag contra a versao efetivamente empacotada
+    # antes de confiar nisto em producao.
+    $rustdeskProcess = Start-Process `
+      -FilePath $rustdeskInstallerPath `
+      -ArgumentList @("--silent-install") `
+      -WindowStyle Hidden `
+      -Wait `
+      -PassThru
+    if ($rustdeskProcess.ExitCode -eq 0) {
+      Write-InstallLog "Cliente RustDesk instalado silenciosamente."
+    } else {
+      Write-InstallLog "AVISO: instalador do RustDesk retornou codigo $($rustdeskProcess.ExitCode)."
+    }
+  } catch {
+    Write-InstallLog "AVISO: falha ao instalar o RustDesk automaticamente. $($_.Exception.Message)"
+  }
+} else {
+  Write-InstallLog "Instalador do RustDesk nao empacotado; transporte RustDesk permanece indisponivel nesta maquina."
+}
+
 Write-InstallLog "Instalacao finalizada com sucesso."

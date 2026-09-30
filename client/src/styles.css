@@ -7207,6 +7207,81 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
   font-size: 0.74rem;
 }
 
+.remote-assistance-rustdesk-panel {
+  display: grid;
+  gap: 14px;
+  min-height: 220px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+}
+
+.remote-assistance-rustdesk-id,
+.remote-assistance-rustdesk-password {
+  display: grid;
+  gap: 4px;
+}
+
+.remote-assistance-rustdesk-id .label,
+.remote-assistance-rustdesk-password .label {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.remote-assistance-rustdesk-id .value,
+.remote-assistance-rustdesk-password .value {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-family: var(--font-mono, monospace);
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
+}
+
+.remote-assistance-rustdesk-id .value.muted {
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.86rem;
+  letter-spacing: normal;
+}
+
+.remote-assistance-rustdesk-password .value {
+  color: var(--accent-strong);
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+}
+
+.remote-assistance-rustdesk-panel .icon-action {
+  display: inline-flex;
+  padding: 2px;
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.remote-assistance-rustdesk-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--warning, #d97706) 30%, var(--border));
+  border-radius: var(--radius-sm);
+  color: var(--warning, #d97706);
+  background: color-mix(in srgb, var(--warning, #d97706) 8%, var(--surface));
+}
+
+.remote-assistance-rustdesk-warning p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
 .remote-assistance-events {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);

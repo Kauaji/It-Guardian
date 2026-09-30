@@ -199,7 +199,9 @@ test("assistencia remota exige autorizacao, consentimento e mantem frames efemer
     idleTimeoutSeconds: 40,
     reconnectGraceSeconds: 30,
     webrtcEnabled: false,
-    iceServers: []
+    iceServers: [],
+    rustdeskEnabled: false,
+    rustdeskPasswordTtlSeconds: 300
   });
 
   const orderResponse = await fetch(`${baseUrl}/api/service-orders`, {

@@ -121,7 +121,22 @@ export function getRemoteAssistanceConfig(env = process.env) {
     .toLowerCase();
   const webrtcEnabled = enabled && isTruthyEnv(env.REMOTE_ASSISTANCE_WEBRTC_ENABLED);
   const transportRequestedWebrtc = requestedTransport === "webrtc";
-  const transport = transportRequestedWebrtc && webrtcEnabled ? "webrtc" : "snapshot_polling";
+  // RustDesk so fica disponivel com um relay proprio configurado
+  // (REMOTE_ASSISTANCE_RUSTDESK_ID_SERVER) -- nunca aponta para o relay
+  // publico do RustDesk por padrao, para nao depender de infraestrutura de
+  // terceiros para o trafego de tela dos clientes.
+  const rustdeskIdServer = String(env.REMOTE_ASSISTANCE_RUSTDESK_ID_SERVER || "").trim().slice(0, 200);
+  const rustdeskRelayServer = String(env.REMOTE_ASSISTANCE_RUSTDESK_RELAY_SERVER || "").trim().slice(0, 200);
+  const rustdeskEnabled =
+    enabled &&
+    isTruthyEnv(env.REMOTE_ASSISTANCE_RUSTDESK_ENABLED) &&
+    Boolean(rustdeskIdServer);
+  const transportRequestedRustdesk = requestedTransport === "rustdesk";
+  const transport = transportRequestedRustdesk && rustdeskEnabled
+    ? "rustdesk"
+    : transportRequestedWebrtc && webrtcEnabled
+      ? "webrtc"
+      : "snapshot_polling";
 
   return {
     enabled,
@@ -161,13 +176,30 @@ export function getRemoteAssistanceConfig(env = process.env) {
     maxQueuedCommands: boundedInteger(env.REMOTE_ASSISTANCE_MAX_QUEUED_COMMANDS, 100, 10, 250),
     agentTimeoutSeconds,
     transport,
-    transportFallback: transportRequestedWebrtc && !webrtcEnabled,
+    transportFallback:
+      (transportRequestedRustdesk && !rustdeskEnabled) ||
+      (transportRequestedWebrtc && !webrtcEnabled),
     webrtc: {
       enabled: webrtcEnabled,
       stunUrls: parseIceUrls(env.REMOTE_ASSISTANCE_STUN_URLS, { schemes: ["stun:", "stuns:"] }),
       hasTurn: parseIceUrls(env.REMOTE_ASSISTANCE_TURN_URL, { maxEntries: 1, schemes: ["turn:", "turns:"] }).length > 0,
       iceServers: buildIceServers(env),
       maxBitrateKbps: boundedInteger(env.REMOTE_ASSISTANCE_MAX_BITRATE_KBPS, 2500, 500, 6000)
+    },
+    // Transporte alternativo via cliente nativo RustDesk (self-hosted).
+    // O backend nunca guarda a senha de sessao -- so o id do dispositivo
+    // (publico por natureza, igual um numero de telefone) fica no card da
+    // maquina. Ver docs/ASSISTENCIA-REMOTA.md, secao "Transporte RustDesk".
+    rustdesk: {
+      enabled: rustdeskEnabled,
+      idServer: rustdeskIdServer,
+      relayServer: rustdeskRelayServer,
+      // Senha de sessao: gerada por sessao, nunca reaproveitada entre
+      // maquinas ou entre atendimentos, expira sozinha mesmo se o comando de
+      // revogacao para o agente se perder (ver assertRustdeskEnabled /
+      // generateRustdeskSessionPassword em domain/remoteAssistancePolicy.js).
+      passwordTtlSeconds: boundedInteger(env.REMOTE_ASSISTANCE_RUSTDESK_PASSWORD_TTL_SECONDS, 300, 60, 900),
+      passwordLength: boundedInteger(env.REMOTE_ASSISTANCE_RUSTDESK_PASSWORD_LENGTH, 16, 12, 32)
     }
   };
 }

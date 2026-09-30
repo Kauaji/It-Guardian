@@ -70,7 +70,9 @@ export function getRemoteAssetDisplayName(asset, alias) {
 }
 
 export function remoteAssistanceTransportLabel(transport) {
-  return transport === "webrtc" ? "WebRTC" : "Snapshot seguro (HTTP)";
+  if (transport === "webrtc") return "WebRTC";
+  if (transport === "rustdesk") return "RustDesk (cliente nativo)";
+  return "Snapshot seguro (HTTP)";
 }
 
 export function formatBytesPerSecond(bytesPerSecond) {

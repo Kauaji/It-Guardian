@@ -101,8 +101,11 @@ reautenticacao do tecnico e consentimento visivel na maquina atendida. O
 transporte `snapshot_polling` agora tem FPS, resolucao e qualidade JPEG
 ajustaveis com limites seguros, ajuste automatico de qualidade, pausa da
 visualizacao e reconexao manual; uma sinalizacao WebRTC ja existe no backend
-como base para uma evolucao futura, mas permanece desligada por padrao.
-Consulte [`docs/ASSISTENCIA-REMOTA.md`](docs/ASSISTENCIA-REMOTA.md).
+como base para uma evolucao futura, mas permanece desligada por padrao. Um
+transporte alternativo via cliente nativo RustDesk (open source, self-hosted)
+tambem esta disponivel como opt-in, com senha de sessao gerada pelo servidor
+por atendimento (nunca fixa nem compartilhada entre maquinas) e desligado por
+padrao. Consulte [`docs/ASSISTENCIA-REMOTA.md`](docs/ASSISTENCIA-REMOTA.md).
 
 Estrutura principal:
 
@@ -133,7 +136,7 @@ it-guardian/
 | Banco de dados | PostgreSQL |
 | Infraestrutura local | Docker Compose, Nginx e scripts PowerShell |
 | Deploy de demonstração | Vercel com Supabase ou Neon |
-| Integrações | Agente Windows, OCS Inventory e Zabbix |
+| Integrações | Agente Windows, OCS Inventory, Zabbix e RustDesk (assistencia remota, opt-in) |
 | Testes e validação | Node Test Runner, smoke tests e checklists manuais |
 
 ## Executar o beta local

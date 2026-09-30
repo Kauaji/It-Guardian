@@ -53,6 +53,8 @@ function assetFromRow(row) {
     group: row.group_name,
     segment: row.segment_name,
     inventoryDetails,
+    rustdeskId: row.rustdesk_id || null,
+    rustdeskIdUpdatedAt: row.rustdesk_id_updated_at || null,
     collectedAt: row.collected_at,
     lastSeenAt: row.last_seen_at,
     createdAt: row.created_at,
@@ -351,4 +353,23 @@ export async function updateAgentAssetAlias({ assetId, alias }) {
     }
     return assetFromRow(result.rows[0]);
   });
+}
+
+/**
+ * Grava o id do dispositivo RustDesk relatado pelo agente. O id em si nao e
+ * segredo (equivalente a um numero de telefone no protocolo RustDesk); a
+ * senha de conexao nunca passa por aqui nem por nenhuma tabela -- fica
+ * somente no relay efemero da sessao (remoteAssistanceRelay.js).
+ */
+export async function setAgentAssetRustdeskId({ assetId, rustdeskId }) {
+  const result = await query(
+    `
+      UPDATE agent_assets
+      SET rustdesk_id = $2, rustdesk_id_updated_at = NOW(), updated_at = NOW()
+      WHERE asset_id = $1
+      RETURNING *
+    `,
+    [assetId, String(rustdeskId || "").trim().slice(0, 32) || null]
+  );
+  return result.rows[0] ? assetFromRow(result.rows[0]) : null;
 }

@@ -430,6 +430,121 @@ testada, mas video/dados via WebRTC em si e trabalho futuro. Ativar
 `REMOTE_ASSISTANCE_WEBRTC_ENABLED=true` hoje so libera a troca de SDP pela API
 — nenhuma tela adicional passa a trafegar por esse caminho.
 
+## Transporte RustDesk (alternativo, opt-in)
+
+`snapshot_polling` (3-10 FPS tipico, JPEG por HTTP) tem um teto de fluidez
+estrutural. Para quem precisa de mais performance e aceita o modelo de
+seguranca diferente descrito abaixo, o IT Guardian pode delegar o video e o
+controle da sessao ao cliente nativo do [RustDesk](https://rustdesk.com)
+(open source), instalado pelo coletor na maquina atendida.
+
+### O que muda de verdade
+
+A diferenca central em relacao a `snapshot_polling`/`webrtc` nao e so
+performance: **a partir do momento em que o tecnico conecta pelo cliente
+RustDesk, o IT Guardian perde visibilidade da sessao**. Nao ha frame
+retransmitido, nao ha fila de comandos de mouse/teclado, nao ha captura para
+auditar. O backend continua controlando quem pode iniciar uma sessao,
+exigindo consentimento local e reautenticacao — mas o que acontece depois da
+conexao (cliques, teclas, arquivos arrastados) fica fora do alcance do IT
+Guardian, do mesmo jeito que ficaria numa ligacao telefonica orientando o
+usuario a instalar outro programa. Quem precisa de auditoria granular de
+input deve continuar em `snapshot_polling` ou aguardar o WebRTC nativo (ver
+secao anterior).
+
+### Modelo de senha: nunca fixa, nunca compartilhada
+
+Fica tentador (e comum em outras ferramentas de RMM) configurar uma senha
+"padrao" do RustDesk, igual em toda a frota, para simplificar a conexao. O IT
+Guardian **nao faz isso de proposito**: uma senha fixa compartilhada por
+todas as maquinas e um unico ponto de falha para a base inteira — vazou uma
+vez (engenharia reversa do instalador, dump de config, captura de rede), da
+acesso irrestrito a qualquer maquina, de fora do IT Guardian, sem cair na
+auditoria nem exigir reautenticacao nenhuma.
+
+Em vez disso:
+
+- cada sessao recebe uma senha **gerada pelo servidor**, aleatoria, de uso
+  restrito aquela sessao (`generateRustdeskSessionPassword` em
+  `server/src/domain/remoteAssistancePolicy.js`);
+- a senha nunca e persistida em banco — vive so no relay efemero da sessao
+  (o mesmo mecanismo que ja guarda frame e chat), com o mesmo `expiresAt` que
+  o agente recebeu para autoexpirar localmente;
+- ao conceder consentimento, o backend envia a senha ao agente pela fila de
+  comandos existente (`rustdesk_set_password`, com `ttlSeconds`) — o agente
+  aplica via `rustdesk.exe --password` e **agenda sozinho** a propria
+  expiracao local, sem depender de um segundo aviso do servidor chegar;
+- ao encerrar a sessao (pelo tecnico, pelo usuario local ou por timeout), o
+  backend tambem tenta avisar o agente para revogar antes do TTL
+  (`revokeRustdeskPasswordBestEffort`) — mas isso e reforco, nao a garantia:
+  a fila de comandos so e entregue enquanto a sessao ainda esta `active`, e
+  um agente que perdeu conexao exatamente no encerramento pode nao receber o
+  aviso a tempo. A garantia real e o TTL aplicado localmente pelo proprio
+  agente;
+- o tecnico ve a senha uma vez por pedido explicito ("Revelar senha de
+  conexao" no painel), nunca automaticamente — cada revelacao gera o evento
+  de auditoria `rustdesk_credentials_revealed` no historico da maquina/OS;
+- a senha nunca viaja por URL (nem no link `rustdesk://id`, nem em nenhum
+  lugar copiado automaticamente para fora do IT Guardian) — o tecnico sempre
+  cola manualmente no cliente RustDesk, para nao deixar rastro em historico
+  de navegador ou logs do sistema operacional.
+
+O id do dispositivo RustDesk (`rustdesk_id` no card da maquina) **nao** segue
+essa mesma cautela porque nao e segredo — e o equivalente a um numero de
+telefone no protocolo RustDesk: serve so para saber com qual maquina
+conectar, nunca concede acesso sozinho.
+
+### Relay proprio obrigatorio
+
+`REMOTE_ASSISTANCE_RUSTDESK_ENABLED=true` sozinho **nao** liga o transporte:
+tambem e preciso configurar `REMOTE_ASSISTANCE_RUSTDESK_ID_SERVER` (e,
+tipicamente, `REMOTE_ASSISTANCE_RUSTDESK_RELAY_SERVER`) apontando para um
+`hbbs`/`hbbr` self-hosted. O IT Guardian nunca aponta para o relay publico do
+RustDesk por padrao — rotear a tela de maquinas de clientes por um servidor
+de terceiros e uma decisao de privacidade explicita demais para ser o
+default de ninguem. Sem essas variaveis, um `REMOTE_ASSISTANCE_TRANSPORT=rustdesk`
+pedido cai de volta para `snapshot_polling` automaticamente
+(`transportFallback: true` na resposta de `/api/remote-assistance/config`).
+
+### Instalacao do cliente
+
+O instalador do coletor (`installers/windows-collector`) pode empacotar o
+instalador oficial do RustDesk e instala-lo silenciosamente junto do
+coletor — veja
+[`installers/windows-collector/README.md`](../installers/windows-collector/README.md#transporte-rustdesk-no-instalador-opcional).
+O IT Guardian nao redistribui o RustDesk: quem gera o instalador baixa o
+pacote oficial e o coloca em `installers/windows-collector/vendor/` antes do
+build. O id do dispositivo criado nesse install e relatado sozinho ao
+servidor no heartbeat seguinte (`ReportRustdeskIdIfChanged` em
+`agent/windows/ITGuardian.Windows.cs`) e gravado no card da maquina.
+
+### Endpoints
+
+- `POST /api/agents/remote-assistance/rustdesk-id` — agente relata o id do
+  dispositivo (autenticado pelo token de enrollment, nao pelo tecnico).
+- `GET /api/remote-assistance/sessions/:sessionId/rustdesk-credentials` —
+  tecnico revela id + senha da sessao ativa (exige `remote_assistance.control`,
+  nao so `.view`: possuir a senha equivale a controle total, diferente do
+  `snapshot_polling`, onde ver a tela e controla-la sao permissoes
+  separadas).
+
+### Limitacoes
+
+- nenhuma auditoria granular de mouse/teclado depois da conexao (ver acima);
+- exige relay proprio (`hbbs`/`hbbr`) rodando como processo sempre ligado —
+  mesma familia de restricao que OCS/Zabbix/polling de LAN, incompativel com
+  deploy 100% serverless;
+- o RustDesk nao e mantido pelo IT Guardian: os flags de CLI usados pelo
+  agente (`--password`, `--get-id`, `--silent-install`) estao marcados com
+  "NOTA DE VERIFICACAO" no codigo-fonte (`agent/windows/ITGuardian.RustdeskController.cs`,
+  `installers/windows-collector/Finalize-CollectorInstall.ps1`) e devem ser
+  confirmados contra a versao efetivamente empacotada antes de uso em
+  producao — nenhuma chamada ao RustDesk foi exercitada contra o binario real
+  neste trabalho, so testada com um relay simulado no backend;
+- se o cliente RustDesk nao estiver instalado na maquina do tecnico, o link
+  `rustdesk://id` nao abre nada — a orientacao de instalar o cliente
+  RustDesk no computador do tecnico fica fora do escopo do IT Guardian.
+
 ## Teste com duas maquinas reais
 
 1. Use duas maquinas proprias em uma rede de laboratorio.

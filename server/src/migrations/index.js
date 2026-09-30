@@ -34,6 +34,7 @@ import { migration030OperationalRefinements } from "./030-operational-refinement
 import { migration031InventoryFamiliesRemoveReports } from "./031-inventory-families-remove-reports.js";
 import { migration032PhysicalHardwareFilter } from "./032-physical-hardware-filter.js";
 import { migration033PhysicalComponentRefinement } from "./033-physical-component-refinement.js";
+import { migration034RustdeskTransport } from "./034-rustdesk-transport.js";
 
 export const migrations = [
   migration001RuntimeFoundation,
@@ -69,7 +70,8 @@ export const migrations = [
   migration030OperationalRefinements,
   migration031InventoryFamiliesRemoveReports,
   migration032PhysicalHardwareFilter,
-  migration033PhysicalComponentRefinement
+  migration033PhysicalComponentRefinement,
+  migration034RustdeskTransport
 ];
 
 export async function runMigrations() {

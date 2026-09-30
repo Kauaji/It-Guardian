@@ -66,6 +66,28 @@ padrao, configuravel via `IT_GUARDIAN_CODE_SIGN_TIMESTAMP_URL`. Os três
 executaveis (`ITGuardian.exe`, `ITGuardian-Uninstaller.exe` e o instalador
 final) sao assinados quando um certificado esta configurado.
 
+### Transporte RustDesk no instalador (opcional)
+
+O IT Guardian nao redistribui o RustDesk. Para empacota-lo junto do coletor:
+
+1. Baixe o instalador oficial do RustDesk para Windows em
+   [github.com/rustdesk/rustdesk/releases](https://github.com/rustdesk/rustdesk/releases).
+2. Salve-o como `installers/windows-collector/vendor/rustdesk-installer.exe`
+   (pasta ignorada pelo git — o binario nunca vai para o repositorio).
+3. Rode `npm run installer:windows` normalmente.
+
+Sem esse arquivo presente, o instalador do IT Guardian e gerado normalmente,
+so sem o RustDesk (mesmo comportamento de ausencia do helper de WebRTC acima).
+`Finalize-CollectorInstall.ps1` roda o instalador do RustDesk silenciosamente
+(`--silent-install`) sempre que o pacote estiver presente, independente da
+flag do servidor — instalar o cliente e reportar o id da maquina e uma coisa,
+o backend so passa a usar esse transporte quando
+`REMOTE_ASSISTANCE_RUSTDESK_ENABLED=true` tambem estiver ligado (caso
+contrario a maquina so fica com o RustDesk instalado e ocioso). Consulte
+[`docs/ASSISTENCIA-REMOTA.md`](../../docs/ASSISTENCIA-REMOTA.md), secao
+"Transporte RustDesk", para o modelo de seguranca completo (senha por sessao,
+nunca compartilhada entre maquinas, relay proprio obrigatorio).
+
 ## Resultado da instalacao
 
 - arquivos em `C:\ProgramData\ITGuardian`;

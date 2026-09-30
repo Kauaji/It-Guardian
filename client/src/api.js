@@ -236,6 +236,13 @@ export function sendRemoteAssistanceChatMessage({ token, sessionId, viewerToken,
   });
 }
 
+export function fetchRemoteAssistanceRustdeskCredentials({ token, sessionId, viewerToken }) {
+  return apiFetch(`/remote-assistance/sessions/${encodeURIComponent(sessionId)}/rustdesk-credentials`, {
+    token,
+    headers: { "x-remote-viewer-token": viewerToken }
+  });
+}
+
 export function endRemoteAssistanceSession({ token, sessionId, viewerToken }) {
   return apiFetch(`/remote-assistance/sessions/${encodeURIComponent(sessionId)}/end`, {
     token,

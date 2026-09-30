@@ -35,6 +35,9 @@ namespace ITGuardian.Windows
         public bool includeLoggedUser { get; set; }
         public bool enableRemoteScriptExecution { get; set; }
         public bool enableRemoteAssistance { get; set; }
+        // Opcional: caminho completo do rustdesk.exe quando nao instalado num
+        // dos locais padrao (ver RustdeskController.ResolveExecutablePath).
+        public string rustdeskExecutablePath { get; set; }
     }
 
     internal sealed class AgentHeartbeatResponse
@@ -183,6 +186,7 @@ namespace ITGuardian.Windows
             }
 
             WriteLog("INFO", "Coletor IT Guardian " + AgentVersion + " iniciado.");
+            RustdeskController.ExecutablePathOverride = config.rustdeskExecutablePath;
             RemoteAssistanceBroker remoteAssistanceBroker = null;
             if (!runOnce && RemoteAssistanceEnvironment.IsAllowed(config))
             {
@@ -191,6 +195,7 @@ namespace ITGuardian.Windows
             }
 
             bool restartForUpdate = false;
+            string lastReportedRustdeskId = null;
             try
             {
                 do
@@ -207,10 +212,16 @@ namespace ITGuardian.Windows
 
                     if (restartForUpdate) break;
 
+                    if (config.enableRemoteAssistance)
+                    {
+                        lastReportedRustdeskId = ReportRustdeskIdIfChanged(config, lastReportedRustdeskId);
+                    }
+
                     if (!runOnce)
                     {
                         WaitForNextHeartbeat(config.intervalSeconds);
                         config = ReadConfig(configPath);
+                        RustdeskController.ExecutablePathOverride = config.rustdeskExecutablePath;
                         // enableRemoteScriptExecution ja era relido a cada ciclo (comparado no
                         // heartbeat seguinte); a assistencia remota nao era -- o canal local so
                         // nascia uma vez, na config lida no exato instante em que o processo
@@ -246,6 +257,51 @@ namespace ITGuardian.Windows
             {
                 WriteLog("INFO", "Encerrando para reiniciar sob o binario atualizado.");
                 Environment.Exit(AutoUpdateRestartExitCode);
+            }
+        }
+
+        /// <summary>
+        /// Melhor esforco, roda no processo coletor (unico com agentToken):
+        /// nunca lanca -- uma falha aqui nao pode derrubar o ciclo de
+        /// heartbeat/inventario. So faz a chamada HTTP quando o id muda (ou
+        /// na primeira leitura), evitando spawnar o rustdesk.exe/chamar a
+        /// rede a toa em todo ciclo quando nada mudou. Silenciosamente pulado
+        /// quando o RustDesk nao esta instalado nesta maquina.
+        /// </summary>
+        private static string ReportRustdeskIdIfChanged(AgentConfig config, string lastReportedId)
+        {
+            try
+            {
+                if (RustdeskController.ResolveExecutablePath() == null) return lastReportedId;
+                string currentId = RustdeskController.TryReadDeviceId();
+                if (string.IsNullOrWhiteSpace(currentId) || currentId == lastReportedId) return lastReportedId;
+
+                string endpoint = config.serverUrl.TrimEnd('/') + "/api/agents/remote-assistance/rustdesk-id";
+                byte[] body = Encoding.UTF8.GetBytes(
+                    new JavaScriptSerializer().Serialize(new RustdeskIdReportPayload { rustdeskId = currentId }));
+                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(endpoint);
+                request.Method = "POST";
+                request.ContentType = "application/json";
+                request.Accept = "application/json";
+                request.Headers[HttpRequestHeader.Authorization] = "Bearer " + config.agentToken;
+                request.Timeout = 15000;
+                request.ReadWriteTimeout = 15000;
+                request.ContentLength = body.Length;
+                using (Stream requestStream = request.GetRequestStream())
+                {
+                    requestStream.Write(body, 0, body.Length);
+                }
+                using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+                {
+                    if ((int)response.StatusCode < 200 || (int)response.StatusCode >= 300) return lastReportedId;
+                }
+                WriteLog("INFO", "Id RustDesk desta maquina relatado ao IT Guardian.");
+                return currentId;
+            }
+            catch (Exception error)
+            {
+                WriteLog("WARN", "Falha ao relatar id RustDesk ao servidor: " + error.Message);
+                return lastReportedId;
             }
         }
 

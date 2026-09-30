@@ -7,10 +7,12 @@ import {
   getRemoteAssistanceEvents,
   getRemoteAssistanceFrame,
   getRemoteAssistancePublicConfig,
+  getRemoteAssistanceRustdeskCredentials,
   getRemoteAssistanceSession,
   getRemoteAssistanceWebrtcAnswer,
   getRemoteAssistanceWebrtcOfferForAgent,
   receiveRemoteAssistanceFrame,
+  reportAgentRustdeskId,
   respondToRemoteAssistanceConsent,
   selectRemoteAssistanceMonitor,
   sendRemoteAssistanceChatMessage,
@@ -139,6 +141,17 @@ export async function pause(req, res, next) {
   } catch (error) { next(error); }
 }
 
+export async function rustdeskCredentials(req, res, next) {
+  try {
+    res.set("Cache-Control", "private, no-store, max-age=0");
+    res.json(await getRemoteAssistanceRustdeskCredentials({
+      user: req.user,
+      sessionId: req.params.id,
+      viewerToken: viewerToken(req)
+    }));
+  } catch (error) { next(error); }
+}
+
 export async function end(req, res, next) {
   try {
     res.json({ session: await endRemoteAssistanceByTechnician({
@@ -146,6 +159,15 @@ export async function end(req, res, next) {
       sessionId: req.params.id,
       viewerToken: viewerToken(req)
     }) });
+  } catch (error) { next(error); }
+}
+
+export async function agentRustdeskId(req, res, next) {
+  try {
+    res.json(await reportAgentRustdeskId({
+      bearerToken: bearerToken(req),
+      rustdeskId: req.body?.rustdeskId
+    }));
   } catch (error) { next(error); }
 }
 

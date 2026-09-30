@@ -82,6 +82,7 @@ $executablePath = Join-Path $PSScriptRoot "ITGuardian.exe"
 $uninstallerExecutablePath = Join-Path $PSScriptRoot "ITGuardian-Uninstaller.exe"
 $sourcePath = Join-Path $PSScriptRoot "..\..\agent\windows\ITGuardian.Windows.cs"
 $remoteAssistanceSourcePath = Join-Path $PSScriptRoot "..\..\agent\windows\ITGuardian.RemoteAssistance.cs"
+$rustdeskControllerSourcePath = Join-Path $PSScriptRoot "..\..\agent\windows\ITGuardian.RustdeskController.cs"
 $uninstallerSourcePath = Join-Path $PSScriptRoot "ITGuardian.Uninstaller.cs"
 $iconScriptPath = Join-Path $PSScriptRoot "New-ITGuardianIcon.ps1"
 $frameworkDirectory = Join-Path $env:WINDIR "Microsoft.NET\Framework64\v4.0.30319"
@@ -97,6 +98,9 @@ if (-not (Test-Path -LiteralPath $sourcePath)) {
 }
 if (-not (Test-Path -LiteralPath $remoteAssistanceSourcePath)) {
   throw "Codigo-fonte da assistencia remota nao encontrado."
+}
+if (-not (Test-Path -LiteralPath $rustdeskControllerSourcePath)) {
+  throw "Codigo-fonte do controlador RustDesk nao encontrado."
 }
 if (-not (Test-Path -LiteralPath $uninstallerSourcePath)) {
   throw "Codigo-fonte do desinstalador Windows nao encontrado."
@@ -116,7 +120,8 @@ if (-not (Test-Path -LiteralPath $uninstallerSourcePath)) {
   "/reference:$(Join-Path $frameworkDirectory 'System.Web.Extensions.dll')" `
   "/reference:$(Join-Path $frameworkDirectory 'System.Windows.Forms.dll')" `
   $sourcePath `
-  $remoteAssistanceSourcePath
+  $remoteAssistanceSourcePath `
+  $rustdeskControllerSourcePath
 if ($LASTEXITCODE -ne 0) {
   throw "A compilacao do ITGuardian.exe falhou com codigo $LASTEXITCODE."
 }
@@ -200,6 +205,23 @@ if (-not $dotnetExecutable) {
   }
 }
 
+# --- Instalador do RustDesk (opcional) --------------------------------------
+# O IT Guardian nao redistribui o RustDesk por conta propria: quem gera o
+# instalador baixa o instalador oficial do RustDesk para Windows a partir do
+# repositorio oficial (https://github.com/rustdesk/rustdesk/releases) e o
+# coloca em installers/windows-collector/vendor/rustdesk-installer.exe antes
+# de rodar este script. Sem esse arquivo, o build simplesmente segue sem o
+# transporte RustDesk (mesma logica de "ausencia nunca e erro" do helper
+# WebRTC acima) -- Finalize-CollectorInstall.ps1 ja trata a ausencia do
+# instalador embutido como aviso, nao como falha.
+$rustdeskInstallerVendorPath = Join-Path $PSScriptRoot "vendor\rustdesk-installer.exe"
+if (Test-Path -LiteralPath $rustdeskInstallerVendorPath) {
+  Write-Host "Instalador do RustDesk encontrado; sera empacotado junto do coletor." -ForegroundColor Green
+} else {
+  Write-Host "Aviso: installers/windows-collector/vendor/rustdesk-installer.exe nao encontrado -- instalador sera gerado sem o RustDesk." -ForegroundColor Yellow
+  $rustdeskInstallerVendorPath = $null
+}
+
 $uri = $null
 if (
   -not [Uri]::TryCreate($ApiBaseUrl, [UriKind]::Absolute, [ref]$uri) -or
@@ -250,6 +272,9 @@ $isccArgs.Add("/DApiBaseUrl=$($ApiBaseUrl.TrimEnd('/'))")
 if ($webrtcHelperPath) {
   $isccArgs.Add("/DWebrtcHelperPath=$webrtcHelperPath")
 }
+if ($rustdeskInstallerVendorPath) {
+  $isccArgs.Add("/DRustdeskInstallerPath=$rustdeskInstallerVendorPath")
+}
 $isccArgs.Add("/O$resolvedOutputDirectory")
 $isccArgs.Add((Join-Path $PSScriptRoot "ITGuardianCollector.iss"))
 & $compiler @isccArgs
@@ -260,6 +285,9 @@ if ($webrtcHelperPath) {
   Write-Host "Instalador inclui o transporte WebRTC (video em tempo real)." -ForegroundColor Green
 } else {
   Write-Host "Instalador gerado sem o transporte WebRTC (video continua por JPEG)." -ForegroundColor Yellow
+}
+if ($rustdeskInstallerVendorPath) {
+  Write-Host "Instalador inclui o cliente RustDesk (transporte alternativo)." -ForegroundColor Green
 }
 $installerExecutablePath = Join-Path $resolvedOutputDirectory "ITGuardian-Collector-Setup.exe"
 $signedInstaller = Invoke-CodeSigning -FilePath $installerExecutablePath

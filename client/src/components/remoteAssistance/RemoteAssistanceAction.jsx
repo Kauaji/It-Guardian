@@ -1,7 +1,10 @@
 import {
+  AlertTriangle,
   CheckCircle2,
   Clock3,
+  Copy,
   Eye,
+  ExternalLink,
   KeyRound,
   Lock,
   Maximize2,
@@ -27,6 +30,7 @@ import {
   fetchRemoteAssistanceConfig,
   fetchRemoteAssistanceEvents,
   fetchRemoteAssistanceFrame,
+  fetchRemoteAssistanceRustdeskCredentials,
   fetchRemoteAssistanceSession,
   fetchRemoteAssistanceWebrtcAnswer,
   reauthenticateRemoteAssistance,
@@ -104,6 +108,103 @@ function waitForIceGatheringComplete(peerConnection, timeoutMs = 8000) {
   });
 }
 
+/**
+ * Painel do transporte RustDesk: substitui a tela/canvas do snapshot polling
+ * e do WebRTC. Nao ha frame nem controle de mouse/teclado retransmitidos por
+ * aqui -- a partir do momento em que o tecnico abre o cliente RustDesk
+ * nativo, o IT Guardian perde visibilidade da sessao (ver docs/ASSISTENCIA-REMOTA.md).
+ * A senha nunca aparece numa URL (nem no link rustdesk://, nem em lugar
+ * nenhum copiavel automaticamente para o cliente): o tecnico sempre cola a
+ * senha manualmente, para nao deixar rastro em historico de navegador ou
+ * logs do sistema operacional.
+ */
+function RemoteAssistanceRustdeskPanel({ session, credentials, revealing, error, onReveal, onCopy }) {
+  const [secondsLeft, setSecondsLeft] = useState(null);
+
+  useEffect(() => {
+    if (!credentials?.expiresAt) {
+      setSecondsLeft(null);
+      return undefined;
+    }
+    function tick() {
+      const remaining = Math.max(0, Math.round((new Date(credentials.expiresAt).getTime() - Date.now()) / 1000));
+      setSecondsLeft(remaining);
+    }
+    tick();
+    const interval = window.setInterval(tick, 1000);
+    return () => window.clearInterval(interval);
+  }, [credentials?.expiresAt]);
+
+  const expired = secondsLeft === 0;
+  const waitingConsent = session.status === "waiting_consent";
+
+  return (
+    <div className="remote-assistance-rustdesk-panel">
+      {waitingConsent ? (
+        <div className="remote-assistance-waiting">
+          <RefreshCw size={24} className="spin" />
+          <strong>Aguardando resposta na maquina</strong>
+          <span>A credencial de conexao so e emitida apos o usuario autorizar localmente.</span>
+        </div>
+      ) : (
+        <>
+          <div className="remote-assistance-rustdesk-id">
+            <span className="label">Id RustDesk desta maquina</span>
+            {credentials?.rustdeskId ? (
+              <span className="value">
+                {credentials.rustdeskId}
+                <button type="button" className="icon-action" onClick={() => onCopy(credentials.rustdeskId, "Id")} title="Copiar id">
+                  <Copy size={14} />
+                </button>
+              </span>
+            ) : (
+              <span className="value muted">Nao relatado ainda pelo agente</span>
+            )}
+          </div>
+
+          {!credentials || expired ? (
+            <button type="button" className="primary-action" onClick={onReveal} disabled={revealing}>
+              {revealing ? <RefreshCw size={16} className="spin" /> : <KeyRound size={16} />}
+              {expired ? "Gerar nova senha de sessao" : "Revelar senha de conexao"}
+            </button>
+          ) : (
+            <div className="remote-assistance-rustdesk-password">
+              <span className="label">Senha desta sessao (expira em {secondsLeft}s)</span>
+              <span className="value">
+                {credentials.password}
+                <button type="button" className="icon-action" onClick={() => onCopy(credentials.password, "Senha")} title="Copiar senha">
+                  <Copy size={14} />
+                </button>
+              </span>
+            </div>
+          )}
+
+          {credentials?.rustdeskId && (
+            <a
+              className="secondary-action"
+              href={`rustdesk://${credentials.rustdeskId}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <ExternalLink size={16} /> Abrir no cliente RustDesk
+            </a>
+          )}
+
+          <div className="remote-assistance-rustdesk-warning">
+            <AlertTriangle size={16} />
+            <p>
+              A senha nunca vai por link: cole-a manualmente no cliente RustDesk. Ela expira sozinha e
+              nao pode ser reaproveitada. A partir da conexao no cliente nativo, esta janela deixa de
+              acompanhar a tela ou os comandos da sessao -- encerre por aqui quando o atendimento terminar.
+            </p>
+          </div>
+        </>
+      )}
+      {error && <p className="form-error" role="alert">{error}</p>}
+    </div>
+  );
+}
+
 function RemoteStatus({ session }) {
   const displayState = session?.connectionState || session?.status;
   const denied = session?.status === "consent_denied" || session?.status === "failed";
@@ -155,6 +256,9 @@ export default function RemoteAssistanceAction({
   const [chatOpen, setChatOpen] = useState(true);
   const [keyboardLocked, setKeyboardLocked] = useState(false);
   const [webrtcTrackActive, setWebrtcTrackActive] = useState(false);
+  const [rustdeskCredentials, setRustdeskCredentials] = useState(null);
+  const [revealingRustdesk, setRevealingRustdesk] = useState(false);
+  const [rustdeskError, setRustdeskError] = useState("");
   const imageRef = useRef(null);
   const videoElementRef = useRef(null);
   const peerConnectionRef = useRef(null);
@@ -203,6 +307,7 @@ export default function RemoteAssistanceAction({
   const viewerPollMs = config?.viewerPollMs || defaultViewerPollMs;
   const paused = Boolean(session?.paused);
   const isWebrtc = session?.transport === "webrtc";
+  const isRustdesk = session?.transport === "rustdesk";
   const connectionState = session?.connectionState || session?.status;
   const frameStale = Boolean(
     session?.status === "active" && !paused && isRemoteAssistanceFrameStale(metrics, viewerPollMs)
@@ -411,6 +516,7 @@ export default function RemoteAssistanceAction({
       const result = await endRemoteAssistanceSession({ token, sessionId: session.id, viewerToken });
       setSession(result.session);
       setFrame(null);
+      setRustdeskCredentials(null);
       notifyResult(notify, "Atendimento remoto encerrado.");
     } catch (endError) {
       setError(endError.message);
@@ -440,6 +546,8 @@ export default function RemoteAssistanceAction({
     setMaximized(false);
     setChatOpen(true);
     setKeyboardLocked(false);
+    setRustdeskCredentials(null);
+    setRustdeskError("");
   }
 
   const dialogRef = useModalLifecycle(open, closeDialog);
@@ -503,6 +611,40 @@ export default function RemoteAssistanceAction({
     setError("");
     await refreshSession();
     await refreshFrame();
+  }
+
+  /**
+   * Revela id + senha de sessao do RustDesk. So chamado sob demanda (nunca
+   * automaticamente): cada chamada fica registrada na auditoria do backend
+   * (evento "rustdesk_credentials_revealed"), entao reabrir o painel sem
+   * necessidade gera ruido na trilha de auditoria da maquina.
+   */
+  async function revealRustdeskCredentials() {
+    if (!session?.id || !viewerToken) return;
+    setRevealingRustdesk(true);
+    setRustdeskError("");
+    try {
+      const result = await fetchRemoteAssistanceRustdeskCredentials({
+        token,
+        sessionId: session.id,
+        viewerToken
+      });
+      setRustdeskCredentials(result);
+    } catch (credentialsError) {
+      setRustdeskCredentials(null);
+      setRustdeskError(credentialsError.message);
+    } finally {
+      setRevealingRustdesk(false);
+    }
+  }
+
+  async function copyToClipboard(value, label) {
+    try {
+      await navigator.clipboard.writeText(value);
+      notifyResult(notify, `${label} copiado.`);
+    } catch {
+      setRustdeskError(`Nao foi possivel copiar ${label.toLowerCase()} automaticamente. Copie manualmente.`);
+    }
   }
 
   async function toggleControl() {
@@ -672,7 +814,7 @@ export default function RemoteAssistanceAction({
           <div className="remote-assistance-viewer">
             <div className="remote-assistance-toolbar">
               <RemoteStatus session={session} />
-              {monitors.length > 1 ? (
+              {isRustdesk ? null : monitors.length > 1 ? (
                 <label>
                   <span className="sr-only">Trocar monitor</span>
                   <select
@@ -690,7 +832,7 @@ export default function RemoteAssistanceAction({
                   {formatRemoteMonitor(monitors[0], 0)} (unico monitor)
                 </span>
               ) : null}
-              {session.status === "active" && (
+              {!isRustdesk && session.status === "active" && (
                 <button
                   type="button"
                   className="secondary-action"
@@ -702,7 +844,7 @@ export default function RemoteAssistanceAction({
                   {paused ? "Retomar" : "Pausar"}
                 </button>
               )}
-              {canReconnect && (
+              {!isRustdesk && canReconnect && (
                 <button
                   type="button"
                   className="secondary-action"
@@ -713,7 +855,7 @@ export default function RemoteAssistanceAction({
                   <RefreshCw size={16} /> Reconectar
                 </button>
               )}
-              {frontendControlEnabled && session.status === "active" && requestedMode === "control" && canControl && (
+              {!isRustdesk && frontendControlEnabled && session.status === "active" && requestedMode === "control" && canControl && (
                 <button
                   type="button"
                   className={`secondary-action ${session.remoteControlEnabled ? "active" : ""}`}
@@ -725,7 +867,7 @@ export default function RemoteAssistanceAction({
                   {session.remoteControlEnabled ? "Liberar controle" : "Solicitar controle"}
                 </button>
               )}
-              {controlActive && (
+              {!isRustdesk && controlActive && (
                 <button
                   type="button"
                   className={`secondary-action ${keyboardLocked ? "active" : ""}`}
@@ -737,15 +879,17 @@ export default function RemoteAssistanceAction({
                   {keyboardLocked ? "Destravar teclado" : "Travar teclado"}
                 </button>
               )}
-              <button
-                type="button"
-                className="secondary-action"
-                onClick={toggleMaximize}
-                title={maximized ? "Restaurar tamanho da janela" : "Maximizar tela"}
-              >
-                {maximized ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-                {maximized ? "Restaurar" : "Maximizar"}
-              </button>
+              {!isRustdesk && (
+                <button
+                  type="button"
+                  className="secondary-action"
+                  onClick={toggleMaximize}
+                  title={maximized ? "Restaurar tamanho da janela" : "Maximizar tela"}
+                >
+                  {maximized ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                  {maximized ? "Restaurar" : "Maximizar"}
+                </button>
+              )}
               <button
                 type="button"
                 className="secondary-action"
@@ -762,66 +906,81 @@ export default function RemoteAssistanceAction({
               )}
             </div>
 
-            <div
-              ref={imageRef}
-              className={`remote-assistance-screen ${controlActive ? "control-active" : ""}`}
-              style={{ aspectRatio: screenAspectRatio }}
-              tabIndex={controlActive ? 0 : -1}
-              onMouseMove={handleMouseMove}
-              onMouseDown={(event) => handleMouseButton(event, "down")}
-              onMouseUp={(event) => handleMouseButton(event, "up")}
-              onWheel={(event) => {
-                if (!controlActive) return;
-                event.preventDefault();
-                sendInput({ type: "mouse_wheel", delta: event.deltaY });
-              }}
-              onContextMenu={(event) => {
-                if (controlActive) event.preventDefault();
-              }}
-              onKeyDown={(event) => handleKey(event, "down")}
-              onKeyUp={(event) => handleKey(event, "up")}
-              aria-label="Tela remota"
-            >
-              {isWebrtc ? (
-                <video
-                  ref={videoElementRef}
-                  className="remote-assistance-video"
-                  autoPlay
-                  playsInline
-                  muted
-                  style={{ display: webrtcTrackActive ? "block" : "none" }}
-                />
-              ) : null}
-              {isWebrtc && !webrtcTrackActive ? (
-                <div className="remote-assistance-waiting">
-                  <RefreshCw size={24} className="spin" />
-                  <strong>{remoteAssistanceStatusLabel(connectionState)}</strong>
-                  <span>Negociando conexao WebRTC com o agente...</span>
-                </div>
-              ) : !isWebrtc && frame ? (
-                <img src={frame} alt={`Tela remota de ${displayName}`} draggable="false" />
-              ) : !isWebrtc ? (
-                <div className="remote-assistance-waiting">
-                  {session.status === "active" ? <RefreshCw size={24} className="spin" /> : <ShieldCheck size={28} />}
-                  <strong>{remoteAssistanceStatusLabel(connectionState)}</strong>
-                  <span>{session.status === "waiting_consent" ? "Aguardando resposta na maquina." : "A imagem aparecera quando o agente iniciar a transmissao."}</span>
-                </div>
-              ) : null}
-              {changingMonitor && <span className="remote-assistance-loading">Trocando monitor...</span>}
-              {paused && !changingMonitor && <span className="remote-assistance-loading">Visualizacao pausada</span>}
-              {!isWebrtc && frameStale && !changingMonitor && !paused && (
-                <span className="remote-assistance-loading">Quadro atrasado - tentando atualizar...</span>
-              )}
-            </div>
+            {isRustdesk ? (
+              <RemoteAssistanceRustdeskPanel
+                session={session}
+                credentials={rustdeskCredentials}
+                revealing={revealingRustdesk}
+                error={rustdeskError}
+                onReveal={revealRustdeskCredentials}
+                onCopy={copyToClipboard}
+              />
+            ) : (
+              <div
+                ref={imageRef}
+                className={`remote-assistance-screen ${controlActive ? "control-active" : ""}`}
+                style={{ aspectRatio: screenAspectRatio }}
+                tabIndex={controlActive ? 0 : -1}
+                onMouseMove={handleMouseMove}
+                onMouseDown={(event) => handleMouseButton(event, "down")}
+                onMouseUp={(event) => handleMouseButton(event, "up")}
+                onWheel={(event) => {
+                  if (!controlActive) return;
+                  event.preventDefault();
+                  sendInput({ type: "mouse_wheel", delta: event.deltaY });
+                }}
+                onContextMenu={(event) => {
+                  if (controlActive) event.preventDefault();
+                }}
+                onKeyDown={(event) => handleKey(event, "down")}
+                onKeyUp={(event) => handleKey(event, "up")}
+                aria-label="Tela remota"
+              >
+                {isWebrtc ? (
+                  <video
+                    ref={videoElementRef}
+                    className="remote-assistance-video"
+                    autoPlay
+                    playsInline
+                    muted
+                    style={{ display: webrtcTrackActive ? "block" : "none" }}
+                  />
+                ) : null}
+                {isWebrtc && !webrtcTrackActive ? (
+                  <div className="remote-assistance-waiting">
+                    <RefreshCw size={24} className="spin" />
+                    <strong>{remoteAssistanceStatusLabel(connectionState)}</strong>
+                    <span>Negociando conexao WebRTC com o agente...</span>
+                  </div>
+                ) : !isWebrtc && frame ? (
+                  <img src={frame} alt={`Tela remota de ${displayName}`} draggable="false" />
+                ) : !isWebrtc ? (
+                  <div className="remote-assistance-waiting">
+                    {session.status === "active" ? <RefreshCw size={24} className="spin" /> : <ShieldCheck size={28} />}
+                    <strong>{remoteAssistanceStatusLabel(connectionState)}</strong>
+                    <span>{session.status === "waiting_consent" ? "Aguardando resposta na maquina." : "A imagem aparecera quando o agente iniciar a transmissao."}</span>
+                  </div>
+                ) : null}
+                {changingMonitor && <span className="remote-assistance-loading">Trocando monitor...</span>}
+                {paused && !changingMonitor && <span className="remote-assistance-loading">Visualizacao pausada</span>}
+                {!isWebrtc && frameStale && !changingMonitor && !paused && (
+                  <span className="remote-assistance-loading">Quadro atrasado - tentando atualizar...</span>
+                )}
+              </div>
+            )}
 
             <footer className="remote-assistance-footer">
               <span>Transporte: {remoteAssistanceTransportLabel(session.transport)}</span>
-              <span>FPS real: {metrics?.fps ? metrics.fps.toFixed(1) : "--"}</span>
-              <span>Latencia HTTP: {latency == null ? "--" : `${latency} ms`}</span>
-              <span>Banda: {metrics ? formatBytesPerSecond(metrics.bytesPerSecond) : "--"}</span>
-              <span>Qualidade: {metrics?.quality ? `${metrics.quality}%` : "--"}</span>
-              <span>Ultimo quadro: {metrics?.lastFrameBytes ? formatFrameSize(metrics.lastFrameBytes) : "--"}</span>
-              <span>Controle: {controlActive ? "ativo" : "inativo"}</span>
+              {!isRustdesk && (
+                <>
+                  <span>FPS real: {metrics?.fps ? metrics.fps.toFixed(1) : "--"}</span>
+                  <span>Latencia HTTP: {latency == null ? "--" : `${latency} ms`}</span>
+                  <span>Banda: {metrics ? formatBytesPerSecond(metrics.bytesPerSecond) : "--"}</span>
+                  <span>Qualidade: {metrics?.quality ? `${metrics.quality}%` : "--"}</span>
+                  <span>Ultimo quadro: {metrics?.lastFrameBytes ? formatFrameSize(metrics.lastFrameBytes) : "--"}</span>
+                  <span>Controle: {controlActive ? "ativo" : "inativo"}</span>
+                </>
+              )}
             </footer>
 
             <section className="remote-assistance-events" aria-label="Eventos recentes da sessao">

@@ -48,6 +48,15 @@ Source: "Uninstall-Collector.ps1"; DestDir: "{app}"; Flags: ignoreversion
 ; transporte JPEG de sempre, nunca como uma falha de instalacao.
 Source: "{#WebrtcHelperPath}"; DestDir: "{app}"; Flags: ignoreversion
 #endif
+#ifdef RustdeskInstallerPath
+; Instalador oficial do RustDesk, empacotado sob o nome fixo
+; "rustdesk-installer.exe" (ver build-installer.ps1). Sem esse arquivo
+; presente no momento de gerar o instalador, este define nunca chega a
+; existir e o IT Guardian e instalado normalmente sem o RustDesk -- o
+; transporte RustDesk so fica disponivel quando REMOTE_ASSISTANCE_RUSTDESK_ENABLED
+; tambem estiver ligado no servidor (ver docs/ASSISTENCIA-REMOTA.md).
+Source: "{#RustdeskInstallerPath}"; DestDir: "{app}"; DestName: "rustdesk-installer.exe"; Flags: ignoreversion
+#endif
 
 [Icons]
 Name: "{commondesktop}\Abrir chamado - IT Guardian"; Filename: "{code:GetSupportUrl}"; WorkingDir: "{app}"; IconFilename: "{app}\ITGuardian.exe"
