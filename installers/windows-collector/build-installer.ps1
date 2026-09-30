@@ -206,19 +206,47 @@ if (-not $dotnetExecutable) {
 }
 
 # --- Instalador do RustDesk (opcional) --------------------------------------
-# O IT Guardian nao redistribui o RustDesk por conta propria: quem gera o
-# instalador baixa o instalador oficial do RustDesk para Windows a partir do
-# repositorio oficial (https://github.com/rustdesk/rustdesk/releases) e o
-# coloca em installers/windows-collector/vendor/rustdesk-installer.exe antes
-# de rodar este script. Sem esse arquivo, o build simplesmente segue sem o
-# transporte RustDesk (mesma logica de "ausencia nunca e erro" do helper
+# O IT Guardian nao redistribui o RustDesk por conta propria. Se
+# installers/windows-collector/vendor/rustdesk-installer.exe ja existir (voce
+# baixou manualmente, ou um build anterior ja baixou), ele e reaproveitado
+# sem nova tentativa de rede. Caso contrario, o script tenta baixar
+# automaticamente a ultima release oficial do GitHub -- e so uma
+# conveniencia: sem internet, sem acesso ao GitHub, ou se o padrao de nome do
+# asset mudar numa release futura, o download falha silenciosamente e o build
+# segue sem o RustDesk (mesma logica de "ausencia nunca e erro" do helper
 # WebRTC acima) -- Finalize-CollectorInstall.ps1 ja trata a ausencia do
-# instalador embutido como aviso, nao como falha.
+# instalador embutido como aviso, nao como falha. Para pular o download
+# automatico (ambiente sem saida para a internet), defina
+# $env:RUSTDESK_SKIP_AUTO_DOWNLOAD = "1" antes de rodar este script.
 $rustdeskInstallerVendorPath = Join-Path $PSScriptRoot "vendor\rustdesk-installer.exe"
+if (-not (Test-Path -LiteralPath $rustdeskInstallerVendorPath) -and -not $env:RUSTDESK_SKIP_AUTO_DOWNLOAD) {
+  Write-Host "Instalador do RustDesk nao encontrado em vendor/; tentando baixar a ultima release oficial..." -ForegroundColor Yellow
+  try {
+    $release = Invoke-RestMethod `
+      -Uri "https://api.github.com/repos/rustdesk/rustdesk/releases/latest" `
+      -Headers @{ "User-Agent" = "ITGuardian-Installer-Build" } `
+      -TimeoutSec 20
+    $asset = $release.assets |
+      Where-Object { $_.name -match "^rustdesk-.*-x86_64\.exe$" -and $_.name -notmatch "sciter" } |
+      Select-Object -First 1
+    if (-not $asset) {
+      $asset = $release.assets | Where-Object { $_.name -match "^rustdesk-.*\.exe$" } | Select-Object -First 1
+    }
+    if ($asset) {
+      New-Item -ItemType Directory -Force -Path (Join-Path $PSScriptRoot "vendor") | Out-Null
+      Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $rustdeskInstallerVendorPath -TimeoutSec 120
+      Write-Host "RustDesk $($release.tag_name) baixado automaticamente ($($asset.name))." -ForegroundColor Green
+    } else {
+      Write-Host "Aviso: nenhum instalador x86_64 encontrado na ultima release do RustDesk -- baixe manualmente se precisar dele." -ForegroundColor Yellow
+    }
+  } catch {
+    Write-Host "Aviso: download automatico do RustDesk falhou ($($_.Exception.Message)) -- baixe manualmente para vendor/rustdesk-installer.exe se precisar dele." -ForegroundColor Yellow
+  }
+}
 if (Test-Path -LiteralPath $rustdeskInstallerVendorPath) {
   Write-Host "Instalador do RustDesk encontrado; sera empacotado junto do coletor." -ForegroundColor Green
 } else {
-  Write-Host "Aviso: installers/windows-collector/vendor/rustdesk-installer.exe nao encontrado -- instalador sera gerado sem o RustDesk." -ForegroundColor Yellow
+  Write-Host "Aviso: instalador sera gerado sem o RustDesk." -ForegroundColor Yellow
   $rustdeskInstallerVendorPath = $null
 }
 
@@ -269,6 +297,21 @@ $resolvedOutputDirectory = [IO.Path]::GetFullPath($OutputDirectory)
 New-Item -ItemType Directory -Force -Path $resolvedOutputDirectory | Out-Null
 $isccArgs = [Collections.Generic.List[string]]::new()
 $isccArgs.Add("/DApiBaseUrl=$($ApiBaseUrl.TrimEnd('/'))")
+# Relay RustDesk proprio (opcional): lido de variaveis de ambiente no momento
+# do build, nao de parametro de linha de comando, porque sao valores de
+# infraestrutura fixos da organizacao (o mesmo relay para toda a frota), nao
+# algo que muda por execucao do script -- mesmo raciocinio de ApiBaseUrl
+# acima, so que sem valor padrao (vazio = cliente RustDesk continua no relay
+# publico de fabrica ate alguem configurar isto).
+if (-not [string]::IsNullOrWhiteSpace($env:RUSTDESK_ID_SERVER)) {
+  $isccArgs.Add("/DRustdeskIdServer=$($env:RUSTDESK_ID_SERVER)")
+}
+if (-not [string]::IsNullOrWhiteSpace($env:RUSTDESK_RELAY_SERVER)) {
+  $isccArgs.Add("/DRustdeskRelayServer=$($env:RUSTDESK_RELAY_SERVER)")
+}
+if (-not [string]::IsNullOrWhiteSpace($env:RUSTDESK_KEY)) {
+  $isccArgs.Add("/DRustdeskKey=$($env:RUSTDESK_KEY)")
+}
 if ($webrtcHelperPath) {
   $isccArgs.Add("/DWebrtcHelperPath=$webrtcHelperPath")
 }

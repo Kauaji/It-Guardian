@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
@@ -107,13 +108,97 @@ namespace ITGuardian.Windows
             }
         }
 
+        private static string ConfigFilePath()
+        {
+            return Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "RustDesk", "config", "RustDesk2.toml");
+        }
+
+        /// <summary>
+        /// Aponta o cliente RustDesk desta maquina para o relay proprio do IT
+        /// Guardian, em vez do relay publico do RustDesk (o padrao de fabrica
+        /// de qualquer instalacao nova). Sem isso, o self-hosting configurado
+        /// no backend (REMOTE_ASSISTANCE_RUSTDESK_ID_SERVER) fica so de
+        /// fachada -- o cliente registraria o id no relay publico mesmo.
+        ///
+        /// Edita o arquivo de configuracao diretamente (nao a CLI): e o
+        /// mecanismo mais estavel entre versoes do RustDesk para configuracao
+        /// nao-interativa de servidor, usado por varios guias de deploy
+        /// customizado do proprio projeto. So reescreve quando o valor muda,
+        /// para nao mexer no arquivo a toa em todo ciclo. Uma mudanca so tem
+        /// efeito completo depois do cliente RustDesk ser reaberto -- este
+        /// metodo nao reinicia nada sozinho.
+        ///
+        /// NOTA DE VERIFICACAO (nao testado neste ambiente): os nomes de
+        /// chave ("id-server", "relay-server", "key") sao os documentados
+        /// publicamente pelo formato RustDesk2.toml nas versoes disponiveis
+        /// ate a escrita deste arquivo. Confirme contra a versao efetivamente
+        /// empacotada antes de depender disso em producao.
+        /// </summary>
+        internal static bool EnsureServerConfigured(string idServer, string relayServer, string key)
+        {
+            if (string.IsNullOrWhiteSpace(idServer)) return false;
+            try
+            {
+                string path = ConfigFilePath();
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                string[] existingLines = File.Exists(path) ? File.ReadAllLines(path) : new string[0];
+
+                string currentIdServer = ReadTomlValue(existingLines, "id-server");
+                string currentRelayServer = ReadTomlValue(existingLines, "relay-server");
+                string currentKey = ReadTomlValue(existingLines, "key");
+                if (currentIdServer == idServer && currentRelayServer == (relayServer ?? "") && currentKey == (key ?? ""))
+                {
+                    return false;
+                }
+
+                List<string> updatedLines = new List<string>(existingLines);
+                SetTomlValue(updatedLines, "id-server", idServer);
+                SetTomlValue(updatedLines, "relay-server", relayServer ?? "");
+                SetTomlValue(updatedLines, "key", key ?? "");
+                File.WriteAllLines(path, updatedLines.ToArray());
+                Program.WriteLog("INFO", "Cliente RustDesk apontado para o relay proprio do IT Guardian (reabra o RustDesk para aplicar).");
+                return true;
+            }
+            catch (Exception error)
+            {
+                Program.WriteLog("WARN", "Falha ao configurar servidor RustDesk proprio: " + error.Message);
+                return false;
+            }
+        }
+
+        private static string ReadTomlValue(string[] lines, string key)
+        {
+            Regex pattern = new Regex("^" + Regex.Escape(key) + "\\s*=\\s*'([^']*)'");
+            foreach (string line in lines)
+            {
+                Match match = pattern.Match(line.Trim());
+                if (match.Success) return match.Groups[1].Value;
+            }
+            return null;
+        }
+
+        private static void SetTomlValue(List<string> lines, string key, string value)
+        {
+            Regex pattern = new Regex("^" + Regex.Escape(key) + "\\s*=");
+            string newLine = key + " = '" + value.Replace("'", "\\'") + "'";
+            for (int i = 0; i < lines.Count; i++)
+            {
+                if (pattern.IsMatch(lines[i].Trim()))
+                {
+                    lines[i] = newLine;
+                    return;
+                }
+            }
+            lines.Add(newLine);
+        }
+
         private static string TryReadDeviceIdFromConfigFile()
         {
             try
             {
-                string path = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "RustDesk", "config", "RustDesk2.toml");
+                string path = ConfigFilePath();
                 if (!File.Exists(path)) return null;
                 foreach (string line in File.ReadAllLines(path))
                 {

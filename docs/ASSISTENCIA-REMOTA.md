@@ -506,6 +506,30 @@ default de ninguem. Sem essas variaveis, um `REMOTE_ASSISTANCE_TRANSPORT=rustdes
 pedido cai de volta para `snapshot_polling` automaticamente
 (`transportFallback: true` na resposta de `/api/remote-assistance/config`).
 
+**Duas configuracoes separadas, mesmo relay**: as variaveis
+`REMOTE_ASSISTANCE_RUSTDESK_*` no backend so ligam/desligam o transporte no
+IT Guardian (o backend nunca fala o protocolo RustDesk diretamente). Quem de
+fato aponta o cliente RustDesk de cada maquina para o seu relay proprio (em
+vez do relay publico de fabrica) sao as variaveis `RUSTDESK_ID_SERVER`,
+`RUSTDESK_RELAY_SERVER` e `RUSTDESK_KEY` lidas por
+`installers/windows-collector/build-installer.ps1` **no momento de gerar o
+instalador** — elas viram `config.json` na maquina (campos
+`rustdeskIdServer`/`rustdeskRelayServer`/`rustdeskKey`) e
+`RustdeskController.EnsureServerConfigured` (agente Windows) escreve isso no
+`RustDesk2.toml` do cliente a cada ciclo em que mudar. Use o **mesmo host e a
+mesma chave publica** (`id_ed25519.pub` gerado pelo `hbbs`, ver
+`docker-compose.local.yml`, perfil `rustdesk`) nos dois lugares, ou o backend
+vai achar que o transporte esta configurado enquanto os clientes continuam
+apontados para servidores diferentes (ou para o relay publico).
+`Program Files\RustDesk\rustdesk.exe --get-id` na maquina atendida confirma
+qual servidor o cliente usa hoje.
+
+O cliente RustDesk **do proprio tecnico** fica fora do alcance do instalador
+do IT Guardian — e o computador do tecnico, nao um ativo gerenciado. Configure
+manualmente uma vez (Configuracoes -> Rede -> ID/Relay Server, no cliente
+RustDesk do tecnico) com os mesmos tres valores, ou os dois lados nunca vao
+se enxergar.
+
 ### Instalacao do cliente
 
 O instalador do coletor (`installers/windows-collector`) pode empacotar o

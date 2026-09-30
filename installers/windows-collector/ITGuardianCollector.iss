@@ -4,6 +4,15 @@
 #ifndef ApiBaseUrl
   #define ApiBaseUrl "https://it-guardian-server.vercel.app"
 #endif
+#ifndef RustdeskIdServer
+  #define RustdeskIdServer ""
+#endif
+#ifndef RustdeskRelayServer
+  #define RustdeskRelayServer ""
+#endif
+#ifndef RustdeskKey
+  #define RustdeskKey ""
+#endif
 
 [Setup]
 AppId={{7CA73097-A67E-4551-94A2-CB11A0F61E91}
@@ -538,7 +547,10 @@ begin
       '  "segment": "' + JsonEscape(PreservedSegment) + '",' + #13#10 +
       '  "includeLoggedUser": ' + BoolToJson(PreservedIncludeLoggedUser) + ',' + #13#10 +
       '  "enableRemoteScriptExecution": ' + BoolToJson(PreservedEnableRemoteScriptExecution) + ',' + #13#10 +
-      '  "enableRemoteAssistance": ' + BoolToJson(PreservedEnableRemoteAssistance) + #13#10 +
+      '  "enableRemoteAssistance": ' + BoolToJson(PreservedEnableRemoteAssistance) + ',' + #13#10 +
+      '  "rustdeskIdServer": "' + JsonEscape('{#RustdeskIdServer}') + '",' + #13#10 +
+      '  "rustdeskRelayServer": "' + JsonEscape('{#RustdeskRelayServer}') + '",' + #13#10 +
+      '  "rustdeskKey": "' + JsonEscape('{#RustdeskKey}') + '"' + #13#10 +
       '}';
     SaveStringToFile(ExpandConstant('{app}\config.json'), ConfigJson, False);
   end;

@@ -38,6 +38,11 @@ namespace ITGuardian.Windows
         // Opcional: caminho completo do rustdesk.exe quando nao instalado num
         // dos locais padrao (ver RustdeskController.ResolveExecutablePath).
         public string rustdeskExecutablePath { get; set; }
+        // Relay proprio do IT Guardian (ver RustdeskController.EnsureServerConfigured).
+        // Vazios = cliente RustDesk continua no relay publico de fabrica.
+        public string rustdeskIdServer { get; set; }
+        public string rustdeskRelayServer { get; set; }
+        public string rustdeskKey { get; set; }
     }
 
     internal sealed class AgentHeartbeatResponse
@@ -214,6 +219,8 @@ namespace ITGuardian.Windows
 
                     if (config.enableRemoteAssistance)
                     {
+                        RustdeskController.EnsureServerConfigured(
+                            config.rustdeskIdServer, config.rustdeskRelayServer, config.rustdeskKey);
                         lastReportedRustdeskId = ReportRustdeskIdIfChanged(config, lastReportedRustdeskId);
                     }
 
