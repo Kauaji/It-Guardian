@@ -123,7 +123,7 @@ export async function listRecentScriptExecutionLogs({ limit = 10 } = {}) {
       FROM script_execution_logs logs
       LEFT JOIN maintenance_scripts scripts ON scripts.id = logs.script_id
       ORDER BY logs.created_at DESC
-      LIMIT $1
+      LIMIT $1::INTEGER
     `,
     [limit]
   );

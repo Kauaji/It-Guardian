@@ -18,15 +18,21 @@ function serializedListColumns(script) {
   ];
 }
 
+const LIST_ALL_SCRIPTS_SQL = `
+  SELECT *
+  FROM maintenance_scripts
+  ORDER BY active DESC, updated_at DESC, name ASC
+`;
+
+const LIST_ACTIVE_SCRIPTS_SQL = `
+  SELECT *
+  FROM maintenance_scripts
+  WHERE active = TRUE
+  ORDER BY active DESC, updated_at DESC, name ASC
+`;
+
 export async function listMaintenanceScripts({ includeInactive = true } = {}) {
-  const result = await query(
-    `
-      SELECT *
-      FROM maintenance_scripts
-      ${includeInactive ? "" : "WHERE active = TRUE"}
-      ORDER BY active DESC, updated_at DESC, name ASC
-    `
-  );
+  const result = await query(includeInactive ? LIST_ALL_SCRIPTS_SQL : LIST_ACTIVE_SCRIPTS_SQL);
 
   return result.rows.map(fromScriptRow);
 }
