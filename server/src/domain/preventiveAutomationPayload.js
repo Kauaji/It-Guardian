@@ -29,16 +29,21 @@ export function normalizeOverridePayload(item = {}) {
     throw badRequest("Informe apenas uma máquina ou um segmento para a recorrência personalizada.");
   }
 
+  const recurrenceIntervalDays = normalizeRecurrenceIntervalDays(
+    item.recurrenceIntervalDays ?? item.recurrenceInterval,
+    recurrenceType,
+    { strict: recurrenceType === "custom_days" }
+  );
+
+  // Os dois nomes ficam presentes: o plano lido do banco tem `recurrenceIntervalDays`
+  // e, ao mesclar com o override, ele precisa ser sobrescrito pelo valor do override.
   return {
     assetId,
     segmentId,
     targetKey: buildOverrideTargetKey({ assetId, segmentId }),
     recurrenceType,
-    recurrenceInterval: normalizeRecurrenceIntervalDays(
-      item.recurrenceIntervalDays ?? item.recurrenceInterval,
-      recurrenceType,
-      { strict: recurrenceType === "custom_days" }
-    ),
+    recurrenceInterval: recurrenceIntervalDays,
+    recurrenceIntervalDays,
     preferredTime: item.preferredTime ? normalizePreferredTime(item.preferredTime) : null,
     active: normalizeBoolean(item.active, true)
   };

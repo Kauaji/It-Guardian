@@ -92,6 +92,7 @@ test("override normaliza alvo, recorrencia e horario", () => {
     targetKey: "asset:a1",
     recurrenceType: "weekly",
     recurrenceInterval: 7,
+    recurrenceIntervalDays: 7,
     preferredTime: "07:15",
     active: false
   });
@@ -99,6 +100,7 @@ test("override normaliza alvo, recorrencia e horario", () => {
   const bySegment = normalizeOverridePayload({ segmentId: "s1", recurrenceType: "custom_days", recurrenceIntervalDays: 4 });
   assert.equal(bySegment.targetKey, "segment:s1");
   assert.equal(bySegment.recurrenceInterval, 4);
+  assert.equal(bySegment.recurrenceIntervalDays, 4);
   assert.equal(bySegment.preferredTime, null);
   assert.equal(bySegment.active, true);
 

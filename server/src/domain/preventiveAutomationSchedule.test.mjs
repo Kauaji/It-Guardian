@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { normalizeOverridePayload } from "./preventiveAutomationPayload.js";
 import {
   buildAssetScheduleDraft,
   chooseScheduleRecalculationBase,
@@ -137,4 +138,14 @@ test("agenda ligada ao plano respeita lista explicita e exclusoes", () => {
   assert.equal(isScheduleLinkedToPlan({ excludedAssetIds: [], scopeType: "all" }, { assetId: "" }), false);
   assert.equal(isScheduleLinkedToPlan({ excludedAssetIds: [], scopeType: "segment", assetIds: [] }, { assetId: "a1" }), true);
   assert.equal(isScheduleLinkedToPlan({ excludedAssetIds: ["a1"], scopeType: "segment", assetIds: [] }, { assetId: "a1" }), false);
+});
+
+test("override recem-normalizado prevalece sobre os dias do plano lido do banco", () => {
+  const plan = { ...basePlan(), recurrenceInterval: 7 };
+  const override = normalizeOverridePayload({ assetId: "a1", recurrenceType: "custom_days", recurrenceIntervalDays: 4 });
+  const draft = buildAssetScheduleDraft({ plan: { ...plan, overrides: [override] }, asset: { id: "a1" }, existing: undefined });
+
+  assert.equal(draft.source, "machine");
+  assert.equal(draft.recurrenceType, "custom_days");
+  assert.equal(draft.recurrenceIntervalDays, 4);
 });

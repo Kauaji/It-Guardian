@@ -328,6 +328,7 @@ test("override individual cria, substitui e remove a recorrencia da maquina", as
   assert.equal(detail.override.preferredTime, "09:45");
   assert.equal(detail.schedule.recurrenceSource, "machine");
   assert.equal(detail.schedule.recurrenceType, "custom_days");
+  assert.equal(detail.schedule.recurrenceIntervalDays, 4, "a agenda reflete os dias do override na mesma resposta");
   assert.equal(detail.schedule.preferredTime, "09:45");
   assert.ok(detail.history.some((item) => item.eventType === "preventive_automation_asset_override_updated"));
 
