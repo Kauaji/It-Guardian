@@ -22,7 +22,14 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
+      testIgnore: /csp\.spec\.js/,
       use: { ...devices["Desktop Chrome"] }
+    },
+    {
+      // client/dist servido com os cabecalhos de producao (precisa de `npm run build` antes)
+      name: "csp-dist",
+      testMatch: /csp\.spec\.js/,
+      use: { ...devices["Desktop Chrome"], baseURL: "http://127.0.0.1:5175" }
     }
   ],
   webServer: [
@@ -48,8 +55,15 @@ export default defineConfig({
         REMOTE_ASSISTANCE_LAB_AUTO_CONSENT: "false",
         ENABLE_REMOTE_PRIVACY_MODE: "false",
         ENABLE_REMOTE_ADMIN_ACTIONS: "false",
+        CORS_ORIGIN: "http://127.0.0.1:5175",
         PORT: "4100"
       }
+    },
+    {
+      command: "node scripts/serve-dist.mjs --port 5175 --api http://127.0.0.1:4100",
+      url: "http://127.0.0.1:5175",
+      reuseExistingServer: false,
+      timeout: 30_000
     },
     {
       command: "npm exec --workspace client vite -- --host 0.0.0.0 --port 5174",
