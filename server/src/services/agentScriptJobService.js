@@ -17,6 +17,7 @@ import { findActiveAgentEnrollmentForAsset } from "../repositories/agentReposito
 import { addAlertComment } from "../repositories/alertRepository.js";
 import { addAssetHistory } from "../repositories/assetHistoryRepository.js";
 import { publicJob } from "../repositories/agentScriptJobs/jobMappers.js";
+import { signJobForAgent } from "./agentSigningService.js";
 import {
   findJobForCompletion,
   findPreventivePlanIdForExecutionLog,
@@ -137,7 +138,7 @@ export async function claimNextAgentScriptJob({ assetId, enrollmentId }) {
     }
 
     const claimed = await markJobClaimed(db, job.id);
-    return claimed ? publicJob({ ...job, ...claimed }) : null;
+    return claimed ? signJobForAgent(publicJob({ ...job, ...claimed }), assetId) : null;
   });
 }
 

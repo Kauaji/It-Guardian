@@ -1,3 +1,4 @@
+import { getJobSigningPublicKey } from "./agentSigningService.js";
 import {
   activateCollector as activateCollectorRecord,
   createProductKey as createProductKeyRecord,
@@ -108,6 +109,7 @@ export async function activateCollector(input) {
     heartbeatPath: "/api/agents/heartbeat",
     supportUrl: `${publicAppUrl}/abrir-chamado?device=${encodeURIComponent(publicMachineToken)}`,
     monitoring: result.monitoring,
+    jobSigningPublicKey: getJobSigningPublicKey(),
     ocsServerUrl: result.monitoring.ocsServerUrl,
     zabbixServer: result.monitoring.zabbixServer,
     zabbixServerActive: result.monitoring.zabbixServerActive,

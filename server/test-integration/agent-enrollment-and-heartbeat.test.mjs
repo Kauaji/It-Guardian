@@ -312,10 +312,15 @@ test("heartbeat informa versao mais recente apenas quando o agente esta desatual
     delete process.env.AGENT_LATEST_VERSION;
     delete process.env.AGENT_LATEST_VERSION_URL;
     delete process.env.AGENT_LATEST_VERSION_SHA256;
+    delete process.env.AGENT_LATEST_VERSION_SIGNATURE;
   });
   process.env.AGENT_LATEST_VERSION = "1.10.0";
   process.env.AGENT_LATEST_VERSION_URL = "https://cdn.example.com/ITGuardian.exe";
   process.env.AGENT_LATEST_VERSION_SHA256 = "b".repeat(64);
+  process.env.AGENT_LATEST_VERSION_SIGNATURE = (await import("../src/security/agentSigning.js")).signUpdateManifest(
+    (await import("../src/security/agentSigning.js")).generateSigningKeyPair().privateKeyPem,
+    { version: "1.10.0", sha256: "b".repeat(64), url: "https://cdn.example.com/ITGuardian.exe" }
+  );
 
   const expectations = [
     ["1.9.0", "1.10.0"],

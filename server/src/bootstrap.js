@@ -2,11 +2,13 @@ import {
   getJwtSecret,
   getMigrationsMode,
   isDemoSeedBlockedInProduction,
+  isRemoteScriptExecutionEnabled,
   isVercel,
   resolveDatabaseConfig,
   shouldSeedDemoData
 } from "./config/environment.js";
 import { logger } from "./lib/logger.js";
+import { getJobSigningPublicKey } from "./services/agentSigningService.js";
 import { detectRedisConfig } from "./lib/redisClient.js";
 import { initializeDatabase } from "./schema/legacyBootstrap.js";
 import { assertSchemaUpToDate, runMigrations } from "./migrations/index.js";
@@ -40,6 +42,11 @@ function warnAboutRiskyConfiguration() {
     logger.error("demo_seed_blocked_in_production", { message: "ENABLE_DEMO_SEED esta ligado em ambiente de producao e foi IGNORADO: os dados de demonstracao criam " +
         "administradores com senha publica. Para uma instancia de apresentacao, defina tambem " +
         "DEMO_SEED_ALLOW_PRODUCTION=true."
+    });
+  }
+  if (isRemoteScriptExecutionEnabled() && !getJobSigningPublicKey()) {
+    logger.warn("agent_job_signing_not_configured", {
+      message: "ENABLE_REMOTE_SCRIPT_EXECUTION esta ligado sem AGENT_JOB_SIGNING_PRIVATE_KEY: agentes com padroes seguros recusam jobs nao assinados. Gere o par com `npm run agent:keys -- jobs`."
     });
   }
   const database = resolveDatabaseConfig();

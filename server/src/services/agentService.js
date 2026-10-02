@@ -14,6 +14,7 @@ import {
   revokeAgentEnrollment
 } from "../repositories/agentRepository.js";
 import { recordAgentInventory } from "./agentInventoryService.js";
+import { resolveSignedUpdate } from "./agentSigningService.js";
 import { claimNextAgentScriptJob, completeAgentScriptJob } from "./agentScriptJobService.js";
 
 export { validateAgentPayload };
@@ -39,7 +40,7 @@ export async function receiveAgentInventory({ token, body }) {
     enrollmentId: enrollment.id
   });
 
-  const autoUpdate = getAgentAutoUpdateInfo();
+  const autoUpdate = resolveSignedUpdate(getAgentAutoUpdateInfo());
   const updateAvailable = isUpdateAvailable(autoUpdate.version, String(body?.agentVersion || "").trim());
 
   return {
@@ -50,7 +51,8 @@ export async function receiveAgentInventory({ token, body }) {
     job,
     latestVersion: updateAvailable ? autoUpdate.version : null,
     latestVersionDownloadUrl: updateAvailable ? autoUpdate.downloadUrl : null,
-    latestVersionSha256: updateAvailable ? autoUpdate.sha256 : null
+    latestVersionSha256: updateAvailable ? autoUpdate.sha256 : null,
+    latestVersionSignature: updateAvailable ? autoUpdate.signature : null
   };
 }
 
