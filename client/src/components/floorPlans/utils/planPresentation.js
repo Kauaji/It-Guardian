@@ -46,3 +46,11 @@ export function getDeviceTags(device) {
   if (Array.isArray(device?.tags)) return device.tags;
   return String(device?.tags || "").split(",").map((tag) => tag.trim()).filter(Boolean);
 }
+
+/** Dica (title) do halo do mapa de calor sobre um objeto. */
+export function getHeatmapTitle(mode, heatmap) {
+  if (mode === "heatmap-os") {
+    return `${heatmap.totalServiceOrders} OS · ${heatmap.openServiceOrders} abertas · ${heatmap.overdueServiceOrders} vencidas`;
+  }
+  return `${heatmap.status || "Sem agente"} · pontuação ${heatmap.score}`;
+}

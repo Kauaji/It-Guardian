@@ -197,3 +197,11 @@ export function setBackgroundSettingsInDraft(draft, activeFloorId, settings) {
     : entry));
   return draft;
 }
+
+/** Atualiza o endereco da imagem de fundo (ou remove com null) de um pavimento do editor. */
+export function withFloorBackgroundUrl(editor, floorId, backgroundUrl) {
+  return {
+    ...editor,
+    floors: (editor?.floors || []).map((entry) => (entry.id === floorId ? { ...entry, backgroundUrl } : entry))
+  };
+}
