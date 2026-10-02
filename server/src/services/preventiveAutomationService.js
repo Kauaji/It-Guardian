@@ -30,6 +30,12 @@ import {
 
 const notFoundMessage = "Plano de automação preventiva não encontrado.";
 
+/**
+ * Ator do scheduler: nao pertence a um usuario, entao precisa de visao global
+ * para preparar os planos vencidos. O acesso ja foi autorizado pelo segredo do cron.
+ */
+const schedulerActor = Object.freeze({ id: null, name: "Scheduler preventivo", isAdmin: true });
+
 function safeEquals(left = "", right = "") {
   const leftBuffer = Buffer.from(String(left));
   const rightBuffer = Buffer.from(String(right));
@@ -148,7 +154,7 @@ export async function runScheduledMaintenanceCron(receivedSecret) {
   verifyCronSecret(receivedSecret);
 
   const startedAt = new Date();
-  const result = await processScheduledMaintenanceTasks({ id: null, name: "Scheduler preventivo" });
+  const result = await processScheduledMaintenanceTasks(schedulerActor);
   const finishedAt = new Date();
 
   return {

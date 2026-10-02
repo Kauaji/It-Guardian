@@ -328,7 +328,19 @@ test("rota de cron exige segredo configurado e valido e executa as rotinas agend
     const body = await ok.json();
     assert.equal(ok.status, 200, JSON.stringify(body));
     assert.equal(body.success, true);
-    assert.ok(body.preventivePlans, "resposta traz o resumo dos planos preventivos");
+    assert.equal(body.preventivePlans.duePlanCount, 1);
+    assert.equal(body.preventivePlans.preparedPlanCount, 1, "o scheduler tem visao global e prepara o plano vencido");
+    assert.equal(body.preventivePlans.failedPlanCount, 0);
+    const scheduled = await fx.rows(
+      "SELECT trigger_type, status FROM preventive_automation_runs WHERE plan_id = $1",
+      [plan.id]
+    );
+    assert.deepEqual(scheduled.map((row) => row.trigger_type), ["scheduled"]);
+    const queuedBy = await fx.rows(
+      "SELECT user_name FROM asset_history WHERE event_type = 'preventive_automation_queued' AND message LIKE $1",
+      ["%Plano do cron%"]
+    );
+    assert.equal(queuedBy[0].user_name, "Scheduler preventivo");
     assert.ok(body.scriptValidations);
     assert.ok(body.serviceOrderAutoPriority !== undefined);
     assert.ok(body.serviceOrderSlaBreaches !== undefined);
