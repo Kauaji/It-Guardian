@@ -157,6 +157,14 @@ test("uso de script em sugestao valida pre-condicoes antes de enfileirar", async
   assert.equal(missingAck.status, 400);
   assert.match((await missingAck.json()).message, /alto risco exigem confirmação extra/);
 
+  const { token: operatorToken } = await bearerUser({ role: "operator", permissions: [] });
+  const withoutApproval = await useScript(baseUrl, bearerHeaders(operatorToken), suggestion.id, highScript.id, {
+    confirmed: true,
+    riskAcknowledged: true
+  });
+  assert.equal(withoutApproval.status, 403);
+  assert.match((await withoutApproval.json()).message, /exigem um revisor com permissão de aprovação/);
+
   for (const status of ["accepted", "rejected"]) {
     await query("UPDATE service_order_suggestions SET status = $2 WHERE id = $1", [suggestion.id, status]);
     const blocked = await useScript(baseUrl, headers, suggestion.id, lowScript.id, { confirmed: true });
