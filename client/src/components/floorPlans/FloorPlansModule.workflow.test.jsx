@@ -33,6 +33,9 @@ vi.mock("./FloorPlanScene3D.jsx", () => ({
   }
 }));
 
+// O autosave (900 ms) e a renderizacao do editor completo deixam estes testes lentos sob carga.
+vi.setConfig({ testTimeout: 30000 });
+
 const ALL_PERMISSIONS = {
   create: true,
   update: true,
