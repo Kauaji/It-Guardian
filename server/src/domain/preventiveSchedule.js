@@ -50,7 +50,7 @@ export function normalizeTimezone(value, fallback = DEFAULT_TIMEZONE) {
   }
 }
 
-function toValidDate(value = new Date()) {
+export function toValidDate(value = new Date()) {
   const date = value instanceof Date ? value : new Date(value);
   return Number.isNaN(date.getTime()) ? new Date() : date;
 }

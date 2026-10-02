@@ -1,28 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { query, withTransaction } from "../database.js";
-import { addAssetHistory } from "./assetHistoryRepository.js";
-import { addLog } from "./logRepository.js";
-import {
-  createScriptSimulationLog,
-  findMaintenanceScriptById
-} from "./maintenanceScriptRepository.js";
-import { queueAgentScriptJob } from "./agentScriptJobRepository.js";
-import { addServiceOrderHistory, createServiceOrder, findServiceOrderById } from "./serviceOrderRepository.js";
-import {
-  createPreventiveAutomationPlanRecord,
-  findPreventiveAutomationPlanByPreventivePlanId
-} from "./preventiveAutomationRepository.js";
-import { startMaintenanceForAsset } from "./assetLifecycleRepository.js";
-import { trimString } from "../lib/textUtils.js";
-import { badRequest, conflict } from "../lib/errors.js";
+import { query } from "../database.js";
 
-const allowedStatuses = new Set(["prepared", "simulated", "completed", "failed", "cancelled"]);
-const highRiskLevels = new Set(["high", "critical"]);
-
-function normalizeStatus(value, fallback = "prepared") {
-  const status = String(value || "").trim().toLowerCase();
-  return allowedStatuses.has(status) ? status : fallback;
-}
+/**
+ * SQL das tabelas preventive_plans, preventive_plan_scripts e
+ * preventive_plan_assets, com o mapeamento linha -> objeto.
+ */
 
 function fromPlanRow(row) {
   return {
@@ -77,42 +59,52 @@ function fromPlanScriptRow(row) {
   };
 }
 
-function normalizePlanPayload(payload = {}) {
-  const name = trimString(payload.name, 120);
-  const assetIds = Array.isArray(payload.assetIds)
-    ? [...new Set(payload.assetIds.map((id) => trimString(id, 120)).filter(Boolean))]
-    : [];
-  const scriptIds = Array.isArray(payload.scriptIds)
-    ? [...new Set(payload.scriptIds.map((id) => trimString(id, 120)).filter(Boolean))]
-    : [];
+const planWithServiceOrderSelect = `
+  SELECT plans.*,
+         orders.id AS linked_service_order_id,
+         orders.number AS linked_service_order_number,
+         orders.title AS linked_service_order_title,
+         orders.status AS linked_service_order_status
+  FROM preventive_plans plans
+  LEFT JOIN service_orders orders ON orders.id = plans.service_order_id
+`;
 
-  if (name.length < 3) {
-    throw badRequest("Informe um nome de plano preventivo com pelo menos 3 caracteres.");
-  }
-
-  if (!assetIds.length) {
-    throw badRequest("Selecione pelo menos uma máquina para a preventiva.");
-  }
-
-  if (!scriptIds.length) {
-    throw badRequest("Selecione pelo menos uma verificação/script cadastrado para compor o plano.");
-  }
-
-  return {
-    name,
-    description: trimString(payload.description, 500),
-    source: trimString(payload.source, 80, "manual"),
-    originAlertId: trimString(payload.originAlertId, 120) || null,
-    originSuggestionId: trimString(payload.originSuggestionId, 120) || null,
-    notes: trimString(payload.notes, 1000),
-    status: normalizeStatus(payload.status, "prepared"),
-    riskAcknowledged: payload.riskAcknowledged === true,
-    assetIds,
-    scriptIds
-  };
+export async function listPlans(db = query) {
+  const result = await db(`
+    ${planWithServiceOrderSelect}
+    ORDER BY plans.created_at DESC
+  `);
+  return result.rows.map(fromPlanRow);
 }
 
-async function hydratePlan(plan, db = query) {
+export async function findPlanById(id, db = query) {
+  const result = await db(
+    `
+      ${planWithServiceOrderSelect}
+      WHERE plans.id = $1
+    `,
+    [id]
+  );
+  return result.rows[0] ? fromPlanRow(result.rows[0]) : null;
+}
+
+/**
+ * Le o plano travando a linha (`FOR UPDATE`) para serializar a criacao da OS.
+ * Bancos sem suporte a `FOR UPDATE` (pg-mem) recebem a leitura simples.
+ */
+export async function lockPlanById(id, db) {
+  try {
+    const result = await db("SELECT * FROM preventive_plans WHERE id = $1 FOR UPDATE", [id]);
+    return result.rows[0] ? fromPlanRow(result.rows[0]) : null;
+  } catch (error) {
+    if (!/FOR UPDATE|syntax|parse/i.test(error.message || "")) throw error;
+    const result = await db("SELECT * FROM preventive_plans WHERE id = $1", [id]);
+    return result.rows[0] ? fromPlanRow(result.rows[0]) : null;
+  }
+}
+
+/** Anexa scripts (com dados do cadastro) e maquinas ao plano. */
+export async function hydratePlan(plan, db = query) {
   if (!plan) return null;
 
   const [scriptResult, assetResult] = await Promise.all([
@@ -149,457 +141,90 @@ async function hydratePlan(plan, db = query) {
   };
 }
 
-function summarizeAutomation(automation) {
-  if (!automation) return { enabled: false };
-  return {
-    enabled: true,
-    id: automation.id,
-    preventivePlanId: automation.preventivePlanId,
-    name: automation.name,
-    active: automation.active !== false,
-    recurrenceType: automation.recurrenceType,
-    recurrenceInterval: automation.recurrenceInterval,
-    recurrenceIntervalDays: automation.recurrenceIntervalDays,
-    preferredTime: automation.preferredTime,
-    timezone: automation.timezone,
-    scopeType: automation.scopeType,
-    scopeId: automation.scopeId,
-    assetIds: automation.assetIds || [],
-    defaultScriptIds: automation.defaultScriptIds || [],
-    notes: automation.notes || "",
-    indicatorColor: automation.indicatorColor,
-    nextRunAt: automation.nextRunAt,
-    nextScheduledFor: automation.nextScheduledFor,
-    overrideCount: automation.overrideCount || 0,
-    overrides: automation.overrides || [],
-    assetSchedules: automation.assetSchedules || []
-  };
-}
-
-async function attachAutomation(plan) {
-  if (!plan) return null;
-  const automation = await findPreventiveAutomationPlanByPreventivePlanId(plan.id);
-  return {
-    ...plan,
-    automation: summarizeAutomation(automation)
-  };
-}
-
-async function attachAutomations(plans) {
-  return Promise.all(plans.map((plan) => attachAutomation(plan)));
-}
-
-export async function listPreventivePlans() {
-  const result = await query(`
-    SELECT plans.*,
-           orders.id AS linked_service_order_id,
-           orders.number AS linked_service_order_number,
-           orders.title AS linked_service_order_title,
-           orders.status AS linked_service_order_status
-    FROM preventive_plans plans
-    LEFT JOIN service_orders orders ON orders.id = plans.service_order_id
-    ORDER BY plans.created_at DESC
-  `);
-
-  const plans = await Promise.all(result.rows.map((row) => hydratePlan(fromPlanRow(row))));
-  return attachAutomations(plans);
-}
-
-export async function findPreventivePlanById(id) {
-  const result = await query(
+export async function insertPlan(db, { id, plan, createdBy }) {
+  const result = await db(
     `
-      SELECT plans.*,
-             orders.id AS linked_service_order_id,
-             orders.number AS linked_service_order_number,
-             orders.title AS linked_service_order_title,
-             orders.status AS linked_service_order_status
-      FROM preventive_plans plans
-      LEFT JOIN service_orders orders ON orders.id = plans.service_order_id
-      WHERE plans.id = $1
+      INSERT INTO preventive_plans (
+        id, name, description, status, source, origin_alert_id,
+        origin_suggestion_id, notes, created_by, prepared_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+      RETURNING *
+    `,
+    [
+      id,
+      plan.name,
+      plan.description || null,
+      plan.status,
+      plan.source,
+      plan.originAlertId,
+      plan.originSuggestionId,
+      plan.notes || null,
+      createdBy
+    ]
+  );
+  return result.rows[0].id;
+}
+
+export async function insertPlanScript(db, { planId, scriptId, orderIndex }) {
+  await db(
+    `
+      INSERT INTO preventive_plan_scripts (id, preventive_plan_id, script_id, order_index)
+      VALUES ($1, $2, $3, $4)
+    `,
+    [randomUUID(), planId, scriptId, orderIndex]
+  );
+}
+
+export async function insertPlanAsset(db, { planId, assetId, status, log }) {
+  await db(
+    `
+      INSERT INTO preventive_plan_assets (
+        id, preventive_plan_id, asset_id, status, log, prepared_at
+      )
+      VALUES ($1, $2, $3, $4, $5, NOW())
+    `,
+    [randomUUID(), planId, assetId, status, log]
+  );
+}
+
+export async function markPlanSimulated(db, id) {
+  await db(
+    `
+      UPDATE preventive_plans
+      SET status = 'simulated',
+          prepared_at = COALESCE(prepared_at, NOW()),
+          updated_at = NOW()
+      WHERE id = $1
     `,
     [id]
   );
-  return attachAutomation(await hydratePlan(result.rows[0] ? fromPlanRow(result.rows[0]) : null));
 }
 
-async function lockPreventivePlanById(id, db) {
-  try {
-    const result = await db("SELECT * FROM preventive_plans WHERE id = $1 FOR UPDATE", [id]);
-    return result.rows[0] ? fromPlanRow(result.rows[0]) : null;
-  } catch (error) {
-    if (!/FOR UPDATE|syntax|parse/i.test(error.message || "")) throw error;
-    const result = await db("SELECT * FROM preventive_plans WHERE id = $1", [id]);
-    return result.rows[0] ? fromPlanRow(result.rows[0]) : null;
-  }
+export async function markPlanAssetsPrepared(db, planId) {
+  await db(
+    `
+      UPDATE preventive_plan_assets
+      SET status = 'prepared',
+          prepared_at = COALESCE(prepared_at, NOW())
+      WHERE preventive_plan_id = $1
+    `,
+    [planId]
+  );
 }
 
-export async function createPreventivePlan(payload = {}, user = null) {
-  const normalized = normalizePlanPayload(payload);
-  const scripts = [];
-
-  for (const scriptId of normalized.scriptIds) {
-    const script = await findMaintenanceScriptById(scriptId);
-    if (!script || script.active === false) {
-      throw badRequest("Um dos scripts selecionados não existe ou está inativo.");
-    }
-    scripts.push(script);
-  }
-
-  const hasHighRiskScript = scripts.some((script) => highRiskLevels.has(script.riskLevel || script.suggestedRiskLevel));
-  if (hasHighRiskScript && !normalized.riskAcknowledged) {
-    throw badRequest("Scripts de alto risco exigem confirmação extra antes de preparar a preventiva.");
-  }
-
-  const automationEnabled = payload.automation?.enabled === true;
-  const planId = randomUUID();
-  const createdPlanId = await withTransaction(async (db) => {
-    const planResult = await db(
-      `
-        INSERT INTO preventive_plans (
-          id, name, description, status, source, origin_alert_id,
-          origin_suggestion_id, notes, created_by, prepared_at
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
-        RETURNING *
-      `,
-      [
-        planId,
-        normalized.name,
-        normalized.description || null,
-        normalized.status,
-        normalized.source,
-        normalized.originAlertId,
-        normalized.originSuggestionId,
-        normalized.notes || null,
-        user?.id || null
-      ]
-    );
-
-    for (const [index, script] of scripts.entries()) {
-      await db(
-        `
-          INSERT INTO preventive_plan_scripts (id, preventive_plan_id, script_id, order_index)
-          VALUES ($1, $2, $3, $4)
-        `,
-        [randomUUID(), planId, script.id, index]
-      );
-    }
-
-    const scriptNames = scripts.map((script) => script.name).join(", ");
-    const userName = user?.name || "Usuário";
-
-    for (const assetId of normalized.assetIds) {
-      const log =
-        `Preventiva registrada para ${assetId} com as verificações: ${scriptNames}. ` +
-        (automationEnabled
-          ? "Execução será iniciada pela agenda de automação."
-          : "Scripts enfileirados para execução pelo agente autenticado.");
-
-      await db(
-        `
-          INSERT INTO preventive_plan_assets (
-            id, preventive_plan_id, asset_id, status, log, prepared_at
-          )
-          VALUES ($1, $2, $3, $4, $5, NOW())
-        `,
-        [randomUUID(), planId, assetId, automationEnabled ? "prepared" : "waiting_agent", log]
-      );
-
-      const jobs = [];
-      if (!automationEnabled) {
-        for (const script of scripts) {
-          const executionLog = await createScriptSimulationLog({
-            scriptId: script.id,
-            assetId,
-            preventivePlanId: planId,
-            mode: "agent",
-            status: "queued",
-            executedBy: user?.id || null,
-            notes: normalized.notes,
-            rawLog: "Verificação preventiva enfileirada e aguardando o agente autenticado.",
-            parsedSummary: `Script '${script.name}' aguardando execução pelo agente.`,
-            errorDetected: false,
-            attentionRequired: false,
-            db
-          });
-          jobs.push(await queueAgentScriptJob({
-            script,
-            assetId,
-            executionLogId: executionLog.id,
-            userId: user?.id || null,
-            db
-          }));
-        }
-      }
-
-      await addAssetHistory({
-        assetId,
-        eventType: automationEnabled ? "preventive_plan_prepared" : "preventive_execution_queued",
-        message: automationEnabled
-          ? `Plano preventivo automatizado '${normalized.name}' registrado por ${userName}.`
-          : `Preventiva '${normalized.name}' enfileirada por ${userName} para execução pelo agente.`,
-        newValue: JSON.stringify({
-          preventivePlanId: planId,
-          scriptNames: scripts.map((script) => script.name),
-          jobIds: jobs.map((job) => job.id),
-          status: automationEnabled ? "scheduled" : "queued"
-        }),
-        userId: user?.id || null,
-        userName,
-        db
-      });
-    }
-
-    await addLog({
-      type: "preventive_plan_created",
-      message: automationEnabled
-        ? `Plano preventivo automatizado registrado: ${normalized.name}.`
-        : `Preventiva registrada e enfileirada no agente: ${normalized.name}.`,
-      userId: user?.id || null,
-      meta: {
-        preventivePlanId: planId,
-        assetCount: normalized.assetIds.length,
-        scriptCount: scripts.length,
-        source: normalized.source
-      },
-      db
-    });
-
-    if (automationEnabled) {
-      const automationPayload = payload.automation || {};
-      const automationId = await createPreventiveAutomationPlanRecord(
-        {
-          ...automationPayload,
-          preventivePlanId: planId,
-          name: trimString(automationPayload.name, 120, normalized.name),
-          description: trimString(automationPayload.description, 1000, normalized.description),
-          notes: trimString(automationPayload.notes, 1000, normalized.notes),
-          scopeType: "asset_list",
-          scopeId: null,
-          assetIds: normalized.assetIds,
-          defaultScriptIds: normalized.scriptIds,
-          active: automationPayload.active !== false
-        },
-        user,
-        db
-      );
-
-      for (const assetId of normalized.assetIds) {
-        await addAssetHistory({
-          assetId,
-          eventType: "preventive_automation_enabled",
-          message: `Plano preventivo '${normalized.name}' recebeu automacao vinculada.`,
-          newValue: automationId,
-          userId: user?.id || null,
-          userName,
-          db
-        });
-      }
-
-      await addLog({
-        type: "preventive_plan_automation_linked",
-        message: `Automacao vinculada ao plano preventivo: ${normalized.name}.`,
-        userId: user?.id || null,
-        meta: {
-          preventivePlanId: planId,
-          preventiveAutomationPlanId: automationId,
-          assetCount: normalized.assetIds.length,
-          scriptCount: normalized.scriptIds.length
-        },
-        db
-      });
-    }
-
-    return planResult.rows[0].id;
-  });
-
-  return findPreventivePlanById(createdPlanId);
-}
-
-export async function preparePreventivePlan(id, user = null) {
-  const preparedPlanId = await withTransaction(async (db) => {
-    const plan = await hydratePlan(await lockPreventivePlanById(id, db), db);
-    if (!plan) return null;
-
-    await db(
-      `
-        UPDATE preventive_plans
-        SET status = 'simulated',
-            prepared_at = COALESCE(prepared_at, NOW()),
-            updated_at = NOW()
-        WHERE id = $1
-      `,
-      [id]
-    );
-
-    await db(
-      `
-        UPDATE preventive_plan_assets
-        SET status = 'prepared',
-            prepared_at = COALESCE(prepared_at, NOW())
-        WHERE preventive_plan_id = $1
-      `,
-      [id]
-    );
-
-    await addLog({
-      type: "preventive_plan_prepared",
-      message: `Registro preventivo confirmado: ${plan.name}. Nenhum comando foi executado.`,
-      userId: user?.id || null,
-      meta: { preventivePlanId: id },
-      db
-    });
-
-    return id;
-  });
-
-  return preparedPlanId ? findPreventivePlanById(preparedPlanId) : null;
-}
-
-export async function createServiceOrderFromPreventivePlan(id, user = null) {
-  const result = await withTransaction(async (db) => {
-    const plan = await hydratePlan(await lockPreventivePlanById(id, db), db);
-    if (!plan) return null;
-
-    if (plan.serviceOrderId) {
-      throw conflict("Este plano já possui uma OS preventiva vinculada.");
-    }
-
-    const assetIds = (plan.assets || []).map((asset) => asset.assetId).filter(Boolean);
-    const scriptNames = (plan.scripts || []).map((script) => script.scriptName || script.name).filter(Boolean);
-    const assetSummary = assetIds.length ? assetIds.join(", ") : "Nenhuma máquina vinculada";
-    const scriptSummary = scriptNames.length ? scriptNames.join(", ") : "Nenhuma verificação selecionada";
-    const titleScope = assetIds.length === 1 ? assetIds[0] : `${assetIds.length} máquina(s)`;
-    const title = `Manutenção preventiva — ${titleScope}`;
-    const description =
-      `OS preventiva criada a partir do plano preventivo '${plan.name}'. ` +
-      `Máquinas selecionadas: ${assetSummary}. ` +
-      `Verificações selecionadas: ${scriptSummary}. ` +
-      "Nenhum comando foi executado automaticamente.";
-
-    let serviceOrder;
-    try {
-      serviceOrder = await createServiceOrder({
-        payload: {
-          title,
-          description,
-          priority: "low",
-          category: "Preventiva",
-          problemType: "Manutenção preventiva",
-          serviceName: "Manutenção preventiva",
-          source: "Plano Preventivo",
-          requesterName: user?.name || "Técnico",
-          assignedTechnicianName: user?.name || null,
-          assetId: assetIds.length === 1 ? assetIds[0] : null,
-          relatedAssetText: assetSummary,
-          notes: [
-            "Origem: Plano Preventivo",
-            `Plano preventivo: ${plan.name}`,
-            `Verificações selecionadas: ${scriptSummary}`,
-            "Nenhum comando foi executado automaticamente."
-          ].join("\n"),
-          preventivePlanId: plan.id,
-          autoPriorityEnabled: false
-        },
-        user,
-        db
-      });
-    } catch (error) {
-      if (error?.code === "23505") {
-        const conflict = new Error("Este plano já possui uma OS preventiva vinculada.");
-        conflict.statusCode = 409;
-        throw conflict;
-      }
-      throw error;
-    }
-
-    const updateResult = await db(
-      `
-        UPDATE preventive_plans
-        SET service_order_id = $2,
-            updated_at = NOW()
-        WHERE id = $1
-          AND service_order_id IS NULL
-        RETURNING id
-      `,
-      [plan.id, serviceOrder.id]
-    );
-
-    if (!updateResult.rowCount) {
-      throw conflict("Este plano já possui uma OS preventiva vinculada.");
-    }
-
-    await addServiceOrderHistory({
-      serviceOrderId: serviceOrder.id,
-      eventType: "preventive_plan_origin",
-      message: `OS criada a partir do plano preventivo ${plan.name}.`,
-      oldValue: null,
-      newValue: plan.id,
-      user,
-      db
-    });
-
-    for (const assetId of assetIds) {
-      await addAssetHistory({
-        assetId,
-        eventType: "preventive_plan_service_order",
-        message: `Plano preventivo ${plan.name} gerou a OS preventiva ${serviceOrder.number}.`,
-        newValue: serviceOrder.number,
-        userId: user?.id || null,
-        userName: user?.name || user?.email || "Sistema",
-        db
-      });
-    }
-
-    await addLog({
-      type: "preventive_plan_service_order_created",
-      message: `Plano preventivo ${plan.name} gerou a OS preventiva ${serviceOrder.number}.`,
-      userId: user?.id || null,
-      meta: {
-        preventivePlanId: plan.id,
-        serviceOrderId: serviceOrder.id,
-        serviceOrderNumber: serviceOrder.number,
-        assetCount: assetIds.length
-      },
-      db
-    });
-
-    return {
-      preventivePlanId: plan.id,
-      serviceOrderId: serviceOrder.id
-    };
-  });
-
-  if (!result) return null;
-
-  const serviceOrder = await findServiceOrderById(result.serviceOrderId);
-  if (serviceOrder?.assetId) {
-    try {
-      await startMaintenanceForAsset({
-        assetId: serviceOrder.assetId,
-        serviceOrderId: serviceOrder.id,
-        notes: "Manutencao iniciada pela OS do plano preventivo.",
-        user: user || { name: "Sistema" }
-      });
-    } catch (error) {
-      if (error.statusCode !== 409) throw error;
-    }
-  }
-
-  return {
-    preventivePlan: await findPreventivePlanById(result.preventivePlanId),
-    serviceOrder
-  };
-}
-
-export async function listPreventivePlanLogs(id) {
-  const plan = await findPreventivePlanById(id);
-  if (!plan) return null;
-  return plan.assets.map((asset) => ({
-    id: asset.id,
-    assetId: asset.assetId,
-    status: asset.status,
-    log: asset.log,
-    preparedAt: asset.preparedAt
-  }));
+/** Vincula a OS ao plano somente se ainda nao houver vinculo; devolve se atualizou. */
+export async function linkServiceOrder(db, { planId, serviceOrderId }) {
+  const result = await db(
+    `
+      UPDATE preventive_plans
+      SET service_order_id = $2,
+          updated_at = NOW()
+      WHERE id = $1
+        AND service_order_id IS NULL
+      RETURNING id
+    `,
+    [planId, serviceOrderId]
+  );
+  return Boolean(result.rowCount);
 }

@@ -3,7 +3,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { isScheduleLinkedToPlan } from "./preventiveAutomationRepository.js";
+import { isScheduleLinkedToPlan } from "../domain/preventiveAutomationSchedule.js";
 import {
   automationMachineStatus,
   buildAutomationManagementGroups,
@@ -48,6 +48,25 @@ const alertCenterSource = () => [
   source("../../../client/src/components/alerts/AlertCenterV2.jsx"),
   source("../../../client/src/components/alerts/AutomationTab.jsx")
 ].join("\n");
+/** Trecho do arquivo a partir de `startMarker` ate `endMarker` (ou ate o fim). */
+function slice(text, startMarker, endMarker) {
+  const start = text.indexOf(startMarker);
+  assert.notEqual(start, -1, `marcador ausente: ${startMarker}`);
+  const end = endMarker ? text.indexOf(endMarker, start) : -1;
+  return end === -1 ? text.slice(start) : text.slice(start, end);
+}
+
+const automationSources = {
+  planService: "../services/preventiveAutomationPlanService.js",
+  assetService: "../services/preventiveAutomationAssetService.js",
+  managementService: "../services/preventiveAutomationManagementService.js",
+  scopeService: "../services/preventiveAutomationScopeService.js",
+  planRepository: "./preventiveAutomationPlanRepository.js",
+  scheduleRepository: "./preventiveAutomationScheduleRepository.js",
+  overrideRepository: "./preventiveAutomationOverrideRepository.js",
+  runRepository: "./preventiveAutomationRunRepository.js",
+  queryRepository: "./preventiveAutomationQueryRepository.js"
+};
 
 const machines = [
   {
@@ -267,33 +286,38 @@ test("validações de plano e override rejeitam dados inválidos", () => {
 });
 
 test("listagem de gerenciamento busca dados relacionados em lote", () => {
-  const repository = source("./preventiveAutomationRepository.js");
-  const body = repository.slice(repository.indexOf("export async function listPreventiveAutomationManagement"));
+  const service = source(automationSources.managementService);
+  const body = slice(service, "async function loadManagementData", "export async function listPreventiveAutomationManagement");
   assert.match(body, /Promise\.all\(\[/);
-  assert.match(body, /preventive_automation_overrides/);
-  assert.match(body, /preventive_automation_asset_schedules/);
-  assert.match(body, /preventive_automation_runs/);
-  assert.match(body, /maintenance_scripts/);
+  assert.match(body, /listOverridesByPlanIds/);
+  assert.match(body, /listSchedulesByPlanIds/);
+  assert.match(body, /listLatestRunsByPlanIds/);
+  assert.match(body, /listScriptSummariesByIds/);
   assert.match(body, /listDevices\(\{\}\)/);
+  assert.match(source(automationSources.overrideRepository), /preventive_automation_overrides/);
+  assert.match(source(automationSources.scheduleRepository), /preventive_automation_asset_schedules/);
+  assert.match(source(automationSources.runRepository), /preventive_automation_runs/);
+  assert.match(source(automationSources.queryRepository), /maintenance_scripts/);
 });
 
 test("exclusão do plano é lógica, transacional e preserva histórico", () => {
-  const repository = source("./preventiveAutomationRepository.js");
-  const start = repository.indexOf("export async function deletePreventiveAutomationPlan");
-  const end = repository.indexOf("function latestRunKey", start);
-  const body = repository.slice(start, end);
-  assert.match(body, /deleted_at\s*=\s*NOW\(\)/);
-  assert.match(body, /preventive_automation_asset_schedules[\s\S]*active\s*=\s*FALSE/);
-  assert.match(body, /preventive_automation_deleted/);
-  assert.doesNotMatch(body, /DELETE\s+FROM\s+preventive_automation_plans/i);
+  const service = slice(source(automationSources.planService), "export async function deletePreventiveAutomationPlan");
+  const planRepository = source(automationSources.planRepository);
+  const scheduleRepository = source(automationSources.scheduleRepository);
+  assert.match(slice(planRepository, "export async function softDeletePlan", "export async function updatePlanAssetScope"), /deleted_at\s*=\s*NOW\(\)/);
+  assert.match(slice(scheduleRepository, "export async function deactivateSchedulesOfPlan", "export async function deactivateAssetSchedule"), /preventive_automation_asset_schedules[\s\S]*active\s*=\s*FALSE/);
+  assert.match(service, /withTransaction/);
+  assert.match(service, /softDeletePlan\(db, id\)/);
+  assert.match(service, /deactivateSchedulesOfPlan\(db, id\)/);
+  assert.match(service, /preventive_automation_deleted/);
+  assert.doesNotMatch(planRepository, /DELETE\s+FROM\s+preventive_automation_plans/i);
 });
 
 test("remoção de máquina desativa agenda e registra histórico e auditoria", () => {
-  const repository = source("./preventiveAutomationRepository.js");
-  const start = repository.indexOf("export async function removeAssetFromPreventiveAutomationPlan");
-  const end = repository.indexOf("export function resolveEffectiveRecurrence", start);
-  const body = repository.slice(start, end);
-  assert.match(body, /preventive_automation_asset_schedules[\s\S]*active\s*=\s*FALSE/);
+  const body = slice(source(automationSources.assetService), "export async function removeAssetFromPreventiveAutomationPlan");
+  const scheduleRepository = source(automationSources.scheduleRepository);
+  assert.match(slice(scheduleRepository, "export async function deactivateAssetSchedule", "export async function reactivateAssetSchedule"), /preventive_automation_asset_schedules[\s\S]*active\s*=\s*FALSE/);
+  assert.match(body, /deactivateAssetSchedule\(db, planId, assetId\)/);
   assert.match(body, /preventive_automation_removed_from_asset/);
   assert.match(body, /addAssetHistory/);
   assert.match(body, /remainingAssetCount/);
@@ -301,9 +325,9 @@ test("remoção de máquina desativa agenda e registra histórico e auditoria", 
 
 test("override individual usa a chave única plan_id mais target_key", () => {
   const database = legacySchemaSource();
-  const repository = source("./preventiveAutomationRepository.js");
+  const assetService = source(automationSources.assetService);
   assert.match(database, /UNIQUE INDEX IF NOT EXISTS idx_preventive_automation_overrides_target[\s\S]*plan_id,\s*target_key/);
-  assert.match(repository, /`asset:\$\{assetId\}`/);
+  assert.match(assetService, /`asset:\$\{assetId\}`/);
 });
 
 test("rotas protegem exclusão, override e remoção de ativo no backend", () => {
@@ -369,7 +393,7 @@ test("edição protege alterações não salvas antes de fechar ou trocar de pla
 
 test("pausa e reativação usam a mesma atualização e sincronizam agendas", () => {
   const component = planDetailsSource();
-  const repository = source("./preventiveAutomationRepository.js");
+  const repository = source(automationSources.planService);
   const routes = source("../routes/preventiveAutomationRoutes.js");
   const controller = source("../controllers/preventiveAutomationController.js");
   const service = source("../services/preventiveAutomationService.js");
@@ -386,13 +410,10 @@ test("pausa e reativação usam a mesma atualização e sincronizam agendas", ()
 });
 
 test("plano excluído logicamente não pode ser reativado", () => {
-  const repository = source("./preventiveAutomationRepository.js");
-  const finderStart = repository.indexOf("export async function findPreventiveAutomationPlanById");
-  const finderEnd = repository.indexOf("export async function createPreventiveAutomationPlan", finderStart);
-  const finder = repository.slice(finderStart, finderEnd);
-  const updateStart = repository.indexOf("export async function updatePreventiveAutomationPlan");
-  const updateEnd = repository.indexOf("export async function disablePreventiveAutomationPlan", updateStart);
-  const update = repository.slice(updateStart, updateEnd);
+  const planRepository = source(automationSources.planRepository);
+  const finder = slice(planRepository, "export async function findActivePlanById", "export async function findActivePlanByPreventivePlanId");
+  const planService = source(automationSources.planService);
+  const update = slice(planService, "export async function updatePreventiveAutomationPlan", "export async function disablePreventiveAutomationPlan");
   assert.match(finder, /deleted_at IS NULL/);
   assert.match(update, /findPreventiveAutomationPlanById\(id\)/);
   assert.match(update, /if \(!current\) return null/);
@@ -428,7 +449,7 @@ test("App mantém gerenciamento fora da composição visual principal", () => {
 
 test("nenhuma primitiva de execução real foi introduzida na área de gerenciamento", () => {
   const combined = [
-    source("./preventiveAutomationRepository.js"),
+    ...Object.values(automationSources).map(source),
     managementViewSource(),
     planDetailsSource()
   ].join("\n");
@@ -447,14 +468,15 @@ test("gerenciamento oferece visoes de maquinas, planos e agenda", () => {
 
 test("agenda usa rota protegida e consulta parametrizada", () => {
   const routes = source("../routes/preventiveAutomationRoutes.js");
-  const repository = source("./preventiveAutomationRepository.js");
+  const management = source(automationSources.managementService);
+  const queries = source(automationSources.queryRepository);
   assert.match(routes, /"\/agenda", requirePermission\("preventive_automation\.view"\)/);
-  assert.match(repository, /export async function listPreventiveAutomationAgenda/);
-  assert.match(repository, /SELECT COUNT\(\*\)::int AS total_count/);
-  assert.match(repository, /LEFT JOIN preventive_automation_runs newer/);
-  assert.match(repository, /allowedPlans = await listPreventiveAutomationPlans\(user/);
-  assert.match(repository, /plans\.id IN/);
-  assert.match(repository, /emptyAutomationAgenda/);
+  assert.match(management, /export async function listPreventiveAutomationAgenda/);
+  assert.match(queries, /SELECT COUNT\(\*\)::int AS total_count/);
+  assert.match(source(automationSources.runRepository), /LEFT JOIN preventive_automation_runs newer/);
+  assert.match(management, /allowedPlans = await listPreventiveAutomationPlans\(user/);
+  assert.match(queries, /plans\.id IN/);
+  assert.match(management, /emptyAutomationAgenda/);
 });
 
 test("detalhe do plano centraliza as cinco areas operacionais", () => {
@@ -536,25 +558,29 @@ test("agenda agrupa máquinas do mesmo plano e segmento em um único bloco", () 
 });
 
 test("criação, edição e recorrência individual preservam histórico da máquina", () => {
-  const repository = source("./preventiveAutomationRepository.js");
+  const planService = source(automationSources.planService);
+  const assetService = source(automationSources.assetService);
+  const combined = `${planService}\n${assetService}`;
   for (const eventType of [
     "preventive_automation_created",
     "preventive_automation_updated",
     "preventive_automation_asset_override_updated",
     "preventive_automation_asset_override_removed"
   ]) {
-    assert.match(repository, new RegExp(`"${eventType}"`));
+    assert.match(combined, new RegExp(`"${eventType}"`));
   }
-  assert.match(repository, /addAssetHistory/);
-  assert.match(repository, /userName: user\\?\\.name \\|\\| user\\?\\.email \\|\\| "Sistema"/);
+  assert.match(combined, /addAssetHistory/);
+  assert.match(source("../domain/preventiveAutomationNormalizers.js"), /return user\?\.name \|\| user\?\.email \|\| "Sistema"/);
+  assert.match(combined, /userName: actorName\(user\)/);
 });
 
 test("criação, edição e override aplicam escopo de máquina no backend", () => {
-  const repository = source("./preventiveAutomationRepository.js");
-  assert.match(repository, /validateScopeSelection\(normalized, \{ user \}\)/);
-  assert.match(repository, /validateScopeSelection\(current, \{ user \}\)/);
-  assert.match(repository, /canAccessAutomationAsset\(device, user\)/);
-  assert.match(repository, /não possui máquinas autorizadas para este usuário/);
+  const planService = source(automationSources.planService);
+  const assetService = source(automationSources.assetService);
+  assert.match(planService, /validateScopeSelection\(normalized, \{ user \}\)/);
+  assert.match(assetService, /validateScopeSelection\(current, \{ user \}\)/);
+  assert.match(source(automationSources.managementService), /canAccessAutomationAsset\(device, user\)/);
+  assert.match(source(automationSources.scopeService), /não possui máquinas autorizadas para este usuário/);
 });
 
 test("controllers repassam usuario para leituras de automacao", () => {
@@ -569,20 +595,19 @@ test("controllers repassam usuario para leituras de automacao", () => {
 });
 
 test("detalhe de ativo usa consultas direcionadas e nao carrega o gerenciamento completo", () => {
-  const repository = source("./preventiveAutomationRepository.js");
-  const start = repository.indexOf("export async function findPreventiveAutomationAssetDetails");
-  const end = repository.indexOf("export async function upsertPreventiveAutomationAssetOverride", start);
-  const body = repository.slice(start, end);
+  const body = slice(source(automationSources.managementService), "export async function findPreventiveAutomationAssetDetails");
   assert.match(body, /Promise\.all/);
-  assert.match(body, /plan_id = \$1 AND asset_id = \$2/);
+  assert.match(body, /findActiveScheduleForAsset\(planId, assetId\)/);
+  assert.match(body, /findLatestOverrideForAsset\(planId, assetId\)/);
+  assert.match(body, /findLatestRunForAsset\(planId, assetId\)/);
+  assert.match(source(automationSources.scheduleRepository), /plan_id = \$1 AND asset_id = \$2/);
+  assert.match(source(automationSources.overrideRepository), /plan_id = \$1 AND asset_id = \$2/);
+  assert.match(source(automationSources.runRepository), /plan_id = \$1 AND asset_id = \$2/);
   assert.doesNotMatch(body, /listPreventiveAutomationManagement/);
 });
 
 test("ultima execucao e selecionada por plano e maquina sem limite global", () => {
-  const repository = source("./preventiveAutomationRepository.js");
-  const start = repository.indexOf("export async function listPreventiveAutomationManagement");
-  const end = repository.indexOf("function normalizePagination", start);
-  const body = repository.slice(start, end);
+  const body = slice(source(automationSources.runRepository), "export async function listLatestRunsByPlanIds", "export async function findLatestRunForAsset");
   assert.match(body, /LEFT JOIN preventive_automation_runs newer/);
   assert.match(body, /newer\.id IS NULL/);
   assert.doesNotMatch(body, /LIMIT 500/);
@@ -590,10 +615,13 @@ test("ultima execucao e selecionada por plano e maquina sem limite global", () =
 });
 
 test("consultas de gerenciamento nao usam recursos ausentes no pg-mem", () => {
-  const repository = source("./preventiveAutomationRepository.js");
-  assert.doesNotMatch(repository, /\bROW_NUMBER\s*\(/);
-  assert.doesNotMatch(repository, /\bCOUNT\s*\(\*\)\s+OVER\s*\(/);
-  assert.doesNotMatch(repository, /\bJOIN\s+LATERAL\b/);
+  const repositories = Object.values(automationSources)
+    .filter((path) => path.startsWith("./"))
+    .map(source)
+    .join("\n");
+  assert.doesNotMatch(repositories, /\bROW_NUMBER\s*\(/);
+  assert.doesNotMatch(repositories, /\bCOUNT\s*\(\*\)\s+OVER\s*\(/);
+  assert.doesNotMatch(repositories, /\bJOIN\s+LATERAL\b/);
 });
 
 test("aba de automatizacoes considera a lista principal enquanto o gerenciamento carrega", () => {
