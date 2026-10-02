@@ -33,6 +33,7 @@
     "test:e2e": "playwright test",
     "lint": "eslint . --max-warnings=0",
     "check:architecture": "node scripts/check-architecture.mjs",
+    "check:env": "node scripts/check-env-docs.mjs",
     "check": "npm run lint && npm run check:architecture && npm run test:coverage && npm run test:client && npm run build",
     "docker:up": "docker compose up --build",
     "docker:down": "docker compose down",

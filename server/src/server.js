@@ -29,12 +29,26 @@ server.listen(port, host, () => {
   logger.info("server_listening", { host, port });
 });
 
-for (const event of ["unhandledRejection", "uncaughtException"]) {
-  process.on(event, (error) => {
-    logger.error(event, { error });
-    reportError(error instanceof Error ? error : new Error(String(error)), { extra: { event } });
-  });
+function toError(error) {
+  return error instanceof Error ? error : new Error(String(error));
 }
+
+// Rejeicao nao tratada: registra e reporta (o processo segue, o servidor atende outras requisicoes).
+process.on("unhandledRejection", (error) => {
+  logger.error("unhandledRejection", { error });
+  reportError(toError(error), { extra: { event: "unhandledRejection" } });
+});
+
+// Excecao nao capturada deixa o processo em estado indefinido: reporta e ENCERRA para o supervisor
+// (Docker restart/systemd) subir uma instancia limpa.
+process.on("uncaughtException", async (error) => {
+  logger.error("uncaughtException", { error });
+  try {
+    await Promise.race([reportError(toError(error), { extra: { event: "uncaughtException" } }), new Promise((resolve) => setTimeout(resolve, 2000))]);
+  } finally {
+    process.exit(1);
+  }
+});
 
 const stopIntegrationScheduler = startIntegrationSyncScheduler();
 const stopRetentionScheduler = startDataRetentionScheduler();
