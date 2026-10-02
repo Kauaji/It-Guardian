@@ -25,11 +25,9 @@ import {
   findScriptLogById,
   listPendingScriptLogs
 } from "./maintenanceScripts/scriptLogService.js";
-import {
-  registerMaintenanceScriptSimulation,
-  useScriptForServiceOrder,
-  useScriptFromSuggestion
-} from "./maintenanceScripts/scriptUsageService.js";
+import { registerMaintenanceScriptSimulation } from "./maintenanceScripts/scriptSimulationService.js";
+import { useScriptForServiceOrder } from "./maintenanceScripts/serviceOrderScriptUsageService.js";
+import { useScriptFromSuggestion } from "./maintenanceScripts/suggestionScriptUsageService.js";
 import {
   cancelScriptValidation,
   listScriptValidationsForSuggestion

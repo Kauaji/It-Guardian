@@ -18,6 +18,9 @@ const MIN_VALIDATION_WINDOW_MINUTES = 5;
 const MAX_VALIDATION_WINDOW_MINUTES = 10080;
 const DEFAULT_VALIDATION_WINDOW_MINUTES = 30;
 
+export const HIGH_RISK_USAGE_MESSAGE =
+  "Scripts de alto risco exigem confirmação extra antes de registrar o uso.";
+
 export const QUEUED_LOG_PARSED_SUMMARY =
   "Script enfileirado. O agente da máquina enviará o resultado após a execução.";
 

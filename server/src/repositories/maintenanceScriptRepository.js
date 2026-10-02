@@ -44,11 +44,9 @@ export {
   listPendingScriptLogs,
   listRecentScriptExecutionLogs
 } from "../services/maintenanceScripts/scriptLogService.js";
-export {
-  registerMaintenanceScriptSimulation,
-  useScriptForServiceOrder,
-  useScriptFromSuggestion
-} from "../services/maintenanceScripts/scriptUsageService.js";
+export { registerMaintenanceScriptSimulation } from "../services/maintenanceScripts/scriptSimulationService.js";
+export { useScriptFromSuggestion } from "../services/maintenanceScripts/suggestionScriptUsageService.js";
+export { useScriptForServiceOrder } from "../services/maintenanceScripts/serviceOrderScriptUsageService.js";
 export {
   cancelScriptValidation,
   listScriptValidationsForSuggestion,
