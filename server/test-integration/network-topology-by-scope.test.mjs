@@ -2,14 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { useTestDatabase } from "../test-support/database.mjs";
 
-const testDatabase = await useTestDatabase();
+await useTestDatabase();
 process.env.ENABLE_DEMO_SEED = "true";
 process.env.JWT_SECRET = "integration-test-secret-with-at-least-32-characters";
 process.env.NODE_ENV = "test";
 
 const { createApp } = await import("../src/app.js");
 const { createUser } = await import("../src/repositories/userRepository.js");
-const { default: jwt } = await import("jsonwebtoken");
+const { startSession } = await import("../src/services/sessionService.js");
 
 const trustedOrigin = "http://localhost:5173";
 
@@ -194,7 +194,7 @@ test("mapa de rede por escopo: usuario sem permissao de visualizar recebe 403", 
     password: "not-used-in-this-test",
     role: "viewer"
   });
-  const noPermissionToken = jwt.sign({ sub: noPermissionUser.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+  const noPermissionToken = (await startSession(noPermissionUser)).token;
 
   const response = await fetch(`${baseUrl}/api/topology-maps/by-scope?scopeType=segment&scopeId=qualquer`, {
     headers: {

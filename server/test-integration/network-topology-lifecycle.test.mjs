@@ -2,14 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { useTestDatabase } from "../test-support/database.mjs";
 
-const testDatabase = await useTestDatabase();
+await useTestDatabase();
 process.env.ENABLE_DEMO_SEED = "true";
 process.env.JWT_SECRET = "integration-test-secret-with-at-least-32-characters";
 process.env.NODE_ENV = "test";
 
 const { createApp } = await import("../src/app.js");
 const { createUser } = await import("../src/repositories/userRepository.js");
-const { default: jwt } = await import("jsonwebtoken");
+const { startSession } = await import("../src/services/sessionService.js");
 
 const trustedOrigin = "http://localhost:5173";
 
@@ -218,7 +218,7 @@ test("mapa de rede: usuario sem permissao de gerenciar nao consegue criar mapa",
     password: "not-used-in-this-test",
     role: "viewer"
   });
-  const viewerToken = jwt.sign({ sub: viewerUser.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+  const viewerToken = (await startSession(viewerUser)).token;
 
   const response = await fetch(`${baseUrl}/api/topology-maps`, {
     method: "POST",

@@ -27,3 +27,11 @@ export function conflict(message, options = {}) {
 export function serviceUnavailable(message, options = {}) {
   return new AppError(message, { statusCode: 503, ...options });
 }
+
+export function unauthorized(message, options = {}) {
+  return new AppError(message, { statusCode: 401, ...options });
+}
+
+export function tooManyRequests(message, options = {}) {
+  return new AppError(message, { statusCode: 429, ...options });
+}

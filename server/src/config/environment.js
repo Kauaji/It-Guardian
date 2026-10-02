@@ -279,9 +279,43 @@ export function resolveDatabasePoolConfig({
   };
 }
 
-export function shouldSeedDemoData() {
-  const flag = process.env.ENABLE_DEMO_SEED ?? process.env.IT_GUARDIAN_ENABLE_DEMO_SEED;
-  return isTruthyEnv(flag);
+/**
+ * Os dados de demonstracao criam usuarios com senha publica ("123456"), entre
+ * eles administradores. Por isso, em ambiente de producao (NODE_ENV=production
+ * ou Vercel) so valem com um SEGUNDO aviso explicito
+ * (DEMO_SEED_ALLOW_PRODUCTION=true), pensado para a instancia de apresentacao
+ * -- uma flag esquecida num servidor real nunca deve abrir um admin conhecido.
+ */
+export function shouldSeedDemoData(env = process.env, productionLike = isProductionLike) {
+  const requested = isTruthyEnv(env.ENABLE_DEMO_SEED ?? env.IT_GUARDIAN_ENABLE_DEMO_SEED);
+  if (!requested) return false;
+  if (productionLike && !isTruthyEnv(env.DEMO_SEED_ALLOW_PRODUCTION)) return false;
+  return true;
+}
+
+export function isDemoSeedBlockedInProduction(env = process.env, productionLike = isProductionLike) {
+  const requested = isTruthyEnv(env.ENABLE_DEMO_SEED ?? env.IT_GUARDIAN_ENABLE_DEMO_SEED);
+  return requested && productionLike && !isTruthyEnv(env.DEMO_SEED_ALLOW_PRODUCTION);
+}
+
+/** Politicas de autenticacao/sessao, todas com limites seguros aplicados aqui. */
+export function getAuthConfig(env = process.env) {
+  const idleSeconds = boundedInteger(env.SESSION_IDLE_SECONDS ?? env.SESSION_MAX_AGE_SECONDS, 8 * 3600, 300, 7 * 24 * 3600);
+  const absoluteSeconds = Math.max(
+    idleSeconds,
+    boundedInteger(env.SESSION_ABSOLUTE_SECONDS, 12 * 3600, 600, 30 * 24 * 3600)
+  );
+  return {
+    idleSeconds,
+    absoluteSeconds,
+    rotateAfterSeconds: boundedInteger(env.SESSION_ROTATE_AFTER_SECONDS, 15 * 60, 60, 24 * 3600),
+    passwordHashCost: boundedInteger(env.PASSWORD_HASH_COST, 12, 10, 14),
+    lockoutThreshold: boundedInteger(env.LOGIN_LOCKOUT_THRESHOLD, 5, 3, 20),
+    lockoutSeconds: [60, 300, 900, 3600],
+    mfaRequiredForAdmins: isTruthyEnv(env.MFA_REQUIRED_FOR_ADMINS),
+    mfaTokenSeconds: 300,
+    setupToken: String(env.SETUP_TOKEN || "").trim()
+  };
 }
 
 export function getFrontendUrl() {
@@ -373,17 +407,51 @@ export function resolveDatabaseConfig() {
   }
 
   const connectionString = databaseUrl || "postgres://itguardian:itguardian@localhost:5432/itguardian";
-  const shouldUseSsl =
-    process.env.DB_SSL === "true" ||
-    (process.env.DB_SSL !== "false" &&
-      (isProductionLike || /supabase|neon\.tech|pooler/i.test(connectionString)));
+  const tls = resolveDatabaseTls({ connectionString });
   const poolConfig = resolveDatabasePoolConfig();
 
   return {
     mode: "postgres",
     connectionString,
-    ssl: shouldUseSsl ? { rejectUnauthorized: false } : false,
+    ssl: tls.ssl,
+    tlsVerification: tls.verification,
     ...poolConfig
   };
+}
+
+// Provedores cujo certificado e emitido por uma CA publica: verificar o
+// certificado funciona sem configurar nada.
+const PUBLIC_CA_HOSTS = /neon\.tech|amazonaws\.com|azure\.com|googleapis\.com|cockroachlabs\.cloud|aivencloud\.com/i;
+
+/**
+ * Decide TLS da conexao com o banco.
+ *  - DB_SSL=false           -> sem TLS (rede local/laboratorio).
+ *  - DB_SSL_MODE=verify     -> TLS verificando certificado e nome do host.
+ *  - DB_SSL_MODE=no-verify  -> TLS sem verificar (aceita MITM; so por escolha explicita).
+ *  - DB_SSL_MODE=auto (padrao) -> verifica quando ha DB_SSL_CA (PEM no proprio
+ *    valor da variavel) ou o provedor usa CA publica; caso contrario mantem
+ *    TLS sem verificacao por compatibilidade e AVISA no boot/readiness.
+ * `verification` e "verified" | "unverified" | "disabled" e e exposto no
+ * /health/ready para o problema nao ficar invisivel.
+ */
+export function resolveDatabaseTls({ connectionString, env = process.env, productionLike = isProductionLike } = {}) {
+  if (env.DB_SSL === "false") return { ssl: false, verification: "disabled" };
+
+  const providerNeedsTls = /supabase|neon\.tech|pooler/i.test(connectionString || "");
+  const wantsTls = env.DB_SSL === "true" || productionLike || providerNeedsTls;
+  if (!wantsTls) return { ssl: false, verification: "disabled" };
+
+  const ca = String(env.DB_SSL_CA || "").replace(/\\n/g, "\n").trim();
+  const mode = String(env.DB_SSL_MODE || "auto").trim().toLowerCase();
+  const publicCa = PUBLIC_CA_HOSTS.test(connectionString || "") && !/pooler\.supabase/i.test(connectionString || "");
+
+  const verify = mode === "verify" || (mode === "auto" && (Boolean(ca) || publicCa));
+  if (verify) {
+    return {
+      ssl: { rejectUnauthorized: true, ...(ca ? { ca } : {}) },
+      verification: "verified"
+    };
+  }
+  return { ssl: { rejectUnauthorized: false }, verification: "unverified" };
 }
 

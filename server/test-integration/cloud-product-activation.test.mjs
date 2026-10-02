@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { useTestDatabase } from "../test-support/database.mjs";
 
-const testDatabase = await useTestDatabase();
+await useTestDatabase();
 process.env.ENABLE_DEMO_SEED = "false";
 process.env.JWT_SECRET = "cloud-activation-test-secret-with-32-characters";
 process.env.NODE_ENV = "test";
@@ -11,7 +11,7 @@ process.env.PUBLIC_APP_URL = "https://it-guardian-server.vercel.app";
 const { createApp } = await import("../src/app.js");
 const { initializeRuntime } = await import("../src/bootstrap.js");
 const { closeDatabase, query } = await import("../src/database.js");
-const { default: jwt } = await import("jsonwebtoken");
+const { startSession } = await import("../src/services/sessionService.js");
 const {
   createProductKey,
   deactivateDeviceActivation,
@@ -102,8 +102,8 @@ test("ativacao cloud controla licencas, reinstalacao, revogacao e heartbeat", as
     role: "admin",
     permissions: ["admin.full"]
   });
-  const regularToken = jwt.sign({ sub: regularUser.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
-  const adminToken = jwt.sign({ sub: adminUser.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+  const regularToken = (await startSession(regularUser)).token;
+  const adminToken = (await startSession(adminUser)).token;
 
   const forbiddenList = await fetch(`${baseUrl}/api/product-keys`, {
     headers: { authorization: `Bearer ${regularToken}` }

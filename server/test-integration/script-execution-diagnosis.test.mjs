@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { useTestDatabase } from "../test-support/database.mjs";
 
-const testDatabase = await useTestDatabase();
+await useTestDatabase();
 process.env.ENABLE_DEMO_SEED = "true";
 process.env.ENABLE_REMOTE_SCRIPT_EXECUTION = "true";
 process.env.JWT_SECRET = "script-execution-diagnosis-integration-secret-32c";
@@ -13,7 +13,7 @@ const { initializeRuntime } = await import("../src/bootstrap.js");
 const { closeDatabase, query } = await import("../src/database.js");
 const { createUser } = await import("../src/repositories/userRepository.js");
 const { createAgentEnrollment } = await import("../src/repositories/agentRepository.js");
-const { default: jwt } = await import("jsonwebtoken");
+const { startSession } = await import("../src/services/sessionService.js");
 
 const trustedOrigin = "http://localhost:5173";
 
@@ -49,7 +49,7 @@ async function bearerUser({ role, permissions = [] }) {
     role,
     permissions
   });
-  const token = jwt.sign({ sub: user.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+  const token = (await startSession(user)).token;
   return { user, token };
 }
 

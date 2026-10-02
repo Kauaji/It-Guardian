@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { ensureRole } from "./userService.js";
 
-const expectedMessage = "Role must be admin, operator or viewer";
+const expectedMessage = "O perfil deve ser administrador, operador ou visualizador.";
 
 test("aceita a role admin sem lancar erro", () => {
   assert.doesNotThrow(() => ensureRole("admin"));

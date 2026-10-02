@@ -1,4 +1,4 @@
-import { isProductionLike } from "../config/environment.js";
+import { getAuthConfig, isProductionLike } from "../config/environment.js";
 
 export const sessionCookieName = "it_guardian_session";
 
@@ -32,8 +32,7 @@ export function readSessionCookie(req) {
   return parseCookies(req.headers.cookie)[sessionCookieName] || "";
 }
 
-export function setSessionCookie(res, token) {
-  const maxAgeSeconds = Math.max(300, Number(process.env.SESSION_MAX_AGE_SECONDS || 28_800));
+export function setSessionCookie(res, token, maxAgeSeconds = getAuthConfig().idleSeconds) {
   const attributes = cookieAttributes(maxAgeSeconds);
   attributes[0] = `${sessionCookieName}=${encodeURIComponent(token)}`;
   res.setHeader("Set-Cookie", attributes.join("; "));

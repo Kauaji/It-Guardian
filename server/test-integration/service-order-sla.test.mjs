@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { useTestDatabase } from "../test-support/database.mjs";
 
-const testDatabase = await useTestDatabase();
+await useTestDatabase();
 process.env.ENABLE_DEMO_SEED = "true";
 process.env.JWT_SECRET = "service-order-sla-integration-secret-32ch";
 process.env.NODE_ENV = "test";

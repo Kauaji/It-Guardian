@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { useTestDatabase } from "../test-support/database.mjs";
 
-const testDatabase = await useTestDatabase();
+await useTestDatabase();
 process.env.ENABLE_DEMO_SEED = "true";
 process.env.JWT_SECRET = "asset-timeline-integration-secret-32-chars";
 process.env.NODE_ENV = "test";
@@ -15,7 +15,7 @@ const {
   createRemoteAssistanceSession,
   addRemoteAssistanceEvent
 } = await import("../src/repositories/remoteAssistanceRepository.js");
-const { default: jwt } = await import("jsonwebtoken");
+const { startSession } = await import("../src/services/sessionService.js");
 const { query, closeDatabase } = await import("../src/database.js");
 const { syncSlaBreaches } = await import("../src/repositories/serviceOrderRepository.js");
 
@@ -70,7 +70,7 @@ async function bearerUser(role) {
     password: "senha-segura-123",
     role
   });
-  const token = jwt.sign({ sub: user.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+  const token = (await startSession(user)).token;
   return { user, token };
 }
 

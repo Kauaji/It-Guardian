@@ -1,4 +1,10 @@
-import { getJwtSecret, isVercel, shouldSeedDemoData } from "./config/environment.js";
+import {
+  getJwtSecret,
+  isDemoSeedBlockedInProduction,
+  isVercel,
+  resolveDatabaseConfig,
+  shouldSeedDemoData
+} from "./config/environment.js";
 import { detectRedisConfig } from "./lib/redisClient.js";
 import { initializeDatabase } from "./schema/legacyBootstrap.js";
 import { runMigrations } from "./migrations/index.js";
@@ -31,11 +37,35 @@ function warnIfServerlessWithoutSharedRedis() {
   }));
 }
 
+function warnAboutRiskyConfiguration() {
+  if (isDemoSeedBlockedInProduction()) {
+    console.error(JSON.stringify({
+      level: "error",
+      event: "demo_seed_blocked_in_production",
+      message:
+        "ENABLE_DEMO_SEED esta ligado em ambiente de producao e foi IGNORADO: os dados de demonstracao criam " +
+        "administradores com senha publica. Para uma instancia de apresentacao, defina tambem " +
+        "DEMO_SEED_ALLOW_PRODUCTION=true."
+    }));
+  }
+  const database = resolveDatabaseConfig();
+  if (database.mode === "postgres" && database.tlsVerification === "unverified") {
+    console.warn(JSON.stringify({
+      level: "warn",
+      event: "db_tls_unverified",
+      message:
+        "A conexao com o banco usa TLS SEM verificar o certificado (aceita interceptacao). Defina DB_SSL_CA " +
+        "com o certificado da CA do provedor (ou DB_SSL_MODE=verify) para fechar isso."
+    }));
+  }
+}
+
 export function initializeRuntime() {
   if (!runtimePromise) {
     runtimePromise = (async () => {
       getJwtSecret();
       warnIfServerlessWithoutSharedRedis();
+      warnAboutRiskyConfiguration();
       await initializeDatabase();
       await runMigrations();
       await purgeLegacyMockIntegrationSnapshots();

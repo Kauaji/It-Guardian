@@ -20,7 +20,8 @@ export default [
       "**/node_modules/**",
       "playwright-report/**",
       "test-results/**",
-      ".vercel/**"
+      ".vercel/**",
+      ".claude/**"
     ]
   },
   {
