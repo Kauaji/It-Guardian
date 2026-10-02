@@ -50,6 +50,17 @@ vi.mock("./components/alerts/AlertCenterV2.jsx", async () => {
 
 const keysOf = (value) => Object.keys(value).sort();
 
+// Todo callback (on*/set*) precisa ser funcao e nenhuma prop pode chegar
+// undefined: protege contra nomes trocados entre as fatias do workspace.
+function expectWired(props) {
+  const undefinedKeys = Object.entries(props).filter(([, value]) => value === undefined).map(([key]) => key);
+  expect(undefinedKeys).toEqual([]);
+  const notFunctions = Object.entries(props)
+    .filter(([key, value]) => /^(on[A-Z]|set[A-Z])/.test(key) && typeof value !== "function")
+    .map(([key]) => key);
+  expect(notFunctions).toEqual([]);
+}
+
 const oldProps = {
   InventoryBoard: ["activeTab", "activeTabId", "aliases", "bulkMoveTarget", "canManage", "devices", "floorPlansView", "groups", "isBulkSelectionDragging", "machinesBySegment", "moveModal", "moveTarget", "notify", "observations", "onAddObservation", "onAddPeripheral", "onAliasSave", "onBulkMarkBackup", "onBulkMove", "onBulkMoveTargetChange", "onBulkPrint", "onChangeDeviceType", "onChangeGroupColor", "onChangeSegmentColor", "onChangeTabColor", "onClearSelection", "onCloseMoveModal", "onCreateGroup", "onCreateManualAsset", "onCreateSegment", "onCreateTab", "onDeleteGroup", "onDeleteSegment", "onDeleteTab", "onMoveGroupOrder", "onMoveMachine", "onMoveSegmentOrder", "onMoveSegmentToGroup", "onOpenMoveModal", "onPutMaintenance", "onRefreshPing", "onRemoveMachine", "onRemovePeripheral", "onRenameGroup", "onRenameSegment", "onRenameTab", "onSelectAsset", "onSelectGroup", "onSelectSegment", "onSelectTab", "onToggleBackup", "onToggleGroup", "onToggleSelection", "search", "segments", "selectedAssetIds", "selectedGroupId", "selectedSegmentId", "setMoveTarget", "setSearch", "tabs", "token", "topologyView", "user", "userName"],
   ServiceOrdersBoard: ["activeTab", "devices", "groups", "notify", "onAddHistory", "onCreate", "onDelete", "onOpenCalendar", "onReleaseBackup", "onReopen", "onSelectBackup", "onStatusChange", "onUpdate", "permissions", "remoteScriptExecutionEnabled", "saving", "segments", "serviceOrders", "systemMode", "tabs", "token", "user"],
@@ -128,6 +139,7 @@ describe("contrato das visoes com os componentes de dominio", () => {
     renderApp("/");
     await screen.findByTestId("DashboardWorkspace");
     expect(keysOf(captured.DashboardWorkspace)).toEqual(oldProps.DashboardWorkspace);
+    expectWired(captured.DashboardWorkspace);
     expect(captured.DashboardWorkspace).toMatchObject({ token: "tok", canCustomize: true });
   });
 
@@ -135,6 +147,7 @@ describe("contrato das visoes com os componentes de dominio", () => {
     renderApp("/inventario");
     await screen.findByTestId("InventoryBoard");
     expect(keysOf(captured.InventoryBoard)).toEqual(oldProps.InventoryBoard);
+    expectWired(captured.InventoryBoard);
     expect(captured.InventoryBoard).toMatchObject({
       token: "tok",
       userName: "Ana",
@@ -150,6 +163,8 @@ describe("contrato das visoes com os componentes de dominio", () => {
     await screen.findByTestId("FloorPlansModule");
     await screen.findByTestId("InventoryNetworkTopologyView");
     expect(keysOf(captured.FloorPlansModule)).toEqual(oldProps.FloorPlansModule);
+    expectWired(captured.FloorPlansModule);
+    expectWired(captured.InventoryNetworkTopologyView);
     expect(keysOf(captured.FloorPlansModule.permissions)).toEqual(permissionKeys.floorPlans);
     expect(keysOf(captured.InventoryNetworkTopologyView)).toEqual(oldProps.InventoryNetworkTopologyView);
   });
@@ -170,6 +185,7 @@ describe("contrato das visoes com os componentes de dominio", () => {
     const first = renderApp("/ordens-de-servico");
     await screen.findByTestId("ServiceOrdersBoard");
     expect(keysOf(captured.ServiceOrdersBoard)).toEqual(oldProps.ServiceOrdersBoard);
+    expectWired(captured.ServiceOrdersBoard);
     expect(keysOf(captured.ServiceOrdersBoard.permissions)).toEqual(permissionKeys.serviceOrders);
     expect(captured.ServiceOrdersBoard).toMatchObject({ systemMode: "local", saving: false });
     first.unmount();
@@ -177,12 +193,14 @@ describe("contrato das visoes com os componentes de dominio", () => {
     const second = renderApp("/agenda");
     await screen.findByTestId("TechnicalCalendarPage");
     expect(keysOf(captured.TechnicalCalendarPage)).toEqual(oldProps.TechnicalCalendarPage);
+    expectWired({ ...captured.TechnicalCalendarPage, focusServiceOrder: null });
     expect(keysOf(captured.TechnicalCalendarPage.permissions)).toEqual(permissionKeys.calendar);
     second.unmount();
 
     renderApp("/pecas");
     await screen.findByTestId("PartsInventoryPage");
     expect(keysOf(captured.PartsInventoryPage)).toEqual(oldProps.PartsInventoryPage);
+    expectWired(captured.PartsInventoryPage);
     expect(keysOf(captured.PartsInventoryPage.permissions)).toEqual(permissionKeys.parts);
   });
 
@@ -190,6 +208,8 @@ describe("contrato das visoes com os componentes de dominio", () => {
     renderApp("/avisos");
     await screen.findByTestId("AlertCenterV2");
     expect(keysOf(captured.AlertCenterV2)).toEqual(oldProps.AlertCenterV2);
+    expectWired(captured.AlertCenterV2);
+    expectWired(captured.alertCenterValue);
     expect(keysOf(captured.alertCenterValue)).toEqual([...oldProps.alertCenterValue].sort());
     expect(captured.alertCenterValue.severityFilter).toBe("all");
   });
