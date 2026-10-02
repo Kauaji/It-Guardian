@@ -1,0 +1,176 @@
+name: Windows Agent
+
+# Testes e build do agente Windows (C#, .NET Framework 4.x) e do instalador.
+#
+#  - Job "tests-mono" (Linux): compila com mcs -langversion:5 e roda os testes C# contra vetores
+#    de assinatura recem-gerados pelo Node (a mesma verificacao ECDSA roda aqui e no Windows).
+#  - Job "build-windows": csc.exe do .NET Framework (via installers/windows-collector/build-installer.ps1,
+#    fonte unica dos parametros de compilacao), Run-Tests.ps1, Inno Setup, SHA-256 dos artefatos e,
+#    SE os secrets existirem, assinatura Authenticode e manifesto de release assinado.
+#
+# Secrets (todos opcionais; sem eles o build roda e publica artefatos NAO assinados):
+#   WINDOWS_CODESIGN_PFX_BASE64   .pfx do certificado de assinatura de codigo, em base64
+#   WINDOWS_CODESIGN_PASSWORD     senha do .pfx
+#   AGENT_RELEASE_PRIVATE_KEY     chave PRIVADA de release (PEM PKCS#8, ECDSA P-256) que assina o manifesto
+#                                 de atualizacao; fica FORA do servidor da API (gere com `npm run agent:keys -- release`)
+# Variaveis do repositorio (opcionais):
+#   AGENT_RELEASE_PUBLIC_KEY      chave PUBLICA correspondente, embutida no instalador
+#   AGENT_RELEASE_URL_BASE        base HTTPS onde o ITGuardian.exe sera hospedado (URL = <base>/ITGuardian-<versao>.exe)
+#   API_BASE_URL                  URL da API embutida no instalador (padrao: it-guardian-server.vercel.app)
+#
+# Interface de scripts/sign-agent-release.mjs (usada abaixo):
+#   AGENT_RELEASE_PRIVATE_KEY=... node scripts/sign-agent-release.mjs --version <v> --url <https://...> --sha256 <hex64>
+#   stdout: {"version","sha256","url","signature"}   (assinatura ECDSA P-256 / SHA-256, base64 P1363)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - "agent/**"
+      - "installers/**"
+      - "server/src/security/agentSigning.js"
+      - ".github/workflows/windows-agent.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-agent-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests-mono:
+    name: Testes C# (Mono, Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Instalar Mono
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mono-mcs mono-runtime \
+            libmono-system-numerics4.0-cil libmono-system-web-extensions4.0-cil \
+            libmono-system-management4.0-cil libmono-system-drawing4.0-cil libmono-system-windows-forms4.0-cil
+      - name: Gerar vetores novos com o Node (o Node tem de concordar com todos)
+        run: node agent/windows/tests/gen-vectors.mjs
+      - name: Testes do agente (contra os vetores recem-gerados)
+        run: bash agent/windows/tests/run-tests.sh
+      - name: Compilar o agente completo (C# 5, como o csc do .NET Framework)
+        run: |
+          cd agent/windows
+          mcs -nologo -target:winexe -langversion:5 -out:/tmp/ITGuardian.exe \
+            -r:System.dll -r:System.Core.dll -r:System.Drawing.dll -r:System.Management.dll \
+            -r:System.Numerics.dll -r:System.Web.Extensions.dll -r:System.Windows.Forms.dll \
+            ITGuardian.Windows.cs ITGuardian.RemoteAssistance.cs ITGuardian.RustdeskController.cs \
+            ITGuardian.Logging.cs ITGuardian.Signing.cs ITGuardian.Policy.cs ITGuardian.Config.cs
+
+  build-windows:
+    name: Build, testes e instalador (Windows)
+    runs-on: windows-latest
+    env:
+      RUSTDESK_SKIP_AUTO_DOWNLOAD: "1"
+      # Segredos so existem fora de PR de fork; as flags abaixo apenas dizem se estao presentes.
+      HAS_CODESIGN: ${{ secrets.WINDOWS_CODESIGN_PFX_BASE64 != '' && secrets.WINDOWS_CODESIGN_PASSWORD != '' }}
+      HAS_RELEASE_KEY: ${{ secrets.AGENT_RELEASE_PRIVATE_KEY != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Testes C# (csc.exe do .NET Framework)
+        shell: pwsh
+        run: ./agent/windows/tests/Run-Tests.ps1
+
+      - name: Instalar Inno Setup
+        shell: pwsh
+        run: choco install innosetup -y --no-progress
+
+      - name: Preparar certificado Authenticode (somente se os secrets existirem)
+        if: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && env.HAS_CODESIGN == 'true' }}
+        shell: pwsh
+        env:
+          PFX_BASE64: ${{ secrets.WINDOWS_CODESIGN_PFX_BASE64 }}
+          PFX_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_PASSWORD }}
+        run: |
+          $pfx = Join-Path $env:RUNNER_TEMP "codesign.pfx"
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:PFX_BASE64))
+          # build-installer.ps1 le estas variaveis e assina ITGuardian.exe, o desinstalador e o instalador
+          # com signtool /fd SHA256 e carimbo de tempo RFC3161 (/tr ... /td SHA256).
+          "IT_GUARDIAN_CODE_SIGN_PFX=$pfx" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "IT_GUARDIAN_CODE_SIGN_PFX_PASSWORD=$env:PFX_PASSWORD" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "IT_GUARDIAN_CODE_SIGN_TIMESTAMP_URL=http://timestamp.digicert.com" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Compilar agente e gerar instalador
+        shell: pwsh
+        env:
+          RELEASE_PUBLIC_KEY: ${{ vars.AGENT_RELEASE_PUBLIC_KEY }}
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+        run: |
+          $arguments = @{}
+          if ($env:API_BASE_URL) { $arguments["ApiBaseUrl"] = $env:API_BASE_URL }
+          if ($env:RELEASE_PUBLIC_KEY) { $arguments["ReleasePublicKey"] = $env:RELEASE_PUBLIC_KEY }
+          ./installers/windows-collector/build-installer.ps1 @arguments
+
+      - name: Verificar assinatura Authenticode (quando assinado)
+        if: ${{ env.HAS_CODESIGN == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        shell: pwsh
+        run: |
+          foreach ($file in @("installers/windows-collector/ITGuardian.exe", "installers/windows-collector/output/ITGuardian-Collector-Setup.exe")) {
+            $signature = Get-AuthenticodeSignature -FilePath $file
+            Write-Host "$file => $($signature.Status)"
+            if ($signature.SignerCertificate -eq $null) { throw "$file sem assinatura Authenticode." }
+          }
+
+      - name: SHA-256 dos artefatos
+        id: hashes
+        shell: pwsh
+        run: |
+          $exe = "installers/windows-collector/ITGuardian.exe"
+          $setup = "installers/windows-collector/output/ITGuardian-Collector-Setup.exe"
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item $exe dist/ITGuardian.exe
+          Copy-Item $setup dist/ITGuardian-Collector-Setup.exe
+          $lines = foreach ($name in @("ITGuardian.exe", "ITGuardian-Collector-Setup.exe")) {
+            $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath "dist/$name").Hash.ToLowerInvariant()
+            "$hash  $name"
+          }
+          $lines | Set-Content -Path dist/SHA256SUMS.txt -Encoding ascii
+          $lines | ForEach-Object { Write-Host $_ }
+          $agentHash = (Get-FileHash -Algorithm SHA256 -LiteralPath "dist/ITGuardian.exe").Hash.ToLowerInvariant()
+          $source = Get-Content -Raw -LiteralPath agent/windows/ITGuardian.Windows.cs
+          if ($source -notmatch 'private const string AgentVersion = "([^"]+)"') { throw "AgentVersion nao encontrada." }
+          "sha256=$agentHash" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "version=$($Matches[1])" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - uses: actions/setup-node@v4
+        if: ${{ env.HAS_RELEASE_KEY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        with:
+          node-version: 22
+
+      - name: Assinar o manifesto de release (somente se AGENT_RELEASE_PRIVATE_KEY existir)
+        if: ${{ env.HAS_RELEASE_KEY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        shell: pwsh
+        env:
+          AGENT_RELEASE_PRIVATE_KEY: ${{ secrets.AGENT_RELEASE_PRIVATE_KEY }}
+          RELEASE_URL_BASE: ${{ vars.AGENT_RELEASE_URL_BASE }}
+          AGENT_VERSION: ${{ steps.hashes.outputs.version }}
+          AGENT_SHA256: ${{ steps.hashes.outputs.sha256 }}
+        run: |
+          if (-not $env:RELEASE_URL_BASE -or -not $env:RELEASE_URL_BASE.StartsWith("https://")) {
+            throw "Defina a variavel AGENT_RELEASE_URL_BASE (base HTTPS onde o ITGuardian.exe sera publicado)."
+          }
+          $url = "$($env:RELEASE_URL_BASE.TrimEnd('/'))/ITGuardian-$($env:AGENT_VERSION).exe"
+          # A chave privada chega so por variavel de ambiente; nunca e impressa nem gravada em disco.
+          $manifest = node scripts/sign-agent-release.mjs --version $env:AGENT_VERSION --url $url --sha256 $env:AGENT_SHA256
+          if ($LASTEXITCODE -ne 0) { throw "sign-agent-release.mjs falhou (codigo $LASTEXITCODE)." }
+          $manifest | Set-Content -Path dist/release-manifest.json -Encoding utf8
+          Get-Content dist/release-manifest.json
+          Write-Host "Publique version/url/sha256/signature nas variaveis AGENT_LATEST_VERSION, AGENT_LATEST_VERSION_URL, AGENT_LATEST_VERSION_SHA256 e AGENT_LATEST_VERSION_SIGNATURE do servidor, DEPOIS de hospedar dist/ITGuardian.exe na URL acima."
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: itguardian-windows-agent
+          path: dist/
+          if-no-files-found: error

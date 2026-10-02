@@ -21,30 +21,6 @@ using System.Windows.Forms;
 
 namespace ITGuardian.Windows
 {
-    internal sealed class AgentConfig
-    {
-        public string serverUrl { get; set; }
-        public string supportUrl { get; set; }
-        public string agentToken { get; set; }
-        public int intervalSeconds { get; set; }
-        public string machineId { get; set; }
-        public string machineAlias { get; set; }
-        public string environment { get; set; }
-        public string group { get; set; }
-        public string segment { get; set; }
-        public bool includeLoggedUser { get; set; }
-        public bool enableRemoteScriptExecution { get; set; }
-        public bool enableRemoteAssistance { get; set; }
-        // Opcional: caminho completo do rustdesk.exe quando nao instalado num
-        // dos locais padrao (ver RustdeskController.ResolveExecutablePath).
-        public string rustdeskExecutablePath { get; set; }
-        // Relay proprio do IT Guardian (ver RustdeskController.EnsureServerConfigured).
-        // Vazios = cliente RustDesk continua no relay publico de fabrica.
-        public string rustdeskIdServer { get; set; }
-        public string rustdeskRelayServer { get; set; }
-        public string rustdeskKey { get; set; }
-    }
-
     internal sealed class AgentHeartbeatResponse
     {
         public string assetId { get; set; }
@@ -53,6 +29,8 @@ namespace ITGuardian.Windows
         public string latestVersion { get; set; }
         public string latestVersionDownloadUrl { get; set; }
         public string latestVersionSha256 { get; set; }
+        // Assinatura ECDSA P-256 (base64) do manifesto de atualizacao; ver ITGuardian.Policy.cs.
+        public string latestVersionSignature { get; set; }
     }
 
     internal sealed class AgentScriptJob
@@ -65,6 +43,14 @@ namespace ITGuardian.Windows
         public int timeoutSeconds { get; set; }
         public bool requiresAdmin { get; set; }
         public bool requiresLoggedUser { get; set; }
+        // Assinatura do job (protocolo ITG-JOB-V1). `signature` e `notAfter`
+        // (unix segundos) sempre vem do servidor; `assetId` e `contentSha256`
+        // sao opcionais: ausentes, o agente usa o assetId do heartbeat e o
+        // hash que ele mesmo calcula sobre `content`.
+        public string signature { get; set; }
+        public long notAfter { get; set; }
+        public string assetId { get; set; }
+        public string contentSha256 { get; set; }
     }
 
     internal sealed class AgentScriptResult
@@ -112,6 +98,7 @@ namespace ITGuardian.Windows
         private static int Main(string[] args)
         {
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+            Log.Sink = WriteLog;
             string configPath = ArgumentValue(args, "--config")
                 ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.json");
 
@@ -156,18 +143,7 @@ namespace ITGuardian.Windows
 
         private static AgentConfig ReadConfig(string path)
         {
-            if (!File.Exists(path)) throw new InvalidOperationException("Configuracao do IT Guardian nao encontrada.");
-            AgentConfig config = new JavaScriptSerializer().Deserialize<AgentConfig>(File.ReadAllText(path));
-            if (config == null || string.IsNullOrWhiteSpace(config.serverUrl))
-            {
-                throw new InvalidOperationException("serverUrl e obrigatorio.");
-            }
-            if (config.intervalSeconds == 0) config.intervalSeconds = 300;
-            if (config.intervalSeconds < 30 || config.intervalSeconds > 86400)
-            {
-                throw new InvalidOperationException("intervalSeconds deve estar entre 30 e 86400.");
-            }
-            return config;
+            return AgentConfigReader.Load(path);
         }
 
         private static void RunTray(string configPath)
@@ -191,6 +167,10 @@ namespace ITGuardian.Windows
             }
 
             WriteLog("INFO", "Coletor IT Guardian " + AgentVersion + " iniciado.");
+            foreach (KeyValuePair<string, string> posture in TrustPosture.Describe(config))
+            {
+                WriteLog(posture.Key, posture.Value);
+            }
             RustdeskController.ExecutablePathOverride = config.rustdeskExecutablePath;
             RemoteAssistanceBroker remoteAssistanceBroker = null;
             if (!runOnce && RemoteAssistanceEnvironment.IsAllowed(config))
@@ -326,6 +306,10 @@ namespace ITGuardian.Windows
         private static bool SendInventory(AgentConfig config, bool skipAutoUpdate = false)
         {
             Dictionary<string, object> payload = CollectInventory(config);
+            // O assetId que o servidor usa e o machineId que ESTE agente reporta
+            // (agentRepository: assetId = payload.machineId); e a identidade
+            // propria contra a qual o assetId assinado do job e conferido.
+            string ownAssetId = Convert.ToString(payload["machineId"]);
             string endpoint = config.serverUrl.TrimEnd('/') + "/api/agents/heartbeat";
             byte[] body = Encoding.UTF8.GetBytes(new JavaScriptSerializer().Serialize(payload));
             if (body.Length > MaxInventoryPayloadBytes)
@@ -369,7 +353,7 @@ namespace ITGuardian.Windows
                 );
                 if (heartbeat.remoteScriptExecutionEnabled && config.enableRemoteScriptExecution)
                 {
-                    ExecuteAndReportJob(config, heartbeat.job);
+                    ExecuteAndReportJob(config, heartbeat.job, heartbeat.assetId, ownAssetId);
                 }
                 else
                 {
@@ -398,9 +382,11 @@ namespace ITGuardian.Windows
                 try
                 {
                     return ApplyUpdate(
+                        config,
                         heartbeat.latestVersion,
                         heartbeat.latestVersionDownloadUrl,
-                        heartbeat.latestVersionSha256
+                        heartbeat.latestVersionSha256,
+                        heartbeat.latestVersionSignature
                     );
                 }
                 catch (Exception updateError)
@@ -412,24 +398,42 @@ namespace ITGuardian.Windows
         }
 
         /// <summary>
-        /// Baixa o binario indicado pelo servidor, confere o hash SHA-256 contra o
-        /// valor esperado e so troca o executavel em uso se ele bater exatamente --
-        /// sem certificado de assinatura em uso ainda, esse hash e a UNICA garantia
-        /// de integridade, o mesmo modelo ja usado na pinagem de scripts de
-        /// manutencao. Nunca lanca: qualquer falha (rede, hash divergente, tamanho
-        /// fora do esperado) so cancela a atualizacao desta vez, sem afetar a
-        /// coleta normal de inventario.
+        /// Atualizacao automatica, em tres travas independentes:
+        ///  1. UpdateGate (ITGuardian.Policy.cs), ANTES de baixar qualquer byte:
+        ///     precisa haver releasePublicKey (ou o opt-out explicito
+        ///     allowUnsignedUpdates), URL https, versao estritamente maior e
+        ///     assinatura ECDSA valida do manifesto (versao + SHA-256 + URL)
+        ///     por uma chave que NAO fica no servidor da API;
+        ///  2. o SHA-256 do binario baixado precisa bater com o valor ASSINADO
+        ///     (nunca com um valor so "informado" na mesma resposta);
+        ///  3. limites de tamanho e URL final https.
+        /// Nunca lanca para o chamador alem do que ele ja captura: qualquer
+        /// falha (rede, hash divergente, tamanho fora do esperado) so cancela a
+        /// atualizacao desta vez, sem afetar a coleta de inventario.
         /// </summary>
-        private static bool ApplyUpdate(string newVersion, string downloadUrl, string expectedSha256)
+        private static bool ApplyUpdate(
+            AgentConfig config,
+            string newVersion,
+            string downloadUrl,
+            string expectedSha256,
+            string signature)
         {
-            Uri parsedUrl;
-            if (!Uri.TryCreate(downloadUrl, UriKind.Absolute, out parsedUrl) ||
-                parsedUrl.Scheme != Uri.UriSchemeHttps)
+            GateDecision gate = UpdateGate.Evaluate(config, AgentVersion, newVersion, downloadUrl, expectedSha256, signature);
+            if (!gate.Allowed)
             {
-                WriteLog("WARN", "URL de atualizacao ausente ou nao HTTPS; atualizacao automatica ignorada.");
+                // O servidor repete a oferta a cada heartbeat; registra uma vez por janela.
+                Log.WriteThrottled(
+                    "update-refused|" + newVersion + "|" + gate.Reason,
+                    Log.LevelWarn,
+                    "Atualizacao automatica para a versao " + newVersion + " ignorada: " + gate.Reason + ".",
+                    TimeSpan.FromHours(6)
+                );
                 return false;
             }
+            if (gate.Warning != null) WriteLog("WARN", gate.Warning);
+            WriteLog("INFO", "Atualizacao para a versao " + newVersion + " autorizada pela politica: " + gate.Reason + ".");
 
+            Uri parsedUrl = new Uri(downloadUrl, UriKind.Absolute);
             byte[] downloadedBytes;
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(parsedUrl);
             request.Method = "GET";
@@ -440,6 +444,12 @@ namespace ITGuardian.Windows
                 if ((int)response.StatusCode < 200 || (int)response.StatusCode >= 300)
                 {
                     WriteLog("WARN", "Download da atualizacao recusado (" + (int)response.StatusCode + ").");
+                    return false;
+                }
+                // Redirecionamentos (ex.: CDN de releases) sao seguidos, mas nunca para fora de HTTPS.
+                if (response.ResponseUri == null || response.ResponseUri.Scheme != Uri.UriSchemeHttps)
+                {
+                    WriteLog("ERROR", "Download da atualizacao terminou fora de HTTPS; atualizacao recusada.");
                     return false;
                 }
                 using (MemoryStream memory = new MemoryStream())
@@ -459,23 +469,13 @@ namespace ITGuardian.Windows
                 return false;
             }
 
-            string actualHash;
-            using (SHA256 sha256 = SHA256.Create())
-            {
-                byte[] hashBytes = sha256.ComputeHash(downloadedBytes);
-                StringBuilder builder = new StringBuilder(hashBytes.Length * 2);
-                foreach (byte value in hashBytes)
-                {
-                    builder.Append(value.ToString("x2"));
-                }
-                actualHash = builder.ToString();
-            }
+            string actualHash = Hashing.Sha256Hex(downloadedBytes);
 
             if (!string.Equals(actualHash, expectedSha256, StringComparison.OrdinalIgnoreCase))
             {
                 WriteLog(
                     "ERROR",
-                    "Hash do binario baixado nao confere com o esperado pelo servidor; atualizacao recusada."
+                    "Hash do binario baixado nao confere com o SHA-256 do manifesto; atualizacao recusada."
                 );
                 return false;
             }
@@ -489,22 +489,96 @@ namespace ITGuardian.Windows
 
             if (File.Exists(previousPath))
             {
-                try { File.Delete(previousPath); } catch { }
+                try
+                {
+                    File.Delete(previousPath);
+                }
+                catch (Exception deleteError)
+                {
+                    Log.BestEffort("apagar o executavel anterior " + previousPath, deleteError, Log.LevelWarn);
+                }
             }
             File.Move(currentExecutablePath, previousPath);
-            File.Move(downloadedPath, currentExecutablePath);
+            try
+            {
+                File.Move(downloadedPath, currentExecutablePath);
+            }
+            catch (Exception swapError)
+            {
+                // Sem rollback a maquina ficaria sem executavel; devolve o anterior e falha a atualizacao.
+                WriteLog("ERROR", "Falha ao instalar o novo executavel (" + swapError.Message + "); restaurando o anterior.");
+                File.Move(previousPath, currentExecutablePath);
+                throw;
+            }
 
             WriteLog("INFO", "Atualizacao automatica aplicada: versao " + newVersion + ".");
             return true;
         }
 
-        private static void ExecuteAndReportJob(AgentConfig config, AgentScriptJob job)
+        // Registro persistente dos ultimos jobIds executados (anti-replay). Fica em
+        // state\ (acesso so de SYSTEM/Administradores, ver Finalize-CollectorInstall.ps1),
+        // fora de logs\ que o grupo Users pode escrever.
+        private static ReplayStore replayStore;
+
+        internal static string StatePath(string fileName)
+        {
+            return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "state", fileName);
+        }
+
+        private static void ExecuteAndReportJob(
+            AgentConfig config, AgentScriptJob job, string heartbeatAssetId, string ownAssetId)
         {
             WriteLog(
                 "INFO",
                 "Trabalho recebido do servidor: id=" + job.id + " scriptId=" + job.scriptId +
                 " nome=\"" + (job.name ?? "") + "\" tipo=" + job.type + "."
             );
+
+            // Politica de assinatura: nada executa sem passar por aqui. Os campos
+            // assinados sao RECONSTRUIDOS a partir do que chegou (protocolo
+            // ITG-JOB-V1: jobId=job.id, interpreter=job.type, assetId do job ou
+            // do heartbeat, hash calculado localmente sobre job.content).
+            if (replayStore == null) replayStore = ReplayStore.Load(StatePath("seen-job-ids.txt"));
+            SignedJob signedJob = new SignedJob
+            {
+                JobId = job.id,
+                AssetId = !string.IsNullOrWhiteSpace(job.assetId) ? job.assetId : heartbeatAssetId,
+                Interpreter = job.type,
+                TimeoutSeconds = job.timeoutSeconds,
+                Content = job.content,
+                ContentSha256 = job.contentSha256,
+                Signature = job.signature,
+                NotAfter = job.notAfter
+            };
+            GateDecision gate = JobGate.Evaluate(config, signedJob, ownAssetId, UnixTime.Now(), replayStore);
+            string refusalReason = gate.Allowed ? null : gate.Reason;
+            if (gate.Allowed && gate.Warning != null)
+            {
+                WriteLog("WARN", gate.Warning);
+            }
+            else if (gate.Allowed)
+            {
+                // Registra ANTES de executar: um crash no meio nao pode permitir reexecucao do mesmo job.
+                string recordError;
+                if (!replayStore.TryRecord(job.id, out recordError))
+                {
+                    refusalReason = recordError;
+                }
+            }
+            if (refusalReason != null)
+            {
+                WriteLog("WARN", "Trabalho " + job.id + " recusado pela politica de assinatura: " + refusalReason + ".");
+                try
+                {
+                    ReportJobRefused(config, job, "Execucao recusada pelo agente: " + refusalReason + ".");
+                }
+                catch (Exception reportError)
+                {
+                    WriteLog("ERROR", "Falha ao reportar recusa do trabalho " + job.id + ": " + reportError.Message);
+                }
+                return;
+            }
+
             string startedAt = DateTime.UtcNow.ToString("o");
             WriteExecutionStatus(new AgentExecutionStatus
             {
@@ -546,10 +620,11 @@ namespace ITGuardian.Windows
                 string statusPath = Path.Combine(logDirectory, "execution-status.json");
                 File.WriteAllText(statusPath, new JavaScriptSerializer().Serialize(status), new UTF8Encoding(false));
             }
-            catch
+            catch (Exception statusError)
             {
                 // Cosmetico (feedback visual na bandeja) -- uma falha aqui nunca pode
                 // interromper a execucao real do script nem o envio do resultado.
+                Log.BestEffort("gravar logs\\execution-status.json (feedback visual da bandeja)", statusError);
             }
         }
 
@@ -695,7 +770,14 @@ namespace ITGuardian.Windows
                     if (!process.WaitForExit(timeoutMilliseconds))
                     {
                         result.timedOut = true;
-                        try { process.Kill(); } catch { }
+                        try
+                        {
+                            process.Kill();
+                        }
+                        catch (Exception killError)
+                        {
+                            Log.BestEffort("encerrar o processo do trabalho " + job.id + " apos o tempo limite", killError, Log.LevelWarn);
+                        }
                         process.WaitForExit();
                         WriteLog(
                             "WARN",
@@ -723,7 +805,10 @@ namespace ITGuardian.Windows
                 {
                     if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
                 }
-                catch { }
+                catch (Exception cleanupError)
+                {
+                    Log.BestEffort("apagar o script temporario " + temporaryPath, cleanupError, Log.LevelWarn);
+                }
             }
             return result;
         }
@@ -880,7 +965,10 @@ namespace ITGuardian.Windows
                     }
                 }
             }
-            catch { }
+            catch (Exception collectError)
+            {
+                Log.BestEffort("coletar saude da memoria (Win32_PhysicalMemory)", collectError, Log.LevelWarn);
+            }
             result["status"] = modules == 0
                 ? "Nao disponibilizada pelo Windows"
                 : warnings.Count == 0
@@ -907,7 +995,10 @@ namespace ITGuardian.Windows
                     }
                 }
             }
-            catch { }
+            catch (Exception collectError)
+            {
+                Log.BestEffort("coletar numero de nucleos (Win32_Processor)", collectError, Log.LevelWarn);
+            }
             return cores > 0 ? cores : Math.Max(1, Environment.ProcessorCount);
         }
 
@@ -941,7 +1032,10 @@ namespace ITGuardian.Windows
                     }
                 }
             }
-            catch { }
+            catch (Exception collectError)
+            {
+                Log.BestEffort("coletar detalhes da CPU (Win32_Processor)", collectError, Log.LevelWarn);
+            }
             result["cores"] = cores > 0 ? cores : Math.Max(1, Environment.ProcessorCount);
             result["logicalProcessors"] = logicalProcessors > 0 ? logicalProcessors : Environment.ProcessorCount;
             result["maxClockMhz"] = maxClockMhz;
@@ -977,7 +1071,10 @@ namespace ITGuardian.Windows
                     }
                 }
             }
-            catch { }
+            catch (Exception collectError)
+            {
+                Log.BestEffort("coletar adaptadores de video (Win32_VideoController)", collectError, Log.LevelWarn);
+            }
             return adapters;
         }
 
@@ -993,7 +1090,10 @@ namespace ITGuardian.Windows
                 result["version"] = Text(board, "Version");
                 result["status"] = Text(board, "Status");
             }
-            catch { }
+            catch (Exception collectError)
+            {
+                Log.BestEffort("coletar placa-mae (Win32_BaseBoard)", collectError, Log.LevelWarn);
+            }
             return result;
         }
 
@@ -1021,7 +1121,10 @@ namespace ITGuardian.Windows
                     }
                 }
             }
-            catch { }
+            catch (Exception collectError)
+            {
+                Log.BestEffort("coletar adaptadores de rede (Win32_NetworkAdapterConfiguration)", collectError, Log.LevelWarn);
+            }
             return adapters;
         }
 
@@ -1039,7 +1142,10 @@ namespace ITGuardian.Windows
                 result["estimatedMinutes"] = ToInt(Value(battery, "EstimatedRunTime"));
                 result["status"] = Text(battery, "Status");
             }
-            catch { }
+            catch (Exception collectError)
+            {
+                Log.BestEffort("coletar bateria (Win32_Battery; esperado em desktops sem bateria)", collectError);
+            }
             return result;
         }
 
@@ -1090,7 +1196,10 @@ namespace ITGuardian.Windows
                     }
                 }
             }
-            catch { }
+            catch (Exception collectError)
+            {
+                Log.BestEffort("coletar perifericos (Win32_PnPEntity)", collectError, Log.LevelWarn);
+            }
             return peripherals;
         }
 
@@ -1132,7 +1241,10 @@ namespace ITGuardian.Windows
                     }
                 }
             }
-            catch { }
+            catch (Exception collectError)
+            {
+                Log.BestEffort("coletar identidade dos monitores (WmiMonitorID)", collectError);
+            }
             return monitors;
         }
 
@@ -1241,7 +1353,10 @@ namespace ITGuardian.Windows
                     }
                 }
             }
-            catch { }
+            catch (Exception collectError)
+            {
+                Log.BestEffort("coletar licencas (SoftwareLicensingProduct)", collectError, Log.LevelWarn);
+            }
             return licenses;
         }
 
@@ -1283,7 +1398,10 @@ namespace ITGuardian.Windows
                 office["version"] = Convert.ToString(version) ?? "";
                 office["architecture"] = Convert.ToString(platform) ?? "";
             }
-            catch { }
+            catch (Exception collectError)
+            {
+                Log.BestEffort("ler o Office do registro ClickToRun", collectError);
+            }
             if (string.IsNullOrWhiteSpace(Convert.ToString(office.ContainsKey("name") ? office["name"] : "")))
             {
                 CollectOfficeFromUninstallRegistry(office);
@@ -1345,7 +1463,10 @@ namespace ITGuardian.Windows
                             }
                         }
                     }
-                    catch { }
+                    catch (Exception collectError)
+                    {
+                        Log.BestEffort("procurar o Office no registro de desinstalacao", collectError, Log.LevelWarn);
+                    }
                 }
             }
         }
@@ -1411,7 +1532,10 @@ namespace ITGuardian.Windows
                     }
                 }
             }
-            catch { }
+            catch (Exception collectError)
+            {
+                Log.BestEffort("coletar discos fisicos (Win32_DiskDrive)", collectError, Log.LevelWarn);
+            }
 
             if (disks.Count == 0 && systemTotal > 0)
             {
@@ -1458,7 +1582,10 @@ namespace ITGuardian.Windows
                     }
                 }
             }
-            catch { }
+            catch (Exception collectError)
+            {
+                Log.BestEffort("coletar contadores de confiabilidade de disco (MSFT_StorageReliabilityCounter)", collectError);
+            }
             return counters;
         }
 
@@ -1512,7 +1639,10 @@ namespace ITGuardian.Windows
                     }
                 }
             }
-            catch { }
+            catch (Exception collectError)
+            {
+                Log.BestEffort("coletar SMART legado (MSStorageDriver_FailurePredictData)", collectError);
+            }
             return counters;
         }
 
@@ -1583,7 +1713,10 @@ namespace ITGuardian.Windows
                         }
                     }
                 }
-                catch { }
+                catch (Exception collectError)
+                {
+                    Log.BestEffort("enumerar perfis de usuario carregados para o inventario de software", collectError, Log.LevelWarn);
+                }
             }
         }
 
@@ -1617,7 +1750,10 @@ namespace ITGuardian.Windows
                     }
                 }
             }
-            catch { }
+            catch (Exception collectError)
+            {
+                Log.BestEffort("ler software instalado do registro", collectError, Log.LevelWarn);
+            }
         }
 
         private static string NormalizeInstallDate(string value)
@@ -1702,9 +1838,11 @@ namespace ITGuardian.Windows
                     DateTime.UtcNow.ToString("o") + " [" + level + "] " + message + Environment.NewLine
                 );
             }
-            catch
+            catch (Exception sinkError)
             {
-                // Falhas de telemetria local nunca podem encerrar o coletor ou a bandeja.
+                // Falhas de telemetria local nunca podem encerrar o coletor ou a bandeja;
+                // so se contabiliza (nao ha onde mais registrar).
+                Log.ReportSinkFailure(sinkError);
             }
         }
     }
@@ -1799,9 +1937,10 @@ namespace ITGuardian.Windows
                     trayIcon.ShowBalloonTip(6000);
                 }
             }
-            catch
+            catch (Exception statusError)
             {
                 // Sondagem cosmetica -- nunca pode derrubar a bandeja.
+                Log.BestEffort("ler logs\\execution-status.json (bandeja)", statusError);
             }
         }
 

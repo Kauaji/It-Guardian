@@ -9,5 +9,9 @@
   "segment": "",
   "includeLoggedUser": false,
   "enableRemoteScriptExecution": false,
-  "enableRemoteAssistance": false
+  "enableRemoteAssistance": false,
+  "releasePublicKey": "",
+  "jobSigningPublicKey": "",
+  "allowUnsignedUpdates": false,
+  "allowUnsignedJobs": false
 }

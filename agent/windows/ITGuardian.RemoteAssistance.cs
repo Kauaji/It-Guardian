@@ -400,7 +400,10 @@ namespace ITGuardian.Windows
             {
                 if (!process.HasExited) process.Kill();
             }
-            catch { }
+            catch (Exception killError)
+            {
+                Log.BestEffort("encerrar o processo auxiliar de WebRTC da sessao " + sessionId, killError, Log.LevelWarn);
+            }
         }
 
         private object Pending()
@@ -501,7 +504,10 @@ namespace ITGuardian.Windows
                     wake.Connect(250);
                 }
             }
-            catch { }
+            catch (Exception wakeError)
+            {
+                Log.BestEffort("acordar o canal local de assistencia remota (pipe)", wakeError);
+            }
         }
     }
 
@@ -593,10 +599,11 @@ namespace ITGuardian.Windows
                     form.Activate();
                 }
             }
-            catch
+            catch (Exception foregroundError)
             {
                 // Falha ao forcar o foco nao pode derrubar o formulario: ele
                 // continua visivel (TopMost) mesmo se nao vier para frente.
+                Log.BestEffort("forcar o formulario de consentimento para o primeiro plano", foregroundError);
                 form.Activate();
             }
         }
@@ -672,7 +679,14 @@ namespace ITGuardian.Windows
         protected override void OnShown(EventArgs e)
         {
             base.OnShown(e);
-            try { SystemSounds.Exclamation.Play(); } catch { }
+            try
+            {
+                SystemSounds.Exclamation.Play();
+            }
+            catch (Exception soundError)
+            {
+                Log.BestEffort("tocar o aviso sonoro do consentimento", soundError);
+            }
             ForegroundHelper.ForceToForeground(this);
         }
 
@@ -899,7 +913,10 @@ namespace ITGuardian.Windows
             {
                 RemoteAssistancePendingSession pending = null;
                 try { pending = LocalRemoteAssistanceClient.Call<RemoteAssistancePendingSession>("pending", null, null); }
-                catch { }
+                catch (Exception pendingError)
+                {
+                    Log.BestEffort("consultar solicitacao pendente no canal local", pendingError);
+                }
                 uiContext.Post(delegate(object state)
                 {
                     polling = false;
@@ -943,8 +960,9 @@ namespace ITGuardian.Windows
                     selectedMonitorId = primary
                 });
             }
-            catch
+            catch (Exception answerError)
             {
+                Log.BestEffort("responder a solicitacao de assistencia remota", answerError, Log.LevelWarn);
                 MessageBox.Show(
                     "Nao foi possivel responder a solicitacao. Tente novamente pelo IT Guardian.",
                     "IT Guardian",
@@ -1001,8 +1019,9 @@ namespace ITGuardian.Windows
                         uiContext.Post(delegate { AppendChatMessages(single); }, null);
                     }
                 }
-                catch
+                catch (Exception chatError)
                 {
+                    Log.BestEffort("enviar mensagem de chat da assistencia remota", chatError, Log.LevelWarn);
                     uiContext.Post(delegate
                     {
                         if (chatForm != null) chatForm.ShowError("Nao foi possivel enviar a mensagem.");
@@ -1127,9 +1146,10 @@ namespace ITGuardian.Windows
                     if (!useWebrtc && !useRustdesk && !capturePaused) CaptureAndSendFrame();
                     consecutiveFailures = 0;
                 }
-                catch
+                catch (Exception loopError)
                 {
                     consecutiveFailures++;
+                    Log.BestEffort("ciclo de captura/transporte da assistencia remota (falha " + consecutiveFailures + " seguida)", loopError, Log.LevelWarn);
                     if (consecutiveFailures >= 8)
                     {
                         StopOnUiThread();
@@ -1223,7 +1243,10 @@ namespace ITGuardian.Windows
                 ThreadPool.QueueUserWorkItem(delegate
                 {
                     try { LocalRemoteAssistanceClient.Call<object>("end", sessionId, null); }
-                    catch { }
+                    catch (Exception endError)
+                    {
+                        Log.BestEffort("encerrar a sessao " + sessionId + " no canal local", endError);
+                    }
                 });
             }
             ResetUi();
