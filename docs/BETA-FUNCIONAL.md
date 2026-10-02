@@ -1,5 +1,7 @@
 # IT Guardian Beta Funcional
 
+> **Documento histórico.** Descreve o estado do projeto numa data passada e pode estar desatualizado; a fonte da verdade é o código e os documentos listados em [docs/README.md](README.md).
+
 Este e o roteiro oficial para validar o IT Guardian em um laboratorio local. O
 perfil usa PostgreSQL persistente, API Express e frontend Nginx no Docker
 Compose. OCS e Zabbix ficam desabilitados e nao sao requisitos.

@@ -1,5 +1,7 @@
 # Auditoria da beta profissional
 
+> **Documento histórico.** Descreve o estado do projeto numa data passada e pode estar desatualizado; a fonte da verdade é o código e os documentos listados em [docs/README.md](README.md).
+
 Data: 2026-08-02
 
 ## Arquitetura auditada

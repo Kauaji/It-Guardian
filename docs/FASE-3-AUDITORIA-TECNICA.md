@@ -1,5 +1,7 @@
 # Fase 3 - Auditoria Tecnica
 
+> **Documento histórico.** Descreve o estado do projeto numa data passada e pode estar desatualizado; a fonte da verdade é o código e os documentos listados em [docs/README.md](README.md).
+
 Auditoria documental do IT Guardian para mapear o que ainda esta no frontend,
 em `localStorage`, mockado, hardcoded ou como regra de negocio no React.
 

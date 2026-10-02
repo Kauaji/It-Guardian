@@ -1,5 +1,7 @@
 # Fase 3 - Checklist de Testes
 
+> **Documento histórico.** Descreve o estado do projeto numa data passada e pode estar desatualizado; a fonte da verdade é o código e os documentos listados em [docs/README.md](README.md).
+
 > Checklist historico da fase de simulacao. Consulte
 > `SCRIPTS-MANUTENCAO-SEGURANCA.md` para o comportamento atual do coletor.
 

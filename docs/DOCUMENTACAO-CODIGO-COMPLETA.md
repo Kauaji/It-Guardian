@@ -1,5 +1,7 @@
 # Documentação completa do código - IT Guardian
 
+> **Documento histórico.** Descreve o estado do projeto numa data passada e pode estar desatualizado; a fonte da verdade é o código e os documentos listados em [docs/README.md](README.md).
+
 Este documento explica a estrutura técnica do IT Guardian e o papel dos principais arquivos, funções, componentes e fluxos do sistema. Ele foi escrito para servir como referência de manutenção da Fase 2 completa, mantendo a visão do que já existe e do que foi preparado para as próximas fases.
 
 ## Visão geral
