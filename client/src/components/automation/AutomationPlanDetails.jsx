@@ -17,7 +17,7 @@ function PlanDetailsBody({ plan, state, permissions, scripts, onDelete }) {
     return (
       <AutomationPlanDeleteConfirmation
         plan={plan}
-        value={state.deleteConfirmation}
+        deleteConfirmation={state.deleteConfirmation}
         busy={state.busy}
         onChange={state.setDeleteConfirmation}
         onCancel={() => state.setConfirmingDelete(false)}

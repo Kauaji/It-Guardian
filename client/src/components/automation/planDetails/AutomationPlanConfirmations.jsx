@@ -1,6 +1,6 @@
 import { Pause, Play, Trash2 } from "lucide-react";
 
-export function AutomationPlanDeleteConfirmation({ plan, value, busy, onChange, onCancel, onConfirm }) {
+export function AutomationPlanDeleteConfirmation({ plan, deleteConfirmation, busy, onChange, onCancel, onConfirm }) {
   return (
     <section className="automation-delete-confirmation">
       <Trash2 size={24} />
@@ -12,7 +12,7 @@ export function AutomationPlanDeleteConfirmation({ plan, value, busy, onChange, 
       </p>
       <label>
         Digite o nome do plano para confirmar
-        <input value={value} onChange={(event) => onChange(event.target.value)} />
+        <input value={deleteConfirmation} onChange={(event) => onChange(event.target.value)} />
       </label>
       <div className="modal-actions">
         <button type="button" className="secondary-action compact-action" onClick={onCancel}>
@@ -21,7 +21,7 @@ export function AutomationPlanDeleteConfirmation({ plan, value, busy, onChange, 
         <button
           type="button"
           className="danger-action compact-action"
-          disabled={busy || value !== plan.name}
+          disabled={busy || deleteConfirmation !== plan.name}
           onClick={() => onConfirm(plan)}
         >
           Excluir plano
