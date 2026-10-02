@@ -1,6 +1,9 @@
 import { getAuthConfig, isProductionLike } from "../config/environment.js";
 
-export const sessionCookieName = "it_guardian_session";
+// O prefixo __Host- obriga o navegador a aceitar o cookie so com Secure,
+// Path=/ e sem Domain: um subdominio comprometido nao consegue sobrescreve-lo.
+// Fora de producao (HTTP local) o nome simples continua valendo.
+export const sessionCookieName = isProductionLike ? "__Host-it_guardian_session" : "it_guardian_session";
 
 function parseCookies(header = "") {
   return String(header)

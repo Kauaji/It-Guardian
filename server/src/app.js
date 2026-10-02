@@ -48,37 +48,14 @@ import productKeyRoutes from "./routes/productKeyRoutes.js";
 import collectorActivationRoutes from "./routes/collectorActivationRoutes.js";
 import securityRoutes from "./routes/securityRoutes.js";
 import remoteAssistanceRoutes from "./routes/remoteAssistanceRoutes.js";
-import { getRelayBackendName } from "./services/remoteAssistanceRelay.js";
+import healthRoutes, { readiness } from "./routes/healthRoutes.js";
+import maintenanceRoutes from "./routes/maintenanceRoutes.js";
 import { initializeRuntime } from "./bootstrap.js";
 import { getCorsOrigins, isAllowedVercelOrigin } from "./config/environment.js";
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 import { requestContext } from "./middleware/requestContextMiddleware.js";
 import { requireTrustedCookieOrigin } from "./middleware/csrfOriginMiddleware.js";
-import { query } from "./database.js";
-
-async function healthCheck(_req, res) {
-  const checkedAt = new Date().toISOString();
-
-  try {
-    await query("SELECT 1 AS healthy");
-    res.json({
-      ok: true,
-      status: "ok",
-      service: "it-guardian-api",
-      timestamp: checkedAt,
-      database: "ok",
-      remoteAssistanceRelay: getRelayBackendName()
-    });
-  } catch (_error) {
-    res.status(503).json({
-      ok: false,
-      status: "error",
-      service: "it-guardian-api",
-      timestamp: checkedAt,
-      database: "unavailable"
-    });
-  }
-}
+import { globalApiRateLimit, rejectDangerousInput } from "./middleware/securityMiddleware.js";
 
 function buildCorsOptions() {
   const allowedOrigins = getCorsOrigins();
@@ -93,9 +70,10 @@ function buildCorsOptions() {
         return;
       }
 
-      const error = new Error(`Origem nao permitida pelo CORS: ${origin}`);
+      const error = new Error("Origem não permitida.");
       error.statusCode = 403;
       error.expose = true;
+      error.code = "CORS_ORIGIN_DENIED";
       callback(error);
     }
   };
@@ -106,11 +84,22 @@ export function createApp({ initializeOnRequest = false } = {}) {
 
   app.disable("x-powered-by");
   app.set("trust proxy", 1);
-  app.use(helmet());
+  // A API so devolve JSON: CSP restritiva, sem enquadramento e sem referrer.
+  app.use(helmet({
+    contentSecurityPolicy: {
+      useDefaults: false,
+      directives: { defaultSrc: ["'none'"], frameAncestors: ["'none'"], baseUri: ["'none'"], formAction: ["'none'"] }
+    },
+    referrerPolicy: { policy: "no-referrer" },
+    crossOriginResourcePolicy: { policy: "same-site" },
+    strictTransportSecurity: { maxAge: 63072000, includeSubDomains: true, preload: false }
+  }));
+  app.use(requestContext);
   app.use(cors(buildCorsOptions()));
   app.use(express.json({ limit: "1mb" }));
   app.use(express.urlencoded({ extended: false, limit: "1mb", parameterLimit: 100 }));
-  app.use(requestContext);
+  app.use(rejectDangerousInput);
+  app.use("/api", globalApiRateLimit);
   app.use(requireTrustedCookieOrigin);
   if (process.env.NODE_ENV === "development") {
     app.use(morgan("dev"));
@@ -127,9 +116,11 @@ export function createApp({ initializeOnRequest = false } = {}) {
     });
   }
 
-  app.get("/health", healthCheck);
-  app.get("/api/health", healthCheck);
+  app.get("/health", readiness);
+  app.get("/api/health", readiness);
+  app.use(healthRoutes);
 
+  app.use("/api/maintenance", maintenanceRoutes);
   app.use("/api/public", publicRoutes);
   app.use("/api/auth", authRoutes);
   app.use("/api/preferences", userPreferenceRoutes);

@@ -5,6 +5,7 @@ import {
   resolveDatabaseConfig,
   shouldSeedDemoData
 } from "./config/environment.js";
+import { logger } from "./lib/logger.js";
 import { detectRedisConfig } from "./lib/redisClient.js";
 import { initializeDatabase } from "./schema/legacyBootstrap.js";
 import { runMigrations } from "./migrations/index.js";
@@ -24,39 +25,27 @@ export function shouldWarnAboutMissingRedis(isVercelValue, redisConfig) {
 
 function warnIfServerlessWithoutSharedRedis() {
   if (!shouldWarnAboutMissingRedis(isVercel, detectRedisConfig())) return;
-  console.warn(JSON.stringify({
-    level: "warn",
-    event: "serverless_without_shared_redis",
-    message:
-      "Deploy serverless (Vercel) sem UPSTASH_REDIS_REST_URL/TOKEN configurado. " +
+  logger.warn("serverless_without_shared_redis", { message: "Deploy serverless (Vercel) sem UPSTASH_REDIS_REST_URL/TOKEN configurado. " +
       "O rate limiter cai para um contador por instancia (nao compartilhado entre " +
       "instancias serverless, na pratica bem mais fraco do que sugere em dev local) " +
       "e o relay da assistencia remota, se algum dia for reativado, tambem cairia " +
       "para memoria local por instancia. Configure a integracao Upstash/Vercel KV " +
       "para restaurar o comportamento compartilhado."
-  }));
+  });
 }
 
 function warnAboutRiskyConfiguration() {
   if (isDemoSeedBlockedInProduction()) {
-    console.error(JSON.stringify({
-      level: "error",
-      event: "demo_seed_blocked_in_production",
-      message:
-        "ENABLE_DEMO_SEED esta ligado em ambiente de producao e foi IGNORADO: os dados de demonstracao criam " +
+    logger.error("demo_seed_blocked_in_production", { message: "ENABLE_DEMO_SEED esta ligado em ambiente de producao e foi IGNORADO: os dados de demonstracao criam " +
         "administradores com senha publica. Para uma instancia de apresentacao, defina tambem " +
         "DEMO_SEED_ALLOW_PRODUCTION=true."
-    }));
+    });
   }
   const database = resolveDatabaseConfig();
   if (database.mode === "postgres" && database.tlsVerification === "unverified") {
-    console.warn(JSON.stringify({
-      level: "warn",
-      event: "db_tls_unverified",
-      message:
-        "A conexao com o banco usa TLS SEM verificar o certificado (aceita interceptacao). Defina DB_SSL_CA " +
+    logger.warn("db_tls_unverified", { message: "A conexao com o banco usa TLS SEM verificar o certificado (aceita interceptacao). Defina DB_SSL_CA " +
         "com o certificado da CA do provedor (ou DB_SSL_MODE=verify) para fechar isso."
-    }));
+    });
   }
 }
 

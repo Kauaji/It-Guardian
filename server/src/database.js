@@ -1,6 +1,9 @@
 import { resolveDatabaseConfig } from "./config/environment.js";
+import { logger } from "./lib/logger.js";
+import { gauge } from "./lib/metrics.js";
 
 let poolPromise;
+let currentPool = null;
 
 async function createPool() {
   const config = resolveDatabaseConfig();
@@ -23,14 +26,10 @@ async function createPool() {
   });
 
   pool.on("error", (error) => {
-    console.error(JSON.stringify({
-      level: "error",
-      event: "database_pool_error",
-      code: error.code,
-      message: error.message
-    }));
+    logger.error("database_pool_error", { code: error.code, message: error.message });
   });
 
+  currentPool = pool;
   return pool;
 }
 export function getPool() {
@@ -64,9 +63,28 @@ export async function withTransaction(operation) {
   }
 }
 
+/** Uma conexao dedicada, sem transacao: necessario para locks de sessao (advisory lock) que precisam de unlock na MESMA conexao. */
+export async function withConnection(operation) {
+  const pool = await getPool();
+  const client = await pool.connect();
+  try {
+    return await operation((text, params = []) => client.query(text, params));
+  } finally {
+    client.release();
+  }
+}
+
 export async function closeDatabase() {
   if (!poolPromise) return;
   const pool = await poolPromise;
   await pool.end();
   poolPromise = undefined;
+  currentPool = null;
 }
+
+/** Estatisticas do pool (sem abrir conexao): usadas por /metrics e pelo diagnostico. */
+export function getPoolStats() {
+  return currentPool ? { total: currentPool.totalCount, idle: currentPool.idleCount, waiting: currentPool.waitingCount } : {};
+}
+
+gauge("itguardian_db_pool_connections", "Conexoes do pool do banco por estado.", () => getPoolStats(), "state");

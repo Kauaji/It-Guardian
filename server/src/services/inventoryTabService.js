@@ -7,10 +7,11 @@ import {
   updateInventoryTab
 } from "../repositories/inventoryTabRepository.js";
 import { broadcastSnapshot } from "./realtimeService.js";
+import { logger } from "../lib/logger.js";
 
 function notifySnapshot(context) {
   broadcastSnapshot().catch((error) => {
-    console.error(`Realtime broadcast failed after ${context}`, error);
+    logger.error("realtime_broadcast_failed", { context, error });
   });
 }
 

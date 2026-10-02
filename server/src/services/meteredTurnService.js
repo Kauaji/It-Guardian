@@ -1,3 +1,4 @@
+import { logger } from "../lib/logger.js";
 const CACHE_SAFETY_MARGIN_MS = 15 * 60 * 1000;
 const CREDENTIAL_TTL_SECONDS = 6 * 60 * 60;
 
@@ -9,7 +10,7 @@ function isMeteredConfigured(env) {
 }
 
 function logWarn(message, extra = {}) {
-  console.warn(JSON.stringify({ level: "warn", event: "metered_turn", message, ...extra }));
+  logger.warn("metered_turn", { message, ...extra });
 }
 
 async function fetchMeteredIceServers(env, fetchImpl) {

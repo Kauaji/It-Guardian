@@ -7,6 +7,7 @@ import { updateAgentAssetAlias } from "../repositories/agentRepository.js";
 import { getDashboardSummary, getDeviceDetails, listDevices } from "./monitoringService.js";
 import { broadcastSnapshot } from "./realtimeService.js";
 import { badRequest, notFoundError } from "../lib/errors.js";
+import { logger } from "../lib/logger.js";
 
 const assetTypes = new Set([
   "server",
@@ -39,7 +40,7 @@ export function validateManualAsset(payload) {
 
 function notifySnapshot(context) {
   broadcastSnapshot().catch((error) => {
-    console.error(`Realtime broadcast failed after ${context}`, error);
+    logger.error("realtime_broadcast_failed", { context, error });
   });
 }
 

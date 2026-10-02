@@ -1,3 +1,4 @@
+import { logger } from "../lib/logger.js";
 import {
   acknowledgeAlert,
   addCommentToAlert,
@@ -45,7 +46,7 @@ export async function acknowledge(req, res, next) {
     });
 
     broadcastSnapshot().catch((error) => {
-      console.error("Realtime broadcast failed after acknowledgement", error);
+      logger.error("realtime_broadcast_failed", { context: "acknowledgement", error });
     });
 
     res.json({ alert });
@@ -62,7 +63,7 @@ export async function removeAcknowledgement(req, res, next) {
     });
 
     broadcastSnapshot().catch((error) => {
-      console.error("Realtime broadcast failed after acknowledgement removal", error);
+      logger.error("realtime_broadcast_failed", { context: "acknowledgement_removal", error });
     });
 
     res.json(result);
@@ -175,7 +176,7 @@ export async function acceptSuggestion(req, res, next) {
     });
 
     broadcastSnapshot().catch((error) => {
-      console.error("Realtime broadcast failed after alert suggestion acceptance", error);
+      logger.error("realtime_broadcast_failed", { context: "alert_suggestion_acceptance", error });
     });
 
     res.status(201).json(result);

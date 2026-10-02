@@ -1,4 +1,7 @@
 import { AppError } from "../lib/errors.js";
+import { reportError } from "../lib/errorReporter.js";
+import { logger, redactPath } from "../lib/logger.js";
+import { appErrors } from "../lib/metrics.js";
 
 export function notFound(req, res, next) {
   const error = new AppError("Rota não encontrada.", { statusCode: 404, code: "NOT_FOUND" });
@@ -35,18 +38,19 @@ function publicCode(error) {
 
 export function errorHandler(error, req, res, _next) {
   const statusCode = error.statusCode || 500;
-  const log = statusCode >= 500 ? console.error : console.warn;
-  log(JSON.stringify({
-    level: statusCode >= 500 ? "error" : "warn",
-    event: "request_error",
+  logger[statusCode >= 500 ? "error" : "warn"]("request_error", {
     requestId: req.requestId,
     method: req.method,
-    path: req.path,
+    path: redactPath(req.originalUrl),
     statusCode,
     code: error.code,
     message: error.message,
     stack: process.env.NODE_ENV === "production" || statusCode < 500 ? undefined : error.stack
-  }));
+  });
+  appErrors.inc({ class: `${Math.floor(statusCode / 100)}xx` });
+  if (statusCode >= 500) {
+    reportError(error, { requestId: req.requestId, method: req.method, path: req.originalUrl });
+  }
 
   const body = {
     message: publicMessage(error, statusCode),

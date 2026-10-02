@@ -3,6 +3,7 @@ import { getAuthConfig, isProductionLike, resolveDatabaseConfig } from "../confi
 import { assertValidPassword } from "../domain/passwordPolicy.js";
 import { normalizeRecoveryCode, verifyTotp } from "../domain/totp.js";
 import { badRequest, forbidden, tooManyRequests, unauthorized } from "../lib/errors.js";
+import { authEvents } from "../lib/metrics.js";
 import { query, withTransaction } from "../database.js";
 import { addLog } from "../repositories/logRepository.js";
 import {
@@ -41,6 +42,7 @@ function invalidCredentials() {
 }
 
 export async function auditAuth(type, message, userId, context = {}, meta = {}) {
+  authEvents.inc({ event: type });
   try {
     await addLog({
       type,

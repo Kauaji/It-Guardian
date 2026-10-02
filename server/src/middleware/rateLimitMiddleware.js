@@ -1,3 +1,5 @@
+import { logger } from "../lib/logger.js";
+import { rateLimitStoreErrors, rateLimited } from "../lib/metrics.js";
 import { getSharedRedisClient } from "../lib/redisClient.js";
 
 const RATE_LIMIT_KEY_PREFIX = "ratelimit:";
@@ -86,7 +88,8 @@ export function createRateLimiter({
       // Uma falha do Redis nunca deve derrubar a rota que ele protege --
       // registra e deixa passar, em vez de transformar uma instabilidade do
       // store num 500 para todo mundo.
-      console.error(`[rateLimit:${limiterName}] falha ao consultar o store (${store.name}), permitindo a requisicao:`, error.message);
+      rateLimitStoreErrors.inc({ limiter: limiterName, store: store.name });
+      logger.warn("rate_limit_store_error", { limiter: limiterName, store: store.name, message: error.message });
       return next();
     }
 
@@ -96,6 +99,7 @@ export function createRateLimiter({
     res.setHeader("RateLimit-Reset", Math.ceil(resetAt / 1000));
 
     if (count > max) {
+      rateLimited.inc({ limiter: limiterName });
       res.setHeader("Retry-After", Math.max(1, Math.ceil((resetAt - Date.now()) / 1000)));
       return res.status(429).json({ message });
     }

@@ -11,7 +11,8 @@ const importPattern =
 const forbiddenServerPatterns = [
   { pattern: /\bchild_process\b/, label: "child_process" },
   { pattern: /\bexecFile\s*\(/, label: "execFile()" },
-  { pattern: /\bexec\s*\(/, label: "exec()" },
+  // `regex.exec(...)` e legitimo; o exec() perigoso (child_process) ja e barrado pelo padrao child_process.
+  { pattern: /(?<![.\w])exec\s*\(/, label: "exec()" },
   { pattern: /\bspawn\s*\(/, label: "spawn()" },
   { pattern: /\bshell\s*:\s*true\b/, label: "shell: true" },
   { pattern: /\bnew\s+Function\s*\(/, label: "new Function()" },

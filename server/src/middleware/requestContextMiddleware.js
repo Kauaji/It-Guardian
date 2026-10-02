@@ -1,40 +1,41 @@
 import { randomUUID } from "node:crypto";
+import { httpDuration, httpRequests } from "../lib/metrics.js";
+import { logger, redact, redactPath } from "../lib/logger.js";
 
-const sensitiveKeys = new Set(["authorization", "cookie", "password", "token", "secret"]);
+// O id vem do cliente/proxy: so e aceito se tiver formato seguro (evita
+// injecao de linhas/caracteres de controle nos logs).
+const SAFE_REQUEST_ID = /^[A-Za-z0-9._-]{8,64}$/;
 
-function redact(value) {
-  if (!value || typeof value !== "object") return value;
-
-  return Object.fromEntries(
-    Object.entries(value).map(([key, item]) => [
-      key,
-      sensitiveKeys.has(key.toLowerCase()) ? "[REDACTED]" : item
-    ])
-  );
+function routeLabel(req) {
+  if (!req.route?.path) return "nao_roteada";
+  return `${req.baseUrl || ""}${typeof req.route.path === "string" ? req.route.path : "*"}`;
 }
 
 export function requestContext(req, res, next) {
-  const requestId = req.get("x-request-id")?.trim() || randomUUID();
+  const provided = req.get("x-request-id")?.trim();
+  const requestId = provided && SAFE_REQUEST_ID.test(provided) ? provided : randomUUID();
   const startedAt = performance.now();
 
   req.requestId = requestId;
   res.setHeader("x-request-id", requestId);
 
   res.on("finish", () => {
-    const entry = {
-      level: res.statusCode >= 500 ? "error" : res.statusCode >= 400 ? "warn" : "info",
-      event: "http_request",
+    const seconds = (performance.now() - startedAt) / 1000;
+    const labels = { method: req.method, route: routeLabel(req), status: String(res.statusCode) };
+    httpRequests.inc(labels);
+    httpDuration.observe({ method: req.method, route: labels.route }, seconds);
+
+    const level = res.statusCode >= 500 ? "error" : res.statusCode >= 400 ? "warn" : "info";
+    logger[level]("http_request", {
       requestId,
       method: req.method,
-      path: req.originalUrl,
+      path: redactPath(req.originalUrl),
       statusCode: res.statusCode,
-      durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
+      durationMs: Math.round(seconds * 100000) / 100,
       ip: req.ip,
       query: redact(req.query)
-    };
-
-    console.log(JSON.stringify(entry));
+    });
   });
 
-  next();
+  logger.withRequest(requestId, next);
 }

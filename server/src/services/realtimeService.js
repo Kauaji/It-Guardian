@@ -5,6 +5,7 @@ import { listSegments } from "../repositories/segmentRepository.js";
 import { getActiveAlertsWithAcknowledgements } from "./alertService.js";
 import { authenticateSessionToken } from "./sessionService.js";
 import { getDashboardSummary, listDevices } from "./monitoringService.js";
+import { logger } from "../lib/logger.js";
 
 const sockets = new Set();
 
@@ -32,7 +33,7 @@ export function attachRealtimeServer(server) {
 
   const interval = setInterval(
     () => broadcastSnapshot().catch((error) => {
-      console.error("Realtime snapshot failed", error);
+      logger.error("realtime_snapshot_failed", { error });
     }),
     Number(process.env.STREAM_INTERVAL_MS || 10000)
   );

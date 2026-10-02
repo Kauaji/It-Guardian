@@ -298,6 +298,22 @@ export function isDemoSeedBlockedInProduction(env = process.env, productionLike 
   return requested && productionLike && !isTruthyEnv(env.DEMO_SEED_ALLOW_PRODUCTION);
 }
 
+/**
+ * Retencao de dados que crescem sem parar. 0 desliga a limpeza daquele grupo.
+ * A trilha de auditoria da assistencia remota (hash encadeado) nunca e apagada.
+ */
+export function getRetentionConfig(env = process.env) {
+  return {
+    heartbeatDays: boundedInteger(env.RETENTION_HEARTBEAT_DAYS, 30, 0, 3650),
+    metricHistoryDays: boundedInteger(env.RETENTION_METRIC_HISTORY_DAYS, 90, 0, 3650),
+    authSessionDays: boundedInteger(env.RETENTION_AUTH_SESSION_DAYS, 30, 1, 3650),
+    reauthDays: boundedInteger(env.RETENTION_REAUTH_DAYS, 7, 1, 3650),
+    reauthAttemptDays: boundedInteger(env.RETENTION_REAUTH_ATTEMPT_DAYS, 180, 0, 3650),
+    auditLogDays: boundedInteger(env.RETENTION_AUDIT_LOG_DAYS, 0, 0, 3650),
+    batchSize: boundedInteger(env.RETENTION_BATCH_SIZE, 5000, 100, 100000)
+  };
+}
+
 /** Politicas de autenticacao/sessao, todas com limites seguros aplicados aqui. */
 export function getAuthConfig(env = process.env) {
   const idleSeconds = boundedInteger(env.SESSION_IDLE_SECONDS ?? env.SESSION_MAX_AGE_SECONDS, 8 * 3600, 300, 7 * 24 * 3600);
@@ -333,8 +349,7 @@ export function getCorsOrigins() {
 
   return Array.from(
     new Set([
-      "http://localhost:5173",
-      "http://127.0.0.1:5173",
+      ...(isProductionLike ? [] : ["http://localhost:5173", "http://127.0.0.1:5173"]),
       ...configuredOrigins,
       process.env.CLIENT_ORIGIN,
       process.env.FRONTEND_URL,

@@ -14,10 +14,11 @@ import {
   updateInventoryVisualMapObject
 } from "../repositories/inventoryVisualMapRepository.js";
 import { broadcastSnapshot } from "./realtimeService.js";
+import { logger } from "../lib/logger.js";
 
 function notifyInventoryChanged() {
   broadcastSnapshot().catch((error) => {
-    console.error("Failed to broadcast inventory visual map snapshot", error);
+    logger.error("realtime_broadcast_failed", { context: "inventory_visual_map", error });
   });
 }
 

@@ -1,12 +1,13 @@
 import { Router } from "express";
 import { productController } from "../controllers/settingsController.js";
-import { requireAuth, requirePermission } from "../middleware/authMiddleware.js";
+import { requireAnyPermission, requireAuth, requirePermission } from "../middleware/authMiddleware.js";
+import { serviceOrderCatalogReaders } from "./accessGroups.js";
 
 const router = Router();
 
 router.use(requireAuth);
-router.get("/", productController.list);
-router.get("/:id", productController.details);
+router.get("/", requireAnyPermission(...serviceOrderCatalogReaders), productController.list);
+router.get("/:id", requireAnyPermission(...serviceOrderCatalogReaders), productController.details);
 router.post("/", requirePermission("service_orders.settings"), productController.create);
 router.patch("/:id", requirePermission("service_orders.settings"), productController.update);
 router.delete("/:id", requirePermission("service_orders.settings"), productController.remove);

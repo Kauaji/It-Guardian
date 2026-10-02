@@ -20,6 +20,7 @@ import { findSegmentById } from "../repositories/segmentRepository.js";
 import { findSegmentGroupById } from "../repositories/segmentGroupRepository.js";
 import { computeAutoLayout } from "./networkTopologyAutoLayout.js";
 import { broadcastSnapshot } from "./realtimeService.js";
+import { logger } from "../lib/logger.js";
 
 // "Aba" nao tem tabela propria no banco (e um conceito 100% client-side, em
 // localStorage - inventoryTabRepository.js existe no codigo mas referencia
@@ -52,7 +53,7 @@ async function ensureNodeRefExists(nodeType, refId) {
 
 function notifySnapshot(context) {
   broadcastSnapshot().catch((error) => {
-    console.error(`Realtime broadcast failed after ${context}`, error);
+    logger.error("realtime_broadcast_failed", { context, error });
   });
 }
 
