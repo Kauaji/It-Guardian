@@ -344,7 +344,7 @@ describe("posicionamento a partir do catalogo", () => {
 
   it("busca global no catalogo ignora acentos e caixa", async () => {
     await openEditor();
-    fireEvent.change(screen.getByLabelText("Buscar item em todo o catalogo"), { target: { value: "REUNIÃO" } });
+    fireEvent.change(screen.getByLabelText("Buscar item em todo o catalogo"), { target: { value: "REUNI\u00c3O" } });
     expect(screen.getByTitle("Posicionar Mesa de reuniao")).toBeInTheDocument();
     expect(screen.queryByTitle("Posicionar Cadeira")).toBeNull();
     fireEvent.change(screen.getByLabelText("Buscar item em todo o catalogo"), { target: { value: "zzzz" } });
