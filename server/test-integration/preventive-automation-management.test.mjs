@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import test from "node:test";
 import { useTestDatabase } from "../test-support/database.mjs";
 
-const database = await useTestDatabase();
+await useTestDatabase();
 process.env.ENABLE_DEMO_SEED = "true";
 process.env.ENABLE_REMOTE_SCRIPT_EXECUTION = "true";
 process.env.JWT_SECRET = "preventive-management-integration-secret-32-chars";
@@ -438,11 +438,7 @@ test("remover maquina de escopo amplo adiciona a lista de exclusoes", async () =
   await api.del(`${base}/${plan.id}`);
 });
 
-// pg-mem nao suporta `= ANY($1)` com parametro de lista (devolve sempre zero
-// linhas); a consulta so e verificavel no PostgreSQL real.
-test("indicadores por maquina listam apenas agendas e planos ativos", {
-  skip: database.mode !== "postgres" && "requer PostgreSQL real (ANY com array)"
-}, async () => {
+test("indicadores por maquina listam apenas agendas e planos ativos", async () => {
   const { listAutomationIndicatorsByAssetIds } = await import("../src/repositories/automationIndicatorRepository.js");
   assert.equal((await listAutomationIndicatorsByAssetIds([])).size, 0);
   assert.equal((await listAutomationIndicatorsByAssetIds(null)).size, 0);

@@ -4,21 +4,29 @@ import {
   createPreventiveAutomationPlan,
   deletePreventiveAutomationPlan,
   disablePreventiveAutomationPlan,
-  findPreventiveAutomationAssetDetails,
+  reactivatePreventiveAutomationPlan,
+  updatePreventiveAutomationPlan
+} from "./preventiveAutomationPlanService.js";
+import {
   findPreventiveAutomationPlanById,
+  listPreventiveAutomationPlans
+} from "./preventiveAutomationPlanQueryService.js";
+import {
+  findPreventiveAutomationAssetDetails,
   listPreventiveAutomationAgenda,
   listPreventiveAutomationManagement,
-  listPreventiveAutomationPlanHistory,
-  listPreventiveAutomationPlans,
-  preparePreventiveAutomationPlan,
-  processDuePreventiveAutomationPlans,
-  processScheduledMaintenanceTasks,
-  reactivatePreventiveAutomationPlan,
+  listPreventiveAutomationPlanHistory
+} from "./preventiveAutomationManagementService.js";
+import {
   removeAssetFromPreventiveAutomationPlan,
   removePreventiveAutomationAssetOverride,
-  upsertPreventiveAutomationAssetOverride,
-  updatePreventiveAutomationPlan
-} from "../repositories/preventiveAutomationRepository.js";
+  upsertPreventiveAutomationAssetOverride
+} from "./preventiveAutomationAssetService.js";
+import {
+  preparePreventiveAutomationPlan,
+  processDuePreventiveAutomationPlans,
+  processScheduledMaintenanceTasks
+} from "./preventiveAutomationRunService.js";
 
 const notFoundMessage = "Plano de automação preventiva não encontrado.";
 

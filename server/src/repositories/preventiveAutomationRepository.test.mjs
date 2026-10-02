@@ -2,17 +2,19 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 import test from "node:test";
+import { computeNextScheduledFor, normalizeRecurrenceIntervalDays, recurrenceToDays } from "../domain/preventiveSchedule.js";
+import { normalizeAssetIds } from "../domain/preventiveAutomationNormalizers.js";
 import {
   buildRunIdempotencyKey,
-  computeNextScheduledFor,
   getAssetScheduleSyncActions,
   hasPreventiveScheduleChanged,
-  normalizeAssetIds,
-  normalizeRecurrenceIntervalDays,
-  recurrenceToDays,
   resolveAssetListDevices,
   resolveEffectiveRecurrence
-} from "./preventiveAutomationRepository.js";
+} from "../domain/preventiveAutomationSchedule.js";
+
+function sourceOf(relativePath) {
+  return readFileSync(fileURLToPath(new URL(relativePath, import.meta.url)), "utf8");
+}
 
 test("normaliza recorrencia como dias sem multiplicar novamente", () => {
   assert.equal(recurrenceToDays("daily", 1), 1);
@@ -174,13 +176,12 @@ test("diff de agendas permite multiplos planos para a mesma maquina", () => {
 });
 
 test("indicadores de automacao usam agendas ativas por ativo como fonte", () => {
-  const repositoryPath = fileURLToPath(new URL("./automationIndicatorRepository.js", import.meta.url));
-  const source = readFileSync(repositoryPath, "utf8");
+  const source = sourceOf("./automationIndicatorRepository.js");
   const functionBody = source.slice(source.indexOf("export async function listAutomationIndicatorsByAssetIds"));
 
   assert.match(functionBody, /FROM\s+preventive_automation_asset_schedules\s+schedules/i);
   assert.match(functionBody, /INNER\s+JOIN\s+preventive_automation_plans\s+plans\s+ON\s+plans\.id\s*=\s*schedules\.plan_id/i);
-  assert.match(functionBody, /schedules\.asset_id\s*=\s*ANY\(\$1\)/i);
+  assert.match(functionBody, /schedules\.asset_id\s+IN\s*\(\$\{placeholders\}\)/i);
   assert.match(functionBody, /schedules\.active\s*=\s*TRUE/i);
   assert.match(functionBody, /plans\.active\s*=\s*TRUE/i);
   assert.doesNotMatch(functionBody, /scope_id\s*=\s*ANY/i);
@@ -225,24 +226,42 @@ test("lista de preventivas usa indicadores apenas visuais", () => {
 });
 
 test("criacao e edicao de automacao validam nome e cor unicos", () => {
-  const repositoryPath = fileURLToPath(new URL("./preventiveAutomationRepository.js", import.meta.url));
-  const source = readFileSync(repositoryPath, "utf8");
+  const service = sourceOf("../services/preventiveAutomationPlanService.js");
+  const repository = sourceOf("./preventiveAutomationPlanRepository.js");
 
-  assert.match(source, /async function assertUniquePlanIdentity/);
-  assert.match(source, /LOWER\(name\)\s*=\s*LOWER\(\$1\)/);
-  assert.match(source, /LOWER\(indicator_color\)\s*=\s*LOWER\(\$2\)/);
-  assert.match(source, /assertUniquePlanIdentity\(normalized,\s*null,\s*db\)/);
-  assert.match(source, /assertUniquePlanIdentity\(normalized,\s*id,\s*db\)/);
-  assert.match(source, /statusCode\s*=\s*409|createHttpError\([^)]*,\s*409\)/);
+  assert.match(service, /async function assertUniquePlanIdentity/);
+  assert.match(repository, /LOWER\(name\)\s*=\s*LOWER\(\$1\)/);
+  assert.match(repository, /LOWER\(indicator_color\)\s*=\s*LOWER\(\$2\)/);
+  assert.match(service, /assertUniquePlanIdentity\(normalized,\s*null,\s*db\)/);
+  assert.match(service, /assertUniquePlanIdentity\(normalized,\s*id,\s*db\)/);
+  assert.match(service, /conflict\("Já existe uma automatização com esse nome\."\)/);
+  assert.match(service, /conflict\(`A cor \$\{indicatorColor\} já está sendo usada por outra automatização\.`\)/);
 });
 
 test("repositorio de automacao nao usa primitivas de execucao de comandos", () => {
-  const repositoryPath = fileURLToPath(new URL("./preventiveAutomationRepository.js", import.meta.url));
-  const scriptRepositoryPath = fileURLToPath(new URL("./maintenanceScriptRepository.js", import.meta.url));
   const source = [
-    readFileSync(repositoryPath, "utf8"),
-    readFileSync(scriptRepositoryPath, "utf8")
-  ].join("\n");
+    "../domain/preventiveAutomationNormalizers.js",
+    "../domain/preventiveAutomationPayload.js",
+    "../domain/preventiveAutomationRun.js",
+    "../domain/preventiveAutomationSchedule.js",
+    "../domain/preventiveAutomationViews.js",
+    "./preventiveAutomationMappers.js",
+    "./preventiveAutomationPlanRepository.js",
+    "./preventiveAutomationScheduleRepository.js",
+    "./preventiveAutomationOverrideRepository.js",
+    "./preventiveAutomationRunRepository.js",
+    "./preventiveAutomationQueryRepository.js",
+    "./preventiveAutomationScopeRepository.js",
+    "../services/preventiveAutomationBackfillService.js",
+    "../services/preventiveAutomationPlanQueryService.js",
+    "../services/preventiveAutomationPlanService.js",
+    "../services/preventiveAutomationAssetService.js",
+    "../services/preventiveAutomationManagementService.js",
+    "../services/preventiveAutomationRunService.js",
+    "../services/preventiveAutomationScheduleService.js",
+    "../services/preventiveAutomationScopeService.js",
+    "./maintenanceScriptRepository.js"
+  ].map(sourceOf).join("\n");
 
   assert.doesNotMatch(source, /child_process/);
   assert.doesNotMatch(source, /\bexec\s*\(/);

@@ -205,11 +205,7 @@ test("preparo recusa plano inativo, inexistente, com script inativo ou maquina s
   await removePlan(doomed);
 });
 
-// pg-mem devolve zero linhas para `IS NOT NULL AND coluna <= $1`; a deteccao de
-// agendas vencidas so e verificavel no PostgreSQL real.
-const dueSkip = database.mode !== "postgres" && "requer PostgreSQL real (IS NOT NULL AND <= no pg-mem)";
-
-test("processamento de vencidos prepara so as agendas vencidas e reagenda", { skip: dueSkip }, async () => {
+test("processamento de vencidos prepara so as agendas vencidas e reagenda", async () => {
   const plan = await createPlan({
     name: "Plano com agenda vencida",
     scopeType: "asset_list",
@@ -263,7 +259,7 @@ test("processamento de vencidos prepara so as agendas vencidas e reagenda", { sk
   await removePlan(plan);
 });
 
-test("processamento de vencidos registra falha por plano sem interromper os demais", { skip: dueSkip }, async () => {
+test("processamento de vencidos registra falha por plano sem interromper os demais", async () => {
   const broken = await createPlan({
     name: "Plano vencido sem agente",
     scopeType: "asset",

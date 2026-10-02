@@ -1,68 +1,20 @@
 import { query } from "../database.js";
-import { serializeTimestamp, trimString } from "../lib/textUtils.js";
+import { serializeTimestamp } from "../lib/textUtils.js";
+import {
+  DEFAULT_PREFERRED_TIME,
+  DEFAULT_TIMEZONE,
+  normalizeRecurrenceIntervalDays,
+  normalizeRecurrenceType
+} from "../domain/preventiveSchedule.js";
+import {
+  normalizeAssetIds,
+  normalizeIndicatorColor,
+  parseJsonArray
+} from "../domain/preventiveAutomationNormalizers.js";
 
-const recurrenceTypes = new Set(["daily", "weekly", "biweekly", "monthly", "custom_days"]);
-const recurrenceIntervalDefaults = {
-  daily: 1,
-  weekly: 7,
-  biweekly: 15,
-  monthly: 30,
-  custom_days: 30
-};
-const DEFAULT_TIMEZONE = "America/Sao_Paulo";
-const DEFAULT_PREFERRED_TIME = "08:00";
-const DEFAULT_INDICATOR_COLOR = "#1f7a61";
+/** Indicadores de automacao (bolinhas coloridas) por ativo, a partir das agendas ativas. */
 
-function normalizeAssetIds(value = []) {
-  return [
-    ...new Set(
-      (Array.isArray(value) ? value : [])
-        .map((item) => trimString(item, 120))
-        .filter(Boolean)
-    )
-  ];
-}
-
-function normalizeIndicatorColor(value, fallback = DEFAULT_INDICATOR_COLOR) {
-  const color = String(value || "").trim();
-  return /^#[0-9a-f]{6}$/i.test(color) ? color.toLowerCase() : fallback;
-}
-
-function parseJsonArray(value) {
-  if (Array.isArray(value)) return value;
-  if (!value) return [];
-  try {
-    const parsed = typeof value === "string" ? JSON.parse(value) : value;
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function normalizeRecurrenceType(value, fallback = "monthly") {
-  const normalized = String(value || "").trim().toLowerCase();
-  return recurrenceTypes.has(normalized) ? normalized : fallback;
-}
-
-function defaultIntervalForType(type) {
-  return recurrenceIntervalDefaults[normalizeRecurrenceType(type)] || recurrenceIntervalDefaults.monthly;
-}
-
-function normalizeRecurrenceIntervalDays(value, type = "monthly") {
-  const recurrenceType = normalizeRecurrenceType(type);
-  if (recurrenceType !== "custom_days") {
-    return defaultIntervalForType(recurrenceType);
-  }
-
-  const parsed = Number(value);
-  if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 365) {
-    return parsed;
-  }
-
-  return defaultIntervalForType(recurrenceType);
-}
-
-function fromAutomationIndicatorRow(row) {
+export function fromAutomationIndicatorRow(row) {
   const recurrenceType = normalizeRecurrenceType(row.recurrence_type);
   const recurrenceIntervalDays = normalizeRecurrenceIntervalDays(row.recurrence_interval, recurrenceType);
 
@@ -88,6 +40,7 @@ function fromAutomationIndicatorRow(row) {
   };
 }
 
+/** Indicadores ativos agrupados por id de ativo (um `Map` de listas). */
 export async function listAutomationIndicatorsByAssetIds(assetIds = []) {
   const normalizedAssetIds = normalizeAssetIds(assetIds);
 
@@ -95,6 +48,7 @@ export async function listAutomationIndicatorsByAssetIds(assetIds = []) {
     return new Map();
   }
 
+  const placeholders = normalizedAssetIds.map((_, index) => `$${index + 1}`).join(", ");
   const result = await query(
     `
       SELECT
@@ -117,13 +71,13 @@ export async function listAutomationIndicatorsByAssetIds(assetIds = []) {
       FROM preventive_automation_asset_schedules schedules
       INNER JOIN preventive_automation_plans plans ON plans.id = schedules.plan_id
       LEFT JOIN preventive_plans ON preventive_plans.id = plans.preventive_plan_id
-      WHERE schedules.asset_id = ANY($1)
+      WHERE schedules.asset_id IN (${placeholders})
         AND schedules.active = TRUE
         AND plans.active = TRUE
         AND plans.deleted_at IS NULL
       ORDER BY schedules.asset_id ASC, schedules.next_run_at ASC NULLS LAST, plans.created_at ASC
     `,
-    [normalizedAssetIds]
+    normalizedAssetIds
   );
 
   const indicatorsByAsset = new Map();

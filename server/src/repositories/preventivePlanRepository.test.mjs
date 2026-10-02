@@ -3,6 +3,10 @@ import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 import test from "node:test";
 
+function sourceOf(relativePath) {
+  return readFileSync(fileURLToPath(new URL(relativePath, import.meta.url)), "utf8");
+}
+
 test("criação de OS preventiva usa transação e trava duplicidade do vínculo", () => {
   const repositoryPath = fileURLToPath(new URL("./preventivePlanRepository.js", import.meta.url));
   const source = readFileSync(repositoryPath, "utf8");
@@ -47,11 +51,12 @@ test("preventive plan repository creates linked automation in unified flow", () 
 });
 
 test("preventive automation repository exposes linked preventive plan fields", () => {
-  const repositoryPath = fileURLToPath(new URL("./preventiveAutomationRepository.js", import.meta.url));
-  const source = readFileSync(repositoryPath, "utf8");
+  const mappers = sourceOf("./preventiveAutomationMappers.js");
+  const repository = sourceOf("./preventiveAutomationPlanRepository.js");
+  const service = sourceOf("../services/preventiveAutomationPlanService.js");
 
-  assert.match(source, /preventivePlanId: row\.preventive_plan_id \|\| null/);
-  assert.match(source, /preventivePlanName: row\.preventive_plan_name \|\| null/);
-  assert.match(source, /LEFT JOIN preventive_plans plans ON plans\.id = automation\.preventive_plan_id/);
-  assert.match(source, /createPreventiveAutomationPlanRecord/);
+  assert.match(mappers, /preventivePlanId: row\.preventive_plan_id \|\| null/);
+  assert.match(mappers, /preventivePlanName: row\.preventive_plan_name \|\| null/);
+  assert.match(repository, /LEFT JOIN preventive_plans plans ON plans\.id = automation\.preventive_plan_id/);
+  assert.match(service, /createPreventiveAutomationPlanRecord/);
 });
