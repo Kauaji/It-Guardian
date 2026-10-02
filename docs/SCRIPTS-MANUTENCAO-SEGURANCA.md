@@ -97,6 +97,12 @@ lista de scripts seguros que **nao** devem ser bloqueados (ver
   recalcula o hash do conteudo atual em `maintenance_scripts` e recusa a
   entrega (marca o trabalho como falho, sem enviar nada ao agente) se o
   script foi editado ou desativado nesse intervalo;
+- **o agente so executa jobs assinados**: cada job leva uma assinatura ECDSA
+  P-256 (`signature`, `notAfter`) que amarra job, maquina, interpretador,
+  timeout, hash do conteudo e validade (15 min); o agente recusa assinatura
+  invalida, job de outra maquina, vencido ou repetido (registro dos ultimos 500
+  ids) e reporta a recusa como falha. Sem `jobSigningPublicKey` no agente, todos
+  os jobs sao recusados (ver `docs/SEGURANCA-DO-AGENTE.md`);
 - **controle duplo para scripts de risco alto/critico**, em duas camadas
   independentes:
   1. identidade — quem enfileira a execucao de um script `high`/`critical`
@@ -316,6 +322,8 @@ validar manualmente:
 - [x] Resultado, auditoria e historico (OS, Aviso e Prontuario Tecnico).
 - [x] Conteudo do trabalho pinado por hash contra o cadastro aprovado; edicao
       ou desativacao entre o enfileiramento e a entrega bloqueia o trabalho.
+- [x] Assinatura do job verificada no agente (maquina, conteudo, validade,
+      anti-replay); sem chave configurada o agente recusa.
 - [x] Bloqueio rigido de padroes de conteudo destrutivo/evasivo no cadastro
       (nao apenas classificacao consultiva de risco).
 - [x] Controle duplo por identidade e por permissao explicita

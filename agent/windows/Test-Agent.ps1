@@ -39,3 +39,12 @@ if ($payload.hostname -ne "PC-TESTE") { throw "hostname nao foi coletado." }
 if (-not $payload.Contains("loggedUser")) { throw "loggedUser nao foi coletado com consentimento habilitado." }
 if ($payload.PSObject.Properties.Name -contains "files") { throw "Campo proibido detectado." }
 Write-Host "Testes do agente passaram." -ForegroundColor Green
+
+# Testes do agente nativo (C#): assinatura, politica de atualizacao/jobs, anti-replay, catch vazio.
+# Exigem o csc.exe do .NET Framework (presente em todo Windows); em outros sistemas use tests/run-tests.sh.
+$csharpTests = Join-Path $PSScriptRoot "tests\Run-Tests.ps1"
+if (Test-Path -LiteralPath (Join-Path $env:WINDIR "Microsoft.NET\Framework64\v4.0.30319\csc.exe")) {
+  & $csharpTests
+} else {
+  Write-Host "csc.exe do .NET Framework nao encontrado; testes C# ignorados (use agent/windows/tests/run-tests.sh)." -ForegroundColor Yellow
+}

@@ -66,6 +66,26 @@ padrao, configuravel via `IT_GUARDIAN_CODE_SIGN_TIMESTAMP_URL`. Os três
 executaveis (`ITGuardian.exe`, `ITGuardian-Uninstaller.exe` e o instalador
 final) sao assinados quando um certificado esta configurado.
 
+### Chaves de assinatura (atualizacao e jobs)
+
+O agente instalado e seguro por padrao: sem chave publica no `config.json`, ele
+**ignora atualizacoes automaticas** (`releasePublicKey`) e **recusa jobs de
+script** (`jobSigningPublicKey`). Veja `docs/SEGURANCA-DO-AGENTE.md`.
+
+- Gere a chave de release **fora do servidor** (`npm run agent:keys -- release`),
+  guarde a privada em cofre/secret do CI (`AGENT_RELEASE_PRIVATE_KEY`) e embuta a
+  publica no instalador com `-ReleasePublicKey "<base64>"` ou colocando a
+  chave publica (uma linha; `#` inicia comentario) em
+  `installers/windows-collector/release-public-key.txt`. O build valida o formato
+  e a grava em `releasePublicKey` do `config.json`.
+- A chave de jobs normalmente nao precisa ser informada: o servidor a entrega na
+  ativacao e o instalador a grava. `-JobSigningPublicKey` permite fixa-la no
+  build. Uma chave ja gravada no `config.json` **nunca e sobrescrita** (reparo,
+  troca de chave de produto ou novo instalador).
+- Em "Reparar", o `Finalize-CollectorInstall.ps1` acrescenta as chaves embutidas
+  se ainda nao existirem e cria `state\` (so SYSTEM/Administradores) para o
+  registro anti-replay de jobs.
+
 ### Transporte RustDesk no instalador (opcional)
 
 O IT Guardian nao redistribui o RustDesk. `npm run installer:windows` baixa
@@ -111,6 +131,11 @@ precisam apontar para o mesmo relay. Consulte
 nunca compartilhada entre maquinas, relay proprio obrigatorio).
 
 ## Resultado da instalacao
+
+Tambem: `config.json` com `releasePublicKey`, `jobSigningPublicKey` e
+`allowUnsignedUpdates`/`allowUnsignedJobs` (`false`); pasta `state\` com ACL
+restrita.
+
 
 - arquivos em `C:\ProgramData\ITGuardian`;
 - token derivado salvo em `config.json` com acesso somente a SYSTEM e

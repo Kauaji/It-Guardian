@@ -1,7 +1,14 @@
 [CmdletBinding()]
 param(
   [string]$ApiBaseUrl = "https://it-guardian-server.vercel.app",
-  [string]$OutputDirectory = ""
+  [string]$OutputDirectory = "",
+  # Chave PUBLICA de release (ECDSA P-256, base64 de SubjectPublicKeyInfo) embutida no instalador:
+  # sem ela o agente instalado IGNORA atualizacoes automaticas. Se omitida, usa o conteudo de
+  # installers/windows-collector/release-public-key.txt quando o arquivo existir.
+  [string]$ReleasePublicKey = "",
+  # Opcional: chave publica de assinatura de jobs a embutir. Normalmente NAO e necessaria: o servidor
+  # a entrega na ativacao (confianca no primeiro uso sobre TLS).
+  [string]$JobSigningPublicKey = ""
 )
 
 Set-StrictMode -Version Latest
@@ -83,6 +90,20 @@ $uninstallerExecutablePath = Join-Path $PSScriptRoot "ITGuardian-Uninstaller.exe
 $sourcePath = Join-Path $PSScriptRoot "..\..\agent\windows\ITGuardian.Windows.cs"
 $remoteAssistanceSourcePath = Join-Path $PSScriptRoot "..\..\agent\windows\ITGuardian.RemoteAssistance.cs"
 $rustdeskControllerSourcePath = Join-Path $PSScriptRoot "..\..\agent\windows\ITGuardian.RustdeskController.cs"
+# Politica de confianca (assinatura ECDSA, anti-replay), configuracao e log: testados em agent\windows\tests.
+$loggingSourcePath = Join-Path $PSScriptRoot "..\..\agent\windows\ITGuardian.Logging.cs"
+$signingSourcePath = Join-Path $PSScriptRoot "..\..\agent\windows\ITGuardian.Signing.cs"
+$policySourcePath = Join-Path $PSScriptRoot "..\..\agent\windows\ITGuardian.Policy.cs"
+$configSourcePath = Join-Path $PSScriptRoot "..\..\agent\windows\ITGuardian.Config.cs"
+$agentSourcePaths = @(
+  $sourcePath,
+  $remoteAssistanceSourcePath,
+  $rustdeskControllerSourcePath,
+  $loggingSourcePath,
+  $signingSourcePath,
+  $policySourcePath,
+  $configSourcePath
+)
 $uninstallerSourcePath = Join-Path $PSScriptRoot "ITGuardian.Uninstaller.cs"
 $iconScriptPath = Join-Path $PSScriptRoot "New-ITGuardianIcon.ps1"
 $frameworkDirectory = Join-Path $env:WINDIR "Microsoft.NET\Framework64\v4.0.30319"
@@ -102,6 +123,11 @@ if (-not (Test-Path -LiteralPath $remoteAssistanceSourcePath)) {
 if (-not (Test-Path -LiteralPath $rustdeskControllerSourcePath)) {
   throw "Codigo-fonte do controlador RustDesk nao encontrado."
 }
+foreach ($agentSource in $agentSourcePaths) {
+  if (-not (Test-Path -LiteralPath $agentSource)) {
+    throw "Codigo-fonte do agente nao encontrado: $agentSource"
+  }
+}
 if (-not (Test-Path -LiteralPath $uninstallerSourcePath)) {
   throw "Codigo-fonte do desinstalador Windows nao encontrado."
 }
@@ -117,11 +143,10 @@ if (-not (Test-Path -LiteralPath $uninstallerSourcePath)) {
   "/reference:$(Join-Path $frameworkDirectory 'System.Core.dll')" `
   "/reference:$(Join-Path $frameworkDirectory 'System.Drawing.dll')" `
   "/reference:$(Join-Path $frameworkDirectory 'System.Management.dll')" `
+  "/reference:$(Join-Path $frameworkDirectory 'System.Numerics.dll')" `
   "/reference:$(Join-Path $frameworkDirectory 'System.Web.Extensions.dll')" `
   "/reference:$(Join-Path $frameworkDirectory 'System.Windows.Forms.dll')" `
-  $sourcePath `
-  $remoteAssistanceSourcePath `
-  $rustdeskControllerSourcePath
+  @agentSourcePaths
 if ($LASTEXITCODE -ne 0) {
   throw "A compilacao do ITGuardian.exe falhou com codigo $LASTEXITCODE."
 }
@@ -297,6 +322,36 @@ $resolvedOutputDirectory = [IO.Path]::GetFullPath($OutputDirectory)
 New-Item -ItemType Directory -Force -Path $resolvedOutputDirectory | Out-Null
 $isccArgs = [Collections.Generic.List[string]]::new()
 $isccArgs.Add("/DApiBaseUrl=$($ApiBaseUrl.TrimEnd('/'))")
+# Chaves publicas de confianca (assinatura de atualizacao e de jobs). Formato validado aqui para
+# nunca embutir lixo: SPKI DER de P-256 = 91 bytes, prefixo fixo "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE".
+function Test-P256PublicKeyShape {
+  param([string]$Value)
+  return $Value -match '^MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE[A-Za-z0-9+/]{86}==$'
+}
+$releaseKeyFile = Join-Path $PSScriptRoot "release-public-key.txt"
+if ([string]::IsNullOrWhiteSpace($ReleasePublicKey) -and (Test-Path -LiteralPath $releaseKeyFile)) {
+  $ReleasePublicKey = (Get-Content -LiteralPath $releaseKeyFile -Encoding UTF8 |
+    Where-Object { $_ -and -not $_.TrimStart().StartsWith("#") } |
+    Select-Object -First 1)
+  Write-Host "Chave publica de release lida de release-public-key.txt." -ForegroundColor Green
+}
+$ReleasePublicKey = "$ReleasePublicKey".Trim()
+$JobSigningPublicKey = "$JobSigningPublicKey".Trim()
+if ($ReleasePublicKey) {
+  if (-not (Test-P256PublicKeyShape $ReleasePublicKey)) {
+    throw "ReleasePublicKey invalida: esperado base64 de SubjectPublicKeyInfo ECDSA P-256 (124 caracteres, gerado por 'npm run agent:keys -- release')."
+  }
+  $isccArgs.Add("/DReleasePublicKey=$ReleasePublicKey")
+  Write-Host "Instalador embute a chave publica de release: atualizacoes automaticas exigem assinatura." -ForegroundColor Green
+} else {
+  Write-Host "Aviso: sem chave publica de release (-ReleasePublicKey ou release-public-key.txt). O agente instalado IGNORARA atualizacoes automaticas ate receber releasePublicKey no config.json." -ForegroundColor Yellow
+}
+if ($JobSigningPublicKey) {
+  if (-not (Test-P256PublicKeyShape $JobSigningPublicKey)) {
+    throw "JobSigningPublicKey invalida: esperado base64 de SubjectPublicKeyInfo ECDSA P-256 (124 caracteres)."
+  }
+  $isccArgs.Add("/DJobSigningPublicKey=$JobSigningPublicKey")
+}
 # Relay RustDesk proprio (opcional): lido de variaveis de ambiente no momento
 # do build, nao de parametro de linha de comando, porque sao valores de
 # infraestrutura fixos da organizacao (o mesmo relay para toda a frota), nao
