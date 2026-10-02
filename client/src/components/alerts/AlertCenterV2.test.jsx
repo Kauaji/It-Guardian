@@ -548,6 +548,49 @@ describe("AlertCenterV2 - configurações", () => {
   });
 });
 
+describe("AlertCenterV2 - acessibilidade dos modais", () => {
+  it("fecha configurações, detalhes e log com Escape e devolve o foco ao botão de origem", async () => {
+    const user = userEvent.setup();
+    renderCenter({
+      center: {
+        suggestions: baseSuggestions.map((suggestion) =>
+          suggestion.id === "sug1" ? { ...suggestion, latestValidation: loggedValidationWithLog } : suggestion
+        )
+      }
+    });
+
+    const settingsButton = screen.getByRole("button", { name: "Configurações de aviso" });
+    await user.click(settingsButton);
+    await waitFor(() => expect(screen.getByRole("dialog").contains(document.activeElement)).toBe(true));
+    expect(document.body).toHaveClass("modal-open");
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.body).not.toHaveClass("modal-open");
+    expect(settingsButton).toHaveFocus();
+
+    await user.click(within(suggestionCards()[0]).getByRole("button", { name: "Ver detalhes do aviso" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    await user.click(within(suggestionCards()[0]).getByRole("button", { name: "Ver log do script" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("fecha o modal de configurações ao clicar no fundo, mas não ao clicar dentro", async () => {
+    const user = userEvent.setup();
+    renderCenter();
+
+    await user.click(screen.getByRole("button", { name: "Configurações de aviso" }));
+    fireEvent.mouseDown(screen.getByRole("dialog"));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    fireEvent.mouseDown(document.querySelector(".alert-settings-backdrop"));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+});
+
 describe("AlertCenterV2 - navegação por abas e permissões", () => {
   it("só mostra as abas permitidas e começa em Preventivas sem permissão de avisos", () => {
     renderCenter({ user: restrictedUser(["preventive_plans.view"]) });

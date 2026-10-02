@@ -264,6 +264,17 @@ describe("Preventivas - etapa 2 (scripts) e registro", () => {
     );
   });
 
+  it("fecha a revisão com Escape", async () => {
+    const { user } = await selectMachineAndScript();
+
+    await user.click(within(screen.getByLabelText("Criar plano preventivo")).getByText("Limpar temporários"));
+    await user.click(screen.getByRole("button", { name: "Revisar preventiva" }));
+    expect(screen.getByRole("dialog", { name: "Registrar plano preventivo" })).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
   it("cancela a revisão sem registrar", async () => {
     const { user, center } = await selectMachineAndScript();
     const builder = screen.getByLabelText("Criar plano preventivo");
