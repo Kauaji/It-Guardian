@@ -40,4 +40,10 @@ describe("isMaintenanceServiceOrder", () => {
     expect(isMaintenanceServiceOrder({ category: "manutencao" })).toBe(false);
     expect(isMaintenanceServiceOrder(null)).toBe(false);
   });
+
+  it("preserva o comportamento original: a comparacao e com 'manutencao' sem acento", () => {
+    // Pendencia conhecida: a OS criada ao colocar uma maquina em manutencao usa
+    // a categoria acentuada ("Manutenção"), que esta regra nao reconhece.
+    expect(isMaintenanceServiceOrder({ assetId: "a", category: "Manutenção" })).toBe(false);
+  });
 });
