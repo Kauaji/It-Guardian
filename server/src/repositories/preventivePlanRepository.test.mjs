@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
+import { legacySchemaSource } from "../../test-support/legacySchemaSource.mjs";
 import test from "node:test";
 
 test("criação de OS preventiva usa transação e trava duplicidade do vínculo", () => {
@@ -14,8 +15,7 @@ test("criação de OS preventiva usa transação e trava duplicidade do vínculo
 });
 
 test("migração cria vínculos únicos entre plano preventivo e OS", () => {
-  const databasePath = fileURLToPath(new URL("../schema/legacyBootstrap.js", import.meta.url));
-  const source = readFileSync(databasePath, "utf8");
+  const source = legacySchemaSource();
 
   assert.match(source, /preventive_plans_service_order_id_fkey/);
   assert.match(source, /service_orders_preventive_plan_id_fkey/);
@@ -24,8 +24,7 @@ test("migração cria vínculos únicos entre plano preventivo e OS", () => {
 });
 
 test("preventive automation schema links optionally to one preventive plan", () => {
-  const databasePath = fileURLToPath(new URL("../schema/legacyBootstrap.js", import.meta.url));
-  const source = readFileSync(databasePath, "utf8");
+  const source = legacySchemaSource();
 
   assert.match(source, /preventive_plan_id TEXT/);
   assert.match(source, /preventive_automation_plans_preventive_plan_id_fkey/);

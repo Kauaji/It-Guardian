@@ -2,13 +2,30 @@ import { Router } from "express";
 import { getPoolStats, query } from "../database.js";
 import { renderMetrics } from "../lib/metrics.js";
 import { logger } from "../lib/logger.js";
-import { migrations } from "../migrations/index.js";
+import { getMigrationStatus, migrations } from "../migrations/index.js";
 import { requireAdmin, requireAuth } from "../middleware/authMiddleware.js";
 import { requireMetricsToken } from "../middleware/securityMiddleware.js";
-import { resolveDatabaseConfig } from "../config/environment.js";
+import { getMigrationsMode, resolveDatabaseConfig } from "../config/environment.js";
 import { getRelayBackendName } from "../services/remoteAssistanceRelay.js";
 
 const router = Router();
+
+// Migracoes so avancam: depois de "ok" nao ha por que reconsultar a cada sonda de saude.
+let migrationsConfirmedAt = 0;
+const MIGRATION_RECHECK_MS = 60_000;
+
+async function migrationCheck() {
+  if (getMigrationsMode() === "skip") return "skipped";
+  if (Date.now() - migrationsConfirmedAt < MIGRATION_RECHECK_MS) return "ok";
+  try {
+    const status = await getMigrationStatus();
+    if (!status.legacySchemaApplied || status.pending.length) return "pending";
+    migrationsConfirmedAt = Date.now();
+    return "ok";
+  } catch {
+    return "pending";
+  }
+}
 
 async function readinessChecks() {
   const checks = { database: "ok", migrations: "ok" };
@@ -20,12 +37,7 @@ async function readinessChecks() {
     checks.migrations = "unknown";
     return checks;
   }
-  try {
-    const applied = await query("SELECT COUNT(*)::int AS total FROM schema_migrations");
-    if (Number(applied.rows[0]?.total || 0) < migrations.length) checks.migrations = "pending";
-  } catch {
-    checks.migrations = "pending";
-  }
+  checks.migrations = await migrationCheck();
   return checks;
 }
 
@@ -37,7 +49,7 @@ export function liveness(_req, res) {
 /** Readiness: pronto para receber trafego (banco acessivel e migracoes aplicadas). */
 export async function readiness(_req, res) {
   const checks = await readinessChecks();
-  const ready = checks.database === "ok" && checks.migrations === "ok";
+  const ready = checks.database === "ok" && ["ok", "skipped"].includes(checks.migrations);
   res.status(ready ? 200 : 503).json({
     ok: ready,
     status: ready ? "ok" : "error",

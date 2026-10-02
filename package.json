@@ -16,6 +16,8 @@
     "vercel-build": "npm run build",
     "start": "npm run start --workspace server",
     "seed:admin": "npm run seed:admin --workspace server --",
+    "db:migrate": "npm run db:migrate --workspace server --",
+    "db:status": "npm run db:status --workspace server --",
     "agent:enroll": "npm run agent:enroll --workspace server --",
     "product-key:create": "npm run product-key:create --workspace server --",
     "product-key:monitoring": "npm run product-key:monitoring --workspace server --",

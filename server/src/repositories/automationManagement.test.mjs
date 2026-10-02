@@ -14,6 +14,7 @@ import {
   getAutomationMachineStatusSummary,
   machineMatchesAutomationStatus
 } from "../../../client/src/components/automation/automationStatusUtils.js";
+import { legacySchemaSource } from "../../test-support/legacySchemaSource.mjs";
 import {
   buildAutomationOverrideDraft,
   buildAutomationPlanDraft,
@@ -276,7 +277,7 @@ test("remoção de máquina desativa agenda e registra histórico e auditoria", 
 });
 
 test("override individual usa a chave única plan_id mais target_key", () => {
-  const database = source("../schema/legacyBootstrap.js");
+  const database = legacySchemaSource();
   const repository = source("./preventiveAutomationRepository.js");
   assert.match(database, /UNIQUE INDEX IF NOT EXISTS idx_preventive_automation_overrides_target[\s\S]*plan_id,\s*target_key/);
   assert.match(repository, /`asset:\$\{assetId\}`/);
@@ -290,7 +291,7 @@ test("rotas protegem exclusão, override e remoção de ativo no backend", () =>
 });
 
 test("migração cria exclusão lógica e índices de gerenciamento", () => {
-  const database = source("../schema/legacyBootstrap.js");
+  const database = legacySchemaSource();
   assert.match(database, /deleted_at TIMESTAMPTZ/);
   assert.match(database, /idx_preventive_automation_plans_deleted_at/);
   assert.match(database, /idx_preventive_automation_plans_active/);

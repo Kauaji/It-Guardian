@@ -1,5 +1,6 @@
-import { withTransaction } from "../database.js";
+import { query, withTransaction } from "../database.js";
 import { resolveDatabaseConfig } from "../config/environment.js";
+import { LEGACY_SCHEMA_MARKER, ensureMigrationsTable } from "../schema/legacyBootstrap.js";
 import { migration001RuntimeFoundation } from "./001-runtime-foundation.js";
 import { migration002UserPreferences } from "./002-user-preferences.js";
 import { migration003WindowsAgentFoundation } from "./003-windows-agent-foundation.js";
@@ -76,18 +77,49 @@ export const migrations = [
   migration035IdentityHardening
 ];
 
+/**
+ * Situacao das migracoes sem alterar nada: usada por `db:status`, pelo modo
+ * MIGRATIONS_MODE=check e pelo /health/ready.
+ */
+export async function getMigrationStatus() {
+  const applied = new Map();
+  try {
+    const rows = await query("SELECT id, applied_at FROM schema_migrations");
+    for (const row of rows.rows) applied.set(row.id, row.applied_at);
+  } catch (error) {
+    // Banco virgem: a tabela ainda nao existe (42P01 no PostgreSQL; mensagem equivalente no pg-mem).
+    if (error.code !== "42P01" && !/does not exist|not exist/i.test(error.message || "")) throw error;
+  }
+  return {
+    legacySchemaApplied: applied.has(LEGACY_SCHEMA_MARKER),
+    migrations: migrations.map((migration) => ({
+      id: migration.id,
+      applied: applied.has(migration.id),
+      appliedAt: applied.get(migration.id) || null
+    })),
+    pending: migrations.filter((migration) => !applied.has(migration.id)).map((migration) => migration.id)
+  };
+}
+
+export async function assertSchemaUpToDate() {
+  const status = await getMigrationStatus();
+  if (!status.legacySchemaApplied || status.pending.length) {
+    const missing = [!status.legacySchemaApplied && LEGACY_SCHEMA_MARKER, ...status.pending].filter(Boolean);
+    throw new Error(
+      `O esquema do banco esta desatualizado (pendentes: ${missing.join(", ")}). ` +
+        "Rode `npm run db:migrate --workspace server` antes de subir esta versao (MIGRATIONS_MODE=check)."
+    );
+  }
+  return status;
+}
+
 export async function runMigrations() {
   await withTransaction(async (db) => {
     if (resolveDatabaseConfig().mode === "postgres") {
       await db("SELECT pg_advisory_xact_lock($1)", [813_724_601]);
     }
 
-    await db(`
-      CREATE TABLE IF NOT EXISTS schema_migrations (
-        id TEXT PRIMARY KEY,
-        applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-    `);
+    await ensureMigrationsTable(db);
 
     for (const migration of migrations) {
       const applied = await db(

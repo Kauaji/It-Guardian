@@ -1,5 +1,6 @@
 import {
   getJwtSecret,
+  getMigrationsMode,
   isDemoSeedBlockedInProduction,
   isVercel,
   resolveDatabaseConfig,
@@ -8,7 +9,7 @@ import {
 import { logger } from "./lib/logger.js";
 import { detectRedisConfig } from "./lib/redisClient.js";
 import { initializeDatabase } from "./schema/legacyBootstrap.js";
-import { runMigrations } from "./migrations/index.js";
+import { assertSchemaUpToDate, runMigrations } from "./migrations/index.js";
 import { seedDemoOperationalData } from "./repositories/demoDataRepository.js";
 import { seedDefaultMaintenanceScripts } from "./repositories/maintenanceScriptRepository.js";
 import { backfillPreventiveAutomationAssetSchedules } from "./repositories/preventiveAutomationRepository.js";
@@ -49,14 +50,23 @@ function warnAboutRiskyConfiguration() {
   }
 }
 
+async function prepareSchema() {
+  const mode = getMigrationsMode();
+  if (mode === "auto") {
+    await initializeDatabase();
+    await runMigrations();
+  } else if (mode === "check") {
+    await assertSchemaUpToDate();
+  }
+}
+
 export function initializeRuntime() {
   if (!runtimePromise) {
     runtimePromise = (async () => {
       getJwtSecret();
       warnIfServerlessWithoutSharedRedis();
       warnAboutRiskyConfiguration();
-      await initializeDatabase();
-      await runMigrations();
+      await prepareSchema();
       await purgeLegacyMockIntegrationSnapshots();
       await seedDefaultSectors();
 

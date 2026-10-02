@@ -302,6 +302,19 @@ export function isDemoSeedBlockedInProduction(env = process.env, productionLike 
  * Retencao de dados que crescem sem parar. 0 desliga a limpeza daquele grupo.
  * A trilha de auditoria da assistencia remota (hash encadeado) nunca e apagada.
  */
+/**
+ * auto  -> aplica esquema legado + migracoes ao subir (padrao; serverless/dev).
+ * check -> nao altera nada; recusa subir se faltar migracao (deploy com `db:migrate` no pipeline).
+ * skip  -> nao toca no esquema (banco gerenciado por outra ferramenta).
+ */
+export function getMigrationsMode(env = process.env) {
+  const mode = String(env.MIGRATIONS_MODE || "auto").trim().toLowerCase();
+  if (!["auto", "check", "skip"].includes(mode)) {
+    throw new Error(`MIGRATIONS_MODE invalido ("${env.MIGRATIONS_MODE}"). Use auto, check ou skip.`);
+  }
+  return mode;
+}
+
 export function getRetentionConfig(env = process.env) {
   return {
     heartbeatDays: boundedInteger(env.RETENTION_HEARTBEAT_DAYS, 30, 0, 3650),

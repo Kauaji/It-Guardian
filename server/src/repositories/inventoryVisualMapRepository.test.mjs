@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { legacySchemaSource } from "../../test-support/legacySchemaSource.mjs";
 import {
   normalizeConnectionPayload,
   normalizeMapPayload,
@@ -99,7 +100,7 @@ test("resolve camada pelo tipo de conexao tecnica", () => {
 });
 
 test("schema e rotas do mapa visual estao registrados", () => {
-  const schema = source("../schema/legacyBootstrap.js");
+  const schema = legacySchemaSource();
   const app = source("../app.js");
   const routes = source("../routes/inventoryVisualMapRoutes.js");
 
