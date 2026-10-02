@@ -233,7 +233,7 @@ export async function movePart(id, movement, user) {
     const inbound = ["receipt", "return"].includes(movement.movementType);
     const resulting = movement.movementType === "adjustment" ? movement.quantity : previous + (inbound ? movement.quantity : -movement.quantity);
     if (resulting < 0) { const error = new Error("Estoque insuficiente para esta movimentação."); error.statusCode = 409; throw error; }
-    await db("UPDATE products SET quantity=$2, assigned_asset_id=CASE WHEN $3 IN ('assignment','consumption') AND $4 IS NOT NULL THEN $4 WHEN $3='unassignment' THEN NULL ELSE assigned_asset_id END, updated_at=NOW() WHERE id=$1", [id,resulting,movement.movementType,movement.assetId]);
+    await db("UPDATE products SET quantity=$2, assigned_asset_id=CASE WHEN $3::text IN ('assignment','consumption') AND $4::text IS NOT NULL THEN $4::text WHEN $3::text='unassignment' THEN NULL ELSE assigned_asset_id END, updated_at=NOW() WHERE id=$1", [id,resulting,movement.movementType,movement.assetId]);
     await db(`INSERT INTO part_inventory_movements (id,part_id,movement_type,quantity,previous_quantity,resulting_quantity,service_order_id,asset_id,notes,performed_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, [randomUUID(),id,movement.movementType,movement.quantity,previous,resulting,movement.serviceOrderId,movement.assetId,movement.notes,user.id]);
   });
   return getPart(id);

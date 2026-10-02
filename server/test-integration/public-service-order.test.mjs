@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { useTestDatabase } from "../test-support/database.mjs";
 
-process.env.DATABASE_URL = "memory";
+const testDatabase = await useTestDatabase();
 process.env.ENABLE_DEMO_SEED = "true";
 process.env.JWT_SECRET = "public-service-order-integration-secret-32-chars";
 process.env.NODE_ENV = "test";

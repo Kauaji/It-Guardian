@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-process.env.DATABASE_URL = "memory";
+import { useTestDatabase } from "../test-support/database.mjs";
+await useTestDatabase();
 process.env.NODE_ENV = "test";
 
 const { validateFloorPlanBackground } = await import("../src/repositories/floorPlanRepository.js");

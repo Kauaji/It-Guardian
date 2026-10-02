@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { useTestDatabase } from "../test-support/database.mjs";
 
-process.env.DATABASE_URL = "memory";
+const testDatabase = await useTestDatabase();
 process.env.ENABLE_DEMO_SEED = "false";
 process.env.JWT_SECRET = "cloud-activation-test-secret-with-32-characters";
 process.env.NODE_ENV = "test";

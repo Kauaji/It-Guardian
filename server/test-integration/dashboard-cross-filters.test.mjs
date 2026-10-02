@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { useTestDatabase } from "../test-support/database.mjs";
 
-process.env.DATABASE_URL = "memory";
+const testDatabase = await useTestDatabase();
 process.env.ENABLE_DEMO_SEED = "true";
 process.env.JWT_SECRET = "dashboard-cross-filter-integration-secret-32";
 process.env.NODE_ENV = "test";
@@ -89,7 +90,7 @@ test.before(async () => {
   orderA = await createOrder(assetA, { sectorId: hiddenSector.id, sectorName: hiddenSector.name });
   orderB = await createOrder(assetB);
   // Fixture writes are strictly in the in-memory test database.
-  assert.equal(process.env.DATABASE_URL, "memory");
+  assert.ok(testDatabase.mode === "memory" || testDatabase.mode === "postgres");
   await query("UPDATE service_orders SET sla_due_at = $2 WHERE id = $1", [orderA.id, new Date(Date.now() - 86400000).toISOString()]);
   await query("UPDATE service_orders SET status = $2 WHERE id = $1", [orderB.id, "in_progress"]);
   await createUser({
