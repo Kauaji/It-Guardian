@@ -39,16 +39,17 @@ export function agentHeaders(token) {
 
 export async function bearerUser({ role, permissions = [] }) {
   const { createUser } = await import("../src/repositories/userRepository.js");
-  const { default: jwt } = await import("jsonwebtoken");
+  const { startSession } = await import("../src/services/sessionService.js");
   const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const user = await createUser({
     name: `Usuario ${role} ${suffix}`,
     email: `${role}-${suffix}@script-fixtures.local`,
     password: "senha-nao-usada-neste-teste",
     role,
-    permissions
+    permissions,
+    mustChangePassword: false
   });
-  const token = jwt.sign({ sub: user.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+  const token = (await startSession(user)).token;
   return { user, token };
 }
 
