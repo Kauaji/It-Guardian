@@ -8,13 +8,13 @@ function sourceOf(relativePath) {
 }
 
 test("criação de OS preventiva usa transação e trava duplicidade do vínculo", () => {
-  const repositoryPath = fileURLToPath(new URL("./preventivePlanRepository.js", import.meta.url));
-  const source = readFileSync(repositoryPath, "utf8");
+  const repository = sourceOf("./preventivePlanRepository.js");
+  const lifecycle = sourceOf("../services/preventivePlanLifecycleService.js");
 
-  assert.match(source, /withTransaction/);
-  assert.match(source, /FOR UPDATE/);
-  assert.match(source, /service_order_id IS NULL/);
-  assert.match(source, /Este plano já possui uma OS preventiva vinculada\./);
+  assert.match(lifecycle, /withTransaction/);
+  assert.match(repository, /FOR UPDATE/);
+  assert.match(repository, /service_order_id IS NULL/);
+  assert.match(lifecycle, /Este plano já possui uma OS preventiva vinculada\./);
 });
 
 test("migração cria vínculos únicos entre plano preventivo e OS", () => {
@@ -39,15 +39,17 @@ test("preventive automation schema links optionally to one preventive plan", () 
 });
 
 test("preventive plan repository creates linked automation in unified flow", () => {
-  const repositoryPath = fileURLToPath(new URL("./preventivePlanRepository.js", import.meta.url));
-  const source = readFileSync(repositoryPath, "utf8");
+  const creation = sourceOf("../services/preventivePlanCreationService.js");
+  const payload = sourceOf("../domain/preventivePlanPayload.js");
+  const repository = sourceOf("./preventivePlanRepository.js");
+  const reader = sourceOf("../services/preventivePlanReadService.js");
 
-  assert.match(source, /payload\.automation\?\.enabled === true/);
-  assert.match(source, /createPreventiveAutomationPlanRecord/);
-  assert.match(source, /preventivePlanId: planId/);
-  assert.match(source, /scopeType: "asset_list"/);
-  assert.match(source, /automation: \{ enabled: false \}/);
-  assert.match(source, /findPreventiveAutomationPlanByPreventivePlanId/);
+  assert.match(creation, /payload\.automation\?\.enabled === true/);
+  assert.match(creation, /createPreventiveAutomationPlanRecord/);
+  assert.match(payload, /preventivePlanId: planId/);
+  assert.match(payload, /scopeType: "asset_list"/);
+  assert.match(repository, /automation: \{ enabled: false \}/);
+  assert.match(reader, /findPreventiveAutomationPlanByPreventivePlanId/);
 });
 
 test("preventive automation repository exposes linked preventive plan fields", () => {

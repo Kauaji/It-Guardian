@@ -1,12 +1,14 @@
 import { notFoundError } from "../lib/errors.js";
+import { createPreventivePlan } from "./preventivePlanCreationService.js";
 import {
-  createPreventivePlan,
   createServiceOrderFromPreventivePlan,
+  preparePreventivePlan
+} from "./preventivePlanLifecycleService.js";
+import {
   findPreventivePlanById,
   listPreventivePlanLogs,
-  listPreventivePlans,
-  preparePreventivePlan
-} from "../repositories/preventivePlanRepository.js";
+  listPreventivePlans
+} from "./preventivePlanReadService.js";
 
 const notFoundMessage = "Plano preventivo não encontrado.";
 
