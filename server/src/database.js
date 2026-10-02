@@ -9,7 +9,12 @@ async function createPool() {
   const config = resolveDatabaseConfig();
 
   if (config.mode === "memory") {
-    const { newDb } = await import("pg-mem");
+    const { newDb } = await import("pg-mem").catch(() => {
+      throw new Error(
+        "DATABASE_URL=memory exige o pacote pg-mem (devDependency): ele nao existe em instalacoes de producao (--omit=dev). " +
+          "Use um PostgreSQL real fora de dev/teste."
+      );
+    });
     const db = newDb({ autoCreateForeignKeyIndices: true });
     const { Pool } = db.adapters.createPg();
     return new Pool();

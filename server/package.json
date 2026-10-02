@@ -26,7 +26,9 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "pg": "^8.13.1",
-    "pg-mem": "^3.0.5",
     "ws": "^8.21.0"
+  },
+  "devDependencies": {
+    "pg-mem": "^3.0.5"
   }
 }

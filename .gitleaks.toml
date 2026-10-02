@@ -1,0 +1,18 @@
+title = "IT Guardian"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Fixtures e exemplos publicos (senhas de demonstracao, .env.example, segredos de teste)"
+paths = [
+  '''(^|/)\.env\.example$''',
+  '''(^|/)docs/.*\.md$''',
+  '''(^|/)server/(test|test-integration|test-support)/''',
+  '''\.test\.(m?js|jsx)$''',
+  '''(^|/)package-lock\.json$''',
+]
+regexes = [
+  '''change-me-in-production''',
+  '''ci-only-secret-with-at-least-32-characters''',
+]
