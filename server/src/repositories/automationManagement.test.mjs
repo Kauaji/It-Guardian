@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { isScheduleLinkedToPlan } from "./preventiveAutomationRepository.js";
@@ -24,6 +25,28 @@ import {
 function source(relativePath) {
   return readFileSync(fileURLToPath(new URL(relativePath, import.meta.url)), "utf8");
 }
+
+// Alguns componentes do cliente foram divididos em subcomponentes e hooks. Os asserts
+// de texto leem o arquivo principal junto com os arquivos (exceto testes) da pasta para
+// onde o JSX foi movido, mantendo a intencao de cada verificacao.
+const automationDir = "../../../client/src/components/automation/";
+
+function sourceWithFolder(mainPath, folderPath) {
+  const folder = fileURLToPath(new URL(folderPath, import.meta.url));
+  const parts = readdirSync(folder)
+    .filter((name) => /\.jsx?$/.test(name) && !/\.test\./.test(name))
+    .sort()
+    .map((name) => readFileSync(join(folder, name), "utf8"));
+  return [source(mainPath), ...parts].join("\n");
+}
+
+const planDetailsSource = () => sourceWithFolder(`${automationDir}AutomationPlanDetails.jsx`, `${automationDir}planDetails/`);
+const machineDetailsSource = () => sourceWithFolder(`${automationDir}AutomationMachineDetails.jsx`, `${automationDir}machineDetails/`);
+const managementViewSource = () => sourceWithFolder(`${automationDir}AutomationManagementView.jsx`, `${automationDir}management/`);
+const alertCenterSource = () => [
+  source("../../../client/src/components/alerts/AlertCenterV2.jsx"),
+  source("../../../client/src/components/alerts/AutomationTab.jsx")
+].join("\n");
 
 const machines = [
   {
@@ -344,7 +367,7 @@ test("edição protege alterações não salvas antes de fechar ou trocar de pla
 });
 
 test("pausa e reativação usam a mesma atualização e sincronizam agendas", () => {
-  const component = source("../../../client/src/components/automation/AutomationPlanDetails.jsx");
+  const component = planDetailsSource();
   const repository = source("./preventiveAutomationRepository.js");
   const routes = source("../routes/preventiveAutomationRoutes.js");
   const controller = source("../controllers/preventiveAutomationController.js");
@@ -375,7 +398,7 @@ test("plano excluído logicamente não pode ser reativado", () => {
 });
 
 test("detalhes da máquina incluem override, remoção e histórico recente", () => {
-  const component = source("../../../client/src/components/automation/AutomationMachineDetails.jsx");
+  const component = machineDetailsSource();
   assert.match(component, /Definir recorrência personalizada/);
   assert.match(component, /Usar recorrência herdada/);
   assert.match(component, /Remover plano da máquina/);
@@ -383,7 +406,7 @@ test("detalhes da máquina incluem override, remoção e histórico recente", ()
 });
 
 test("detalhes gerais exigem confirmação forte para excluir", () => {
-  const component = source("../../../client/src/components/automation/AutomationPlanDetails.jsx");
+  const component = planDetailsSource();
   assert.match(component, /Digite o nome do plano para confirmar/);
   assert.match(component, /deleteConfirmation !== plan\.name/);
   assert.match(component, /histórico será preservado/);
@@ -396,7 +419,7 @@ test("tela de gerenciamento reutiliza AutomationIndicatorDots", () => {
 });
 
 test("App mantém gerenciamento fora da composição visual principal", () => {
-  const app = source("../../../client/src/components/alerts/AlertCenterV2.jsx");
+  const app = alertCenterSource();
   assert.match(app, /<AutomationManagementView/);
   assert.match(app, /canShowAutomationManagement/);
   assert.match(app, /alertActiveTab === "automation"/);
@@ -405,8 +428,8 @@ test("App mantém gerenciamento fora da composição visual principal", () => {
 test("nenhuma primitiva de execução real foi introduzida na área de gerenciamento", () => {
   const combined = [
     source("./preventiveAutomationRepository.js"),
-    source("../../../client/src/components/automation/AutomationManagementView.jsx"),
-    source("../../../client/src/components/automation/AutomationPlanDetails.jsx")
+    managementViewSource(),
+    planDetailsSource()
   ].join("\n");
   assert.doesNotMatch(combined, /child_process|\bexecFile\s*\(|\bspawn\s*\(|shell\s*:\s*true|\beval\s*\(/);
 });
@@ -434,7 +457,7 @@ test("agenda usa rota protegida e consulta parametrizada", () => {
 });
 
 test("detalhe do plano centraliza as cinco areas operacionais", () => {
-  const component = source("../../../client/src/components/automation/AutomationPlanDetails.jsx");
+  const component = planDetailsSource();
   for (const label of ["Resumo", "Agenda", "Máquinas", "Scripts", "Histórico"]) {
     assert.match(component, new RegExp(label));
   }
