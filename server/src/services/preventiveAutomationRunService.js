@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { query, withTransaction } from "../database.js";
 import { trimString } from "../lib/textUtils.js";
-import { normalizeScheduleSlot, toValidDate } from "../domain/preventiveAutomationNormalizers.js";
+import { actorName, normalizeScheduleSlot, toValidDate } from "../domain/preventiveAutomationNormalizers.js";
 import { buildRunDraft, recurrenceFromSchedule } from "../domain/preventiveAutomationRun.js";
 import { resolveEffectiveRecurrence } from "../domain/preventiveAutomationSchedule.js";
 import { addAssetHistory } from "../repositories/assetHistoryRepository.js";
@@ -16,7 +16,6 @@ import {
   markSchedulePrepared
 } from "../repositories/preventiveAutomationScheduleRepository.js";
 import { syncAutoPriorities, syncSlaBreaches } from "../repositories/serviceOrderRepository.js";
-import { actorName } from "./preventiveAutomationPlanService.js";
 import {
   findPreventiveAutomationPlanById,
   listDuePreventiveAutomationPlans

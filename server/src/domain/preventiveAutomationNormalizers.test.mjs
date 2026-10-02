@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  actorName,
   buildOverrideTargetKey,
   normalizeIdList,
   normalizeIndicatorColor,
@@ -64,4 +65,11 @@ test("chave do alvo do override identifica maquina ou segmento", () => {
   assert.equal(buildOverrideTargetKey({ assetId: "a1", segmentId: "s1" }), "asset:a1");
   assert.equal(buildOverrideTargetKey({}), null);
   assert.equal(buildOverrideTargetKey(), null);
+});
+
+test("nome do ator para historico usa nome, e-mail ou Sistema", () => {
+  assert.equal(actorName({ name: "Ana", email: "ana@x" }), "Ana");
+  assert.equal(actorName({ email: "ana@x" }), "ana@x");
+  assert.equal(actorName({ id: "1" }), "Sistema");
+  assert.equal(actorName(null), "Sistema");
 });

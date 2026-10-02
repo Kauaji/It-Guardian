@@ -1,5 +1,6 @@
 import { withTransaction } from "../database.js";
 import { notFoundError } from "../lib/errors.js";
+import { actorName } from "../domain/preventiveAutomationNormalizers.js";
 import { normalizeOverridePayload } from "../domain/preventiveAutomationPayload.js";
 import { addAssetHistory } from "../repositories/assetHistoryRepository.js";
 import { addLog } from "../repositories/logRepository.js";
@@ -11,7 +12,6 @@ import {
 import { deactivateAssetSchedule } from "../repositories/preventiveAutomationScheduleRepository.js";
 import { findPreventiveAutomationPlanById } from "./preventiveAutomationPlanQueryService.js";
 import { findPreventiveAutomationAssetDetails } from "./preventiveAutomationManagementService.js";
-import { actorName } from "./preventiveAutomationPlanService.js";
 import { syncAssetSchedulesForPlan } from "./preventiveAutomationScheduleService.js";
 import { validateScopeSelection } from "./preventiveAutomationScopeService.js";
 

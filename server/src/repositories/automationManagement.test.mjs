@@ -547,7 +547,7 @@ test("criação, edição e recorrência individual preservam histórico da máq
     assert.match(combined, new RegExp(`"${eventType}"`));
   }
   assert.match(combined, /addAssetHistory/);
-  assert.match(planService, /return user\?\.name \|\| user\?\.email \|\| "Sistema"/);
+  assert.match(source("../domain/preventiveAutomationNormalizers.js"), /return user\?\.name \|\| user\?\.email \|\| "Sistema"/);
   assert.match(combined, /userName: actorName\(user\)/);
 });
 

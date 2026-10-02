@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 import { query, withTransaction } from "../database.js";
 import { conflict } from "../lib/errors.js";
 import { computeNextScheduledFor } from "../domain/preventiveSchedule.js";
-import { normalizePlanPayload, assertUniqueOverrides } from "../domain/preventiveAutomationPayload.js";
+import { actorName } from "../domain/preventiveAutomationNormalizers.js";
+import { assertUniqueOverrides, normalizePlanPayload } from "../domain/preventiveAutomationPayload.js";
 import { addAssetHistory } from "../repositories/assetHistoryRepository.js";
 import { addLog } from "../repositories/logRepository.js";
 import {
@@ -30,10 +31,6 @@ import { validateScopeSelection, validateScripts } from "./preventiveAutomationS
  * pausar, reativar e excluir logicamente. Cada operacao valida o payload e o
  * escopo, grava em uma unica transacao e registra historico e auditoria.
  */
-
-export function actorName(user) {
-  return user?.name || user?.email || "Sistema";
-}
 
 function automationHistoryMessage(plan, prefix) {
   const scriptCount = Array.isArray(plan.defaultScriptIds) ? plan.defaultScriptIds.length : 0;

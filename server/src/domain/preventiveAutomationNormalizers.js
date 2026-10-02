@@ -70,3 +70,8 @@ export function buildOverrideTargetKey({ assetId = null, segmentId = null } = {}
   if (segmentId) return `segment:${segmentId}`;
   return null;
 }
+
+/** Nome do ator para historico e auditoria (usuario, e-mail ou "Sistema"). */
+export function actorName(user) {
+  return user?.name || user?.email || "Sistema";
+}
