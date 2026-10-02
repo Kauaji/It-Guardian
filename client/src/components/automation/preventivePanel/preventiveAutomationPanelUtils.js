@@ -1,5 +1,6 @@
 // Regras puras do formulario de automacao preventiva: rotulos, valores padrao,
 // montagem de payloads e validacoes simples. Sem React, para testar isoladamente.
+import { automationColorOptions } from "../automationFormUtils.js";
 
 export const preventiveAutomationRecurrenceLabels = {
   daily: "Diária",
@@ -17,7 +18,7 @@ export const preventiveAutomationScopeLabels = {
   group: "Grupo"
 };
 
-export const preventiveAutomationColorOptions = ["#1f7a61", "#2563eb", "#7c3aed", "#d97706", "#dc2626", "#0f766e"];
+export const preventiveAutomationColorOptions = automationColorOptions;
 
 export const preventiveAutomationTimezoneOptions = [
   "America/Sao_Paulo",
