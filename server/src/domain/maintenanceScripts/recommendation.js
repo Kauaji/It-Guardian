@@ -75,15 +75,26 @@ function matchesContextValue(values, candidates) {
   );
 }
 
-export function scoreMaintenanceScriptForContext(script = {}, context = {}) {
-  if (!script || script.active === false) return null;
+const CONTEXT_KEYWORDS = [
+  "disco",
+  "ram",
+  "memoria",
+  "cpu",
+  "rede",
+  "offline",
+  "ping",
+  "impressora",
+  "servico",
+  "temperatura"
+];
 
-  const normalized = buildRecommendationContext(context);
+// Campos normalizados do script usados na comparacao com o contexto.
+function profileScriptForScoring(script) {
   const relatedAlertTypes = normalizeTokenList(script.relatedAlertTypes);
   const relatedProblemTypes = normalizeTokenList(script.relatedProblemTypes);
   const recommendedForCategories = normalizeTokenList(script.recommendedForCategories);
   const tags = normalizeTokenList(script.tags);
-  const scriptFields = normalizeComparableText([
+  const fields = normalizeComparableText([
     script.name,
     script.description,
     script.category,
@@ -95,75 +106,86 @@ export function scoreMaintenanceScriptForContext(script = {}, context = {}) {
     ...relatedProblemTypes,
     ...recommendedForCategories
   ].filter(Boolean).join(" "));
-  const compatibilityWarnings = [];
-  const reasons = [];
-  let score = 0;
 
-  const scriptAlertType = normalizeComparableText(script.alertType);
+  return { relatedAlertTypes, relatedProblemTypes, recommendedForCategories, tags, fields };
+}
+
+// Cada criterio compativel contribui com pontos e um motivo legivel, nesta ordem.
+function collectScoreEntries(script, normalized, profile) {
+  const entries = [];
+
   if (
     normalized.alertType &&
-    (scriptAlertType === normalized.alertType || relatedAlertTypes.includes(normalized.alertType))
+    (normalizeComparableText(script.alertType) === normalized.alertType ||
+      profile.relatedAlertTypes.includes(normalized.alertType))
   ) {
-    score += 40;
-    reasons.push("tipo de aviso compatível");
+    entries.push({ points: 40, reason: "tipo de aviso compatível" });
   }
 
   if (
     normalized.problemType &&
-    (normalizeComparableText(script.problemType) === normalized.problemType || relatedProblemTypes.includes(normalized.problemType))
+    (normalizeComparableText(script.problemType) === normalized.problemType ||
+      profile.relatedProblemTypes.includes(normalized.problemType))
   ) {
-    score += 35;
-    reasons.push("tipo de problema compatível");
+    entries.push({ points: 35, reason: "tipo de problema compatível" });
   }
 
-  const scriptCategory = normalizeComparableText(script.category);
   if (
     normalized.technicalCategory &&
-    (scriptCategory === normalized.technicalCategory || recommendedForCategories.includes(normalized.technicalCategory))
+    (normalizeComparableText(script.category) === normalized.technicalCategory ||
+      profile.recommendedForCategories.includes(normalized.technicalCategory))
   ) {
-    score += 25;
-    reasons.push("categoria compatível");
+    entries.push({ points: 25, reason: "categoria compatível" });
   }
 
-  const tagMatches = tags.filter((tag) =>
+  const tagMatches = profile.tags.filter((tag) =>
     tag && (normalized.normalizedText.includes(tag) || normalized.tags.includes(tag))
   );
   if (tagMatches.length) {
-    score += tagMatches.length * 10;
-    reasons.push(`tags relacionadas: ${tagMatches.slice(0, 3).join(", ")}`);
+    entries.push({ points: tagMatches.length * 10, reason: `tags relacionadas: ${tagMatches.slice(0, 3).join(", ")}` });
   }
 
-  if (normalized.assetType && scriptFields.includes(normalized.assetType)) {
-    score += 20;
-    reasons.push("tipo de ativo compativel");
+  if (normalized.assetType && profile.fields.includes(normalized.assetType)) {
+    entries.push({ points: 20, reason: "tipo de ativo compativel" });
   }
 
-  if (normalized.operatingSystem && scriptFields.includes(normalized.operatingSystem)) {
-    score += 20;
-    reasons.push("sistema operacional compativel");
+  if (normalized.operatingSystem && profile.fields.includes(normalized.operatingSystem)) {
+    entries.push({ points: 20, reason: "sistema operacional compativel" });
   }
 
-  const keywordMatches = [
-    "disco",
-    "ram",
-    "memoria",
-    "cpu",
-    "rede",
-    "offline",
-    "ping",
-    "impressora",
-    "servico",
-    "temperatura"
-  ].filter((keyword) => normalized.normalizedText.includes(keyword) && scriptFields.includes(keyword));
+  const keywordMatches = CONTEXT_KEYWORDS.filter(
+    (keyword) => normalized.normalizedText.includes(keyword) && profile.fields.includes(keyword)
+  );
   if (keywordMatches.length) {
-    score += keywordMatches.length * 5;
-    reasons.push(`palavras-chave: ${keywordMatches.slice(0, 3).join(", ")}`);
+    entries.push({ points: keywordMatches.length * 5, reason: `palavras-chave: ${keywordMatches.slice(0, 3).join(", ")}` });
   }
 
+  return entries;
+}
+
+// Script que declara sistemas operacionais suportados e nao inclui o do ativo e descartado.
+function isIncompatibleWithOperatingSystem(script, normalized) {
   const supportedSystems = normalizeTokenList(script.supportedOperatingSystems || script.operatingSystems);
-  if (normalized.operatingSystem && supportedSystems.length && !matchesContextValue(supportedSystems, [normalized.operatingSystem])) {
-    return null;
-  }
+  return Boolean(
+    normalized.operatingSystem &&
+      supportedSystems.length &&
+      !matchesContextValue(supportedSystems, [normalized.operatingSystem])
+  );
+}
+
+function isElevatedRisk(script) {
+  return ["high", "critical"].includes(normalizeRiskLevel(script.riskLevel, "medium"));
+}
+
+export function scoreMaintenanceScriptForContext(script = {}, context = {}) {
+  if (!script || script.active === false) return null;
+
+  const normalized = buildRecommendationContext(context);
+  const entries = collectScoreEntries(script, normalized, profileScriptForScoring(script));
+  if (isIncompatibleWithOperatingSystem(script, normalized)) return null;
+
+  const compatibilityWarnings = [];
+  let score = entries.reduce((total, entry) => total + entry.points, 0);
 
   if (script.requiresAdmin) {
     compatibilityWarnings.push("Pode exigir permissão administrativa em execução futura.");
@@ -171,11 +193,12 @@ export function scoreMaintenanceScriptForContext(script = {}, context = {}) {
   if (script.requiresLoggedUser) {
     compatibilityWarnings.push("Pode exigir usuário logado no ativo em execução futura.");
   }
-  if (["high", "critical"].includes(normalizeRiskLevel(script.riskLevel, "medium"))) {
+  if (isElevatedRisk(script)) {
     compatibilityWarnings.push("Script de risco elevado: revisar antes de usar.");
     score = Math.max(0, score - 5);
   }
 
+  const reasons = entries.map((entry) => entry.reason);
   return {
     ...script,
     recommendationScore: score,
