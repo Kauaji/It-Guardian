@@ -55,8 +55,9 @@ services:
       context: .
       dockerfile: client/Dockerfile
       args:
-        VITE_API_URL: http://localhost:4000/api
-        VITE_WS_URL: ws://localhost:4000/ws
+        # Mesma origem: o nginx do cliente faz proxy de /api e /ws (a CSP so permite connect-src 'self').
+        VITE_API_URL: /api
+        VITE_WS_URL: ""
     container_name: it-guardian-web
     ports:
       - "5173:80"
