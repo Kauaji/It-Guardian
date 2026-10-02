@@ -1,38 +1,41 @@
+import { analyzeMaintenanceScriptContent } from "../domain/maintenanceScripts/contentAnalysis.js";
+import {
+  describeScriptForDiagnosis,
+  executionDiagnosisContextPermissions,
+  isScriptDiagnosisSatisfied
+} from "../domain/maintenanceScripts/executionDiagnosis.js";
+import { resolveScriptRiskLevel } from "../domain/maintenanceScripts/scriptVocabulary.js";
+import { requiresSecondReviewer } from "../domain/agentScriptJobs.js";
 import { badRequest, forbidden, notFoundError } from "../lib/errors.js";
 import { hasPermission } from "../permissions.js";
+import { isAgentAssetFresh } from "../lib/agentFreshness.js";
+import { isRemoteScriptExecutionEnabled } from "../config/environment.js";
+import { findActiveAgentEnrollmentForAsset, findAgentAssetById } from "../repositories/agentRepository.js";
+import { listServiceOrderScriptActivity } from "../repositories/maintenanceScripts/scriptLogRepository.js";
 import {
-  analyzeMaintenanceScriptContent,
-  acknowledgeScriptLog,
-  applyScriptLogSuggestedSolution,
-  cancelScriptValidation,
   createMaintenanceScript,
   deactivateMaintenanceScript,
   findMaintenanceScriptById,
-  findScriptLogById,
   listMaintenanceScripts,
-  listPendingScriptLogs,
-  listRecommendedScriptsForSuggestion,
-  listScriptValidationsForSuggestion,
-  listServiceOrderScriptActivity,
-  normalizeRiskLevel,
-  registerMaintenanceScriptSimulation,
-  updateMaintenanceScript,
-  useScriptForServiceOrder,
-  useScriptFromSuggestion
-} from "../repositories/maintenanceScriptRepository.js";
-import { executableTypes } from "../repositories/agentScriptJobRepository.js";
-import { findActiveAgentEnrollmentForAsset, findAgentAssetById } from "../repositories/agentRepository.js";
-import { isAgentAssetFresh } from "../lib/agentFreshness.js";
-import { isRemoteScriptExecutionEnabled } from "../config/environment.js";
+  updateMaintenanceScript
+} from "./maintenanceScripts/scriptCatalogService.js";
+import {
+  acknowledgeScriptLog,
+  applyScriptLogSuggestedSolution,
+  findScriptLogById,
+  listPendingScriptLogs
+} from "./maintenanceScripts/scriptLogService.js";
+import { registerMaintenanceScriptSimulation } from "./maintenanceScripts/scriptSimulationService.js";
+import { useScriptForServiceOrder } from "./maintenanceScripts/serviceOrderScriptUsageService.js";
+import { useScriptFromSuggestion } from "./maintenanceScripts/suggestionScriptUsageService.js";
+import {
+  cancelScriptValidation,
+  listScriptValidationsForSuggestion
+} from "./maintenanceScripts/scriptValidationService.js";
+import { listRecommendedScriptsForSuggestion } from "./maintenanceScripts/suggestionRecommendationService.js";
 import { listRecommendedScriptsForContext } from "./maintenanceScriptRecommendationService.js";
 
-const dualControlRiskLevels = new Set(["high", "critical"]);
-const diagnosisContextPermissions = {
-  service_order: "service_orders.run_scripts",
-  alert: "scripts.use_from_alert"
-};
-
-// Reforca o segundo revisor: assertSecondReviewer (na repository) so
+// Reforca o segundo revisor: assertSecondReviewer (na fila do agente) so
 // impede a MESMA pessoa que editou o script de enfileirar risco alto/
 // critico, mas nao garante que quem enfileira tenha autoridade pra
 // isso. Essa checagem na camada de servico exige a permissao dedicada
@@ -40,8 +43,7 @@ const diagnosisContextPermissions = {
 async function assertCanQueueScript(scriptId, user) {
   const script = await findMaintenanceScriptById(scriptId);
   if (!script) return;
-  const riskLevel = normalizeRiskLevel(script.riskLevel || script.suggestedRiskLevel, "medium");
-  if (dualControlRiskLevels.has(riskLevel) && !hasPermission(user, "scripts.approve_high_risk")) {
+  if (requiresSecondReviewer(resolveScriptRiskLevel(script)) && !hasPermission(user, "scripts.approve_high_risk")) {
     throw forbidden("Scripts de risco alto ou crítico exigem um revisor com permissão de aprovação (scripts.approve_high_risk).");
   }
 }
@@ -122,17 +124,17 @@ export async function applySuggestedSolutionToLog(id, payload, user) {
   return applyScriptLogSuggestedSolution(id, payload || {}, user);
 }
 
-// Unica funcao deste arquivo com logica de verdade (as demais sao
-// wrappers de uma linha para a repository) - o diagnostico precisa
-// combinar dado de varias fontes (flag do servidor, agente, permissao,
-// script) num unico resultado somente-leitura para a UI explicar por
-// que a execucao esta bloqueada, sem duplicar os mesmos criterios que
-// useScriptForServiceOrder/useScriptFromSuggestion ja aplicam de verdade.
+// O diagnostico precisa combinar dado de varias fontes (flag do servidor,
+// agente, permissao, script) num unico resultado somente-leitura para a UI
+// explicar por que a execucao esta bloqueada, sem duplicar os mesmos
+// criterios que useScriptForServiceOrder/useScriptFromSuggestion ja aplicam
+// de verdade (as regras do script vivem em domain/maintenanceScripts/executionDiagnosis.js).
 export async function getScriptExecutionDiagnosis({ assetId, scriptId = null, context, user = null }) {
   if (!String(assetId || "").trim()) {
     throw badRequest("Informe o ativo para calcular o diagnostico de execucao.");
   }
-  const basePermission = diagnosisContextPermissions[context] || diagnosisContextPermissions.service_order;
+  const basePermission =
+    executionDiagnosisContextPermissions[context] || executionDiagnosisContextPermissions.service_order;
   const serverEnabled = isRemoteScriptExecutionEnabled();
   const userHasPermission = hasPermission(user, basePermission);
   const userHasHighRiskApproval = hasPermission(user, "scripts.approve_high_risk");
@@ -145,7 +147,10 @@ export async function getScriptExecutionDiagnosis({ assetId, scriptId = null, co
   const agentActive =
     agentRegistered && Boolean(agentAsset) && isAgentAssetFresh(agentAsset.lastSeenAt, agentAsset.intervalSeconds);
 
-  const diagnosis = {
+  const script = scriptId ? await findMaintenanceScriptById(scriptId) : null;
+  const scriptDiagnosis = script ? describeScriptForDiagnosis(script, user) : null;
+
+  return {
     serverEnabled,
     agentRegistered,
     agentActive,
@@ -156,35 +161,12 @@ export async function getScriptExecutionDiagnosis({ assetId, scriptId = null, co
     agentLocalConfigStatus: "unknown",
     userHasPermission,
     userHasHighRiskApproval,
-    script: null
+    script: scriptDiagnosis,
+    overallAvailable:
+      serverEnabled &&
+      agentRegistered &&
+      agentActive &&
+      userHasPermission &&
+      isScriptDiagnosisSatisfied(scriptDiagnosis, userHasHighRiskApproval)
   };
-
-  if (scriptId) {
-    const script = await findMaintenanceScriptById(scriptId);
-    if (script) {
-      const riskLevel = normalizeRiskLevel(script.riskLevel || script.suggestedRiskLevel, "medium");
-      const riskRequiresSecondReviewer = dualControlRiskLevels.has(riskLevel);
-      const secondReviewerSatisfied = !riskRequiresSecondReviewer
-        ? null
-        : !(user?.id && script.contentUpdatedBy && user.id === script.contentUpdatedBy);
-      diagnosis.script = {
-        scriptActive: script.active !== false,
-        scriptTypeAllowed: executableTypes.has(String(script.type || "").toLowerCase()),
-        riskLevel,
-        riskRequiresSecondReviewer,
-        secondReviewerSatisfied
-      };
-    }
-  }
-
-  const scriptOk =
-    !diagnosis.script ||
-    (diagnosis.script.scriptActive &&
-      diagnosis.script.scriptTypeAllowed &&
-      (!diagnosis.script.riskRequiresSecondReviewer ||
-        (diagnosis.script.secondReviewerSatisfied && userHasHighRiskApproval)));
-
-  diagnosis.overallAvailable = serverEnabled && agentRegistered && agentActive && userHasPermission && scriptOk;
-
-  return diagnosis;
 }
