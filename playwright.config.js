@@ -10,6 +10,12 @@ export default defineConfig({
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL: "http://127.0.0.1:5174",
+    // Ambientes sem `playwright install` (ex.: Chromium pre-instalado na imagem) apontam o binario aqui.
+    // WebGL por software (SwiftShader): runners/containers sem GPU precisam disso para a cena 3D das plantas.
+    launchOptions: {
+      args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"],
+      ...(process.env.PLAYWRIGHT_CHROMIUM_PATH ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH } : {})
+    },
     trace: "retain-on-failure",
     screenshot: "only-on-failure"
   },
