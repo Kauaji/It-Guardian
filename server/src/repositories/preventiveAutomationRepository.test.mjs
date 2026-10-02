@@ -212,8 +212,12 @@ test("componente de indicadores limita pontos visiveis e oferece acessibilidade"
 });
 
 test("lista de preventivas usa indicadores apenas visuais", () => {
-  const appPath = fileURLToPath(new URL("../../../client/src/components/alerts/AlertCenterV2.jsx", import.meta.url));
-  const source = readFileSync(appPath, "utf8");
+  // A Central de Avisos foi dividida: a juncao dos indicadores mora em preventiveUtils.js e a
+  // linha da maquina (com os indicadores visuais) em PreventiveDeviceRow.jsx.
+  const alertsDir = "../../../client/src/components/alerts/";
+  const source = ["AlertCenterV2.jsx", "preventiveUtils.js", "preventives/PreventiveDeviceRow.jsx"]
+    .map((file) => readFileSync(fileURLToPath(new URL(`${alertsDir}${file}`, import.meta.url)), "utf8"))
+    .join("\n");
 
   assert.match(source, /preventiveAutomationManagement\?\.machines/);
   assert.match(source, /managementMachine\?\.plans/);
