@@ -1,4 +1,5 @@
 import { LogOut, Moon, RefreshCw, Sun } from "lucide-react";
+import UserMenu from "../../components/auth/UserMenu.jsx";
 import { useAppSession } from "../../context/AppSessionContext.jsx";
 import { useNavigation, useWorkspaceData } from "../context/workspaceContexts.js";
 
@@ -29,6 +30,7 @@ export default function Topbar() {
         <button className="icon-button" onClick={toggleTheme} title={theme === "dark" ? "Modo claro" : "Modo noturno"}>
           {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
         </button>
+        <UserMenu />
         <button className="icon-button" onClick={logout} title="Sair">
           <LogOut size={18} />
         </button>

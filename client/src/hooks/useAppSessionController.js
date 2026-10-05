@@ -1,6 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchAuthSession, logoutSession } from "../api.js";
-import { clearAuthSession, readAuthSession, writeAuthSession } from "../authSession.js";
+import {
+  AUTH_EXPIRED_EVENT,
+  SESSION_EXPIRED_MESSAGE,
+  clearAuthSession,
+  readAuthSession,
+  writeAuthSession
+} from "../authSession.js";
 import {
   applyStoredGeneralPreferences,
   clearRuntimeAppearancePreferences
@@ -83,16 +89,22 @@ export function useAppSessionController({ isPublicSupportPath, assetId }) {
     applyStoredGeneralPreferences();
   }, [isPublicSupportPath, theme, token, user]);
 
+  // Evita avisar "sessao expirada" por uma resposta 401 atrasada que chega
+  // depois de a pessoa ja ter saido de proposito (e do app ja estar no login).
+  const authenticatedRef = useRef(false);
+  authenticatedRef.current = Boolean(token && user);
+
   useEffect(() => {
     function handleAuthExpired() {
+      if (!authenticatedRef.current) return;
       clearAuthSession();
       setToken(null);
       setUser(null);
-      notify("Sessao expirada. Faca login novamente.", "danger");
+      notify(SESSION_EXPIRED_MESSAGE, "danger");
     }
 
-    window.addEventListener("it-guardian:auth-expired", handleAuthExpired);
-    return () => window.removeEventListener("it-guardian:auth-expired", handleAuthExpired);
+    window.addEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
   }, [notify]);
 
   return {

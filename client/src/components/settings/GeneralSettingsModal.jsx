@@ -24,6 +24,7 @@ import {
 } from "../../api.js";
 import { permissionGroups } from "../../permissions.js";
 import CloudProductAdminPanel from "./CloudProductAdminPanel.jsx";
+import UserSecurityActions from "./UserSecurityActions.jsx";
 import { useModalLifecycle } from "../../hooks/useModalLifecycle.js";
 
 const accentColorKey = "it_guardian_accent_color";
@@ -594,8 +595,8 @@ export default function GeneralSettingsModal({
       return;
     }
 
-    if (!userForm.id && userForm.password.trim().length < 6) {
-      notify("Informe uma senha temporaria com pelo menos 6 caracteres.", "danger");
+    if (!userForm.id && userForm.password.length < 12) {
+      notify("Informe uma senha temporaria com pelo menos 12 caracteres. A pessoa troca no primeiro acesso.", "danger");
       return;
     }
 
@@ -949,9 +950,10 @@ export default function GeneralSettingsModal({
                             Senha temporaria
                             <input
                               type="password"
+                              autoComplete="new-password"
                               value={userForm.password}
                               onChange={(event) => setUserForm((current) => ({ ...current, password: event.target.value }))}
-                              placeholder="Minimo 6 caracteres"
+                              placeholder="Minimo 12 caracteres"
                             />
                           </label>
                         )}
@@ -1035,6 +1037,13 @@ export default function GeneralSettingsModal({
                             <button type="button" className="secondary-action compact-action" onClick={() => editUser(item)}>
                               Editar
                             </button>
+                            <UserSecurityActions
+                              token={token}
+                              target={item}
+                              currentUserId={user?.id}
+                              disabled={savingAdmin}
+                              notify={notify}
+                            />
                             <button
                               type="button"
                               className="danger-action compact-action icon-only"
