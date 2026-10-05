@@ -15,7 +15,7 @@ process.env.NODE_ENV = "test";
 
 const { initializeRuntime } = await import("../src/bootstrap.js");
 const { closeDatabase, query } = await import("../src/database.js");
-const { seedDemoUsers } = await import("../src/repositories/userRepository.js");
+const { seedDemoUsers } = await import("../src/repositories/demo/demoUserSeed.js");
 const { seedDemoOperationalData } = await import("../src/repositories/demoDataRepository.js");
 const { verifyPassword } = await import("../src/security/passwordHasher.js");
 
