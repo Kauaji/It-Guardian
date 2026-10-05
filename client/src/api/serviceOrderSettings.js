@@ -1,9 +1,20 @@
 import { apiFetch } from "./http.js";
 
+/** @import { ApiObject, AuthToken, EntityId, Payload } from "./types.js" */
+
+/**
+ * @param {AuthToken} token
+ * @returns {Promise<ApiObject>}
+ */
 export function fetchServiceOrderSettings(token) {
   return apiFetch("/service-order-settings", { token });
 }
 
+/**
+ * @param {AuthToken} token
+ * @param {Payload} payload
+ * @returns {Promise<ApiObject>}
+ */
 export function updateServiceOrderSettings(token, payload) {
   return apiFetch("/service-order-settings", {
     token,
@@ -12,10 +23,19 @@ export function updateServiceOrderSettings(token, payload) {
   });
 }
 
+/**
+ * @param {AuthToken} token
+ * @returns {Promise<ApiObject>}
+ */
 export function fetchServiceOrderStatuses(token) {
   return apiFetch("/service-order-statuses", { token });
 }
 
+/**
+ * @param {AuthToken} token
+ * @param {Payload} payload
+ * @returns {Promise<ApiObject>}
+ */
 export function createServiceOrderStatus(token, payload) {
   return apiFetch("/service-order-statuses", {
     token,
@@ -24,6 +44,12 @@ export function createServiceOrderStatus(token, payload) {
   });
 }
 
+/**
+ * @param {AuthToken} token
+ * @param {EntityId} id
+ * @param {Payload} payload
+ * @returns {Promise<ApiObject>}
+ */
 export function updateServiceOrderStatusDefinition(token, id, payload) {
   return apiFetch(`/service-order-statuses/${id}`, {
     token,
@@ -32,6 +58,11 @@ export function updateServiceOrderStatusDefinition(token, id, payload) {
   });
 }
 
+/**
+ * @param {AuthToken} token
+ * @param {EntityId} id
+ * @returns {Promise<ApiObject>}
+ */
 export function deleteServiceOrderStatus(token, id) {
   return apiFetch(`/service-order-statuses/${id}`, {
     token,
@@ -39,10 +70,19 @@ export function deleteServiceOrderStatus(token, id) {
   });
 }
 
+/**
+ * @param {AuthToken} token
+ * @returns {Promise<ApiObject>}
+ */
 export function fetchServiceOrderChecklistTemplates(token) {
   return apiFetch("/service-order-checklist-templates", { token });
 }
 
+/**
+ * @param {AuthToken} token
+ * @param {Payload} payload
+ * @returns {Promise<ApiObject>}
+ */
 export function createServiceOrderChecklistTemplate(token, payload) {
   return apiFetch("/service-order-checklist-templates", {
     token,
@@ -51,6 +91,12 @@ export function createServiceOrderChecklistTemplate(token, payload) {
   });
 }
 
+/**
+ * @param {AuthToken} token
+ * @param {EntityId} id
+ * @param {Payload} payload
+ * @returns {Promise<ApiObject>}
+ */
 export function updateServiceOrderChecklistTemplate(token, id, payload) {
   return apiFetch(`/service-order-checklist-templates/${id}`, {
     token,
@@ -59,6 +105,11 @@ export function updateServiceOrderChecklistTemplate(token, id, payload) {
   });
 }
 
+/**
+ * @param {AuthToken} token
+ * @param {EntityId} id
+ * @returns {Promise<ApiObject>}
+ */
 export function deleteServiceOrderChecklistTemplate(token, id) {
   return apiFetch(`/service-order-checklist-templates/${id}`, {
     token,
@@ -66,6 +117,11 @@ export function deleteServiceOrderChecklistTemplate(token, id) {
   });
 }
 
+/**
+ * @param {AuthToken} token
+ * @param {Payload} payload
+ * @returns {Promise<ApiObject>}
+ */
 export function updateServiceOrderChecklistPolicy(token, payload) {
   return apiFetch("/service-order-checklist-templates/policy", {
     token,

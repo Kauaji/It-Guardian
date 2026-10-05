@@ -1,9 +1,20 @@
-import { apiFetch } from "./http.js";
+import { apiFetch, buildQuerySuffix } from "./http.js";
 
+/** @import { ApiObject, AuthToken, EntityId, Payload, QueryParams } from "./types.js" */
+
+/**
+ * @param {AuthToken} token
+ * @returns {Promise<ApiObject>}
+ */
 export function fetchPreventivePlans(token) {
   return apiFetch("/preventive-plans", { token });
 }
 
+/**
+ * @param {AuthToken} token
+ * @param {Payload} payload
+ * @returns {Promise<ApiObject>}
+ */
 export function createPreventivePlan(token, payload) {
   return apiFetch("/preventive-plans", {
     token,
@@ -12,6 +23,11 @@ export function createPreventivePlan(token, payload) {
   });
 }
 
+/**
+ * @param {AuthToken} token
+ * @param {EntityId} id
+ * @returns {Promise<ApiObject>}
+ */
 export function createPreventivePlanServiceOrder(token, id) {
   return apiFetch(`/preventive-plans/${id}/service-order`, {
     token,
@@ -19,6 +35,11 @@ export function createPreventivePlanServiceOrder(token, id) {
   });
 }
 
+/**
+ * @param {AuthToken} token
+ * @param {EntityId} id
+ * @returns {Promise<ApiObject>}
+ */
 export function preparePreventivePlan(token, id) {
   return apiFetch(`/preventive-plans/${id}/prepare`, {
     token,
@@ -26,31 +47,57 @@ export function preparePreventivePlan(token, id) {
   });
 }
 
+/**
+ * @param {AuthToken} token
+ * @returns {Promise<ApiObject>}
+ */
 export function fetchPreventiveAutomationPlans(token) {
   return apiFetch("/preventive-automation-plans", { token });
 }
 
+/**
+ * @param {AuthToken} token
+ * @returns {Promise<ApiObject>}
+ */
 export function fetchPreventiveAutomationManagement(token) {
   return apiFetch("/preventive-automation-plans/management", { token });
 }
 
+/**
+ * @param {AuthToken} token
+ * @param {QueryParams} [filters]
+ * @returns {Promise<ApiObject>}
+ */
 export function fetchPreventiveAutomationAgenda(token, filters = {}) {
-  const search = new URLSearchParams();
-  Object.entries(filters).forEach(([key, value]) => {
-    if (value !== "" && value != null) search.set(key, value);
-  });
-  const suffix = search.toString() ? `?${search}` : "";
+  const suffix = buildQuerySuffix(filters);
   return apiFetch(`/preventive-automation-plans/agenda${suffix}`, { token });
 }
 
+/**
+ * @param {AuthToken} token
+ * @param {EntityId} planId
+ * @param {number} [limit]
+ * @returns {Promise<ApiObject>}
+ */
 export function fetchPreventiveAutomationPlanHistory(token, planId, limit = 50) {
   return apiFetch(`/preventive-automation-plans/${planId}/history?limit=${limit}`, { token });
 }
 
+/**
+ * @param {AuthToken} token
+ * @param {EntityId} planId
+ * @param {EntityId} assetId
+ * @returns {Promise<ApiObject>}
+ */
 export function fetchPreventiveAutomationAsset(token, planId, assetId) {
   return apiFetch(`/preventive-automation-plans/${planId}/assets/${assetId}`, { token });
 }
 
+/**
+ * @param {AuthToken} token
+ * @param {Payload} payload
+ * @returns {Promise<ApiObject>}
+ */
 export function createPreventiveAutomationPlan(token, payload) {
   return apiFetch("/preventive-automation-plans", {
     token,
@@ -59,6 +106,12 @@ export function createPreventiveAutomationPlan(token, payload) {
   });
 }
 
+/**
+ * @param {AuthToken} token
+ * @param {EntityId} id
+ * @param {Payload} payload
+ * @returns {Promise<ApiObject>}
+ */
 export function updatePreventiveAutomationPlan(token, id, payload) {
   return apiFetch(`/preventive-automation-plans/${id}`, {
     token,
@@ -67,6 +120,11 @@ export function updatePreventiveAutomationPlan(token, id, payload) {
   });
 }
 
+/**
+ * @param {AuthToken} token
+ * @param {EntityId} id
+ * @returns {Promise<ApiObject>}
+ */
 export function disablePreventiveAutomationPlan(token, id) {
   return apiFetch(`/preventive-automation-plans/${id}/disable`, {
     token,
@@ -74,6 +132,11 @@ export function disablePreventiveAutomationPlan(token, id) {
   });
 }
 
+/**
+ * @param {AuthToken} token
+ * @param {EntityId} id
+ * @returns {Promise<ApiObject>}
+ */
 export function reactivatePreventiveAutomationPlan(token, id) {
   return apiFetch(`/preventive-automation-plans/${id}/reactivate`, {
     token,
@@ -81,6 +144,11 @@ export function reactivatePreventiveAutomationPlan(token, id) {
   });
 }
 
+/**
+ * @param {AuthToken} token
+ * @param {EntityId} id
+ * @returns {Promise<ApiObject>}
+ */
 export function deletePreventiveAutomationPlan(token, id) {
   return apiFetch(`/preventive-automation-plans/${id}`, {
     token,
@@ -88,6 +156,13 @@ export function deletePreventiveAutomationPlan(token, id) {
   });
 }
 
+/**
+ * @param {AuthToken} token
+ * @param {EntityId} planId
+ * @param {EntityId} assetId
+ * @param {Payload} payload
+ * @returns {Promise<ApiObject>}
+ */
 export function savePreventiveAutomationAssetOverride(token, planId, assetId, payload) {
   return apiFetch(`/preventive-automation-plans/${planId}/assets/${assetId}/override`, {
     token,
@@ -96,6 +171,12 @@ export function savePreventiveAutomationAssetOverride(token, planId, assetId, pa
   });
 }
 
+/**
+ * @param {AuthToken} token
+ * @param {EntityId} planId
+ * @param {EntityId} assetId
+ * @returns {Promise<ApiObject>}
+ */
 export function removePreventiveAutomationAssetOverride(token, planId, assetId) {
   return apiFetch(`/preventive-automation-plans/${planId}/assets/${assetId}/override`, {
     token,
@@ -103,6 +184,12 @@ export function removePreventiveAutomationAssetOverride(token, planId, assetId) 
   });
 }
 
+/**
+ * @param {AuthToken} token
+ * @param {EntityId} planId
+ * @param {EntityId} assetId
+ * @returns {Promise<ApiObject>}
+ */
 export function removeAssetFromPreventiveAutomationPlan(token, planId, assetId) {
   return apiFetch(`/preventive-automation-plans/${planId}/assets/${assetId}`, {
     token,
@@ -110,6 +197,11 @@ export function removeAssetFromPreventiveAutomationPlan(token, planId, assetId) 
   });
 }
 
+/**
+ * @param {AuthToken} token
+ * @param {EntityId} id
+ * @returns {Promise<ApiObject>}
+ */
 export function preparePreventiveAutomationPlan(token, id) {
   return apiFetch(`/preventive-automation-plans/${id}/prepare`, {
     token,
@@ -117,6 +209,10 @@ export function preparePreventiveAutomationPlan(token, id) {
   });
 }
 
+/**
+ * @param {AuthToken} token
+ * @returns {Promise<ApiObject>}
+ */
 export function processDuePreventiveAutomationPlans(token) {
   return apiFetch("/preventive-automation-plans/process-due", {
     token,

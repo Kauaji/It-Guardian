@@ -1,3 +1,9 @@
+/** @import { ApiError, ApiFetchOptions, QueryParams } from "./types.js" */
+
+/**
+ * @param {string | null | undefined} value URL absoluta ou vazio.
+ * @returns {boolean} true para localhost, loopback, link-local e faixas privadas RFC 1918.
+ */
 export function isPrivateNetworkUrl(value) {
   if (!value) return false;
 
@@ -22,6 +28,10 @@ export function isPrivateNetworkUrl(value) {
   }
 }
 
+/**
+ * @param {{ configuredUrl?: string | null, isDev?: boolean }} options
+ * @returns {string} Base da API: "/api" em producao quando a URL configurada e privada.
+ */
 export function resolveApiBaseUrl({ configuredUrl, isDev }) {
   const configured = String(configuredUrl || "").trim();
 
@@ -34,16 +44,19 @@ export const API_BASE_URL = resolveApiBaseUrl({
   isDev: import.meta.env.DEV
 });
 
-export function normalizeBaseUrl(baseUrl) {
+/** @param {string | null | undefined} baseUrl */
+function normalizeBaseUrl(baseUrl) {
   return String(baseUrl || "").replace(/\/$/, "");
 }
 
+/** @param {string} path Caminho da rota, com barra inicial (ex.: "/devices"). */
 export function buildApiUrl(path) {
   const baseUrl = normalizeBaseUrl(API_BASE_URL);
   const apiPrefix = baseUrl.endsWith("/api") ? "" : "/api";
   return `${baseUrl}${apiPrefix}${path}`;
 }
 
+/** @returns {string | null} URL do WebSocket de monitoramento ou null quando desativado. */
 export function buildWsUrl() {
   if (import.meta.env.VITE_ENABLE_WS !== "true" && !import.meta.env.DEV) {
     return null;
@@ -66,6 +79,18 @@ export function buildWsUrl() {
   return wsPath;
 }
 
+/**
+ * Chama a API do IT Guardian e devolve o JSON da resposta.
+ *
+ * O tipo de retorno `T` e uma afirmacao do chamador (o servidor nao e validado em runtime):
+ * cada funcao de dominio o fixa no seu `@returns`.
+ *
+ * @template [T=import("./types.js").ApiObject]
+ * @param {string} path Caminho da rota, com barra inicial.
+ * @param {ApiFetchOptions} [options] `token` vira `Authorization: Bearer`; o resto vai ao fetch.
+ * @returns {Promise<T>}
+ * @throws {ApiError} Falha de rede (sem `statusCode`) ou resposta nao-2xx (com `statusCode`).
+ */
 export async function apiFetch(path, { token, ...options } = {}) {
   let response;
 
@@ -97,10 +122,37 @@ export async function apiFetch(path, { token, ...options } = {}) {
       window.dispatchEvent(new CustomEvent("it-guardian:auth-expired", { detail: { message } }));
     }
 
+    /** @type {ApiError} */
     const error = new Error(message);
     error.statusCode = response.status;
     throw error;
   }
 
   return data;
+}
+
+/**
+ * Monta o sufixo `?a=1&b=2` ignorando valores vazios (`""`, `null`, `undefined`).
+ * Devolve "" quando nao sobra nenhum parametro.
+ *
+ * @param {QueryParams} [params]
+ * @returns {string}
+ */
+export function buildQuerySuffix(params = {}) {
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== "" && value != null) search.set(key, String(value));
+  });
+  return search.toString() ? `?${search}` : "";
+}
+
+/**
+ * `new URLSearchParams(params)` para parametros com numeros/booleanos: o navegador
+ * ja converte cada valor com `String()`, so o tipo de `Record<string, string>` nao sabia.
+ *
+ * @param {QueryParams} [params]
+ * @returns {URLSearchParams}
+ */
+export function toSearchParams(params = {}) {
+  return new URLSearchParams(/** @type {Record<string, string>} */ (params));
 }

@@ -1,9 +1,19 @@
 import { apiFetch } from "./http.js";
 
+/** @import { ApiObject, AuthToken, EntityId, Payload } from "./types.js" */
+
+/**
+ * @param {AuthToken} token
+ * @returns {Promise<ApiObject>}
+ */
 export function fetchRemoteAssistanceConfig(token) {
   return apiFetch("/remote-assistance/config", { token });
 }
 
+/**
+ * @param {{ token: AuthToken, password: string, assetId: EntityId, serviceOrderId?: EntityId }} args
+ * @returns {Promise<ApiObject>}
+ */
 export function reauthenticateRemoteAssistance({ token, password, assetId, serviceOrderId }) {
   return apiFetch("/security/reauthenticate", {
     token,
@@ -17,6 +27,10 @@ export function reauthenticateRemoteAssistance({ token, password, assetId, servi
   });
 }
 
+/**
+ * @param {{ token: AuthToken, assetId: EntityId, serviceOrderId?: EntityId, reason: string, requestedMode: string, reauthenticationToken: string }} args
+ * @returns {Promise<ApiObject>}
+ */
 export function createRemoteAssistanceSession({
   token,
   assetId,
@@ -37,14 +51,26 @@ export function createRemoteAssistanceSession({
   });
 }
 
+/**
+ * @param {{ token: AuthToken, sessionId: EntityId }} args
+ * @returns {Promise<ApiObject>}
+ */
 export function fetchRemoteAssistanceSession({ token, sessionId }) {
   return apiFetch(`/remote-assistance/sessions/${encodeURIComponent(sessionId)}`, { token });
 }
 
+/**
+ * @param {{ token: AuthToken, sessionId: EntityId }} args
+ * @returns {Promise<ApiObject>}
+ */
 export function fetchRemoteAssistanceEvents({ token, sessionId }) {
   return apiFetch(`/remote-assistance/sessions/${encodeURIComponent(sessionId)}/events`, { token });
 }
 
+/**
+ * @param {{ token: AuthToken, sessionId: EntityId, viewerToken: string }} args
+ * @returns {Promise<ApiObject>}
+ */
 export function fetchRemoteAssistanceFrame({ token, sessionId, viewerToken }) {
   return apiFetch(`/remote-assistance/sessions/${encodeURIComponent(sessionId)}/frame`, {
     token,
@@ -52,6 +78,10 @@ export function fetchRemoteAssistanceFrame({ token, sessionId, viewerToken }) {
   });
 }
 
+/**
+ * @param {{ token: AuthToken, sessionId: EntityId, viewerToken: string, sdp: string }} args
+ * @returns {Promise<ApiObject>}
+ */
 export function sendRemoteAssistanceWebrtcOffer({ token, sessionId, viewerToken, sdp }) {
   return apiFetch(`/remote-assistance/sessions/${encodeURIComponent(sessionId)}/webrtc/offer`, {
     token,
@@ -61,6 +91,10 @@ export function sendRemoteAssistanceWebrtcOffer({ token, sessionId, viewerToken,
   });
 }
 
+/**
+ * @param {{ token: AuthToken, sessionId: EntityId, viewerToken: string }} args
+ * @returns {Promise<ApiObject>}
+ */
 export function fetchRemoteAssistanceWebrtcAnswer({ token, sessionId, viewerToken }) {
   return apiFetch(`/remote-assistance/sessions/${encodeURIComponent(sessionId)}/webrtc/answer`, {
     token,
@@ -68,6 +102,10 @@ export function fetchRemoteAssistanceWebrtcAnswer({ token, sessionId, viewerToke
   });
 }
 
+/**
+ * @param {{ token: AuthToken, sessionId: EntityId, viewerToken: string, monitorId: EntityId }} args
+ * @returns {Promise<ApiObject>}
+ */
 export function selectRemoteAssistanceMonitor({ token, sessionId, viewerToken, monitorId }) {
   return apiFetch(`/remote-assistance/sessions/${encodeURIComponent(sessionId)}/monitor`, {
     token,
@@ -77,6 +115,10 @@ export function selectRemoteAssistanceMonitor({ token, sessionId, viewerToken, m
   });
 }
 
+/**
+ * @param {{ token: AuthToken, sessionId: EntityId, viewerToken: string, enabled: boolean }} args
+ * @returns {Promise<ApiObject>}
+ */
 export function updateRemoteAssistanceControl({ token, sessionId, viewerToken, enabled }) {
   return apiFetch(`/remote-assistance/sessions/${encodeURIComponent(sessionId)}/control`, {
     token,
@@ -86,6 +128,10 @@ export function updateRemoteAssistanceControl({ token, sessionId, viewerToken, e
   });
 }
 
+/**
+ * @param {{ token: AuthToken, sessionId: EntityId, viewerToken: string, paused: boolean }} args
+ * @returns {Promise<ApiObject>}
+ */
 export function updateRemoteAssistanceCapture({ token, sessionId, viewerToken, paused }) {
   return apiFetch(`/remote-assistance/sessions/${encodeURIComponent(sessionId)}/pause`, {
     token,
@@ -95,6 +141,10 @@ export function updateRemoteAssistanceCapture({ token, sessionId, viewerToken, p
   });
 }
 
+/**
+ * @param {{ token: AuthToken, sessionId: EntityId, viewerToken: string, command: Payload }} args
+ * @returns {Promise<ApiObject>}
+ */
 export function sendRemoteAssistanceInput({ token, sessionId, viewerToken, command }) {
   return apiFetch(`/remote-assistance/sessions/${encodeURIComponent(sessionId)}/input`, {
     token,
@@ -104,6 +154,10 @@ export function sendRemoteAssistanceInput({ token, sessionId, viewerToken, comma
   });
 }
 
+/**
+ * @param {{ token: AuthToken, sessionId: EntityId, viewerToken: string, text: string }} args
+ * @returns {Promise<ApiObject>}
+ */
 export function sendRemoteAssistanceChatMessage({ token, sessionId, viewerToken, text }) {
   return apiFetch(`/remote-assistance/sessions/${encodeURIComponent(sessionId)}/chat`, {
     token,
@@ -113,6 +167,10 @@ export function sendRemoteAssistanceChatMessage({ token, sessionId, viewerToken,
   });
 }
 
+/**
+ * @param {{ token: AuthToken, sessionId: EntityId, viewerToken: string }} args
+ * @returns {Promise<ApiObject>}
+ */
 export function fetchRemoteAssistanceRustdeskCredentials({ token, sessionId, viewerToken }) {
   return apiFetch(`/remote-assistance/sessions/${encodeURIComponent(sessionId)}/rustdesk-credentials`, {
     token,
@@ -120,6 +178,10 @@ export function fetchRemoteAssistanceRustdeskCredentials({ token, sessionId, vie
   });
 }
 
+/**
+ * @param {{ token: AuthToken, sessionId: EntityId, viewerToken: string }} args
+ * @returns {Promise<ApiObject>}
+ */
 export function endRemoteAssistanceSession({ token, sessionId, viewerToken }) {
   return apiFetch(`/remote-assistance/sessions/${encodeURIComponent(sessionId)}/end`, {
     token,

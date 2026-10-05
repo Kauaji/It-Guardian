@@ -1,3 +1,4 @@
+/** @param {unknown} value */
 function enabled(value) {
   return ["1", "true", "yes", "sim"].includes(String(value || "").trim().toLowerCase());
 }
