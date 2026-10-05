@@ -1,7 +1,7 @@
 import { listServiceOrdersByAssetId } from "../repositories/serviceOrderRepository.js";
 import { listAssetHistory } from "../repositories/assetHistoryRepository.js";
 import { listRemoteAssistanceEventsByAssetId } from "../repositories/remoteAssistanceRepository.js";
-import { findNetworkTopologyReferencesForAsset } from "../repositories/networkTopologyRepository.js";
+import { findNetworkTopologyReferencesForAsset } from "../repositories/networkTopology/topologyReferenceRepository.js";
 import { findManualAssetById } from "../repositories/manualAssetRepository.js";
 import { findAgentAssetById } from "../repositories/agentRepository.js";
 import { getHostAlertsWithAcknowledgements } from "./alertService.js";
