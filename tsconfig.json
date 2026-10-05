@@ -24,13 +24,19 @@
     "client/src/permissions.js",
     "client/src/authSession.js",
     "client/src/utils/**/*.js",
-    "client/src/config/**/*.js"
+    "client/src/config/**/*.js",
+    "server/src/lib/**/*.js",
+    "server/src/security/**/*.js",
+    "server/src/config/**/*.js",
+    "server/src/middleware/**/*.js",
+    "server/src/types/**/*.d.ts"
   ],
   "exclude": [
     "**/*.test.js",
     "**/*.test.jsx",
     "**/*.test.mjs",
     "**/node_modules",
-    "**/dist"
+    "**/dist",
+    "server/src/middleware/authMiddleware.js"
   ]
 }

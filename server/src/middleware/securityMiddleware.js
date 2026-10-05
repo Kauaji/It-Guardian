@@ -1,3 +1,4 @@
+/** @import { NextFunction, Request, Response } from "express" */
 import { createHash, timingSafeEqual } from "node:crypto";
 import { readSessionCookie } from "../security/sessionCookie.js";
 import { createRateLimiter } from "./rateLimitMiddleware.js";
@@ -5,13 +6,18 @@ import { createRateLimiter } from "./rateLimitMiddleware.js";
 const DANGEROUS_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 const MAX_DEPTH = 12;
 
+/**
+ * @param {unknown} value
+ * @param {number} [depth]
+ * @returns {boolean}
+ */
 function hasDangerousKey(value, depth = 0) {
   if (value === null || typeof value !== "object") return false;
   if (depth > MAX_DEPTH) return true;
   if (Array.isArray(value)) return value.some((item) => hasDangerousKey(item, depth + 1));
   for (const key of Object.keys(value)) {
     if (DANGEROUS_KEYS.has(key)) return true;
-    if (hasDangerousKey(value[key], depth + 1)) return true;
+    if (hasDangerousKey(/** @type {Record<string, unknown>} */ (value)[key], depth + 1)) return true;
   }
   return false;
 }
@@ -20,6 +26,11 @@ function hasDangerousKey(value, depth = 0) {
  * Recusa corpos JSON com chaves de poluicao de prototipo (`__proto__`,
  * `constructor`, `prototype`) ou aninhamento absurdo. Nenhum endpoint legitimo
  * usa esses nomes como campo.
+ */
+/**
+ * @param {Request} req
+ * @param {Response} res
+ * @param {NextFunction} next
  */
 export function rejectDangerousInput(req, res, next) {
   if (hasDangerousKey(req.body) || hasDangerousKey(req.query)) {
@@ -35,11 +46,19 @@ export function rejectDangerousInput(req, res, next) {
 
 const unsafeMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
+/**
+ * @param {string} name Variavel de ambiente.
+ * @param {number} fallback
+ */
 function limitFromEnv(name, fallback) {
   const parsed = Number.parseInt(process.env[name] || "", 10);
   return Number.isInteger(parsed) && parsed > 0 ? Math.min(parsed, 1_000_000) : fallback;
 }
 
+/**
+ * @param {Request} req
+ * @returns {string} Token Bearer, cookie de sessao ou "".
+ */
 function credentialOf(req) {
   const bearer = /^Bearer\s+(.+)$/i.exec(String(req.headers.authorization || ""));
   return bearer?.[1]?.trim() || readSessionCookie(req);
@@ -84,6 +103,11 @@ const limiters = {
  * etc. Agentes e health checks ficam de fora: tem protecao propria e volume
  * previsivel.
  */
+/**
+ * @param {Request} req
+ * @param {Response} res
+ * @param {NextFunction} next
+ */
 export function globalApiRateLimit(req, res, next) {
   const path = req.path || "";
   if (path.startsWith("/agents") || path.startsWith("/health")) return next();
@@ -95,6 +119,12 @@ export function globalApiRateLimit(req, res, next) {
   return limiter(req, res, next);
 }
 
+/**
+ * Comparacao em tempo constante.
+ *
+ * @param {unknown} a
+ * @param {unknown} b
+ */
 function safeEqual(a, b) {
   const left = Buffer.from(String(a));
   const right = Buffer.from(String(b));
@@ -102,6 +132,11 @@ function safeEqual(a, b) {
 }
 
 /** Protege rotas operacionais (/metrics) por token Bearer fixo; sem METRICS_TOKEN a rota nao existe. */
+/**
+ * @param {Request} req
+ * @param {Response} res
+ * @param {NextFunction} next
+ */
 export function requireMetricsToken(req, res, next) {
   const expected = process.env.METRICS_TOKEN;
   if (!expected) return res.status(404).json({ message: "Rota não encontrada.", statusCode: 404 });

@@ -12,22 +12,43 @@ export const vercelEnv = process.env.VERCEL_ENV || "";
 export const isProduction = process.env.NODE_ENV === "production";
 export const isProductionLike = isProduction || isVercel;
 
+/** @typedef {NodeJS.ProcessEnv} Env */
+
+/** @param {unknown} value */
 function isTruthyEnv(value) {
   return ["1", "true", "yes", "sim"].includes(String(value || "").trim().toLowerCase());
 }
 
+/**
+ * @param {unknown} value
+ * @param {boolean} defaultValue Usado quando a variavel esta ausente ou vazia.
+ */
 function isTruthyEnvWithDefault(value, defaultValue) {
   if (value === undefined || value === null || String(value).trim() === "") return defaultValue;
   return isTruthyEnv(value);
 }
 
+/**
+ * Inteiro truncado e limitado a [min, max]; `fallback` quando nao e numerico.
+ *
+ * @param {unknown} value
+ * @param {number} fallback
+ * @param {number} min
+ * @param {number} max
+ * @returns {number}
+ */
 function boundedInteger(value, fallback, min, max) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return fallback;
   return Math.max(min, Math.min(max, Math.trunc(parsed)));
 }
 
-function parseIceUrls(value, { maxEntries = 4, maxLength = 200, schemes } = {}) {
+/**
+ * @param {unknown} value Lista separada por virgula.
+ * @param {{ maxEntries?: number, maxLength?: number, schemes: string[] }} options
+ * @returns {string[]}
+ */
+function parseIceUrls(value, { maxEntries = 4, maxLength = 200, schemes }) {
   return String(value || "")
     .split(",")
     .map((entry) => entry.trim())
@@ -37,6 +58,11 @@ function parseIceUrls(value, { maxEntries = 4, maxLength = 200, schemes } = {}) 
     .slice(0, maxEntries);
 }
 
+/**
+ * Configuracao da assistencia remota derivada do ambiente (tudo limitado a faixas seguras).
+ *
+ * @param {Env} [env]
+ */
 export function getRemoteAssistanceConfig(env = process.env) {
   const environment = String(
     env.REMOTE_ASSISTANCE_ENV ||
@@ -213,7 +239,12 @@ export function getRemoteAssistanceConfig(env = process.env) {
  * (isso exigiria um servidor TURN de verdade, que e infraestrutura separada,
  * fora do que o deploy serverless atual hospeda).
  */
+/**
+ * @param {Env} env
+ * @returns {Array<{ urls: string, username?: string, credential?: string }>}
+ */
 function buildIceServers(env) {
+  /** @type {Array<{ urls: string, username?: string, credential?: string }>} */
   const servers = parseIceUrls(env.REMOTE_ASSISTANCE_STUN_URLS, { schemes: ["stun:", "stuns:"] })
     .map((urls) => ({ urls }));
   const turnUrls = parseIceUrls(env.REMOTE_ASSISTANCE_TURN_URL, { maxEntries: 1, schemes: ["turn:", "turns:"] });
@@ -227,6 +258,7 @@ function buildIceServers(env) {
   return servers;
 }
 
+/** @param {Env} [env] */
 export function isRemoteScriptExecutionEnabled(env = process.env) {
   return isTruthyEnv(env.ENABLE_REMOTE_SCRIPT_EXECUTION);
 }
@@ -239,6 +271,10 @@ const SHA256_HEX_PATTERN = /^[0-9a-f]{64}$/i;
 // manutencao (maintenance_scripts.content_updated_by). Por isso as tres
 // variaveis sao exigidas em conjunto: uma URL de download sem hash esperado,
 // ou um hash sem URL, nao habilita nada.
+/**
+ * @param {Env} [env]
+ * @returns {{ version: string | null, downloadUrl: string | null, sha256: string | null }}
+ */
 export function getAgentAutoUpdateInfo(env = process.env) {
   const version = String(env.AGENT_LATEST_VERSION || "").trim();
   const downloadUrl = String(env.AGENT_LATEST_VERSION_URL || "").trim();
@@ -262,6 +298,9 @@ export function getAgentAutoUpdateInfo(env = process.env) {
   return { version, downloadUrl, sha256 };
 }
 
+/**
+ * @param {{ env?: Env, serverless?: boolean }} [options]
+ */
 export function resolveDatabasePoolConfig({
   env = process.env,
   serverless = isVercel
@@ -286,6 +325,10 @@ export function resolveDatabasePoolConfig({
  * (DEMO_SEED_ALLOW_PRODUCTION=true), pensado para a instancia de apresentacao
  * -- uma flag esquecida num servidor real nunca deve abrir um admin conhecido.
  */
+/**
+ * @param {Env} [env]
+ * @param {boolean} [productionLike]
+ */
 export function shouldSeedDemoData(env = process.env, productionLike = isProductionLike) {
   const requested = isTruthyEnv(env.ENABLE_DEMO_SEED ?? env.IT_GUARDIAN_ENABLE_DEMO_SEED);
   if (!requested) return false;
@@ -293,6 +336,10 @@ export function shouldSeedDemoData(env = process.env, productionLike = isProduct
   return true;
 }
 
+/**
+ * @param {Env} [env]
+ * @param {boolean} [productionLike]
+ */
 export function isDemoSeedBlockedInProduction(env = process.env, productionLike = isProductionLike) {
   const requested = isTruthyEnv(env.ENABLE_DEMO_SEED ?? env.IT_GUARDIAN_ENABLE_DEMO_SEED);
   return requested && productionLike && !isTruthyEnv(env.DEMO_SEED_ALLOW_PRODUCTION);
@@ -307,14 +354,20 @@ export function isDemoSeedBlockedInProduction(env = process.env, productionLike 
  * check -> nao altera nada; recusa subir se faltar migracao (deploy com `db:migrate` no pipeline).
  * skip  -> nao toca no esquema (banco gerenciado por outra ferramenta).
  */
+/**
+ * @param {Env} [env]
+ * @returns {"auto" | "check" | "skip"}
+ * @throws {Error} Para valores fora de auto/check/skip.
+ */
 export function getMigrationsMode(env = process.env) {
   const mode = String(env.MIGRATIONS_MODE || "auto").trim().toLowerCase();
   if (!["auto", "check", "skip"].includes(mode)) {
     throw new Error(`MIGRATIONS_MODE invalido ("${env.MIGRATIONS_MODE}"). Use auto, check ou skip.`);
   }
-  return mode;
+  return /** @type {"auto" | "check" | "skip"} */ (mode);
 }
 
+/** @param {Env} [env] */
 export function getRetentionConfig(env = process.env) {
   return {
     heartbeatDays: boundedInteger(env.RETENTION_HEARTBEAT_DAYS, 30, 0, 3650),
@@ -328,6 +381,7 @@ export function getRetentionConfig(env = process.env) {
 }
 
 /** Politicas de autenticacao/sessao, todas com limites seguros aplicados aqui. */
+/** @param {Env} [env] */
 export function getAuthConfig(env = process.env) {
   const idleSeconds = boundedInteger(env.SESSION_IDLE_SECONDS ?? env.SESSION_MAX_AGE_SECONDS, 8 * 3600, 300, 7 * 24 * 3600);
   const absoluteSeconds = Math.max(
@@ -368,7 +422,7 @@ export function getCorsOrigins() {
       process.env.FRONTEND_URL,
       process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
       process.env.VERCEL_BRANCH_URL ? `https://${process.env.VERCEL_BRANCH_URL}` : null
-    ].filter(Boolean).map((origin) => origin.replace(/\/$/, "")))
+    ].filter(/** @returns {origin is string} */ (origin) => Boolean(origin)).map((origin) => origin.replace(/\/$/, "")))
   );
 }
 
@@ -384,6 +438,10 @@ export function getCorsOrigins() {
  * infalsificavel e a igualdade exata com o dominio de producao do proprio
  * projeto, que a Vercel garante ser unico globalmente e informa via
  * `VERCEL_PROJECT_PRODUCTION_URL`.
+ */
+/**
+ * @param {string} origin
+ * @param {Env} [env]
  */
 export function isAllowedVercelOrigin(origin, env = process.env) {
   if (env.VERCEL !== "1") return false;
@@ -406,6 +464,7 @@ export function getJwtSecret() {
     isProductionLike &&
     (!secret || secret.length < 32 || secret === "dev-secret" || secret === "change-me-in-production")
   ) {
+    /** @type {Error & { statusCode?: number }} */
     const error = new Error("JWT_SECRET precisa ter pelo menos 32 caracteres aleatórios em produção.");
     error.statusCode = 500;
     throw error;
@@ -419,12 +478,14 @@ export function resolveDatabaseConfig() {
   const wantsMemory = databaseUrl === "memory" || process.env.DB_MODE === "memory";
 
   if (isProductionLike && wantsMemory) {
+    /** @type {Error & { statusCode?: number }} */
     const error = new Error("DATABASE_URL=memory não pode ser usado em produção. Configure Supabase ou Neon.");
     error.statusCode = 500;
     throw error;
   }
 
   if (isProductionLike && !databaseUrl) {
+    /** @type {Error & { statusCode?: number }} */
     const error = new Error("Erro ao conectar ao banco de dados. Configure DATABASE_URL no ambiente de produção.");
     error.statusCode = 500;
     throw error;
@@ -461,6 +522,9 @@ const PUBLIC_CA_HOSTS = /neon\.tech|amazonaws\.com|azure\.com|googleapis\.com|co
  *    TLS sem verificacao por compatibilidade e AVISA no boot/readiness.
  * `verification` e "verified" | "unverified" | "disabled" e e exposto no
  * /health/ready para o problema nao ficar invisivel.
+ */
+/**
+ * @param {{ connectionString?: string, env?: Env, productionLike?: boolean }} [options]
  */
 export function resolveDatabaseTls({ connectionString, env = process.env, productionLike = isProductionLike } = {}) {
   if (env.DB_SSL === "false") return { ssl: false, verification: "disabled" };

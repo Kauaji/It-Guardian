@@ -6,15 +6,25 @@ import { Redis } from "@upstash/redis";
  * remota, rate limiting). Um unico cliente por processo evita abrir uma
  * conexao REST por feature.
  */
+/**
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {{ url: string, token: string } | null}
+ */
 export function detectRedisConfig(env = process.env) {
   const url = env.UPSTASH_REDIS_REST_URL || env.KV_REST_API_URL;
   const token = env.UPSTASH_REDIS_REST_TOKEN || env.KV_REST_API_TOKEN;
   return url && token ? { url, token } : null;
 }
 
+/** @type {Redis | null} */
 let sharedClient = null;
+/** @type {string | null} */
 let sharedClientUrl = null;
 
+/**
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {Redis | null}
+ */
 export function getSharedRedisClient(env = process.env) {
   const config = detectRedisConfig(env);
   if (!config) return null;
