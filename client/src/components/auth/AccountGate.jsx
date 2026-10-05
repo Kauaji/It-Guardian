@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { ACCOUNT_RESTRICTED_EVENT } from "../../authSession.js";
 import { fetchMe, fetchMfaStatus } from "../../api/identityApi.js";
 import { useAppSession } from "../../context/AppSessionContext.jsx";
 import ViewLoadingState from "../ui/ViewLoadingState.jsx";
-import ForcedPasswordChange from "./ForcedPasswordChange.jsx";
-import MfaEnrollmentGate from "./MfaEnrollmentGate.jsx";
+// Telas de bloqueio raras: carregadas sob demanda.
+const ForcedPasswordChange = lazy(() => import("./ForcedPasswordChange.jsx"));
+const MfaEnrollmentGate = lazy(() => import("./MfaEnrollmentGate.jsx"));
 
 function isAdminUser(user) {
   return Boolean(user?.isAdmin || user?.role === "admin");
@@ -68,6 +69,7 @@ export default function AccountGate({ children }) {
 
   if (mustChange) {
     return (
+      <Suspense fallback={<ViewLoadingState />}>
       <ForcedPasswordChange
         token={token}
         user={user}
@@ -77,6 +79,7 @@ export default function AccountGate({ children }) {
           notify("Senha alterada com sucesso.", "ok");
         }}
       />
+      </Suspense>
     );
   }
 
@@ -84,6 +87,7 @@ export default function AccountGate({ children }) {
 
   if (enrollment.required) {
     return (
+      <Suspense fallback={<ViewLoadingState />}>
       <MfaEnrollmentGate
         token={token}
         onSignOut={signOut}
@@ -95,6 +99,7 @@ export default function AccountGate({ children }) {
           notify("Verificação em duas etapas ativada.", "ok");
         }}
       />
+      </Suspense>
     );
   }
 

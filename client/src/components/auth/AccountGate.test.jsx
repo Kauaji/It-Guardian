@@ -35,7 +35,7 @@ describe("AccountGate: troca de senha obrigatoria", () => {
     const session = mount({ user: { ...baseUser, mustChangePassword: true } });
     const user = userEvent.setup();
 
-    expect(screen.getByRole("heading", { name: "Troque a senha para continuar" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Troque a senha para continuar" })).toBeInTheDocument();
     expect(screen.queryByTestId("app")).not.toBeInTheDocument();
     expect(identity.fetchMfaStatus).not.toHaveBeenCalled();
 
@@ -50,7 +50,7 @@ describe("AccountGate: troca de senha obrigatoria", () => {
 
   it("permite sair", async () => {
     const session = mount({ user: { ...baseUser, mustChangePassword: true } });
-    await userEvent.setup().click(screen.getByRole("button", { name: /Sair/ }));
+    await userEvent.setup().click(await screen.findByRole("button", { name: /Sair/ }));
     expect(session.signOut).toHaveBeenCalled();
   });
 

@@ -1,9 +1,13 @@
+import { Suspense, lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
-import AccountSecurityPage from "../../components/auth/AccountSecurityPage.jsx";
+import ViewLoadingState from "../../components/ui/ViewLoadingState.jsx";
 import PermissionBlocked from "../../components/ui/PermissionBlocked.jsx";
 import { useNavigation } from "../context/workspaceContexts.js";
 import { ACCOUNT_SECURITY_PATH, BLOCKED_VIEW_ID, DEFAULT_VIEW_ID, pathForView, viewRoutes } from "../routes.js";
 import { viewComponents } from "../views/index.js";
+
+// Pagina rara (so quem abre o menu da conta): fora do bundle de entrada.
+const AccountSecurityPage = lazy(() => import("../../components/auth/AccountSecurityPage.jsx"));
 
 // So renderiza a visao quando ela e a visao ativa (ja filtrada por
 // permissao), evitando um instante de tela nao autorizada antes do redirect.
@@ -21,7 +25,14 @@ export default function AuthenticatedRoutes() {
 
   return (
     <Routes>
-      <Route path={ACCOUNT_SECURITY_PATH} element={<AccountSecurityPage />} />
+      <Route
+        path={ACCOUNT_SECURITY_PATH}
+        element={
+          <Suspense fallback={<ViewLoadingState />}>
+            <AccountSecurityPage />
+          </Suspense>
+        }
+      />
       {viewRoutes.flatMap((route) => {
         const View = viewComponents[route.id];
         return route.paths.map((path) => (
