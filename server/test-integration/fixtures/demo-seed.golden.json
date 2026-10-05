@@ -1,0 +1,875 @@
+{
+  "users": [
+    {
+      "id": "seed-admin",
+      "name": "Admin Sistema",
+      "email": "admin@itguardian.local",
+      "role": "admin",
+      "active": true,
+      "sector_id": "sector-administracao",
+      "job_title": "Administrador principal",
+      "is_admin": true,
+      "permissions": [
+        "admin.full"
+      ]
+    },
+    {
+      "id": "seed-admin-marina",
+      "name": "Marina Duarte",
+      "email": "marina.duarte@itguardian.local",
+      "role": "admin",
+      "active": true,
+      "sector_id": "sector-administracao",
+      "job_title": "Administradora auxiliar",
+      "is_admin": true,
+      "permissions": [
+        "admin.full"
+      ]
+    },
+    {
+      "id": "seed-demo-sem-permissao",
+      "name": "Sem Permissao Demo",
+      "email": "sem.permissao@itguardian.local",
+      "role": "viewer",
+      "active": true,
+      "sector_id": "sector-geral",
+      "job_title": "Usuario sem permissao",
+      "is_admin": false,
+      "permissions": []
+    },
+    {
+      "id": "seed-demo-tecnico-n1",
+      "name": "Tecnico N1 Demo",
+      "email": "tecnico.n1@itguardian.local",
+      "role": "viewer",
+      "active": true,
+      "sector_id": "sector-support-n1",
+      "job_title": "Tecnico N1",
+      "is_admin": false,
+      "permissions": []
+    },
+    {
+      "id": "seed-demo-tecnico-n2",
+      "name": "Tecnico N2 Demo",
+      "email": "tecnico.n2@itguardian.local",
+      "role": "viewer",
+      "active": true,
+      "sector_id": "sector-suporte-n2",
+      "job_title": "Tecnico N2",
+      "is_admin": false,
+      "permissions": [
+        "service_orders.edit",
+        "service_orders.parts"
+      ]
+    },
+    {
+      "id": "seed-demo-usuario-comum",
+      "name": "Usuario Comum Demo",
+      "email": "usuario.comum@itguardian.local",
+      "role": "viewer",
+      "active": true,
+      "sector_id": "sector-geral",
+      "job_title": "Solicitante",
+      "is_admin": false,
+      "permissions": [
+        "service_orders.view",
+        "service_orders.create"
+      ]
+    },
+    {
+      "id": "seed-user-andre",
+      "name": "Andre Torres",
+      "email": "andre.torres@itguardian.local",
+      "role": "viewer",
+      "active": true,
+      "sector_id": "sector-diretoria",
+      "job_title": "Gestor",
+      "is_admin": false,
+      "permissions": []
+    },
+    {
+      "id": "seed-user-bruno",
+      "name": "Bruno Almeida",
+      "email": "bruno.almeida@itguardian.local",
+      "role": "viewer",
+      "active": true,
+      "sector_id": "sector-infra",
+      "job_title": "Tecnico de infraestrutura",
+      "is_admin": false,
+      "permissions": [
+        "inventory.move_assets"
+      ]
+    },
+    {
+      "id": "seed-user-camila",
+      "name": "Camila Rocha",
+      "email": "camila.rocha@itguardian.local",
+      "role": "viewer",
+      "active": true,
+      "sector_id": "sector-redes",
+      "job_title": "Analista de redes",
+      "is_admin": false,
+      "permissions": []
+    },
+    {
+      "id": "seed-user-felipe",
+      "name": "Felipe Castro",
+      "email": "felipe.castro@itguardian.local",
+      "role": "viewer",
+      "active": true,
+      "sector_id": "sector-suporte-n2",
+      "job_title": "Tecnico avancado",
+      "is_admin": false,
+      "permissions": [
+        "service_orders.edit",
+        "service_orders.parts"
+      ]
+    },
+    {
+      "id": "seed-user-lucas",
+      "name": "Lucas Pereira",
+      "email": "lucas.pereira@itguardian.local",
+      "role": "viewer",
+      "active": true,
+      "sector_id": "sector-geral",
+      "job_title": "Usuario novo",
+      "is_admin": false,
+      "permissions": []
+    },
+    {
+      "id": "seed-user-patricia",
+      "name": "Patricia Lima",
+      "email": "patricia.lima@itguardian.local",
+      "role": "viewer",
+      "active": true,
+      "sector_id": "sector-financeiro",
+      "job_title": "Usuario comum",
+      "is_admin": false,
+      "permissions": []
+    },
+    {
+      "id": "seed-user-rafael",
+      "name": "Rafael Nunes",
+      "email": "rafael.nunes@itguardian.local",
+      "role": "viewer",
+      "active": true,
+      "sector_id": "sector-support-n1",
+      "job_title": "Tecnico N1",
+      "is_admin": false,
+      "permissions": []
+    }
+  ],
+  "segment_groups": [
+    {
+      "id": "demo-group-infra",
+      "name": "Infraestrutura",
+      "color": "#2563eb",
+      "created_by": "seed-admin"
+    },
+    {
+      "id": "demo-group-network",
+      "name": "Rede e Periféricos",
+      "color": "#f59e0b",
+      "created_by": "seed-admin"
+    },
+    {
+      "id": "demo-group-workstations",
+      "name": "Estações e Atendimento",
+      "color": "#16a34a",
+      "created_by": "seed-admin"
+    }
+  ],
+  "inventory_segments": [
+    {
+      "id": "demo-segment-cashier",
+      "name": "Caixas e atendimento",
+      "color": "#0ea5e9",
+      "group_id": "demo-group-workstations",
+      "created_by": "seed-admin"
+    },
+    {
+      "id": "demo-segment-network",
+      "name": "Rede e segurança",
+      "color": "#7c3aed",
+      "group_id": "demo-group-network",
+      "created_by": "seed-admin"
+    },
+    {
+      "id": "demo-segment-printers",
+      "name": "Impressoras",
+      "color": "#d97706",
+      "group_id": "demo-group-network",
+      "created_by": "seed-admin"
+    },
+    {
+      "id": "demo-segment-servers",
+      "name": "Servidores",
+      "color": "#2563eb",
+      "group_id": "demo-group-infra",
+      "created_by": "seed-admin"
+    },
+    {
+      "id": "demo-segment-workstations",
+      "name": "Estações administrativas",
+      "color": "#16a34a",
+      "group_id": "demo-group-workstations",
+      "created_by": "seed-admin"
+    },
+    {
+      "id": "unorganized",
+      "name": "Nao organizadas",
+      "color": "#64748b",
+      "group_id": null,
+      "created_by": null
+    }
+  ],
+  "device_segments": [
+    {
+      "device_id": "cam-nvr-01",
+      "segment_id": "demo-segment-network",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "fw-edge-01",
+      "segment_id": "demo-segment-network",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "kiosk-rec-01",
+      "segment_id": "demo-segment-cashier",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "manual-ap-estoque",
+      "segment_id": "demo-segment-network",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "manual-ap-financeiro",
+      "segment_id": "demo-segment-network",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "manual-ap-recepcao",
+      "segment_id": "demo-segment-network",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "manual-camera-caixa-01",
+      "segment_id": "demo-segment-network",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "manual-camera-galpao",
+      "segment_id": "demo-segment-network",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "manual-camera-recepcao-01",
+      "segment_id": "demo-segment-network",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "manual-nas-arquivos-01",
+      "segment_id": "demo-segment-network",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "manual-printer-expedicao",
+      "segment_id": "demo-segment-printers",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "manual-printer-financeiro",
+      "segment_id": "demo-segment-printers",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "manual-printer-rh",
+      "segment_id": "demo-segment-printers",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "manual-router-link-02",
+      "segment_id": "demo-segment-network",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "manual-switch-acesso-01",
+      "segment_id": "demo-segment-network",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "manual-switch-acesso-02",
+      "segment_id": "demo-segment-network",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "nb-comercial-02",
+      "segment_id": "demo-segment-workstations",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "nb-diretoria-01",
+      "segment_id": "demo-segment-workstations",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "nb-gerencia-03",
+      "segment_id": "demo-segment-workstations",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "nb-ti-01",
+      "segment_id": "demo-segment-workstations",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "nb-vendas-05",
+      "segment_id": "demo-segment-workstations",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "prd-print-01",
+      "segment_id": "demo-segment-printers",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "prd-print-02",
+      "segment_id": "demo-segment-printers",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "srv-app-02",
+      "segment_id": "demo-segment-servers",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "srv-auth-01",
+      "segment_id": "demo-segment-servers",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "srv-bkp-01",
+      "segment_id": "demo-segment-servers",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "srv-db-01",
+      "segment_id": "demo-segment-servers",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "srv-erp-01",
+      "segment_id": "demo-segment-servers",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "srv-files-01",
+      "segment_id": "demo-segment-servers",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "srv-vmhost-02",
+      "segment_id": "demo-segment-servers",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "srv-web-01",
+      "segment_id": "demo-segment-servers",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "sw-core-01",
+      "segment_id": "demo-segment-network",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "ws-adm-03",
+      "segment_id": "demo-segment-workstations",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "ws-aud-04",
+      "segment_id": "demo-segment-workstations",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "ws-caixa-01",
+      "segment_id": "demo-segment-cashier",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "ws-caixa-02",
+      "segment_id": "demo-segment-cashier",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "ws-caixa-03",
+      "segment_id": "demo-segment-cashier",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "ws-compras-04",
+      "segment_id": "demo-segment-workstations",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "ws-contab-01",
+      "segment_id": "demo-segment-workstations",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "ws-contab-02",
+      "segment_id": "demo-segment-workstations",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "ws-fin-07",
+      "segment_id": "demo-segment-workstations",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "ws-juridico-01",
+      "segment_id": "demo-segment-workstations",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "ws-logistica-06",
+      "segment_id": "demo-segment-workstations",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "ws-rh-12",
+      "segment_id": "demo-segment-workstations",
+      "updated_by": "seed-admin"
+    },
+    {
+      "device_id": "ws-suporte-02",
+      "segment_id": "demo-segment-workstations",
+      "updated_by": "seed-admin"
+    }
+  ],
+  "backups": [
+    {
+      "device_id": "nb-comercial-02",
+      "asset_type": "ocs",
+      "is_backup": true,
+      "backup_status": "available",
+      "backup_original_segment_id": "demo-segment-workstations",
+      "backup_original_segment_name": "Estações administrativas"
+    },
+    {
+      "device_id": "nb-ti-01",
+      "asset_type": "ocs",
+      "is_backup": true,
+      "backup_status": "available",
+      "backup_original_segment_id": "demo-segment-workstations",
+      "backup_original_segment_name": "Estações administrativas"
+    },
+    {
+      "device_id": "ws-suporte-02",
+      "asset_type": "ocs",
+      "is_backup": true,
+      "backup_status": "available",
+      "backup_original_segment_id": "demo-segment-workstations",
+      "backup_original_segment_name": "Estações administrativas"
+    }
+  ],
+  "technicians": [
+    {
+      "id": "demo-tech-ana",
+      "name": "Ana Ribeiro",
+      "email": "ana.ribeiro@itguardian.local",
+      "phone": "(11) 98800-1101",
+      "role": "Técnica N2",
+      "specialty": "Hardware e redes",
+      "active": true,
+      "allowed_client_ids": [
+        "demo-client-alfa",
+        "demo-client-beta"
+      ]
+    },
+    {
+      "id": "demo-tech-bruno",
+      "name": "Bruno Lima",
+      "email": "bruno.lima@itguardian.local",
+      "phone": "(11) 98800-1102",
+      "role": "Técnico N1",
+      "specialty": "Atendimento e sistemas",
+      "active": true,
+      "allowed_client_ids": [
+        "demo-client-alfa"
+      ]
+    },
+    {
+      "id": "demo-tech-carla",
+      "name": "Carla Mendes",
+      "email": "carla.mendes@itguardian.local",
+      "phone": "(11) 98800-1103",
+      "role": "Especialista",
+      "specialty": "Servidores e virtualização",
+      "active": true,
+      "allowed_client_ids": [
+        "demo-client-orion"
+      ]
+    },
+    {
+      "id": "demo-tech-diego",
+      "name": "Diego Santos",
+      "email": "diego.santos@itguardian.local",
+      "phone": "(11) 98800-1104",
+      "role": "Técnico N2",
+      "specialty": "Impressoras e periféricos",
+      "active": true,
+      "allowed_client_ids": [
+        "demo-client-beta",
+        "demo-client-orion"
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "id": "demo-client-alfa",
+      "trade_name": "Alfa Comercio",
+      "legal_name": "Alfa Comercio e Servicos Ltda",
+      "document": "00.000.000/0001-01",
+      "phone": "(11) 3333-0101",
+      "email": "contato@alfa.local",
+      "address": "Unidade Centro",
+      "contact_name": "Equipe Alfa",
+      "active": true
+    },
+    {
+      "id": "demo-client-beta",
+      "trade_name": "Beta Logistica",
+      "legal_name": "Beta Logistica Integrada Ltda",
+      "document": "00.000.000/0001-02",
+      "phone": "(11) 3333-0202",
+      "email": "suporte@beta.local",
+      "address": "CD Norte",
+      "contact_name": "Operacao Beta",
+      "active": true
+    },
+    {
+      "id": "demo-client-orion",
+      "trade_name": "Orion Saude",
+      "legal_name": "Orion Saude Corporativa Ltda",
+      "document": "00.000.000/0001-03",
+      "phone": "(11) 3333-0303",
+      "email": "ti@orion.local",
+      "address": "Unidade Administrativa",
+      "contact_name": "TI Orion",
+      "active": true
+    }
+  ],
+  "products": [
+    {
+      "id": "demo-part-cabo",
+      "name": "Cabo de rede CAT6 2m",
+      "category": "Rede",
+      "brand": "Furukawa",
+      "model": "CAT6",
+      "internal_code": "PEC-CAB-CAT6",
+      "quantity": 30,
+      "unit_price": 18,
+      "unit": "un",
+      "active": true
+    },
+    {
+      "id": "demo-part-fonte",
+      "name": "Fonte ATX 500W",
+      "category": "Energia",
+      "brand": "Corsair",
+      "model": "CV500",
+      "internal_code": "PEC-FNT-500",
+      "quantity": 5,
+      "unit_price": 280,
+      "unit": "un",
+      "active": true
+    },
+    {
+      "id": "demo-part-mouse",
+      "name": "Mouse USB corporativo",
+      "category": "Periféricos",
+      "brand": "Logitech",
+      "model": "M90",
+      "internal_code": "PEC-MOU-USB",
+      "quantity": 15,
+      "unit_price": 42,
+      "unit": "un",
+      "active": true
+    },
+    {
+      "id": "demo-part-ram-8",
+      "name": "Memória RAM 8GB DDR4",
+      "category": "Memória",
+      "brand": "Crucial",
+      "model": "DDR4 2666",
+      "internal_code": "PEC-RAM-8DDR4",
+      "quantity": 12,
+      "unit_price": 145,
+      "unit": "un",
+      "active": true
+    },
+    {
+      "id": "demo-part-ssd-480",
+      "name": "SSD 480GB SATA",
+      "category": "Armazenamento",
+      "brand": "Kingston",
+      "model": "A400 480GB",
+      "internal_code": "PEC-SSD-480",
+      "quantity": 8,
+      "unit_price": 220,
+      "unit": "un",
+      "active": true
+    },
+    {
+      "id": "demo-part-toner",
+      "name": "Toner HP 58A",
+      "category": "Impressão",
+      "brand": "HP",
+      "model": "CF258A",
+      "internal_code": "PEC-TON-58A",
+      "quantity": 6,
+      "unit_price": 390,
+      "unit": "un",
+      "active": true
+    }
+  ],
+  "service_catalog": [
+    {
+      "id": "demo-service-diagnostic",
+      "code": "SRV-0001",
+      "name": "Diagnóstico técnico",
+      "category": "Atendimento",
+      "default_priority": "medium",
+      "default_value": 80,
+      "description": "Análise inicial do problema e registro do diagnóstico.",
+      "notes": "Análise inicial do problema e registro do diagnóstico.",
+      "active": true
+    },
+    {
+      "id": "demo-service-format",
+      "code": "SRV-0002",
+      "name": "Formatação e reinstalação",
+      "category": "Sistemas",
+      "default_priority": "medium",
+      "default_value": 180,
+      "description": "Reinstalação de sistema operacional e aplicativos básicos.",
+      "notes": "Reinstalação de sistema operacional e aplicativos básicos.",
+      "active": true
+    },
+    {
+      "id": "demo-service-hardware",
+      "code": "SRV-0003",
+      "name": "Troca de peça",
+      "category": "Hardware",
+      "default_priority": "high",
+      "default_value": 120,
+      "description": "Substituição física de componente e teste de funcionamento.",
+      "notes": "Substituição física de componente e teste de funcionamento.",
+      "active": true
+    },
+    {
+      "id": "demo-service-network",
+      "code": "SRV-0004",
+      "name": "Correção de rede",
+      "category": "Rede",
+      "default_priority": "high",
+      "default_value": 150,
+      "description": "Correção de conectividade, ponto de rede ou configuração.",
+      "notes": "Correção de conectividade, ponto de rede ou configuração.",
+      "active": true
+    },
+    {
+      "id": "demo-service-printer",
+      "code": "SRV-0005",
+      "name": "Manutenção de impressora",
+      "category": "Impressoras",
+      "default_priority": "medium",
+      "default_value": 130,
+      "description": "Limpeza, troca de suprimento ou ajuste de impressão.",
+      "notes": "Limpeza, troca de suprimento ou ajuste de impressão.",
+      "active": true
+    }
+  ],
+  "problem_types": [
+    {
+      "id": "demo-problem-network",
+      "name": "Internet lenta",
+      "category": "Rede",
+      "default_priority": "medium",
+      "description": "Oscilação de link, Wi-Fi ou ponto físico.",
+      "active": true
+    },
+    {
+      "id": "demo-problem-piece",
+      "name": "Troca de peça",
+      "category": "Hardware",
+      "default_priority": "high",
+      "description": "Substituição de componente com teste posterior.",
+      "active": true
+    },
+    {
+      "id": "demo-problem-power",
+      "name": "Computador não liga",
+      "category": "Computador",
+      "default_priority": "high",
+      "description": "Falha de energia, fonte, placa ou periférico crítico.",
+      "active": true
+    },
+    {
+      "id": "demo-problem-printer",
+      "name": "Impressora não imprime",
+      "category": "Impressora",
+      "default_priority": "medium",
+      "description": "Fila travada, toner, conexão ou driver.",
+      "active": true
+    },
+    {
+      "id": "demo-problem-system",
+      "name": "Sistema travando",
+      "category": "Sistema",
+      "default_priority": "medium",
+      "description": "Lentidão ou travamento de aplicação corporativa.",
+      "active": true
+    }
+  ],
+  "service_orders": [
+    {
+      "id": "demo-os-001",
+      "number": "OS-2026-0001",
+      "title": "Manutenção preventiva do servidor web",
+      "description": "Verificar alertas de disco e atualizar pacotes do servidor web.",
+      "status": "in_progress",
+      "priority": "high",
+      "category": "Servidor",
+      "asset_id": "srv-web-01",
+      "sector_id": "sector-infra",
+      "sector_name": "Infraestrutura",
+      "environment_id": "demo-client-orion",
+      "environment_name": "Orion Saude",
+      "service_id": "demo-service-diagnostic",
+      "service_code": "SRV-0001",
+      "service_name": "Diagnóstico técnico",
+      "requester_name": "Operação",
+      "assigned_technician_name": "Carla Mendes",
+      "service_performed": "Diagnóstico técnico",
+      "diagnosis": "Disco com alerta preventivo e pacotes pendentes.",
+      "attendance_notes": "Janela combinada para execução fora do horário comercial.",
+      "parts_used": null,
+      "created_by": "seed-admin",
+      "closed": false
+    },
+    {
+      "id": "demo-os-002",
+      "number": "OS-2026-0002",
+      "title": "Caixa com lentidão no atendimento",
+      "description": "Máquina do caixa 01 apresenta travamentos durante emissão de cupom.",
+      "status": "open",
+      "priority": "medium",
+      "category": "Desktop",
+      "asset_id": "ws-caixa-01",
+      "sector_id": "sector-support-n1",
+      "sector_name": "Suporte N1",
+      "environment_id": "demo-client-alfa",
+      "environment_name": "Alfa Comercio",
+      "service_id": "demo-service-diagnostic",
+      "service_code": "SRV-0001",
+      "service_name": "Diagnóstico técnico",
+      "requester_name": "Frente de caixa",
+      "assigned_technician_name": "Ana Ribeiro",
+      "service_performed": "Diagnóstico técnico",
+      "diagnosis": "Aguardando avaliação presencial.",
+      "attendance_notes": null,
+      "parts_used": null,
+      "created_by": "seed-admin",
+      "closed": false
+    },
+    {
+      "id": "demo-os-003",
+      "number": "OS-2026-0003",
+      "title": "Impressora do financeiro falhando",
+      "description": "Relatórios saem com falhas e manchas.",
+      "status": "waiting",
+      "priority": "medium",
+      "category": "Impressora",
+      "asset_id": "manual-printer-financeiro",
+      "sector_id": "sector-financeiro",
+      "sector_name": "Financeiro",
+      "environment_id": "demo-client-beta",
+      "environment_name": "Beta Logistica",
+      "service_id": "demo-service-printer",
+      "service_code": "SRV-0005",
+      "service_name": "Manutenção de impressora",
+      "requester_name": "Financeiro",
+      "assigned_technician_name": "Diego Santos",
+      "service_performed": "Manutenção de impressora",
+      "diagnosis": "Provável toner no fim e rolete com sujeira.",
+      "attendance_notes": null,
+      "parts_used": "Toner HP 58A x1",
+      "created_by": "seed-admin",
+      "closed": false
+    },
+    {
+      "id": "demo-os-004",
+      "number": "OS-2026-0004",
+      "title": "Notebook da diretoria sem vídeo",
+      "description": "Usuário relata tela preta ao conectar dockstation.",
+      "status": "closed",
+      "priority": "high",
+      "category": "Notebook",
+      "asset_id": "nb-diretoria-01",
+      "sector_id": "sector-diretoria",
+      "sector_name": "Diretoria",
+      "environment_id": "demo-client-orion",
+      "environment_name": "Orion Saude",
+      "service_id": "demo-service-network",
+      "service_code": "SRV-0004",
+      "service_name": "Correção de rede",
+      "requester_name": "Diretoria",
+      "assigned_technician_name": "Bruno Lima",
+      "service_performed": "Correção de rede",
+      "diagnosis": "Cabo USB-C danificado.",
+      "attendance_notes": "Substituído cabo e testado monitor externo.",
+      "parts_used": null,
+      "created_by": "seed-admin",
+      "closed": true
+    }
+  ],
+  "service_order_history": [
+    {
+      "id": "demo-os-001-history-created",
+      "service_order_id": "demo-os-001",
+      "event_type": "created",
+      "message": "Ordem de serviço OS-2026-0001 criada para demonstração.",
+      "user_id": "seed-admin",
+      "user_name": "Sistema"
+    },
+    {
+      "id": "demo-os-002-history-created",
+      "service_order_id": "demo-os-002",
+      "event_type": "created",
+      "message": "Ordem de serviço OS-2026-0002 criada para demonstração.",
+      "user_id": "seed-admin",
+      "user_name": "Sistema"
+    },
+    {
+      "id": "demo-os-003-history-created",
+      "service_order_id": "demo-os-003",
+      "event_type": "created",
+      "message": "Ordem de serviço OS-2026-0003 criada para demonstração.",
+      "user_id": "seed-admin",
+      "user_name": "Sistema"
+    },
+    {
+      "id": "demo-os-004-history-created",
+      "service_order_id": "demo-os-004",
+      "event_type": "created",
+      "message": "Ordem de serviço OS-2026-0004 criada para demonstração.",
+      "user_id": "seed-admin",
+      "user_name": "Sistema"
+    }
+  ]
+}
