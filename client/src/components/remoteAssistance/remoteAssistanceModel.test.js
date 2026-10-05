@@ -110,7 +110,7 @@ describe("getRemoteAssetDisplayName", () => {
   it("segue a prioridade alias > asset.alias > displayName > name > hostname > fallback", () => {
     expect(getRemoteAssetDisplayName({ hostname: "PC-01" }, "Meu Alias")).toBe("Meu Alias");
     expect(getRemoteAssetDisplayName({ alias: "Alias do ativo", hostname: "PC-01" })).toBe("Alias do ativo");
-    expect(getRemoteAssetDisplayName({})).toBe("Maquina");
+    expect(getRemoteAssetDisplayName({})).toBe("Máquina");
   });
 });
 
