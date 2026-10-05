@@ -7,10 +7,10 @@ import {
   buildLinkedAutomationPayload,
   normalizePreventivePlanPayload
 } from "../domain/preventivePlanPayload.js";
-import { queueAgentScriptJob } from "../repositories/agentScriptJobRepository.js";
+import { queueAgentScriptJob } from "./agentScriptJobService.js";
 import { addAssetHistory } from "../repositories/assetHistoryRepository.js";
 import { addLog } from "../repositories/logRepository.js";
-import { createScriptSimulationLog, findMaintenanceScriptById } from "../repositories/maintenanceScriptRepository.js";
+import { createScriptSimulationLog, findMaintenanceScriptById } from "./maintenanceScripts/maintenanceScriptsFacade.js";
 import { insertPlan, insertPlanAsset, insertPlanScript } from "../repositories/preventivePlanRepository.js";
 import { createPreventiveAutomationPlanRecord } from "./preventiveAutomationPlanService.js";
 import { findPreventivePlanById } from "./preventivePlanReadService.js";

@@ -12,7 +12,7 @@ process.env.NODE_ENV = "test";
 const { createApp } = await import("../src/app.js");
 const { initializeRuntime } = await import("../src/bootstrap.js");
 const { closeDatabase, query } = await import("../src/database.js");
-const { refreshDueScriptValidations } = await import("../src/repositories/maintenanceScriptRepository.js");
+const { refreshDueScriptValidations } = await import("../src/services/maintenanceScripts/maintenanceScriptsFacade.js");
 const {
   bearerHeaders,
   bearerUser,

@@ -68,7 +68,7 @@ export function createClient(baseUrl, cookie) {
 }
 
 export async function createScript(name, overrides = {}) {
-  const { createMaintenanceScript } = await import("../src/repositories/maintenanceScriptRepository.js");
+  const { createMaintenanceScript } = await import("../src/services/maintenanceScripts/maintenanceScriptsFacade.js");
   return createMaintenanceScript({
     name,
     content: `Write-Host 'rotina preventiva ${name}'`,

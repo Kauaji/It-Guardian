@@ -15,7 +15,7 @@ const {
   createScriptSimulationLog,
   findMaintenanceScriptById,
   listRecentScriptExecutionLogs
-} = await import("../src/repositories/maintenanceScriptRepository.js");
+} = await import("../src/services/maintenanceScripts/maintenanceScriptsFacade.js");
 const {
   browserHeaders,
   createScriptViaApi,

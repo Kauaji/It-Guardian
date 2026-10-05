@@ -9,11 +9,11 @@ import {
 import { createServiceOrder } from "./serviceOrders/serviceOrderCreationService.js";
 import { listSettingsRecords } from "../repositories/settingsRepository.js";
 import { getSystemSettings } from "../repositories/systemSettingsRepository.js";
-import { verifyPublicMachineToken } from "../domain/publicMachineToken.js";
+import { verifyPublicMachineToken } from "./publicMachineToken.js";
 import {
   createPublicServiceOrderTrackingToken,
   verifyPublicServiceOrderTrackingToken
-} from "../domain/publicServiceOrderTrackingToken.js";
+} from "./publicServiceOrderTrackingToken.js";
 import {
   chooseHigherPriority,
   normalize,

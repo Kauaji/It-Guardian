@@ -18,8 +18,8 @@ const { createApp } = await import("../src/app.js");
 const { initializeRuntime } = await import("../src/bootstrap.js");
 const { closeDatabase } = await import("../src/database.js");
 const { createAgentEnrollment } = await import("../src/repositories/agentRepository.js");
-const { queueAgentScriptJob } = await import("../src/repositories/agentScriptJobRepository.js");
-const { createMaintenanceScript, createScriptSimulationLog } = await import("../src/repositories/maintenanceScriptRepository.js");
+const { queueAgentScriptJob } = await import("../src/services/agentScriptJobService.js");
+const { createMaintenanceScript, createScriptSimulationLog } = await import("../src/services/maintenanceScripts/maintenanceScriptsFacade.js");
 const { listen, sendHeartbeat } = await import("../test-support/scriptFixtures.mjs");
 
 test.after(closeDatabase);

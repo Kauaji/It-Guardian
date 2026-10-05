@@ -31,7 +31,7 @@ import { createSuggestionForAlert } from "./alerts/alertSuggestionCreationServic
 import { buildAgentAlertsFromEnvironment, syncAgentAlerts } from "./alerts/agentAlertSyncService.js";
 import { buildAlertCorrelations, buildAlertInsights, buildSuggestionPayload } from "../domain/alerts/alertInsights.js";
 import { buildAlertEnrichmentContext, enrichAlerts, enrichSuggestions } from "./alerts/alertEnrichmentService.js";
-import { refreshDueScriptValidations } from "../repositories/maintenanceScriptRepository.js";
+import { refreshDueScriptValidations } from "./maintenanceScripts/maintenanceScriptsFacade.js";
 import { startMaintenanceForAsset } from "../repositories/assetLifecycleRepository.js";
 import { conflict, notFoundError } from "../lib/errors.js";
 

@@ -6,10 +6,8 @@ import { assetFromRow, enrollmentFromRow } from "./agents/agentMappers.js";
 /**
  * SQL de enrollments (tokens do agente) e dos ativos reportados pelos agentes.
  * O registro de inventario/heartbeat (recordAgentInventory) vive em
- * services/agentInventoryService.js e e reexportado aqui para manter estavel o
- * ponto de importacao.
+ * services/agentInventoryService.js.
  */
-export { recordAgentInventory } from "../services/agentInventoryService.js";
 
 export async function createAgentEnrollment({ name, createdBy = null }) {
   const token = createAgentToken();

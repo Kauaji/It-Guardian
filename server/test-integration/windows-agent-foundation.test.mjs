@@ -17,8 +17,8 @@ const {
   revokeAgentEnrollment,
   updateAgentAssetAlias
 } = await import("../src/repositories/agentRepository.js");
-const { queueAgentScriptJob } = await import("../src/repositories/agentScriptJobRepository.js");
-const { createScriptSimulationLog } = await import("../src/repositories/maintenanceScriptRepository.js");
+const { queueAgentScriptJob } = await import("../src/services/agentScriptJobService.js");
+const { createScriptSimulationLog } = await import("../src/services/maintenanceScripts/maintenanceScriptsFacade.js");
 const { listDevices } = await import("../src/services/monitoringService.js");
 
 function listen(app) {

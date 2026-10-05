@@ -17,11 +17,11 @@ const {
   claimNextAgentScriptJob,
   completeAgentScriptJob,
   queueAgentScriptJob
-} = await import("../src/repositories/agentScriptJobRepository.js");
+} = await import("../src/services/agentScriptJobService.js");
 const {
   createMaintenanceScript,
   createScriptSimulationLog
-} = await import("../src/repositories/maintenanceScriptRepository.js");
+} = await import("../src/services/maintenanceScripts/maintenanceScriptsFacade.js");
 const { agentHeaders, listen, sendHeartbeat } = await import("../test-support/scriptFixtures.mjs");
 
 test.after(closeDatabase);

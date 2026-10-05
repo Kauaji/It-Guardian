@@ -11,7 +11,7 @@ process.env.NODE_ENV = "test";
 
 const fx = await import("../test-support/preventiveFixtures.mjs");
 const { closeDatabase } = await import("../src/database.js");
-const repository = await import("../src/repositories/preventiveAutomationRepository.js");
+const repository = await import("../src/services/preventiveAutomationFacade.js");
 
 const base = fx.automationPath;
 const adminUser = { id: null, name: "Teste de execucao", isAdmin: true };

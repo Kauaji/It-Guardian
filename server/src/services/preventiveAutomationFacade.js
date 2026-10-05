@@ -1,14 +1,13 @@
 /**
- * Barril de compatibilidade do dominio de automacao preventiva.
+ * Fachada do dominio de automacao preventiva (camada de servicos).
  *
  * O codigo que vivia aqui foi dividido por responsabilidade:
  * - `domain/preventiveAutomation*.js`: regras puras (payload, agenda, visoes);
  * - `repositories/preventiveAutomation*Repository.js`: SQL e mapeamento;
  * - `services/preventiveAutomation*Service.js`: orquestracao e transacoes.
  *
- * Este arquivo apenas reexporta a API publica anterior para quem ainda importa
- * o caminho antigo (`bootstrap.js`, testes). Codigo novo deve importar direto
- * dos modulos acima.
+ * Este arquivo reexporta a API publica (`bootstrap.js`, testes). Codigo novo deve
+ * importar direto dos modulos acima.
  */
 export {
   computeNextScheduledFor,
@@ -33,7 +32,7 @@ export {
   findPreventiveAutomationPlanByPreventivePlanId,
   listDuePreventiveAutomationPlans,
   listPreventiveAutomationPlans
-} from "../services/preventiveAutomationPlanQueryService.js";
+} from "./preventiveAutomationPlanQueryService.js";
 export {
   createPreventiveAutomationPlan,
   createPreventiveAutomationPlanRecord,
@@ -41,21 +40,21 @@ export {
   disablePreventiveAutomationPlan,
   reactivatePreventiveAutomationPlan,
   updatePreventiveAutomationPlan
-} from "../services/preventiveAutomationPlanService.js";
+} from "./preventiveAutomationPlanService.js";
 export {
   findPreventiveAutomationAssetDetails,
   listPreventiveAutomationAgenda,
   listPreventiveAutomationManagement,
   listPreventiveAutomationPlanHistory
-} from "../services/preventiveAutomationManagementService.js";
+} from "./preventiveAutomationManagementService.js";
 export {
   removeAssetFromPreventiveAutomationPlan,
   removePreventiveAutomationAssetOverride,
   upsertPreventiveAutomationAssetOverride
-} from "../services/preventiveAutomationAssetService.js";
-export { backfillPreventiveAutomationAssetSchedules } from "../services/preventiveAutomationBackfillService.js";
+} from "./preventiveAutomationAssetService.js";
+export { backfillPreventiveAutomationAssetSchedules } from "./preventiveAutomationBackfillService.js";
 export {
   preparePreventiveAutomationPlan,
   processDuePreventiveAutomationPlans,
   processScheduledMaintenanceTasks
-} from "../services/preventiveAutomationRunService.js";
+} from "./preventiveAutomationRunService.js";

@@ -15,13 +15,13 @@ const { createAgentEnrollment } = await import("../src/repositories/agentReposit
 const {
   claimNextAgentScriptJob,
   queueAgentScriptJob
-} = await import("../src/repositories/agentScriptJobRepository.js");
+} = await import("../src/services/agentScriptJobService.js");
 const {
   createMaintenanceScript,
   createScriptSimulationLog,
   deactivateMaintenanceScript,
   updateMaintenanceScript
-} = await import("../src/repositories/maintenanceScriptRepository.js");
+} = await import("../src/services/maintenanceScripts/maintenanceScriptsFacade.js");
 
 function heartbeatPayload(overrides = {}) {
   return {
