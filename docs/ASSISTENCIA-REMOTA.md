@@ -24,13 +24,14 @@ O fluxo permite:
 - encerrar pelo navegador ou pela maquina atendida;
 - registrar os eventos no historico da maquina, da OS e da sessao.
 
-Esta versao usa `snapshot_polling` como transporte principal, agora com FPS,
+Esta versao usa `snapshot_polling` como transporte padrao, com FPS,
 resolucao e qualidade JPEG configuraveis dentro de limites seguros, ajuste
 automatico de qualidade e deduplicacao de quadros identicos. Os frames JPEG
 trafegam com token curto, ficam somente em memoria e nunca sao gravados no
-banco ou no historico. Um transporte `webrtc` esta preparado (sinalizacao
-autenticada no backend) mas permanece desligado por padrao — veja
-"Transporte WebRTC" abaixo.
+banco ou no historico. Existem dois transportes alternativos, ambos opt-in e
+desligados por padrao: `webrtc` (video por WebRTC, com viewer no navegador e
+processo auxiliar no agente Windows — veja "Transporte WebRTC") e `rustdesk`
+(cliente nativo — veja "Transporte RustDesk").
 
 ## Estado seguro padrao
 
@@ -57,9 +58,16 @@ mesmo com o recurso desligado (`REMOTE_ASSISTANCE_TRANSPORT=snapshot_polling`,
 para que ativar `ENABLE_REMOTE_ASSISTANCE` sozinho ja resulte num
 comportamento seguro sem exigir ajuste fino imediato.
 
-Em `NODE_ENV=production`, o backend recusa novas sessoes quando
-`REMOTE_ASSISTANCE_ENV` nao for explicitamente `lab`, `homologation` ou
-`internal`. O frontend nunca substitui essa validacao do servidor.
+O backend so considera o recurso disponivel quando o ambiente efetivo
+(`REMOTE_ASSISTANCE_ENV`, depois `REMOTE_ASSISTANCE_ENVIRONMENT`,
+`IT_GUARDIAN_ENVIRONMENT` e `NODE_ENV`, nessa ordem) for `lab`, `homologation`
+ou `internal` (ou os aliases `laboratory`, `laboratorio`, `homologacao`,
+`interno` e `test`). Em `NODE_ENV=production` sem um desses valores em
+`REMOTE_ASSISTANCE_ENV`, `GET /api/remote-assistance/config` devolve
+`enabled: false` e as demais rotas respondem `403`. O consentimento
+automatico de laboratorio e ignorado em deploy publico (`VERCEL=1` ou
+`VERCEL_ENV=production`). O frontend nunca substitui essa validacao do
+servidor.
 
 ## Habilitar somente em laboratorio
 
@@ -115,20 +123,30 @@ perigosa:
 
 ```env
 REMOTE_ASSISTANCE_TRANSPORT=snapshot_polling
-REMOTE_ASSISTANCE_TARGET_FPS=3        # 1 a 5, nunca acima do teto abaixo
-REMOTE_ASSISTANCE_MAX_FPS=3           # teto rigido, 1 a 5
+REMOTE_ASSISTANCE_TARGET_FPS=3        # 1 a 10, nunca acima do teto abaixo
+REMOTE_ASSISTANCE_MAX_FPS=3           # teto rigido, 1 a 10
 REMOTE_ASSISTANCE_MAX_WIDTH=1280      # 320 a 1920
 REMOTE_ASSISTANCE_MAX_HEIGHT=720      # 240 a 1080
 REMOTE_ASSISTANCE_JPEG_QUALITY=65     # ponto de partida, 10 a 95
-REMOTE_ASSISTANCE_MIN_JPEG_QUALITY=35 # piso do ajuste automatico
-REMOTE_ASSISTANCE_MAX_JPEG_QUALITY=80 # teto do ajuste automatico
-REMOTE_ASSISTANCE_MAX_FRAME_BYTES=700000
+REMOTE_ASSISTANCE_MIN_JPEG_QUALITY=35 # piso do ajuste automatico (10 a 90)
+REMOTE_ASSISTANCE_MAX_JPEG_QUALITY=80 # teto do ajuste automatico (20 a 95)
+REMOTE_ASSISTANCE_MAX_FRAME_BYTES=700000  # 100000 a 900000
 REMOTE_ASSISTANCE_ADAPTIVE_QUALITY=true
-REMOTE_ASSISTANCE_VIEWER_POLL_MS=350
-REMOTE_ASSISTANCE_AGENT_CAPTURE_MS=350
-REMOTE_ASSISTANCE_IDLE_TIMEOUT_SECONDS=60
-REMOTE_ASSISTANCE_RECONNECT_GRACE_SECONDS=30
+REMOTE_ASSISTANCE_VIEWER_POLL_MS=350  # 80 a 2000
+REMOTE_ASSISTANCE_AGENT_CAPTURE_MS=350  # 150 a 2000
+REMOTE_ASSISTANCE_IDLE_TIMEOUT_SECONDS=60  # 20 a 300
+REMOTE_ASSISTANCE_RECONNECT_GRACE_SECONDS=30  # 10 a 120
+REMOTE_ASSISTANCE_SESSION_TTL_MINUTES=20  # 5 a 60
 ```
+
+Os valores acima sao os dos arquivos `.env.example`. Quando a variavel nao e
+definida, o codigo (`getRemoteAssistanceConfig`) usa outros padroes mais
+generosos: `MAX_FPS=8` (teto 10), `TARGET_FPS` igual a `MAX_FPS`,
+`AGENT_CAPTURE_MS` derivado de `1000 / TARGET_FPS` e `VIEWER_POLL_MS` igual a
+`AGENT_CAPTURE_MS` (minimo 80 ms). O viewer do navegador usa
+`viewerPollMs` devolvido por `GET /api/remote-assistance/config` e, se o
+campo faltar, consulta a cada 1000 ms; o estado da sessao e a auditoria sao
+consultados a cada 1200 ms.
 
 Comportamento resultante:
 
@@ -206,8 +224,8 @@ Comportamento:
 |---|---|
 | `remote_assistance.view` | Consultar sessao, eventos, frame atual, trocar monitor e pausar/retomar a visualizacao |
 | `remote_assistance.chat` | Enviar mensagens no chat da sessao (separada de `.view`: quem so acompanha a tela nao envia mensagem por padrao) |
-| `remote_assistance.start` | Solicitar uma nova sessao |
-| `remote_assistance.control` | Solicitar controle basico apos consentimento |
+| `remote_assistance.start` | Solicitar uma nova sessao (e enviar a oferta WebRTC) |
+| `remote_assistance.control` | Solicitar controle basico apos consentimento, enviar comandos de entrada e revelar as credenciais do transporte RustDesk |
 | `remote_assistance.end` | Encerrar a sessao |
 | `remote_assistance.manage` | Administrar o ciclo operacional da sessao |
 | `remote_assistance.privacy_mode` | Reservada; recurso nao implementado |
@@ -220,7 +238,7 @@ as permissoes necessarias e o agente possui heartbeat recente.
 ## Fluxo do tecnico
 
 1. Abra o Inventario e os detalhes da maquina, ou uma OS vinculada ao ativo.
-2. Clique em `Atendimento remoto` ou `Acessar maquina`.
+2. Clique em `Atendimento remoto` ou `Acessar máquina`.
 3. Confira nome, hostname, IP, sistema, agente e ultimo contato.
 4. Informe um motivo operacional claro.
 5. Digite a senha do proprio login.
@@ -239,7 +257,10 @@ as permissoes necessarias e o agente possui heartbeat recente.
 
 A reautenticacao gera um token aleatorio, vinculado ao tecnico, ativo, OS e
 acao solicitada. Ele expira em cinco minutos, e consumido uma unica vez e nao
-contem a senha.
+contem a senha. No navegador, a senha digitada vive so no estado do
+componente: e enviada a `POST /api/security/reauthenticate`, zerada assim que
+o pedido de sessao termina (com sucesso ou erro) e nunca vai para storage,
+URL ou console.
 
 ## Fluxo do usuario atendido
 
@@ -262,8 +283,8 @@ timeout tambem encerra ou expira a sessao.
 
 O agente envia somente metadados dos monitores: identificador, nome, resolucao
 e indicador de principal. O viewer captura um monitor por vez. Quando so
-existe um monitor, o seletor fica oculto e um texto informa "unico monitor
-detectado". Ao trocar:
+existe um monitor, o seletor fica oculto e a barra mostra o nome do monitor
+seguido de "(único monitor)". Ao trocar:
 
 1. o backend valida a sessao e o monitor;
 2. registra `monitor_changed`;
@@ -319,6 +340,68 @@ Funcionamento:
   flutuante e mostra o historico recebido enquanto a janela estava fechada
   assim que e aberta.
 
+## Estrutura do cliente (frontend)
+
+O ponto de entrada e `client/src/components/remoteAssistance/RemoteAssistanceAction.jsx`
+(export default, props `asset`, `alias`, `serviceOrder`, `token`, `user`,
+`notify`, `compact`), usado pelo Inventario, pela OS e pelos alertas. Ele so
+orquestra: a logica fica em hooks por responsabilidade e a interface em
+componentes de apresentacao pequenos.
+
+```text
+client/src/components/remoteAssistance/
+  RemoteAssistanceAction.jsx        orquestrador (mesmo caminho, export e props de sempre)
+  remoteAssistanceModel.js          regras puras: flag do front, elegibilidade do ativo, rotulos de estado/transporte, formatadores
+  hooks/
+    useRemoteAvailability.js        permissoes, elegibilidade, flags e titulo de indisponibilidade do botao
+    useRemoteAssistanceConfig.js    GET /api/remote-assistance/config
+    useRemoteAssistanceDialog.js    compoe os hooks abaixo; inicia, encerra e fecha o dialogo
+    useRemoteReauth.js              motivo, modo pedido e senha; troca a senha por token de reautenticacao
+    useRemoteAssistanceSession.js   criar/encerrar/pausar, polling de sessao e auditoria (1,2 s), encerra no evento it-guardian:auth-expired
+    useRemoteViewer.js              polling de quadros (viewerPollMs), latencia, troca de monitor, reconectar
+    useRemoteWebrtc.js              RTCPeerConnection recvonly, oferta/resposta SDP
+    useRustdeskCredentials.js       revelar e copiar id/senha do RustDesk (so em memoria)
+    useRustdeskCountdown.js         contagem regressiva ate o expiresAt da senha
+    useRemoteChat.js                mensagens, rascunho, envio
+    useRemoteControl.js             controle, trava de teclado local, traducao de mouse/teclado
+    useBodyScrollLock.js            trava o scroll do body com o dialogo aberto
+  components/
+    RemoteAssistanceTrigger.jsx     botao que abre o dialogo
+    RemoteDialogHeader.jsx          cabecalho (maquina, IP, fechar)
+    RemoteReauthPanel.jsx           formulario: resumo da maquina, motivo, modo, senha
+    RemoteViewer.jsx                corpo da sessao
+    RemoteToolbar.jsx               barra de controles (+ RemoteStatus, RemoteMonitorPicker)
+    RemoteScreen.jsx                visor (snapshot ou video WebRTC) e captura de mouse/teclado
+    RemoteWaitingState.jsx          estados de espera (consentimento, negociacao, imagem)
+    RemoteRustdeskPanel.jsx         painel do transporte RustDesk
+    RemoteFooterMetrics.jsx         transporte, FPS, latencia, banda, qualidade
+    RemoteEvents.jsx                auditoria recente (5 ultimos eventos)
+    RemoteChat.jsx                  chat com o usuario local
+  utils/                            funcoes puras: format, frame, input, notify, viewState, webrtc
+  test/fixtures.jsx                 mock da API e helpers dos testes
+  RemoteAssistanceAction.*.test.jsx testes de fluxo (nativo, ciclo de vida, RustDesk, WebRTC, controle/chat)
+```
+
+Regras do cliente que o servidor nao substitui, mas que valem registrar:
+
+- a API e sempre importada de `client/src/api.js` (barril); os testes mockam
+  esse modulo;
+- o botao so aparece com `VITE_ENABLE_REMOTE_ASSISTANCE=true`, as permissoes
+  `remote_assistance.view` e `.start`, agente com contato recente e
+  `enabled: true` vindo de `/api/remote-assistance/config`. O controle exige
+  tambem `VITE_ENABLE_REMOTE_CONTROL=true`, `controlEnabled` no backend e
+  `remote_assistance.control`. As demais flags `VITE_*` do `.env.example`
+  (privacidade, acoes administrativas, transporte, FPS) nao sao lidas pelo
+  codigo do cliente;
+- o tecnico, a senha digitada, o token de visualizacao e as credenciais
+  RustDesk ficam so no estado do React: nada vai para `localStorage`,
+  `sessionStorage` ou console;
+- fechar o dialogo com sessao em andamento pede confirmacao e encerra a sessao
+  antes de fechar; perder o login do tecnico (`it-guardian:auth-expired`)
+  tambem encerra;
+- os textos visiveis da pasta usam ortografia com acentos; os testes e2e
+  (`tests/e2e/remote-assistance.spec.js`) procuram esses textos.
+
 ## Persistencia e auditoria
 
 A migration cria:
@@ -373,12 +456,14 @@ compartilhado entre instancias serverless.
 - `POST /api/remote-assistance/assets/:assetId/sessions`
 - `GET /api/remote-assistance/sessions/:sessionId`
 - `GET /api/remote-assistance/sessions/:sessionId/events`
+- `GET /api/remote-assistance/sessions/:sessionId/events/integrity`
 - `GET /api/remote-assistance/sessions/:sessionId/frame`
 - `POST /api/remote-assistance/sessions/:sessionId/input`
 - `POST /api/remote-assistance/sessions/:sessionId/chat`
 - `POST /api/remote-assistance/sessions/:sessionId/monitor`
 - `POST /api/remote-assistance/sessions/:sessionId/pause`
 - `POST /api/remote-assistance/sessions/:sessionId/control`
+- `GET /api/remote-assistance/sessions/:sessionId/rustdesk-credentials` (so com o transporte RustDesk)
 - `POST /api/remote-assistance/sessions/:sessionId/webrtc/offer` (inativo por padrao)
 - `GET /api/remote-assistance/sessions/:sessionId/webrtc/answer` (inativo por padrao)
 - `POST /api/remote-assistance/sessions/:sessionId/end`
@@ -386,6 +471,7 @@ compartilhado entre instancias serverless.
 ### Agente autenticado
 
 - `GET /api/agents/remote-assistance/pending`
+- `POST /api/agents/remote-assistance/rustdesk-id`
 - `POST /api/agents/remote-assistance/sessions/:sessionId/consent`
 - `POST /api/agents/remote-assistance/sessions/:sessionId/frame`
 - `GET /api/agents/remote-assistance/sessions/:sessionId/commands`
@@ -399,36 +485,59 @@ nao e exposto ao navegador e o JWT do tecnico nao vira token de transporte. Os
 quatro endpoints `webrtc/*` respondem `409` enquanto
 `REMOTE_ASSISTANCE_WEBRTC_ENABLED` estiver `false` (o padrao).
 
-## Transporte WebRTC (preparado, inativo por padrao)
+## Transporte WebRTC (opt-in, desligado por padrao)
 
-O backend ja expoe uma sinalizacao autenticada de oferta/resposta SDP para um
-futuro transporte WebRTC, seguindo o mesmo modelo de tokens curtos e
-separados do snapshot polling. Isso permite evoluir o transporte sem redesenhar
-a API de sessao, consentimento e auditoria.
+O transporte `webrtc` entrega o video da tela por WebRTC em vez de JPEG por
+HTTP. Ele existe ponta a ponta no codigo, mas so e usado quando as duas
+condicoes abaixo forem verdadeiras ao mesmo tempo; caso contrario a sessao cai
+em `snapshot_polling` (`transportFallback: true` em
+`/api/remote-assistance/config`):
 
-O que existe hoje:
+```env
+REMOTE_ASSISTANCE_WEBRTC_ENABLED=true
+REMOTE_ASSISTANCE_TRANSPORT=webrtc
+```
 
-- flags `REMOTE_ASSISTANCE_WEBRTC_ENABLED`, `REMOTE_ASSISTANCE_STUN_URLS`,
-  `REMOTE_ASSISTANCE_TURN_URL`, `REMOTE_ASSISTANCE_TURN_USERNAME`,
-  `REMOTE_ASSISTANCE_TURN_PASSWORD` e `REMOTE_ASSISTANCE_MAX_BITRATE_KBPS`,
-  todas desligadas/vazias por padrao;
-- validacao de forma da oferta/resposta SDP (tamanho maximo, prefixo `v=0`);
-- relay efemero de oferta e resposta por sessao, nunca persistido;
-- testes de contrato cobrindo bloqueio quando desligado e o relay completo
-  quando ligado (`server/test-integration/remote-assistance-webrtc-signaling.test.mjs`).
+Como funciona:
 
-O que **nao** existe ainda, de proposito:
+- **Backend**: sinalizacao autenticada de oferta/resposta SDP com tokens curtos
+  e separados (viewer e agente), validacao de forma do SDP (tamanho maximo,
+  prefixo `v=0`) e relay efemero de oferta e resposta por sessao, nunca
+  persistido. Nao ha sinalizacao trickle: a oferta e a resposta viajam como um
+  SDP unico, por isso quem negocia espera a coleta de candidatos ICE terminar;
+- **Navegador** (`client/src/components/remoteAssistance/hooks/useRemoteWebrtc.js`):
+  cria um `RTCPeerConnection` somente-recebimento (`recvonly`) de video com a
+  lista `iceServers` devolvida por `/api/remote-assistance/config`, espera o
+  `iceGatheringState` ficar `complete` (limite de 8 s), envia a oferta e
+  consulta a resposta a cada 1 s. Pausar a visualizacao ou encerrar a sessao
+  fecha a conexao; retomar abre outra. Enquanto a trilha de video nao chega o
+  viewer mostra "Negociando conexão WebRTC com o agente...". O viewer continua
+  consultando `GET .../frame` para metricas e mensagens do chat;
+- **Agente Windows**: ao receber `transport: "webrtc"` na resposta de
+  `GET .../commands`, o controlador da bandeja pede ao broker
+  (`start_webrtc`, via pipe local) para iniciar o processo auxiliar
+  `ITGuardianRemoteAssistanceWebRtc.exe` (`agent/windows/webrtc`, SIPSorcery,
+  captura de tela codificada em VP8). Os parametros, inclusive o token da
+  sessao, vao por uma linha JSON na entrada padrao do processo — nunca por
+  argumento de linha de comando. Se o executavel nao existir (instalador
+  gerado sem o .NET SDK) ou falhar ao iniciar, a sessao continua no transporte
+  JPEG. Com o helper ativo o agente nao envia quadros JPEG;
+- flags de configuracao: `REMOTE_ASSISTANCE_WEBRTC_ENABLED`,
+  `REMOTE_ASSISTANCE_STUN_URLS`, `REMOTE_ASSISTANCE_TURN_URL`,
+  `REMOTE_ASSISTANCE_TURN_USERNAME`, `REMOTE_ASSISTANCE_TURN_CREDENTIAL` (o
+  servidor le este nome; os `.env.example` ainda listam
+  `REMOTE_ASSISTANCE_TURN_PASSWORD`, que nao e lida) e
+  `REMOTE_ASSISTANCE_MAX_BITRATE_KBPS`, todas desligadas/vazias por padrao.
+  Sem `REMOTE_ASSISTANCE_TURN_URL` a lista de servidores ICE fica so com STUN.
 
-- nenhum `RTCPeerConnection` no navegador — o viewer continua 100% em
-  `snapshot_polling` enquanto isso nao for implementado;
-- nenhum peer WebRTC nativo no agente Windows (exigiria uma biblioteca WebRTC
-  nativa em C#, hoje ausente do projeto);
-- STUN/TURN reais nao foram testados em rede alguma.
+Testes: contrato da sinalizacao em
+`server/test-integration/remote-assistance-webrtc-signaling.test.mjs`; fluxo do
+viewer em `client/src/components/remoteAssistance/RemoteAssistanceAction.webrtc.test.jsx`
+(com `RTCPeerConnection` simulado).
 
-Ou seja: a fiacao de seguranca (autenticacao, tokens, auditoria) esta pronta e
-testada, mas video/dados via WebRTC em si e trabalho futuro. Ativar
-`REMOTE_ASSISTANCE_WEBRTC_ENABLED=true` hoje so libera a troca de SDP pela API
-— nenhuma tela adicional passa a trafegar por esse caminho.
+O que este documento **nao** registra: homologacao de STUN/TURN em redes reais
+(NAT simetrico, firewalls corporativos) nem medicao de latencia/FPS do video
+WebRTC em producao. Trate esses pontos como pendentes ate haver evidencia.
 
 ## Transporte RustDesk (alternativo, opt-in)
 
@@ -449,8 +558,8 @@ exigindo consentimento local e reautenticacao — mas o que acontece depois da
 conexao (cliques, teclas, arquivos arrastados) fica fora do alcance do IT
 Guardian, do mesmo jeito que ficaria numa ligacao telefonica orientando o
 usuario a instalar outro programa. Quem precisa de auditoria granular de
-input deve continuar em `snapshot_polling` ou aguardar o WebRTC nativo (ver
-secao anterior).
+input deve usar `snapshot_polling` ou `webrtc` (ver secao anterior), nos quais
+o controle passa pela fila de comandos do IT Guardian.
 
 ### Modelo de senha: nunca fixa, nunca compartilhada
 
@@ -464,26 +573,43 @@ auditoria nem exigir reautenticacao nenhuma.
 
 Em vez disso:
 
-- cada sessao recebe uma senha **gerada pelo servidor**, aleatoria, de uso
+- cada sessao recebe uma senha **gerada pelo servidor** no momento em que o
+  usuario local autoriza (`issueRustdeskSessionPassword`), aleatoria, de uso
   restrito aquela sessao (`generateRustdeskSessionPassword` em
-  `server/src/domain/remoteAssistancePolicy.js`);
+  `server/src/domain/remoteAssistancePolicy.js`; 16 caracteres por padrao —
+  `REMOTE_ASSISTANCE_RUSTDESK_PASSWORD_LENGTH`, 12 a 32 — sem caracteres
+  ambiguos como 0/O e 1/l/I). A emissao gera o evento de auditoria
+  `rustdesk_password_issued`;
 - a senha nunca e persistida em banco — vive so no relay efemero da sessao
   (o mesmo mecanismo que ja guarda frame e chat), com o mesmo `expiresAt` que
-  o agente recebeu para autoexpirar localmente;
+  o agente recebeu para autoexpirar localmente. O TTL padrao e de 300 s
+  (`REMOTE_ASSISTANCE_RUSTDESK_PASSWORD_TTL_SECONDS`, 60 a 900);
 - ao conceder consentimento, o backend envia a senha ao agente pela fila de
   comandos existente (`rustdesk_set_password`, com `ttlSeconds`) — o agente
   aplica via `rustdesk.exe --password` e **agenda sozinho** a propria
   expiracao local, sem depender de um segundo aviso do servidor chegar;
 - ao encerrar a sessao (pelo tecnico, pelo usuario local ou por timeout), o
   backend tambem tenta avisar o agente para revogar antes do TTL
-  (`revokeRustdeskPasswordBestEffort`) — mas isso e reforco, nao a garantia:
+  (comando `rustdesk_clear_password`, em `revokeRustdeskPasswordBestEffort`)
+  e apaga a senha do relay — mas o aviso ao agente e reforco, nao a garantia:
   a fila de comandos so e entregue enquanto a sessao ainda esta `active`, e
   um agente que perdeu conexao exatamente no encerramento pode nao receber o
   aviso a tempo. A garantia real e o TTL aplicado localmente pelo proprio
   agente;
-- o tecnico ve a senha uma vez por pedido explicito ("Revelar senha de
-  conexao" no painel), nunca automaticamente — cada revelacao gera o evento
-  de auditoria `rustdesk_credentials_revealed` no historico da maquina/OS;
+- o tecnico so ve a senha por pedido explicito ("Revelar senha de conexão" no
+  painel), nunca automaticamente — cada revelacao gera o evento de auditoria
+  `rustdesk_credentials_revealed` (com contador) no historico da maquina/OS.
+  A rota `GET .../rustdesk-credentials` exige `remote_assistance.control` e
+  tem limite de 10 chamadas por minuto por sessao. A revelacao devolve a
+  **mesma** senha emitida no consentimento ate ela expirar: nao gera outra. Se
+  expirar (resposta `409`), o usuario local precisa autorizar de novo, o que
+  exige uma nova sessao — o botao "Gerar nova senha de sessão" do painel
+  apenas repete o pedido e recebe esse `409`;
+- no navegador, id e senha ficam apenas no estado do componente enquanto a
+  sessao esta aberta: nao vao para `localStorage`/`sessionStorage`, URL ou
+  console, a senha some da tela quando o `expiresAt` chega (contagem
+  regressiva no painel) e todas as credenciais sao descartadas ao encerrar a
+  sessao ou fechar o dialogo;
 - a senha nunca viaja por URL (nem no link `rustdesk://id`, nem em nenhum
   lugar copiado automaticamente para fora do IT Guardian) — o tecnico sempre
   cola manualmente no cliente RustDesk, para nao deixar rastro em historico
@@ -550,7 +676,8 @@ servidor no heartbeat seguinte (`ReportRustdeskIdIfChanged` em
   tecnico revela id + senha da sessao ativa (exige `remote_assistance.control`,
   nao so `.view`: possuir a senha equivale a controle total, diferente do
   `snapshot_polling`, onde ver a tela e controla-la sao permissoes
-  separadas).
+  separadas). Responde `409` se a maquina ainda nao relatou um id RustDesk,
+  se a senha ainda nao foi emitida ou se ja expirou.
 
 ### Limitacoes
 
@@ -587,7 +714,7 @@ servidor no heartbeat seguinte (`ReportRustdeskIdIfChanged` em
 13. Observe o rodape do viewer: FPS real deve ficar proximo do configurado,
     a banda deve variar com o conteudo da tela e a qualidade deve cair se
     voce abrir algo com muito movimento na maquina atendida.
-14. Pause a visualizacao, confirme o aviso "Visualizacao pausada" e que o
+14. Pause a visualizacao, confirme o aviso "Visualização pausada" e que o
     rodape para de atualizar; retome e confirme que volta a atualizar.
 15. Desconecte a rede da maquina atendida por alguns segundos e confirme que
     o viewer mostra "reconectando"; ao reconectar a rede, use o botao
@@ -626,9 +753,10 @@ o agente. Para depurar lentidao:
   agente pula o quadro daquele ciclo) e nao derruba a sessao.
 - UAC e `Ctrl+Alt+Del` nao sao controlados.
 - O transporte precisa de HTTPS fora de uma LAN isolada.
-- A sinalizacao WebRTC (oferta/resposta SDP) esta pronta e testada, mas
-  nenhum peer real (navegador ou agente) a utiliza ainda — STUN/TURN nunca
-  foram exercitados em rede real.
+- O transporte WebRTC existe (viewer no navegador e processo auxiliar no
+  agente), mas e opt-in e este documento nao registra homologacao de
+  STUN/TURN em rede real; ele tambem depende do executavel auxiliar ter sido
+  empacotado no instalador (sem ele a sessao continua em JPEG).
 - Modo privacidade e acoes administrativas permanecem placeholders bloqueados.
 - O agente e o instalador ainda precisam de assinatura de codigo antes de uso
   em clientes.
@@ -655,9 +783,10 @@ o agente. Para depurar lentidao:
 - shell remoto livre ou captura global fora da sessao;
 - tela preta, bloqueio de input local ou modo privacidade;
 - persistencia de frames;
-- video/dados WebRTC de fato (o transporte continua `snapshot_polling`); a
-  sinalizacao SDP existe, mas sem peer real dos dois lados;
-- STUN/TURN homologados em rede real.
+- homologacao de STUN/TURN em rede real e medicao do video WebRTC em
+  producao (o transporte padrao continua `snapshot_polling`);
+- reaproveitar ou renovar a senha RustDesk de uma sessao ja expirada sem nova
+  autorizacao do usuario local.
 
 ## Por que nao ha acesso invisivel nem acoes administrativas silenciosas
 
@@ -667,7 +796,7 @@ usuario local antes de qualquer captura comecar; o indicador
 a sessao e o usuario pode encerrar a qualquer momento pela propria maquina.
 Nao existe caminho de codigo que inicie captura, controle ou elevacao sem
 passar por essas duas confirmacoes — inclusive as melhorias desta versao
-(pausa, qualidade adaptativa, WebRTC preparado) respeitam a mesma sessao
+(pausa, qualidade adaptativa, WebRTC opt-in, RustDesk opt-in) respeitam a mesma sessao
 autenticada e auditada, sem novo canal paralelo. Acoes administrativas e modo
 privacidade continuam bloqueados por flag (`ENABLE_REMOTE_ADMIN_ACTIONS`,
 `ENABLE_REMOTE_PRIVACY_MODE`) porque nenhuma implementacao real existe ainda
@@ -675,9 +804,11 @@ para essas permissoes — elas so aparecem reservadas na tabela de permissoes.
 
 ## Roadmap
 
-1. Implementar `RTCPeerConnection` no viewer e um peer WebRTC nativo no
-   agente Windows, usando a sinalizacao ja pronta no backend.
-2. Homologar STUN/TURN e reconexao em redes reais.
+1. Homologar o transporte WebRTC (ja implementado no viewer e no helper do
+   agente), STUN/TURN e reconexao em redes reais, e decidir se ele passa a
+   ser o transporte recomendado.
+2. Permitir renovar a senha RustDesk durante a sessao (hoje o painel oferece
+   "Gerar nova senha de sessão", mas o backend nao emite outra).
 3. Assinar agente e instalador.
 4. Executar revisao de seguranca independente e teste de invasao.
 5. Medir latencia real de rede (nao apenas tamanho de quadro) para alimentar
