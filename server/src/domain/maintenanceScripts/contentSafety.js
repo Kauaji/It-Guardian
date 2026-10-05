@@ -29,6 +29,12 @@ const dangerousContentPatterns = [
   { pattern: /\bdisablerealtimemonitoring\b/i, reason: "desativacao de protecao em tempo real (DisableRealtimeMonitoring)" }
 ];
 
+/**
+ * Recusa conteudo claramente destrutivo ou de evasao (lista fechada de padroes).
+ *
+ * @param {unknown} content
+ * @throws {import("../../lib/errors.js").AppError} 400 com o motivo legivel.
+ */
 export function assertScriptContentIsSafe(content) {
   const text = String(content || "");
   for (const { pattern, reason } of dangerousContentPatterns) {

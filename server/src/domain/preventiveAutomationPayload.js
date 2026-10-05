@@ -1,3 +1,4 @@
+/** @import { AutomationPlan, PlanOverride } from "./preventiveTypes.js" */
 import { trimString, normalizeBoolean } from "../lib/textUtils.js";
 import { badRequest, conflict } from "../lib/errors.js";
 import {
@@ -19,6 +20,11 @@ import {
  * recorrencia personalizada (override). Sem acesso a banco.
  */
 
+/**
+ * @param {Record<string, unknown>} [item]
+ * @returns {PlanOverride | null} null quando nao aponta maquina nem segmento.
+ * @throws {import("../lib/errors.js").AppError} 400 quando aponta os dois ou o intervalo personalizado e invalido.
+ */
 export function normalizeOverridePayload(item = {}) {
   const assetId = trimString(item.assetId, 120) || null;
   const segmentId = trimString(item.segmentId, 120) || null;
@@ -49,6 +55,10 @@ export function normalizeOverridePayload(item = {}) {
   };
 }
 
+/**
+ * @param {unknown} value
+ * @returns {string[]}
+ */
 function normalizeAssetListPayload(value) {
   if (!Array.isArray(value)) {
     throw badRequest("assetIds deve ser uma lista de maquinas para o escopo asset_list.");
@@ -62,6 +72,11 @@ function normalizeAssetListPayload(value) {
   return ids;
 }
 
+/**
+ * @param {unknown} value
+ * @param {boolean} hasIncomingValue
+ * @returns {never[]}
+ */
 function normalizeNonAssetListPayload(value, hasIncomingValue) {
   if (!hasIncomingValue || value == null) return [];
   if (!Array.isArray(value)) {
@@ -76,6 +91,11 @@ function normalizeNonAssetListPayload(value, hasIncomingValue) {
   return [];
 }
 
+/**
+ * @param {Record<string, unknown>} payload
+ * @param {AutomationPlan | null} current
+ * @param {string} scopeType
+ */
 function normalizeScopeSelection(payload, current, scopeType) {
   const rawAssetIds = payload.assetIds ?? payload.asset_ids;
   const hasIncomingAssetIds = rawAssetIds !== undefined;
@@ -89,6 +109,13 @@ function normalizeScopeSelection(payload, current, scopeType) {
   return { assetIds, scopeId };
 }
 
+/**
+ * Valida/normaliza o corpo de criacao ou edicao de um plano de automacao.
+ *
+ * @param {Record<string, unknown>} [payload]
+ * @param {(AutomationPlan & { active?: boolean }) | null} [current] Plano existente (edicao parcial).
+ * @throws {import("../lib/errors.js").AppError} 400 sem nome, escopo ou com assetIds incoerentes.
+ */
 export function normalizePlanPayload(payload = {}, current = null) {
   const name = trimString(payload.name ?? current?.name, 120);
   const recurrenceType = normalizeRecurrenceType(payload.recurrenceType ?? current?.recurrenceType);
@@ -131,7 +158,12 @@ export function normalizePlanPayload(payload = {}, current = null) {
   };
 }
 
+/**
+ * @param {PlanOverride[]} [overrides]
+ * @throws {import("../lib/errors.js").AppError} 409 `DUPLICATE_PREVENTIVE_AUTOMATION_OVERRIDE`.
+ */
 export function assertUniqueOverrides(overrides = []) {
+  /** @type {Set<string>} */
   const seen = new Set();
 
   for (const override of overrides) {

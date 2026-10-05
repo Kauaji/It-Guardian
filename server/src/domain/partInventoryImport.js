@@ -1,28 +1,43 @@
+/** @type {Record<string, string>} */
 const ENTITY_MAP = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" };
 
+/**
+ * @param {string} message
+ * @returns {never}
+ */
 function invalid(message) {
+  /** @type {import("../lib/errors.js").HttpErrorLike} */
   const error = new Error(message);
   error.statusCode = 400;
   throw error;
 }
 
+/** @param {unknown} [value] */
 function decodeXml(value = "") {
   return String(value)
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
     .replace(/&(#x?[0-9a-f]+|amp|lt|gt|quot|apos);/gi, (_, entity) => {
       if (entity[0] === "#") {
         const hexadecimal = entity[1]?.toLowerCase() === "x";
-        return String.fromCodePoint(Number.parseInt(entity.slice(hexadecimal ? 2 : 1), hexadecimal ? 16 : 10));
+        const codePoint = Number.parseInt(entity.slice(hexadecimal ? 2 : 1), hexadecimal ? 16 : 10);
+        // `String.fromCodePoint` lanca RangeError acima de U+10FFFF: um XML malicioso virava 500.
+        return Number.isInteger(codePoint) && codePoint >= 0 && codePoint <= 0x10ffff ? String.fromCodePoint(codePoint) : "";
       }
       return ENTITY_MAP[entity.toLowerCase()] || "";
     })
     .trim();
 }
 
+/**
+ * @param {string} block Trecho de XML.
+ * @param {string} name Nome da tag.
+ * @returns {string} Conteudo decodificado da primeira ocorrencia ou "".
+ */
 function tag(block, name) {
   return decodeXml(block.match(new RegExp(`<${name}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${name}>`, "i"))?.[1] || "");
 }
 
+/** @param {string} name */
 function inferCategory(name) {
   const value = name.toLowerCase();
   if (/mem[oó]ria|\bram\b|ddr[3-6]/.test(value)) return "Memória";
@@ -36,6 +51,25 @@ function inferCategory(name) {
   return "Outros";
 }
 
+/**
+ * @typedef {object} NfeItem
+ * @property {string | null} supplierProductCode
+ * @property {string} name
+ * @property {string} category
+ * @property {number} quantity
+ * @property {number} unitPrice
+ * @property {string} unit
+ * @property {string | null} manufacturerPartNumber
+ * @property {string | null} ncm
+ */
+
+/**
+ * Le os itens de uma NF-e (XML) de compra, recusando DOCTYPE/ENTITY.
+ *
+ * @param {Buffer | string | null | undefined} xmlInput
+ * @returns {{ invoiceKey: string | null, supplierName: string, supplierTaxId: string | null, items: NfeItem[] }}
+ * @throws {import("../lib/errors.js").HttpErrorLike} 400 para XML invalido ou sem produtos.
+ */
 export function parseNfePurchaseXml(xmlInput) {
   const xml = Buffer.isBuffer(xmlInput) ? xmlInput.toString("utf8") : String(xmlInput || "");
   if (!/<(?:nfeProc|NFe|infNFe)\b/i.test(xml) || !/<det\b/i.test(xml)) invalid("O arquivo não contém uma NF-e de produtos válida.");
@@ -46,6 +80,7 @@ export function parseNfePurchaseXml(xmlInput) {
   const invoiceKey = tag(xml, "chNFe") || infNfeId || null;
   const supplierName = tag(emit, "xNome") || "Fornecedor não identificado";
   const supplierTaxId = tag(emit, "CNPJ") || tag(emit, "CPF") || null;
+  /** @type {NfeItem[]} */
   const items = [];
   const detailPattern = /<det\b[^>]*>([\s\S]*?)<\/det>/gi;
   for (const match of xml.matchAll(detailPattern)) {

@@ -139,3 +139,17 @@ test("inventario reconhece todas as origens suportadas", () => {
     ["agent", "manual", "mock", "ocs", "zabbix"]
   );
 });
+
+test("problema do Zabbix preserva os horários epoch (clock/r_clock) em vez de usar 'agora'", () => {
+  const problem = normalizeZabbixProblem({
+    eventid: "9002",
+    name: "Disco cheio",
+    clock: "1785153900",
+    r_clock: "1785154200"
+  });
+
+  // Antes, Date.parse(<número>) retornava NaN e ambos os campos viravam o instante atual.
+  assert.equal(problem.occurredAt, new Date(1785153900 * 1000).toISOString());
+  assert.equal(problem.resolvedAt, new Date(1785154200 * 1000).toISOString());
+  assert.equal(problem.status, "resolved");
+});

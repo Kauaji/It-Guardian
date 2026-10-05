@@ -14,6 +14,20 @@ export const executionDiagnosisContextPermissions = {
 };
 
 /** Resumo do script para o diagnostico (ativo, tipo executavel e controle duplo). */
+/**
+ * @typedef {object} ScriptDiagnosis
+ * @property {boolean} scriptActive
+ * @property {boolean} scriptTypeAllowed
+ * @property {string} riskLevel
+ * @property {boolean} riskRequiresSecondReviewer
+ * @property {boolean | null} secondReviewerSatisfied
+ */
+
+/**
+ * @param {{ active?: boolean, type?: string, riskLevel?: string | null, suggestedRiskLevel?: string | null, contentUpdatedBy?: string | null }} script
+ * @param {{ id?: string } | null | undefined} user
+ * @returns {ScriptDiagnosis}
+ */
 export function describeScriptForDiagnosis(script, user) {
   const riskLevel = resolveScriptRiskLevel(script);
   const riskRequiresSecondReviewer = requiresSecondReviewer(riskLevel);
@@ -31,6 +45,11 @@ export function describeScriptForDiagnosis(script, user) {
 }
 
 /** O script selecionado (se houver) permite a execucao para este usuario? */
+/**
+ * @param {ScriptDiagnosis | null | undefined} scriptDiagnosis
+ * @param {boolean} userHasHighRiskApproval
+ * @returns {boolean}
+ */
 export function isScriptDiagnosisSatisfied(scriptDiagnosis, userHasHighRiskApproval) {
   if (!scriptDiagnosis) return true;
   return Boolean(

@@ -20,19 +20,30 @@ export const TAMPERED_JOB_SUMMARY =
 export const ROLLUP_FAILURE_SUMMARY = "Uma ou mais verificações terminaram com falha no agente.";
 export const ROLLUP_SUCCESS_SUMMARY = "Todas as verificações foram executadas com sucesso pelo agente.";
 
+/**
+ * @param {unknown} content
+ * @returns {string} SHA-256 hexadecimal do conteudo.
+ */
 export function hashScriptContent(content) {
   return createHash("sha256").update(String(content || ""), "utf8").digest("hex");
 }
 
+/** @param {unknown} type */
 export function isExecutableScriptType(type) {
   return executableTypes.has(String(type || "").toLowerCase());
 }
 
 /** Scripts de risco alto ou critico exigem uma segunda pessoa alem de quem editou o conteudo. */
+/** @param {unknown} riskLevel */
 export function requiresSecondReviewer(riskLevel) {
   return dualControlRiskLevels.has(String(riskLevel || "").toLowerCase());
 }
 
+/**
+ * @param {{ contentUpdatedBy?: string | null, riskLevel?: string | null }} script
+ * @param {string | null | undefined} userId
+ * @throws {import("../lib/errors.js").AppError} 403 quando a mesma pessoa tenta enfileirar um script de risco alto.
+ */
 export function assertSecondReviewer(script, userId) {
   if (!userId || !script.contentUpdatedBy) return;
   if (!requiresSecondReviewer(script.riskLevel)) return;
@@ -46,12 +57,17 @@ export function assertSecondReviewer(script, userId) {
 }
 
 /** Timeout do trabalho entre 15 e 600 segundos; valor ausente ou nao numerico assume 120. */
+/**
+ * @param {unknown} value
+ * @returns {number}
+ */
 export function clampTimeoutSeconds(value) {
   const requested = Number(value || 120);
   const seconds = Number.isNaN(requested) ? 120 : requested;
   return Math.min(600, Math.max(15, Math.round(seconds)));
 }
 
+/** @param {unknown} value */
 export function truncateOutput(value) {
   return String(value || "").slice(0, maxOutputLength);
 }
@@ -61,10 +77,18 @@ export function truncateOutput(value) {
  * pode ser entregue se o script continua ativo e o hash gravado no
  * enfileiramento ainda bate com o conteudo vigente.
  */
+/**
+ * @param {{ scriptActive: unknown, currentContent: unknown, expectedHash: string }} input
+ * @returns {boolean}
+ */
 export function isJobContentStillApproved({ scriptActive, currentContent, expectedHash }) {
   return scriptActive === true && hashScriptContent(currentContent) === expectedHash;
 }
 
+/**
+ * @param {string} status
+ * @param {string} scriptName
+ */
 function summarizeJobStatus(status, scriptName) {
   if (status === "succeeded") return `Script '${scriptName}' executado com sucesso pelo agente.`;
   if (status === "timed_out") return `Script '${scriptName}' interrompido por tempo limite.`;
@@ -74,6 +98,10 @@ function summarizeJobStatus(status, scriptName) {
 /**
  * Classifica o resultado reportado pelo agente: sucesso so com exit code 0 e
  * sem mensagem de erro; tempo limite tem precedencia; o resto e falha.
+ */
+/**
+ * @param {{ timedOut?: boolean, exitCode?: number | null, errorMessage?: unknown, stdout?: unknown, stderr?: unknown }} result
+ * @param {string} scriptName
  */
 export function evaluateJobResult(result, scriptName) {
   const timedOut = result.timedOut === true;
@@ -101,6 +129,7 @@ export function evaluateJobResult(result, scriptName) {
 }
 
 /** Estado final da validacao de aviso vinculada ao trabalho concluido. */
+/** @param {string} jobStatus */
 export function validationStatusForJob(jobStatus) {
   return jobStatus === "succeeded" ? "execution_success" : "execution_failed";
 }

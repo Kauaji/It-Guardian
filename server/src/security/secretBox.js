@@ -11,7 +11,12 @@ function deriveKey() {
   return Buffer.from(hkdfSync("sha256", Buffer.from(material), Buffer.from("it-guardian"), KEY_INFO, 32));
 }
 
-/** Cifra um texto curto com AES-256-GCM (segredos TOTP em repouso). */
+/**
+ * Cifra um texto curto com AES-256-GCM (segredos TOTP em repouso).
+ *
+ * @param {unknown} plaintext
+ * @returns {string} `v1.<iv>.<tag>.<texto cifrado>` em base64url.
+ */
 export function sealSecret(plaintext) {
   const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", deriveKey(), iv);
@@ -20,6 +25,11 @@ export function sealSecret(plaintext) {
   return [VERSION, iv.toString("base64url"), tag.toString("base64url"), ciphertext.toString("base64url")].join(".");
 }
 
+/**
+ * @param {string | null | undefined} sealed Saida de `sealSecret`.
+ * @returns {string}
+ * @throws {Error} Quando o formato nao e `v1.<iv>.<tag>.<texto>` ou a autenticacao falha.
+ */
 export function openSecret(sealed) {
   const [version, iv, tag, ciphertext] = String(sealed || "").split(".");
   if (version !== VERSION || !iv || !tag || !ciphertext) {

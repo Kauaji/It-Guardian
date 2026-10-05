@@ -1,0 +1,347 @@
+
+.machine-card {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 4px;
+  border: 1px solid color-mix(in srgb, var(--segment-color, var(--status-info)) 16%, var(--border));
+  border-radius: 8px;
+  background: var(--surface);
+  background-clip: padding-box;
+  padding: 7px;
+  box-shadow: var(--shadow-sm);
+  transition:
+    box-shadow 160ms var(--ease-premium),
+    border-color 180ms var(--ease-premium),
+    background 180ms var(--ease-premium),
+    transform 160ms var(--ease-premium),
+    opacity 140ms var(--ease-premium),
+    filter 140ms var(--ease-premium);
+}
+
+.machine-card:hover {
+  border-color: color-mix(in srgb, var(--segment-color, var(--status-info)) 38%, var(--border-strong));
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.machine-card.details-open {
+  z-index: 3200;
+}
+
+.machine-card.move-menu-open {
+  z-index: 3200;
+}
+
+.machine-card.selected {
+  border-color: color-mix(in srgb, var(--segment-color, var(--status-info)) 72%, var(--border-strong));
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--segment-color, var(--status-info)) 10%, transparent), transparent 58%),
+    var(--surface);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--segment-color, var(--status-info)) 24%, transparent),
+    var(--shadow-md);
+}
+
+.machine-card.backup-card {
+  border-color: color-mix(in srgb, var(--status-warning) 48%, var(--border));
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--status-warning) 9%, transparent), transparent 58%),
+    var(--surface);
+}
+
+.machine-card.backup-card:hover {
+  border-color: color-mix(in srgb, var(--status-warning) 68%, var(--border-strong));
+}
+
+.machine-card.backup-card.backup-in-use {
+  border-color: color-mix(in srgb, #ea580c 56%, var(--border-strong));
+}
+
+.machine-card.dragging {
+  z-index: 12;
+  opacity: 0.58;
+  filter: saturate(0.96);
+  transform: none;
+  box-shadow: var(--shadow-sm);
+}
+
+.machine-card.drag-overlay {
+  cursor: grabbing;
+  pointer-events: none;
+  opacity: 0.99;
+  border-color: var(--border-strong);
+  box-shadow: 0 10px 22px rgba(10, 20, 30, 0.14);
+  transform: translateZ(0) scale(1.005);
+  will-change: transform;
+  transition: box-shadow 120ms var(--ease-premium), opacity 120ms var(--ease-premium);
+}
+
+.machine-card.drag-overlay .asset-drag-handle {
+  cursor: grabbing;
+}
+
+body.is-inventory-dragging .segment-machine-grid,
+body.is-inventory-dragging .machine-card,
+body.is-inventory-dragging .segment-card,
+body.is-inventory-dragging .segment-group-section {
+  transition: none !important;
+}
+
+body.is-inventory-dragging .machine-card,
+body.is-inventory-dragging .machine-card:hover,
+body.is-inventory-dragging .machine-card.dragging,
+body.is-inventory-dragging .segment-card:hover,
+body.is-inventory-dragging .segment-card.drop-over,
+body.is-inventory-dragging .segment-group-section.group-drop-over {
+  transform: none !important;
+}
+
+body.is-inventory-dragging .machine-card:not(.dragging) {
+  box-shadow: var(--shadow-sm);
+}
+
+body.is-inventory-dragging .machine-card.dragging {
+  opacity: 0.62;
+  border-style: dashed;
+}
+
+body.is-inventory-dragging .segment-card.drop-over,
+body.is-inventory-dragging .segment-group-section.group-drop-over {
+  box-shadow: var(--shadow-sm);
+}
+
+.asset-drag-compact-overlay {
+  --overlay-segment-color: var(--status-info);
+  max-width: min(360px, 72vw);
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid color-mix(in srgb, var(--overlay-segment-color) 38%, var(--border-strong));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 94%, var(--overlay-segment-color));
+  color: var(--text-strong);
+  padding: 7px 10px;
+  box-shadow: 0 8px 18px rgba(10, 20, 30, 0.13);
+  pointer-events: none;
+  will-change: transform;
+}
+
+.asset-drag-compact-icon {
+  width: 27px;
+  height: 27px;
+  border: 1px solid color-mix(in srgb, var(--overlay-segment-color) 46%, var(--border));
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  background: color-mix(in srgb, var(--overlay-segment-color) 13%, var(--surface));
+  color: color-mix(in srgb, var(--overlay-segment-color) 82%, var(--text-strong));
+}
+
+.asset-drag-compact-overlay strong {
+  min-width: 0;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.asset-drag-count {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--overlay-segment-color) 16%, var(--surface));
+  color: color-mix(in srgb, var(--overlay-segment-color) 82%, var(--text-strong));
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.asset-drag-check {
+  flex: 0 0 auto;
+  color: color-mix(in srgb, var(--overlay-segment-color) 82%, #0f8c67);
+}
+
+.selection-checkbox {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  z-index: 5;
+  width: 20px;
+  height: 20px;
+  border: 1px solid color-mix(in srgb, var(--segment-color, var(--status-info)) 30%, var(--border-strong));
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: color-mix(in srgb, var(--surface) 88%, var(--segment-color, var(--status-info)));
+  color: var(--surface);
+  cursor: pointer;
+  opacity: 0.72;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+  transition:
+    opacity 160ms var(--ease-premium),
+    background 180ms var(--ease-premium),
+    border-color 180ms var(--ease-premium),
+    box-shadow 180ms var(--ease-premium),
+    transform 180ms var(--ease-premium);
+}
+
+.selection-checkbox:hover,
+.machine-card:hover .selection-checkbox,
+.selection-checkbox.checked {
+  opacity: 1;
+}
+
+.selection-checkbox.checked {
+  border-color: color-mix(in srgb, var(--segment-color, var(--status-info)) 82%, var(--accent));
+  background: color-mix(in srgb, var(--segment-color, var(--status-info)) 78%, var(--accent));
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--segment-color, var(--status-info)) 28%, transparent);
+}
+
+.selection-checkbox:hover {
+  transform: translateY(-1px) scale(1.04);
+}
+
+.selection-checkbox + .machine-card-header {
+  padding-right: 24px;
+}
+
+.drag-selection-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 4;
+  border-radius: 999px;
+  padding: 5px 8px;
+  background: color-mix(in srgb, var(--segment-color, var(--status-info)) 84%, var(--slate-950));
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: 0 12px 24px color-mix(in srgb, var(--segment-color, var(--status-info)) 22%, transparent);
+}
+
+.machine-card-header {
+  padding-right: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.machine-card-header div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.machine-card-header strong {
+  color: var(--text-strong);
+  font-size: 12.5px;
+  font-weight: 800;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.asset-drag-handle {
+  width: 25px;
+  height: 25px;
+  border: 1px solid color-mix(in srgb, var(--segment-color, #1f7a61) 18%, var(--border));
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  background: color-mix(in srgb, var(--segment-color, #1f7a61) 8%, var(--surface));
+  color: color-mix(in srgb, var(--segment-color, #1f7a61) 76%, var(--text));
+  cursor: grab;
+  transition:
+    background 180ms var(--ease-premium),
+    border-color 180ms var(--ease-premium),
+    box-shadow 180ms var(--ease-premium),
+    transform 180ms var(--ease-premium);
+}
+
+.asset-drag-handle:hover {
+  border-color: color-mix(in srgb, var(--segment-color, #1f7a61) 60%, var(--border));
+  background: color-mix(in srgb, var(--segment-color, #1f7a61) 15%, var(--surface));
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--segment-color, #1f7a61) 22%, transparent);
+  transform: translateY(-1px) scale(1.04);
+}
+
+.asset-drag-handle:active {
+  cursor: grabbing;
+}
+
+.status-dot {
+  width: fit-content;
+  border: 0;
+  border-radius: 999px;
+  padding: 2px 7px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.status-action {
+  cursor: pointer;
+  transition:
+    box-shadow 180ms var(--ease-premium),
+    transform 180ms var(--ease-premium),
+    filter 180ms var(--ease-premium);
+}
+
+.status-action:hover:not(:disabled) {
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+  filter: saturate(1.08);
+}
+
+.status-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+.status-dot.online {
+  color: #047857;
+  background: #c9f4df;
+}
+
+.status-dot.offline,
+.status-dot.error {
+  color: var(--status-danger);
+  background: #ffd7d7;
+}
+
+.status-dot.unknown {
+  color: #b45309;
+  background: #ffedbd;
+}
+
+.machine-badge-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.asset-type-badge {
+  width: fit-content;
+  border: 1px solid color-mix(in srgb, var(--segment-color, var(--status-info)) 34%, var(--border));
+  border-radius: 999px;
+  padding: 2px 7px;
+  background: color-mix(in srgb, var(--segment-color, var(--status-info)) 15%, var(--surface-soft));
+  color: color-mix(in srgb, var(--segment-color, var(--status-info)) 74%, var(--text-strong));
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.25;
+}

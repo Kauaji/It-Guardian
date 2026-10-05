@@ -1,3 +1,4 @@
+/** @import { AutomationPlan } from "./preventiveTypes.js" */
 import { badRequest } from "../lib/errors.js";
 import { trimString } from "../lib/textUtils.js";
 
@@ -9,17 +10,31 @@ import { trimString } from "../lib/textUtils.js";
 const allowedStatuses = new Set(["prepared", "simulated", "completed", "failed", "cancelled"]);
 const highRiskLevels = new Set(["high", "critical"]);
 
+/**
+ * @param {unknown} value
+ * @param {string} [fallback]
+ */
 export function normalizePreventivePlanStatus(value, fallback = "prepared") {
   const status = String(value || "").trim().toLowerCase();
   return allowedStatuses.has(status) ? status : fallback;
 }
 
+/**
+ * @param {unknown} value
+ * @returns {string[]}
+ */
 function normalizeIdList(value) {
   return Array.isArray(value)
     ? [...new Set(value.map((id) => trimString(id, 120)).filter(Boolean))]
     : [];
 }
 
+/**
+ * Valida e normaliza o corpo de criacao de um plano preventivo manual.
+ *
+ * @param {Record<string, unknown>} [payload]
+ * @throws {import("../lib/errors.js").AppError} 400 sem nome (3+), maquinas ou scripts.
+ */
 export function normalizePreventivePlanPayload(payload = {}) {
   const name = trimString(payload.name, 120);
   const assetIds = normalizeIdList(payload.assetIds);
@@ -51,13 +66,21 @@ export function normalizePreventivePlanPayload(payload = {}) {
   };
 }
 
+/**
+ * @param {Array<{ riskLevel?: string, suggestedRiskLevel?: string }>} scripts
+ * @param {boolean} riskAcknowledged
+ * @throws {import("../lib/errors.js").AppError} 400 quando ha script de alto risco sem confirmacao.
+ */
 export function assertRiskAcknowledged(scripts, riskAcknowledged) {
-  const hasHighRiskScript = scripts.some((script) => highRiskLevels.has(script.riskLevel || script.suggestedRiskLevel));
+  const hasHighRiskScript = scripts.some((script) => highRiskLevels.has(String(script.riskLevel || script.suggestedRiskLevel)));
   if (hasHighRiskScript && !riskAcknowledged) {
     throw badRequest("Scripts de alto risco exigem confirmação extra antes de preparar a preventiva.");
   }
 }
 
+/**
+ * @param {(AutomationPlan & { overrideCount?: number, nextScheduledFor?: string, nextRunAt?: string, assetSchedules?: unknown[], notes?: string }) | null | undefined} automation
+ */
 export function summarizeAutomation(automation) {
   if (!automation) return { enabled: false };
   return {
@@ -85,6 +108,10 @@ export function summarizeAutomation(automation) {
   };
 }
 
+/**
+ * @param {{ assetId: string, scriptNames: string, automationEnabled: boolean }} input
+ * @returns {string}
+ */
 export function buildAssetRegistrationLog({ assetId, scriptNames, automationEnabled }) {
   return (
     `Preventiva registrada para ${assetId} com as verificações: ${scriptNames}. ` +
@@ -95,6 +122,9 @@ export function buildAssetRegistrationLog({ assetId, scriptNames, automationEnab
 }
 
 /** Payload do plano de automacao criado junto do plano preventivo (escopo = lista de maquinas). */
+/**
+ * @param {{ automationPayload?: Record<string, unknown>, planId: string, normalized: ReturnType<typeof normalizePreventivePlanPayload> }} input
+ */
 export function buildLinkedAutomationPayload({ automationPayload = {}, planId, normalized }) {
   return {
     ...automationPayload,
@@ -111,6 +141,9 @@ export function buildLinkedAutomationPayload({ automationPayload = {}, planId, n
 }
 
 /** Dados da OS preventiva gerada a partir do plano (nenhum comando e executado). */
+/**
+ * @param {{ plan: { id: string, name: string, assets?: Array<{ assetId?: string }>, scripts?: Array<{ scriptName?: string, name?: string }> }, user?: { name?: string } | null }} input
+ */
 export function buildServiceOrderDraft({ plan, user }) {
   const assetIds = (plan.assets || []).map((asset) => asset.assetId).filter(Boolean);
   const scriptNames = (plan.scripts || []).map((script) => script.scriptName || script.name).filter(Boolean);

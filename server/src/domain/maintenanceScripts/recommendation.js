@@ -6,6 +6,60 @@ import { normalizeRiskLevel } from "./scriptVocabulary.js";
  * sugestao de OS ou ativo. Modulo puro.
  */
 
+/**
+ * Contexto de um aviso/sugestao/ativo contra o qual os scripts sao pontuados.
+ * @typedef {object} RecommendationContext
+ * @property {string | null} [alertType]
+ * @property {string | null} [metric]
+ * @property {string | null} [category]
+ * @property {string | null} [technicalCategory]
+ * @property {string | null} [severity]
+ * @property {string | null} [priority]
+ * @property {string | null} [title]
+ * @property {string | null} [description]
+ * @property {string | null} [probableCause]
+ * @property {string | null} [recommendedAction]
+ * @property {string | null} [problemType]
+ * @property {string | null} [assetType]
+ * @property {string | null} [operatingSystem]
+ * @property {string | null} [segmentName]
+ * @property {string | null} [groupName]
+ * @property {unknown} [tags]
+ * @property {string | null} [assetId]
+ * @property {string | null} [alertId]
+ */
+
+/**
+ * Script de manutencao como o ranking o enxerga (campos de lista aceitam array, JSON ou CSV).
+ * @typedef {object} RecommendableScript
+ * @property {string} [id]
+ * @property {string} [name]
+ * @property {string} [description]
+ * @property {string} [category]
+ * @property {string} [alertType]
+ * @property {string} [problemType]
+ * @property {string} [estimatedSummary]
+ * @property {string} [riskLevel]
+ * @property {boolean} [active]
+ * @property {boolean} [requiresAdmin]
+ * @property {boolean} [requiresLoggedUser]
+ * @property {unknown} [relatedAlertTypes]
+ * @property {unknown} [relatedProblemTypes]
+ * @property {unknown} [recommendedForCategories]
+ * @property {unknown} [tags]
+ * @property {unknown} [supportedOperatingSystems]
+ * @property {unknown} [operatingSystems]
+ * @property {unknown[]} [supportedVariables]
+ */
+
+/**
+ * Script ja pontuado.
+ * @typedef {RecommendableScript & {
+ *   recommendationScore: number, recommendationReason: string, compatibilityWarnings: string[], isRecommended: boolean
+ * }} ScoredScript
+ */
+
+/** @param {RecommendationContext} [context] */
 function buildRecommendationContext(context = {}) {
   const tags = normalizeTokenList(context.tags);
   const technicalCategory = context.technicalCategory || inferTechnicalCategory(context);
@@ -47,6 +101,10 @@ function buildRecommendationContext(context = {}) {
   };
 }
 
+/**
+ * @param {RecommendationContext} [source]
+ * @returns {string} Categoria tecnica inferida do texto (ou a informada, ou "").
+ */
 export function inferTechnicalCategory(source = {}) {
   const text = normalizeComparableText([
     source.alertType,
@@ -69,6 +127,10 @@ export function inferTechnicalCategory(source = {}) {
   return source.technicalCategory || source.category || "";
 }
 
+/**
+ * @param {string[]} values
+ * @param {string[]} candidates
+ */
 function matchesContextValue(values, candidates) {
   return values.some((value) =>
     candidates.some((candidate) => candidate && (value === candidate || candidate.includes(value) || value.includes(candidate)))
@@ -89,6 +151,7 @@ const CONTEXT_KEYWORDS = [
 ];
 
 // Campos normalizados do script usados na comparacao com o contexto.
+/** @param {RecommendableScript} script */
 function profileScriptForScoring(script) {
   const relatedAlertTypes = normalizeTokenList(script.relatedAlertTypes);
   const relatedProblemTypes = normalizeTokenList(script.relatedProblemTypes);
@@ -111,7 +174,13 @@ function profileScriptForScoring(script) {
 }
 
 // Cada criterio compativel contribui com pontos e um motivo legivel, nesta ordem.
+/**
+ * @param {RecommendableScript} script
+ * @param {ReturnType<typeof buildRecommendationContext> & { normalizedText: string }} normalized
+ * @param {ReturnType<typeof profileScriptForScoring>} profile
+ */
 function collectScoreEntries(script, normalized, profile) {
+  /** @type {Array<{ points: number, reason: string }>} */
   const entries = [];
 
   if (
@@ -164,6 +233,10 @@ function collectScoreEntries(script, normalized, profile) {
 }
 
 // Script que declara sistemas operacionais suportados e nao inclui o do ativo e descartado.
+/**
+ * @param {RecommendableScript} script
+ * @param {{ operatingSystem: string }} normalized
+ */
 function isIncompatibleWithOperatingSystem(script, normalized) {
   const supportedSystems = normalizeTokenList(script.supportedOperatingSystems || script.operatingSystems);
   return Boolean(
@@ -173,10 +246,16 @@ function isIncompatibleWithOperatingSystem(script, normalized) {
   );
 }
 
+/** @param {RecommendableScript} script */
 function isElevatedRisk(script) {
   return ["high", "critical"].includes(normalizeRiskLevel(script.riskLevel, "medium"));
 }
 
+/**
+ * @param {RecommendableScript} [script]
+ * @param {RecommendationContext} [context]
+ * @returns {ScoredScript | null} null para script inativo ou incompativel com o SO do ativo.
+ */
 export function scoreMaintenanceScriptForContext(script = {}, context = {}) {
   if (!script || script.active === false) return null;
 
@@ -184,6 +263,7 @@ export function scoreMaintenanceScriptForContext(script = {}, context = {}) {
   const entries = collectScoreEntries(script, normalized, profileScriptForScoring(script));
   if (isIncompatibleWithOperatingSystem(script, normalized)) return null;
 
+  /** @type {string[]} */
   const compatibilityWarnings = [];
   let score = entries.reduce((total, entry) => total + entry.points, 0);
 
@@ -210,10 +290,15 @@ export function scoreMaintenanceScriptForContext(script = {}, context = {}) {
   };
 }
 
+/**
+ * @param {RecommendationContext} [context]
+ * @param {RecommendableScript[]} [scripts]
+ * @returns {{ recommended: ScoredScript[], others: ScoredScript[] }}
+ */
 export function recommendMaintenanceScripts(context = {}, scripts = []) {
   const scored = scripts
     .map((script) => scoreMaintenanceScriptForContext(script, context))
-    .filter(Boolean)
+    .filter((script) => script !== null)
     .sort((left, right) => {
       if (right.recommendationScore !== left.recommendationScore) {
         return right.recommendationScore - left.recommendationScore;
@@ -227,6 +312,7 @@ export function recommendMaintenanceScripts(context = {}, scripts = []) {
   };
 }
 
+/** @param {Partial<ScoredScript> & { matchedAssetIds?: string[], matchedAlertIds?: string[] }} script */
 export function toRecommendedScriptResponse(script) {
   return {
     id: script.id,
@@ -247,6 +333,11 @@ export function toRecommendedScriptResponse(script) {
 }
 
 /** Monta o contexto de recomendacao a partir de uma sugestao de OS e do aviso de origem. */
+/**
+ * @param {{ suggestedProblemTypeId?: string | null, title?: string, description?: string, suggestedPriority?: string, probableCause?: string, recommendedAction?: string, assetType?: string, operatingSystem?: string }} suggestion
+ * @param {{ type?: string, metric?: string, title?: string, description?: string, severity?: string } | null | undefined} alert
+ * @returns {RecommendationContext}
+ */
 export function buildSuggestionRecommendationContext(suggestion, alert) {
   return {
     alertType: alert?.type || suggestion.suggestedProblemTypeId || "",

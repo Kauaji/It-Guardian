@@ -1,0 +1,617 @@
+
+/* Floor-plan interaction layer: top-down symbols, marquee selection and bounded inspector. */
+.floor-plan-object-glyph {
+  pointer-events: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.floor-plan-object-hit-target {
+  cursor: grab;
+  fill: transparent;
+  pointer-events: all;
+  stroke: none;
+}
+
+.floor-plan-object:active .floor-plan-object-hit-target {
+  cursor: grabbing;
+}
+
+.floor-plan-object-glyph.fixture rect,
+.floor-plan-object-glyph.fixture path {
+  fill: rgba(255, 255, 255, 0.9);
+}
+
+.floor-plan-object-glyph.fixture circle {
+  fill: currentColor;
+}
+
+.floor-plan-object-glyph.fixture .floor-plan-tv-bezel {
+  fill: #475569;
+  stroke-width: 1.8;
+}
+
+.floor-plan-object-glyph.fixture .floor-plan-tv-screen {
+  fill: var(--slate-950);
+  stroke: var(--status-info);
+  stroke-width: 1.4;
+}
+
+.floor-plan-object-glyph.fixture .floor-plan-tv-stand {
+  fill: none;
+  stroke-width: 2;
+}
+
+.floor-plan-object-glyph.opening {
+  fill: none;
+  stroke-width: 3;
+}
+
+.floor-plan-object-selection-outline {
+  fill: none !important;
+  stroke: var(--status-info) !important;
+  stroke-width: 2.5 !important;
+  stroke-dasharray: 7 5;
+  vector-effect: non-scaling-stroke;
+}
+
+.floor-plan-object-label {
+  fill: #172033;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+  paint-order: stroke;
+  pointer-events: none;
+  stroke: rgba(255, 255, 255, 0.96);
+  stroke-linejoin: round;
+  stroke-width: 4px;
+}
+
+.floor-plan-marquee-selection {
+  fill: rgba(37, 99, 235, 0.14);
+  pointer-events: none;
+  stroke: var(--status-info);
+  stroke-dasharray: 7 5;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.floor-plan-object-resize-overlay.wall-endpoints circle {
+  cursor: crosshair;
+  fill: #ffffff;
+  stroke: var(--status-info);
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.floor-plan-editor-shell .floor-plan-editor-layout.editing .floor-plan-inspector {
+  bottom: 196px;
+  height: auto;
+  max-height: none;
+  overflow-x: hidden;
+  overflow-y: auto;
+  top: 10px;
+}
+
+.floor-plan-editor-shell .floor-plan-stage > .floor-plan-inspector {
+  bottom: 10px;
+  height: auto;
+  max-height: none;
+  position: absolute;
+  right: 10px;
+  top: 10px;
+}
+
+@media (max-width: 760px) {
+  .floor-plan-editor-shell .floor-plan-editor-layout.editing .floor-plan-inspector {
+    bottom: 190px;
+    max-height: none;
+    top: 76px;
+  }
+
+
+  .floor-plan-editor-shell .floor-plan-stage > .floor-plan-inspector {
+    bottom: 8px;
+    left: 8px;
+    max-height: none;
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    width: auto;
+  }
+}
+
+/* Floor plan operations desk: editor chrome around the existing SVG/Three.js engines. */
+.floor-plan-editor-shell {
+  --plan-border: #dce5ef;
+  --plan-ink: #172033;
+  --plan-muted: #66748b;
+  --plan-green: #197a61;
+  background: #f4f7fa;
+  border: 1px solid var(--plan-border);
+  border-radius: 8px;
+  overflow: clip;
+}
+
+.floor-plan-editor-topbar {
+  align-items: center;
+  border: 0;
+  border-bottom: 1px solid var(--plan-border);
+  border-radius: 0;
+  box-shadow: 0 5px 18px rgba(23, 32, 51, 0.06);
+  display: grid;
+  grid-template-columns: minmax(210px, 0.9fr) auto minmax(470px, 1.35fr);
+  min-height: 62px;
+  padding: 8px 12px;
+  top: 0;
+}
+
+.floor-plan-editor-identity {
+  align-items: center;
+  display: flex;
+}
+
+.floor-plan-editor-identity > div {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
+.floor-plan-editor-identity strong {
+  font-size: 0.95rem;
+  max-width: 170px;
+}
+
+.floor-plan-floor-selector {
+  align-items: center;
+  color: var(--plan-muted);
+  display: inline-flex;
+  font-size: 0.68rem;
+  font-weight: 800;
+  gap: 5px;
+  text-transform: uppercase;
+}
+
+.floor-plan-floor-selector select {
+  background: transparent;
+  border: 0;
+  color: var(--plan-ink);
+  font: inherit;
+  max-width: 110px;
+  text-transform: none;
+}
+
+.floor-plan-editor-center-actions,
+.floor-plan-editor-actions,
+.floor-plan-top-tools {
+  align-items: center;
+  display: flex;
+}
+
+.floor-plan-editor-actions {
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.floor-plan-top-tools {
+  background: #f7f9fc;
+  border: 1px solid var(--plan-border);
+  border-radius: 8px;
+  gap: 2px;
+  padding: 3px;
+}
+
+.floor-plan-top-tools button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: #506079;
+  cursor: pointer;
+  display: inline-flex;
+  height: 32px;
+  justify-content: center;
+  width: 32px;
+}
+
+.floor-plan-top-tools button:hover,
+.floor-plan-top-tools button.active {
+  background: #e8f4f0;
+  color: var(--plan-green);
+}
+
+.floor-plan-share-action {
+  background: #6d49d8 !important;
+  border-color: #6d49d8 !important;
+  color: #fff !important;
+}
+
+.floor-plan-editor-layout {
+  align-items: stretch;
+  gap: 0;
+  grid-template-columns: 214px minmax(0, 1fr) 286px;
+  min-height: calc(100dvh - 126px);
+}
+
+.floor-plan-brush-panel,
+.floor-plan-canvas-panel,
+.floor-plan-inspector {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.floor-plan-brush-panel {
+  background: #fbfcfe;
+  border-right: 1px solid var(--plan-border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 12px;
+}
+
+.floor-plan-brush-panel > header {
+  align-items: center;
+  color: #364157;
+  display: flex;
+  font-size: 0.72rem;
+  justify-content: space-between;
+  text-transform: uppercase;
+}
+
+.floor-plan-brush-panel > header span {
+  align-items: center;
+  border: 1px solid #b8c6d8;
+  border-radius: 50%;
+  display: inline-flex;
+  font-size: 0.65rem;
+  height: 18px;
+  justify-content: center;
+  width: 18px;
+}
+
+.floor-plan-brush-card {
+  background: var(--surface);
+  border: 1px solid var(--plan-border);
+  border-radius: 8px;
+  color: var(--plan-ink);
+  cursor: pointer;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 32px 1fr;
+  padding: 12px;
+  text-align: left;
+}
+
+.floor-plan-brush-card.group {
+  background: #fbf9ff;
+  border-color: #d9ccfa;
+}
+
+.floor-plan-brush-card.segment {
+  background: #f7fdf9;
+  border-color: #c8ead6;
+}
+
+.floor-plan-brush-card.active {
+  box-shadow: 0 0 0 2px rgba(25, 122, 97, 0.14);
+}
+
+.floor-plan-brush-card:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+
+.floor-plan-brush-icon {
+  align-items: center;
+  background: #7450df;
+  border-radius: 7px;
+  color: #fff;
+  display: inline-flex;
+  height: 32px;
+  justify-content: center;
+  width: 32px;
+}
+
+.floor-plan-brush-card.segment .floor-plan-brush-icon {
+  background: #63bb7b;
+}
+
+.floor-plan-brush-copy {
+  display: grid;
+  gap: 7px;
+}
+
+.floor-plan-brush-copy strong {
+  color: inherit;
+  font-size: 0.88rem;
+}
+
+.floor-plan-brush-copy small,
+.floor-plan-brush-lock {
+  color: var(--plan-muted);
+  font-size: 0.72rem;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.floor-plan-brush-status,
+.floor-plan-brush-lock {
+  align-items: center;
+  display: flex;
+  gap: 7px;
+  grid-column: 1 / -1;
+}
+
+.floor-plan-brush-status i {
+  background: #7450df;
+  border-radius: 3px;
+  display: inline-block;
+  height: 17px;
+  width: 17px;
+}
+
+.floor-plan-brush-tip {
+  align-items: flex-start;
+  background: var(--slate-50);
+  border: 1px solid var(--plan-border);
+  border-radius: 8px;
+  color: #4c5a70;
+  display: grid;
+  font-size: 0.73rem;
+  gap: 8px;
+  grid-template-columns: auto 1fr;
+  line-height: 1.45;
+  margin-top: auto;
+  padding: 11px;
+}
+
+.floor-plan-canvas-panel {
+  background: #eef3f7;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+}
+
+.floor-plan-stage {
+  min-height: 510px;
+  position: relative;
+}
+
+.floor-plan-stage > .floor-plan-canvas-wrap,
+.floor-plan-stage > .floor-plan-scene-shell {
+  height: 100%;
+  min-height: 510px;
+}
+
+.floor-plan-dimensions-badge {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--plan-border);
+  border-radius: 6px;
+  color: var(--plan-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  left: 10px;
+  padding: 5px 8px;
+  position: absolute;
+  top: 10px;
+  z-index: 4;
+}
+
+.floor-plan-canvas-wrap,
+.floor-plan-scene-3d {
+  border-radius: 7px;
+}
+
+.floor-plan-canvas-wrap.no-grid,
+.floor-plan-canvas-wrap.no-grid .floor-plan-canvas {
+  background-image: none;
+}
+
+.floor-plan-preview-card {
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid var(--plan-border);
+  border-radius: 8px;
+  bottom: 12px;
+  box-shadow: 0 12px 28px rgba(23, 32, 51, 0.16);
+  overflow: hidden;
+  position: absolute;
+  right: 12px;
+  width: min(36%, 340px);
+  z-index: 5;
+}
+
+.floor-plan-preview-card header,
+.floor-plan-preview-card footer {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 8px;
+}
+
+.floor-plan-preview-card header strong {
+  color: #364157;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+}
+
+.floor-plan-preview-viewport,
+.floor-plan-preview-viewport .floor-plan-scene-shell,
+.floor-plan-preview-viewport .floor-plan-scene-3d,
+.floor-plan-preview-viewport canvas {
+  height: 150px !important;
+  min-height: 150px !important;
+}
+
+.floor-plan-preview-card footer {
+  justify-content: flex-end;
+}
+
+.floor-plan-quick-actions {
+  bottom: 12px;
+  display: grid;
+  gap: 7px;
+  left: 12px;
+  position: absolute;
+  width: 128px;
+  z-index: 5;
+}
+
+.floor-plan-quick-actions button {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid var(--plan-border);
+  border-radius: 7px;
+  color: #45546b;
+  cursor: pointer;
+  display: flex;
+  font-size: 0.68rem;
+  font-weight: 800;
+  gap: 7px;
+  min-height: 34px;
+  padding: 6px 9px;
+  text-align: left;
+}
+
+.floor-plan-quick-actions button.active,
+.floor-plan-quick-actions button:hover {
+  border-color: #80c7b1;
+  color: var(--plan-green);
+}
+
+.floor-plan-catalog {
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid var(--plan-border);
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(23, 32, 51, 0.08);
+  max-height: 184px;
+  overflow: hidden;
+  padding: 7px;
+  position: sticky;
+}
+
+.floor-plan-catalog-items,
+.room-catalog-grid {
+  align-items: stretch;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+}
+
+.floor-plan-catalog-items button {
+  flex: 0 0 100px;
+  min-height: 86px;
+}
+
+.floor-plan-inspector {
+  background: #fbfcfe;
+  border-left: 1px solid var(--plan-border);
+  border-radius: 0;
+  max-height: calc(100dvh - 126px);
+  padding: 12px;
+  top: 62px;
+}
+
+.floor-plan-inspector header > span {
+  font-size: 0.82rem;
+  text-transform: uppercase;
+}
+
+.floor-plan-inspector label {
+  font-size: 0.68rem;
+  gap: 5px;
+}
+
+.floor-plan-inspector input,
+.floor-plan-inspector select {
+  border-radius: 7px;
+  min-height: 36px;
+}
+
+@media (max-width: 1320px) {
+  .floor-plan-editor-topbar {
+    grid-template-columns: minmax(190px, 0.8fr) auto minmax(390px, 1.2fr);
+  }
+
+  .floor-plan-share-action,
+  .floor-plan-save-action {
+    font-size: 0;
+    min-width: 38px;
+    padding-inline: 10px;
+  }
+
+  .floor-plan-editor-layout {
+    grid-template-columns: 190px minmax(0, 1fr) 258px;
+  }
+}
+
+@media (max-width: 1060px) {
+  .floor-plan-editor-topbar {
+    grid-template-columns: minmax(180px, 1fr) auto;
+  }
+
+  .floor-plan-editor-center-actions {
+    display: none;
+  }
+
+  .floor-plan-editor-layout {
+    grid-template-columns: 170px minmax(0, 1fr);
+  }
+
+  .floor-plan-inspector {
+    border-left: 0;
+    border-top: 1px solid var(--plan-border);
+    grid-column: 1 / -1;
+  }
+
+  .floor-plan-preview-card {
+    width: 300px;
+  }
+}
+
+@media (max-width: 760px) {
+  .floor-plan-editor-topbar {
+    display: flex;
+    position: sticky;
+  }
+
+  .floor-plan-editor-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .floor-plan-editor-layout {
+    display: block;
+  }
+
+  .floor-plan-brush-panel {
+    border-bottom: 1px solid var(--plan-border);
+    border-right: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .floor-plan-brush-panel > header,
+  .floor-plan-brush-tip {
+    grid-column: 1 / -1;
+  }
+
+  .floor-plan-stage,
+  .floor-plan-stage > .floor-plan-canvas-wrap,
+  .floor-plan-stage > .floor-plan-scene-shell {
+    min-height: 420px;
+  }
+
+  .floor-plan-preview-card {
+    display: none;
+  }
+
+  .floor-plan-quick-actions {
+    bottom: 8px;
+    left: 8px;
+  }
+}

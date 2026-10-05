@@ -11,6 +11,11 @@ import { maxLengths, normalizeRiskLevel, normalizeScriptType } from "./scriptVoc
  * antes de qualquer gravacao. Modulo puro.
  */
 
+/**
+ * @param {Record<string, unknown>} [payload] Corpo da requisicao.
+ * @param {Record<string, unknown>} [current] Script existente (edicao parcial).
+ * @throws {import("../../lib/errors.js").AppError} 400 para nome curto, conteudo vazio/perigoso ou variaveis nao permitidas.
+ */
 export function normalizeScriptPayload(payload = {}, current = {}) {
   const name = trimString(payload.name ?? current.name, maxLengths.name);
   const content = String(payload.content ?? current.content ?? "").slice(0, maxLengths.content);

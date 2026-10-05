@@ -28,7 +28,9 @@ O runbook detalhado esta em
 ## Fronteiras principais
 
 - O backend e a fonte da verdade para autenticacao, permissoes, inventario, OS, alertas, preventivas, automacoes e preferencias.
-- Componentes React exibem estado e chamam funcoes de `client/src/api.js`.
+- Componentes React exibem estado e chamam funcoes de `client/src/api.js`, um barril
+  sobre `client/src/api/*.js` (um modulo por dominio: `devices.js`, `serviceOrders.js`, `alerts.js` etc.).
+  Funcoes novas entram no modulo do dominio, nunca no barril.
 - A persistencia local nao substitui dados de negocio.
 - Scripts de manutencao sao cadastrados e analisados, mas nunca executados pelo servidor ou navegador.
 
@@ -66,10 +68,15 @@ O runbook detalhado esta em
 `npm run check:architecture` bloqueia ciclos entre modulos locais e o uso de
 primitivas de execucao de comandos no servidor.
 
+`npm run typecheck` roda `tsc --noEmit` (JSDoc estrito) sobre um escopo crescente de arquivos;
+estrategia e lista em [`TIPAGEM.md`](TIPAGEM.md). `npm run check:bundle` aplica o orcamento de bundle
+([`PERFORMANCE-FRONTEND.md`](PERFORMANCE-FRONTEND.md)).
+
 ## Divida tecnica priorizada
 
 1. Dividir `AlertCenterV2.jsx` por Sugestoes, Preventivas, Configuracoes e detalhes.
 2. Reduzir `App.jsx` movendo hidratacao de dominios para hooks especificos.
-3. Separar `styles.css` por dominio sem alterar a cascata.
+3. ~~Separar `styles.css` por dominio sem alterar a cascata.~~ Feito: `client/src/styles/*.css`
+   (39 arquivos, ordem em `styles/index.css`); `node scripts/verify-css-split.mjs` prova a equivalencia byte a byte com o arquivo original (prova do corte, nao entra em `npm run check`).
 4. Converter o bootstrap legado em migracoes historicas versionadas.
 5. Ampliar testes de API e PostgreSQL real na CI.

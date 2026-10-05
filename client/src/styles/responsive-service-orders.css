@@ -1,0 +1,166 @@
+
+@media (max-width: 1020px) {
+  .service-order-kanban.layout-vertical {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 840px) {
+  .service-order-status-row {
+    grid-template-columns: 16px minmax(0, 1fr) 46px;
+  }
+
+  .service-order-status-row label,
+  .service-order-status-row-actions {
+    grid-column: 2 / -1;
+  }
+}
+
+@media print {
+  body {
+    background: var(--surface);
+  }
+
+  @page {
+    size: 50mm 30mm;
+    margin: 0;
+  }
+
+  .sidebar,
+  .topbar,
+  .machine-tabs,
+  .asset-modal-header .icon-button,
+  .print-action,
+  .modal-backdrop:not(.asset-modal-backdrop) {
+    display: none !important;
+  }
+
+  .app-shell,
+  .asset-public-page {
+    display: block;
+  }
+
+  .workspace {
+    padding: 0;
+  }
+
+  .asset-modal-backdrop {
+    position: static;
+    padding: 0;
+    background: var(--surface);
+  }
+
+  .asset-modal,
+  .asset-public-card {
+    width: 100%;
+    max-height: none;
+    box-shadow: none;
+    border: 0;
+  }
+
+  .asset-modal-body {
+    overflow: visible;
+  }
+
+  body.qr-print-mode {
+    width: auto !important;
+    min-height: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    background: var(--surface) !important;
+  }
+
+  body.qr-print-mode #root {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  body.qr-print-mode .zebra-label-print-view {
+    position: static;
+    z-index: 9999;
+    width: var(--label-width, 50mm);
+    height: var(--label-height, 30mm);
+    min-height: var(--label-height, 30mm);
+    display: grid !important;
+    place-items: center;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+    background: var(--surface);
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  body.qr-print-mode .zebra-qr-label {
+    width: var(--label-width, 50mm);
+    height: var(--label-height, 30mm);
+    display: grid;
+    grid-template-columns: var(--label-qr-size, 18mm) 1fr;
+    align-items: center;
+    gap: 2mm;
+    padding: var(--label-padding, 2mm);
+    color: var(--slate-950);
+    background: var(--surface);
+    text-align: left;
+    overflow: hidden;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  body.qr-print-mode .zebra-qr-label img {
+    width: var(--label-qr-size, 18mm);
+    height: var(--label-qr-size, 18mm);
+    display: block;
+    flex: 0 0 auto;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  body.qr-print-mode .zebra-qr-label h1 {
+    max-width: 100%;
+    margin: 0 0 1.2mm;
+    color: var(--slate-950);
+    font: 800 8.5px/1.08 Arial, sans-serif;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  body.qr-print-mode .zebra-qr-label p {
+    max-width: 100%;
+    margin: 0;
+    color: var(--slate-900);
+    font: 700 7.3px/1.18 Arial, sans-serif;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  body.qr-print-mode.bulk-qr-print-mode {
+    overflow: visible !important;
+  }
+
+  body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view {
+    display: block !important;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label {
+    page-break-after: always;
+    break-after: page;
+  }
+
+body.qr-print-mode.bulk-qr-print-mode .bulk-label-print-view .zebra-qr-label:last-child {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+}

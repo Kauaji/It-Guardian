@@ -5,16 +5,28 @@ import { monitorEventLoopDelay } from "node:perf_hooks";
 
 const LATENCY_BUCKETS = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10];
 
+/** @typedef {Record<string, string | number | boolean>} Labels */
+
+/** @param {Labels} labels */
 function labelKey(labels) {
   return Object.keys(labels).sort().map((key) => `${key}="${String(labels[key]).replace(/[\\"\n]/g, "_")}"`).join(",");
 }
 
 class Counter {
+  /**
+   * @param {string} name
+   * @param {string} help
+   */
   constructor(name, help) {
     this.name = name;
     this.help = help;
+    /** @type {Map<string, number>} */
     this.values = new Map();
   }
+  /**
+   * @param {Labels} [labels]
+   * @param {number} [amount]
+   */
   inc(labels = {}, amount = 1) {
     const key = labelKey(labels);
     this.values.set(key, (this.values.get(key) || 0) + amount);
@@ -27,12 +39,22 @@ class Counter {
 }
 
 class Histogram {
+  /**
+   * @param {string} name
+   * @param {string} help
+   * @param {number[]} [buckets]
+   */
   constructor(name, help, buckets = LATENCY_BUCKETS) {
     this.name = name;
     this.help = help;
     this.buckets = buckets;
+    /** @type {Map<string, { counts: number[], sum: number, count: number }>} */
     this.series = new Map();
   }
+  /**
+   * @param {Labels} labels
+   * @param {number} seconds
+   */
   observe(labels, seconds) {
     const key = labelKey(labels);
     let entry = this.series.get(key);
@@ -61,22 +83,43 @@ class Histogram {
   }
 }
 
+/** @typedef {number | Record<string, number>} GaugeReading */
+/** @typedef {{ name: string, help: string, read: () => GaugeReading, labelName: string | null }} GaugeProvider */
+
+/** @type {Array<Counter | Histogram>} */
 const collectors = [];
+/** @type {GaugeProvider[]} */
 const gaugeProviders = [];
 
+/**
+ * @param {string} name
+ * @param {string} help
+ */
 export function counter(name, help) {
   const metric = new Counter(name, help);
   collectors.push(metric);
   return metric;
 }
 
+/**
+ * @param {string} name
+ * @param {string} help
+ * @param {number[]} [buckets]
+ */
 export function histogram(name, help, buckets) {
   const metric = new Histogram(name, help, buckets);
   collectors.push(metric);
   return metric;
 }
 
-/** `read` devolve um numero ou um objeto { labelValue: numero } para varias series. */
+/**
+ * `read` devolve um numero ou um objeto { labelValue: numero } para varias series.
+ *
+ * @param {string} name
+ * @param {string} help
+ * @param {() => GaugeReading} read
+ * @param {string | null} [labelName]
+ */
 export function gauge(name, help, read, labelName = null) {
   gaugeProviders.push({ name, help, read, labelName });
 }
@@ -96,8 +139,10 @@ gauge("itguardian_process_resident_memory_bytes", "Memoria residente.", () => pr
 gauge("itguardian_nodejs_heap_used_bytes", "Heap usado.", () => process.memoryUsage().heapUsed);
 gauge("itguardian_nodejs_eventloop_lag_p99_seconds", "Atraso p99 do event loop.", () => loopDelay.percentile(99) / 1e9);
 
+/** @param {GaugeProvider} provider */
 function renderGauge({ name, help, read, labelName }) {
   const lines = [`# HELP ${name} ${help}`, `# TYPE ${name} gauge`];
+  /** @type {GaugeReading} */
   let value;
   try {
     value = read();

@@ -5,6 +5,10 @@
  */
 
 /** Limite de silencio, em segundos, configurado por ambiente (padrao 10 minutos). */
+/**
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {number}
+ */
 export function resolveOfflineThresholdSeconds(env = process.env) {
   return env.AGENT_OFFLINE_AFTER_SECONDS
     ? Number(env.AGENT_OFFLINE_AFTER_SECONDS)
@@ -14,6 +18,20 @@ export function resolveOfflineThresholdSeconds(env = process.env) {
 /**
  * A maquina ficou em silencio por mais que o maior entre o limite configurado e
  * tres vezes o intervalo de heartbeat (o anterior, ou o do payload recebido).
+ */
+/**
+ * @typedef {object} PreviousAgentState
+ * @property {number | string | null} [intervalSeconds]
+ * @property {string | Date} lastSeenAt
+ */
+
+/**
+ * @param {object} input
+ * @param {PreviousAgentState | null | undefined} input.previous Ultimo estado conhecido (ausente = primeiro contato).
+ * @param {number | string | null | undefined} input.payloadIntervalSeconds
+ * @param {number} input.configuredThresholdSeconds
+ * @param {number} [input.now]
+ * @returns {boolean}
  */
 export function wasAgentStale({ previous, payloadIntervalSeconds, configuredThresholdSeconds, now = Date.now() }) {
   if (!previous) return false;
@@ -27,6 +45,15 @@ export function wasAgentStale({ previous, payloadIntervalSeconds, configuredThre
 /**
  * Evento de historico do ativo para este heartbeat: "agent_enrolled" na
  * primeira vez, "agent_reconnected" apos inatividade e null caso contrario.
+ */
+/**
+ * @param {object} input
+ * @param {PreviousAgentState | null | undefined} input.previous
+ * @param {{ intervalSeconds?: number | string | null, hostname?: string, agentVersion?: string }} input.payload
+ * @param {string | number | null | undefined} input.enrollmentId
+ * @param {NodeJS.ProcessEnv} [input.env]
+ * @param {number} [input.now]
+ * @returns {{ eventType: string, message: string, newValue: string } | null}
  */
 export function resolveAgentConnectionEvent({ previous, payload, enrollmentId, env = process.env, now = Date.now() }) {
   const stale = wasAgentStale({
