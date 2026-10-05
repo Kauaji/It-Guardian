@@ -3,9 +3,11 @@ import userEvent from "@testing-library/user-event";
 import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as api from "./api.js";
+import * as identity from "./api/identityApi.js";
 import App from "./App.jsx";
 
 vi.mock("./api.js");
+vi.mock("./api/identityApi.js");
 
 const { stub } = vi.hoisted(() => ({
   stub: (testId) => async () => {
@@ -91,7 +93,7 @@ describe("History API real", () => {
 
   it("deslogado e redirecionado para /login e volta ao destino apos entrar", async () => {
     api.fetchAuthSession.mockRejectedValue(new Error("401"));
-    api.login.mockResolvedValue({ token: "tok", user: { id: "u1", name: "Ana", role: "admin" } });
+    identity.login.mockResolvedValue({ token: "tok", user: { id: "u1", name: "Ana", role: "admin" } });
     window.history.replaceState(null, "", "/avisos");
     const user = userEvent.setup();
     render(

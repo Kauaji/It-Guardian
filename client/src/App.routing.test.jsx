@@ -3,9 +3,11 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as api from "./api.js";
+import * as identity from "./api/identityApi.js";
 import App from "./App.jsx";
 
 vi.mock("./api.js");
+vi.mock("./api/identityApi.js");
 
 // As visoes pesadas viram stubs que identificam a tela.
 const { stub, stubWithProp } = vi.hoisted(() => ({
@@ -83,7 +85,7 @@ beforeEach(() => {
 describe("roteamento: usuario deslogado", () => {
   it("vai para /login e, apos entrar, volta ao destino pedido", async () => {
     mockServer({ user: null });
-    api.login.mockResolvedValue({ token: "tok", user: admin });
+    identity.login.mockResolvedValue({ token: "tok", user: admin });
     const user = userEvent.setup();
     renderApp("/ordens-de-servico");
 
@@ -98,7 +100,7 @@ describe("roteamento: usuario deslogado", () => {
 
   it("preserva busca e hash do destino pedido", async () => {
     mockServer({ user: null });
-    api.login.mockResolvedValue({ token: "tok", user: admin });
+    identity.login.mockResolvedValue({ token: "tok", user: admin });
     const user = userEvent.setup();
     renderApp("/agenda?dia=2026-10-01#manha");
 
@@ -109,7 +111,7 @@ describe("roteamento: usuario deslogado", () => {
 
   it("entra no dashboard quando nao havia destino especifico", async () => {
     mockServer({ user: null });
-    api.login.mockResolvedValue({ token: "tok", user: admin });
+    identity.login.mockResolvedValue({ token: "tok", user: admin });
     const user = userEvent.setup();
     renderApp("/");
     await user.click(await screen.findByRole("button", { name: "Acessar painel" }));
@@ -269,7 +271,7 @@ describe("roteamento: app autenticado", () => {
     await screen.findByRole("button", { name: "Acessar painel" });
     expect(router.location.pathname).toBe("/login");
     expect(router.location.state.from.pathname).toBe("/pecas");
-    expect(await screen.findByText("Sessao expirada. Faca login novamente.")).toBeInTheDocument();
+    expect(await screen.findByText("Sua sessão expirou. Entre novamente.")).toBeInTheDocument();
   });
 
   it("carrega os dados ao abrir e permite atualizar pelo botao da topbar", async () => {

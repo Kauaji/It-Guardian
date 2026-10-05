@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAppSession } from "../../context/AppSessionContext.jsx";
-import { BLOCKED_VIEW_ID, DEFAULT_VIEW_ID, pathForView, viewIdFromPath } from "../routes.js";
+import { ACCOUNT_VIEW_ID, BLOCKED_VIEW_ID, DEFAULT_VIEW_ID, pathForView, viewIdFromPath } from "../routes.js";
 
 const OPEN_INVENTORY_BOARD_EVENT = "it-guardian:open-inventory-board";
 
@@ -23,9 +23,11 @@ export function useWorkspaceNavigation(access) {
 
   const requestedView = viewIdFromPath(location.pathname);
   const effectiveRequested = requestedView || DEFAULT_VIEW_ID;
-  const activeView = permittedViewIds.includes(effectiveRequested)
-    ? effectiveRequested
-    : permittedViewIds[0] || BLOCKED_VIEW_ID;
+  // A pagina da conta nao depende de permissao: vale para qualquer logado.
+  const activeView =
+    requestedView === ACCOUNT_VIEW_ID || permittedViewIds.includes(effectiveRequested)
+      ? effectiveRequested
+      : permittedViewIds[0] || BLOCKED_VIEW_ID;
 
   useEffect(() => {
     if (!requestedView || activeView === BLOCKED_VIEW_ID || activeView === requestedView) return;

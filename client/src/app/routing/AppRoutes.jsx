@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import AccountGate from "../../components/auth/AccountGate.jsx";
 import AuthScreen from "../../components/auth/AuthScreen.jsx";
 import Toast from "../../components/ui/Toast.jsx";
 import { AppSessionProvider } from "../../context/AppSessionContext.jsx";
@@ -47,7 +48,9 @@ export default function AppRoutes({ session }) {
           element={
             authenticated ? (
               <AppSessionProvider value={appSession}>
-                <AuthenticatedApp />
+                <AccountGate>
+                  <AuthenticatedApp />
+                </AccountGate>
               </AppSessionProvider>
             ) : (
               <Navigate to={LOGIN_PATH} replace state={signOutRequested.current ? null : { from: location }} />

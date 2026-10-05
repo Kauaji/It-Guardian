@@ -1,4 +1,5 @@
 import { matchPath } from "react-router-dom";
+import { ACCOUNT_SECURITY_LABEL, ACCOUNT_SECURITY_PATH, ACCOUNT_VIEW_ID } from "../auth/accountRoutes.js";
 
 // Tabela unica das visoes de nivel superior do app autenticado. O `id` e o
 // mesmo identificador usado internamente (useDashboardData, ViewErrorBoundary)
@@ -18,7 +19,12 @@ export const viewRoutes = [
   { id: "inventory", label: "Inventário de Ativos", paths: ["/inventario", "/plantas/*"] }
 ];
 
+// Rotas da conta (ex.: /conta/seguranca): sempre permitidas para quem esta
+// logado, por isso ficam fora de `viewRoutes` (que depende de permissao).
+export { ACCOUNT_SECURITY_PATH, ACCOUNT_VIEW_ID };
+
 export function viewIdFromPath(pathname) {
+  if (matchPath({ path: ACCOUNT_SECURITY_PATH, end: true }, pathname)) return ACCOUNT_VIEW_ID;
   const route = viewRoutes.find((item) =>
     item.paths.some((path) => matchPath({ path, end: true }, pathname))
   );
@@ -26,11 +32,13 @@ export function viewIdFromPath(pathname) {
 }
 
 export function pathForView(viewId) {
+  if (viewId === ACCOUNT_VIEW_ID) return ACCOUNT_SECURITY_PATH;
   const route = viewRoutes.find((item) => item.id === viewId);
   return route ? route.paths[0] : viewRoutes[0].paths[0];
 }
 
 export function labelForView(viewId) {
+  if (viewId === ACCOUNT_VIEW_ID) return ACCOUNT_SECURITY_LABEL;
   return viewRoutes.find((item) => item.id === viewId)?.label || "";
 }
 
