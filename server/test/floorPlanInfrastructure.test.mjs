@@ -5,7 +5,7 @@ import { useTestDatabase } from "../test-support/database.mjs";
 await useTestDatabase();
 process.env.NODE_ENV = "test";
 
-const { validateFloorPlanBackground } = await import("../src/repositories/floorPlanRepository.js");
+const { validateFloorPlanBackground } = await import("../src/domain/floorPlans/floorPlanBackground.js");
 
 test("floor plan background accepts only authentic supported image signatures", () => {
   const png = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 0]);
