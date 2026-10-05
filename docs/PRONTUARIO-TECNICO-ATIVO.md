@@ -60,7 +60,7 @@ Duas pecas complementares:
    mapa(s) de rede", com o nome de cada mapa - consulta direta em
    `network_topology_nodes`/`network_topology_links` (nao depende de
    evento historico, entao cobre vinculos criados antes desta rodada).
-2. **Historico daqui pra frente**: `networkTopologyRepository.js` passa a
+2. **Historico daqui pra frente**: `services/networkTopology/*` (antes `networkTopologyRepository.js`) passa a
    gravar em `asset_history` quando um no/conexao envolvendo o ativo e
    criado ou removido (`network_topology_node_added/removed`,
    `network_topology_link_created/removed`) - mesmo padrao ja usado por OS
