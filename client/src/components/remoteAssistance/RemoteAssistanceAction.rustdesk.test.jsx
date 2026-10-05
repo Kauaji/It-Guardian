@@ -61,8 +61,8 @@ describe("transporte RustDesk", () => {
     await startRustdesk({ status: "waiting_consent" });
     const dialog = screen.getByRole("dialog");
     expect(dialog).toHaveTextContent("Transporte: RustDesk (cliente nativo)");
-    expect(dialog).toHaveTextContent("Aguardando resposta na maquina");
-    expect(dialog).toHaveTextContent("A credencial de conexao so e emitida apos o usuario autorizar localmente.");
+    expect(dialog).toHaveTextContent("Aguardando resposta na máquina");
+    expect(dialog).toHaveTextContent("A credencial de conexão só é emitida após o usuário autorizar localmente.");
     expect(screen.queryByRole("button", { name: /Revelar senha/ })).not.toBeInTheDocument();
     await advance(3000);
     expect(api.fetchRemoteAssistanceRustdeskCredentials).not.toHaveBeenCalled();
@@ -76,7 +76,7 @@ describe("transporte RustDesk", () => {
     expect(screen.queryByLabelText("Tela remota")).not.toBeInTheDocument();
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
     expect(dialog).not.toHaveTextContent("FPS real");
-    expect(dialog).not.toHaveTextContent("unico monitor");
+    expect(dialog).not.toHaveTextContent("único monitor");
     expect(screen.getByRole("button", { name: /Encerrar/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Fechar chat/ })).toBeInTheDocument();
   });
@@ -84,14 +84,14 @@ describe("transporte RustDesk", () => {
   it("ativa: pede o id da maquina e so revela a senha sob demanda", async () => {
     await startRustdesk({ status: "active" });
     const dialog = screen.getByRole("dialog");
-    expect(dialog).toHaveTextContent("Id RustDesk desta maquina");
-    expect(dialog).toHaveTextContent("Nao relatado ainda pelo agente");
+    expect(dialog).toHaveTextContent("Id RustDesk desta máquina");
+    expect(dialog).toHaveTextContent("Não relatado ainda pelo agente");
     expect(dialog).not.toHaveTextContent(SECRET);
     expect(screen.queryByRole("link", { name: /Abrir no cliente RustDesk/ })).not.toBeInTheDocument();
     expect(dialog).toHaveTextContent("A senha nunca vai por link: cole-a manualmente no cliente RustDesk.");
 
     api.fetchRemoteAssistanceRustdeskCredentials.mockResolvedValue(credentials());
-    await click(screen.getByRole("button", { name: /Revelar senha de conexao/ }));
+    await click(screen.getByRole("button", { name: /Revelar senha de conexão/ }));
 
     expect(api.fetchRemoteAssistanceRustdeskCredentials).toHaveBeenCalledTimes(1);
     expect(api.fetchRemoteAssistanceRustdeskCredentials).toHaveBeenCalledWith({
@@ -101,8 +101,8 @@ describe("transporte RustDesk", () => {
     });
     expect(dialog).toHaveTextContent("123 456 789");
     expect(dialog).toHaveTextContent(SECRET);
-    expect(dialog).toHaveTextContent("Senha desta sessao (expira em 30s)");
-    expect(screen.queryByRole("button", { name: /Revelar senha de conexao/ })).not.toBeInTheDocument();
+    expect(dialog).toHaveTextContent("Senha desta sessão (expira em 30s)");
+    expect(screen.queryByRole("button", { name: /Revelar senha de conexão/ })).not.toBeInTheDocument();
 
     // O link rustdesk:// leva so o id; a senha nunca vai em URL.
     const link = screen.getByRole("link", { name: /Abrir no cliente RustDesk/ });
@@ -120,7 +120,7 @@ describe("transporte RustDesk", () => {
   it("copia id e senha para a area de transferencia e avisa", async () => {
     const { notify } = await startRustdesk({ status: "active" });
     api.fetchRemoteAssistanceRustdeskCredentials.mockResolvedValue(credentials());
-    await click(screen.getByRole("button", { name: /Revelar senha de conexao/ }));
+    await click(screen.getByRole("button", { name: /Revelar senha de conexão/ }));
 
     await click(screen.getByTitle("Copiar id"));
     expect(writeText).toHaveBeenLastCalledWith("123 456 789");
@@ -134,11 +134,11 @@ describe("transporte RustDesk", () => {
   it("falha ao copiar orienta copiar manualmente, sem expor a senha", async () => {
     await startRustdesk({ status: "active" });
     api.fetchRemoteAssistanceRustdeskCredentials.mockResolvedValue(credentials());
-    await click(screen.getByRole("button", { name: /Revelar senha de conexao/ }));
+    await click(screen.getByRole("button", { name: /Revelar senha de conexão/ }));
     writeText.mockRejectedValue(new Error("negado"));
     await click(screen.getByTitle("Copiar senha"));
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Nao foi possivel copiar senha automaticamente. Copie manualmente."
+      "Não foi possível copiar senha automaticamente. Copie manualmente."
     );
     expect(screen.getByRole("alert")).not.toHaveTextContent(SECRET);
   });
@@ -146,7 +146,7 @@ describe("transporte RustDesk", () => {
   it("copiar funciona sem a funcao notify", async () => {
     await startRustdesk({ status: "active" });
     api.fetchRemoteAssistanceRustdeskCredentials.mockResolvedValue(credentials());
-    await click(screen.getByRole("button", { name: /Revelar senha de conexao/ }));
+    await click(screen.getByRole("button", { name: /Revelar senha de conexão/ }));
     await click(screen.getByTitle("Copiar id"));
     expect(writeText).toHaveBeenCalled();
   });
@@ -154,7 +154,7 @@ describe("transporte RustDesk", () => {
   it("a senha expira sozinha e permite gerar outra", async () => {
     await startRustdesk({ status: "active" });
     api.fetchRemoteAssistanceRustdeskCredentials.mockResolvedValue(credentials({ expiresAt: new Date(Date.now() + 3000).toISOString() }));
-    await click(screen.getByRole("button", { name: /Revelar senha de conexao/ }));
+    await click(screen.getByRole("button", { name: /Revelar senha de conexão/ }));
     expect(screen.getByRole("dialog")).toHaveTextContent(SECRET);
 
     await advance(4000);
@@ -162,7 +162,7 @@ describe("transporte RustDesk", () => {
     expect(dialog).not.toHaveTextContent(SECRET);
     expect(dialog).toHaveTextContent("123 456 789");
     api.fetchRemoteAssistanceRustdeskCredentials.mockResolvedValue(credentials({ password: "outra-senha" }));
-    await click(screen.getByRole("button", { name: /Gerar nova senha de sessao/ }));
+    await click(screen.getByRole("button", { name: /Gerar nova senha de sessão/ }));
     expect(api.fetchRemoteAssistanceRustdeskCredentials).toHaveBeenCalledTimes(2);
     expect(dialog).toHaveTextContent("outra-senha");
   });
@@ -170,29 +170,29 @@ describe("transporte RustDesk", () => {
   it("credenciais sem expiracao nao iniciam contagem", async () => {
     await startRustdesk({ status: "active" });
     api.fetchRemoteAssistanceRustdeskCredentials.mockResolvedValue({ rustdeskId: "1", password: SECRET });
-    await click(screen.getByRole("button", { name: /Revelar senha de conexao/ }));
-    expect(screen.getByRole("dialog")).toHaveTextContent("Senha desta sessao (expira em s)");
+    await click(screen.getByRole("button", { name: /Revelar senha de conexão/ }));
+    expect(screen.getByRole("dialog")).toHaveTextContent("Senha desta sessão (expira em s)");
   });
 
   it("erro ao revelar mostra o alerta e nao deixa credencial na tela", async () => {
     await startRustdesk({ status: "active" });
     api.fetchRemoteAssistanceRustdeskCredentials.mockRejectedValue(new Error("Sem credencial disponivel"));
-    await click(screen.getByRole("button", { name: /Revelar senha de conexao/ }));
+    await click(screen.getByRole("button", { name: /Revelar senha de conexão/ }));
     expect(screen.getByRole("alert")).toHaveTextContent("Sem credencial disponivel");
-    expect(screen.getByRole("button", { name: /Revelar senha de conexao/ })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /Revelar senha de conexão/ })).toBeEnabled();
   });
 
   it("desabilita o botao enquanto a credencial esta sendo buscada", async () => {
     await startRustdesk({ status: "active" });
     api.fetchRemoteAssistanceRustdeskCredentials.mockReturnValue(new Promise(() => {}));
-    await click(screen.getByRole("button", { name: /Revelar senha de conexao/ }));
-    expect(screen.getByRole("button", { name: /Revelar senha de conexao/ })).toBeDisabled();
+    await click(screen.getByRole("button", { name: /Revelar senha de conexão/ }));
+    expect(screen.getByRole("button", { name: /Revelar senha de conexão/ })).toBeDisabled();
   });
 
   it("encerrar oculta as credenciais da tela", async () => {
     await startRustdesk({ status: "active" });
     api.fetchRemoteAssistanceRustdeskCredentials.mockResolvedValue(credentials());
-    await click(screen.getByRole("button", { name: /Revelar senha de conexao/ }));
+    await click(screen.getByRole("button", { name: /Revelar senha de conexão/ }));
     expect(screen.getByRole("dialog")).toHaveTextContent(SECRET);
 
     await click(screen.getByRole("button", { name: /Encerrar/ }));
@@ -204,7 +204,7 @@ describe("transporte RustDesk", () => {
   it("nunca persiste credenciais em storage nem as escreve no console", async () => {
     await startRustdesk({ status: "active" });
     api.fetchRemoteAssistanceRustdeskCredentials.mockResolvedValue(credentials());
-    await click(screen.getByRole("button", { name: /Revelar senha de conexao/ }));
+    await click(screen.getByRole("button", { name: /Revelar senha de conexão/ }));
     await click(screen.getByTitle("Copiar senha"));
     await advance(5000);
     await click(screen.getByRole("button", { name: /Encerrar/ }));
@@ -222,7 +222,7 @@ describe("transporte RustDesk", () => {
   it("fechar o dialogo descarta as credenciais reveladas", async () => {
     await startRustdesk({ status: "active" });
     api.fetchRemoteAssistanceRustdeskCredentials.mockResolvedValue(credentials());
-    await click(screen.getByRole("button", { name: /Revelar senha de conexao/ }));
+    await click(screen.getByRole("button", { name: /Revelar senha de conexão/ }));
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
     await click(screen.getByTitle("Fechar"));
     confirm.mockRestore();

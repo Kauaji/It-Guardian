@@ -3,10 +3,10 @@ import { isRemoteAssistanceFrameStale, isRemoteAssistanceTerminal } from "../rem
 // Valores derivados (puros) do estado do atendimento remoto.
 
 export function getUnavailableTitle({ frontendEnabled, canView, canStart, eligible, config }) {
-  if (!frontendEnabled) return "Atendimento remoto nao habilitado";
-  if (!canView || !canStart) return "Sem permissao para atendimento remoto";
+  if (!frontendEnabled) return "Atendimento remoto não habilitado";
+  if (!canView || !canStart) return "Sem permissão para atendimento remoto";
   if (!eligible) return "Agente offline ou sem contato recente";
-  if (config?.enabled === false) return "Atendimento remoto indisponivel";
+  if (config?.enabled === false) return "Atendimento remoto indisponível";
   return "Verificando atendimento remoto";
 }
 
@@ -24,7 +24,7 @@ export function getMonitorState(session) {
 }
 
 // O controle so esta ativo com a opcao de front ligada, sessao ativa, controle
-// liberado no agente, consentimento do usuario local e modo "control" pedido.
+// liberado no agente, consentimento do usuário local e modo "control" pedido.
 export function isControlActive({ frontendControlEnabled, session, requestedMode }) {
   return Boolean(
     frontendControlEnabled &&

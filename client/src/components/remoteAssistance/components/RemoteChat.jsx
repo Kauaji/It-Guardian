@@ -5,7 +5,7 @@ function ChatBubble({ message }) {
   return (
     <p className={`chat-bubble chat-${message.sender}`}>
       <span className="chat-bubble-meta">
-        {message.sender === "technician" ? "Voce" : (message.senderName || "Usuario local")}
+        {message.sender === "technician" ? "Você" : (message.senderName || "Usuário local")}
         {" - "}
         {formatChatTime(message.createdAt)}
       </span>
@@ -40,8 +40,8 @@ function ChatForm({ chat, active }) {
 
 export default function RemoteChat({ chat, canChat, session }) {
   return (
-    <section className="remote-assistance-chat" aria-label="Chat com o usuario local">
-      <h3><MessageCircle size={16} /> Chat com o usuario local</h3>
+    <section className="remote-assistance-chat" aria-label="Chat com o usuário local">
+      <h3><MessageCircle size={16} /> Chat com o usuário local</h3>
       <div className="remote-assistance-chat-log" ref={chat.logRef}>
         {chat.messages.map((message) => (
           <ChatBubble key={message.id} message={message} />
@@ -51,7 +51,7 @@ export default function RemoteChat({ chat, canChat, session }) {
       {canChat ? (
         <ChatForm chat={chat} active={session.status === "active"} />
       ) : (
-        <p className="remote-assistance-chat-empty">Voce nao tem permissao para enviar mensagens.</p>
+        <p className="remote-assistance-chat-empty">Você não tem permissão para enviar mensagens.</p>
       )}
     </section>
   );

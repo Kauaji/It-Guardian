@@ -61,7 +61,7 @@ describe("visibilidade do gatilho", () => {
     await renderAction(Action, { compact: true, user: { id: "x", role: "viewer", effectivePermissions: [] } });
     expect(screen.getByRole("button", { name: "Atendimento remoto" })).toHaveAttribute(
       "title",
-      "Sem permissao para atendimento remoto"
+      "Sem permissão para atendimento remoto"
     );
     cleanup();
 
@@ -69,7 +69,7 @@ describe("visibilidade do gatilho", () => {
     await renderAction(Action, { compact: true });
     expect(screen.getByRole("button", { name: "Atendimento remoto" })).toHaveAttribute(
       "title",
-      "Atendimento remoto indisponivel"
+      "Atendimento remoto indisponível"
     );
     cleanup();
 
@@ -86,7 +86,7 @@ describe("visibilidade do gatilho", () => {
     await renderAction(Action, { compact: true });
     expect(screen.getByRole("button", { name: "Atendimento remoto" })).toHaveAttribute(
       "title",
-      "Atendimento remoto nao habilitado"
+      "Atendimento remoto não habilitado"
     );
     expect(api.fetchRemoteAssistanceConfig).not.toHaveBeenCalled();
   });
@@ -106,7 +106,7 @@ describe("visibilidade do gatilho", () => {
     cleanup();
 
     await renderAction(Action, { serviceOrder: { id: "os-1", number: "OS-7" } });
-    expect(screen.getByRole("button", { name: "Acessar maquina" })).toHaveAttribute("title", "Acessar maquina");
+    expect(screen.getByRole("button", { name: "Acessar máquina" })).toHaveAttribute("title", "Acessar máquina");
   });
 
   it("no modo compacto o clique nao propaga para o cartao", async () => {
@@ -126,7 +126,7 @@ describe("formulario de reautenticacao", () => {
   it("mostra resumo da maquina, motivo, permissao somente visualizar e aviso de seguranca", async () => {
     await renderAction(Action, { serviceOrder: { id: "os-1", number: "OS-7" } });
     await openDialog();
-    const dialog = screen.getByRole("dialog", { name: "Assistencia remota" });
+    const dialog = screen.getByRole("dialog", { name: "Assistência remota" });
     expect(dialog).toHaveAttribute("aria-modal", "true");
     expect(within(dialog).getByRole("heading", { name: "lab-01" })).toBeInTheDocument();
     expect(dialog).toHaveTextContent("LAB-01 - 10.0.0.5");
@@ -136,8 +136,8 @@ describe("formulario de reautenticacao", () => {
     expect(dialog).toHaveTextContent("Vinculado a OS OS-7");
     expect(within(dialog).getByRole("radio", { name: /Somente visualizar/ })).toBeChecked();
     expect(within(dialog).queryByRole("radio", { name: /Solicitar mouse e teclado/ })).not.toBeInTheDocument();
-    expect(dialog).toHaveTextContent("O usuario precisa autorizar localmente");
-    expect(dialog).toHaveTextContent("Modo privacidade e acoes administrativas permanecem indisponiveis nesta fase.");
+    expect(dialog).toHaveTextContent("O usuário precisa autorizar localmente");
+    expect(dialog).toHaveTextContent("Modo privacidade e ações administrativas permanecem indisponíveis nesta fase.");
     expect(document.body.style.overflow).toBe("hidden");
   });
 
@@ -146,10 +146,10 @@ describe("formulario de reautenticacao", () => {
     await renderAction(Action, { asset: sparse });
     await openDialog();
     const dialog = screen.getByRole("dialog");
-    expect(dialog).toHaveTextContent("sem-info - IP nao informado");
-    expect(dialog).toHaveTextContent("Nao informado");
+    expect(dialog).toHaveTextContent("sem-info - IP não informado");
+    expect(dialog).toHaveTextContent("Não informado");
     expect(dialog).toHaveTextContent("Ativo");
-    expect(dialog).toHaveTextContent("Nao coletado");
+    expect(dialog).toHaveTextContent("Não coletado");
   });
 
   it("oferece mouse e teclado apenas com o controle habilitado no front, backend e permissao", async () => {
@@ -225,19 +225,19 @@ describe("fluxo feliz do transporte nativo", () => {
       requestedMode: "view",
       reauthenticationToken: "reauth-1"
     });
-    expect(notify).toHaveBeenCalledWith("Solicitacao enviada ao usuario da maquina.", "ok");
+    expect(notify).toHaveBeenCalledWith("Solicitação enviada ao usuário da máquina.", "ok");
 
     // Aguardando consentimento.
     const dialog = screen.getByRole("dialog");
-    expect(dialog).toHaveTextContent("Aguardando autorizacao local");
-    expect(dialog).toHaveTextContent("Aguardando resposta na maquina.");
+    expect(dialog).toHaveTextContent("Aguardando autorização local");
+    expect(dialog).toHaveTextContent("Aguardando resposta na máquina.");
     expect(dialog).toHaveTextContent("Transporte: Snapshot seguro (HTTP)");
     expect(dialog).toHaveTextContent("Nenhum evento recebido ainda.");
     expect(screen.queryByRole("button", { name: /Pausar/ })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Encerrar/ })).toBeEnabled();
     expect(api.fetchRemoteAssistanceFrame).not.toHaveBeenCalled();
 
-    // Usuario local autoriza; a sessao passa a ativa no proximo poll.
+    // Usuário local autoriza; a sessao passa a ativa no proximo poll.
     server.session = {
       ...server.session,
       status: "active",
@@ -250,14 +250,14 @@ describe("fluxo feliz do transporte nativo", () => {
     await advance(1300);
 
     expect(dialog).toHaveTextContent("Atendimento em andamento");
-    expect(dialog).toHaveTextContent("Tela 1 - 1920x1080 - Principal (unico monitor)");
+    expect(dialog).toHaveTextContent("Tela 1 - 1920x1080 - Principal (único monitor)");
     expect(dialog).toHaveTextContent("Consentimento concedido");
     expect(dialog).toHaveTextContent("FPS real: 4.5");
     expect(dialog).toHaveTextContent("Banda: 2.0 KB/s");
     expect(dialog).toHaveTextContent("Qualidade: 70%");
-    expect(dialog).toHaveTextContent("Ultimo quadro: 1.5 KB");
+    expect(dialog).toHaveTextContent("Último quadro: 1.5 KB");
     expect(dialog).toHaveTextContent("Controle: inativo");
-    expect(dialog).toHaveTextContent(/Latencia HTTP: \d+ ms/);
+    expect(dialog).toHaveTextContent(/Latência HTTP: \d+ ms/);
     const image = within(dialog).getByAltText("Tela remota de lab-01");
     expect(image).toHaveAttribute("src", "data:image/jpeg;base64,AAAA");
     expect(image).toHaveAttribute("draggable", "false");
@@ -287,8 +287,8 @@ describe("fluxo feliz do transporte nativo", () => {
       viewerToken: "viewer-1",
       paused: true
     });
-    expect(screen.getByRole("button", { name: /Retomar/ })).toHaveAttribute("title", "Retomar visualizacao");
-    expect(dialog).toHaveTextContent("Visualizacao pausada");
+    expect(screen.getByRole("button", { name: /Retomar/ })).toHaveAttribute("title", "Retomar visualização");
+    expect(dialog).toHaveTextContent("Visualização pausada");
     const framesWhilePaused = api.fetchRemoteAssistanceFrame.mock.calls.length;
     await advance(3000);
     expect(api.fetchRemoteAssistanceFrame.mock.calls.length).toBe(framesWhilePaused);
@@ -299,8 +299,8 @@ describe("fluxo feliz do transporte nativo", () => {
     });
     await advance(0);
     expect(api.updateRemoteAssistanceCapture).toHaveBeenLastCalledWith(expect.objectContaining({ paused: false }));
-    expect(screen.getByRole("button", { name: /Pausar/ })).toHaveAttribute("title", "Pausar visualizacao");
-    expect(dialog).not.toHaveTextContent("Visualizacao pausada");
+    expect(screen.getByRole("button", { name: /Pausar/ })).toHaveAttribute("title", "Pausar visualização");
+    expect(dialog).not.toHaveTextContent("Visualização pausada");
     expect(api.fetchRemoteAssistanceFrame.mock.calls.length).toBeGreaterThan(framesWhilePaused);
 
     // Encerrar.

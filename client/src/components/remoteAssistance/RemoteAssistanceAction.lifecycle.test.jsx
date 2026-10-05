@@ -49,7 +49,7 @@ describe("recusa, expiracao e queda", () => {
     const dialog = await startAndGetDialog();
     server.session = { ...server.session, status: "consent_denied" };
     await advance(1300);
-    expect(dialog).toHaveTextContent("Autorizacao negada");
+    expect(dialog).toHaveTextContent("Autorização negada");
     expect(screen.queryByRole("button", { name: /Encerrar/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Reconectar/ })).not.toBeInTheDocument();
     expect(dialog.querySelector(".remote-assistance-status")).toHaveClass("status-consent_denied");
@@ -63,13 +63,13 @@ describe("recusa, expiracao e queda", () => {
     const dialog = await startAndGetDialog();
     server.session = { ...server.session, status: "expired" };
     await advance(1300);
-    expect(dialog).toHaveTextContent("Sessao expirada");
+    expect(dialog).toHaveTextContent("Sessão expirada");
     cleanup();
 
     server.session = makeFailed();
     const second = await startAndGetDialog();
     await advance(1300);
-    expect(second).toHaveTextContent("Falha na sessao");
+    expect(second).toHaveTextContent("Falha na sessão");
   });
 
   function makeFailed() {
@@ -90,10 +90,10 @@ describe("recusa, expiracao e queda", () => {
     expect(dialog).toHaveTextContent("Sem quadros recentes - reconectando");
     expect(dialog.querySelector(".remote-assistance-status")).toHaveClass("status-reconnecting");
     expect(dialog).toHaveTextContent("Quadro atrasado - tentando atualizar...");
-    expect(dialog).toHaveTextContent("A imagem aparecera quando o agente iniciar a transmissao.");
+    expect(dialog).toHaveTextContent("A imagem aparecerá quando o agente iniciar a transmissão.");
 
     const reconnect = screen.getByRole("button", { name: /Reconectar/ });
-    expect(reconnect).toHaveAttribute("title", "Forcar nova tentativa de conexao");
+    expect(reconnect).toHaveAttribute("title", "Forçar nova tentativa de conexão");
     const before = api.fetchRemoteAssistanceFrame.mock.calls.length;
     await act(async () => {
       fireEvent.click(reconnect);

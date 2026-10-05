@@ -21,7 +21,7 @@ export default function RemoteMonitorPicker({ session, monitors, changingMonitor
   if (monitors.length === 1) {
     return (
       <span className="remote-assistance-single-monitor">
-        {formatRemoteMonitor(monitors[0], 0)} (unico monitor)
+        {formatRemoteMonitor(monitors[0], 0)} (único monitor)
       </span>
     );
   }

@@ -12,10 +12,10 @@ export default function RemoteFooterMetrics({ session, isRustdesk, metrics, late
       {!isRustdesk && (
         <>
           <span>FPS real: {metrics?.fps ? metrics.fps.toFixed(1) : "--"}</span>
-          <span>Latencia HTTP: {latency == null ? "--" : `${latency} ms`}</span>
+          <span>Latência HTTP: {latency == null ? "--" : `${latency} ms`}</span>
           <span>Banda: {metrics ? formatBytesPerSecond(metrics.bytesPerSecond) : "--"}</span>
           <span>Qualidade: {metrics?.quality ? `${metrics.quality}%` : "--"}</span>
-          <span>Ultimo quadro: {metrics?.lastFrameBytes ? formatFrameSize(metrics.lastFrameBytes) : "--"}</span>
+          <span>Último quadro: {metrics?.lastFrameBytes ? formatFrameSize(metrics.lastFrameBytes) : "--"}</span>
           <span>Controle: {controlActive ? "ativo" : "inativo"}</span>
         </>
       )}

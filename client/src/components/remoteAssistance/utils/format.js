@@ -1,7 +1,7 @@
 export function formatDateTime(value) {
-  if (!value) return "Nao informado";
+  if (!value) return "Não informado";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Nao informado";
+  if (Number.isNaN(date.getTime())) return "Não informado";
   return new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
     month: "2-digit",

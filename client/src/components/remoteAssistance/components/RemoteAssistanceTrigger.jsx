@@ -12,11 +12,11 @@ export default function RemoteAssistanceTrigger({ compact, serviceOrder, visible
         if (!visible) return;
         onOpen();
       }}
-      title={visible ? (serviceOrder ? "Acessar maquina" : "Atendimento remoto") : unavailableTitle}
-      aria-label={serviceOrder ? "Acessar maquina" : "Atendimento remoto"}
+      title={visible ? (serviceOrder ? "Acessar máquina" : "Atendimento remoto") : unavailableTitle}
+      aria-label={serviceOrder ? "Acessar máquina" : "Atendimento remoto"}
     >
       <MonitorUp size={15} />
-      {!compact && (serviceOrder ? "Acessar maquina" : "Atendimento remoto")}
+      {!compact && (serviceOrder ? "Acessar máquina" : "Atendimento remoto")}
     </button>
   );
 }

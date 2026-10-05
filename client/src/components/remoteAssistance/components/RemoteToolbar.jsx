@@ -20,7 +20,7 @@ function ControlButton({ session, submitting, onToggle }) {
       className={`secondary-action ${session.remoteControlEnabled ? "active" : ""}`}
       onClick={onToggle}
       disabled={submitting || !session.controlConsentGranted}
-      title={!session.controlConsentGranted ? "O usuario nao autorizou controle" : undefined}
+      title={!session.controlConsentGranted ? "O usuário não autorizou controle" : undefined}
     >
       <MousePointer2 size={16} />
       {session.remoteControlEnabled ? "Liberar controle" : "Solicitar controle"}
@@ -54,7 +54,7 @@ function NativeViewerActions({ view, control, actions }) {
           className="secondary-action"
           onClick={actions.onTogglePause}
           disabled={submitting || terminal}
-          title={paused ? "Retomar visualizacao" : "Pausar visualizacao"}
+          title={paused ? "Retomar visualização" : "Pausar visualização"}
         >
           {paused ? <Play size={16} /> : <Pause size={16} />}
           {paused ? "Retomar" : "Pausar"}
@@ -66,7 +66,7 @@ function NativeViewerActions({ view, control, actions }) {
           className="secondary-action"
           onClick={actions.onReconnect}
           disabled={submitting}
-          title="Forcar nova tentativa de conexao"
+          title="Forçar nova tentativa de conexão"
         >
           <RefreshCw size={16} /> Reconectar
         </button>
@@ -110,7 +110,7 @@ export default function RemoteToolbar({ view, control, chatOpen, actions }) {
         type="button"
         className="secondary-action"
         onClick={actions.onToggleChat}
-        title={chatOpen ? "Fechar o chat com o usuario local" : "Abrir o chat com o usuario local"}
+        title={chatOpen ? "Fechar o chat com o usuário local" : "Abrir o chat com o usuário local"}
       >
         <MessageCircle size={16} />
         {chatOpen ? "Fechar chat" : "Abrir chat"}

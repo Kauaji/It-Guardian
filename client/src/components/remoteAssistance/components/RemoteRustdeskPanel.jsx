@@ -5,7 +5,7 @@ import RemoteWaitingState from "./RemoteWaitingState.jsx";
 function RustdeskId({ credentials, onCopy }) {
   return (
     <div className="remote-assistance-rustdesk-id">
-      <span className="label">Id RustDesk desta maquina</span>
+      <span className="label">Id RustDesk desta máquina</span>
       {credentials?.rustdeskId ? (
         <span className="value">
           {credentials.rustdeskId}
@@ -14,7 +14,7 @@ function RustdeskId({ credentials, onCopy }) {
           </button>
         </span>
       ) : (
-        <span className="value muted">Nao relatado ainda pelo agente</span>
+        <span className="value muted">Não relatado ainda pelo agente</span>
       )}
     </div>
   );
@@ -23,7 +23,7 @@ function RustdeskId({ credentials, onCopy }) {
 function RustdeskPassword({ credentials, secondsLeft, onCopy }) {
   return (
     <div className="remote-assistance-rustdesk-password">
-      <span className="label">Senha desta sessao (expira em {secondsLeft}s)</span>
+      <span className="label">Senha desta sessão (expira em {secondsLeft}s)</span>
       <span className="value">
         {credentials.password}
         <button type="button" className="icon-action" onClick={() => onCopy(credentials.password, "Senha")} title="Copiar senha">
@@ -51,8 +51,8 @@ export default function RemoteRustdeskPanel({ session, credentials, revealing, e
   return (
     <div className="remote-assistance-rustdesk-panel">
       {session.status === "waiting_consent" ? (
-        <RemoteWaitingState icon={<RefreshCw size={24} className="spin" />} title="Aguardando resposta na maquina">
-          A credencial de conexao so e emitida apos o usuario autorizar localmente.
+        <RemoteWaitingState icon={<RefreshCw size={24} className="spin" />} title="Aguardando resposta na máquina">
+          A credencial de conexão só é emitida após o usuário autorizar localmente.
         </RemoteWaitingState>
       ) : (
         <>
@@ -61,7 +61,7 @@ export default function RemoteRustdeskPanel({ session, credentials, revealing, e
           {!credentials || expired ? (
             <button type="button" className="primary-action" onClick={onReveal} disabled={revealing}>
               {revealing ? <RefreshCw size={16} className="spin" /> : <KeyRound size={16} />}
-              {expired ? "Gerar nova senha de sessao" : "Revelar senha de conexao"}
+              {expired ? "Gerar nova senha de sessão" : "Revelar senha de conexão"}
             </button>
           ) : (
             <RustdeskPassword credentials={credentials} secondsLeft={secondsLeft} onCopy={onCopy} />
@@ -82,8 +82,8 @@ export default function RemoteRustdeskPanel({ session, credentials, revealing, e
             <AlertTriangle size={16} />
             <p>
               A senha nunca vai por link: cole-a manualmente no cliente RustDesk. Ela expira sozinha e
-              nao pode ser reaproveitada. A partir da conexao no cliente nativo, esta janela deixa de
-              acompanhar a tela ou os comandos da sessao -- encerre por aqui quando o atendimento terminar.
+              não pode ser reaproveitada. A partir da conexão no cliente nativo, esta janela deixa de
+              acompanhar a tela ou os comandos da sessão -- encerre por aqui quando o atendimento terminar.
             </p>
           </div>
         </>

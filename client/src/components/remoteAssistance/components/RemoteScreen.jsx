@@ -18,7 +18,7 @@ function ScreenContent({ view, screen }) {
         />
         {!trackActive && (
           <RemoteWaitingState icon={<RefreshCw size={24} className="spin" />} title={remoteAssistanceStatusLabel(connectionState)}>
-            Negociando conexao WebRTC com o agente...
+            Negociando conexão WebRTC com o agente...
           </RemoteWaitingState>
         )}
       </>
@@ -30,7 +30,7 @@ function ScreenContent({ view, screen }) {
       icon={session.status === "active" ? <RefreshCw size={24} className="spin" /> : <ShieldCheck size={28} />}
       title={remoteAssistanceStatusLabel(connectionState)}
     >
-      {session.status === "waiting_consent" ? "Aguardando resposta na maquina." : "A imagem aparecera quando o agente iniciar a transmissao."}
+      {session.status === "waiting_consent" ? "Aguardando resposta na máquina." : "A imagem aparecerá quando o agente iniciar a transmissão."}
     </RemoteWaitingState>
   );
 }
@@ -49,7 +49,7 @@ export default function RemoteScreen({ view, screen, control, screenRef }) {
     >
       <ScreenContent view={view} screen={screen} />
       {changingMonitor && <span className="remote-assistance-loading">Trocando monitor...</span>}
-      {paused && !changingMonitor && <span className="remote-assistance-loading">Visualizacao pausada</span>}
+      {paused && !changingMonitor && <span className="remote-assistance-loading">Visualização pausada</span>}
       {!isWebrtc && frameStale && !changingMonitor && !paused && (
         <span className="remote-assistance-loading">Quadro atrasado - tentando atualizar...</span>
       )}

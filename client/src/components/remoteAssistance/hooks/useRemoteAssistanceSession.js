@@ -85,7 +85,7 @@ export function useRemoteAssistanceSession({ open, token, notify }) {
         onFinished?.();
         setSession(result.session);
         setViewerToken(result.viewerToken);
-        notifyResult(notify, "Solicitacao enviada ao usuario da maquina.");
+        notifyResult(notify, "Solicitação enviada ao usuário da máquina.");
       } catch (startError) {
         onFinished?.();
         setError(startError.message);

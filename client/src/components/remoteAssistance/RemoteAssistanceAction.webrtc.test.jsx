@@ -97,7 +97,7 @@ describe("transporte WebRTC", () => {
       sdp: "offer-sdp"
     });
     expect(dialog).toHaveTextContent("Transporte: WebRTC");
-    expect(dialog).toHaveTextContent("Negociando conexao WebRTC com o agente...");
+    expect(dialog).toHaveTextContent("Negociando conexão WebRTC com o agente...");
     expect(dialog.querySelector("video")).toHaveStyle({ display: "none" });
     expect(dialog.querySelector("img")).toBeNull();
 
@@ -126,7 +126,7 @@ describe("transporte WebRTC", () => {
     expect(video).toHaveStyle({ display: "block" });
     expect(video.srcObject).toBe(stream);
     expect(video.muted).toBe(true);
-    expect(dialog).not.toHaveTextContent("Negociando conexao WebRTC");
+    expect(dialog).not.toHaveTextContent("Negociando conexão WebRTC");
   });
 
   it("espera a coleta de candidatos ICE terminar antes de enviar a oferta", async () => {

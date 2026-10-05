@@ -96,13 +96,13 @@ test("Inventario abre o fluxo visual seguro de assistencia remota", async ({ pag
 
   await remoteButton.click();
 
-  const remoteDialog = page.getByRole("dialog", { name: "Assistencia remota" });
+  const remoteDialog = page.getByRole("dialog", { name: "Assistência remota" });
   await expect(remoteDialog).toBeVisible();
   await expect(remoteDialog.getByRole("heading", { name: "Notebook remoto E2E" })).toBeVisible();
   await expect(remoteDialog.getByLabel("Motivo do atendimento")).toBeVisible();
   await expect(remoteDialog.getByLabel("Confirme sua senha")).toBeVisible();
-  await expect(remoteDialog).toContainText("O usuario precisa autorizar localmente");
-  await expect(remoteDialog).toContainText("Modo privacidade e acoes administrativas permanecem indisponiveis");
+  await expect(remoteDialog).toContainText("O usuário precisa autorizar localmente");
+  await expect(remoteDialog).toContainText("Modo privacidade e ações administrativas permanecem indisponíveis");
 });
 
 test("sessao ativa mostra metricas, pausa a visualizacao e reconecta pelo viewer", async ({ page }) => {
@@ -118,7 +118,7 @@ test("sessao ativa mostra metricas, pausa a visualizacao e reconecta pelo viewer
   await expect(remoteButton).toBeEnabled({ timeout: 10_000 });
   await remoteButton.click();
 
-  const remoteDialog = page.getByRole("dialog", { name: "Assistencia remota" });
+  const remoteDialog = page.getByRole("dialog", { name: "Assistência remota" });
   await remoteDialog.getByLabel("Motivo do atendimento").fill("Verificacao de metricas em laboratorio");
   await remoteDialog.getByLabel("Confirme sua senha").fill("123456");
   await remoteDialog.getByRole("button", { name: "Solicitar atendimento" }).click();
@@ -164,7 +164,7 @@ test("sessao ativa mostra metricas, pausa a visualizacao e reconecta pelo viewer
   }, { baseUrl: apiUrl, agentToken: enrollment.enrollmentToken });
 
   await expect(remoteDialog).toContainText("Atendimento em andamento", { timeout: 10_000 });
-  await expect(remoteDialog).toContainText("unico monitor");
+  await expect(remoteDialog).toContainText("único monitor");
   await expect(remoteDialog.locator("img")).toBeVisible();
   await expect(remoteDialog).toContainText(/FPS real: \d/, { timeout: 10_000 });
 
@@ -172,7 +172,7 @@ test("sessao ativa mostra metricas, pausa a visualizacao e reconecta pelo viewer
   await expect(pauseButton).toBeVisible();
   await pauseButton.click();
   await expect(remoteDialog.getByRole("button", { name: "Retomar" })).toBeVisible();
-  await expect(remoteDialog).toContainText("Visualizacao pausada");
+  await expect(remoteDialog).toContainText("Visualização pausada");
 
   await remoteDialog.getByRole("button", { name: "Retomar" }).click();
   await expect(remoteDialog.getByRole("button", { name: "Pausar" })).toBeVisible();

@@ -40,7 +40,7 @@ export function useRustdeskCredentials({ token, session, viewerToken, notify }) 
         await navigator.clipboard.writeText(value);
         notifyResult(notify, `${label} copiado.`);
       } catch {
-        setError(`Nao foi possivel copiar ${label.toLowerCase()} automaticamente. Copie manualmente.`);
+        setError(`Não foi possível copiar ${label.toLowerCase()} automaticamente. Copie manualmente.`);
       }
     },
     [notify]

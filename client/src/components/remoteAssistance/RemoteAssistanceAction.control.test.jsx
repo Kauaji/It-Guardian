@@ -194,7 +194,7 @@ describe("controle remoto", () => {
     await startControlSession({ remoteControlEnabled: false, controlConsentGranted: false });
     const button = screen.getByRole("button", { name: /Solicitar controle/ });
     expect(button).toBeDisabled();
-    expect(button).toHaveAttribute("title", "O usuario nao autorizou controle");
+    expect(button).toHaveAttribute("title", "O usuário não autorizou controle");
   });
 
   it("o controle exige a opcao de front, a permissao e a escolha do modo", async () => {
@@ -219,7 +219,7 @@ describe("maximizar", () => {
   });
 });
 
-describe("chat com o usuario local", () => {
+describe("chat com o usuário local", () => {
   async function startChatSession(props = {}) {
     server.session = { ...server.session, status: "active", monitors: [MONITORS[0]], selectedMonitorId: "m1" };
     server.frame = "AAAA";
@@ -236,10 +236,10 @@ describe("chat com o usuario local", () => {
       { id: "c3", sender: "user", text: "sem nome", createdAt: "data-invalida" }
     ];
     await startChatSession();
-    const log = screen.getByRole("region", { name: "Chat com o usuario local" });
-    expect(log).toHaveTextContent(/Voce - \d{2}:\d{2}Ola/);
+    const log = screen.getByRole("region", { name: "Chat com o usuário local" });
+    expect(log).toHaveTextContent(/Você - \d{2}:\d{2}Ola/);
     expect(log).toHaveTextContent(/Maria - \d{2}:\d{2}Oi, pode entrar/);
-    expect(log).toHaveTextContent("Usuario local - sem nome");
+    expect(log).toHaveTextContent("Usuário local - sem nome");
     expect(log.querySelector(".chat-technician")).not.toBeNull();
     expect(log.querySelector(".chat-user")).not.toBeNull();
     expect(log).not.toHaveTextContent("Nenhuma mensagem ainda.");
@@ -339,20 +339,20 @@ describe("chat com o usuario local", () => {
   it("abre e fecha o painel de chat", async () => {
     await startChatSession();
     const toggle = screen.getByRole("button", { name: /Fechar chat/ });
-    expect(toggle).toHaveAttribute("title", "Fechar o chat com o usuario local");
+    expect(toggle).toHaveAttribute("title", "Fechar o chat com o usuário local");
     await click(toggle);
-    expect(screen.queryByRole("region", { name: "Chat com o usuario local" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Chat com o usuário local" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Abrir chat/ })).toHaveAttribute(
       "title",
-      "Abrir o chat com o usuario local"
+      "Abrir o chat com o usuário local"
     );
     await click(screen.getByRole("button", { name: /Abrir chat/ }));
-    expect(screen.getByRole("region", { name: "Chat com o usuario local" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Chat com o usuário local" })).toBeInTheDocument();
   });
 
   it("sem permissao de chat mostra apenas o aviso", async () => {
     await startChatSession({ user: viewOnlyUser });
     expect(screen.queryByLabelText("Mensagem de chat")).not.toBeInTheDocument();
-    expect(screen.getByRole("dialog")).toHaveTextContent("Voce nao tem permissao para enviar mensagens.");
+    expect(screen.getByRole("dialog")).toHaveTextContent("Você não tem permissão para enviar mensagens.");
   });
 });

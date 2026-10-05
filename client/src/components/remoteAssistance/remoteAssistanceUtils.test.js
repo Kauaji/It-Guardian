@@ -8,8 +8,8 @@ import { waitForIceGatheringComplete } from "./utils/webrtc.js";
 
 describe("format", () => {
   it("formatDateTime trata vazio e invalido", () => {
-    expect(formatDateTime(null)).toBe("Nao informado");
-    expect(formatDateTime("nao-e-data")).toBe("Nao informado");
+    expect(formatDateTime(null)).toBe("Não informado");
+    expect(formatDateTime("nao-e-data")).toBe("Não informado");
     expect(formatDateTime("2026-08-15T12:30:00.000Z")).toMatch(/^15\/08/);
   });
 
@@ -59,10 +59,10 @@ describe("notifyResult", () => {
 describe("viewState", () => {
   it("escolhe o titulo de indisponibilidade na ordem de prioridade", () => {
     const base = { frontendEnabled: true, canView: true, canStart: true, eligible: true, config: null };
-    expect(getUnavailableTitle({ ...base, frontendEnabled: false })).toBe("Atendimento remoto nao habilitado");
-    expect(getUnavailableTitle({ ...base, canStart: false })).toBe("Sem permissao para atendimento remoto");
+    expect(getUnavailableTitle({ ...base, frontendEnabled: false })).toBe("Atendimento remoto não habilitado");
+    expect(getUnavailableTitle({ ...base, canStart: false })).toBe("Sem permissão para atendimento remoto");
     expect(getUnavailableTitle({ ...base, eligible: false })).toBe("Agente offline ou sem contato recente");
-    expect(getUnavailableTitle({ ...base, config: { enabled: false } })).toBe("Atendimento remoto indisponivel");
+    expect(getUnavailableTitle({ ...base, config: { enabled: false } })).toBe("Atendimento remoto indisponível");
     expect(getUnavailableTitle(base)).toBe("Verificando atendimento remoto");
   });
 

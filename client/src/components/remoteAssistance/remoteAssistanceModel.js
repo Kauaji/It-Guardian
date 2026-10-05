@@ -48,15 +48,15 @@ export function isRemoteAssistanceTerminal(status) {
 export function remoteAssistanceStatusLabel(status) {
   return {
     requested: "Solicitada",
-    waiting_consent: "Aguardando autorizacao local",
-    consent_denied: "Autorizacao negada",
+    waiting_consent: "Aguardando autorização local",
+    consent_denied: "Autorização negada",
     connecting: "Conectando",
     active: "Atendimento em andamento",
     reconnecting: "Sem quadros recentes - reconectando",
     agent_offline: "Agente sem resposta",
     ended: "Atendimento encerrado",
-    failed: "Falha na sessao",
-    expired: "Sessao expirada"
+    failed: "Falha na sessão",
+    expired: "Sessão expirada"
   }[status] || "Preparando atendimento";
 }
 
@@ -66,7 +66,7 @@ export function formatRemoteMonitor(monitor, index = 0) {
 }
 
 export function getRemoteAssetDisplayName(asset, alias) {
-  return String(alias || asset?.alias || asset?.displayName || asset?.name || asset?.hostname || "Maquina");
+  return String(alias || asset?.alias || asset?.displayName || asset?.name || asset?.hostname || "Máquina");
 }
 
 export function remoteAssistanceTransportLabel(transport) {

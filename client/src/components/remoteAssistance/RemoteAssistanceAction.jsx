@@ -7,7 +7,7 @@ import { useRemoteAssistanceDialog } from "./hooks/useRemoteAssistanceDialog.js"
 import { useRemoteAvailability } from "./hooks/useRemoteAvailability.js";
 
 // Fluxo de assistencia remota: reautenticacao do tecnico, pedido, consentimento
-// do usuario local, visor (snapshots/WebRTC) ou painel RustDesk, chat, controle
+// do usuário local, visor (snapshots/WebRTC) ou painel RustDesk, chat, controle
 // e encerramento. A logica vive em ./hooks, a interface em ./components.
 export default function RemoteAssistanceAction({
   asset,
@@ -33,7 +33,7 @@ export default function RemoteAssistanceAction({
         className={`remote-assistance-modal ${view.maximized ? "remote-assistance-modal--maximized" : ""}`}
         role="dialog"
         aria-modal="true"
-        aria-label="Assistencia remota"
+        aria-label="Assistência remota"
       >
         <RemoteDialogHeader displayName={view.displayName} asset={asset} onClose={dialogState.closeDialog} />
         {!view.session ? (

@@ -4,11 +4,11 @@ import { formatDateTime } from "../utils/format.js";
 
 function MachineSummary({ asset }) {
   return (
-    <section className="remote-assistance-machine-summary" aria-label="Dados da maquina">
-      <div><span>Sistema</span><strong>{asset.os || asset.operatingSystem || "Nao informado"}</strong></div>
-      <div><span>Ultimo contato</span><strong>{formatDateTime(getRemoteAssetLastSeenAt(asset))}</strong></div>
+    <section className="remote-assistance-machine-summary" aria-label="Dados da máquina">
+      <div><span>Sistema</span><strong>{asset.os || asset.operatingSystem || "Não informado"}</strong></div>
+      <div><span>Último contato</span><strong>{formatDateTime(getRemoteAssetLastSeenAt(asset))}</strong></div>
       <div><span>Agente</span><strong>{asset.agentVersion || asset.agent?.version || "Ativo"}</strong></div>
-      <div><span>Usuario local</span><strong>{asset.localUser || asset.agent?.localUser || "Nao coletado"}</strong></div>
+      <div><span>Usuário local</span><strong>{asset.localUser || asset.agent?.localUser || "Não coletado"}</strong></div>
     </section>
   );
 }
@@ -16,7 +16,7 @@ function MachineSummary({ asset }) {
 function ModeFieldset({ requestedMode, onModeChange, controlOptionVisible }) {
   return (
     <fieldset className="remote-assistance-mode">
-      <legend>Permissao solicitada</legend>
+      <legend>Permissão solicitada</legend>
       <label>
         <input type="radio" name="remote-mode" value="view" checked={requestedMode === "view"} onChange={() => onModeChange("view")} />
         <Eye size={16} /> Somente visualizar
@@ -84,9 +84,9 @@ export default function RemoteReauthPanel({
 
       <div className="remote-assistance-security-note">
         <ShieldCheck size={18} />
-        <p>O usuario precisa autorizar localmente. A solicitacao, o consentimento e o encerramento ficam registrados.</p>
+        <p>O usuário precisa autorizar localmente. A solicitação, o consentimento e o encerramento ficam registrados.</p>
       </div>
-      <p className="remote-assistance-disabled-feature">Modo privacidade e acoes administrativas permanecem indisponiveis nesta fase.</p>
+      <p className="remote-assistance-disabled-feature">Modo privacidade e ações administrativas permanecem indisponíveis nesta fase.</p>
       {error && <p className="form-error" role="alert">{error}</p>}
       <button type="submit" className="primary-action remote-assistance-submit" disabled={submitting}>
         {submitting ? <RefreshCw size={17} className="spin" /> : <MonitorUp size={17} />}
