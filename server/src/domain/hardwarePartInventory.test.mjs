@@ -78,3 +78,17 @@ test("nomeia módulos pela capacidade e limita incongruências ao hardware princ
   assert.equal(isCoreHardwarePartRecord(memory), true);
   assert.equal(isCoreHardwarePartRecord({ metadata: { hardwareType: "keyboard" } }), false);
 });
+
+test("elementos nulos nas listas do inventário do agente são ignorados em vez de derrubar a coleta", () => {
+  const parts = collectHardwareParts({
+    asset_id: "asset-null",
+    cpu_model: null,
+    inventory_details: {
+      disks: [null, { name: "Samsung SSD 980", serialNumber: "S1" }],
+      memoryModules: [null, { capacityGb: 8 }],
+      peripherals: [null]
+    }
+  });
+
+  assert.deepEqual(parts.map((part) => part.category).sort(), ["Armazenamento", "Memória"]);
+});

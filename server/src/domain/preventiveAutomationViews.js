@@ -1,3 +1,4 @@
+/** @import { AssetLike, AssetSchedule, AutomationPlan, LatestRun, PlanOverride } from "./preventiveTypes.js" */
 import { serializeTimestamp, trimString } from "../lib/textUtils.js";
 import { isScheduleLinkedToPlan } from "./preventiveAutomationSchedule.js";
 import { normalizeIndicatorColor, normalizePagination } from "./preventiveAutomationNormalizers.js";
@@ -8,13 +9,56 @@ import { normalizeIndicatorColor, normalizePagination } from "./preventiveAutoma
  * banco nem relogio fora do `now` informado.
  */
 
+/**
+ * Plano de automacao com os campos que as visoes leem (`defaultScriptIds` sempre presente).
+ * @typedef {AutomationPlan & { defaultScriptIds: string[] }} ViewPlan
+ */
+/** @typedef {LatestRun & { planId?: string, assetId?: string }} ViewRun */
+/**
+ * Plano ja enriquecido por `buildManagementPlan`.
+ * @typedef {ViewPlan & {
+ *   overrides: PlanOverride[], assetSchedules: AssetSchedule[], scripts: unknown[], assetCount: number,
+ *   scriptCount: number, overrideCount: number, activeScheduleCount: number, errorAssetCount: number,
+ *   withoutScheduleCount: number, latestRun: ViewRun | null
+ * }} ManagementPlan
+ */
+/**
+ * @typedef {object} MachinePlanEntry
+ * @property {string | undefined} name
+ * @property {boolean} active
+ * @property {string | null | undefined} nextRunAt
+ * @property {ViewRun | null} latestRun
+ * @property {unknown} [id]
+ */
+/**
+ * @typedef {object} ManagementMachine
+ * @property {string} assetId
+ * @property {string} assetName
+ * @property {string} segmentId
+ * @property {string} segmentName
+ * @property {string} groupId
+ * @property {string} groupName
+ * @property {MachinePlanEntry[]} plans
+ */
+
 const agendaStatuses = new Set(["all", "active", "overdue", "error", "without_schedule"]);
 
+/**
+ * @param {unknown} planId
+ * @param {unknown} assetId
+ * @returns {string} Chave `<plano>:<maquina>` dos mapas de ultima execucao.
+ */
 export function latestRunKey(planId, assetId) {
   return `${String(planId)}:${String(assetId)}`;
 }
 
+/**
+ * @template {{ planId?: unknown }} T
+ * @param {T[]} items
+ * @returns {Map<string, T[]>}
+ */
 export function groupByPlanId(items) {
+  /** @type {Map<string, T[]>} */
   const grouped = new Map();
   for (const item of items) {
     const key = String(item.planId);
@@ -25,22 +69,33 @@ export function groupByPlanId(items) {
   return grouped;
 }
 
+/** @param {ViewRun} run */
 function isErrorRun(run) {
   return Boolean(run.errorDetected) || String(run.status).toLowerCase() === "error";
 }
 
+/** @param {ViewRun[]} runs */
 function newestRun(runs) {
   return runs
     .slice()
-    .sort((left, right) => new Date(right.createdAt || 0) - new Date(left.createdAt || 0))[0] || null;
+    .sort((left, right) => new Date(right.createdAt || 0).getTime() - new Date(left.createdAt || 0).getTime())[0] || null;
 }
 
+/**
+ * @param {object} input
+ * @param {ViewPlan} input.plan
+ * @param {PlanOverride[]} input.overrides
+ * @param {AssetSchedule[]} input.schedules
+ * @param {Map<string, ViewRun>} input.runsByAsset
+ * @param {Map<string, unknown>} input.scriptsById
+ * @returns {ManagementPlan}
+ */
 export function buildManagementPlan({ plan, overrides, schedules, runsByAsset, scriptsById }) {
   const assetSchedules = schedules.filter((schedule) => isScheduleLinkedToPlan(plan, schedule));
   const activeSchedules = assetSchedules.filter((schedule) => schedule.active !== false);
   const latestRuns = activeSchedules
     .map((schedule) => runsByAsset.get(latestRunKey(plan.id, schedule.assetId)))
-    .filter(Boolean);
+    .filter((run) => run !== undefined);
 
   return {
     ...plan,
@@ -57,6 +112,11 @@ export function buildManagementPlan({ plan, overrides, schedules, runsByAsset, s
   };
 }
 
+/**
+ * @param {AssetLike} device
+ * @param {Map<string, string>} groupsById
+ * @returns {ManagementMachine & Record<string, unknown>}
+ */
 function buildMachineBase(device, groupsById) {
   const groupId = device.segmentGroupId || "";
   return {
@@ -74,10 +134,19 @@ function buildMachineBase(device, groupsById) {
     groupName: groupsById.get(String(groupId)) || "Sem grupo",
     tabId: "",
     tabName: "Ambiente",
+    /** @type {MachinePlanEntry[]} */
     plans: []
   };
 }
 
+/**
+ * @param {object} input
+ * @param {ManagementPlan} input.plan
+ * @param {AssetSchedule} input.schedule
+ * @param {AssetLike} input.device
+ * @param {ViewRun | null} input.latestRun
+ * @returns {MachinePlanEntry & Record<string, unknown>}
+ */
 function buildMachinePlanEntry({ plan, schedule, device, latestRun }) {
   return {
     id: plan.id,
@@ -114,8 +183,18 @@ function buildMachinePlanEntry({ plan, schedule, device, latestRun }) {
  * Reune as agendas ativas por maquina: uma maquina com varios planos aparece
  * uma unica vez, na ordem em que sua primeira agenda foi lida.
  */
+/**
+ * @param {object} input
+ * @param {ManagementPlan[]} input.plans
+ * @param {Array<AssetSchedule>} input.schedules
+ * @param {Map<string, AssetLike>} input.devicesById
+ * @param {Map<string, string>} input.groupsById
+ * @param {Map<string, ViewRun>} input.runsByAsset
+ * @returns {Array<ManagementMachine & Record<string, unknown>>}
+ */
 export function buildManagementMachines({ plans, schedules, devicesById, groupsById, runsByAsset }) {
   const plansById = new Map(plans.map((plan) => [String(plan.id), plan]));
+  /** @type {Map<string, ManagementMachine & Record<string, unknown>>} */
   const machinesById = new Map();
 
   for (const schedule of schedules) {
@@ -139,11 +218,19 @@ export function buildManagementMachines({ plans, schedules, devicesById, groupsB
   return [...machinesById.values()];
 }
 
+/**
+ * @param {ManagementMachine} machine
+ * @param {string} search Em minusculas.
+ */
 function machineMatchesSearch(machine, search) {
   const haystack = `${machine.assetName} ${machine.segmentName} ${machine.groupName} ${machine.plans.map((item) => item.name).join(" ")}`;
   return haystack.toLowerCase().includes(search);
 }
 
+/**
+ * @param {ManagementMachine} machine
+ * @param {string} status
+ */
 function machineMatchesStatus(machine, status) {
   if (status === "error") {
     return machine.plans.some((item) => item.latestRun?.errorDetected || item.latestRun?.status === "error");
@@ -154,6 +241,12 @@ function machineMatchesStatus(machine, status) {
   return true;
 }
 
+/**
+ * @template {ManagementMachine} M
+ * @param {M[]} machines
+ * @param {{ search?: unknown, status?: unknown, segmentId?: unknown, groupId?: unknown }} [options]
+ * @returns {M[]}
+ */
 export function filterManagementMachines(machines, options = {}) {
   const search = trimString(options.search, 120).toLowerCase();
   const status = trimString(options.status, 40, "all").toLowerCase();
@@ -168,6 +261,10 @@ export function filterManagementMachines(machines, options = {}) {
   });
 }
 
+/**
+ * @param {ManagementPlan[]} plans
+ * @param {unknown[]} machines
+ */
 export function buildManagementMetadata(plans, machines) {
   return {
     planCount: plans.length,
@@ -184,6 +281,9 @@ export function emptyManagementView() {
   return { plans: [], machines: [], metadata: { planCount: 0, machineCount: 0 } };
 }
 
+/**
+ * @param {{ startDate?: string | Date | null, endDate?: string | Date | null, status?: unknown, planId?: unknown, assetId?: unknown, segmentId?: unknown, limit?: unknown, offset?: unknown }} [filters]
+ */
 export function normalizeAgendaFilters(filters = {}) {
   const status = trimString(filters.status, 40, "all").toLowerCase();
 
@@ -199,6 +299,7 @@ export function normalizeAgendaFilters(filters = {}) {
   };
 }
 
+/** @param {{ limit: number, offset: number }} normalized */
 export function emptyAutomationAgenda(normalized) {
   return {
     items: [],
@@ -218,6 +319,11 @@ export function emptyAutomationAgenda(normalized) {
   };
 }
 
+/**
+ * @param {{ planActive: boolean, scheduleActive: boolean, nextRunAt?: string | Date | null, latestRun?: ViewRun | null }} item
+ * @param {Date} [now]
+ * @returns {"paused" | "error" | "without_schedule" | "overdue" | "scheduled"}
+ */
 export function agendaItemStatus({ planActive, scheduleActive, nextRunAt, latestRun }, now = new Date()) {
   if (!planActive || !scheduleActive) return "paused";
   if (latestRun?.errorDetected || String(latestRun?.status || "").toLowerCase() === "error") return "error";
@@ -226,6 +332,29 @@ export function agendaItemStatus({ planActive, scheduleActive, nextRunAt, latest
   return "scheduled";
 }
 
+/**
+ * Linha da agenda lida do banco.
+ * @typedef {object} AgendaRow
+ * @property {string} planId
+ * @property {string} [planName]
+ * @property {string} assetId
+ * @property {string} [indicatorColor]
+ * @property {string | Date | null} [nextRunAt]
+ * @property {string} [recurrenceType]
+ * @property {number | string | null} [recurrenceInterval]
+ * @property {string | null} [recurrenceSource]
+ * @property {boolean} [planActive]
+ * @property {boolean} [scheduleActive]
+ * @property {string | Date | null} [lastPreparedAt]
+ */
+
+/**
+ * @param {object} input
+ * @param {AgendaRow[]} input.rows
+ * @param {Map<string, AssetLike>} input.devicesById
+ * @param {Map<string, ViewRun>} input.latestRunsByAsset
+ * @param {Date} [input.now]
+ */
 export function buildAgendaItems({ rows, devicesById, latestRunsByAsset, now = new Date() }) {
   return rows.map((row) => {
     const device = devicesById.get(String(row.assetId));
@@ -261,6 +390,12 @@ export function buildAgendaItems({ rows, devicesById, latestRunsByAsset, now = n
 }
 
 /** Filtros que so podem ser aplicados depois de cruzar com o inventario/execucoes. */
+/**
+ * @template {{ segmentId: string, status: string }} I
+ * @param {I[]} items
+ * @param {{ segmentId: string | null, status: string }} normalized
+ * @returns {I[]}
+ */
 export function filterAgendaItemsAfterLoad(items, normalized) {
   let filtered = items;
   if (normalized.segmentId) {
@@ -272,11 +407,19 @@ export function filterAgendaItemsAfterLoad(items, normalized) {
   return filtered;
 }
 
+/**
+ * @param {Array<{ nextRunAt: string | null, status: string }>} items
+ * @param {Date} [now]
+ */
 export function summarizeAgenda(items, now = new Date()) {
   const todayEnd = new Date(now);
   todayEnd.setHours(23, 59, 59, 999);
   const sevenDaysEnd = new Date(now);
   sevenDaysEnd.setDate(sevenDaysEnd.getDate() + 7);
+  /**
+   * @param {{ nextRunAt: string | null }} item
+   * @param {Date} limit
+   */
   const within = (item, limit) => item.nextRunAt && new Date(item.nextRunAt) <= limit && new Date(item.nextRunAt) >= now;
 
   return {
@@ -288,6 +431,9 @@ export function summarizeAgenda(items, now = new Date()) {
   };
 }
 
+/**
+ * @param {{ normalized: { limit: number, offset: number, status: string, segmentId: string | null }, items: unknown[], pageRowCount: number, totalCount: unknown }} input
+ */
 export function buildAgendaPagination({ normalized, items, pageRowCount, totalCount }) {
   const localFilter = normalized.status === "error" || Boolean(normalized.segmentId);
   const total = localFilter ? items.length : Number(totalCount || 0);

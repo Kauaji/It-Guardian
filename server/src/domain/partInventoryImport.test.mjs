@@ -14,3 +14,12 @@ test("rejeita XML com DTD ou sem produtos de NF-e", () => {
   assert.throws(() => parseNfePurchaseXml("<!DOCTYPE foo><NFe><det /></NFe>"), /não permitidas/i);
   assert.throws(() => parseNfePurchaseXml("<xml />"), /NF-e/i);
 });
+
+test("referências numéricas de caractere inválidas não derrubam o parser", () => {
+  const xml = (name) =>
+    `<nfeProc><NFe><infNFe Id="NFe1"><emit><xNome>F</xNome></emit><det><prod><xProd>${name}</xProd></prod></det></infNFe></NFe></nfeProc>`;
+  // Antes, `String.fromCodePoint` lançava RangeError (virava erro 500) para estes valores.
+  assert.equal(parseNfePurchaseXml(xml("Cabo&#x110000;USB")).items[0].name, "CaboUSB");
+  assert.equal(parseNfePurchaseXml(xml("Cabo&#abc;USB")).items[0].name, "CaboUSB");
+  assert.equal(parseNfePurchaseXml(xml("Cabo&#65;USB")).items[0].name, "CaboAUSB");
+});

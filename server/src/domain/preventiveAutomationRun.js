@@ -1,3 +1,4 @@
+/** @import { AssetLike, AutomationPlan, EffectiveRecurrence, NormalizedSchedule } from "./preventiveTypes.js" */
 import { computeFollowingScheduledFor } from "./preventiveSchedule.js";
 import { normalizeRunStatus } from "./preventiveAutomationNormalizers.js";
 import { buildRunIdempotencyKey } from "./preventiveAutomationSchedule.js";
@@ -5,6 +6,9 @@ import { buildRunIdempotencyKey } from "./preventiveAutomationSchedule.js";
 /** Regras puras do preparo de uma execucao (run) de automacao preventiva. */
 
 /** Resume a recorrencia efetiva de uma agenda por maquina para o preparo agendado. */
+/**
+ * @param {NormalizedSchedule & { recurrenceSource?: string }} schedule
+ */
 export function recurrenceFromSchedule(schedule) {
   return {
     recurrenceType: schedule.recurrenceType,
@@ -18,6 +22,16 @@ export function recurrenceFromSchedule(schedule) {
 /**
  * Dados da execucao preparada: com scripts ela aguarda o agente; sem scripts
  * conclui imediatamente. `nextRunAt` e a ocorrencia seguinte a esta janela.
+ */
+/**
+ * @param {object} input
+ * @param {string} input.id
+ * @param {AutomationPlan} input.plan
+ * @param {AssetLike} input.asset
+ * @param {Partial<EffectiveRecurrence> & { recurrenceType: string, recurrenceIntervalDays: number }} input.recurrence
+ * @param {string | Date} input.scheduledFor
+ * @param {unknown[]} input.scripts Scripts vinculados (so a quantidade importa).
+ * @param {string} input.triggerType
  */
 export function buildRunDraft({ id, plan, asset, recurrence, scheduledFor, scripts, triggerType }) {
   const preferredTime = recurrence.preferredTime || plan.preferredTime;

@@ -68,6 +68,10 @@ O runbook detalhado esta em
 `npm run check:architecture` bloqueia ciclos entre modulos locais e o uso de
 primitivas de execucao de comandos no servidor.
 
+`npm run typecheck` roda `tsc --noEmit` (JSDoc estrito) sobre um escopo crescente de arquivos;
+estrategia e lista em [`TIPAGEM.md`](TIPAGEM.md). `npm run check:bundle` aplica o orcamento de bundle
+([`PERFORMANCE-FRONTEND.md`](PERFORMANCE-FRONTEND.md)).
+
 ## Divida tecnica priorizada
 
 1. Dividir `AlertCenterV2.jsx` por Sugestoes, Preventivas, Configuracoes e detalhes.

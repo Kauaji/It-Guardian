@@ -1,3 +1,4 @@
+/** @import { RecommendableScript, RecommendationContext, ScoredScript } from "./recommendation.js" */
 import { inferTechnicalCategory, scoreMaintenanceScriptForContext } from "./recommendation.js";
 
 /**
@@ -5,6 +6,16 @@ import { inferTechnicalCategory, scoreMaintenanceScriptForContext } from "./reco
  * contexto livre) e ranqueamento dos scripts contra todos eles. Modulo puro.
  */
 
+/** @typedef {{ id: string, assetId?: string | null, type?: string, metric?: string, severity?: string, title?: string, description?: string }} ContextAlert */
+/** @typedef {{ id: string, type?: string, operatingSystem?: string, segmentName?: string, groupName?: string }} ContextDevice */
+
+/**
+ * @param {{ assetIds?: unknown, context?: RecommendationContext }} payload
+ * @param {ContextDevice[]} devices
+ * @param {ContextAlert[]} activeAlerts
+ * @param {ContextAlert[]} selectedAlerts
+ * @returns {RecommendationContext[]}
+ */
 export function buildRecommendationContexts(payload, devices, activeAlerts, selectedAlerts) {
   const assetIds = new Set((Array.isArray(payload.assetIds) ? payload.assetIds : []).map(String));
   const alertsById = new Map(selectedAlerts.map((alert) => [String(alert.id), alert]));
@@ -15,11 +26,12 @@ export function buildRecommendationContexts(payload, devices, activeAlerts, sele
   }
 
   const alerts = [...alertsById.values()];
+  /** @type {RecommendationContext[]} */
   const contexts = [];
 
   for (const asset of assets) {
     const assetAlerts = alerts.filter((alert) => String(alert.assetId || "") === String(asset.id));
-    for (const alert of assetAlerts.length ? assetAlerts : [null]) {
+    for (const alert of /** @type {Array<ContextAlert | null>} */ (assetAlerts.length ? assetAlerts : [null])) {
       contexts.push({
         ...(payload.context || {}),
         alertType: payload.context?.alertType || alert?.type || "",
@@ -57,12 +69,17 @@ export function buildRecommendationContexts(payload, devices, activeAlerts, sele
   return contexts.length ? contexts : [{ ...(payload.context || {}), tags: payload.context?.tags || [] }];
 }
 
+/**
+ * @param {RecommendableScript[]} scripts
+ * @param {RecommendationContext[]} contexts
+ * @returns {Array<ScoredScript & { matchedAssetIds: string[], matchedAlertIds: string[] }>}
+ */
 export function rankScriptsForContexts(scripts, contexts) {
   return scripts
     .map((script) => {
       const matches = contexts
         .map((context) => ({ context, result: scoreMaintenanceScriptForContext(script, context) }))
-        .filter((item) => item.result);
+        .filter(/** @returns {item is { context: RecommendationContext, result: ScoredScript }} */ (item) => item.result !== null);
       if (!matches.length) return null;
 
       const best = matches.sort((left, right) => right.result.recommendationScore - left.result.recommendationScore)[0];
@@ -72,7 +89,7 @@ export function rankScriptsForContexts(scripts, contexts) {
         matchedAlertIds: [...new Set(matches.map((item) => item.context.alertId).filter(Boolean).map(String))]
       };
     })
-    .filter(Boolean)
+    .filter((item) => item !== null)
     .sort((left, right) => (
       right.recommendationScore - left.recommendationScore
       || String(left.name || "").localeCompare(String(right.name || ""))

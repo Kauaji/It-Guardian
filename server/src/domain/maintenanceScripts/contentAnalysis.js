@@ -105,8 +105,13 @@ export function detectScriptVariables(content = "") {
   };
 }
 
+/**
+ * @param {string} current
+ * @param {string} candidate
+ */
 function chooseHigherRisk(current, candidate) {
-  return riskRank[candidate] > riskRank[current] ? candidate : current;
+  const rank = /** @type {Record<string, number>} */ (riskRank);
+  return rank[candidate] > rank[current] ? candidate : current;
 }
 
 export function analyzeMaintenanceScriptContent(content = "") {

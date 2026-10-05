@@ -5,8 +5,10 @@ export const PASSWORD_MIN_LENGTH = 12;
 // falsa sensacao de seguranca.
 export const PASSWORD_MAX_BYTES = 72;
 
+/** @type {Record<string, string>} */
 const leetMap = { "@": "a", "4": "a", "3": "e", "1": "i", "!": "i", "0": "o", "$": "s", "5": "s", "7": "t" };
 
+/** @param {unknown} value */
 function foldAccents(value) {
   return String(value || "")
     .toLowerCase()
@@ -14,15 +16,18 @@ function foldAccents(value) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
+/** @param {string} value */
 function alnumOnly(value) {
   return value.replace(/[^a-z0-9]/g, "");
 }
 
+/** @param {string} value */
 function applyLeet(value) {
   return value.replace(/[@43$51!07]/g, (char) => leetMap[char] || char);
 }
 
 /** Forma "so letras e numeros", sem leetspeak: usada para sequencias e identidade. */
+/** @param {unknown} value */
 function normalizeForComparison(value) {
   return alnumOnly(foldAccents(value));
 }
@@ -32,6 +37,7 @@ function normalizeForComparison(value) {
  * ("Senha@2024!!" -> "senha") e tenta com e sem leetspeak ("p@ssw0rd" ->
  * "password"). Assim sufixos tipicos nao disfarcam uma senha comum.
  */
+/** @param {unknown} value */
 function commonRootCandidates(value) {
   const folded = foldAccents(value);
   const trimmed = folded.replace(/^[^a-z]+/, "").replace(/[^a-z]+$/, "");
@@ -45,6 +51,7 @@ function commonRootCandidates(value) {
 
 const sequenceHaystacks = commonSequences.map((sequence) => sequence + sequence);
 
+/** @param {string} normalized */
 function isSequentialOrRepeated(normalized) {
   if (!normalized) return true;
   if (new Set(normalized).size <= 3) return true;
@@ -57,11 +64,17 @@ function isSequentialOrRepeated(normalized) {
   return sequenceHaystacks.some((haystack) => haystack.includes(normalized));
 }
 
+/**
+ * @param {string} normalized
+ * @param {string[]} identities
+ */
 function containsIdentity(normalized, identities) {
   return identities.some((identity) => identity.length >= 4 && normalized.includes(identity));
 }
 
+/** @param {{ email?: unknown, name?: unknown }} identity */
 function identityTokens({ email, name }) {
+  /** @type {string[]} */
   const tokens = [];
   const local = String(email || "").split("@")[0];
   if (local) tokens.push(normalizeForComparison(local));
@@ -75,8 +88,13 @@ function identityTokens({ email, name }) {
  * Politica de senha (NIST SP 800-63B, simplificada): comprimento e lista de
  * bloqueio em vez de regras de composicao artificiais.
  * Retorna { valid, errors } com mensagens prontas para o usuario.
+ *
+ * @param {unknown} password
+ * @param {{ email?: unknown, name?: unknown }} [context] Dados do usuario que a senha nao pode conter.
+ * @returns {{ valid: boolean, errors: string[] }}
  */
 export function validatePassword(password, { email = "", name = "" } = {}) {
+  /** @type {string[]} */
   const errors = [];
   const value = String(password ?? "");
 
@@ -105,9 +123,15 @@ export function validatePassword(password, { email = "", name = "" } = {}) {
   return { valid: errors.length === 0, errors };
 }
 
+/**
+ * @param {unknown} password
+ * @param {{ email?: unknown, name?: unknown }} [context]
+ * @throws {import("../lib/errors.js").HttpErrorLike} 400 `WEAK_PASSWORD` com `details` = todas as violacoes.
+ */
 export function assertValidPassword(password, context) {
   const result = validatePassword(password, context);
   if (!result.valid) {
+    /** @type {import("../lib/errors.js").HttpErrorLike} */
     const error = new Error(result.errors[0]);
     error.statusCode = 400;
     error.expose = true;

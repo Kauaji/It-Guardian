@@ -6,6 +6,10 @@ import { allowedScriptVariables, maxLengths } from "./scriptVocabulary.js";
  * recomendacao de scripts. Modulo puro.
  */
 
+/**
+ * @param {unknown} value Array, JSON de array ou texto separado por virgula.
+ * @returns {unknown[]}
+ */
 export function parseArrayValue(value) {
   if (Array.isArray(value)) return value;
   if (typeof value === "string") {
@@ -24,12 +28,20 @@ export function parseArrayValue(value) {
   return [];
 }
 
+/**
+ * @param {unknown} value
+ * @returns {string[]} Itens unicos, aparados e nao vazios.
+ */
 export function normalizeTextList(value) {
   return [...new Set(parseArrayValue(value)
     .map((item) => trimString(item, maxLengths.listItem))
     .filter(Boolean))];
 }
 
+/**
+ * @param {unknown} [value]
+ * @returns {string} Minusculas, sem acentos, so [a-z0-9_ ].
+ */
 export function normalizeComparableText(value = "") {
   return String(value || "")
     .normalize("NFD")
@@ -39,12 +51,20 @@ export function normalizeComparableText(value = "") {
     .trim();
 }
 
+/**
+ * @param {unknown} value
+ * @returns {string[]}
+ */
 export function normalizeTokenList(value) {
   return parseArrayValue(value)
-    .map(normalizeComparableText)
+    .map((item) => normalizeComparableText(item))
     .filter(Boolean);
 }
 
+/**
+ * @param {unknown} value
+ * @returns {string[]} Variaveis permitidas (`{{NOME}}` vira `NOME`).
+ */
 export function normalizeVariableList(value) {
   return [...new Set(parseArrayValue(value)
     .map((item) => trimString(item, maxLengths.listItem).replace(/[{}]/g, "").toUpperCase())

@@ -25,9 +25,11 @@
     "client/src/authSession.js",
     "client/src/utils/**/*.js",
     "client/src/config/**/*.js",
+    "shared/**/*.js",
+    "server/src/domain/**/*.js",
     "server/src/lib/**/*.js",
-    "server/src/security/**/*.js",
     "server/src/config/**/*.js",
+    "server/src/security/**/*.js",
     "server/src/middleware/**/*.js",
     "server/src/types/**/*.d.ts"
   ],
@@ -37,6 +39,8 @@
     "**/*.test.mjs",
     "**/node_modules",
     "**/dist",
-    "server/src/middleware/authMiddleware.js"
+    "server/src/middleware/authMiddleware.js",
+    "server/src/domain/problemTypes.js",
+    "server/src/domain/serviceOrderAggregates.js"
   ]
 }

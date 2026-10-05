@@ -1,3 +1,6 @@
+/** @typedef {"healthy" | "attention" | "critical" | "emergency"} HealthClassification */
+
+/** @type {Record<HealthClassification, string>} */
 const classificationLabels = {
   healthy: "Saudavel",
   attention: "Atencao",
@@ -5,6 +8,10 @@ const classificationLabels = {
   emergency: "Emergencial"
 };
 
+/**
+ * @param {number} score
+ * @returns {HealthClassification}
+ */
 function classify(score) {
   if (score >= 85) return "healthy";
   if (score >= 70) return "attention";
@@ -16,6 +23,9 @@ function classify(score) {
  * Nota de saude da infraestrutura: comeca em 100 e perde pontos por sinais
  * operacionais reais (nunca por dado ausente). Cada fator tem um teto de
  * deducao proprio para que um unico problema nao domine a nota sozinho.
+ *
+ * @param {{ totalAssets?: number, offlineAssets?: number, criticalAlerts?: number, overdueServiceOrders?: number, criticalDiskAssets?: number, criticalPerformanceAssets?: number, staleHeartbeatAssets?: number, recurringProblemAssets?: number }} [signals]
+ * @returns {{ score: number, classification: HealthClassification, classificationLabel: string, deductions: Array<{ reason: string, points: number }> }}
  */
 export function calculateInfrastructureHealth({
   totalAssets = 0,
@@ -27,9 +37,14 @@ export function calculateInfrastructureHealth({
   staleHeartbeatAssets = 0,
   recurringProblemAssets = 0
 } = {}) {
+  /** @type {Array<{ reason: string, points: number }>} */
   const deductions = [];
   let score = 100;
 
+  /**
+   * @param {number} points
+   * @param {string} reason
+   */
   function deduct(points, reason) {
     const rounded = Math.round(points * 10) / 10;
     if (rounded <= 0) return;

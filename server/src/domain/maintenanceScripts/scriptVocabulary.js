@@ -45,17 +45,23 @@ export const maxLengths = {
   listItem: 80
 };
 
+/** @param {unknown} value */
 export function normalizeScriptType(value) {
   const type = String(value || "other").trim().toLowerCase();
   return scriptTypes.has(type) ? type : "other";
 }
 
+/**
+ * @param {unknown} value
+ * @param {string} [fallback]
+ */
 export function normalizeRiskLevel(value, fallback = "medium") {
   const risk = String(value || fallback).trim().toLowerCase();
   return riskLevels.has(risk) ? risk : fallback;
 }
 
 /** Nivel de risco efetivo de um script: o cadastrado, senao o sugerido, senao "medium". */
+/** @param {{ riskLevel?: string | null, suggestedRiskLevel?: string | null }} script */
 export function resolveScriptRiskLevel(script) {
   return normalizeRiskLevel(script.riskLevel || script.suggestedRiskLevel, "medium");
 }

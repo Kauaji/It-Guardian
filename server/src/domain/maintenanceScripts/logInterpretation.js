@@ -77,6 +77,7 @@ const logErrorPatterns = [
   }
 ];
 
+/** @type {Record<string, { code: string, category: string, severity: string, requiresAdmin: boolean, requiresLoggedUser: boolean }>} */
 const logErrorMetadata = {
   access_denied: {
     code: "ACCESS_DENIED",
@@ -150,6 +151,10 @@ const logErrorMetadata = {
   }
 };
 
+/**
+ * @param {unknown} [rawLog]
+ * @param {string} [fallbackStatus]
+ */
 export function interpretScriptLogWithMetadata(rawLog = "", fallbackStatus = "registered") {
   const text = String(rawLog || "").trim();
 
@@ -171,19 +176,19 @@ export function interpretScriptLogWithMetadata(rawLog = "", fallbackStatus = "re
 
   for (const rule of logErrorPatterns) {
     if (!rule.patterns.some((pattern) => pattern.test(text))) continue;
-    const metadata = logErrorMetadata[rule.type] || {};
+    const metadata = logErrorMetadata[rule.type];
 
     return {
       parsedSummary: rule.summary,
       errorDetected: true,
       errorType: rule.type,
-      errorCode: metadata.code || "",
-      errorCategory: metadata.category || "",
-      errorSeverity: metadata.severity || "medium",
+      errorCode: metadata?.code || "",
+      errorCategory: metadata?.category || "",
+      errorSeverity: metadata?.severity || "medium",
       probableCause: rule.cause,
       suggestedSolution: rule.solution,
-      requiresAdmin: metadata.requiresAdmin === true,
-      requiresLoggedUser: metadata.requiresLoggedUser === true,
+      requiresAdmin: metadata?.requiresAdmin === true,
+      requiresLoggedUser: metadata?.requiresLoggedUser === true,
       status: "error"
     };
   }
