@@ -3,14 +3,13 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { legacySchemaSource } from "../../test-support/legacySchemaSource.mjs";
+import { legacySchemaSource } from "../../../test-support/legacySchemaSource.mjs";
 import {
   normalizeConnectionPayload,
   normalizeMapPayload,
-  normalizeObjectPayload,
-  resolveConnectionTypeLayer,
-  resolveObjectLayer
-} from "./inventoryVisualMapRepository.js";
+  normalizeObjectPayload
+} from "../../domain/inventoryVisualMap/visualMapPayload.js";
+import { resolveConnectionTypeLayer, resolveObjectLayer } from "../../domain/inventoryVisualMap/visualMapVocabulary.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -101,8 +100,8 @@ test("resolve camada pelo tipo de conexao tecnica", () => {
 
 test("schema e rotas do mapa visual estao registrados", () => {
   const schema = legacySchemaSource();
-  const app = source("../app.js");
-  const routes = source("../routes/inventoryVisualMapRoutes.js");
+  const app = source("../../app.js");
+  const routes = source("../../routes/inventoryVisualMapRoutes.js");
 
   assert.match(schema, /CREATE TABLE IF NOT EXISTS inventory_visual_maps/);
   assert.match(schema, /CREATE TABLE IF NOT EXISTS inventory_visual_map_objects/);
@@ -121,7 +120,7 @@ test("schema e rotas do mapa visual estao registrados", () => {
 });
 
 test("listagem de mapas evita recursos SQL nao suportados pelo pg-mem", () => {
-  const repository = source("inventoryVisualMapRepository.js");
+  const repository = source("visualMapRepository.js");
 
   assert.doesNotMatch(repository, /GROUP BY maps\.id/);
   assert.doesNotMatch(repository, /\bROW_NUMBER\s*\(/);
@@ -130,7 +129,11 @@ test("listagem de mapas evita recursos SQL nao suportados pelo pg-mem", () => {
 });
 
 test("vinculos de ativos sao validados e nao podem se repetir no mesmo mapa", () => {
-  const repository = source("inventoryVisualMapRepository.js");
+  // A validacao mora nos guardas do repositorio; as chamadas, nos servicos de objeto.
+  const repository = [
+    source("visualMapGuards.js"),
+    source("../../services/inventoryVisualMap/visualMapObjectService.js")
+  ].join("\n");
 
   assert.match(repository, /removed_at IS NULL/);
   assert.match(repository, /ensureAssetLinkAvailable\(mapId, data\.linkedAssetId/);

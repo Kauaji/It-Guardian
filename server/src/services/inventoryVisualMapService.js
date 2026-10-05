@@ -1,18 +1,24 @@
 import {
-  createInventoryVisualMap,
-  createInventoryVisualMapConnection,
-  createInventoryVisualMapObject,
-  deleteInventoryVisualMap,
-  deleteInventoryVisualMapConnection,
-  deleteInventoryVisualMapObject,
   getInventoryVisualMap,
-  listInventoryVisualMapConnections,
-  listInventoryVisualMapObjects,
-  listInventoryVisualMaps,
-  updateInventoryVisualMap,
-  updateInventoryVisualMapConnection,
+  listInventoryVisualMaps
+} from "../repositories/inventoryVisualMap/visualMapRepository.js";
+import { listInventoryVisualMapConnections } from "../repositories/inventoryVisualMap/visualMapConnectionRepository.js";
+import { listInventoryVisualMapObjects } from "../repositories/inventoryVisualMap/visualMapObjectRepository.js";
+import {
+  createInventoryVisualMapConnection,
+  deleteInventoryVisualMapConnection,
+  updateInventoryVisualMapConnection
+} from "./inventoryVisualMap/visualMapConnectionService.js";
+import {
+  createInventoryVisualMap,
+  deleteInventoryVisualMap,
+  updateInventoryVisualMap
+} from "./inventoryVisualMap/visualMapCommandService.js";
+import {
+  createInventoryVisualMapObject,
+  deleteInventoryVisualMapObject,
   updateInventoryVisualMapObject
-} from "../repositories/inventoryVisualMapRepository.js";
+} from "./inventoryVisualMap/visualMapObjectService.js";
 import { broadcastSnapshot } from "./realtimeService.js";
 import { logger } from "../lib/logger.js";
 
