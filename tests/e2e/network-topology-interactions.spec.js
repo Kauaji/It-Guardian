@@ -97,8 +97,13 @@ function mapNode(page, name, kind) {
 }
 
 async function openMap(page) {
-  await page.getByRole("button", { name: "Inventário de Ativos", exact: true }).click();
-  await page.getByRole("button", { name: "Mapa de Rede", exact: true }).click();
+  // Com o roteador, recarregar em /inventario ja reabre o Inventario: so clica no menu quando ainda nao estiver nele.
+  const mapTab = page.getByRole("button", { name: "Mapa de Rede", exact: true });
+  const sidebarItem = page.getByRole("button", { name: "Inventário de Ativos", exact: true });
+  await expect(sidebarItem).toBeVisible();
+  await page.waitForLoadState("networkidle");
+  if (!(await mapTab.isVisible())) await sidebarItem.click();
+  await mapTab.click();
   await expect(page.getByRole("navigation", { name: breadcrumbLabel })).toBeVisible();
   await page.getByRole("heading", { name: "Infraestrutura em tempo real" }).hover();
 }

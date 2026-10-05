@@ -41,7 +41,7 @@ test("menu da conta abre a pagina Seguranca da conta com senha, MFA e sessoes", 
   await expect(page.getByRole("heading", { name: "Sessões ativas" })).toBeVisible();
 
   // A sessao atual aparece marcada.
-  await expect(page.getByText("Esta sessão")).toBeVisible();
+  await expect(page.getByText("Esta sessão").first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Ativar verificação em duas etapas" })).toBeVisible();
 });
 

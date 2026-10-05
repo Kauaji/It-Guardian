@@ -1,3 +1,4 @@
+/* global window, document */
 import { expect, test } from "@playwright/test";
 
 // Roda contra client/dist servido com os cabecalhos de producao (scripts/serve-dist.mjs): o app inteiro precisa
