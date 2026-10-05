@@ -15,7 +15,7 @@ import {
   listDueSchedulesForPlan,
   markSchedulePrepared
 } from "../repositories/preventiveAutomationScheduleRepository.js";
-import { syncAutoPriorities, syncSlaBreaches } from "../repositories/serviceOrderRepository.js";
+import { syncAutoPriorities, syncSlaBreaches } from "./serviceOrders/serviceOrderSlaSyncService.js";
 import {
   findPreventiveAutomationPlanById,
   listDuePreventiveAutomationPlans

@@ -17,7 +17,7 @@ const {
 } = await import("../src/repositories/remoteAssistanceRepository.js");
 const { startSession } = await import("../src/services/sessionService.js");
 const { query, closeDatabase } = await import("../src/database.js");
-const { syncSlaBreaches } = await import("../src/repositories/serviceOrderRepository.js");
+const { syncSlaBreaches } = await import("../src/services/serviceOrders/serviceOrderSlaSyncService.js");
 
 const trustedOrigin = "http://localhost:5173";
 

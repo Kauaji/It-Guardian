@@ -11,7 +11,8 @@ import {
   markPlanAssetsPrepared,
   markPlanSimulated
 } from "../repositories/preventivePlanRepository.js";
-import { addServiceOrderHistory, createServiceOrder, findServiceOrderById } from "../repositories/serviceOrderRepository.js";
+import { addServiceOrderHistory, findServiceOrderById } from "../repositories/serviceOrderRepository.js";
+import { createServiceOrder } from "./serviceOrders/serviceOrderCreationService.js";
 import { findPreventivePlanById } from "./preventivePlanReadService.js";
 
 /**

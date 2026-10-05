@@ -10,7 +10,7 @@ process.env.NODE_ENV = "test";
 const { createApp } = await import("../src/app.js");
 const { initializeRuntime } = await import("../src/bootstrap.js");
 const { closeDatabase, query } = await import("../src/database.js");
-const { syncSlaBreaches } = await import("../src/repositories/serviceOrderRepository.js");
+const { syncSlaBreaches } = await import("../src/services/serviceOrders/serviceOrderSlaSyncService.js");
 
 function listen(app) {
   return new Promise((resolve) => {
@@ -127,7 +127,7 @@ test("escalonamento de prioridade automatica recalcula o prazo de SLA a partir d
 
   await query("UPDATE service_orders SET created_at = NOW() - INTERVAL '2 hours' WHERE id = $1", [created.id]);
 
-  const { syncAutoPriorities } = await import("../src/repositories/serviceOrderRepository.js");
+  const { syncAutoPriorities } = await import("../src/services/serviceOrders/serviceOrderSlaSyncService.js");
   await syncAutoPriorities();
 
   const afterSyncRow = await query("SELECT priority, sla_due_at FROM service_orders WHERE id = $1", [created.id]);

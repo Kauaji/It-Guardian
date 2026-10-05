@@ -10,10 +10,6 @@ import {
 } from "../repositories/assetLifecycleRepository.js";
 import {
   addServiceOrderHistory,
-  createServiceOrder,
-  createServiceOrderAttachment,
-  deleteServiceOrder,
-  deleteServiceOrderAttachment,
   findServiceOrderById,
   findServiceOrderFeedback,
   getFinalStatus,
@@ -23,14 +19,19 @@ import {
   listServiceOrderAttachments,
   listServiceOrders,
   maxServiceOrderStatuses,
-  reopenServiceOrder,
   serviceOrderPriorities,
   setFirstResponseAtIfNeeded,
-  submitServiceOrderFeedback,
-  updateServiceOrder,
-  updateServiceOrderSettings,
-  updateServiceOrderStatus
+  updateServiceOrderSettings
 } from "../repositories/serviceOrderRepository.js";
+import { createServiceOrderAttachment, deleteServiceOrderAttachment } from "./serviceOrders/serviceOrderAttachmentService.js";
+import { createServiceOrder } from "./serviceOrders/serviceOrderCreationService.js";
+import { submitServiceOrderFeedback } from "./serviceOrders/serviceOrderFeedbackService.js";
+import {
+  deleteServiceOrder,
+  reopenServiceOrder,
+  updateServiceOrderStatus
+} from "./serviceOrders/serviceOrderLifecycleService.js";
+import { updateServiceOrder } from "./serviceOrders/serviceOrderUpdateService.js";
 import { applyChecklistTemplateOnCreate, assertChecklistCompleteForFinish } from "./serviceOrderChecklistService.js";
 
 const notFoundMessage = "Ordem de servico nao encontrada.";

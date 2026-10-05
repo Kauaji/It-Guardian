@@ -27,10 +27,10 @@ import {
 } from "../repositories/alertRepository.js";
 import {
   addServiceOrderHistory,
-  createServiceOrder,
   findServiceOrderById,
   listServiceOrders
 } from "../repositories/serviceOrderRepository.js";
+import { createServiceOrder } from "./serviceOrders/serviceOrderCreationService.js";
 import { refreshDueScriptValidations } from "../repositories/maintenanceScriptRepository.js";
 import { listAgentAssets } from "../repositories/agentRepository.js";
 import { startMaintenanceForAsset } from "../repositories/assetLifecycleRepository.js";
