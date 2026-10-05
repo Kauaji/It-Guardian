@@ -109,6 +109,27 @@ test("planta: criar normaliza payload, atualizar preserva campos, editor substit
   assert.equal(editor.plan.objectCount, 2);
   assert.equal(editor.plan.floorCount, 2);
 
+  // pontos e rotas sem label/cor usam padroes (antes falhava com 500 por NOT NULL)
+  const withDefaults = await api(baseUrl, cookie, "PATCH", `/floor-plans/${planId}/editor-data`, {
+    floors: editor.floors,
+    zones: editor.zones,
+    objects: editor.objects,
+    connectionPoints: [{ id: "pt-a", floorId, pointType: "power", x: 1, y: 1 }, { id: "pt-b", floorId, x: 2, y: 2 }],
+    cableRoutes: [{ id: "rt-a", floorId, routeType: "network", sourcePointId: "pt-a", targetPointId: "pt-b" }]
+  });
+  assert.equal(withDefaults.status, 200, JSON.stringify(withDefaults.body));
+  assert.deepEqual(withDefaults.body.plan.connectionPoints.map((point) => point.label).sort(), ["Ponto de rede", "Tomada"]);
+  assert.equal(withDefaults.body.plan.cableRoutes[0].label, "Cabo de rede");
+  assert.equal(withDefaults.body.plan.cableRoutes[0].color, "#2563eb");
+  const restored = await api(baseUrl, cookie, "PATCH", `/floor-plans/${planId}/editor-data`, {
+    floors: editor.floors,
+    zones: editor.zones,
+    objects: editor.objects,
+    connectionPoints: editor.connectionPoints,
+    cableRoutes: editor.cableRoutes
+  });
+  assert.equal(restored.status, 200, JSON.stringify(restored.body));
+
   const invalidEditor = await api(baseUrl, cookie, "PATCH", `/floor-plans/${planId}/editor-data`, {
     floors: [{ id: floorId, name: "Térreo" }],
     objects: [{ id: "obj-1", floorId, label: "A" }, { id: "obj-1", floorId, label: "Repetido" }]

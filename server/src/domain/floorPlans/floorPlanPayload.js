@@ -127,7 +127,8 @@ function normalizePointPayload(item = {}, planId, validFloorIds, fallbackFloorId
     planId,
     floorId,
     pointType,
-    label: nullableText(item.label),
+    // label e NOT NULL no banco: sem texto, usa o nome padrao do tipo.
+    label: normalizeText(item.label, pointType === "power" ? "Tomada" : "Ponto de rede"),
     linkedObjectId: nullableText(item.linkedObjectId ?? item.linked_object_id),
     x: normalizeNumber(item.x, 120, { min: -12000, max: 12000 }),
     y: normalizeNumber(item.y, 120, { min: -12000, max: 12000 }),
@@ -143,11 +144,12 @@ function normalizeRoutePayload(item = {}, planId, validFloorIds, fallbackFloorId
     planId,
     floorId,
     routeType,
-    label: nullableText(item.label),
+    // label e color sao NOT NULL no banco: sem valor, usa padroes do tipo.
+    label: normalizeText(item.label, routeType === "power" ? "Cabo de energia" : "Cabo de rede"),
     sourcePointId: nullableText(item.sourcePointId ?? item.source_point_id),
     targetPointId: nullableText(item.targetPointId ?? item.target_point_id),
     path: normalizeJsonArray(item.path),
-    color: nullableText(item.color),
+    color: nullableText(item.color) ?? "#2563eb",
     metadata: normalizeMetadata(item.metadata)
   };
 }

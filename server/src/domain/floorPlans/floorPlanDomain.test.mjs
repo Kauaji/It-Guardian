@@ -62,6 +62,17 @@ test("editor: andar padrao, filhos com andar invalido caem no primeiro e ids sao
   assert.deepEqual(children.cableRoutes[0].path, []);
 });
 
+test("pontos e rotas sem label/cor recebem padroes (colunas NOT NULL) em vez de falhar no banco", () => {
+  const children = normalizeEditorChildren("p1", {
+    floors: [{ id: "f1", name: "A", width: 800, height: 600 }],
+    connectionPoints: [{ pointType: "power" }, {}],
+    cableRoutes: [{ routeType: "power" }, {}]
+  });
+  assert.deepEqual(children.connectionPoints.map((point) => point.label), ["Tomada", "Ponto de rede"]);
+  assert.deepEqual(children.cableRoutes.map((route) => route.label), ["Cabo de energia", "Cabo de rede"]);
+  assert.deepEqual(children.cableRoutes.map((route) => route.color), ["#2563eb", "#2563eb"]);
+});
+
 test("andar ativo e a copia de planta remapeiam ids e referencias", () => {
   const floors = [{ id: "a" }, { id: "b" }];
   assert.equal(resolveActiveFloorId({ activeFloorId: "b" }, floors), "b");
