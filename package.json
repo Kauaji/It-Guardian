@@ -28,6 +28,7 @@
     "installer:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File installers/windows-collector/build-installer.ps1",
     "test": "npm run test --workspace server",
     "test:client": "npm run test --workspace client",
+    "test:client:coverage": "npm run test:coverage --workspace client",
     "test:coverage": "npm run test:coverage --workspace server",
     "test:integration": "npm run test:integration --workspace server",
     "test:e2e": "playwright test",
