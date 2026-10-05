@@ -114,9 +114,11 @@ export async function enrollAgentAsset(baseUrl, machineId) {
 /** Cadastra um ativo manual (sem agente): aparece no inventario, mas nao recebe jobs. */
 export async function createManualDevice(name, tag, ip) {
   const { createManualAsset } = await import("../src/repositories/manualAssetRepository.js");
+  const { checkPingStatus } = await import("../src/services/pingStatusService.js");
   const asset = await createManualAsset({
     payload: { name, type: "desktop", brand: "Generica", model: "Teste", assetTag: tag, ip },
-    user: { id: null }
+    user: { id: null },
+    checkPing: checkPingStatus
   });
   return asset;
 }
