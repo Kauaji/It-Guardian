@@ -1,7 +1,7 @@
 import { withTransaction } from "../../database.js";
 import { resolveObservationOutcome } from "../../domain/maintenanceScripts/usagePolicy.js";
 import { notFoundError } from "../../lib/errors.js";
-import { markSuggestionValidated } from "../../repositories/alertRepository.js";
+import { markSuggestionValidated } from "../alerts/alertSuggestionObservationService.js";
 import { addAssetHistory } from "../../repositories/assetHistoryRepository.js";
 import { addLog } from "../../repositories/logRepository.js";
 import {
