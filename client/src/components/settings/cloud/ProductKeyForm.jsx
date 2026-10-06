@@ -2,7 +2,7 @@ import { Clipboard, KeyRound, LoaderCircle, ShieldCheck } from "lucide-react";
 
 const formFields = [
   { name: "displayName", label: "Nome de exibição", maxLength: 120, placeholder: "Cliente principal" },
-  { name: "organizationName", label: "Organizacao", maxLength: 160, placeholder: "Empresa" },
+  { name: "organizationName", label: "Organização", maxLength: 160, placeholder: "Empresa" },
   { name: "planName", label: "Plano", maxLength: 80 },
   { name: "activationLimit", label: "Limite de computadores", type: "number", min: "1", max: "100000" },
   { name: "expiresAt", label: "Expira em", type: "date" }

@@ -142,7 +142,7 @@ describe("CloudProductAdminPanel - criar chave", () => {
     expect(screen.getByText("Exibição única")).toBeInTheDocument();
 
     await user.type(screen.getByLabelText("Nome de exibição"), "Novo");
-    await user.type(screen.getByLabelText("Organizacao"), "Org");
+    await user.type(screen.getByLabelText("Organização"), "Org");
     await user.clear(screen.getByLabelText("Plano"));
     await user.type(screen.getByLabelText("Plano"), "Pro");
     await user.clear(screen.getByLabelText("Limite de computadores"));
@@ -176,7 +176,7 @@ describe("CloudProductAdminPanel - criar chave", () => {
     Object.defineProperty(navigator, "clipboard", { value: { writeText: vi.fn().mockRejectedValue(new Error("no")) }, configurable: true });
     await screen.findByText("Cliente principal");
     await user.type(screen.getByLabelText("Nome de exibição"), "N");
-    await user.type(screen.getByLabelText("Organizacao"), "O");
+    await user.type(screen.getByLabelText("Organização"), "O");
     await user.click(screen.getByRole("button", { name: /Gerar chave/ }));
     await user.click(await screen.findByRole("button", { name: /Copiar/ }));
     expect(notify).toHaveBeenCalledWith("Não foi possível copiar automaticamente. Selecione a chave exibida.", "danger");
@@ -187,7 +187,7 @@ describe("CloudProductAdminPanel - criar chave", () => {
     const user = mount();
     await screen.findByText("Cliente principal");
     await user.type(screen.getByLabelText("Nome de exibição"), "N");
-    await user.type(screen.getByLabelText("Organizacao"), "O");
+    await user.type(screen.getByLabelText("Organização"), "O");
     await user.click(screen.getByRole("button", { name: /Gerar chave/ }));
     await waitFor(() => expect(notify).toHaveBeenCalledWith("Limite excedido", "danger"));
     expect(screen.getByText("Exibição única")).toBeInTheDocument();
