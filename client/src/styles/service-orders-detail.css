@@ -430,7 +430,7 @@
 .service-order-sla-status.service-order-sla-near_due {
   border: 1px solid color-mix(in srgb, var(--status-warning) 45%, var(--border));
   background: color-mix(in srgb, var(--status-warning) 16%, var(--surface-soft));
-  color: #92400e;
+  color: var(--text-warn);
 }
 
 .service-order-sla-badge-not_applicable {
@@ -542,7 +542,7 @@
 }
 
 .service-order-checklist-list label em {
-  color: var(--status-danger);
+  color: var(--text-danger);
   font-style: normal;
 }
 
@@ -570,7 +570,7 @@
   border-radius: 12px;
   border: 1px solid color-mix(in srgb, var(--status-warning) 40%, var(--border));
   background: color-mix(in srgb, var(--status-warning) 12%, var(--surface-soft));
-  color: #92400e;
+  color: var(--text-warn);
   font-size: 0.8rem;
 }
 
@@ -639,7 +639,7 @@
 }
 
 .service-order-attachment-reference {
-  color: var(--status-info);
+  color: var(--text-info);
   overflow-wrap: anywhere;
 }
 
@@ -695,7 +695,7 @@
   border-radius: 12px;
   border: 1px solid color-mix(in srgb, var(--status-warning) 40%, var(--border));
   background: color-mix(in srgb, var(--status-warning) 12%, var(--surface-soft));
-  color: #92400e;
+  color: var(--text-warn);
   font-size: 0.8rem;
 }
 
@@ -754,13 +754,13 @@
 .service-order-script-risk.risk-high {
   border-color: color-mix(in srgb, var(--status-warning) 45%, var(--border));
   background: color-mix(in srgb, var(--status-warning) 15%, var(--surface-soft));
-  color: #92400e;
+  color: var(--text-warn);
 }
 
 .service-order-script-risk.risk-critical {
   border-color: color-mix(in srgb, var(--status-danger) 45%, var(--border));
   background: color-mix(in srgb, var(--status-danger) 15%, var(--surface-soft));
-  color: var(--status-danger);
+  color: var(--text-danger);
 }
 
 .service-order-scripts-activity ul {
@@ -811,7 +811,7 @@
 }
 
 .service-order-script-output.error {
-  color: var(--status-danger);
+  color: var(--text-danger);
 }
 
 .service-order-script-confirm-modal {

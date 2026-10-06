@@ -178,7 +178,7 @@
 }
 
 .danger-icon {
-  color: var(--status-danger);
+  color: var(--text-danger);
 }
 
 .floor-plan-editor-shell {
@@ -252,7 +252,7 @@
 .floor-plan-save-state.error {
   background: #fef2f2;
   border-color: #fecaca;
-  color: var(--red-700);
+  color: var(--text-danger);
 }
 
 .segmented-control.compact {
@@ -483,7 +483,7 @@
 
 .floor-plan-delete-plan {
   border-color: #fecaca;
-  color: var(--status-danger);
+  color: var(--text-danger);
 }
 
 .floor-plan-delete-plan:hover {
@@ -627,7 +627,7 @@
 }
 
 .floor-plan-catalog-items button svg {
-  color: var(--status-info);
+  color: var(--text-info);
   margin-top: -45px;
   position: relative;
 }

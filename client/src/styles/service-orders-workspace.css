@@ -40,11 +40,11 @@
 }
 
 .script-diagnostic-row.script-diagnostic-pass {
-  color: #047857;
+  color: var(--text-ok);
 }
 
 .script-diagnostic-row.script-diagnostic-fail {
-  color: var(--status-danger);
+  color: var(--text-danger);
 }
 
 .script-diagnostic-row.script-diagnostic-unknown {
@@ -125,7 +125,7 @@
 }
 
 .service-order-checklist-template-actions .danger {
-  color: var(--status-danger);
+  color: var(--text-danger);
   border-color: color-mix(in srgb, var(--status-danger) 40%, var(--border));
 }
 
@@ -545,7 +545,7 @@
 }
 
 .service-order-backup-panel > header {
-  color: #b45309;
+  color: var(--text-warn);
 }
 
 .service-order-backup-panel > header div,
@@ -597,7 +597,7 @@
 
 .service-order-backup-card-list button:hover:not(:disabled) {
   border-color: var(--status-warning);
-  color: #b45309;
+  color: var(--text-warn);
   box-shadow: var(--shadow-sm);
   transform: translateY(-1px);
 }

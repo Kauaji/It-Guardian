@@ -234,7 +234,7 @@
 }
 
 .room-resize-handle svg {
-  color: var(--status-info);
+  color: var(--text-info);
 }
 
 .room-floating-toolbar {
@@ -264,7 +264,7 @@
 }
 
 .room-floating-toolbar > g svg {
-  color: var(--status-info);
+  color: var(--text-info);
 }
 
 .room-floating-toolbar > g:last-child rect {
@@ -273,7 +273,7 @@
 }
 
 .room-floating-toolbar > g:last-child svg {
-  color: var(--status-danger);
+  color: var(--text-danger);
 }
 
 .floor-plan-inspector {
@@ -454,7 +454,7 @@
   }
 
   .floor-plan-scene-actions::before {
-    color: #b45309;
+    color: var(--text-warn);
     content: "A edicao 3D funciona melhor em telas maiores.";
     font-size: 0.72rem;
   }

@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import * as api from "../api.js";
 import { renderA11yApp, setupA11yApiMocks, waitForAppReady } from "../test/a11yApp.jsx";
-import { modalScenarios, viewScenarios } from "../test/a11yScenarios.js";
+import { modalScenarios, tabScenarios, viewScenarios } from "../test/a11yScenarios.js";
 import { expectNoAxeViolations } from "../test/axe.js";
 
 vi.mock("../api.js");
@@ -31,6 +31,19 @@ describe("modais principais", () => {
       await waitForAppReady(marker);
       await open(user);
       await screen.findByRole("dialog");
+      await expectNoAxeViolations();
+    }, 40000);
+  }
+});
+
+describe("abas internas", () => {
+  for (const { name, path, marker, open } of tabScenarios) {
+    it(name, async () => {
+      const user = userEvent.setup();
+      renderA11yApp(path);
+      await waitForAppReady(marker);
+      await open(user);
+      await new Promise((resolve) => setTimeout(resolve, 200));
       await expectNoAxeViolations();
     }, 40000);
   }

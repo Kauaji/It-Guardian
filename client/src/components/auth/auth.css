@@ -149,7 +149,7 @@
 }
 
 .auth-checklist li.met svg {
-  color: var(--green-600);
+  color: var(--text-ok);
 }
 
 .auth-strength {
@@ -321,11 +321,11 @@
 }
 
 .auth-status.on svg {
-  color: var(--green-600);
+  color: var(--text-ok);
 }
 
 .auth-status.off svg {
-  color: var(--amber-600);
+  color: var(--text-warn);
 }
 
 .auth-dialog {

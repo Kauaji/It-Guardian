@@ -165,7 +165,7 @@
 
 .script-variable-list.error strong,
 .script-variable-list.error p {
-  color: var(--red-700);
+  color: var(--text-danger);
 }
 
 .script-form-actions,
@@ -325,7 +325,7 @@
 
 .summary-card.danger svg,
 .bar span.danger {
-  color: var(--red-500);
+  color: var(--text-danger);
 }
 
 .summary-card.warning svg,

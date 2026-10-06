@@ -170,7 +170,7 @@
 }
 
 .icon-button.danger {
-  color: var(--status-danger);
+  color: var(--text-danger);
 }
 
 .settings-empty {

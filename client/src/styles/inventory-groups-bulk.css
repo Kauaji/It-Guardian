@@ -344,7 +344,7 @@
 
 .bulk-actions-bar button.danger:hover {
   border-color: var(--red-500);
-  color: var(--red-500);
+  color: var(--text-danger);
 }
 
 .inventory-board-view > .bulk-actions-bar {

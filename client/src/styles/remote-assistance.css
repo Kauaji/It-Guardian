@@ -209,7 +209,7 @@
 
 .remote-assistance-toolbar .danger {
   margin-left: auto;
-  color: #b42318;
+  color: var(--text-danger);
   border-color: #f4c7c3;
 }
 
@@ -240,7 +240,7 @@
 
 .remote-assistance-status.status-reconnecting,
 .remote-assistance-status.status-agent_offline {
-  color: #92400e;
+  color: var(--text-warn);
   background: color-mix(in srgb, var(--status-warning) 16%, var(--surface));
 }
 

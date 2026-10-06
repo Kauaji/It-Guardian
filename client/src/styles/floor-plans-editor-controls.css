@@ -40,7 +40,7 @@
 .floor-plan-editor-shell .floor-plan-top-tools button.danger-tool {
   background: #fee2e2;
   border-color: #fca5a5;
-  color: var(--red-700);
+  color: var(--text-danger);
 }
 
 .floor-plan-editor-shell .floor-plan-top-tools button:disabled {

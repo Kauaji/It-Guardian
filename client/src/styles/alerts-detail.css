@@ -518,7 +518,7 @@
 
 .resolve-icon-button.danger {
   border-color: #f0b8b8;
-  color: var(--red-500);
+  color: var(--text-danger);
 }
 
 .resolve-icon-button.danger:hover {

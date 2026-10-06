@@ -186,7 +186,7 @@
 .public-support-error {
   border: 1px solid #fecaca;
   background: #fff1f2;
-  color: var(--red-700);
+  color: var(--text-danger);
 }
 
 .public-support-actions {

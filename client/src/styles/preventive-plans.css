@@ -359,7 +359,7 @@
 .preventive-device-row em,
 .preventive-script-select small,
 .preventive-script-select em {
-  color: var(--text-soft);
+  color: var(--text-muted);
   font-size: 0.72rem;
   font-style: normal;
   font-weight: 800;

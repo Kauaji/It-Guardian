@@ -434,7 +434,7 @@
 .inventory-visual-map-error {
   border-color: color-mix(in srgb, var(--status-danger) 28%, var(--border));
   background: color-mix(in srgb, var(--status-danger) 8%, var(--surface));
-  color: #991b1b;
+  color: var(--text-danger);
 }
 
 .inventory-visual-map-error,

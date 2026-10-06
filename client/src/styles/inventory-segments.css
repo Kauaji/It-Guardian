@@ -605,7 +605,7 @@
 .inline-action-button.danger:hover {
   border-color: color-mix(in srgb, var(--status-danger) 40%, var(--border-strong)) !important;
   background: color-mix(in srgb, var(--status-danger) 12%, var(--surface)) !important;
-  color: var(--red-700) !important;
+  color: var(--text-danger) !important;
 }
 
 .inline-action-strip .segment-color-trigger span {
@@ -693,7 +693,7 @@
 
 .action-menu-item.danger:hover {
   background: color-mix(in srgb, var(--status-danger) 12%, var(--surface-soft)) !important;
-  color: var(--red-700) !important;
+  color: var(--text-danger) !important;
 }
 
 .action-menu-item.color-action {
