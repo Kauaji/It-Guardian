@@ -1,9 +1,25 @@
 import { hasOwn } from "./serviceOrderPayload.js";
 
+/** @import { ServiceOrder, ServiceOrderMoney, ServiceOrderPayload, ServiceOrderSector, ServiceOrderService, ServiceOrderSettings } from "./types.js" */
+
 /**
  * Monta os valores persistidos de uma OS nova a partir do payload ja
  * validado e dos dados resolvidos (setor, servico, prioridade, totais).
  * Funcao pura: nao acessa banco.
+ *
+ * @param {object} input
+ * @param {ServiceOrderPayload} input.payload
+ * @param {string} input.id
+ * @param {string} input.number
+ * @param {ServiceOrderSettings} input.settings
+ * @param {string} input.initialStatus
+ * @param {string} input.priority
+ * @param {ServiceOrderSector & { sectorId: string | null, sectorName: string | null }} input.sector
+ * @param {ServiceOrderService} input.service
+ * @param {ServiceOrderMoney} input.money
+ * @param {string[]} input.assignedTechnicianNames
+ * @param {{ id?: string | null } | null} [input.user]
+ * @param {string | null} input.slaDueAt
  */
 export function buildNewServiceOrderRow({
   payload,
@@ -59,7 +75,12 @@ export function buildNewServiceOrderRow({
   };
 }
 
-/** Instante de fechamento: preserva o existente ao finalizar e zera ao reabrir. */
+/**
+ * Instante de fechamento: preserva o existente ao finalizar e zera ao reabrir.
+ *
+ * @param {{ nextStatus: string, finalStatus: string, current: Pick<ServiceOrder, "closedAt"> }} input
+ * @returns {string | Date | null}
+ */
 export function resolveClosedAt({ nextStatus, finalStatus, current }) {
   return nextStatus === finalStatus ? current.closedAt || new Date().toISOString() : null;
 }
@@ -67,6 +88,16 @@ export function resolveClosedAt({ nextStatus, finalStatus, current }) {
 /**
  * Valores da atualizacao de uma OS: cada campo enviado no payload substitui o
  * atual; campos ausentes preservam o valor existente (funcao pura).
+ *
+ * @param {object} input
+ * @param {ServiceOrderPayload} input.payload
+ * @param {ServiceOrder} input.current
+ * @param {string} input.nextStatus
+ * @param {string | Date | null} input.closedAt
+ * @param {ServiceOrderSector} input.sector
+ * @param {ServiceOrderService} input.service
+ * @param {ServiceOrderMoney} input.money
+ * @param {string[]} input.assignedTechnicianNames
  */
 export function buildUpdatedServiceOrderRow({
   payload,

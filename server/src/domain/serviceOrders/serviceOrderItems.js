@@ -1,5 +1,11 @@
 import { randomUUID } from "node:crypto";
 
+/** @import { ServiceOrderItem, ServiceOrderItemInput } from "./types.js" */
+
+/**
+ * @param {unknown} value Numero ou texto monetario ("1.234,50").
+ * @returns {number} Reais arredondados em centavos; invalido ou negativo vira 0.
+ */
 export function toMoneyValue(value) {
   if (value == null || value === "") return 0;
   const raw = String(value).replace(/[^\d,.-]/g, "");
@@ -9,16 +15,26 @@ export function toMoneyValue(value) {
   return Math.round(number * 100) / 100;
 }
 
+/**
+ * @param {unknown} value
+ * @returns {number} Quantidade positiva com 2 casas; invalida vira 1.
+ */
 export function toQuantityValue(value) {
   const quantity = Number(String(value ?? "").replace(",", "."));
   if (!Number.isFinite(quantity) || quantity <= 0) return 1;
   return Math.round(quantity * 100) / 100;
 }
 
+/**
+ * @param {unknown} [items]
+ * @returns {ServiceOrderItem[]} Itens validos (com nome de produto); entradas nao objeto sao descartadas.
+ */
 export function normalizeServiceOrderItems(items = []) {
   if (!Array.isArray(items)) return [];
 
-  return items
+  // `null`/`undefined` no meio da lista (corpo cru) antes derrubavam a OS com TypeError.
+  return /** @type {(ServiceOrderItemInput | null | undefined)[]} */ (items)
+    .filter((item) => item != null)
     .map((item) => {
       const quantity = toQuantityValue(item.quantity);
       const unitPrice = toMoneyValue(item.unitPrice ?? item.unit_price);
@@ -35,10 +51,18 @@ export function normalizeServiceOrderItems(items = []) {
     .filter((item) => item.productName);
 }
 
+/**
+ * @param {{ subtotal?: unknown }[]} [items]
+ * @returns {number}
+ */
 export function sumServiceOrderItems(items = []) {
   return Math.round(items.reduce((total, item) => total + toMoneyValue(item.subtotal), 0) * 100) / 100;
 }
 
+/**
+ * @param {unknown} [items]
+ * @returns {string} JSON estavel dos itens normalizados (para comparar mudancas).
+ */
 export function itemsSignature(items = []) {
   return JSON.stringify(
     normalizeServiceOrderItems(items).map((item) => ({
@@ -52,6 +76,10 @@ export function itemsSignature(items = []) {
   );
 }
 
+/**
+ * @param {unknown} [items]
+ * @returns {string}
+ */
 export function formatItemsForHistory(items = []) {
   const normalized = normalizeServiceOrderItems(items);
   if (!normalized.length) return "";

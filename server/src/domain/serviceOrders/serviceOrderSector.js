@@ -7,6 +7,10 @@ export const defaultServiceOrderSector = {
   sectorName: generalSector.name
 };
 
+/**
+ * @param {{ sectorId?: string | null, sectorName?: string | null }} [sector]
+ * @returns {boolean}
+ */
 export function isGeneralSector({ sectorId, sectorName } = {}) {
   return !sectorId || sectorId === generalSector.id || normalizeText(sectorName) === normalizeText(generalSector.name);
 }

@@ -2,10 +2,21 @@ import { hasPermission } from "../../permissions.js";
 import { isGeneralSector } from "./serviceOrderSector.js";
 import { normalizeText } from "./serviceOrderText.js";
 
+/** @import { ServiceOrder, ServiceOrderUser } from "./types.js" */
+
+/**
+ * @param {ServiceOrderUser} [user]
+ * @returns {boolean}
+ */
 export function canViewAllServiceOrders(user = {}) {
   return hasPermission(user, "service_orders.view_all") || hasPermission(user, "admin.full");
 }
 
+/**
+ * @param {ServiceOrderUser | null | undefined} [user]
+ * @param {Partial<ServiceOrder>} [order]
+ * @returns {boolean}
+ */
 export function canViewServiceOrder(user = {}, order = {}) {
   if (!user?.id) return false;
   if (canViewAllServiceOrders(user)) return true;
