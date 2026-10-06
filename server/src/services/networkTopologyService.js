@@ -1,21 +1,27 @@
 import { badRequest, conflict, notFoundError } from "../lib/errors.js";
+import { listNetworkTopologyLinks } from "../repositories/networkTopology/topologyLinkRepository.js";
+import {
+  getNetworkTopologyMap,
+  listNetworkTopologyMaps
+} from "../repositories/networkTopology/topologyMapRepository.js";
+import { listNetworkTopologyNodes } from "../repositories/networkTopology/topologyNodeRepository.js";
 import {
   createNetworkTopologyLink,
-  createNetworkTopologyMap,
-  createNetworkTopologyNode,
   deleteNetworkTopologyLink,
+  updateNetworkTopologyLink
+} from "./networkTopology/topologyLinkCommandService.js";
+import {
+  createNetworkTopologyMap,
   deleteNetworkTopologyMap,
-  deleteNetworkTopologyNode,
-  bulkUpdateNetworkTopologyNodePositions,
-  getNetworkTopologyMap,
   getOrCreateNetworkTopologyMapByScope,
-  listNetworkTopologyLinks,
-  listNetworkTopologyMaps,
-  listNetworkTopologyNodes,
-  updateNetworkTopologyLink,
-  updateNetworkTopologyMap,
+  updateNetworkTopologyMap
+} from "./networkTopology/topologyMapCommandService.js";
+import {
+  bulkUpdateNetworkTopologyNodePositions,
+  createNetworkTopologyNode,
+  deleteNetworkTopologyNode,
   updateNetworkTopologyNode
-} from "../repositories/networkTopologyRepository.js";
+} from "./networkTopology/topologyNodeCommandService.js";
 import { findSegmentById } from "../repositories/segmentRepository.js";
 import { findSegmentGroupById } from "../repositories/segmentGroupRepository.js";
 import { computeAutoLayout } from "./networkTopologyAutoLayout.js";

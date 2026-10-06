@@ -264,7 +264,7 @@ test("repositorio de automacao nao usa primitivas de execucao de comandos", () =
     "../services/preventiveAutomationRunService.js",
     "../services/preventiveAutomationScheduleService.js",
     "../services/preventiveAutomationScopeService.js",
-    "./maintenanceScriptRepository.js"
+    "../services/maintenanceScripts/maintenanceScriptsFacade.js"
   ].map(sourceOf).join("\n");
 
   assert.doesNotMatch(source, /child_process/);

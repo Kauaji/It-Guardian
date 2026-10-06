@@ -24,7 +24,7 @@ const {
   setAgentAssetRustdeskId,
   updateAgentAssetAlias
 } = await import("../src/repositories/agentRepository.js");
-const { verifyPublicMachineToken } = await import("../src/domain/publicMachineToken.js");
+const { verifyPublicMachineToken } = await import("../src/services/publicMachineToken.js");
 const {
   agentHeaders,
   bearerHeaders,

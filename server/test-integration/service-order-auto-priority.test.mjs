@@ -10,7 +10,7 @@ process.env.NODE_ENV = "test";
 const { createApp } = await import("../src/app.js");
 const { initializeRuntime } = await import("../src/bootstrap.js");
 const { closeDatabase, query } = await import("../src/database.js");
-const { syncAutoPriorities } = await import("../src/repositories/serviceOrderRepository.js");
+const { syncAutoPriorities } = await import("../src/services/serviceOrders/serviceOrderSlaSyncService.js");
 
 function listen(app) {
   return new Promise((resolve) => {

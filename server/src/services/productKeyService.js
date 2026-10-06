@@ -9,7 +9,7 @@ import {
   updateProductKeyMonitoring
 } from "../repositories/productKeyRepository.js";
 import { getFrontendUrl } from "../config/environment.js";
-import { createPublicMachineToken } from "../domain/publicMachineToken.js";
+import { createPublicMachineToken } from "./publicMachineToken.js";
 
 function badRequest(message) {
   const error = new Error(message);

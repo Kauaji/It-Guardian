@@ -8,8 +8,9 @@ process.env.JWT_SECRET = "integration-test-secret-with-at-least-32-characters";
 process.env.NODE_ENV = "test";
 
 const { createApp } = await import("../src/app.js");
-const { createMaintenanceScript } = await import("../src/repositories/maintenanceScriptRepository.js");
+const { createMaintenanceScript } = await import("../src/services/maintenanceScripts/maintenanceScriptsFacade.js");
 const { createManualAsset } = await import("../src/repositories/manualAssetRepository.js");
+const { checkPingStatus } = await import("../src/services/pingStatusService.js");
 
 const trustedOrigin = "http://localhost:5173";
 const basePath = "/api/preventive-automation-plans";
@@ -58,7 +59,8 @@ test("plano de automacao preventiva: criar, listar, pausar, reativar e excluir",
       assetTag: "AUTOMATION-TEST-1",
       ip: "203.0.113.50"
     },
-    user: { id: null }
+    user: { id: null },
+    checkPing: checkPingStatus
   });
 
   const createResponse = await fetch(baseUrl + basePath, {

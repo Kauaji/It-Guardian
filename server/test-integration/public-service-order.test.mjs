@@ -11,7 +11,7 @@ const { createApp } = await import("../src/app.js");
 const { initializeRuntime } = await import("../src/bootstrap.js");
 const { closeDatabase } = await import("../src/database.js");
 const { createProductKey, activateCollector } = await import("../src/repositories/productKeyRepository.js");
-const { createPublicMachineToken } = await import("../src/domain/publicMachineToken.js");
+const { createPublicMachineToken } = await import("../src/services/publicMachineToken.js");
 const { honeypotFieldName } = await import("../src/services/publicServiceOrderService.js");
 
 const trustedOrigin = "http://localhost:5173";

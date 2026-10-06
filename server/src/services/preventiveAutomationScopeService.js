@@ -1,6 +1,6 @@
 import { badRequest, conflict, forbidden } from "../lib/errors.js";
 import { filterAutomationAssetsByScope } from "../repositories/automationAccessScope.js";
-import { findMaintenanceScriptById } from "../repositories/maintenanceScriptRepository.js";
+import { findMaintenanceScriptById } from "./maintenanceScripts/maintenanceScriptsFacade.js";
 import {
   groupExists,
   listSegmentIdsByGroup,

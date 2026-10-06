@@ -1,27 +1,26 @@
 import { findAgentAssetByActivationId } from "../repositories/agentRepository.js";
 import { startMaintenanceForAsset } from "../repositories/assetLifecycleRepository.js";
 import {
-  createServiceOrder,
   calculateServiceOrderSla,
   findServiceOrderById,
   formatServiceOrderNumber,
   getServiceOrderSettings
 } from "../repositories/serviceOrderRepository.js";
+import { createServiceOrder } from "./serviceOrders/serviceOrderCreationService.js";
 import { listSettingsRecords } from "../repositories/settingsRepository.js";
 import { getSystemSettings } from "../repositories/systemSettingsRepository.js";
-import { verifyPublicMachineToken } from "../domain/publicMachineToken.js";
+import { verifyPublicMachineToken } from "./publicMachineToken.js";
 import {
   createPublicServiceOrderTrackingToken,
   verifyPublicServiceOrderTrackingToken
-} from "../domain/publicServiceOrderTrackingToken.js";
+} from "./publicServiceOrderTrackingToken.js";
 import {
   chooseHigherPriority,
-  getActiveProblemTypes,
   normalize,
-  resolveProblemTypeKey,
   sanitizePriority,
   uniqueCategories
 } from "../domain/problemTypes.js";
+import { getActiveProblemTypes, resolveProblemTypeKey } from "./problemTypeService.js";
 import { applyChecklistTemplateOnCreate } from "./serviceOrderChecklistService.js";
 import { trimString } from "../lib/textUtils.js";
 import { badRequest, notFoundError } from "../lib/errors.js";

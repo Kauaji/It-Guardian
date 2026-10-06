@@ -13,12 +13,13 @@ import { detectRedisConfig } from "./lib/redisClient.js";
 import { initializeDatabase } from "./schema/legacyBootstrap.js";
 import { assertSchemaUpToDate, runMigrations } from "./migrations/index.js";
 import { seedDemoOperationalData } from "./repositories/demoDataRepository.js";
-import { seedDefaultMaintenanceScripts } from "./repositories/maintenanceScriptRepository.js";
-import { backfillPreventiveAutomationAssetSchedules } from "./repositories/preventiveAutomationRepository.js";
+import { seedDemoUsers } from "./repositories/demo/demoUserSeed.js";
+import { seedDefaultMaintenanceScripts } from "./services/maintenanceScripts/maintenanceScriptsFacade.js";
+import { backfillPreventiveAutomationAssetSchedules } from "./services/preventiveAutomationFacade.js";
 import { purgeLegacyMockIntegrationSnapshots } from "./repositories/integrationRepository.js";
 import { seedDefaultSegment } from "./repositories/segmentRepository.js";
 import { seedDefaultSectors } from "./repositories/sectorRepository.js";
-import { seedDefaultAdmin, seedDemoUsers } from "./repositories/userRepository.js";
+import { seedDefaultAdmin } from "./repositories/userRepository.js";
 
 let runtimePromise;
 

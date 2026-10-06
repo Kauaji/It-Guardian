@@ -1,4 +1,4 @@
-import { calculateServiceOrderSla } from "../repositories/serviceOrderRepository.js";
+import { calculateServiceOrderSla } from "./serviceOrders/serviceOrderSla.js";
 
 export function buildIsFinalServiceOrderStatus(statusSettings) {
   const statusById = new Map(statusSettings.statuses.map((status) => [status.id, status]));

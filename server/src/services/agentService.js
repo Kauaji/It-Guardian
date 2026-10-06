@@ -5,7 +5,7 @@ import {
   validateJobResultPayload
 } from "../domain/agentPayload.js";
 import { isUpdateAvailable } from "../domain/agentVersion.js";
-import { createPublicMachineToken } from "../domain/publicMachineToken.js";
+import { createPublicMachineToken } from "./publicMachineToken.js";
 import { AppError, conflict } from "../lib/errors.js";
 import {
   authenticateAgentToken,

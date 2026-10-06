@@ -8,7 +8,7 @@ import {
   recommendMaintenanceScripts,
   scoreMaintenanceScriptForContext,
   toRecommendedScriptResponse
-} from "./maintenanceScriptRepository.js";
+} from "../services/maintenanceScripts/maintenanceScriptsFacade.js";
 
 const baseScript = {
   id: "script-base",

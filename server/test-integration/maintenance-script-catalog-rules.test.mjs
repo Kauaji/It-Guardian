@@ -11,7 +11,7 @@ process.env.NODE_ENV = "test";
 const { createApp } = await import("../src/app.js");
 const { initializeRuntime } = await import("../src/bootstrap.js");
 const { closeDatabase, query } = await import("../src/database.js");
-const { seedDefaultMaintenanceScripts } = await import("../src/repositories/maintenanceScriptRepository.js");
+const { seedDefaultMaintenanceScripts } = await import("../src/services/maintenanceScripts/maintenanceScriptsFacade.js");
 const {
   browserHeaders,
   bearerHeaders,

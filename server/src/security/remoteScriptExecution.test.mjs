@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { isRemoteScriptExecutionEnabled } from "../config/environment.js";
-import { queueAgentScriptJob } from "../repositories/agentScriptJobRepository.js";
+import { queueAgentScriptJob } from "../services/agentScriptJobService.js";
 
 test("execucao remota permanece desabilitada por padrao", () => {
   assert.equal(isRemoteScriptExecutionEnabled({}), false);

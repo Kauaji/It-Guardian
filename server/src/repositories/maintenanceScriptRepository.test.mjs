@@ -5,7 +5,7 @@ import {
   assertScriptContentIsSafe,
   recommendMaintenanceScripts,
   scoreMaintenanceScriptForContext
-} from "./maintenanceScriptRepository.js";
+} from "../services/maintenanceScripts/maintenanceScriptsFacade.js";
 
 test("pontua script recomendado pelo contexto do aviso", () => {
   const score = scoreMaintenanceScriptForContext(

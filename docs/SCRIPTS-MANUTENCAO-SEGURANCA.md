@@ -56,7 +56,7 @@ alto ou critico exigem uma confirmacao extra explicita.
 Alem da classificacao consultiva de risco (`analyzeMaintenanceScriptContent`,
 que so sugere um nivel e nunca bloqueia sozinha), todo cadastro ou edicao de
 script passa por `assertScriptContentIsSafe`
-(`server/src/repositories/maintenanceScriptRepository.js`), que **recusa
+(`server/src/domain/maintenanceScripts/contentSafety.js`), que **recusa
 salvar** o script (`400`, antes de qualquer gravacao) se o conteudo bater com
 um destes padroes — a lista e fixa, nao configuravel pela UI:
 

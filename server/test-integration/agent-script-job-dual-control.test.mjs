@@ -12,13 +12,13 @@ const { createApp } = await import("../src/app.js");
 const { initializeRuntime } = await import("../src/bootstrap.js");
 const { closeDatabase } = await import("../src/database.js");
 const { createAgentEnrollment } = await import("../src/repositories/agentRepository.js");
-const { queueAgentScriptJob } = await import("../src/repositories/agentScriptJobRepository.js");
+const { queueAgentScriptJob } = await import("../src/services/agentScriptJobService.js");
 const {
   createMaintenanceScript,
   createScriptSimulationLog,
   findMaintenanceScriptById,
   updateMaintenanceScript
-} = await import("../src/repositories/maintenanceScriptRepository.js");
+} = await import("../src/services/maintenanceScripts/maintenanceScriptsFacade.js");
 
 function heartbeatPayload(overrides = {}) {
   return {

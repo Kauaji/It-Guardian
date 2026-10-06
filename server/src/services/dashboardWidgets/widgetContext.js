@@ -1,6 +1,6 @@
 import { listAlerts } from "../../repositories/alertRepository.js";
 import { listLogs } from "../../repositories/logRepository.js";
-import { listRecentScriptExecutionLogs } from "../../repositories/maintenanceScriptRepository.js";
+import { listRecentScriptExecutionLogs } from "../maintenanceScripts/maintenanceScriptsFacade.js";
 import { getServiceOrderSettings, listServiceOrders } from "../../repositories/serviceOrderRepository.js";
 import { getActiveAlertsWithAcknowledgements } from "../alertService.js";
 import { listDevices } from "../monitoringService.js";

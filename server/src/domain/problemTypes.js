@@ -2,9 +2,9 @@
 // circular quando o checklist tecnico (serviceOrderChecklistService.js)
 // precisou resolver a mesma chave de tipo de problema usada aqui pra
 // calcular prioridade - os dois lados agora importam deste modulo de
-// dominio, sem nenhum dos dois apontar pro outro.
-import { serviceOrderPriorities } from "../repositories/serviceOrderRepository.js";
-import { listSettingsRecords } from "../repositories/settingsRepository.js";
+// dominio, sem nenhum dos dois apontar pro outro. A leitura dos tipos de
+// problema configurados (banco) fica em services/problemTypeService.js.
+import { serviceOrderPriorities } from "./serviceOrders/serviceOrderPriority.js";
 
 export const defaultCategories = [
   "Computador",
@@ -66,8 +66,11 @@ export function chooseHigherPriority(current, candidate) {
   return priorityRank[safeCandidate] > priorityRank[current] ? safeCandidate : current;
 }
 
-export async function getActiveProblemTypes() {
-  const configured = await listSettingsRecords("problemTypes");
+/**
+ * Tipos de problema ativos a partir dos registros configurados (funcao pura);
+ * sem nenhum ativo, usa os padroes embutidos.
+ */
+export function activeProblemTypesFromRecords(configured) {
   const active = configured
     .filter((item) => item.active !== false)
     .map((item) => ({
@@ -81,14 +84,8 @@ export async function getActiveProblemTypes() {
   return active.length ? active : defaultProblemTypes;
 }
 
-// Reaproveitada pelo checklist tecnico (serviceOrderChecklistService.js) e
-// pelo calculo de prioridade do formulario publico para resolver
-// `service_orders.problem_type` (texto livre - pode ser o id de um
-// problem_types configurado, o nome, ou um slug default-* quando nao ha
-// nenhum problem type configurado) na mesma chave - evita as duas logicas
-// de match divergirem.
-export async function resolveProblemTypeKey(problemTypeValue) {
-  const problemTypes = await getActiveProblemTypes();
+/** Procura o tipo de problema por id ou nome, ignorando acentos e caixa. */
+export function findProblemTypeKey(problemTypes, problemTypeValue) {
   const match = problemTypes.find(
     (item) => normalize(item.id) === normalize(problemTypeValue) || normalize(item.name) === normalize(problemTypeValue)
   );

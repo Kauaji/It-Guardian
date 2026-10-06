@@ -5,9 +5,9 @@ import { actorName, normalizeScheduleSlot, toValidDate } from "../domain/prevent
 import { buildRunDraft, recurrenceFromSchedule } from "../domain/preventiveAutomationRun.js";
 import { resolveEffectiveRecurrence } from "../domain/preventiveAutomationSchedule.js";
 import { addAssetHistory } from "../repositories/assetHistoryRepository.js";
-import { queueAgentScriptJob } from "../repositories/agentScriptJobRepository.js";
+import { queueAgentScriptJob } from "./agentScriptJobService.js";
 import { addLog } from "../repositories/logRepository.js";
-import { createScriptSimulationLog, refreshDueScriptValidations } from "../repositories/maintenanceScriptRepository.js";
+import { createScriptSimulationLog, refreshDueScriptValidations } from "./maintenanceScripts/maintenanceScriptsFacade.js";
 import { markPlanPrepared } from "../repositories/preventiveAutomationPlanRepository.js";
 import { findRunBySlot, insertRun } from "../repositories/preventiveAutomationRunRepository.js";
 import {
@@ -15,7 +15,7 @@ import {
   listDueSchedulesForPlan,
   markSchedulePrepared
 } from "../repositories/preventiveAutomationScheduleRepository.js";
-import { syncAutoPriorities, syncSlaBreaches } from "../repositories/serviceOrderRepository.js";
+import { syncAutoPriorities, syncSlaBreaches } from "./serviceOrders/serviceOrderSlaSyncService.js";
 import {
   findPreventiveAutomationPlanById,
   listDuePreventiveAutomationPlans

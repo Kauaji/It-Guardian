@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { query } from "../database.js";
 import { addAssetHistory, listAssetHistory } from "./assetHistoryRepository.js";
-import { checkPingStatus } from "../services/pingStatusService.js";
 
 function normalizeOptional(value) {
   return value?.trim() || null;
@@ -58,7 +57,8 @@ export async function findManualAssetById(id) {
   };
 }
 
-export async function createManualAsset({ payload, user }) {
+// `checkPing(asset)` e injetado pelo servico: o repositorio nao faz chamadas de rede.
+export async function createManualAsset({ payload, user, checkPing }) {
   const id = `manual-${randomUUID()}`;
   const asset = {
     id,
@@ -74,7 +74,7 @@ export async function createManualAsset({ payload, user }) {
     location: normalizeOptional(payload.location),
     notes: normalizeOptional(payload.notes)
   };
-  const ping = await checkPingStatus(asset);
+  const ping = await checkPing(asset);
 
   const result = await query(
     `
@@ -193,11 +193,11 @@ export async function updateManualAsset({ id, payload, user }) {
   return fromRow(result.rows[0]);
 }
 
-export async function refreshManualAssetPing({ id, user = null }) {
+export async function refreshManualAssetPing({ id, user = null, checkPing }) {
   const asset = await findManualAssetById(id);
   if (!asset) return null;
 
-  const ping = await checkPingStatus(asset);
+  const ping = await checkPing(asset);
   const result = await query(
     `
       UPDATE manual_network_assets
