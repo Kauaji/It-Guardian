@@ -46,7 +46,7 @@ test("login usa cookie HttpOnly e restaura a sessao apos recarregar", async ({ p
   await expect(page.getByRole("heading", { name: "Infraestrutura em tempo real" })).toBeVisible();
 });
 
-test("navega para Ordens de Servico e fecha detalhes com Escape", async ({ page }) => {
+test("navega para Ordens de Serviço e fecha detalhes com Escape", async ({ page }) => {
   await login(page);
 
   await page.getByRole("button", { name: /Ordens de Servi/ }).click();

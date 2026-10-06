@@ -1071,7 +1071,7 @@ export default function ServiceOrderDetailsModal({
                             <span>{item.quantity} x {formatCurrency(item.unitPrice)}</span>
                           </div>
                           <strong>{formatCurrency(item.subtotal)}</strong>
-                          <button type="button" className="icon-button danger" onClick={() => removePartItem(item.id)} title="Remover peca">
+                          <button type="button" className="icon-button danger" onClick={() => removePartItem(item.id)} title="Remover peça">
                             <X size={15} />
                           </button>
                         </article>

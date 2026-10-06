@@ -71,7 +71,7 @@ export function useItemPlacement({ doc, ui, notify, viewport, paint }) {
     if (!floor || !item) return;
     const candidate = preview || buildCatalogPreview(item, point);
     if (candidate && !candidate.valid) {
-      notify?.(candidate.reason || "Escolha outra posicao para o item.", "warning");
+      notify?.(candidate.reason || "Escolha outra posição para o item.", "warning");
       return;
     }
     const targetPoint = candidate?.point || point;

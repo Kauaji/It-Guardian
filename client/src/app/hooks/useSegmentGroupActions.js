@@ -43,7 +43,7 @@ export function useSegmentGroupActions({ data, inventory, meta }) {
     );
 
     if (duplicate) {
-      notify("Ja existe um grupo com esse nome.", "danger");
+      notify("Já existe um grupo com esse nome.", "danger");
       return;
     }
 
@@ -133,7 +133,7 @@ export function useSegmentGroupActions({ data, inventory, meta }) {
         filters.setSelectedInventorySegment("all");
       }
 
-      notify("Grupo excluido. Segmentos mantidos em Sem grupo.", "ok");
+      notify("Grupo excluído. Segmentos mantidos em Sem grupo.", "ok");
       await loadData(true);
     } catch (error) {
       notify(error.message, "danger");

@@ -57,7 +57,7 @@ async function connectLabAgent(page) {
   }, { baseUrl: apiUrl });
 }
 
-test("Inventario abre o fluxo visual seguro de assistencia remota", async ({ page }) => {
+test("Inventário abre o fluxo visual seguro de assistencia remota", async ({ page }) => {
   await page.setViewportSize({ width: 948, height: 746 });
   await login(page);
   await connectLabAgent(page);
@@ -105,7 +105,7 @@ test("Inventario abre o fluxo visual seguro de assistencia remota", async ({ pag
   await expect(remoteDialog).toContainText("Modo privacidade e ações administrativas permanecem indisponíveis");
 });
 
-test("sessao ativa mostra metricas, pausa a visualizacao e reconecta pelo viewer", async ({ page }) => {
+test("sessao ativa mostra métricas, pausa a visualização e reconecta pelo viewer", async ({ page }) => {
   await page.setViewportSize({ width: 948, height: 746 });
   await login(page);
   const enrollment = await connectLabAgent(page);
@@ -119,7 +119,7 @@ test("sessao ativa mostra metricas, pausa a visualizacao e reconecta pelo viewer
   await remoteButton.click();
 
   const remoteDialog = page.getByRole("dialog", { name: "Assistência remota" });
-  await remoteDialog.getByLabel("Motivo do atendimento").fill("Verificacao de metricas em laboratorio");
+  await remoteDialog.getByLabel("Motivo do atendimento").fill("Verificacao de métricas em laboratorio");
   await remoteDialog.getByLabel("Confirme sua senha").fill("123456");
   await remoteDialog.getByRole("button", { name: "Solicitar atendimento" }).click();
 
@@ -142,7 +142,7 @@ test("sessao ativa mostra metricas, pausa a visualizacao e reconecta pelo viewer
         body: JSON.stringify({
           granted: true,
           controlAllowed: false,
-          monitors: [{ id: "display-1", name: "Tela unica", primary: true, width: 1920, height: 1080 }],
+          monitors: [{ id: "display-1", name: "Tela única", primary: true, width: 1920, height: 1080 }],
           selectedMonitorId: "display-1"
         })
       }

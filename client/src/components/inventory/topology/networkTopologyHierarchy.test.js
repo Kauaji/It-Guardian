@@ -134,18 +134,18 @@ describe("summarizeGroup", () => {
   ]);
 
   it("so inclui segmentos cujo groupId bate com o grupo (relacao real do banco)", () => {
-    const summary = summarizeGroup({ id: "g1", name: "Recepcao" }, segments, devicesBySegment);
+    const summary = summarizeGroup({ id: "g1", name: "Recepção" }, segments, devicesBySegment);
     expect(summary.segments.map((segment) => segment.id)).toEqual(["s1", "s2"]);
     expect(summary.segmentCount).toBe(2);
   });
 
   it("soma os ativos de todos os segmentos do grupo", () => {
-    const summary = summarizeGroup({ id: "g1", name: "Recepcao" }, segments, devicesBySegment);
+    const summary = summarizeGroup({ id: "g1", name: "Recepção" }, segments, devicesBySegment);
     expect(summary.deviceCount).toBe(2);
   });
 
   it("status do grupo agrega o status dos segmentos (misto quando discordam)", () => {
-    const summary = summarizeGroup({ id: "g1", name: "Recepcao" }, segments, devicesBySegment);
+    const summary = summarizeGroup({ id: "g1", name: "Recepção" }, segments, devicesBySegment);
     // s1 = online (1 ativo online), s2 = atencao (1 ativo offline) -> misto
     expect(summary.status).toBe("misto");
   });
@@ -192,7 +192,7 @@ describe("buildHierarchyTree", () => {
   });
 
   it("monta grupos com seus segmentos e separa segmentos sem grupo", () => {
-    const groups = [{ id: "g1", name: "Recepcao" }];
+    const groups = [{ id: "g1", name: "Recepção" }];
     const segments = [
       { id: "s1", name: "Atendimento", groupId: "g1" },
       { id: "s2", name: "Solta", groupId: "" }

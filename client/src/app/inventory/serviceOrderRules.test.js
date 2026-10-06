@@ -12,8 +12,8 @@ const complete = {
 
 describe("getServiceOrderModeError", () => {
   it("exige titulo com pelo menos 3 caracteres em qualquer modo", () => {
-    expect(getServiceOrderModeError({ ...complete, title: " ab " }, "local")).toMatch(/titulo/);
-    expect(getServiceOrderModeError(undefined, "business")).toMatch(/titulo/);
+    expect(getServiceOrderModeError({ ...complete, title: " ab " }, "local")).toMatch(/título/);
+    expect(getServiceOrderModeError(undefined, "business")).toMatch(/título/);
   });
 
   it("modo local exige descricao, categoria e solicitante, nessa ordem", () => {

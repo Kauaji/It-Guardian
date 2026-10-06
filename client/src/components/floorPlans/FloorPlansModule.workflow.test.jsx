@@ -55,7 +55,7 @@ function buildPlanPayload({ floorExtras = {}, objects, size = { width: 1280, hei
   return {
     plan: {
       plan: { id: "plan-1", name: "Planta Teste", ...size, gridSize: 25, snapSize: 25, activeFloorId: "floor-1" },
-      floors: [{ id: "floor-1", name: "Terreo", ...size, ...floorExtras }],
+      floors: [{ id: "floor-1", name: "Térreo", ...size, ...floorExtras }],
       zones: [{
         id: "room-1",
         floorId: "floor-1",
@@ -180,7 +180,7 @@ async function openEditor({ editing = true, ...props } = {}) {
   await screen.findByRole("img", { name: "Editor 2D da planta" });
   if (editing) {
     fireEvent.click(screen.getByRole("button", { name: "Editar planta" }));
-    await screen.findByRole("navigation", { name: "Catalogo da planta" });
+    await screen.findByRole("navigation", { name: "Catálogo da planta" });
   }
   return { ...view, svg: getSvg(view.container) };
 }
@@ -210,13 +210,13 @@ describe("lista e navegacao de plantas", () => {
     expect(api.fetchFloorPlans).toHaveBeenCalledWith("tok", "tab-1");
     expect(api.fetchFloorPlan).toHaveBeenCalledWith("tok", "plan-1");
     expect(window.location.pathname).toBe("/plantas/plan-1");
-    expect(screen.queryByRole("navigation", { name: "Catalogo da planta" })).toBeNull();
+    expect(screen.queryByRole("navigation", { name: "Catálogo da planta" })).toBeNull();
     expect(screen.getByRole("button", { name: "Editar planta" })).toBeInTheDocument();
     expect(container.querySelector(".floor-plan-editor-layout.view-only")).toBeInTheDocument();
     expect(screen.getByText("Planta Matriz")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Editar planta" }));
-    expect(await screen.findByRole("navigation", { name: "Catalogo da planta" })).toBeInTheDocument();
+    expect(await screen.findByRole("navigation", { name: "Catálogo da planta" })).toBeInTheDocument();
     expect(window.location.pathname).toBe("/plantas/plan-1/editor");
     expect(container.querySelector(".floor-plan-editor-layout.editing")).toBeInTheDocument();
   });
@@ -224,7 +224,7 @@ describe("lista e navegacao de plantas", () => {
   it("abre direto no editor quando a URL aponta para /plantas/:id/editor", async () => {
     window.history.replaceState(null, "", "/plantas/plan-1/editor");
     await openEditor({ editing: false });
-    expect(await screen.findByRole("navigation", { name: "Catalogo da planta" })).toBeInTheDocument();
+    expect(await screen.findByRole("navigation", { name: "Catálogo da planta" })).toBeInTheDocument();
   });
 
   it("sem permissao de edicao nao oferece o botao de editar", async () => {
@@ -267,7 +267,7 @@ describe("lista e navegacao de plantas", () => {
     api.fetchFloorPlans.mockResolvedValue({ plans: [] });
     click("Excluir planta");
     await waitFor(() => expect(api.deleteFloorPlan).toHaveBeenCalledWith("tok", "plan-1"));
-    expect(window.confirm).toHaveBeenCalledWith('Excluir a planta "Planta Teste"? Esta acao nao pode ser desfeita.');
+    expect(window.confirm).toHaveBeenCalledWith('Excluir a planta "Planta Teste"? Esta ação não pode ser desfeita.');
     expect(await screen.findByText("Nenhuma planta cadastrada.")).toBeInTheDocument();
     expect(notify).toHaveBeenCalledWith("Planta removida.", "ok");
   });
@@ -300,7 +300,7 @@ describe("posicionamento a partir do catalogo", () => {
   it("posiciona um item com pre-visualizacao e clique", async () => {
     const { container, svg } = await openEditor();
     const before = objectNodes(container).length;
-    click("Moveis");
+    click("Móveis");
     fireEvent.click(screen.getByTitle("Posicionar Cadeira"));
     expect(screen.getByText("Clique na planta para posicionar Cadeira. Esc cancela")).toBeInTheDocument();
     expect(screen.getByTitle("Posicionar Cadeira")).toHaveAttribute("aria-pressed", "true");
@@ -315,19 +315,19 @@ describe("posicionamento a partir do catalogo", () => {
   it("recusa posicionar em area invalida e avisa o motivo", async () => {
     const { container, svg } = await openEditor();
     const before = objectNodes(container).length;
-    click("Moveis");
+    click("Móveis");
     fireEvent.click(screen.getByTitle("Posicionar Cadeira"));
     pointerMove(svg, 1200, 700);
     expect(container.querySelector(".floor-plan-catalog-placement-preview.invalid")).toBeInTheDocument();
     pointerDown(svg, 1200, 700);
-    expect(notify).toHaveBeenCalledWith("Posicione o item inteiramente dentro de um comodo", "warning");
+    expect(notify).toHaveBeenCalledWith("Posicione o item inteiramente dentro de um cômodo", "warning");
     expect(objectNodes(container)).toHaveLength(before);
     expect(screen.getByText(/Esc cancela/)).toBeInTheDocument();
   });
 
   it("Esc cancela o posicionamento", async () => {
     const { svg } = await openEditor();
-    click("Moveis");
+    click("Móveis");
     fireEvent.click(screen.getByTitle("Posicionar Cadeira"));
     expect(svg).toBeInTheDocument();
     keyDown("Escape");
@@ -344,17 +344,17 @@ describe("posicionamento a partir do catalogo", () => {
 
   it("busca global no catalogo ignora acentos e caixa", async () => {
     await openEditor();
-    fireEvent.change(screen.getByLabelText("Buscar item em todo o catalogo"), { target: { value: "REUNI\u00c3O" } });
-    expect(screen.getByTitle("Posicionar Mesa de reuniao")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Buscar item em todo o catálogo"), { target: { value: "REUNI\u00c3O" } });
+    expect(screen.getByTitle("Posicionar Mesa de reunião")).toBeInTheDocument();
     expect(screen.queryByTitle("Posicionar Cadeira")).toBeNull();
-    fireEvent.change(screen.getByLabelText("Buscar item em todo o catalogo"), { target: { value: "zzzz" } });
+    fireEvent.change(screen.getByLabelText("Buscar item em todo o catálogo"), { target: { value: "zzzz" } });
     expect(screen.getByText("Nenhum item encontrado.")).toBeInTheDocument();
   });
 
   it("favoritos ficam salvos no navegador e vao para o inicio", async () => {
     window.localStorage.clear();
     await openEditor();
-    click("Moveis");
+    click("Móveis");
     fireEvent.click(screen.getByRole("button", { name: "Adicionar Cadeira aos favoritos" }));
     expect(JSON.parse(window.localStorage.getItem("it-guardian-floor-plan-favorites"))).toEqual(["chair"]);
     expect(screen.getByRole("button", { name: "Remover Cadeira dos favoritos" })).toBeInTheDocument();
@@ -365,17 +365,17 @@ describe("posicionamento a partir do catalogo", () => {
 
   it("recolhe e expande o catalogo", async () => {
     const { container } = await openEditor();
-    click("Recolher catalogo");
+    click("Recolher catálogo");
     expect(container.querySelector(".floor-plan-catalog.collapsed")).toBeInTheDocument();
-    click("Expandir catalogo");
+    click("Expandir catálogo");
     expect(container.querySelector(".floor-plan-catalog.collapsed")).toBeNull();
   });
 
   it("posiciona um comodo por clique e o salva", async () => {
     const { container, svg } = await openEditor();
-    click("Comodos");
+    click("Cômodos");
     fireEvent.click(screen.getByRole("button", { name: new RegExp(ROOM_TEMPLATES[0].label) }));
-    expect(screen.getByText("Defina a area do comodo")).toBeInTheDocument();
+    expect(screen.getByText("Defina a área do cômodo")).toBeInTheDocument();
     pointerMove(svg, 1000, 650);
     pointerDown(svg, 1000, 650);
     pointerUp(svg, 1000, 650);
@@ -386,19 +386,19 @@ describe("posicionamento a partir do catalogo", () => {
 
   it("avisa quando nao ha area livre para o comodo", async () => {
     const { svg } = await openEditor();
-    click("Comodos");
+    click("Cômodos");
     fireEvent.click(screen.getByRole("button", { name: new RegExp(ROOM_TEMPLATES[0].label) }));
     pointerMove(svg, 300, 300);
     pointerDown(svg, 300, 300);
     pointerUp(svg, 300, 300);
-    expect(notify).toHaveBeenCalledWith("Escolha uma area livre da planta para posicionar o comodo.", "warning");
+    expect(notify).toHaveBeenCalledWith("Escolha uma área livre da planta para posicionar o cômodo.", "warning");
   });
 
   it("desenha uma parede com a divisoria e encaixa uma porta nela", async () => {
     const { container, svg } = await openEditor();
-    click("Comodos");
-    fireEvent.click(screen.getByRole("button", { name: /Divisoria/ }));
-    expect(screen.getByText("Marque o inicio e o fim")).toBeInTheDocument();
+    click("Cômodos");
+    fireEvent.click(screen.getByRole("button", { name: /Divisória/ }));
+    expect(screen.getByText("Marque o início e o fim")).toBeInTheDocument();
     pointerDown(svg, 800, 150);
     pointerMove(svg, 900, 150);
     expect(container.querySelector(".floor-plan-wall-preview")).toBeInTheDocument();
@@ -436,7 +436,7 @@ describe("posicionamento a partir do catalogo", () => {
 
   it("mede uma distancia, digita o comprimento e confirma com Enter", async () => {
     const { container, svg } = await openEditor();
-    click("Medir uma distancia real");
+    click("Medir uma distância real");
     pointerDown(svg, 100, 600);
     pointerMove(svg, 300, 600);
     expect(container.querySelector(".floor-plan-measurement-preview text")).toHaveTextContent("4,00 m");
@@ -457,7 +457,7 @@ describe("posicionamento a partir do catalogo", () => {
 
   it("confirma a medida com o segundo clique", async () => {
     const { container, svg } = await openEditor();
-    click("Medir uma distancia real");
+    click("Medir uma distância real");
     pointerDown(svg, 100, 600);
     pointerMove(svg, 300, 600);
     pointerDown(svg, 300, 600);
@@ -480,12 +480,12 @@ describe("selecao e edicao de objetos", () => {
   it("seleciona um objeto, abre o inspetor e edita o nome", async () => {
     const { container } = await selectChair();
     expect(container.querySelector("g.floor-plan-object.selected")).toBeInTheDocument();
-    expect(screen.getByRole("toolbar", { name: "Acoes da selecao" })).toHaveTextContent("1 item");
+    expect(screen.getByRole("toolbar", { name: "Ações da seleção" })).toHaveTextContent("1 item");
     const input = screen.getByLabelText("Nome do ativo");
     expect(input).toHaveValue("Cadeira base");
     fireEvent.change(input, { target: { value: "Cadeira nova" } });
     expect(screen.getByText("Cadeira nova", { selector: "text.floor-plan-object-label" })).toBeInTheDocument();
-    expect(saveStatus(container)).toBe("Alteracoes pendentes");
+    expect(saveStatus(container)).toBe("Alterações pendentes");
     await waitForSave();
     expect(saveStatus(container)).toBe("Salvo");
     expect(lastSavedPayload().objects.find((object) => object.id === "chair-1").label).toBe("Cadeira nova");
@@ -519,52 +519,52 @@ describe("selecao e edicao de objetos", () => {
 
   it("duplica, gira, trava e exclui pela barra de acoes", async () => {
     const { container } = await selectChair();
-    click("Duplicar selecao");
-    expect(screen.getByText("Cadeira base copia", { selector: "text.floor-plan-object-label" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Nome do ativo")).toHaveValue("Cadeira base copia");
+    click("Duplicar seleção");
+    expect(screen.getByText("Cadeira base cópia", { selector: "text.floor-plan-object-label" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Nome do ativo")).toHaveValue("Cadeira base cópia");
 
-    click("Girar selecao 90 graus");
-    const copy = objectByLabel(container, "Cadeira base copia");
+    click("Girar seleção 90 graus");
+    const copy = objectByLabel(container, "Cadeira base cópia");
     expect(copy.querySelector("g").getAttribute("transform")).toContain("rotate(90 ");
 
-    click("Travar selecao");
-    expect(notify).toHaveBeenCalledWith("Selecao travada no mapa.", "success");
-    expect(objectByLabel(container, "Cadeira base copia")).toHaveClass("locked");
-    expect(screen.getByRole("button", { name: "Excluir selecao" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Girar selecao 90 graus" })).toBeDisabled();
+    click("Travar seleção");
+    expect(notify).toHaveBeenCalledWith("Seleção travada no mapa.", "success");
+    expect(objectByLabel(container, "Cadeira base cópia")).toHaveClass("locked");
+    expect(screen.getByRole("button", { name: "Excluir seleção" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Girar seleção 90 graus" })).toBeDisabled();
     expect(container.querySelector(".floor-plan-object-resize-overlay")).toBeNull();
 
-    click("Destravar selecao");
-    expect(notify).toHaveBeenCalledWith("Selecao destravada.", "success");
-    click("Excluir selecao");
-    expect(screen.queryByText("Cadeira base copia", { selector: "text.floor-plan-object-label" })).toBeNull();
+    click("Destravar seleção");
+    expect(notify).toHaveBeenCalledWith("Seleção destravada.", "success");
+    click("Excluir seleção");
+    expect(screen.queryByText("Cadeira base cópia", { selector: "text.floor-plan-object-label" })).toBeNull();
     expect(container.querySelector("aside.floor-plan-inspector")).toBeNull();
   });
 
   it("atalhos: Delete exclui, Ctrl+Z desfaz, Ctrl+Y refaz, R gira e Ctrl+D duplica", async () => {
     const { container } = await selectChair();
     keyDown("d", { ctrlKey: true });
-    expect(screen.getByText("Cadeira base copia", { selector: "text.floor-plan-object-label" })).toBeInTheDocument();
+    expect(screen.getByText("Cadeira base cópia", { selector: "text.floor-plan-object-label" })).toBeInTheDocument();
     keyDown("r");
-    expect(objectByLabel(container, "Cadeira base copia").querySelector("g").getAttribute("transform")).toContain("rotate(90 ");
+    expect(objectByLabel(container, "Cadeira base cópia").querySelector("g").getAttribute("transform")).toContain("rotate(90 ");
     keyDown("Delete");
-    expect(screen.queryByText("Cadeira base copia", { selector: "text.floor-plan-object-label" })).toBeNull();
+    expect(screen.queryByText("Cadeira base cópia", { selector: "text.floor-plan-object-label" })).toBeNull();
     keyDown("z", { ctrlKey: true });
-    expect(screen.getByText("Cadeira base copia", { selector: "text.floor-plan-object-label" })).toBeInTheDocument();
+    expect(screen.getByText("Cadeira base cópia", { selector: "text.floor-plan-object-label" })).toBeInTheDocument();
     keyDown("y", { ctrlKey: true });
-    expect(screen.queryByText("Cadeira base copia", { selector: "text.floor-plan-object-label" })).toBeNull();
+    expect(screen.queryByText("Cadeira base cópia", { selector: "text.floor-plan-object-label" })).toBeNull();
   });
 
   it("botoes de desfazer e refazer seguem o historico", async () => {
     await selectChair();
     expect(screen.getByRole("button", { name: "Desfazer" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Refazer" })).toBeDisabled();
-    click("Duplicar selecao");
+    click("Duplicar seleção");
     click("Desfazer");
-    expect(screen.queryByText("Cadeira base copia", { selector: "text.floor-plan-object-label" })).toBeNull();
+    expect(screen.queryByText("Cadeira base cópia", { selector: "text.floor-plan-object-label" })).toBeNull();
     expect(screen.getByRole("button", { name: "Refazer" })).toBeEnabled();
     click("Refazer");
-    expect(screen.getByText("Cadeira base copia", { selector: "text.floor-plan-object-label" })).toBeInTheDocument();
+    expect(screen.getByText("Cadeira base cópia", { selector: "text.floor-plan-object-label" })).toBeInTheDocument();
   });
 
   it("nao dispara atalhos enquanto o usuario digita em um campo", async () => {
@@ -583,17 +583,17 @@ describe("selecao e edicao de objetos", () => {
     fireEvent.click(chair);
     const desk = container.querySelectorAll("g.floor-plan-object")[objectNodes(container).findIndex((node) => translateOf(node) === "translate(200 200)")];
     fireEvent.click(desk, { shiftKey: true });
-    expect(screen.getByRole("toolbar", { name: "Acoes da selecao" })).toHaveTextContent("2 itens");
-    expect(screen.getByRole("button", { name: "Duplicar selecao" })).toBeDisabled();
+    expect(screen.getByRole("toolbar", { name: "Ações da seleção" })).toHaveTextContent("2 itens");
+    expect(screen.getByRole("button", { name: "Duplicar seleção" })).toBeDisabled();
     keyDown("Escape");
-    expect(screen.queryByRole("toolbar", { name: "Acoes da selecao" })).toBeNull();
+    expect(screen.queryByRole("toolbar", { name: "Ações da seleção" })).toBeNull();
 
     pointerDown(svg, 150, 150);
     pointerMove(svg, 400, 300);
     expect(container.querySelector(".floor-plan-marquee-selection")).toBeInTheDocument();
     pointerUp(svg, 400, 300);
     expect(container.querySelector(".floor-plan-marquee-selection")).toBeNull();
-    expect(screen.getByRole("toolbar", { name: "Acoes da selecao" })).toHaveTextContent("1 item");
+    expect(screen.getByRole("toolbar", { name: "Ações da seleção" })).toHaveTextContent("1 item");
   });
 
   it("redimensiona pelo canto e restringe ao comodo", async () => {
@@ -621,7 +621,7 @@ describe("selecao e edicao de objetos", () => {
 
   it("objeto travado nao e excluido pela ferramenta de excluir", async () => {
     const { container } = await selectChair();
-    click("Travar selecao");
+    click("Travar seleção");
     click("Excluir itens ao clicar");
     fireEvent.click(objectByLabel(container, "Cadeira base"));
     expect(notify).toHaveBeenCalledWith("Destrave o objeto antes de exclui-lo.", "warning");
@@ -639,10 +639,10 @@ describe("selecao e edicao de objetos", () => {
     await waitForSave();
     expect(lastSavedPayload().zones[0].geometry).toMatchObject({ x: 150, y: 125 });
     expect(lastSavedPayload().objects.find((object) => object.id === "chair-1")).toMatchObject({ x: 530, y: 365 });
-    click("Duplicar selecao");
+    click("Duplicar seleção");
     await waitForSave(2);
     expect(lastSavedPayload().zones).toHaveLength(2);
-    expect(lastSavedPayload().zones[1].name).toBe("Sala principal copia");
+    expect(lastSavedPayload().zones[1].name).toBe("Sala principal cópia");
   });
 
   it("gira o comodo selecionado quando ha espaco", async () => {
@@ -650,7 +650,7 @@ describe("selecao e edicao de objetos", () => {
     const room = container.querySelector("g.floor-plan-room");
     pointerDown(room, 150, 150);
     pointerUp(svg, 150, 150);
-    click("Girar selecao 90 graus");
+    click("Girar seleção 90 graus");
     await waitForSave();
     expect(lastSavedPayload().zones[0].geometry).toMatchObject({ width: 400, height: 600 });
   });
@@ -685,8 +685,8 @@ describe("inspetor por tipo de entidade", () => {
 
   it("parede: comprimento, espessura, angulo, altura 3D e textura", async () => {
     const { container, svg } = await openEditor();
-    click("Comodos");
-    fireEvent.click(screen.getByRole("button", { name: /Divisoria/ }));
+    click("Cômodos");
+    fireEvent.click(screen.getByRole("button", { name: /Divisória/ }));
     pointerDown(svg, 800, 150);
     pointerMove(svg, 900, 150);
     pointerDown(svg, 900, 150);
@@ -726,20 +726,20 @@ describe("inspetor por tipo de entidade", () => {
     const { container, svg } = await openEditor();
     await placeCatalogItem(container, svg, { tab: "Ativos TI", title: "Posicionar PC", x: 600, y: 440 });
     selectByLabel(container, svg, "PC", 600, 440);
-    expect(screen.getByText("Sem vinculo com o inventario")).toBeInTheDocument();
+    expect(screen.getByText("Sem vínculo com o inventário")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Status manual"), { target: { value: "offline" } });
-    click("Correlacionar maquina");
-    fireEvent.change(screen.getByLabelText("Maquina do inventario"), { target: { value: "dev-1" } });
+    click("Correlacionar máquina");
+    fireEvent.change(screen.getByLabelText("Máquina do inventário"), { target: { value: "dev-1" } });
     await waitFor(() => expect(api.linkFloorPlanObjectToAsset).toHaveBeenCalledTimes(1));
     const [, objectId, body] = api.linkFloorPlanObjectToAsset.mock.calls[0];
     expect(objectId).toMatch(/^object-/);
     expect(body).toEqual({ assetId: "dev-1", label: "Servidor 01", groupId: "g1", segmentId: "s1" });
-    expect(notify).toHaveBeenCalledWith("Vinculo atualizado.", "ok");
+    expect(notify).toHaveBeenCalledWith("Vínculo atualizado.", "ok");
     expect(screen.getByLabelText("Status online")).toBeInTheDocument();
     expect(screen.getByText("Tomada de energia")).toBeInTheDocument();
     expect(screen.getByText("a")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Ver no inventario" })).toBeDisabled();
-    click("Desvincular maquina");
+    expect(screen.getByRole("button", { name: "Ver no inventário" })).toBeDisabled();
+    click("Desvincular máquina");
     await waitFor(() => expect(api.linkFloorPlanObjectToAsset).toHaveBeenCalledTimes(2));
     expect(api.linkFloorPlanObjectToAsset.mock.calls[1][2].assetId).toBeNull();
   });
@@ -748,8 +748,8 @@ describe("inspetor por tipo de entidade", () => {
     const { container, svg } = await openEditor({ permissions: { ...ALL_PERMISSIONS, linkInventory: false } });
     await placeCatalogItem(container, svg, { tab: "Ativos TI", title: "Posicionar PC", x: 600, y: 440 });
     selectByLabel(container, svg, "PC", 600, 440);
-    expect(screen.getByText("Seu usuario nao pode alterar vinculos com inventario.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Correlacionar maquina" })).toBeDisabled();
+    expect(screen.getByText("Seu usuário não pode alterar vínculos com inventário.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Correlacionar máquina" })).toBeDisabled();
   });
 
   it("remove a entidade pelo botao do inspetor e fecha o painel pelo X", async () => {
@@ -771,17 +771,17 @@ describe("inspetor por tipo de entidade", () => {
 describe("pincel de grupo e segmento", () => {
   it("demarca uma area de grupo e confirma", async () => {
     const { container, svg } = await openEditor();
-    click("Pinceis");
+    click("Pincéis");
     fireEvent.click(screen.getByTitle("Posicionar Pincel de grupo"));
     const panel = screen.getByRole("region", { name: "Pincel de grupo" });
-    expect(within(panel).getByText("0 bloco(s) na demarcacao temporaria")).toBeInTheDocument();
+    expect(within(panel).getByText("0 bloco(s) na demarcação temporária")).toBeInTheDocument();
     pointerDown(svg, 300, 300);
     pointerMove(svg, 340, 300);
     pointerUp(svg, 340, 300);
-    expect(within(panel).getByText(/bloco\(s\) na demarcacao temporaria/).textContent).not.toMatch(/^0 /);
+    expect(within(panel).getByText(/bloco\(s\) na demarcação temporária/).textContent).not.toMatch(/^0 /);
     expect(container.querySelector(".floor-plan-paint-draft")).toBeInTheDocument();
-    click("Confirmar area");
-    expect(notify).toHaveBeenCalledWith("Area demarcada e vinculada com sucesso.", "ok");
+    click("Confirmar área");
+    expect(notify).toHaveBeenCalledWith("Área demarcada e vinculada com sucesso.", "ok");
     await waitForSave();
     const zones = lastSavedPayload().zones;
     expect(zones).toHaveLength(2);
@@ -790,32 +790,32 @@ describe("pincel de grupo e segmento", () => {
 
   it("avisa ao confirmar sem demarcar e cancela com confirmacao", async () => {
     const { svg } = await openEditor();
-    click("Pinceis");
+    click("Pincéis");
     fireEvent.click(screen.getByTitle("Posicionar Pincel de grupo"));
-    click("Confirmar area");
-    expect(notify).toHaveBeenCalledWith("Nenhuma area foi demarcada.", "warning");
+    click("Confirmar área");
+    expect(notify).toHaveBeenCalledWith("Nenhuma área foi demarcada.", "warning");
     pointerDown(svg, 300, 300);
     pointerUp(svg, 300, 300);
     vi.spyOn(window, "confirm").mockReturnValueOnce(false).mockReturnValueOnce(true);
-    click("Cancelar area");
+    click("Cancelar área");
     expect(screen.getByRole("region", { name: "Pincel de grupo" })).toBeInTheDocument();
-    click("Cancelar area");
+    click("Cancelar área");
     expect(screen.queryByRole("region", { name: "Pincel de grupo" })).toBeNull();
   });
 
   it("o pincel de segmento exige uma area de grupo", async () => {
     await openEditor();
-    click("Pinceis");
+    click("Pincéis");
     fireEvent.click(screen.getByTitle("Posicionar Pincel de segmento"));
-    expect(notify).toHaveBeenCalledWith("Crie uma area de grupo antes de demarcar segmentos.", "warning");
+    expect(notify).toHaveBeenCalledWith("Crie uma área de grupo antes de demarcar segmentos.", "warning");
     expect(screen.queryByRole("region", { name: "Pincel de segmento" })).toBeNull();
   });
 
   it("borracha, balde e Esc no pincel", async () => {
     const { svg } = await openEditor();
-    click("Pinceis");
+    click("Pincéis");
     fireEvent.click(screen.getByTitle("Posicionar Pincel de grupo"));
-    fireEvent.click(screen.getByTitle("Completar comodo"));
+    fireEvent.click(screen.getByTitle("Completar cômodo"));
     pointerDown(svg, 300, 300);
     pointerUp(svg, 300, 300);
     expect(screen.getByText(/^[1-9]\d* bloco\(s\)/)).toBeInTheDocument();
@@ -824,9 +824,9 @@ describe("pincel de grupo e segmento", () => {
     fireEvent.change(screen.getByLabelText("Tamanho do pincel e da borracha"), { target: { value: "5" } });
     pointerDown(svg, 300, 300);
     pointerUp(svg, 300, 300);
-    fireEvent.click(screen.getByTitle("Completar comodo"));
+    fireEvent.click(screen.getByTitle("Completar cômodo"));
     pointerDown(svg, 1200, 780);
-    expect(notify).toHaveBeenCalledWith("Nao foi possivel completar a area. Verifique se o espaco esta fechado por paredes.", "warning");
+    expect(notify).toHaveBeenCalledWith("Não foi possível completar a área. Verifique se o espaço está fechado por paredes.", "warning");
     keyDown("Escape");
     expect(screen.queryByRole("region", { name: "Pincel de grupo" })).toBeNull();
   });
@@ -885,7 +885,7 @@ describe("zoom, camadas e visualizacao", () => {
     expect(objectNodes(container)).toHaveLength(0);
     toggle("Objetos");
     expect(objectNodes(container).length).toBeGreaterThan(0);
-    toggle("Comodos");
+    toggle("Cômodos");
     expect(container.querySelector("g.floor-plan-room")).toBeNull();
     toggle("Textos");
     expect(container.querySelector("svg.layers-hide-labels")).toBeInTheDocument();
@@ -903,9 +903,9 @@ describe("zoom, camadas e visualizacao", () => {
   it("expande a area do pavimento", async () => {
     const { container } = await openEditor();
     expect(container.querySelector(".floor-plan-dimensions-badge").textContent).toContain("1280 x 820");
-    click("Aumentar largura da area");
+    click("Aumentar largura da área");
     expect(container.querySelector(".floor-plan-dimensions-badge").textContent).toContain("1600 x 820");
-    click("Aumentar altura da area");
+    click("Aumentar altura da área");
     expect(container.querySelector(".floor-plan-dimensions-badge").textContent).toContain("1600 x 1025");
   });
 
@@ -939,7 +939,7 @@ describe("zoom, camadas e visualizacao", () => {
     pointerDown(chair, 500, 360);
     pointerUp(svg, 500, 360);
     fireEvent.click(chair);
-    click("Travar selecao");
+    click("Travar seleção");
     click("3D");
     await screen.findByTestId("scene3d");
     await act(async () => scene3dProps.current.onMoveObject("chair-1", { x: 400, y: 300 }));
@@ -1059,7 +1059,7 @@ describe("salvamento", () => {
     expect(saveStatus(container)).toBe("Salvo");
     click("Excluir itens ao clicar");
     fireEvent.click(objectByLabel(container, "Cadeira base"));
-    expect(saveStatus(container)).toBe("Alteracoes pendentes");
+    expect(saveStatus(container)).toBe("Alterações pendentes");
     expect(api.saveFloorPlanEditorData).not.toHaveBeenCalled();
     await waitForSave();
     expect(api.saveFloorPlanEditorData.mock.calls[0].slice(0, 2)).toEqual(["tok", "plan-1"]);

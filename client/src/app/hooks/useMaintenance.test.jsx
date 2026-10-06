@@ -92,7 +92,7 @@ describe("useMaintenanceExit", () => {
       newValue: "Redes",
       userName: "Ana Admin"
     });
-    expect(context.session.notify).toHaveBeenCalledWith("PC-01 retirada da manutencao.", "ok");
+    expect(context.session.notify).toHaveBeenCalledWith("PC-01 retirada da manutenção.", "ok");
   });
 
   it("usa o segmento padrao quando a origem nao existe mais e cita a OS finalizada", async () => {
@@ -169,7 +169,7 @@ describe("useMaintenanceEntry.putMachineInMaintenance", () => {
       notes: "Origem: Redes"
     }));
     expect(context.ordersStore.get()[0].id).toBe("os-1");
-    expect(context.session.notify).toHaveBeenCalledWith("PC-01 colocada em manutencao.", "ok");
+    expect(context.session.notify).toHaveBeenCalledWith("PC-01 colocada em manutenção.", "ok");
   });
 
   it("reaproveita o segmento existente e nao duplica a OS aberta", async () => {

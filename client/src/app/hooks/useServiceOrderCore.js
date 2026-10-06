@@ -102,7 +102,7 @@ export function useServiceOrderCore({ data }) {
           order.id === id ? { ...order, history: [response.event, ...(order.history || [])] } : order
         )
       );
-      notify("Registro adicionado ao historico.", "ok");
+      notify("Registro adicionado ao histórico.", "ok");
       return response.event;
     } catch (error) {
       notify(error.message, "danger");

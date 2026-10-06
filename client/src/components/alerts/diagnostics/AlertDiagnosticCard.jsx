@@ -33,7 +33,7 @@ function AlertComments({ alert, comments, commentBox }) {
       <strong>Comentários internos</strong>
       {comments.slice(-2).map((comment) => (
         <p key={comment.id}>
-          <span>{formatDisplayText(comment.userName, "Usuario")} · {formatDate(comment.createdAt)}</span>
+          <span>{formatDisplayText(comment.userName, "Usuário")} · {formatDate(comment.createdAt)}</span>
           {getSafeCommentMessage(comment)}
         </p>
       ))}

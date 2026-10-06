@@ -20,7 +20,7 @@ describe("apresentacao", () => {
   });
 
   it("formata datas em pt-BR ou informa ausencia", () => {
-    expect(formatDate(null)).toBe("Nao informado");
+    expect(formatDate(null)).toBe("Não informado");
     expect(formatDate("2026-03-05T14:07:00")).toMatch(/05\/03.*14:07/);
   });
 

@@ -467,7 +467,7 @@ describe("AlertCenterV2 - configurações", () => {
     await user.click(within(dialog).getByText("Regras de aviso"));
     const silence = within(dialog).getByLabelText(/Ignorar aviso recusado por/);
     fireEvent.change(silence, { target: { value: "12" } });
-    fireEvent.change(within(dialog).getByLabelText(/Validacao de script/), { target: { value: "1" } });
+    fireEvent.change(within(dialog).getByLabelText(/Validação de script/), { target: { value: "1" } });
     await user.click(within(dialog).getByRole("button", { name: "Salvar janelas" }));
 
     await waitFor(() => expect(center.onSaveAlertPrioritySettings).toHaveBeenCalledTimes(1));

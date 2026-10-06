@@ -178,7 +178,7 @@ export function useMaintenanceEntry({ data, deviceState, exit, inventory, meta, 
         setServiceOrders((current) => [response.serviceOrder, ...current]);
       }
 
-      notify(`${machine.name} colocada em manutencao.`, "ok");
+      notify(`${machine.name} colocada em manutenção.`, "ok");
       return true;
     } catch (error) {
       notify(error.message, "danger");

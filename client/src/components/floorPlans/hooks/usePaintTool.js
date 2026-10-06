@@ -40,7 +40,7 @@ export function usePaintTool({ doc, ui, groups, segments, notify }) {
   const startSegmentBrush = () => {
     const parentArea = savedGroupAreas[0] || null;
     if (!parentArea) {
-      notify?.("Crie uma area de grupo antes de demarcar segmentos.", "warning");
+      notify?.("Crie uma área de grupo antes de demarcar segmentos.", "warning");
       setSelectedTool("select");
       setPaintDraft(null);
       return false;
@@ -101,11 +101,11 @@ export function usePaintTool({ doc, ui, groups, segments, notify }) {
     setPaintDraft(null);
     setSelectedTool("select");
     if (createdAreaId) setSelected({ type: "zone", id: createdAreaId });
-    notify?.("Area demarcada e vinculada com sucesso.", "ok");
+    notify?.("Área demarcada e vinculada com sucesso.", "ok");
   };
 
   const cancelPaintArea = () => {
-    if (paintDraft?.cells?.length && !window.confirm("Cancelar demarcacao atual?")) return;
+    if (paintDraft?.cells?.length && !window.confirm("Cancelar demarcação atual?")) return;
     stopPainting();
     setSelectedTool("select");
   };

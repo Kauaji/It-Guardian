@@ -71,7 +71,7 @@ export function duplicateEditorObject(object, { id, offset = FINE_OBJECT_SNAP_SI
     id,
     x: Number(object.x || 0) + Number(offset || 0),
     y: Number(object.y || 0) + Number(offset || 0),
-    label: object.label ? `${object.label} copia` : object.label,
+    label: object.label ? `${object.label} cópia` : object.label,
     linkedAssetId: null,
     metadata: {
       ...(object.metadata || {}),

@@ -66,7 +66,7 @@ export default function SegmentGroupFormModal({
             placeholder="Ex: Administrativo"
           />
         </label>
-        {duplicateName && <span className="form-error">Ja existe um grupo com esse nome.</span>}
+        {duplicateName && <span className="form-error">Já existe um grupo com esse nome.</span>}
 
         <div className="group-color-field">
           <span>Cor do grupo</span>

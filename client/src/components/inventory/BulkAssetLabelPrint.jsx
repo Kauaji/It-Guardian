@@ -17,7 +17,7 @@ export default function BulkAssetLabelPrint({ assets = [], aliases = {}, onReady
       id: asset.id,
       name: aliases[asset.id] || asset.name,
       ip: asset.ip,
-      assetTag: asset.hardware?.assetTag || asset.manualAsset?.assetTag || "Sem patrimonio",
+      assetTag: asset.hardware?.assetTag || asset.manualAsset?.assetTag || "Sem patrimônio",
       url: assetUrlFor(asset)
     })),
     [aliases, assets]

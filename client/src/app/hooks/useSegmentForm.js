@@ -95,7 +95,7 @@ export function useSegmentForm({ data, inventory, meta }) {
     });
 
     if (duplicate) {
-      notify("Ja existe um segmento com esse nome neste grupo.", "danger");
+      notify("Já existe um segmento com esse nome neste grupo.", "danger");
       return;
     }
 

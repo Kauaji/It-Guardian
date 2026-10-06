@@ -272,7 +272,7 @@ export default function InventoryBoard({
               onChange={(event) => setSearch(event.target.value)}
               onFocus={() => setSearchFocused(true)}
               onBlur={() => setSearchFocused(false)}
-              placeholder="Buscar maquina, IP, sistema ou segmento"
+              placeholder="Buscar máquina, IP, sistema ou segmento"
               aria-label="Buscar máquina, IP, sistema ou segmento"
             />
           </div>
@@ -383,7 +383,7 @@ export default function InventoryBoard({
         isDragActive={isBulkSelectionDragging}
       />
 
-      <section className="segment-stack" aria-label="Segmentos de inventario">
+      <section className="segment-stack" aria-label="Segmentos de inventário">
         {groupedSections.map((group, groupIndex) => (
           <SegmentGroupContainer key={group.id} groupId={group.id} color={group.color || activeTab?.color}>
             <header>
@@ -526,7 +526,7 @@ export default function InventoryBoard({
               )) : (
                 <div className="segment-group-empty">
                   <strong>Grupo vazio</strong>
-                  <span>Use o seletor "Sem grupo" no cabecalho de um segmento para mover ele para ca.</span>
+                  <span>Use o seletor "Sem grupo" no cabeçalho de um segmento para mover ele para cá.</span>
                 </div>
               )
             )}

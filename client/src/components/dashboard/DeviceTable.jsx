@@ -43,7 +43,7 @@ export default function DeviceTable({ devices, selectedId, onSelect, statusClass
               <td className="tabular-nums">{device.metrics?.cpu ?? "-"}{device.metrics ? "%" : ""}</td>
               <td className="tabular-nums">{device.metrics?.ram ?? "-"}{device.metrics ? "%" : ""}</td>
               <td className="tabular-nums">{device.metrics?.disk ?? "-"}{device.metrics ? "%" : ""}</td>
-              <td>{device.hardware?.model || "Sem inventario"}</td>
+              <td>{device.hardware?.model || "Sem inventário"}</td>
             </tr>
           ))}
         </tbody>

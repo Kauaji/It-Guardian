@@ -142,7 +142,7 @@ describe("AccountGate: MFA obrigatorio", () => {
     act(() => {
       window.dispatchEvent(new CustomEvent(ACCOUNT_RESTRICTED_EVENT, { detail: { code: "MFA_ENROLLMENT_REQUIRED" } }));
     });
-    // Usuario ja tem MFA (mfaEnabled=true): o evento nao o bloqueia indevidamente.
+    // Usuário ja tem MFA (mfaEnabled=true): o evento nao o bloqueia indevidamente.
     expect(screen.getByTestId("app")).toBeInTheDocument();
   });
 

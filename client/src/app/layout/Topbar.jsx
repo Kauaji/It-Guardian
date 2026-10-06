@@ -21,7 +21,7 @@ export default function Topbar() {
     <header className="topbar">
       <div>
         <h1>Infraestrutura em tempo real</h1>
-        <p>Ultima atualizacao: {formatTime(lastUpdated)}</p>
+        <p>Última atualização: {formatTime(lastUpdated)}</p>
       </div>
       <div className="topbar-actions">
         <button className="icon-button" onClick={() => loadData()} title="Atualizar">

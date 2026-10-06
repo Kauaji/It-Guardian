@@ -112,7 +112,7 @@ describe("applyPaintAtPoint", () => {
     expect(filled.draft.cells.length).toBeGreaterThan(100);
     const missing = applyPaintAtPoint(bucket, { x: 1000, y: 700 }, base);
     expect(missing.draft).toBe(bucket);
-    expect(missing.warning).toMatch(/Nao foi possivel completar a area/);
+    expect(missing.warning).toMatch(/Não foi possível completar a área/);
   });
 });
 
@@ -120,23 +120,23 @@ describe("resolvePaintConfirmation", () => {
   const context = { groups, segments, savedGroupAreas: [groupArea] };
 
   it("exige celulas demarcadas", () => {
-    expect(resolvePaintConfirmation(createGroupPaintDraft(groups), context)).toEqual({ error: "Nenhuma area foi demarcada." });
-    expect(resolvePaintConfirmation(null, context).error).toBe("Nenhuma area foi demarcada.");
+    expect(resolvePaintConfirmation(createGroupPaintDraft(groups), context)).toEqual({ error: "Nenhuma área foi demarcada." });
+    expect(resolvePaintConfirmation(null, context).error).toBe("Nenhuma área foi demarcada.");
   });
 
   it("exige grupo no pincel de grupo", () => {
     const draft = { ...createGroupPaintDraft(groups), groupId: "", cells: ["1:1"] };
-    expect(resolvePaintConfirmation(draft, context).error).toBe("Selecione o grupo da area demarcada.");
+    expect(resolvePaintConfirmation(draft, context).error).toBe("Selecione o grupo da área demarcada.");
   });
 
   it("exige area de grupo e segmento no pincel de segmento", () => {
     const draft = { ...createSegmentPaintDraft(groupArea, segments), cells: ["5:5"], segmentId: "" };
-    expect(resolvePaintConfirmation(draft, context).error).toBe("Selecione a area de grupo e o segmento antes de confirmar.");
+    expect(resolvePaintConfirmation(draft, context).error).toBe("Selecione a área de grupo e o segmento antes de confirmar.");
   });
 
   it("rejeita segmento de outro grupo", () => {
     const draft = { ...createSegmentPaintDraft(groupArea, segments), cells: ["5:5"], segmentId: "s2" };
-    expect(resolvePaintConfirmation(draft, context).error).toBe("O segmento selecionado nao pertence ao grupo desta area.");
+    expect(resolvePaintConfirmation(draft, context).error).toBe("O segmento selecionado não pertence ao grupo desta área.");
   });
 
   it("devolve as entidades resolvidas quando valido", () => {

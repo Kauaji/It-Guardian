@@ -46,7 +46,7 @@ export default function WidgetChrome({ widget, editing, arranging, menuOpen, onT
               type="button"
               className="icon-button"
               onClick={onToggleMenu}
-              title="Opcoes do widget"
+              title="Opções do widget"
               aria-haspopup="menu"
               aria-expanded={menuOpen}
             >

@@ -40,7 +40,7 @@ describe("decorateSegmentGroups / decorateSegments", () => {
     const segments = decorateSegments(
       [
         { id: "s1", name: "Redes" },
-        { id: "s2", name: "Nao organizadas", isDefault: true },
+        { id: "s2", name: "Não organizadas", isDefault: true },
         { id: "s3", name: "Manutenção" }
       ],
       meta,
@@ -103,7 +103,7 @@ describe("decorateDevices", () => {
 
 describe("segmentos ativos", () => {
   const decoratedSegments = [
-    { id: "default", isDefault: true, name: "Nao organizadas", tabId: "shared" },
+    { id: "default", isDefault: true, name: "Não organizadas", tabId: "shared" },
     { id: "s1", name: "Redes", tabId: "tab-a" },
     { id: "s2", name: "Outra aba", tabId: "tab-b" },
     { id: "m1", name: "Manutenção", tabId: "shared" }

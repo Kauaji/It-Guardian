@@ -65,7 +65,7 @@ describe("useSegmentForm", () => {
     await act(async () => {
       await result.current.submitSegmentForm(" redes ", "g1");
     });
-    expect(session.notify).toHaveBeenLastCalledWith("Ja existe um segmento com esse nome neste grupo.", "danger");
+    expect(session.notify).toHaveBeenLastCalledWith("Já existe um segmento com esse nome neste grupo.", "danger");
     expect(createSegment).not.toHaveBeenCalled();
   });
 

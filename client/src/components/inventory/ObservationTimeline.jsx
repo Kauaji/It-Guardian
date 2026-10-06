@@ -27,7 +27,7 @@ export default function ObservationTimeline({ observations, userName, onAdd }) {
         <textarea
           value={text}
           onChange={(event) => setText(event.target.value)}
-          placeholder="Adicionar observacao interna..."
+          placeholder="Adicionar observação interna..."
           aria-label="Observação interna"
         />
         <button className="primary-action compact-action" type="submit">
@@ -44,7 +44,7 @@ export default function ObservationTimeline({ observations, userName, onAdd }) {
             <p>{note.text}</p>
           </article>
         ))}
-        {!observations.length && <p className="empty">Nenhuma observacao registrada.</p>}
+        {!observations.length && <p className="empty">Nenhuma observação registrada.</p>}
       </div>
     </section>
   );

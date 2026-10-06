@@ -6,7 +6,7 @@ export const assetTypeOptions = [
   { value: "router", label: "Roteador" },
   { value: "switch", label: "Switch" },
   { value: "access_point", label: "Access Point" },
-  { value: "camera_ip", label: "Camera IP" },
+  { value: "camera_ip", label: "Câmera IP" },
   { value: "nas", label: "NAS" },
   { value: "other", label: "Outro" }
 ];

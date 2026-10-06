@@ -68,7 +68,7 @@ describe("useSegmentGroupActions", () => {
     await act(async () => {
       await result.current.submitSegmentGroupForm(" ANDAR 1 ", "#fff");
     });
-    expect(session.notify).toHaveBeenCalledWith("Ja existe um grupo com esse nome.", "danger");
+    expect(session.notify).toHaveBeenCalledWith("Já existe um grupo com esse nome.", "danger");
     expect(createSegmentGroup).not.toHaveBeenCalled();
   });
 
@@ -151,7 +151,7 @@ describe("useSegmentGroupActions", () => {
     expect(groupStore.get().map((group) => group.id)).toEqual(["g2"]);
     expect(segmentStore.get()[0].groupId).toBe("");
     expect(filters.setSelectedInventoryGroup).toHaveBeenCalledWith("all");
-    expect(session.notify).toHaveBeenCalledWith("Grupo excluido. Segmentos mantidos em Sem grupo.", "ok");
+    expect(session.notify).toHaveBeenCalledWith("Grupo excluído. Segmentos mantidos em Sem grupo.", "ok");
   });
 
   it("nao exclui sem confirmacao, grupo vazio usa a mensagem simples e erros avisam", async () => {

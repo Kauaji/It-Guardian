@@ -13,7 +13,7 @@ const operationalWindowFields = [
   { field: "recurrenceCounterResetHours", label: "Resetar recorrência a cada (horas)", min: "1", unit: "H" },
   { field: "preventiveDueDays", label: "Preventiva vence em (dias)", min: "1", unit: "D" },
   { field: "inactiveAlertAutoResolveHours", label: "Remover aviso inativo após (horas)", min: "1", unit: "H" },
-  { field: "scriptValidationWindowMinutes", label: "Validacao de script (minutos)", min: "5", max: "10080", unit: "M" }
+  { field: "scriptValidationWindowMinutes", label: "Validação de script (minutos)", min: "5", max: "10080", unit: "M" }
 ];
 
 function OperationalWindows({ settings }) {

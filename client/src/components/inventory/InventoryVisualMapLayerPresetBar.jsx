@@ -8,7 +8,7 @@ import {
 export default function InventoryVisualMapLayerPresetBar({ layers, onLayersChange, onToggleLayer }) {
   return (
     <div className="inventory-visual-layer-controls">
-      <div className="inventory-visual-quick-views" role="group" aria-label="Visualizacoes rapidas do mapa">
+      <div className="inventory-visual-quick-views" role="group" aria-label="Visualizações rápidas do mapa">
         {QUICK_LAYER_VIEWS.map((view) => (
           <button
             key={view.key}

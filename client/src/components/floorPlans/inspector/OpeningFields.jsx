@@ -20,7 +20,7 @@ function DoorFields({ entity, onChangeSelected }) {
       </label>
       {isSlidingKind ? (
         <label>
-          Direcao de correr
+          Direção de correr
           <select
             value={entity.metadata?.slideDirection || "right"}
             onChange={(event) => onChangeSelected(buildMetadataPatch(entity, { slideDirection: event.target.value }))}

@@ -202,7 +202,7 @@ const configs = {
     fields: [
       { name: "name", label: "Nome do problema", required: true },
       { name: "category", label: "Categoria associada", type: "category" },
-      { name: "defaultPriority", label: "Prioridade padrao", type: "select", options: priorityOptions }
+      { name: "defaultPriority", label: "Prioridade padrão", type: "select", options: priorityOptions }
     ],
     columns: [
       { key: "name", label: "Problema" },
@@ -524,7 +524,7 @@ export default function SettingsView({
 
     try {
       await config.remove(token, record.id);
-      notify?.("Cadastro excluido.", "ok");
+      notify?.("Cadastro excluído.", "ok");
       await loadRecords();
     } catch (error) {
       notify?.(error.message, "danger");
@@ -537,7 +537,7 @@ export default function SettingsView({
     if (!file) return;
 
     if (!file.name.toLowerCase().endsWith(".csv")) {
-      notify?.("Por enquanto a importacao aceita CSV. Excel ficara preparado para uma proxima etapa.", "danger");
+      notify?.("Por enquanto a importação aceita CSV. Excel ficará preparado para uma próxima etapa.", "danger");
       return;
     }
 

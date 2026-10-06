@@ -93,7 +93,7 @@ export default function InventoryTabs({
   }
 
   return (
-    <section className="inventory-tabs-shell" aria-label="Ambientes do inventario">
+    <section className="inventory-tabs-shell" aria-label="Ambientes do inventário">
       <div className="inventory-tabs-list">
         {tabs.map((tab) => renderTab(tab, tab.id === activeTabId))}
         <button type="button" className="inventory-tab-add" onClick={onCreate} title="Criar aba">

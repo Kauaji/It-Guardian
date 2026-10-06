@@ -11,7 +11,7 @@ const ROOM_COLORS = {
 export const ROOM_TEMPLATES = [
   {
     id: "office-small",
-    label: "Escritorio pequeno",
+    label: "Escritório pequeno",
     category: "Trabalho",
     icon: Monitor,
     width: 220,
@@ -39,33 +39,33 @@ export const ROOM_TEMPLATES = [
   },
   {
     id: "meeting-room",
-    label: "Sala de reuniao",
+    label: "Sala de reunião",
     category: "Trabalho",
     icon: SquareStack,
     width: 300,
     height: 210,
     color: ROOM_COLORS.meeting,
     objects: [
-      { type: "desk", label: "Mesa de reuniao", x: 82, y: 66, width: 140, height: 72, color: "#b08968" },
+      { type: "desk", label: "Mesa de reunião", x: 82, y: 66, width: 140, height: 72, color: "#b08968" },
       { type: "tv", label: "TV", x: 132, y: 18, width: 62, height: 32, color: "#334155" }
     ]
   },
   {
     id: "reception",
-    label: "Recepcao",
+    label: "Recepção",
     category: "Atendimento",
     icon: Home,
     width: 280,
     height: 180,
     color: ROOM_COLORS.support,
     objects: [
-      { type: "desk", label: "Balcao", x: 54, y: 44, width: 118, height: 52, color: "#b08968" },
+      { type: "desk", label: "Balcão", x: 54, y: 44, width: 118, height: 52, color: "#b08968" },
       { type: "pc", label: "Terminal", x: 88, y: 54, width: 52, height: 36, color: "#2563eb" }
     ]
   },
   {
     id: "support-room",
-    label: "Suporte tecnico",
+    label: "Suporte técnico",
     category: "Atendimento",
     icon: Building2,
     width: 300,
@@ -73,13 +73,13 @@ export const ROOM_TEMPLATES = [
     color: ROOM_COLORS.support,
     objects: [
       { type: "desk", label: "Bancada", x: 42, y: 52, width: 150, height: 56, color: "#b08968" },
-      { type: "rack", label: "Armario", x: 218, y: 48, width: 50, height: 76, color: "#1f2937" }
+      { type: "rack", label: "Armário", x: 218, y: 48, width: 50, height: 76, color: "#1f2937" }
     ]
   },
   {
     id: "server-room",
     label: "Sala de servidores",
-    category: "Tecnico",
+    category: "Técnico",
     icon: Server,
     width: 260,
     height: 180,
@@ -92,7 +92,7 @@ export const ROOM_TEMPLATES = [
   {
     id: "network-closet",
     label: "Rack de rede",
-    category: "Tecnico",
+    category: "Técnico",
     icon: Network,
     width: 180,
     height: 140,
@@ -104,8 +104,8 @@ export const ROOM_TEMPLATES = [
   },
   {
     id: "printer-room",
-    label: "Ilha de impressao",
-    category: "Servico",
+    label: "Ilha de impressão",
+    category: "Serviço",
     icon: Printer,
     width: 220,
     height: 150,
@@ -117,7 +117,7 @@ export const ROOM_TEMPLATES = [
   {
     id: "storage-room",
     label: "Deposito TI",
-    category: "Servico",
+    category: "Serviço",
     icon: Warehouse,
     width: 240,
     height: 170,
@@ -143,8 +143,8 @@ export const ROOM_TEMPLATES = [
   },
   {
     id: "lounge",
-    label: "Area de descanso",
-    category: "Servico",
+    label: "Área de descanso",
+    category: "Serviço",
     icon: Sofa,
     width: 280,
     height: 180,
@@ -157,7 +157,7 @@ export const ROOM_TEMPLATES = [
   {
     id: "kitchenette",
     label: "Copa",
-    category: "Servico",
+    category: "Serviço",
     icon: Coffee,
     width: 230,
     height: 160,
@@ -183,20 +183,20 @@ export const ROOM_TEMPLATES = [
   {
     id: "security-room",
     label: "Monitoramento",
-    category: "Tecnico",
+    category: "Técnico",
     icon: Server,
     width: 280,
     height: 180,
     color: "#fca5a5",
     objects: [
       { type: "pc", label: "Console", x: 64, y: 52, width: 58, height: 42, color: "#2563eb" },
-      { type: "camera", label: "Cameras", x: 154, y: 48, width: 72, height: 42, color: "#334155" }
+      { type: "camera", label: "Câmeras", x: 154, y: 48, width: 72, height: 42, color: "#334155" }
     ]
   },
   {
     id: "corridor",
-    label: "Corredor tecnico",
-    category: "Circulacao",
+    label: "Corredor técnico",
+    category: "Circulação",
     icon: DoorOpen,
     width: 360,
     height: 95,

@@ -57,7 +57,7 @@ export default function PeripheralList({
   return (
     <section className="peripheral-panel" style={{ "--machine-segment-color": segmentColor || "#1f7a61" }}>
       <header>
-        <span>Perifericos</span>
+        <span>Periféricos</span>
         <strong>{items.length}</strong>
       </header>
 
@@ -77,7 +77,7 @@ export default function PeripheralList({
             }}
           />
         ))}
-        {!items.length && <li className="peripheral-empty">Nenhum periferico vinculado.</li>}
+        {!items.length && <li className="peripheral-empty">Nenhum periférico vinculado.</li>}
       </ul>
 
       {allowAdd && <form className="peripheral-add-form" onSubmit={addPeripheral}>
@@ -104,7 +104,7 @@ export default function PeripheralList({
           placeholder="Patrimônio"
           aria-label="Patrimônio"
         />
-        <button type="submit" title="Adicionar periferico">
+        <button type="submit" title="Adicionar periférico">
           <Plus size={14} />
         </button>
       </form>}

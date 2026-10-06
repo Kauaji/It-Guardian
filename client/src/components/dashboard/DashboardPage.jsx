@@ -132,18 +132,18 @@ export default function DashboardPage({
           {
             title: "OS abertas",
             value: overview ? overview.openServiceOrders : "--",
-            subtitle: "Ordens de servico ainda nao finalizadas"
+            subtitle: "Ordens de serviço ainda não finalizadas"
           },
           {
             title: "OS vencidas",
-            value: overview?.overdueServiceOrdersAvailable ? overview.overdueServiceOrders : "Indisponivel",
-            subtitle: "Depende de prazo/SLA persistido (ainda nao implementado)",
+            value: overview?.overdueServiceOrdersAvailable ? overview.overdueServiceOrders : "Indisponível",
+            subtitle: "Depende de prazo/SLA persistido (ainda não implementado)",
             tone: overview?.overdueServiceOrdersAvailable ? "" : "muted"
           },
           {
-            title: "Em manutencao",
+            title: "Em manutenção",
             value: overview ? overview.inMaintenanceAssets : "--",
-            subtitle: "Ativos com manutencao ativa no momento"
+            subtitle: "Ativos com manutenção ativa no momento"
           },
           {
             title: "Alertas resolvidos hoje",
@@ -235,7 +235,7 @@ export default function DashboardPage({
         </section>
       </section>
 
-      <h2 className="dashboard-section-title">Distribuicao e tendencias</h2>
+      <h2 className="dashboard-section-title">Distribuição e tendências</h2>
       <section className="dashboard-chart-grid">
         <DashboardChartCard title="Ativos por status" icon={Server} loading={reportPending} empty={!byStatus.length}>
           <SimpleBarChart data={byStatus} color="#2563eb" />
@@ -254,7 +254,7 @@ export default function DashboardPage({
           icon={ClipboardList}
           loading={reportPending}
           empty={!soByStatus.length}
-          emptyMessage="Nenhuma ordem de servico cadastrada."
+          emptyMessage="Nenhuma ordem de serviço cadastrada."
         >
           <SimpleBarChart data={soByStatus} color="#16a34a" />
         </DashboardChartCard>
@@ -263,25 +263,25 @@ export default function DashboardPage({
           icon={ClipboardList}
           loading={reportPending}
           empty={!soByPriority.length}
-          emptyMessage="Nenhuma ordem de servico cadastrada."
+          emptyMessage="Nenhuma ordem de serviço cadastrada."
         >
           <SimpleBarChart data={soByPriority} color="#d97706" />
         </DashboardChartCard>
         <DashboardChartCard
-          title={`Tendencia de OS abertas (${period})`}
+          title={`Tendência de OS abertas (${period})`}
           icon={TrendingUp}
           loading={reportPending}
           empty={!soTrend.some((item) => item.count > 0)}
-          emptyMessage="Nenhuma OS criada neste periodo."
+          emptyMessage="Nenhuma OS criada neste período."
         >
           <SimpleTrendChart data={soTrend} color="#2563eb" />
         </DashboardChartCard>
         <DashboardChartCard
-          title={`Tendencia de alertas (${period})`}
+          title={`Tendência de alertas (${period})`}
           icon={TrendingUp}
           loading={reportPending}
           empty={!alertsTrend.some((item) => item.count > 0)}
-          emptyMessage="Nenhum alerta registrado neste periodo."
+          emptyMessage="Nenhum alerta registrado neste período."
         >
           <SimpleTrendChart data={alertsTrend} color="#d64545" />
         </DashboardChartCard>

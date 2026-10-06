@@ -150,7 +150,7 @@ export function CommentsSection({ alertId, comments, commentBox }) {
       <div className="alert-comments suggestion-info-comments">
         {comments.map((comment) => (
           <p key={comment.id}>
-            <span>{formatDisplayText(comment.userName, "Usuario")} - {formatDate(comment.createdAt)}</span>
+            <span>{formatDisplayText(comment.userName, "Usuário")} - {formatDate(comment.createdAt)}</span>
             {getSafeCommentMessage(comment)}
           </p>
         ))}

@@ -5,7 +5,7 @@ export default function ScriptExecutionsWidget({ data }) {
   return (
     <WidgetList
       items={data.rows}
-      emptyMessage="Nenhuma execucao de script registrada ainda."
+      emptyMessage="Nenhuma execução de script registrada ainda."
       renderItem={(log) => (
         <>
           <span>{log.scriptName || "Script removido"}</span>

@@ -1,6 +1,6 @@
 export default function MachineTabs({ activeTab, tabs, onChange }) {
   return (
-    <nav className="machine-tabs" aria-label="Detalhes da maquina">
+    <nav className="machine-tabs" aria-label="Detalhes da máquina">
       {tabs.map((tab) => (
         <button
           key={tab.id}

@@ -11,7 +11,7 @@ export default function WidgetChartFrame({ empty, emptyMessage, height, children
   const settledWidthKey = useSettledWidthKey();
 
   if (empty) {
-    return <p className="dashboard-empty-state">{emptyMessage || "Sem dados suficientes neste periodo."}</p>;
+    return <p className="dashboard-empty-state">{emptyMessage || "Sem dados suficientes neste período."}</p>;
   }
 
   return (

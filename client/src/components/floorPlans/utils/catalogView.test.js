@@ -9,7 +9,7 @@ import {
 } from "./catalogView.js";
 
 const catalog = [
-  { id: "furniture", label: "Moveis", items: [{ id: "desk", label: "Mesa" }, { id: "chair", label: "Cadeira" }] },
+  { id: "furniture", label: "Móveis", items: [{ id: "desk", label: "Mesa" }, { id: "chair", label: "Cadeira" }] },
   { id: "it", label: "TI", items: [{ id: "pc", label: "Computador", tags: ["desktop"] }, { id: "rack", label: "Rack" }] }
 ];
 
@@ -46,8 +46,8 @@ describe("getVisibleCatalogItems", () => {
 
 describe("getPlacementHint", () => {
   it("descreve o proximo passo de cada tipo de posicionamento", () => {
-    expect(getPlacementHint({ kind: "room" })).toBe("Defina a area do comodo");
-    expect(getPlacementHint({ kind: "wall" })).toBe("Marque o inicio e o fim");
+    expect(getPlacementHint({ kind: "room" })).toBe("Defina a área do cômodo");
+    expect(getPlacementHint({ kind: "wall" })).toBe("Marque o início e o fim");
     expect(getPlacementHint({ kind: "opening" })).toBe("Selecione uma parede");
     expect(getPlacementHint({ kind: "catalog", item: { label: "Mesa" } })).toBe("Clique na planta para posicionar Mesa. Esc cancela");
     expect(getPlacementHint({ kind: "catalog" })).toBe("Clique na planta para posicionar o item. Esc cancela");

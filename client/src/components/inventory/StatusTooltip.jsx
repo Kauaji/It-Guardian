@@ -2,9 +2,9 @@ import { useId } from "react";
 import { useHoverPopover } from "../../hooks/useHoverPopover.js";
 
 const STATUS_MESSAGES = {
-  online: "Maquina online",
-  offline: "Maquina offline",
-  problem: "Maquina com alerta/problema",
+  online: "Máquina online",
+  offline: "Máquina offline",
+  problem: "Máquina com alerta/problema",
   unknown: "Sem dados recentes"
 };
 
@@ -25,12 +25,12 @@ function relativeSince(value) {
   const time = Date.parse(value);
   if (!Number.isFinite(time)) return null;
   const diffMinutes = Math.max(0, Math.round((Date.now() - time) / 60000));
-  if (diffMinutes < 1) return "Ha menos de 1 minuto";
-  if (diffMinutes < 60) return `Ha ${diffMinutes} minuto${diffMinutes === 1 ? "" : "s"}`;
+  if (diffMinutes < 1) return "Há menos de 1 minuto";
+  if (diffMinutes < 60) return `Há ${diffMinutes} minuto${diffMinutes === 1 ? "" : "s"}`;
   const diffHours = Math.round(diffMinutes / 60);
-  if (diffHours < 24) return `Ha ${diffHours} hora${diffHours === 1 ? "" : "s"}`;
+  if (diffHours < 24) return `Há ${diffHours} hora${diffHours === 1 ? "" : "s"}`;
   const diffDays = Math.round(diffHours / 24);
-  return `Ha ${diffDays} dia${diffDays === 1 ? "" : "s"}`;
+  return `Há ${diffDays} dia${diffDays === 1 ? "" : "s"}`;
 }
 
 /**
@@ -56,11 +56,11 @@ export default function StatusTooltip({ status, lastSeenAt, className = "", chil
           <strong>{message}</strong>
           {lastSeenLabel ? (
             <>
-              <p>Ultimo contato: {lastSeenLabel}</p>
+              <p>Último contato: {lastSeenLabel}</p>
               {relativeLabel && <p>{relativeLabel}</p>}
             </>
           ) : (
-            <p>Sem historico de contato disponivel.</p>
+            <p>Sem histórico de contato disponível.</p>
           )}
         </div>
       )}

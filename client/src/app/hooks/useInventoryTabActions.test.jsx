@@ -54,7 +54,7 @@ describe("useInventoryTabActions", () => {
     expect(result.current.inventoryTabForm).toEqual(tabs[0]);
 
     act(() => result.current.submitInventoryTabForm("filial"));
-    expect(session.notify).toHaveBeenLastCalledWith("Ja existe uma aba com esse nome.", "danger");
+    expect(session.notify).toHaveBeenLastCalledWith("Já existe uma aba com esse nome.", "danger");
     expect(tabStore.set).not.toHaveBeenCalled();
 
     act(() => result.current.submitInventoryTabForm("  Sede  "));
@@ -77,7 +77,7 @@ describe("useInventoryTabActions", () => {
   it("nao deixa excluir a ultima aba", () => {
     const { result, session } = setup([tabs[0]]);
     act(() => result.current.deleteInventoryTab("tab-a"));
-    expect(session.notify).toHaveBeenCalledWith("Mantenha pelo menos uma aba no inventario.", "danger");
+    expect(session.notify).toHaveBeenCalledWith("Mantenha pelo menos uma aba no inventário.", "danger");
   });
 
   it("exclui apos confirmar, reatribuindo os dados locais a aba restante", () => {
@@ -88,7 +88,7 @@ describe("useInventoryTabActions", () => {
     expect(metaStore.get().groups.g1.tabId).toBe("tab-a");
     expect(metaStore.get().devices.d1.tabId).toBe("tab-a");
     expect(setActiveInventoryTabId).toHaveBeenCalledWith("tab-a");
-    expect(session.notify).toHaveBeenCalledWith("Aba excluida. Dados movidos para outro ambiente.", "ok");
+    expect(session.notify).toHaveBeenCalledWith("Aba excluída. Dados movidos para outro ambiente.", "ok");
   });
 
   it("nao exclui sem confirmar nem aba inexistente e troca a cor", () => {

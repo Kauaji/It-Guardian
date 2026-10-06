@@ -32,7 +32,7 @@ export function useServiceOrderLifecycle({ backupFlow, data, inventory, maintena
     try {
       await deleteServiceOrder(token, order.id);
       setServiceOrders((current) => current.filter((item) => item.id !== order.id));
-      notify(`Ordem ${order.number} excluida.`, "ok");
+      notify(`Ordem ${order.number} excluída.`, "ok");
       return true;
     } catch (error) {
       notify(error.message, "danger");

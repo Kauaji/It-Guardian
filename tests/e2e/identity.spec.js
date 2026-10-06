@@ -19,7 +19,7 @@ test("login com o admin demo entra direto (sem MFA nem troca obrigatoria)", asyn
   await expect(page.getByRole("heading", { name: "Verificação em duas etapas" })).toHaveCount(0);
 });
 
-test("senha errada mostra mensagem generica e nao entra", async ({ page }) => {
+test("senha errada mostra mensagem generica e não entra", async ({ page }) => {
   await page.goto("/");
   await page.getByLabel("E-mail").fill(demoEmail);
   await page.getByLabel("Senha").fill("senha-errada-123");

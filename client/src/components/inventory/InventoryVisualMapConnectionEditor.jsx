@@ -3,7 +3,7 @@ import { CONNECTION_TYPE_OPTIONS } from "./inventoryVisualMapConnectionUtils.js"
 
 const METADATA_FIELDS = [
   { key: "circuit", label: "Circuito" },
-  { key: "voltage", label: "Tensao" },
+  { key: "voltage", label: "Tensão" },
   { key: "panel", label: "Quadro" },
   { key: "breaker", label: "Disjuntor" },
   { key: "criticality", label: "Criticidade" },
@@ -30,7 +30,7 @@ export default function InventoryVisualMapConnectionEditor({
   return (
     <section className="inventory-visual-connection-editor">
       <div className="inventory-visual-section-title">
-        Editar conexao
+        Editar conexão
       </div>
 
       <div className="inventory-visual-form-grid compact">
@@ -38,7 +38,7 @@ export default function InventoryVisualMapConnectionEditor({
           Camada
           <select value={draft.layer} onChange={(event) => onChange("layer", event.target.value)} disabled={!canManage}>
             <option value="infrastructure">Infraestrutura</option>
-            <option value="electrical">Eletrica</option>
+            <option value="electrical">Elétrica</option>
           </select>
         </label>
         <label>
@@ -114,7 +114,7 @@ export default function InventoryVisualMapConnectionEditor({
         <footer>
           <button type="button" className="primary-action compact-action" onClick={onSave} disabled={saving}>
             <Save size={15} />
-            Salvar conexao
+            Salvar conexão
           </button>
           <button type="button" className="danger-action compact-action" onClick={onDelete} disabled={saving}>
             <Trash2 size={15} />

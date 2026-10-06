@@ -100,7 +100,7 @@ export default function FloorPlanInspector({ editor, selected, onChangeSelected,
       {!permissions.linkInventory && asAsset && (
         <div className="floor-plan-inspector-note">
           <Link2 size={16} />
-          Seu usuario nao pode alterar vinculos com inventario.
+          Seu usuário não pode alterar vínculos com inventário.
         </div>
       )}
       <button className="danger-action compact-action floor-plan-remove-selection" type="button" onClick={() => onChangeSelected({ remove: true })}>

@@ -5,7 +5,7 @@ export default function ServiceOrdersOverdueWidget({ data }) {
   return (
     <WidgetList
       items={data.rows}
-      emptyMessage="Nenhuma ordem de servico vencida no momento."
+      emptyMessage="Nenhuma ordem de serviço vencida no momento."
       renderItem={(order) => (
         <>
           <span>{order.number} - {order.title}</span>

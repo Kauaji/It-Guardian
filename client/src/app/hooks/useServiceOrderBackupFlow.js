@@ -169,7 +169,7 @@ export function useServiceOrderBackupFlow({ data, deviceState, inventory, mainte
         createdAt: new Date().toISOString(),
         userName: user.name,
         eventType: "backup",
-        message: `Devolvida para a area Backup pela OS #${order.number}.`,
+        message: `Devolvida para a área Backup pela OS #${order.number}.`,
         oldValue: backupMachine.segmentName,
         newValue: backupSegmentName
       });

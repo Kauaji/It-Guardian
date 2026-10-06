@@ -82,7 +82,7 @@ export function useEntityActions({ doc, ui, notify }) {
     if (selectedObjectIds.length > 1) {
       const removableIds = filterUnlockedObjectIds(editor?.objects, selectedObjectIds);
       if (removableIds.length === 0) {
-        notify?.("Destrave a selecao antes de exclui-la.", "warning");
+        notify?.("Destrave a seleção antes de excluí-la.", "warning");
         return;
       }
       commitEditor((draft) => removeObjectsFromDraft(draft, removableIds));
@@ -102,7 +102,7 @@ export function useEntityActions({ doc, ui, notify }) {
     if (targetObjects.length === 0) return;
     const nextLocked = !targetObjects.every(isEditorObjectLocked);
     commitEditor((draft) => setObjectsLockedInDraft(draft, targetIds, nextLocked));
-    notify?.(nextLocked ? "Selecao travada no mapa." : "Selecao destravada.", "success");
+    notify?.(nextLocked ? "Seleção travada no mapa." : "Seleção destravada.", "success");
   };
 
   const moveObjectFrom3D = (objectId, position) => {

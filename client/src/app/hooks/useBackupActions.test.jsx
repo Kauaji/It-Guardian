@@ -62,7 +62,7 @@ describe("useBackupActions.handleToggleBackup", () => {
     await act(async () => {
       await result.current.handleToggleBackup({ ...machine, isBackup: true }, false);
     });
-    expect(session.notify).toHaveBeenCalledWith("PC-01 removida da area de Backup.", "ok");
+    expect(session.notify).toHaveBeenCalledWith("PC-01 removida da área de Backup.", "ok");
   });
 
   it("avisa quando a API falha", async () => {

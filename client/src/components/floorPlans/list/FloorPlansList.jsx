@@ -69,7 +69,7 @@ export default function FloorPlansList({ plans, loading, query, onQueryChange, o
         <div>
           <span className="eyebrow">Plantas</span>
           <h2>Plantas e Infraestrutura</h2>
-          <p>Mapeie ambientes, ativos, pontos, cabos e zonas com vinculo ao inventario.</p>
+          <p>Mapeie ambientes, ativos, pontos, cabos e zonas com vínculo ao inventário.</p>
         </div>
         {permissions.create && (
           <button className="primary-action compact-action" type="button" onClick={onCreate}>
@@ -96,7 +96,7 @@ export default function FloorPlansList({ plans, loading, query, onQueryChange, o
       {!loading && filteredPlans.length === 0 && (
         <div className="floor-plan-list-empty">
           <strong>Nenhuma planta cadastrada.</strong>
-          <span>Crie a primeira planta para organizar infraestrutura fisica e logica.</span>
+          <span>Crie a primeira planta para organizar infraestrutura física e lógica.</span>
         </div>
       )}
 

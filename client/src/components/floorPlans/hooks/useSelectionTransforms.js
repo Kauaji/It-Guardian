@@ -40,7 +40,7 @@ export function useSelectionTransforms({ doc, ui, notify }) {
     const snapSize = editor?.plan?.snapSize || DEFAULT_PLAN_SIZE.snapSize;
     const geometry = findRoomDuplicateGeometry({ zone, floor, zones: editor.zones || [], snapSize });
     if (!geometry) {
-      notify?.("Nao ha espaco livre ao lado para duplicar este comodo.", "warning");
+      notify?.("Não há espaço livre ao lado para duplicar este cômodo.", "warning");
       return;
     }
     let nextRoomId = null;
@@ -60,7 +60,7 @@ export function useSelectionTransforms({ doc, ui, notify }) {
     const targetIds = selectedObjectIds.length > 1 ? selectedObjectIds : [selected.id];
     const unlockedIds = filterUnlockedObjectIds(editor?.objects, targetIds);
     if (unlockedIds.length === 0) {
-      notify?.("Destrave a selecao antes de gira-la.", "warning");
+      notify?.("Destrave a seleção antes de girá-la.", "warning");
       return;
     }
     commitEditor((draft) => rotateObjectsInDraft(draft, unlockedIds, activeFloorId));
@@ -73,7 +73,7 @@ export function useSelectionTransforms({ doc, ui, notify }) {
     const snapSize = editor?.plan?.snapSize || DEFAULT_PLAN_SIZE.snapSize;
     const nextGeometry = getRotatedRoomGeometry({ zone, floor, snapSize });
     if (!isRoomPlacementValid(nextGeometry, floor, editor.zones || [], zone.id)) {
-      notify?.("Nao foi possivel girar: o comodo ocuparia uma area ja usada.", "warning");
+      notify?.("Não foi possível girar: o cômodo ocuparia uma área já usada.", "warning");
       return;
     }
     commitEditor((draft) => rotateRoomInDraft({ draft, zone, nextGeometry }));

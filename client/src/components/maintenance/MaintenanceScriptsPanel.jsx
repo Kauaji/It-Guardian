@@ -114,19 +114,19 @@ function ScriptAnalysis({ analysis }) {
       </span>
       {!!analysis.allowedVariables?.length && (
         <div className="script-variable-list">
-          <strong>Variaveis permitidas</strong>
+          <strong>Variáveis permitidas</strong>
           <p>{analysis.allowedVariables.map((variable) => variable.name).join(", ")}</p>
         </div>
       )}
       {!!analysis.detectedVariables?.length && (
         <div className="script-variable-list">
-          <strong>Variaveis usadas</strong>
+          <strong>Variáveis usadas</strong>
           <p>{analysis.detectedVariables.join(", ")}</p>
         </div>
       )}
       {!!analysis.unknownVariables?.length && (
         <div className="script-variable-list error">
-          <strong>Variaveis nao permitidas</strong>
+          <strong>Variáveis não permitidas</strong>
           <p>{analysis.unknownVariables.join(", ")}</p>
         </div>
       )}
@@ -444,7 +444,7 @@ export default function MaintenanceScriptsPanel({
               checked={form.requiresLoggedUser}
               onChange={(event) => updateForm("requiresLoggedUser", event.target.checked)}
             />
-            Requer usuario logado
+            Requer usuário logado
           </label>
           <label className="inline-check maintenance-script-checkbox">
             <input
@@ -525,7 +525,7 @@ export default function MaintenanceScriptsPanel({
             )}
             {!!script.supportedVariables?.length && (
               <div className="script-links">
-                <span>Variaveis: {script.supportedVariables.map((variable) => `{{${String(variable).replace(/[{}]/g, "")}}}`).join(", ")}</span>
+                <span>Variáveis: {script.supportedVariables.map((variable) => `{{${String(variable).replace(/[{}]/g, "")}}}`).join(", ")}</span>
               </div>
             )}
             {canManage && (

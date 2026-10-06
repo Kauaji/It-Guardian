@@ -9,7 +9,7 @@ export default function CriticalAssetsWidget({ data }) {
       items={data.rows}
       onSelectItem={enabled ? (asset) => toggleFilter("assetId", asset.id, asset.name) : undefined}
       isSelected={(asset) => filters.assetId === asset.id}
-      emptyMessage="Nenhum ativo em estado critico agora."
+      emptyMessage="Nenhum ativo em estado crítico agora."
       renderItem={(asset) => (
         <>
           <span>{asset.name}</span>

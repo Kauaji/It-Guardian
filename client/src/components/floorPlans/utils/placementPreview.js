@@ -58,7 +58,7 @@ function collidesWithObjects(candidate, floor, objects) {
 
 function getPlacementFailure({ withinFloor, withinRoom, collides }) {
   if (!withinFloor) return "Fora dos limites da planta";
-  if (!withinRoom) return "Posicione o item inteiramente dentro de um comodo";
+  if (!withinRoom) return "Posicione o item inteiramente dentro de um cômodo";
   if (collides) return "Este item colide com outro objeto";
   return PLACEMENT_OK;
 }

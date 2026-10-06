@@ -145,7 +145,7 @@ export function createModelController({ enabled, resources, parts, lifecycle, re
     }).catch((error) => {
       warnOnce(
         assetMode.parts.map((part) => part.url).join(","),
-        "Modelos 3D compostos indisponiveis; usando fallback procedural.",
+        "Modelos 3D compostos indisponíveis; usando fallback procedural.",
         error
       );
     }).finally(() => updatePending(-1));
@@ -167,7 +167,7 @@ export function createModelController({ enabled, resources, parts, lifecycle, re
       group.add(model);
       render();
     }).catch((error) => {
-      warnOnce(assetMode.url, `Modelo 3D local indisponivel; usando fallback procedural: ${assetMode.url}`, error);
+      warnOnce(assetMode.url, `Modelo 3D local indisponível; usando fallback procedural: ${assetMode.url}`, error);
     }).finally(() => updatePending(-1));
   };
 

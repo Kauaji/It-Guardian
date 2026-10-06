@@ -23,7 +23,7 @@ export function useDashboardSummary({ token, canView, notify }) {
         setReport(result);
         setError("");
       } catch (fetchError) {
-        setError(fetchError.message || "Nao foi possivel carregar o resumo do dashboard.");
+        setError(fetchError.message || "Não foi possível carregar o resumo do dashboard.");
         if (!silent) notifyRef.current?.(fetchError.message, "danger");
       } finally {
         setLoading(false);

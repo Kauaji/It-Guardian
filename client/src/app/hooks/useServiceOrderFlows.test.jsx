@@ -221,7 +221,7 @@ describe("useServiceOrderLifecycle.handleDeleteServiceOrder", () => {
     });
     expect(ok).toBe(true);
     expect(context.ordersStore.get()).toEqual([]);
-    expect(context.session.notify).toHaveBeenLastCalledWith("Ordem 4 excluida.", "ok");
+    expect(context.session.notify).toHaveBeenLastCalledWith("Ordem 4 excluída.", "ok");
     expect(context.shared.serviceOrderCore.setServiceOrderSaving).toHaveBeenLastCalledWith(false);
   });
 

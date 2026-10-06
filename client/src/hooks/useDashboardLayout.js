@@ -19,7 +19,7 @@ export function useDashboardLayout({ token, canView, notify }) {
       setLayout(result);
       setError("");
     } catch (fetchError) {
-      setError(fetchError.message || "Nao foi possivel carregar o layout do dashboard.");
+      setError(fetchError.message || "Não foi possível carregar o layout do dashboard.");
       notifyRef.current?.(fetchError.message, "danger");
     } finally {
       setLoading(false);

@@ -112,7 +112,7 @@ export default function PublicSupportForm({
         <input
           value={form.department}
           onChange={(event) => updateField("department", event.target.value)}
-          placeholder="Financeiro, RH, recepcao..."
+          placeholder="Financeiro, RH, recepção..."
         />
       </label>
 

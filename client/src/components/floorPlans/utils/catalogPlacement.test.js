@@ -51,12 +51,12 @@ describe("addCatalogEntityToDraft", () => {
 
   it("cria um objeto restrito ao comodo e com altura 3D do catalogo", () => {
     const draft = cloneEditor(buildEditor({ objects: [] }));
-    const item = { id: "cabinet", objectType: "cabinet", category: "furniture", label: "Armario", width: 60, height: 40, color: "#b08968" };
+    const item = { id: "cabinet", objectType: "cabinet", category: "furniture", label: "Armário", width: 60, height: 40, color: "#b08968" };
     const { target } = addCatalogEntityToDraft({ draft, item, floor, targetPoint: { x: 300, y: 300 }, candidate: null, createId: createIdSequence() });
     expect(target).toEqual({ type: "object", id: "object-1" });
     expect(draft.objects.find((object) => object.id === "object-1")).toMatchObject({
       objectType: "cabinet",
-      label: "Armario",
+      label: "Armário",
       x: 270,
       y: 280,
       width: 60,
@@ -79,7 +79,7 @@ describe("addCatalogEntityToDraft", () => {
 
   it("usa a posicao validada da pre-visualizacao quando existe", () => {
     const draft = cloneEditor(buildEditor({ objects: [] }));
-    const item = { id: "cabinet", objectType: "cabinet", category: "furniture", label: "Armario", width: 60, height: 40 };
+    const item = { id: "cabinet", objectType: "cabinet", category: "furniture", label: "Armário", width: 60, height: 40 };
     addCatalogEntityToDraft({ draft, item, floor, targetPoint: { x: 300, y: 300 }, candidate: { object: { x: 150, y: 150 } }, createId: createIdSequence() });
     expect(draft.objects.find((object) => object.id === "object-1")).toMatchObject({ x: 150, y: 150 });
   });

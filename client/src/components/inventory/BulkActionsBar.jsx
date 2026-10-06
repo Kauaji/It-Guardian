@@ -39,7 +39,7 @@ export default function BulkActionsBar({
       </button>
       <button type="button" className="danger" onClick={onClear}>
         <X size={14} />
-        Limpar selecao
+        Limpar seleção
       </button>
     </section>
   );

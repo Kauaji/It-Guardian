@@ -44,7 +44,7 @@ export function useInventoryMoves({ data, deviceState, inventory, meta }) {
 
     const target = lookupSegment(segmentId);
     if (!target || target.isBackupSegment) {
-      notify("Segmento de destino invalido.", "danger");
+      notify("Segmento de destino inválido.", "danger");
       return false;
     }
     const previousSegment = { id: machine.segmentId, name: machine.segmentName };
@@ -84,7 +84,7 @@ export function useInventoryMoves({ data, deviceState, inventory, meta }) {
 
     const target = lookupSegment(segmentId);
     if (!target || target.isBackupSegment) {
-      notify("Segmento de destino invalido.", "danger");
+      notify("Segmento de destino inválido.", "danger");
       return false;
     }
     const machinesToMove = activeAllDevices.filter(

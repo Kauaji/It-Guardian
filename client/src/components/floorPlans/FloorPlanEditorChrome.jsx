@@ -15,7 +15,7 @@ import {
 const SAVE_STATE_LABELS = {
   saved: "Salvo",
   saving: "Salvando",
-  dirty: "Alteracoes pendentes",
+  dirty: "Alterações pendentes",
   error: "Falha ao salvar"
 };
 
@@ -66,7 +66,7 @@ export function FloorPlanTopbar({
             </button>
           </>
         )}
-        <div className="segmented-control compact floor-plan-mode-switch" aria-label="Modo de visualizacao">
+        <div className="segmented-control compact floor-plan-mode-switch" aria-label="Modo de visualização">
           <button className={mode === "2d" ? "active" : ""} type="button" onClick={() => onModeChange("2d")}>2D</button>
           <button className={mode === "3d" ? "active" : ""} type="button" onClick={() => onModeChange("3d")}>3D</button>
         </div>
@@ -105,8 +105,8 @@ export function FloorPlanTopbar({
             className={measurementActive ? "active" : ""}
             type="button"
             onClick={onStartMeasurement}
-            title="Medir uma distancia real (desenhar e digitar a metragem)"
-            aria-label="Medir uma distancia real"
+            title="Medir uma distância real (desenhar e digitar a metragem)"
+            aria-label="Medir uma distância real"
             aria-pressed={measurementActive}
           >
             <Ruler size={17} />
@@ -140,7 +140,7 @@ export function FloorPlanTopbar({
 
 export function FloorPlanQuickActions({ activeSection, onSectionChange }) {
   return (
-    <div className="floor-plan-quick-actions" aria-label="Acoes rapidas de infraestrutura">
+    <div className="floor-plan-quick-actions" aria-label="Ações rápidas de infraestrutura">
       <button className={activeSection === "network" ? "active" : ""} type="button" onClick={() => onSectionChange("network")}>
         <Cable size={17} />
         <span>Rede e cabeamento</span>

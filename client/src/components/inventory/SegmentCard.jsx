@@ -89,7 +89,7 @@ export default function SegmentCard({
             type="button"
             ref={setSegmentDragNodeRef}
             className={`segment-title-drag-handle ${isSegmentDragging ? "dragging" : ""}`}
-            title={isDefaultSegment ? "Segmento padrao nao pode ser movido" : "Mover segmento"}
+            title={isDefaultSegment ? "Segmento padrão não pode ser movido" : "Mover segmento"}
             disabled={isDefaultSegment || !canManage}
             {...segmentDragAttributes}
             {...segmentDragListeners}
@@ -254,7 +254,7 @@ export default function SegmentCard({
           ))}
           {!machines.length && (
             <div className="empty-segment wide-empty">
-              <span>Solte maquinas aqui</span>
+              <span>Solte máquinas aqui</span>
             </div>
           )}
         </div>

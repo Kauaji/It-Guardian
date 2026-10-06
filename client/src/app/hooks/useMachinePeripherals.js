@@ -2,7 +2,7 @@ import { useAppSession } from "../../context/AppSessionContext.jsx";
 import { peripheralKey } from "../../components/inventory/inventoryLocalState.js";
 
 function describePeripheral(peripheral) {
-  return `${peripheral.type} - ${peripheral.brand || "Sem marca"} - ${peripheral.assetTag || "Sem patrimonio"}`;
+  return `${peripheral.type} - ${peripheral.brand || "Sem marca"} - ${peripheral.assetTag || "Sem patrimônio"}`;
 }
 
 function peripheralLabel(peripheral) {
@@ -16,7 +16,7 @@ export function useMachinePeripherals({ deviceState, inventory }) {
   const { persistence } = inventory;
 
   function removeMachinePeripheral(machineId, peripheral) {
-    const confirmed = window.confirm(`Remover periferico "${peripheral.type}" deste ativo?`);
+    const confirmed = window.confirm(`Remover periférico "${peripheral.type}" deste ativo?`);
     if (!confirmed) return null;
 
     const removedKey = peripheralKey(peripheral);
@@ -24,7 +24,7 @@ export function useMachinePeripherals({ deviceState, inventory }) {
       id: `${machineId}-peripheral-removed-${Date.now()}`,
       createdAt: new Date().toISOString(),
       user: user.name,
-      change: `Periferico removido: ${peripheral.type}`,
+      change: `Periférico removido: ${peripheral.type}`,
       message: describePeripheral(peripheral),
       field: "peripherals",
       oldValue: peripheralLabel(peripheral),
@@ -48,7 +48,7 @@ export function useMachinePeripherals({ deviceState, inventory }) {
         peripherals: (device.hardware?.peripherals || []).filter((item) => peripheralKey(item) !== removedKey)
       }
     }));
-    notify("Periferico removido e registrado no historico.", "ok");
+    notify("Periférico removido e registrado no histórico.", "ok");
     return event;
   }
 
@@ -61,10 +61,10 @@ export function useMachinePeripherals({ deviceState, inventory }) {
       id: `${machineId}-peripheral-added-${Date.now()}`,
       createdAt: new Date().toISOString(),
       user: user.name,
-      change: `Periferico adicionado: ${item.type}`,
+      change: `Periférico adicionado: ${item.type}`,
       message: describePeripheral(item),
       field: "peripherals",
-      oldValue: "Nao cadastrado",
+      oldValue: "Não cadastrado",
       newValue: peripheralLabel(item)
     };
 
@@ -85,7 +85,7 @@ export function useMachinePeripherals({ deviceState, inventory }) {
         peripherals: [...(device.hardware?.peripherals || []), item]
       }
     }));
-    notify("Periferico adicionado e registrado no historico.", "ok");
+    notify("Periférico adicionado e registrado no histórico.", "ok");
     return { peripheral: item, event };
   }
 

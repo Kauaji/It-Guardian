@@ -57,7 +57,7 @@ export default function DashboardWorkspace({ token, canCustomize, notify }) {
       setArranging(false);
       notify?.("Layout do dashboard salvo.", "ok");
     } catch (saveError) {
-      notify?.(saveError.message || "Nao foi possivel salvar o layout.", "danger");
+      notify?.(saveError.message || "Não foi possível salvar o layout.", "danger");
     } finally {
       setSaving(false);
     }
@@ -69,9 +69,9 @@ export default function DashboardWorkspace({ token, canCustomize, notify }) {
       const result = await resetLayout();
       setDraftWidgets(result.widgets);
       setLastLoadedAt(new Date().toISOString());
-      notify?.("Layout restaurado para o padrao.", "ok");
+      notify?.("Layout restaurado para o padrão.", "ok");
     } catch (resetError) {
-      notify?.(resetError.message || "Nao foi possivel restaurar o layout padrao.", "danger");
+      notify?.(resetError.message || "Não foi possível restaurar o layout padrão.", "danger");
     } finally {
       setSaving(false);
     }

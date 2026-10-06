@@ -144,7 +144,7 @@ describe("duplicar e mover", () => {
     const draft = draftWith({ objects: [buildDesk({ linkedAssetId: "asset-9", label: "Mesa" })] });
     duplicateObjectInDraft(draft, draft.objects.find((object) => object.id === "desk-1"), { id: "desk-copy", activeFloorId: "floor-1" });
     const copy = draft.objects.find((object) => object.id === "desk-copy");
-    expect(copy).toMatchObject({ label: "Mesa copia", linkedAssetId: null, x: 205, y: 205 });
+    expect(copy).toMatchObject({ label: "Mesa cópia", linkedAssetId: null, x: 205, y: 205 });
     expect(copy.metadata.duplicatedFromId).toBe("desk-1");
   });
 

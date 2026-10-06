@@ -16,7 +16,7 @@ export function useInventoryLink({ token, devices, permissions, notify, entities
         groupId: patch.groupId,
         segmentId: patch.segmentId
       });
-      notify?.("Vinculo atualizado.", "ok");
+      notify?.("Vínculo atualizado.", "ok");
     } catch (requestError) {
       notify?.(requestError.message, "danger");
     }

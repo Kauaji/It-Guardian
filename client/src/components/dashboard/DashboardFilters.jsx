@@ -12,7 +12,7 @@ export default function DashboardFilters({ period, onChangePeriod, onRefresh, re
   return (
     <section className="toolbar dashboard-filters">
       <label className="dashboard-period-filter">
-        <span className="sr-only">Periodo do resumo</span>
+        <span className="sr-only">Período do resumo</span>
         <select value={period} onChange={(event) => onChangePeriod(event.target.value)}>
           {periods.map((item) => (
             <option key={item.value} value={item.value}>{item.label}</option>

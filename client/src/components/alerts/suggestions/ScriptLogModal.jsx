@@ -76,7 +76,7 @@ export default function ScriptLogModal({ scriptLog }) {
         <div className="script-log-body">
           <LogSummary log={log} />
           <section>
-            <h3>Causa provavel</h3>
+            <h3>Causa provável</h3>
             <p>{formatDisplayText(log.probableCause, "Nenhuma causa específica foi identificada.")}</p>
           </section>
           <section>

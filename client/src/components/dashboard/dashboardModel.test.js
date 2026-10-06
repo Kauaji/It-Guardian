@@ -42,8 +42,8 @@ describe("subtitles do dashboard", () => {
     expect(overdueSubtitle(null)).toBe("");
   });
 
-  it("onlineSubtitle mostra a razao de maquinas online sobre o total", () => {
-    expect(onlineSubtitle({ onlineAssets: 8, totalAssets: 10 })).toBe("8 de 10 maquinas online");
+  it("onlineSubtitle mostra a razao de máquinas online sobre o total", () => {
+    expect(onlineSubtitle({ onlineAssets: 8, totalAssets: 10 })).toBe("8 de 10 máquinas online");
   });
 
   it("offlineSubtitle soma offline e critico, e trata o caso zero", () => {
@@ -52,13 +52,13 @@ describe("subtitles do dashboard", () => {
   });
 
   it("criticalAlertsSubtitle distingue zero alertas de algum alerta", () => {
-    expect(criticalAlertsSubtitle({ criticalAlerts: 0 })).toBe("Nenhum alerta critico ativo");
-    expect(criticalAlertsSubtitle({ criticalAlerts: 3 })).toBe("3 alerta(s) critico(s) ativo(s)");
+    expect(criticalAlertsSubtitle({ criticalAlerts: 0 })).toBe("Nenhum alerta crítico ativo");
+    expect(criticalAlertsSubtitle({ criticalAlerts: 3 })).toBe("3 alerta(s) crítico(s) ativo(s)");
   });
 
   it("overdueSubtitle avisa quando o dado ainda nao esta disponivel", () => {
     expect(overdueSubtitle({ overdueServiceOrdersAvailable: false })).toBe(
-      "Depende de prazo/SLA persistido (ainda nao disponivel)"
+      "Depende de prazo/SLA persistido (ainda não disponível)"
     );
     expect(overdueSubtitle({ overdueServiceOrdersAvailable: true, overdueServiceOrders: 4 })).toBe(
       "4 ordem(ns) vencida(s)"

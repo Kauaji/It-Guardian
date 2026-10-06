@@ -92,7 +92,7 @@ function normalizePoint(point) {
 }
 
 function getConnectionLabel(connection) {
-  return connection.label || connection.connectionType || "Conexao";
+  return connection.label || connection.connectionType || "Conexão";
 }
 
 function buildConnectionLine(connection, selectedConnectionId) {
