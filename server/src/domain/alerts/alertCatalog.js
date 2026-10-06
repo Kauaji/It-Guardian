@@ -1,3 +1,6 @@
+/** @import { AlertLike, AlertRuleLike } from "./types.js" */
+
+/** @type {Record<string, string>} */
 export const alertTypeLabels = {
   ram_high: "Memória RAM acima do limite",
   cpu_high: "CPU acima do limite",
@@ -11,6 +14,7 @@ export const alertTypeLabels = {
   service_unavailable: "Serviço crítico indisponível"
 };
 
+/** @type {Record<string, string>} */
 export const compactAlertTypeLabels = {
   ram_high: "RAM alta",
   cpu_high: "CPU alta",
@@ -24,6 +28,7 @@ export const compactAlertTypeLabels = {
   service_unavailable: "Serviço indisponível"
 };
 
+/** @type {Record<string, string>} */
 const alertCategoryByType = {
   ram_high: "Desempenho",
   cpu_high: "Desempenho",
@@ -37,6 +42,7 @@ const alertCategoryByType = {
   service_unavailable: "Disponibilidade"
 };
 
+/** @type {Record<string, string>} */
 const alertOperationalImpact = {
   ram_high: "Pode causar lentidão, travamentos e perda de produtividade.",
   cpu_high: "Pode degradar o desempenho e deixar aplicações sem resposta.",
@@ -50,6 +56,7 @@ const alertOperationalImpact = {
   service_unavailable: "Pode interromper uma função crítica dependente do serviço."
 };
 
+/** @type {Record<string, string>} */
 const alertProbableCause = {
   ram_high: "Aplicação com alto consumo, carga acima do normal ou vazamento de memória.",
   cpu_high: "Processo travado, atualização em execução ou uso excessivo de processamento.",
@@ -63,6 +70,7 @@ const alertProbableCause = {
   service_unavailable: "Serviço parado, dependência indisponível ou erro de configuração."
 };
 
+/** @type {Record<string, string>} */
 const alertRecommendedAction = {
   ram_high: "Verificar processos com maior consumo e avaliar reinício controlado ou expansão de memória.",
   cpu_high: "Identificar processo com alto consumo e validar se há tarefa travada.",
@@ -76,6 +84,7 @@ const alertRecommendedAction = {
   service_unavailable: "Verificar serviço, dependências e logs antes de acionar manutenção."
 };
 
+/** @type {Record<string, string[]>} */
 const alertChecklist = {
   ram_high: [
     "Verificar processos com maior consumo.",
@@ -139,6 +148,18 @@ const alertChecklist = {
   ]
 };
 
+/**
+ * @param {AlertLike} alert
+ * @returns {string} Tipo do aviso (`type`, `alertType` ou `suggestedProblemTypeId`); vazio quando ausente.
+ */
+function alertTypeOf(alert) {
+  return alert.type || alert.alertType || alert.suggestedProblemTypeId || "";
+}
+
+/**
+ * @param {unknown} [value]
+ * @returns {string} Texto sem acentos e em minusculas.
+ */
 export function normalizeText(value = "") {
   return String(value)
     .normalize("NFD")
@@ -146,45 +167,79 @@ export function normalizeText(value = "") {
     .toLowerCase();
 }
 
+/**
+ * @param {AlertLike} [alert]
+ * @param {AlertRuleLike | null} [rule]
+ * @returns {string}
+ */
 export function suggestedPriority(alert = {}, rule = null) {
   if (rule?.suggestedPriority) return rule.suggestedPriority;
-  if (["disk_health_low", "disk_full"].includes(alert.type) || alert.severity === "critical") return "critical";
-  if (["ram_high", "cpu_high", "disk_high", "machine_offline", "ping_failure"].includes(alert.type)) return "high";
+  const type = alert.type ?? "";
+  if (["disk_health_low", "disk_full"].includes(type) || alert.severity === "critical") return "critical";
+  if (["ram_high", "cpu_high", "disk_high", "machine_offline", "ping_failure"].includes(type)) return "high";
   return alert.severity === "warning" ? "medium" : "low";
 }
 
+/**
+ * @param {AlertLike} [alert]
+ * @returns {string}
+ */
 export function getAlertTypeLabel(alert = {}) {
-  const type = alert.type || alert.alertType || alert.suggestedProblemTypeId;
+  const type = alertTypeOf(alert);
   return alertTypeLabels[type] || alert.title || "Aviso de monitoramento";
 }
 
+/**
+ * @param {AlertLike} [alert]
+ * @returns {string}
+ */
 export function getAlertCategory(alert = {}) {
-  const type = alert.type || alert.alertType || alert.suggestedProblemTypeId;
+  const type = alertTypeOf(alert);
   return alertCategoryByType[type] || "Operacional";
 }
 
+/**
+ * @param {AlertLike} [alert]
+ * @returns {string}
+ */
 export function getAlertCompactLabel(alert = {}) {
-  const type = alert.type || alert.alertType || alert.suggestedProblemTypeId;
+  const type = alertTypeOf(alert);
   return compactAlertTypeLabels[type] || getAlertTypeLabel(alert);
 }
 
+/**
+ * @param {AlertLike} [alert]
+ * @returns {string}
+ */
 export function getAlertImpact(alert = {}) {
-  const type = alert.type || alert.alertType || alert.suggestedProblemTypeId;
+  const type = alertTypeOf(alert);
   return alertOperationalImpact[type] || "Pode gerar impacto operacional se o aviso se repetir.";
 }
 
+/**
+ * @param {AlertLike} [alert]
+ * @returns {string}
+ */
 export function getAlertProbableCause(alert = {}) {
-  const type = alert.type || alert.alertType || alert.suggestedProblemTypeId;
+  const type = alertTypeOf(alert);
   return alertProbableCause[type] || "Causa ainda não determinada com os dados disponíveis.";
 }
 
+/**
+ * @param {AlertLike} [alert]
+ * @returns {string}
+ */
 export function getAlertRecommendedAction(alert = {}) {
-  const type = alert.type || alert.alertType || alert.suggestedProblemTypeId;
+  const type = alertTypeOf(alert);
   return alertRecommendedAction[type] || "Registrar evidências e validar o ativo antes de abrir atendimento.";
 }
 
+/**
+ * @param {AlertLike} [alert]
+ * @returns {string[]}
+ */
 export function getAlertChecklist(alert = {}) {
-  const type = alert.type || alert.alertType || alert.suggestedProblemTypeId;
+  const type = alertTypeOf(alert);
   return alertChecklist[type] || [
     "Validar o ativo afetado.",
     "Conferir se o aviso se repetiu no período.",
@@ -193,6 +248,10 @@ export function getAlertChecklist(alert = {}) {
   ];
 }
 
+/**
+ * @param {AlertLike} [alert]
+ * @returns {string}
+ */
 export function getAlertConfidence(alert = {}) {
   const occurrences = Number(alert.occurrencesCount || 1);
   if (alert.severity === "critical" && occurrences >= 3) return "Alta";
@@ -200,6 +259,10 @@ export function getAlertConfidence(alert = {}) {
   return "Baixa";
 }
 
+/**
+ * @param {AlertLike} [alert]
+ * @returns {string}
+ */
 export function getAlertTrend(alert = {}) {
   const occurrences = Number(alert.occurrencesCount || 1);
   if (occurrences >= 4) return "Em alta";
@@ -207,12 +270,17 @@ export function getAlertTrend(alert = {}) {
   return "Pontual";
 }
 
+/**
+ * @param {unknown} priority
+ * @returns {string}
+ */
 export function getPriorityLabel(priority) {
+  /** @type {Record<string, string>} */
   const labels = {
     low: "Baixa",
     medium: "Média",
     high: "Alta",
     critical: "Crítica"
   };
-  return labels[priority] || labels.medium;
+  return labels[String(priority)] || labels.medium;
 }

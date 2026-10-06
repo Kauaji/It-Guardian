@@ -1,5 +1,12 @@
 import { alertTypeLabels } from "./alertCatalog.js";
 
+/** @import { AgentAlertAsset, Alert } from "./types.js" */
+
+/**
+ * @param {unknown} used
+ * @param {unknown} total
+ * @returns {number | null} Percentual inteiro, ou `null` sem total valido.
+ */
 function percentage(used, total) {
   if (!Number.isFinite(Number(used)) || !Number.isFinite(Number(total)) || Number(total) <= 0) return null;
   return Math.round((Number(used) / Number(total)) * 100);
@@ -9,8 +16,14 @@ function percentage(used, total) {
  * Avisos gerados a partir da leitura atual de um ativo com agente. O limite de
  * "offline" combina os parametros de ambiente informados (em segundos e em
  * minutos, lidos pelo chamador) com 3x o intervalo de coleta do agente.
+ *
+ * @param {AgentAlertAsset} asset
+ * @param {Date} [now]
+ * @param {{ offlineAfterSecondsSetting?: number, offlineAfterMinutesSetting?: number }} [thresholds]
+ * @returns {Alert[]}
  */
 export function buildAgentAlerts(asset, now = new Date(), { offlineAfterSecondsSetting = 0, offlineAfterMinutesSetting = 10 } = {}) {
+  /** @type {Alert[]} */
   const alerts = [];
   const hostName = asset.machineAlias || asset.hostname || "Maquina monitorada";
   const lastSeenAt = asset.lastSeenAt ? new Date(asset.lastSeenAt) : null;
@@ -22,6 +35,7 @@ export function buildAgentAlerts(asset, now = new Date(), { offlineAfterSecondsS
   );
   const stale = !lastSeenAt || now.getTime() - lastSeenAt.getTime() > offlineAfterSeconds * 1000;
   const measuredAt = asset.collectedAt || asset.lastSeenAt || now.toISOString();
+  /** @param {{ type: string, metric: string, value: number | null | undefined, threshold?: number }} input */
   const addMetricAlert = ({ type, metric, value, threshold = 85 }) => {
     if (value == null || value < threshold) return;
     alerts.push({
@@ -75,10 +89,10 @@ export function buildAgentAlerts(asset, now = new Date(), { offlineAfterSecondsS
       asset.diskTotalBytes
     );
     addMetricAlert({
-      type: diskUsage >= 95 ? "disk_full" : "disk_high",
+      type: diskUsage !== null && diskUsage >= 95 ? "disk_full" : "disk_high",
       metric: "disco",
       value: diskUsage,
-      threshold: diskUsage >= 95 ? 95 : 85
+      threshold: diskUsage !== null && diskUsage >= 95 ? 95 : 85
     });
   }
 

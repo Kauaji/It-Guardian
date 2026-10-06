@@ -14,12 +14,24 @@ import {
   suggestedPriority
 } from "./alertCatalog.js";
 
+/** @import { Alert, AlertEnrichmentContext, AlertLocation, AlertSegmentInfo, AlertServiceOrder, AlertSuggestion, AlertRuleLike, CapacityForecast, EnrichedAlert, FalsePositiveInsight, RecurrenceInsight } from "./types.js" */
+
+/**
+ * @param {Alert} [alert]
+ * @param {AlertServiceOrder} [order]
+ * @returns {boolean}
+ */
 function sameAsset(alert = {}, order = {}) {
   const alertIds = [alert.assetId, alert.hostId, alert.hostName].filter(Boolean).map(String);
   const orderIds = [order.assetId, order.relatedAssetText].filter(Boolean).map(String);
   return alertIds.some((id) => orderIds.includes(id));
 }
 
+/**
+ * @param {Alert} [alert]
+ * @param {AlertServiceOrder[]} [serviceOrders]
+ * @returns {AlertServiceOrder[]}
+ */
 export function findRelatedOrders(alert = {}, serviceOrders = []) {
   return serviceOrders.filter((order) => {
     if (!sameAsset(alert, order)) return false;
@@ -29,13 +41,18 @@ export function findRelatedOrders(alert = {}, serviceOrders = []) {
   });
 }
 
+/**
+ * @param {Alert | AlertSuggestion} [alert]
+ * @param {AlertServiceOrder[]} [relatedOrders]
+ * @returns {string}
+ */
 export function buildPriorityReason(alert = {}, relatedOrders = []) {
   const pieces = [];
   const occurrences = Number(alert.occurrencesCount || 1);
 
   if (alert.severity === "critical") pieces.push("o aviso está classificado como crítico");
   if (occurrences >= 3) pieces.push(`houve ${occurrences} ocorrências no período configurado`);
-  if (["disk_health_low", "disk_high", "disk_full", "machine_offline", "service_unavailable"].includes(alert.type)) {
+  if (["disk_health_low", "disk_high", "disk_full", "machine_offline", "service_unavailable"].includes(alert.type ?? "")) {
     pieces.push(`o tipo "${getAlertTypeLabel(alert)}" tem impacto operacional alto`);
   }
   if (relatedOrders.some((order) => order.status !== "closed" && !order.closedAt)) {
@@ -52,14 +69,19 @@ export function buildPriorityReason(alert = {}, relatedOrders = []) {
   return `Prioridade sugerida porque ${pieces.join(", ")}.`;
 }
 
+/**
+ * @param {Alert} [alert]
+ * @param {AlertServiceOrder[]} [relatedOrders]
+ * @returns {RecurrenceInsight | null}
+ */
 export function buildRecurrenceInsight(alert = {}, relatedOrders = []) {
   const recentClosed = relatedOrders
     .filter((order) => order.closedAt)
-    .sort((a, b) => new Date(b.closedAt).getTime() - new Date(a.closedAt).getTime())[0];
+    .sort((a, b) => new Date(b.closedAt ?? 0).getTime() - new Date(a.closedAt ?? 0).getTime())[0];
 
   if (!recentClosed) return null;
 
-  const closedAt = new Date(recentClosed.closedAt).getTime();
+  const closedAt = new Date(recentClosed.closedAt ?? 0).getTime();
   const alertAt = new Date(alert.lastSeenAt || alert.updatedAt || Date.now()).getTime();
   const days = Math.max(0, Math.round((alertAt - closedAt) / 86400000));
 
@@ -74,6 +96,11 @@ export function buildRecurrenceInsight(alert = {}, relatedOrders = []) {
   };
 }
 
+/**
+ * @param {Alert} [alert]
+ * @param {AlertSuggestion[]} [suggestions]
+ * @returns {FalsePositiveInsight | null}
+ */
 export function buildFalsePositiveInsight(alert = {}, suggestions = []) {
   const rejectedCount = suggestions.filter((suggestion) =>
     suggestion.alertId === alert.id && suggestion.status === "rejected"
@@ -88,8 +115,12 @@ export function buildFalsePositiveInsight(alert = {}, suggestions = []) {
   };
 }
 
+/**
+ * @param {Alert} [alert]
+ * @returns {CapacityForecast}
+ */
 export function buildCapacityForecast(alert = {}) {
-  if (!["disk_high", "disk_full", "ram_high", "cpu_high"].includes(alert.type)) {
+  if (!["disk_high", "disk_full", "ram_high", "cpu_high"].includes(alert.type ?? "")) {
     return {
       available: false,
       summary: "Sem dados históricos suficientes para previsão de capacidade."
@@ -114,6 +145,12 @@ export function buildCapacityForecast(alert = {}) {
   };
 }
 
+/**
+ * @param {Alert | AlertSuggestion} [alert]
+ * @param {Map<string, AlertSegmentInfo>} [segmentMap]
+ * @param {Map<string, { id?: string, name?: string }>} [groupMap]
+ * @returns {AlertLocation}
+ */
 export function getAlertLocation(alert = {}, segmentMap = new Map(), groupMap = new Map()) {
   const segment = alert.assetId ? segmentMap.get(String(alert.assetId)) : null;
   const group = segment?.segmentGroupId ? groupMap.get(String(segment.segmentGroupId)) : null;
@@ -126,6 +163,11 @@ export function getAlertLocation(alert = {}, segmentMap = new Map(), groupMap = 
   };
 }
 
+/**
+ * @param {Alert} [alert]
+ * @param {Partial<AlertLocation>} [location]
+ * @returns {string}
+ */
 export function buildCorrelationKey(alert = {}, location = {}) {
   return [
     alert.type || "unknown",
@@ -134,13 +176,18 @@ export function buildCorrelationKey(alert = {}, location = {}) {
   ].join(":");
 }
 
+/**
+ * @param {Alert} [alert]
+ * @param {AlertRuleLike | null} [rule]
+ * @returns {{ title: string, description: string, suggestedPriority: string, suggestedProblemTypeId: string | undefined, occurrencesCount: number | string }}
+ */
 export function buildSuggestionPayload(alert = {}, rule = null) {
-  const label = alertTypeLabels[alert.type] || "Aviso recorrente";
+  const label = alertTypeLabels[alert.type ?? ""] || "Aviso recorrente";
   const hostName = alert.hostName || "ativo monitorado";
   const priority = suggestedPriority(alert, rule);
 
   return {
-    title: `${compactAlertTypeLabels[alert.type] || label} em ${hostName}`,
+    title: `${compactAlertTypeLabels[alert.type ?? ""] || label} em ${hostName}`,
     description:
       `O sistema identificou ${label.toLowerCase()} acima do limite configurado em ` +
       `${alert.occurrencesCount || 1} ocorrência(s) no período analisado. ` +
@@ -151,7 +198,14 @@ export function buildSuggestionPayload(alert = {}, rule = null) {
   };
 }
 
-/** Aviso enriquecido com classificacao, justificativas, insights, localizacao e comentarios. */
+/**
+ * Aviso enriquecido com classificacao, justificativas, insights, localizacao e comentarios.
+ *
+ * @param {Alert} alert
+ * @param {AlertEnrichmentContext} context
+ * @param {unknown[]} [comments]
+ * @returns {EnrichedAlert}
+ */
 export function buildEnrichedAlert(alert, context, comments = []) {
   const relatedOrders = findRelatedOrders(alert, context.serviceOrders);
   const location = getAlertLocation(alert, context.segmentMap, context.groupMap);
@@ -184,7 +238,13 @@ export function buildEnrichedAlert(alert, context, comments = []) {
   };
 }
 
-/** Sugestao de OS enriquecida; usa o aviso ja enriquecido quando existir e deduz o resto da propria sugestao. */
+/**
+ * Sugestao de OS enriquecida; usa o aviso ja enriquecido quando existir e deduz o resto da propria sugestao.
+ *
+ * @param {AlertSuggestion} suggestion
+ * @param {EnrichedAlert | undefined} alert Aviso ja enriquecido (ausente quando o aviso original sumiu).
+ * @param {AlertEnrichmentContext} context
+ */
 export function buildEnrichedSuggestion(suggestion, alert, context) {
   const relatedOrders = alert ? findRelatedOrders(alert, context.serviceOrders) : [];
   const priority = suggestion.suggestedPriority || suggestedPriority(alert);
@@ -194,7 +254,7 @@ export function buildEnrichedSuggestion(suggestion, alert, context) {
     suggestedPriority: priority,
     priorityLabel: getPriorityLabel(priority),
     priorityReason: alert?.priorityReason || buildPriorityReason(alert || suggestion, relatedOrders),
-    typeLabel: alert?.typeLabel || alertTypeLabels[suggestion.alertType] || "Aviso preventivo",
+    typeLabel: alert?.typeLabel || alertTypeLabels[suggestion.alertType ?? ""] || "Aviso preventivo",
     category: alert?.category || getAlertCategory(alert || suggestion),
     operationalImpact: alert?.operationalImpact || getAlertImpact(alert || suggestion),
     probableCause: alert?.probableCause || getAlertProbableCause(alert || suggestion),
@@ -214,8 +274,14 @@ export function buildEnrichedSuggestion(suggestion, alert, context) {
   };
 }
 
-/** Agrupa avisos enriquecidos por tipo e localizacao; so grupos com 2+ avisos viram correlacao. */
+/**
+ * Agrupa avisos enriquecidos por tipo e localizacao; so grupos com 2+ avisos viram correlacao.
+ *
+ * @param {EnrichedAlert[]} alerts
+ * @returns {object[]}
+ */
 export function buildAlertCorrelations(alerts) {
+  /** @type {Map<string, EnrichedAlert[]>} */
   const groups = new Map();
 
   for (const alert of alerts) {
@@ -256,7 +322,11 @@ export function buildAlertCorrelations(alerts) {
     });
 }
 
-/** Resumo de recorrencias, possiveis falsos positivos e previsao de capacidade dos avisos enriquecidos. */
+/**
+ * Resumo de recorrencias, possiveis falsos positivos e previsao de capacidade dos avisos enriquecidos.
+ *
+ * @param {EnrichedAlert[]} alerts
+ */
 export function buildAlertInsights(alerts) {
   return {
     recurrences: alerts.filter((alert) => alert.recurrenceInsight).map((alert) => ({
