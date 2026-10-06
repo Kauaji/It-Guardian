@@ -44,10 +44,12 @@ function sourceWithFolder(mainPath, folderPath) {
 const planDetailsSource = () => sourceWithFolder(`${automationDir}AutomationPlanDetails.jsx`, `${automationDir}planDetails/`);
 const machineDetailsSource = () => sourceWithFolder(`${automationDir}AutomationMachineDetails.jsx`, `${automationDir}machineDetails/`);
 const managementViewSource = () => sourceWithFolder(`${automationDir}AutomationManagementView.jsx`, `${automationDir}management/`);
-const alertCenterSource = () => [
-  source("../../../client/src/components/alerts/AlertCenterV2.jsx"),
-  source("../../../client/src/components/alerts/AutomationTab.jsx")
-].join("\n");
+const alertCenterSource = () =>
+  [
+    source("../../../client/src/components/alerts/AlertCenterV2.jsx"),
+    source("../../../client/src/components/alerts/AutomationTab.jsx"),
+    source("../../../client/src/components/alerts/hooks/useAlertCenterController.js")
+  ].join("\n");
 /** Trecho do arquivo a partir de `startMarker` ate `endMarker` (ou ate o fim). */
 function slice(text, startMarker, endMarker) {
   const start = text.indexOf(startMarker);
@@ -120,30 +122,21 @@ const locations = {
 
 test("agenda explícita pertence ao plano asset_list enquanto o ativo estiver vinculado", () => {
   assert.equal(
-    isScheduleLinkedToPlan(
-      { scopeType: "asset_list", assetIds: ["asset-1"], excludedAssetIds: [] },
-      { assetId: "asset-1" }
-    ),
+    isScheduleLinkedToPlan({ scopeType: "asset_list", assetIds: ["asset-1"], excludedAssetIds: [] }, { assetId: "asset-1" }),
     true
   );
 });
 
 test("agenda removida do asset_list não volta para a listagem", () => {
   assert.equal(
-    isScheduleLinkedToPlan(
-      { scopeType: "asset_list", assetIds: ["asset-2"], excludedAssetIds: [] },
-      { assetId: "asset-1" }
-    ),
+    isScheduleLinkedToPlan({ scopeType: "asset_list", assetIds: ["asset-2"], excludedAssetIds: [] }, { assetId: "asset-1" }),
     false
   );
 });
 
 test("ativo excluído de um escopo amplo não aparece no gerenciamento", () => {
   assert.equal(
-    isScheduleLinkedToPlan(
-      { scopeType: "segment", assetIds: [], excludedAssetIds: ["asset-1"] },
-      { assetId: "asset-1" }
-    ),
+    isScheduleLinkedToPlan({ scopeType: "segment", assetIds: [], excludedAssetIds: ["asset-1"] }, { assetId: "asset-1" }),
     false
   );
 });
@@ -164,8 +157,10 @@ test("filtro ativo usa semântica de qualquer plano ativo", () => {
 });
 
 test("filtros de inativo, erro e sem agenda são independentes", () => {
-  const idsFor = (status) => buildAutomationManagementGroups({ machines, ...locations, status })
-    .flatMap((group) => group.machines.map(({ machine }) => machine.assetId));
+  const idsFor = (status) =>
+    buildAutomationManagementGroups({ machines, ...locations, status }).flatMap((group) =>
+      group.machines.map(({ machine }) => machine.assetId)
+    );
   assert.deepEqual(idsFor("inactive"), ["asset-2"]);
   assert.deepEqual(idsFor("error"), ["asset-3"]);
   assert.deepEqual(idsFor("without_schedule"), ["asset-3", "asset-4"]);
@@ -178,16 +173,22 @@ test("busca encontra máquina pelo nome do plano", () => {
     status: "all",
     search: "limpeza de disco"
   });
-  assert.deepEqual(result.flatMap((group) => group.machines.map(({ machine }) => machine.assetId)), ["asset-1"]);
+  assert.deepEqual(
+    result.flatMap((group) => group.machines.map(({ machine }) => machine.assetId)),
+    ["asset-1"]
+  );
 });
 
 test("agrupamento usa aba, grupo e segmento", () => {
   const result = buildAutomationManagementGroups({ machines, ...locations, status: "all" });
   assert.equal(result.length, 2);
-  assert.deepEqual(result.map((group) => [group.tabName, group.groupName, group.segmentName]), [
-    ["Matriz", "Estações", "Diretoria"],
-    ["Matriz", "Infraestrutura", "Servidores"]
-  ]);
+  assert.deepEqual(
+    result.map((group) => [group.tabName, group.groupName, group.segmentName]),
+    [
+      ["Matriz", "Estações", "Diretoria"],
+      ["Matriz", "Infraestrutura", "Servidores"]
+    ]
+  );
 });
 
 test("aba de automatizações exige permissão e ao menos um plano", () => {
@@ -236,10 +237,7 @@ test("resumo por máquina contabiliza planos ativos, inativos, com erro e sem ag
     errorCount: 1,
     withoutScheduleCount: 1
   });
-  assert.equal(
-    formatAutomationMachineStatusSummary(mixedMachine),
-    "2 ativos • 1 inativo • 1 com erro • 1 sem agenda"
-  );
+  assert.equal(formatAutomationMachineStatusSummary(mixedMachine), "2 ativos • 1 inativo • 1 com erro • 1 sem agenda");
 });
 
 test("formulário de override respeita prioridade override, agenda e plano", () => {
@@ -304,8 +302,14 @@ test("exclusão do plano é lógica, transacional e preserva histórico", () => 
   const service = slice(source(automationSources.planService), "export async function deletePreventiveAutomationPlan");
   const planRepository = source(automationSources.planRepository);
   const scheduleRepository = source(automationSources.scheduleRepository);
-  assert.match(slice(planRepository, "export async function softDeletePlan", "export async function updatePlanAssetScope"), /deleted_at\s*=\s*NOW\(\)/);
-  assert.match(slice(scheduleRepository, "export async function deactivateSchedulesOfPlan", "export async function deactivateAssetSchedule"), /preventive_automation_asset_schedules[\s\S]*active\s*=\s*FALSE/);
+  assert.match(
+    slice(planRepository, "export async function softDeletePlan", "export async function updatePlanAssetScope"),
+    /deleted_at\s*=\s*NOW\(\)/
+  );
+  assert.match(
+    slice(scheduleRepository, "export async function deactivateSchedulesOfPlan", "export async function deactivateAssetSchedule"),
+    /preventive_automation_asset_schedules[\s\S]*active\s*=\s*FALSE/
+  );
   assert.match(service, /withTransaction/);
   assert.match(service, /softDeletePlan\(db, id\)/);
   assert.match(service, /deactivateSchedulesOfPlan\(db, id\)/);
@@ -316,7 +320,10 @@ test("exclusão do plano é lógica, transacional e preserva histórico", () => 
 test("remoção de máquina desativa agenda e registra histórico e auditoria", () => {
   const body = slice(source(automationSources.assetService), "export async function removeAssetFromPreventiveAutomationPlan");
   const scheduleRepository = source(automationSources.scheduleRepository);
-  assert.match(slice(scheduleRepository, "export async function deactivateAssetSchedule", "export async function reactivateAssetSchedule"), /preventive_automation_asset_schedules[\s\S]*active\s*=\s*FALSE/);
+  assert.match(
+    slice(scheduleRepository, "export async function deactivateAssetSchedule", "export async function reactivateAssetSchedule"),
+    /preventive_automation_asset_schedules[\s\S]*active\s*=\s*FALSE/
+  );
   assert.match(body, /deactivateAssetSchedule\(db, planId, assetId\)/);
   assert.match(body, /preventive_automation_removed_from_asset/);
   assert.match(body, /addAssetHistory/);
@@ -411,9 +418,17 @@ test("pausa e reativação usam a mesma atualização e sincronizam agendas", ()
 
 test("plano excluído logicamente não pode ser reativado", () => {
   const planRepository = source(automationSources.planRepository);
-  const finder = slice(planRepository, "export async function findActivePlanById", "export async function findActivePlanByPreventivePlanId");
+  const finder = slice(
+    planRepository,
+    "export async function findActivePlanById",
+    "export async function findActivePlanByPreventivePlanId"
+  );
   const planService = source(automationSources.planService);
-  const update = slice(planService, "export async function updatePreventiveAutomationPlan", "export async function disablePreventiveAutomationPlan");
+  const update = slice(
+    planService,
+    "export async function updatePreventiveAutomationPlan",
+    "export async function disablePreventiveAutomationPlan"
+  );
   assert.match(finder, /deleted_at IS NULL/);
   assert.match(update, /findPreventiveAutomationPlanById\(id\)/);
   assert.match(update, /if \(!current\) return null/);
@@ -448,11 +463,7 @@ test("App mantém gerenciamento fora da composição visual principal", () => {
 });
 
 test("nenhuma primitiva de execução real foi introduzida na área de gerenciamento", () => {
-  const combined = [
-    ...Object.values(automationSources).map(source),
-    managementViewSource(),
-    planDetailsSource()
-  ].join("\n");
+  const combined = [...Object.values(automationSources).map(source), managementViewSource(), planDetailsSource()].join("\n");
   assert.doesNotMatch(combined, /child_process|\bexecFile\s*\(|\bspawn\s*\(|shell\s*:\s*true|\beval\s*\(/);
 });
 
@@ -488,12 +499,8 @@ test("detalhe do plano centraliza as cinco areas operacionais", () => {
 });
 
 test("escopo de automacao diferencia administrador e proprietario do plano", async () => {
-  const {
-    buildAutomationAccessScope,
-    canAccessAutomationAsset,
-    canAccessAutomationPlan,
-    filterAutomationAssetsByScope
-  } = await import("./automationAccessScope.js");
+  const { buildAutomationAccessScope, canAccessAutomationAsset, canAccessAutomationPlan, filterAutomationAssetsByScope } =
+    await import("./automationAccessScope.js");
   assert.equal(buildAutomationAccessScope({ id: "admin", isAdmin: true }).unrestricted, true);
   assert.equal(canAccessAutomationPlan({ createdBy: "user-1" }, { id: "user-1" }), true);
   assert.equal(canAccessAutomationPlan({ createdBy: "user-1" }, { id: "user-2" }), false);
@@ -607,7 +614,11 @@ test("detalhe de ativo usa consultas direcionadas e nao carrega o gerenciamento 
 });
 
 test("ultima execucao e selecionada por plano e maquina sem limite global", () => {
-  const body = slice(source(automationSources.runRepository), "export async function listLatestRunsByPlanIds", "export async function findLatestRunForAsset");
+  const body = slice(
+    source(automationSources.runRepository),
+    "export async function listLatestRunsByPlanIds",
+    "export async function findLatestRunForAsset"
+  );
   assert.match(body, /LEFT JOIN preventive_automation_runs newer/);
   assert.match(body, /newer\.id IS NULL/);
   assert.doesNotMatch(body, /LIMIT 500/);
@@ -625,7 +636,7 @@ test("consultas de gerenciamento nao usam recursos ausentes no pg-mem", () => {
 });
 
 test("aba de automatizacoes considera a lista principal enquanto o gerenciamento carrega", () => {
-  const app = source("../../../client/src/components/alerts/AlertCenterV2.jsx");
+  const app = alertCenterSource();
   assert.match(app, /Array\.isArray\(preventiveAutomationPlans\)/);
   assert.match(app, /preventiveAutomationPlans\.length/);
   assert.match(app, /Math\.max/);

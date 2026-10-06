@@ -13,16 +13,10 @@ const DEFAULT_MODEL_HEIGHTS = {
 };
 
 /** Escala e posiciona o modelo carregado para caber no alvo (largura/profundidade/altura), apoiado em y. */
-export function fitModelToTarget(sourceScene, {
-  width: targetWidth,
-  depth: targetDepth,
-  height: targetHeight,
-  x = 0,
-  z = 0,
-  y = 0,
-  rotationY = 0,
-  objectId
-}) {
+export function fitModelToTarget(
+  sourceScene,
+  { width: targetWidth, depth: targetDepth, height: targetHeight, x = 0, z = 0, y = 0, rotationY = 0, objectId }
+) {
   const model = sourceScene.clone(true);
   model.rotation.y = THREE.MathUtils.degToRad(rotationY);
   const bounds = new THREE.Box3().setFromObject(model);
@@ -54,10 +48,7 @@ export function fitModelToTarget(sourceScene, {
 
 /** Altura alvo de um modelo unico: altura do objeto, da biblioteca, padrao do tipo ou 70. */
 export function resolveModelTargetHeight(object, assetMode, type) {
-  return Math.max(
-    8,
-    Number(object.height3d || assetMode.definition?.dimensions?.height || DEFAULT_MODEL_HEIGHTS[type] || 70)
-  );
+  return Math.max(8, Number(object.height3d || assetMode.definition?.dimensions?.height || DEFAULT_MODEL_HEIGHTS[type] || 70));
 }
 
 function markObjectTree(root, object, group) {
@@ -86,7 +77,8 @@ export function createModelController({ enabled, resources, parts, lifecycle, re
   const loadModelScene = (url) => {
     if (!loader) return Promise.reject(new Error("Model loader is disabled"));
     if (!scenePromises.has(url)) {
-      const promise = loader.loadAsync(url)
+      const promise = loader
+        .loadAsync(url)
         .then((gltf) => gltf?.scene || null)
         .catch((error) => {
           scenePromises.delete(url);
@@ -110,65 +102,75 @@ export function createModelController({ enabled, resources, parts, lifecycle, re
 
   const attachComposite = (group, object, assetMode, { width, depth }) => {
     updatePending(1);
-    Promise.all(assetMode.parts.map(async (part) => ({
-      part,
-      scene: await loadModelScene(part.url)
-    }))).then((loadedParts) => {
-      if (lifecycle.disposed) return;
-      clearGroup(group);
-      const height = Number(object.height3d || 70);
-      loadedParts.forEach(({ part, scene: sourceScene }) => {
-        if (!sourceScene) return;
-        group.add(fitModelToTarget(sourceScene, {
-          width: width * part.width,
-          depth: depth * part.depth,
-          height: height * part.height,
-          x: width * part.x,
-          z: depth * part.z,
+    Promise.all(
+      assetMode.parts.map(async (part) => ({
+        part,
+        scene: await loadModelScene(part.url)
+      }))
+    )
+      .then((loadedParts) => {
+        if (lifecycle.disposed) return;
+        clearGroup(group);
+        const height = Number(object.height3d || 70);
+        loadedParts.forEach(({ part, scene: sourceScene }) => {
+          if (!sourceScene) return;
+          group.add(
+            fitModelToTarget(sourceScene, {
+              width: width * part.width,
+              depth: depth * part.depth,
+              height: height * part.height,
+              x: width * part.x,
+              z: depth * part.z,
+              y: 0,
+              rotationY: Number(part.rotationY || 0),
+              objectId: object.id
+            })
+          );
+        });
+        parts.addModelPart(group, {
+          x: width * 0.32,
+          z: -depth * 0.08,
           y: 0,
-          rotationY: Number(part.rotationY || 0),
-          objectId: object.id
-        }));
-      });
-      parts.addModelPart(group, {
-        x: width * 0.32,
-        z: -depth * 0.08,
-        y: 0,
-        width: width * 0.2,
-        depth: depth * 0.42,
-        height: height * 0.68,
-        color: "#1c2734",
-        metalness: 0.28
-      });
-      markObjectTree(group, object, group);
-      render();
-    }).catch((error) => {
-      warnOnce(
-        assetMode.parts.map((part) => part.url).join(","),
-        "Modelos 3D compostos indisponíveis; usando fallback procedural.",
-        error
-      );
-    }).finally(() => updatePending(-1));
+          width: width * 0.2,
+          depth: depth * 0.42,
+          height: height * 0.68,
+          color: "#1c2734",
+          metalness: 0.28
+        });
+        markObjectTree(group, object, group);
+        render();
+      })
+      .catch((error) => {
+        warnOnce(
+          assetMode.parts.map((part) => part.url).join(","),
+          "Modelos 3D compostos indisponíveis; usando fallback procedural.",
+          error
+        );
+      })
+      .finally(() => updatePending(-1));
   };
 
   const attachSingle = (group, object, type, assetMode, { width, depth }) => {
     updatePending(1);
-    loadModelScene(assetMode.url).then((sourceScene) => {
-      if (lifecycle.disposed || !sourceScene) return;
-      clearGroup(group);
-      const model = fitModelToTarget(sourceScene, {
-        width,
-        depth,
-        height: resolveModelTargetHeight(object, assetMode, type),
-        rotationY: Number(assetMode.definition.defaultRotationY ?? assetMode.definition.defaultRotation ?? 0),
-        objectId: object.id
-      });
-      markObjectTree(model, object, group);
-      group.add(model);
-      render();
-    }).catch((error) => {
-      warnOnce(assetMode.url, `Modelo 3D local indisponível; usando fallback procedural: ${assetMode.url}`, error);
-    }).finally(() => updatePending(-1));
+    loadModelScene(assetMode.url)
+      .then((sourceScene) => {
+        if (lifecycle.disposed || !sourceScene) return;
+        clearGroup(group);
+        const model = fitModelToTarget(sourceScene, {
+          width,
+          depth,
+          height: resolveModelTargetHeight(object, assetMode, type),
+          rotationY: Number(assetMode.definition.defaultRotationY ?? assetMode.definition.defaultRotation ?? 0),
+          objectId: object.id
+        });
+        markObjectTree(model, object, group);
+        group.add(model);
+        render();
+      })
+      .catch((error) => {
+        warnOnce(assetMode.url, `Modelo 3D local indisponível; usando fallback procedural: ${assetMode.url}`, error);
+      })
+      .finally(() => updatePending(-1));
   };
 
   /**

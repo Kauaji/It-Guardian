@@ -29,9 +29,7 @@ export default function InventoryVisualMapConnectionEditor({
 
   return (
     <section className="inventory-visual-connection-editor">
-      <div className="inventory-visual-section-title">
-        Editar conexão
-      </div>
+      <div className="inventory-visual-section-title">Editar conexão</div>
 
       <div className="inventory-visual-form-grid compact">
         <label>
@@ -45,24 +43,48 @@ export default function InventoryVisualMapConnectionEditor({
           Tipo
           <select value={draft.connectionType} onChange={(event) => onChange("connectionType", event.target.value)} disabled={!canManage}>
             {typeOptions.map((option) => (
-              <option key={option.type} value={option.type}>{option.label}</option>
+              <option key={option.type} value={option.type}>
+                {option.label}
+              </option>
             ))}
           </select>
         </label>
         <label>
           Identificacao
-          <input value={draft.label || ""} onChange={(event) => onChange("label", event.target.value)} disabled={!canManage} placeholder="Ex: Cabo rack A" />
+          <input
+            value={draft.label || ""}
+            onChange={(event) => onChange("label", event.target.value)}
+            disabled={!canManage}
+            placeholder="Ex: Cabo rack A"
+          />
         </label>
         <label>
           Cor
-          <input type="color" value={draft.color || "#0ea5e9"} onChange={(event) => onChange("color", event.target.value)} disabled={!canManage} />
+          <input
+            type="color"
+            value={draft.color || "#0ea5e9"}
+            onChange={(event) => onChange("color", event.target.value)}
+            disabled={!canManage}
+          />
         </label>
         <label>
           Espessura
-          <input type="number" min="1" max="12" value={draft.thickness || 2} onChange={(event) => onChange("thickness", event.target.value)} disabled={!canManage} />
+          <input
+            type="number"
+            min="1"
+            max="12"
+            value={draft.thickness || 2}
+            onChange={(event) => onChange("thickness", event.target.value)}
+            disabled={!canManage}
+          />
         </label>
         <label className="inventory-visual-inline-check">
-          <input type="checkbox" checked={!!draft.dashed} onChange={(event) => onChange("dashed", event.target.checked)} disabled={!canManage} />
+          <input
+            type="checkbox"
+            checked={!!draft.dashed}
+            onChange={(event) => onChange("dashed", event.target.checked)}
+            disabled={!canManage}
+          />
           Tracejada
         </label>
       </div>
@@ -80,11 +102,38 @@ export default function InventoryVisualMapConnectionEditor({
         {(draft.points || []).map((point, index) => (
           <div className="inventory-visual-point-row" key={index}>
             <span>{index + 1}</span>
-            <input type="number" step="0.1" value={point.x} onChange={(event) => onPointChange(index, "x", event.target.value)} disabled={!canManage} aria-label={`Ponto ${index + 1} X`} />
-            <input type="number" step="0.1" value={point.y} onChange={(event) => onPointChange(index, "y", event.target.value)} disabled={!canManage} aria-label={`Ponto ${index + 1} Y`} />
-            <input type="number" step="0.1" value={point.z} onChange={(event) => onPointChange(index, "z", event.target.value)} disabled={!canManage} aria-label={`Ponto ${index + 1} Z`} />
+            <input
+              type="number"
+              step="0.1"
+              value={point.x}
+              onChange={(event) => onPointChange(index, "x", event.target.value)}
+              disabled={!canManage}
+              aria-label={`Ponto ${index + 1} X`}
+            />
+            <input
+              type="number"
+              step="0.1"
+              value={point.y}
+              onChange={(event) => onPointChange(index, "y", event.target.value)}
+              disabled={!canManage}
+              aria-label={`Ponto ${index + 1} Y`}
+            />
+            <input
+              type="number"
+              step="0.1"
+              value={point.z}
+              onChange={(event) => onPointChange(index, "z", event.target.value)}
+              disabled={!canManage}
+              aria-label={`Ponto ${index + 1} Z`}
+            />
             {canManage && (
-              <button type="button" className="icon-button" onClick={() => onRemovePoint(index)} disabled={(draft.points || []).length <= 2 || saving} title="Remover ponto">
+              <button
+                type="button"
+                className="icon-button"
+                onClick={() => onRemovePoint(index)}
+                disabled={(draft.points || []).length <= 2 || saving}
+                title="Remover ponto"
+              >
                 <X size={14} />
               </button>
             )}

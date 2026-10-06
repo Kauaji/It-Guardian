@@ -2,7 +2,13 @@ import { ChevronDown, MoreHorizontal } from "lucide-react";
 import SegmentActionStrip from "./SegmentActionStrip.jsx";
 
 export default function SegmentHeaderTools({
-  isDefaultSegment, collapsed, actionsOpen, actionsMenuId, setActivePopoverId, onToggleCollapsed, stripProps
+  isDefaultSegment,
+  collapsed,
+  actionsOpen,
+  actionsMenuId,
+  setActivePopoverId,
+  onToggleCollapsed,
+  stripProps
 }) {
   if (isDefaultSegment) {
     return (

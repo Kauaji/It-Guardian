@@ -1,9 +1,6 @@
 import PreventiveAutomationColorField from "./PreventiveAutomationColorField.jsx";
 import PreventiveAutomationScopeFields from "./PreventiveAutomationScopeFields.jsx";
-import {
-  preventiveAutomationRecurrenceLabels,
-  preventiveAutomationTimezoneOptions
-} from "./preventiveAutomationPanelUtils.js";
+import { preventiveAutomationRecurrenceLabels, preventiveAutomationTimezoneOptions } from "./preventiveAutomationPanelUtils.js";
 
 export default function PreventiveAutomationFormFields({ form, plans, identity, scopeSources, onChange }) {
   return (
@@ -11,15 +8,15 @@ export default function PreventiveAutomationFormFields({ form, plans, identity, 
       <label>
         Nome
         <input value={form.name} onChange={(event) => onChange("name", event.target.value)} required />
-        {identity.duplicateNamePlan && (
-          <span className="form-error">Já existe uma automatização com esse nome.</span>
-        )}
+        {identity.duplicateNamePlan && <span className="form-error">Já existe uma automatização com esse nome.</span>}
       </label>
       <label>
         Recorrência
         <select value={form.recurrenceType} onChange={(event) => onChange("recurrenceType", event.target.value)}>
           {Object.entries(preventiveAutomationRecurrenceLabels).map(([value, label]) => (
-            <option key={value} value={value}>{label}</option>
+            <option key={value} value={value}>
+              {label}
+            </option>
           ))}
         </select>
       </label>

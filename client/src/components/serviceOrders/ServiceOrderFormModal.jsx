@@ -29,7 +29,16 @@ export default function ServiceOrderFormModal({
     : "No modo Local, o setor organiza o atendimento interno sem exigir cliente.";
   const { technicians, clients } = useFormLookups({ open, token, businessMode, notify });
   const state = useServiceOrderForm({
-    open, businessMode, activeTab, tabs, devices, sectors, serviceOrderSettings, clients, saving, onSubmit
+    open,
+    businessMode,
+    activeTab,
+    tabs,
+    devices,
+    sectors,
+    serviceOrderSettings,
+    clients,
+    saving,
+    onSubmit
   });
   const { form, formError, updateField } = state;
 
@@ -37,7 +46,14 @@ export default function ServiceOrderFormModal({
 
   return (
     <div className="modal-backdrop service-order-backdrop" role="presentation">
-      <form ref={dialogRef} className="modal-panel service-order-form-modal" role="dialog" aria-modal="true" aria-labelledby="service-order-form-title" onSubmit={state.submit}>
+      <form
+        ref={dialogRef}
+        className="modal-panel service-order-form-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="service-order-form-title"
+        onSubmit={state.submit}
+      >
         <FormHeader helperText={helperText} onClose={onClose} />
         <SummaryFields form={form} availableSectors={state.availableSectors} updateField={updateField} />
         <EnvironmentAssetFields
@@ -50,7 +66,11 @@ export default function ServiceOrderFormModal({
           selectedAsset={state.selectedAsset}
           updateField={updateField}
         />
-        <TechnicianPicker technicians={technicians} selectedNames={form.assignedTechnicianNames} onToggle={state.toggleAssignedTechnician} />
+        <TechnicianPicker
+          technicians={technicians}
+          selectedNames={form.assignedTechnicianNames}
+          onToggle={state.toggleAssignedTechnician}
+        />
         <RequesterFields
           form={form}
           technicians={technicians}
@@ -62,7 +82,9 @@ export default function ServiceOrderFormModal({
         {formError && <div className="service-order-form-error service-order-wide">{formError}</div>}
 
         <div className="modal-actions service-order-wide">
-          <button type="button" className="ghost-action" onClick={onClose}>Cancelar</button>
+          <button type="button" className="ghost-action" onClick={onClose}>
+            Cancelar
+          </button>
           <button className="primary-action compact-action" disabled={saving || form.title.trim().length < 3}>
             {saving ? "Criando..." : "Criar OS"}
           </button>

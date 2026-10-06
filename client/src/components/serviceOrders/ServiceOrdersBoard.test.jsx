@@ -28,8 +28,34 @@ vi.mock("./ServiceOrderChecklistTemplatesSettings.jsx", () => ({
 
 const orders = [
   makeOrder(),
-  makeOrder({ id: "os-2", number: "OS-0002", title: "Impressora offline", status: "in_progress", priority: "low", priorityLabel: "Baixa", assignedTechnicianName: "Bruno Silva", assignedTechnicianNames: ["Bruno Silva"], sla: { status: "breached" }, feedback: { rating: 5 }, sectorId: "sector-geral", sectorName: "Geral", environmentId: "c2", assetId: "dev-2" }),
-  makeOrder({ id: "os-3", number: "OS-0003", title: "Troca de memória", status: "closed", closedAt: "2026-08-12T10:00:00.000Z", priority: "critical", priorityLabel: "Crítica", source: "public_support_form", sectorId: "sector-ti", sla: { status: "resolved" } })
+  makeOrder({
+    id: "os-2",
+    number: "OS-0002",
+    title: "Impressora offline",
+    status: "in_progress",
+    priority: "low",
+    priorityLabel: "Baixa",
+    assignedTechnicianName: "Bruno Silva",
+    assignedTechnicianNames: ["Bruno Silva"],
+    sla: { status: "breached" },
+    feedback: { rating: 5 },
+    sectorId: "sector-geral",
+    sectorName: "Geral",
+    environmentId: "c2",
+    assetId: "dev-2"
+  }),
+  makeOrder({
+    id: "os-3",
+    number: "OS-0003",
+    title: "Troca de memória",
+    status: "closed",
+    closedAt: "2026-08-12T10:00:00.000Z",
+    priority: "critical",
+    priorityLabel: "Crítica",
+    source: "public_support_form",
+    sectorId: "sector-ti",
+    sla: { status: "resolved" }
+  })
 ];
 const devices = [makeDevice(), makeDevice({ id: "dev-2", name: "IMP-01" })];
 const allPermissions = { viewAll: true };
@@ -42,7 +68,15 @@ function renderBoard(props = {}) {
     onStatusChange: vi.fn().mockResolvedValue(undefined)
   };
   const view = render(
-    <ServiceOrdersBoard serviceOrders={orders} devices={devices} token="tok" permissions={allPermissions} user={{ id: "u1", name: "Ana Técnica", sectorId: "sector-ti" }} {...handlers} {...props} />
+    <ServiceOrdersBoard
+      serviceOrders={orders}
+      devices={devices}
+      token="tok"
+      permissions={allPermissions}
+      user={{ id: "u1", name: "Ana Técnica", sectorId: "sector-ti" }}
+      {...handlers}
+      {...props}
+    />
   );
   return { ...view, ...handlers };
 }
@@ -86,7 +120,14 @@ describe("ServiceOrdersBoard", () => {
   });
 
   it("filtra pelo mês de abertura e permite escolher ano, mês ou todos", async () => {
-    const old = makeOrder({ id: "os-old", number: "OS-0000", title: "OS antiga", status: "closed", createdAt: "2025-03-10T10:00:00.000Z", closedAt: "2025-03-20T10:00:00.000Z" });
+    const old = makeOrder({
+      id: "os-old",
+      number: "OS-0000",
+      title: "OS antiga",
+      status: "closed",
+      createdAt: "2025-03-10T10:00:00.000Z",
+      closedAt: "2025-03-20T10:00:00.000Z"
+    });
     await renderReady({ serviceOrders: [...orders, old] });
     expect(screen.getByText("Agosto de 2026")).toBeInTheDocument();
     expect(screen.queryByText("OS antiga")).not.toBeInTheDocument();
@@ -179,7 +220,11 @@ describe("ServiceOrdersBoard", () => {
     await waitFor(() => expect(api.fetchClients).toHaveBeenCalledWith("tok"));
     click(screen.getByRole("button", { name: "Filtros de Ordens de Serviço" }));
     const client = screen.getByText("Cliente").closest("label").querySelector("select");
-    expect(within(client).getAllByRole("option").map((option) => option.textContent)).toEqual(["Todos os clientes", "Acme", "Beta Ltda", "Cliente sem nome"]);
+    expect(
+      within(client)
+        .getAllByRole("option")
+        .map((option) => option.textContent)
+    ).toEqual(["Todos os clientes", "Acme", "Beta Ltda", "Cliente sem nome"]);
     fireEvent.change(client, { target: { value: "c2" } });
     expect(document.querySelector(".service-orders-summary article strong")).toHaveTextContent("1");
     expect(screen.getByText("Setor/local")).toBeInTheDocument();
@@ -196,7 +241,15 @@ describe("ServiceOrdersBoard", () => {
   });
 
   it("aplica configurações carregadas (layout vertical, status e cores)", async () => {
-    wireApi(api, { settings: { boardLayout: "vertical", statuses: [{ id: "a", name: "Nova", color: "#112233", isInitial: true }, { id: "b", name: "Fim", isFinal: true }] } });
+    wireApi(api, {
+      settings: {
+        boardLayout: "vertical",
+        statuses: [
+          { id: "a", name: "Nova", color: "#112233", isInitial: true },
+          { id: "b", name: "Fim", isFinal: true }
+        ]
+      }
+    });
     await renderReady();
     await waitFor(() => expect(document.querySelector(".service-order-kanban")).toHaveClass("layout-vertical"));
     expect(screen.getByText("Nova", { selector: "section.service-order-column strong" })).toBeInTheDocument();
@@ -207,7 +260,13 @@ describe("ServiceOrdersBoard", () => {
     expect(captured.details.serviceOrder).toBeNull();
     click(screen.getByText("Impressora offline").closest("button"));
     expect(screen.getByTestId("details")).toHaveAttribute("data-order", "os-2");
-    expect(captured.details).toMatchObject({ token: "tok", systemMode: "local", canChangeSector: false, remoteScriptExecutionEnabled: false, permissions: allPermissions });
+    expect(captured.details).toMatchObject({
+      token: "tok",
+      systemMode: "local",
+      canChangeSector: false,
+      remoteScriptExecutionEnabled: false,
+      permissions: allPermissions
+    });
     expect(captured.details.statuses.map((status) => status.id)).toEqual(["open", "in_progress", "waiting", "closed"]);
     act(() => captured.details.onClose());
     expect(screen.getByTestId("details")).toHaveAttribute("data-order", "");
@@ -221,7 +280,14 @@ describe("ServiceOrdersBoard", () => {
   it("repassa a versão atual da OS selecionada ao detalhe", async () => {
     const { rerender } = await renderReady();
     click(screen.getByText("Impressora offline").closest("button"));
-    rerender(<ServiceOrdersBoard serviceOrders={[orders[0], { ...orders[1], title: "Atualizada" }, orders[2]]} devices={devices} token="tok" permissions={allPermissions} />);
+    rerender(
+      <ServiceOrdersBoard
+        serviceOrders={[orders[0], { ...orders[1], title: "Atualizada" }, orders[2]]}
+        devices={devices}
+        token="tok"
+        permissions={allPermissions}
+      />
+    );
     expect(captured.details.serviceOrder.title).toBe("Atualizada");
     rerender(<ServiceOrdersBoard serviceOrders={[orders[0]]} devices={devices} token="tok" permissions={allPermissions} />);
     expect(captured.details.serviceOrder.title).toBe("Impressora offline");
@@ -288,7 +354,9 @@ describe("ServiceOrdersBoard", () => {
       const second = await renderReady({ permissions: { changeStatus: true, finish: false, viewAll: true } });
       target = column("Finalizada");
       fireEvent.drop(target, { dataTransfer: drag("Computador não liga", target) });
-      await waitFor(() => expect(second.notify).toHaveBeenCalledWith("Você não possui permissão para finalizar esta Ordem de Serviço.", "danger"));
+      await waitFor(() =>
+        expect(second.notify).toHaveBeenCalledWith("Você não possui permissão para finalizar esta Ordem de Serviço.", "danger")
+      );
       expect(onStatusChange).not.toHaveBeenCalled();
       expect(second.onStatusChange).not.toHaveBeenCalled();
     });
@@ -389,7 +457,11 @@ describe("ServiceOrdersBoard", () => {
 
     it("mostra 'Salvando...' enquanto salva e notifica falha", async () => {
       let rejectSave;
-      api.updateServiceOrderSettings.mockReturnValue(new Promise((_resolve, reject) => { rejectSave = reject; }));
+      api.updateServiceOrderSettings.mockReturnValue(
+        new Promise((_resolve, reject) => {
+          rejectSave = reject;
+        })
+      );
       const { notify } = await openSettings();
       click(within(dialog()).getByRole("button", { name: "Salvar" }));
       expect(within(dialog()).getByRole("button", { name: "Salvando..." })).toBeDisabled();
@@ -456,7 +528,14 @@ describe("ServiceOrdersBoard", () => {
     });
 
     it("não exclui abaixo de dois status", async () => {
-      wireApi(api, { settings: { statuses: [{ id: "a", name: "A", isInitial: true }, { id: "b", name: "B", isFinal: true }] } });
+      wireApi(api, {
+        settings: {
+          statuses: [
+            { id: "a", name: "A", isInitial: true },
+            { id: "b", name: "B", isFinal: true }
+          ]
+        }
+      });
       const { notify } = await openSettings();
       await act(async () => {});
       click(within(dialog()).getByText("Segmentos/Status da OS").closest("button"));

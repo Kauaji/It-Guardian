@@ -6,13 +6,7 @@ import { hasRemoteAssistanceAgent, isRemoteAssistanceAssetFresh } from "../../re
 
 // Menu "Scripts disponiveis" dos cards de sugestao: carrega recomendacoes sob
 // demanda e envia o script para execucao via agente apos confirmacao.
-export default function useSuggestionScriptMenu({
-  token,
-  activeScripts,
-  lookups,
-  validationWindowMinutes,
-  onUseSuggestionScript
-}) {
+export default function useSuggestionScriptMenu({ token, activeScripts, lookups, validationWindowMinutes, onUseSuggestionScript }) {
   const [openSuggestionId, setOpenSuggestionId] = useState(null);
   const [recommendationsBySuggestion, setRecommendationsBySuggestion] = useState({});
   const [loadingId, setLoadingId] = useState(null);
@@ -21,11 +15,7 @@ export default function useSuggestionScriptMenu({
   async function toggleMenu(suggestionId) {
     setOpenSuggestionId((current) => (current === suggestionId ? null : suggestionId));
 
-    if (
-      openSuggestionId === suggestionId ||
-      recommendationsBySuggestion[suggestionId]?.recommended ||
-      loadingId === suggestionId
-    ) {
+    if (openSuggestionId === suggestionId || recommendationsBySuggestion[suggestionId]?.recommended || loadingId === suggestionId) {
       return;
     }
 

@@ -3,12 +3,7 @@ import { Database, Map as MapIcon, Network } from "lucide-react";
 export default function BoardViewSwitch({ mode, hasFloorPlans, hasTopology, onChange }) {
   return (
     <div className="inventory-view-switch" role="group" aria-label="Visualização do inventário">
-      <button
-        type="button"
-        className={mode === "board" ? "active" : ""}
-        onClick={() => onChange("board")}
-        aria-pressed={mode === "board"}
-      >
+      <button type="button" className={mode === "board" ? "active" : ""} onClick={() => onChange("board")} aria-pressed={mode === "board"}>
         <Database size={16} aria-hidden="true" />
         Quadro
       </button>

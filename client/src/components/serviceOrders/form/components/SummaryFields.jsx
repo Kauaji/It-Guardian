@@ -28,7 +28,9 @@ export default function SummaryFields({ form, availableSectors, updateField }) {
         Prioridade
         <select value={form.priority} onChange={(event) => updateField("priority", event.target.value)}>
           {priorities.map((priority) => (
-            <option key={priority.value} value={priority.value}>{priority.label}</option>
+            <option key={priority.value} value={priority.value}>
+              {priority.label}
+            </option>
           ))}
         </select>
       </label>
@@ -38,7 +40,9 @@ export default function SummaryFields({ form, availableSectors, updateField }) {
         <select value={form.category} onChange={(event) => updateField("category", event.target.value)}>
           <option value="">Selecione</option>
           {assetTypeOptions.map((option) => (
-            <option key={option.value} value={option.label}>{option.label}</option>
+            <option key={option.value} value={option.label}>
+              {option.label}
+            </option>
           ))}
         </select>
       </label>
@@ -47,7 +51,9 @@ export default function SummaryFields({ form, availableSectors, updateField }) {
         Setor
         <select value={form.sectorId} onChange={(event) => updateField("sectorId", event.target.value || GENERAL_SECTOR_ID)}>
           {availableSectors.map((sector) => (
-            <option key={sector.id} value={sector.id}>{sector.name}</option>
+            <option key={sector.id} value={sector.id}>
+              {sector.name}
+            </option>
           ))}
         </select>
       </label>

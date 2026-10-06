@@ -3,8 +3,14 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 const emptyFilters = {};
 const DashboardFilterContext = createContext({
-  filters: emptyFilters, requestFilters: emptyFilters, selections: emptyFilters,
-  enabled: false, pending: false, toggleFilter: () => {}, clearFilters: () => {}, removeFilter: () => {}
+  filters: emptyFilters,
+  requestFilters: emptyFilters,
+  selections: emptyFilters,
+  enabled: false,
+  pending: false,
+  toggleFilter: () => {},
+  clearFilters: () => {},
+  removeFilter: () => {}
 });
 
 export function useDashboardFilters() {
@@ -41,15 +47,24 @@ export function DashboardFilterProvider({ children, enabled = true }) {
   }
 
   const value = {
-    filters, selections, requestFilters, enabled, toggleFilter, removeFilter,
-    clearFilters: () => setSelections({}), pending: filterKey !== JSON.stringify(requestFilters)
+    filters,
+    selections,
+    requestFilters,
+    enabled,
+    toggleFilter,
+    removeFilter,
+    clearFilters: () => setSelections({}),
+    pending: filterKey !== JSON.stringify(requestFilters)
   };
   return <DashboardFilterContext.Provider value={value}>{children}</DashboardFilterContext.Provider>;
 }
 
 const dimensionLabels = {
-  assetStatus: "Status", assetId: "Ativo", alertSeverity: "Severidade",
-  serviceOrderStatus: "OS", overdue: "Prazo"
+  assetStatus: "Status",
+  assetId: "Ativo",
+  alertSeverity: "Severidade",
+  serviceOrderStatus: "OS",
+  overdue: "Prazo"
 };
 
 export function DashboardFilterBar() {
@@ -60,19 +75,36 @@ export function DashboardFilterBar() {
       <div className="dashboard-filter-hint">
         {entries.length ? <Filter size={15} /> : <MousePointer2 size={15} />}
         <span>{entries.length ? "Análise filtrada" : "Explore os dados"}</span>
-        <small>{enabled ? "Clique em uma barra, fatia, indicador ou ativo para cruzar os dados." : "Filtros por clique pausados durante a edição."}</small>
+        <small>
+          {enabled
+            ? "Clique em uma barra, fatia, indicador ou ativo para cruzar os dados."
+            : "Filtros por clique pausados durante a edição."}
+        </small>
       </div>
       {entries.length > 0 && (
         <div className="dashboard-filter-chips">
           {entries.map(([dimension, selection]) => (
-            <button key={dimension} type="button" className="dashboard-filter-chip" onClick={() => removeFilter(dimension)} aria-label={"Remover filtro " + dimensionLabels[dimension] + ": " + selection.label}>
-              <span>{dimensionLabels[dimension]}: <strong>{selection.label}</strong></span><X size={13} />
+            <button
+              key={dimension}
+              type="button"
+              className="dashboard-filter-chip"
+              onClick={() => removeFilter(dimension)}
+              aria-label={"Remover filtro " + dimensionLabels[dimension] + ": " + selection.label}
+            >
+              <span>
+                {dimensionLabels[dimension]}: <strong>{selection.label}</strong>
+              </span>
+              <X size={13} />
             </button>
           ))}
-          <button type="button" className="dashboard-filter-clear" onClick={clearFilters}>Limpar filtros</button>
+          <button type="button" className="dashboard-filter-clear" onClick={clearFilters}>
+            Limpar filtros
+          </button>
         </div>
       )}
-      <span className="sr-only" role="status" aria-live="polite">{pending ? "Aplicando filtros aos widgets" : entries.length ? entries.length + " filtro(s) ativo(s)" : "Exibindo todos os dados"}</span>
+      <span className="sr-only" role="status" aria-live="polite">
+        {pending ? "Aplicando filtros aos widgets" : entries.length ? entries.length + " filtro(s) ativo(s)" : "Exibindo todos os dados"}
+      </span>
     </section>
   );
 }

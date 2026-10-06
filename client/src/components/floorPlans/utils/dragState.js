@@ -47,9 +47,8 @@ export function createEntityDrag({ editor, type, id, entity, point, objectIds })
     originX: origin.x || 0,
     originY: origin.y || 0,
     originObject: type === "object" ? { ...entity } : null,
-    selectedObjectOrigins: type === "object"
-      ? copyEntities(editor.objects, (object) => objectIds.includes(object.id) && !isEditorObjectLocked(object))
-      : [],
+    selectedObjectOrigins:
+      type === "object" ? copyEntities(editor.objects, (object) => objectIds.includes(object.id) && !isEditorObjectLocked(object)) : [],
     originGeometry: type === "zone" ? getRoomGeometry(entity) : null,
     ...children
   };

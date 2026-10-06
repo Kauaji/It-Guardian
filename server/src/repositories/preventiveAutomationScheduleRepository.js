@@ -74,7 +74,10 @@ export async function listActiveSchedulesByIds(planId, scheduleIds, db = query) 
   return result.rows.map(fromAssetScheduleRow);
 }
 
-export async function upsertSchedule(db, { id, planId, assetId, source, recurrenceType, recurrenceIntervalDays, preferredTime, timezone, nextRunAt, active }) {
+export async function upsertSchedule(
+  db,
+  { id, planId, assetId, source, recurrenceType, recurrenceIntervalDays, preferredTime, timezone, nextRunAt, active }
+) {
   await db(
     `
       INSERT INTO preventive_automation_asset_schedules (

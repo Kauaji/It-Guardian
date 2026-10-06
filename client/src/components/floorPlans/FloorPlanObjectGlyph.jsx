@@ -20,7 +20,7 @@ const INVISIBLE_COLORS = ["#fff", "#ffffff", "white", "rgb(255, 255, 255)"];
 function resolveGlyphColor(object, type) {
   const rawColor = String(object?.color || "").trim();
   const isInvisibleColor = INVISIBLE_COLORS.includes(rawColor.toLowerCase());
-  return !rawColor || isInvisibleColor ? (FALLBACK_COLORS[type] || "#475569") : rawColor;
+  return !rawColor || isInvisibleColor ? FALLBACK_COLORS[type] || "#475569" : rawColor;
 }
 
 /** Glifo 2D (SVG) de um objeto da planta: medida, parede, porta, janela ou equipamento/movel. */
@@ -37,7 +37,11 @@ export default function FloorPlanObjectGlyph({ object, width, height, selected =
   if (type === "window") return <WindowGlyph width={width} height={height} color={color} selected={selected} />;
 
   return (
-    <g className={`floor-plan-object-glyph ${isOpeningObject(object) ? "opening" : "fixture"} ${selected ? "selected" : ""}`} stroke={color} fill="none">
+    <g
+      className={`floor-plan-object-glyph ${isOpeningObject(object) ? "opening" : "fixture"} ${selected ? "selected" : ""}`}
+      stroke={color}
+      fill="none"
+    >
       <DeviceGlyph type={type} width={width} height={height} metadata={object?.metadata || {}} />
     </g>
   );

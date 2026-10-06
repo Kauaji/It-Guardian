@@ -2,18 +2,7 @@ import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import PeripheralItem from "./PeripheralItem.jsx";
 
-const peripheralTypes = [
-  "Monitor",
-  "Mouse",
-  "Teclado",
-  "Headset",
-  "Impressora",
-  "Webcam",
-  "Dockstation",
-  "Notebook",
-  "Scanner",
-  "Outro"
-];
+const peripheralTypes = ["Monitor", "Mouse", "Teclado", "Headset", "Impressora", "Webcam", "Dockstation", "Notebook", "Scanner", "Outro"];
 
 export default function PeripheralList({
   peripherals = [],
@@ -70,44 +59,53 @@ export default function PeripheralList({
             onRemove={(item) => {
               const removed = onRemove(item);
               if (!removed) return;
-              setItems((current) => current.filter((peripheralItem) =>
-                (peripheralItem.id || `${peripheralItem.type}-${peripheralItem.brand}-${peripheralItem.assetTag}`) !==
-                (item.id || `${item.type}-${item.brand}-${item.assetTag}`)
-              ));
+              setItems((current) =>
+                current.filter(
+                  (peripheralItem) =>
+                    (peripheralItem.id || `${peripheralItem.type}-${peripheralItem.brand}-${peripheralItem.assetTag}`) !==
+                    (item.id || `${item.type}-${item.brand}-${item.assetTag}`)
+                )
+              );
             }}
           />
         ))}
         {!items.length && <li className="peripheral-empty">Nenhum periférico vinculado.</li>}
       </ul>
 
-      {allowAdd && <form className="peripheral-add-form" onSubmit={addPeripheral}>
-        <select aria-label="Tipo de periférico" value={draft.type} onChange={(event) => setDraft({ ...draft, type: event.target.value })}>
-          {peripheralTypes.map((type) => <option key={type} value={type}>{type}</option>)}
-        </select>
-        {draft.type === "Outro" && (
+      {allowAdd && (
+        <form className="peripheral-add-form" onSubmit={addPeripheral}>
+          <select aria-label="Tipo de periférico" value={draft.type} onChange={(event) => setDraft({ ...draft, type: event.target.value })}>
+            {peripheralTypes.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
+          {draft.type === "Outro" && (
+            <input
+              value={draft.customType}
+              onChange={(event) => setDraft({ ...draft, customType: event.target.value })}
+              placeholder="Tipo"
+              aria-label="Tipo personalizado"
+            />
+          )}
           <input
-            value={draft.customType}
-            onChange={(event) => setDraft({ ...draft, customType: event.target.value })}
-            placeholder="Tipo"
-            aria-label="Tipo personalizado"
+            value={draft.brand}
+            onChange={(event) => setDraft({ ...draft, brand: event.target.value })}
+            placeholder="Marca"
+            aria-label="Marca"
           />
-        )}
-        <input
-          value={draft.brand}
-          onChange={(event) => setDraft({ ...draft, brand: event.target.value })}
-          placeholder="Marca"
-          aria-label="Marca"
-        />
-        <input
-          value={draft.assetTag}
-          onChange={(event) => setDraft({ ...draft, assetTag: event.target.value })}
-          placeholder="Patrimônio"
-          aria-label="Patrimônio"
-        />
-        <button type="submit" title="Adicionar periférico">
-          <Plus size={14} />
-        </button>
-      </form>}
+          <input
+            value={draft.assetTag}
+            onChange={(event) => setDraft({ ...draft, assetTag: event.target.value })}
+            placeholder="Patrimônio"
+            aria-label="Patrimônio"
+          />
+          <button type="submit" title="Adicionar periférico">
+            <Plus size={14} />
+          </button>
+        </form>
+      )}
     </section>
   );
 }

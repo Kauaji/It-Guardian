@@ -14,8 +14,7 @@ import { createScriptSimulationLog } from "./scriptLogService.js";
  * ativo/OS deixando explicito que nenhum comando foi executado.
  */
 
-const HIGH_RISK_SIMULATION_MESSAGE =
-  "Scripts de alto risco exigem confirmação extra antes de registrar a simulação.";
+const HIGH_RISK_SIMULATION_MESSAGE = "Scripts de alto risco exigem confirmação extra antes de registrar a simulação.";
 
 async function recordSimulationAudit(db, { script, riskLevel, assetId, serviceOrderId, alertId, mode, notes, user }) {
   const userName = user?.name || "Usuário";
@@ -26,7 +25,9 @@ async function recordSimulationAudit(db, { script, riskLevel, assetId, serviceOr
     `Resumo estimado: ${script.estimatedSummary || "Não informado"}`,
     notes ? `Observação: ${notes}` : "",
     "Nenhum comando foi executado."
-  ].filter(Boolean).join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   if (assetId) {
     await addAssetHistory({

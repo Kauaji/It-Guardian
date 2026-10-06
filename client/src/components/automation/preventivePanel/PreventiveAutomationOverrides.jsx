@@ -12,12 +12,7 @@ export default function PreventiveAutomationOverrides({ formState, scopeSources 
 
   return (
     <section className={`preventive-automation-overrides ${overridesOpen ? "open" : ""}`}>
-      <button
-        type="button"
-        className="preventive-automation-overrides-trigger"
-        onClick={toggleOverridesOpen}
-        aria-expanded={overridesOpen}
-      >
+      <button type="button" className="preventive-automation-overrides-trigger" onClick={toggleOverridesOpen} aria-expanded={overridesOpen}>
         <span>Recorrência personalizada</span>
         <ChevronDown size={16} />
       </button>
@@ -39,20 +34,26 @@ export default function PreventiveAutomationOverrides({ formState, scopeSources 
             >
               <option value="">Selecione</option>
               {getScopeOptions(overrideDraft.targetType, scopeSources).map((option) => (
-                <option key={option.id} value={option.id}>{option.label}</option>
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
               ))}
             </select>
             <select
               aria-label="Recorrência da exceção"
               value={overrideDraft.recurrenceType}
-              onChange={(event) => setOverrideDraft((current) => ({
-                ...current,
-                recurrenceType: event.target.value,
-                recurrenceInterval: getDefaultRecurrenceInterval(event.target.value)
-              }))}
+              onChange={(event) =>
+                setOverrideDraft((current) => ({
+                  ...current,
+                  recurrenceType: event.target.value,
+                  recurrenceInterval: getDefaultRecurrenceInterval(event.target.value)
+                }))
+              }
             >
               {Object.entries(preventiveAutomationRecurrenceLabels).map(([value, label]) => (
-                <option key={value} value={value}>{label}</option>
+                <option key={value} value={value}>
+                  {label}
+                </option>
               ))}
             </select>
             {overrideDraft.recurrenceType === "custom_days" && (
@@ -61,10 +62,12 @@ export default function PreventiveAutomationOverrides({ formState, scopeSources 
                 min="1"
                 max="365"
                 value={overrideDraft.recurrenceInterval}
-                onChange={(event) => setOverrideDraft((current) => ({
-                  ...current,
-                  recurrenceInterval: event.target.value
-                }))}
+                onChange={(event) =>
+                  setOverrideDraft((current) => ({
+                    ...current,
+                    recurrenceInterval: event.target.value
+                  }))
+                }
                 aria-label="Dias da recorrência personalizada"
               />
             )}
@@ -76,7 +79,9 @@ export default function PreventiveAutomationOverrides({ formState, scopeSources 
             {(form.overrides || []).map((item, index) => (
               <span key={`${item.assetId || item.segmentId}-${index}`} className="pill">
                 {getOverrideLabel(item, scopeSources)}
-                <button type="button" onClick={() => removeOverride(index)} aria-label="Remover recorrência personalizada">×</button>
+                <button type="button" onClick={() => removeOverride(index)} aria-label="Remover recorrência personalizada">
+                  ×
+                </button>
               </span>
             ))}
           </div>

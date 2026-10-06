@@ -43,7 +43,10 @@ test("editor: andar padrao, filhos com andar invalido caem no primeiro e ids sao
   assert.deepEqual(data.objects, []);
 
   const children = normalizeEditorChildren("p1", {
-    floors: [{ id: "f1", name: "A", width: 800, height: 600 }, { id: "f2", name: "B", width: 800, height: 600 }],
+    floors: [
+      { id: "f1", name: "A", width: 800, height: 600 },
+      { id: "f2", name: "B", width: 800, height: 600 }
+    ],
     zones: [{ floorId: "f9", zoneType: "x", geometry: { x: 0, y: 0, width: 10, height: 10 } }],
     objects: [{ floorId: "f2", label: " PC " }, { floor_id: "inexistente" }],
     connection_points: [{ pointType: "invalido", label: "R" }],
@@ -88,9 +91,18 @@ test("pontos e rotas sem label/cor recebem padroes (colunas NOT NULL) em vez de 
     connectionPoints: [{ pointType: "power" }, {}],
     cableRoutes: [{ routeType: "power" }, {}]
   });
-  assert.deepEqual(children.connectionPoints.map((point) => point.label), ["Tomada", "Ponto de rede"]);
-  assert.deepEqual(children.cableRoutes.map((route) => route.label), ["Cabo de energia", "Cabo de rede"]);
-  assert.deepEqual(children.cableRoutes.map((route) => route.color), ["#2563eb", "#2563eb"]);
+  assert.deepEqual(
+    children.connectionPoints.map((point) => point.label),
+    ["Tomada", "Ponto de rede"]
+  );
+  assert.deepEqual(
+    children.cableRoutes.map((route) => route.label),
+    ["Cabo de energia", "Cabo de rede"]
+  );
+  assert.deepEqual(
+    children.cableRoutes.map((route) => route.color),
+    ["#2563eb", "#2563eb"]
+  );
 });
 
 test("andar ativo e a copia de planta remapeiam ids e referencias", () => {
@@ -101,11 +113,23 @@ test("andar ativo e a copia de planta remapeiam ids e referencias", () => {
 
   const source = {
     plan: { name: "Base", activeFloorId: "b" },
-    floors: [{ id: "a", name: "A" }, { id: "b", name: "B" }],
-    zones: [{ id: "z", floorId: "b" }, { id: "z2", floorId: "desconhecido" }],
+    floors: [
+      { id: "a", name: "A" },
+      { id: "b", name: "B" }
+    ],
+    zones: [
+      { id: "z", floorId: "b" },
+      { id: "z2", floorId: "desconhecido" }
+    ],
     objects: [{ id: "o", floorId: "a" }],
-    connectionPoints: [{ id: "p1", floorId: "a", linkedObjectId: "o" }, { id: "p2", floorId: "a", linkedObjectId: "fora" }],
-    cableRoutes: [{ id: "r", floorId: "a", sourcePointId: "p1", targetPointId: "p2" }, { id: "r2", floorId: "a", sourcePointId: "x", targetPointId: null }]
+    connectionPoints: [
+      { id: "p1", floorId: "a", linkedObjectId: "o" },
+      { id: "p2", floorId: "a", linkedObjectId: "fora" }
+    ],
+    cableRoutes: [
+      { id: "r", floorId: "a", sourcePointId: "p1", targetPointId: "p2" },
+      { id: "r2", floorId: "a", sourcePointId: "x", targetPointId: null }
+    ]
   };
   const copy = planFloorPlanDuplicate(source, "novo");
   assert.equal(copy.name, "Base - copia");
@@ -129,9 +153,18 @@ test("fundo da planta: assinatura real, tamanho e nome normalizado", () => {
   const png = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 0]);
   const ok = validateFloorPlanBackground(png, "IMAGE/PNG; charset=x", "Planta Térreo (1).PNG");
   assert.deepEqual(ok, { mimeType: "image/png", fileName: "Planta-Terreo-1-.png" });
-  assert.throws(() => validateFloorPlanBackground(Buffer.alloc(0), "image/png"), (error) => error.statusCode === 400);
-  assert.throws(() => validateFloorPlanBackground(Buffer.alloc(8 * 1024 * 1024 + 1), "image/png"), (error) => error.statusCode === 413);
-  assert.throws(() => validateFloorPlanBackground(Buffer.from("<html>"), "image/png"), (error) => error.statusCode === 400);
+  assert.throws(
+    () => validateFloorPlanBackground(Buffer.alloc(0), "image/png"),
+    (error) => error.statusCode === 400
+  );
+  assert.throws(
+    () => validateFloorPlanBackground(Buffer.alloc(8 * 1024 * 1024 + 1), "image/png"),
+    (error) => error.statusCode === 413
+  );
+  assert.throws(
+    () => validateFloorPlanBackground(Buffer.from("<html>"), "image/png"),
+    (error) => error.statusCode === 400
+  );
   assert.equal(floorPlanBackgroundUrl("p", "f"), "/api/floor-plans/p/floors/f/background");
 });
 
@@ -143,7 +176,15 @@ test("infraestrutura: severidade, snapshot e metrica valida", () => {
   assert.equal(assetHeatmapSeverity("cpu", 90, "online"), "critical");
   assert.equal(assetHeatmapSeverity("cpu", 10, "online"), "low");
   assert.equal(assetSnapshot(null).status, "no_agent");
-  const fresh = assetSnapshot({ memory_total_bytes: 100, memory_used_bytes: 50, disk_total_bytes: 200, disk_free_bytes: 50, last_seen_at: new Date().toISOString(), cpu_usage_percent: "12", hostname: "H" });
+  const fresh = assetSnapshot({
+    memory_total_bytes: 100,
+    memory_used_bytes: 50,
+    disk_total_bytes: 200,
+    disk_free_bytes: 50,
+    last_seen_at: new Date().toISOString(),
+    cpu_usage_percent: "12",
+    hostname: "H"
+  });
   assert.equal(fresh.status, "online");
   assert.equal(fresh.ram, 50);
   assert.equal(fresh.disk, 75);
@@ -151,7 +192,10 @@ test("infraestrutura: severidade, snapshot e metrica valida", () => {
   assert.equal(fresh.name, "H");
   assert.equal(assetSnapshot({ last_seen_at: "2020-01-01T00:00:00Z" }).status, "offline");
   assert.doesNotThrow(() => assertAssetHeatmapMetric("cpu"));
-  assert.throws(() => assertAssetHeatmapMetric("inventada"), (error) => error.statusCode === 400);
+  assert.throws(
+    () => assertAssetHeatmapMetric("inventada"),
+    (error) => error.statusCode === 400
+  );
 });
 
 test("mapas de calor e resumo agregam ativos, alertas e OS por componente", () => {
@@ -163,7 +207,10 @@ test("mapas de calor e resumo agregam ativos, alertas e OS por componente", () =
       { id: "c3", label: "Mesa", linked_asset_id: null }
     ],
     assets: [{ asset_id: "a1", hostname: "srv", last_seen_at: new Date(now).toISOString(), cpu_usage_percent: 80 }],
-    alerts: [{ asset_id: "a1", severity: "critical" }, { asset_id: "a1", severity: "low" }],
+    alerts: [
+      { asset_id: "a1", severity: "critical" },
+      { asset_id: "a1", severity: "low" }
+    ],
     orders: [
       { asset_id: "a1", created_at: new Date(now - 3600e3).toISOString(), closed_at: null, sla_due_at: new Date(now - 1000).toISOString() },
       { asset_id: "a1", created_at: new Date(now - 7200e3).toISOString(), closed_at: new Date(now).toISOString(), sla_due_at: null },
@@ -189,9 +236,18 @@ test("mapas de calor e resumo agregam ativos, alertas e OS por componente", () =
   assert.equal(orders.components[0].score, 2 + 2 + 3);
   assert.equal(orders.components[0].severity, "high");
   assert.equal(orders.summary.totalServiceOrders, 2);
-  assert.throws(() => parseHeatmapPeriod("x", "y"), (error) => error.statusCode === 400);
-  assert.throws(() => parseHeatmapPeriod(end.toISOString(), start.toISOString()), (error) => error.statusCode === 400);
-  assert.throws(() => parseHeatmapPeriod("2020-01-01", "2022-01-01"), (error) => error.statusCode === 400);
+  assert.throws(
+    () => parseHeatmapPeriod("x", "y"),
+    (error) => error.statusCode === 400
+  );
+  assert.throws(
+    () => parseHeatmapPeriod(end.toISOString(), start.toISOString()),
+    (error) => error.statusCode === 400
+  );
+  assert.throws(
+    () => parseHeatmapPeriod("2020-01-01", "2022-01-01"),
+    (error) => error.statusCode === 400
+  );
 
   const summary = buildInfrastructureSummary(data);
   assert.equal(summary.totalComponents, 3);

@@ -47,9 +47,7 @@ export function integrationBadgeClass(integration) {
 /** Mensagem de sucesso de testar/sincronizar uma integração. */
 export function integrationActionMessage(source, action, response) {
   if (response.skipped) return `${integrationNames[source]} esta desativado.`;
-  return action === "test"
-    ? `Conexão com ${integrationNames[source]} validada.`
-    : `${integrationNames[source]} sincronizado.`;
+  return action === "test" ? `Conexão com ${integrationNames[source]} validada.` : `${integrationNames[source]} sincronizado.`;
 }
 
 /** Converte os resultados de Promise.allSettled das fontes no estado das integrações. */
@@ -57,9 +55,10 @@ export function mergeIntegrationResults(current, sources, results) {
   const next = { ...current };
   sources.forEach((source, index) => {
     const result = results[index];
-    next[source] = result.status === "fulfilled"
-      ? { ...result.value, loading: false, error: "" }
-      : { loading: false, error: result.reason?.message || "Falha ao consultar integração." };
+    next[source] =
+      result.status === "fulfilled"
+        ? { ...result.value, loading: false, error: "" }
+        : { loading: false, error: result.reason?.message || "Falha ao consultar integração." };
   });
   return next;
 }

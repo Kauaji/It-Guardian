@@ -3,9 +3,7 @@ const RECOVERY_WINDOW_MS = 30_000;
 
 export function isDynamicImportFailure(error) {
   const message = String(error?.message || error || "");
-  return /dynamically imported module|failed to fetch.*module|importing a module script|loading chunk|chunkloaderror/i.test(
-    message
-  );
+  return /dynamically imported module|failed to fetch.*module|importing a module script|loading chunk|chunkloaderror/i.test(message);
 }
 
 export function shouldAttemptAssetRecovery(previousAttempt, now = Date.now()) {
@@ -46,12 +44,7 @@ function renderRecoveryFallback(documentLike, error) {
 
 export function recoverFromAssetFailure(
   error,
-  {
-    storage = window.sessionStorage,
-    locationLike = window.location,
-    documentLike = document,
-    now = Date.now()
-  } = {}
+  { storage = window.sessionStorage, locationLike = window.location, documentLike = document, now = Date.now() } = {}
 ) {
   if (!isDynamicImportFailure(error)) {
     renderRecoveryFallback(documentLike, error);

@@ -28,7 +28,11 @@ describe("useAutomationPlanHistory", () => {
 
   it("indica o carregamento enquanto a promessa não resolve", async () => {
     let finish;
-    const onLoadHistory = vi.fn().mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+    const onLoadHistory = vi.fn().mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      })
+    );
     const { result } = renderHook(() => useAutomationPlanHistory({ open: true, activeTab: "history", planId: "p1", onLoadHistory }));
 
     await waitFor(() => expect(result.current.historyLoading).toBe(true));

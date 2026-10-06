@@ -1,13 +1,6 @@
 import { snap } from "./editorGeometry.js";
-import {
-  attachOpeningToWall,
-  createWallObjectFromPoints,
-  snapPointToWallEndpoints
-} from "./wallGeometry.js";
-import {
-  createMeasurementObjectFromPoints,
-  parseTypedLengthBuffer
-} from "./measurementGeometry.js";
+import { attachOpeningToWall, createWallObjectFromPoints, snapPointToWallEndpoints } from "./wallGeometry.js";
+import { createMeasurementObjectFromPoints, parseTypedLengthBuffer } from "./measurementGeometry.js";
 
 const DEFAULT_WALL_GRID = 5;
 
@@ -62,26 +55,30 @@ export function addMeasurementToDraft({ draft, floorId, placement, end, createId
 
 /** Cria uma porta/janela encaixada na parede mais proxima e a adiciona ao rascunho. */
 export function addOpeningToDraft({ draft, floorId, item, wall, point, createId }) {
-  const opening = attachOpeningToWall({
-    id: createId("object"),
-    planId: draft.plan.id,
-    floorId,
-    objectType: item.objectType,
-    category: "structure",
-    label: item.label,
-    linkedAssetId: null,
-    groupId: null,
-    segmentId: null,
-    x: point.x - Number(item.width || 72) / 2,
-    y: point.y - Number(item.height || 16) / 2,
-    width: item.width || 72,
-    height: item.height || 16,
-    rotation: 0,
-    z: 0,
-    height3d: item.objectType === "window" ? 48 : 96,
-    color: item.color || "#64748b",
-    metadata: { ...(item.metadata || {}), parentRoomId: wall.metadata?.parentRoomId || null }
-  }, wall, point);
+  const opening = attachOpeningToWall(
+    {
+      id: createId("object"),
+      planId: draft.plan.id,
+      floorId,
+      objectType: item.objectType,
+      category: "structure",
+      label: item.label,
+      linkedAssetId: null,
+      groupId: null,
+      segmentId: null,
+      x: point.x - Number(item.width || 72) / 2,
+      y: point.y - Number(item.height || 16) / 2,
+      width: item.width || 72,
+      height: item.height || 16,
+      rotation: 0,
+      z: 0,
+      height3d: item.objectType === "window" ? 48 : 96,
+      color: item.color || "#64748b",
+      metadata: { ...(item.metadata || {}), parentRoomId: wall.metadata?.parentRoomId || null }
+    },
+    wall,
+    point
+  );
   draft.objects = [...(draft.objects || []), opening];
   return opening.id;
 }

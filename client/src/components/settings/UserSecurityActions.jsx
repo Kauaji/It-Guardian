@@ -50,9 +50,7 @@ function TemporaryPasswordDialog({ target, temporaryPassword, onClose }) {
 
   return (
     <Dialog title="Senha temporária gerada" labelId="admin-temp-password-title" onClose={onClose}>
-      <p>
-        Senha temporária de {target.name}. Repasse por um canal seguro; a pessoa precisará trocá-la ao entrar.
-      </p>
+      <p>Senha temporária de {target.name}. Repasse por um canal seguro; a pessoa precisará trocá-la ao entrar.</p>
       <div className="auth-secret">
         <code aria-label="Senha temporária">{temporaryPassword}</code>
         <button

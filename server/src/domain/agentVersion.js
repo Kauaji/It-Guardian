@@ -9,8 +9,12 @@
  * @returns {number} Negativo, zero ou positivo como em `Array.prototype.sort`.
  */
 export function compareVersions(a, b) {
-  const partsA = String(a || "0").split(".").map((part) => parseInt(part, 10) || 0);
-  const partsB = String(b || "0").split(".").map((part) => parseInt(part, 10) || 0);
+  const partsA = String(a || "0")
+    .split(".")
+    .map((part) => parseInt(part, 10) || 0);
+  const partsB = String(b || "0")
+    .split(".")
+    .map((part) => parseInt(part, 10) || 0);
   const length = Math.max(partsA.length, partsB.length);
   for (let index = 0; index < length; index += 1) {
     const diff = (partsA[index] || 0) - (partsB[index] || 0);

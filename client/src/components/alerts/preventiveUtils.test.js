@@ -24,7 +24,10 @@ const devices = [
   { id: "d3", name: "Servidor", segmentId: "s2", isBackup: true },
   { id: "d4", name: "Em reparo", segmentName: "Manutenção" }
 ];
-const segments = [{ id: "s1", name: "Recepção", groupId: "g1" }, { id: "s2", name: "Servidores", groupId: "g1" }];
+const segments = [
+  { id: "s1", name: "Recepção", groupId: "g1" },
+  { id: "s2", name: "Servidores", groupId: "g1" }
+];
 const lookups = createAlertLookups({ devices, segments, segmentGroups: [{ id: "g1", name: "Matriz" }], inventoryTabs: [] });
 
 function info(device, overrides = {}) {
@@ -105,14 +108,26 @@ describe("buildDevicePreventiveInfo", () => {
 
   it("eleva a urgência com avisos e marca crítica com aviso crítico", () => {
     const upToDate = [{ id: "p", createdAt: daysAgo(5), assets: [{ assetId: "d1" }] }];
-    const warning = info(devices[0], { preventivePlans: upToDate, alerts: [{ id: "a", assetId: "d1", status: "active", severity: "warning" }] });
-    const critical = info(devices[0], { preventivePlans: upToDate, alerts: [{ id: "a", assetId: "d1", status: "active", severity: "critical" }] });
+    const warning = info(devices[0], {
+      preventivePlans: upToDate,
+      alerts: [{ id: "a", assetId: "d1", status: "active", severity: "warning" }]
+    });
+    const critical = info(devices[0], {
+      preventivePlans: upToDate,
+      alerts: [{ id: "a", assetId: "d1", status: "active", severity: "critical" }]
+    });
     const resolved = info(devices[0], { preventivePlans: upToDate, alerts: [{ id: "a", assetId: "d1", status: "resolved" }] });
 
     expect(warning).toMatchObject({ urgency: 62, activeAlertsCount: 1, criticalAlertsCount: 0 });
-    expect(warning.badges).toEqual([{ label: "Preventiva em dia", tone: "ok" }, { label: "1 aviso", tone: "warning" }]);
+    expect(warning.badges).toEqual([
+      { label: "Preventiva em dia", tone: "ok" },
+      { label: "1 aviso", tone: "warning" }
+    ]);
     expect(critical).toMatchObject({ preventiveStatus: "critical", preventiveStatusLabel: "Crítica", urgency: 100 });
-    expect(critical.badges).toEqual([{ label: "Crítica", tone: "danger" }, { label: "1 aviso", tone: "danger" }]);
+    expect(critical.badges).toEqual([
+      { label: "Crítica", tone: "danger" },
+      { label: "1 aviso", tone: "danger" }
+    ]);
     expect(resolved.activeAlertsCount).toBe(0);
   });
 
@@ -211,7 +226,10 @@ describe("scripts e payloads", () => {
   const active = [{ id: "a" }, { id: "b" }, { id: "c" }];
 
   it("coloca as recomendadas primeiro e remove duplicatas", () => {
-    expect(orderPreventiveScripts({ recommended: [{ id: "b" }], others: [{ id: "a" }, { id: "b" }] }, active).map((s) => s.id)).toEqual(["b", "a"]);
+    expect(orderPreventiveScripts({ recommended: [{ id: "b" }], others: [{ id: "a" }, { id: "b" }] }, active).map((s) => s.id)).toEqual([
+      "b",
+      "a"
+    ]);
     expect(orderPreventiveScripts({ recommended: [], others: [] }, active).map((s) => s.id)).toEqual(["a", "b", "c"]);
     expect(orderPreventiveScripts({}, active)).toHaveLength(3);
   });
@@ -230,7 +248,10 @@ describe("scripts e payloads", () => {
 
   it("monta o pedido do assistente de automação com resumo e contexto", () => {
     const request = buildAutomationCreateRequest({
-      devices: [{ id: "d2", name: "PC-02" }, { id: "d1", hostname: "host-1" }],
+      devices: [
+        { id: "d2", name: "PC-02" },
+        { id: "d1", hostname: "host-1" }
+      ],
       scripts: [{ id: "b", name: "B" }, { id: "a" }],
       riskScripts: [{ id: "b" }],
       planName: "",
@@ -252,7 +273,9 @@ describe("scripts e payloads", () => {
   it("abrevia a descrição com mais de seis máquinas e trata seleção vazia", () => {
     const many = Array.from({ length: 8 }, (_, index) => ({ id: `d${index}`, name: `PC-${index}` }));
 
-    expect(buildAutomationCreateRequest({ devices: many, scripts: [], riskScripts: [], planName: "X" }).defaults.description).toMatch(/PC-5\.\.\.\.$/);
+    expect(buildAutomationCreateRequest({ devices: many, scripts: [], riskScripts: [], planName: "X" }).defaults.description).toMatch(
+      /PC-5\.\.\.\.$/
+    );
     expect(buildAutomationCreateRequest({ devices: [], scripts: [], riskScripts: [], planName: "X" }).defaults.description).toBe(
       "Automação criada a partir do fluxo de preventivas."
     );
@@ -286,8 +309,8 @@ describe("scripts e payloads", () => {
       defaultScriptIds: ["a"],
       recurrenceType: "weekly"
     });
-    expect(
-      buildAutomatedPreventivePlanPayload({ automationPayload: {}, planName: "", devices: [], scripts: [] }).name
-    ).toBe("Plano preventivo automatizado");
+    expect(buildAutomatedPreventivePlanPayload({ automationPayload: {}, planName: "", devices: [], scripts: [] }).name).toBe(
+      "Plano preventivo automatizado"
+    );
   });
 });

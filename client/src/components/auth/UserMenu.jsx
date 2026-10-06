@@ -41,7 +41,12 @@ export default function UserMenu() {
     const items = menuItems();
     if (!items.length) return;
     const current = items.indexOf(document.activeElement);
-    const next = { first: 0, last: items.length - 1, next: (current + 1) % items.length, previous: (current - 1 + items.length) % items.length }[target];
+    const next = {
+      first: 0,
+      last: items.length - 1,
+      next: (current + 1) % items.length,
+      previous: (current - 1 + items.length) % items.length
+    }[target];
     items[next].focus();
   }
 

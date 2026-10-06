@@ -80,10 +80,7 @@ export function validateDashboardLayout(data, { knownWidgetTypes }) {
       errors.push(`Widget ${widget.id} tem altura invalida.`);
     }
 
-    if (
-      !Number.isInteger(widget.refreshIntervalSeconds) ||
-      widget.refreshIntervalSeconds < MIN_REFRESH_SECONDS
-    ) {
+    if (!Number.isInteger(widget.refreshIntervalSeconds) || widget.refreshIntervalSeconds < MIN_REFRESH_SECONDS) {
       errors.push(`Widget ${widget.id} precisa de um intervalo de atualizacao de pelo menos ${MIN_REFRESH_SECONDS}s.`);
     }
 

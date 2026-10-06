@@ -8,17 +8,28 @@ export default function useVisualMapNavigation({ canManage, data, drafts }) {
   const [layers, setLayers] = useState(getQuickLayerState("all"));
   const [cameraAction, setCameraAction] = useState({ type: "fit", revision: 0 });
   const {
-    activeMapId, setActiveMapId, selectedObject, selectedConnection, selectedObjectId, selectedConnectionId,
-    setSelectedObjectId, setSelectedConnectionId, loadMaps, loadActiveMap
+    activeMapId,
+    setActiveMapId,
+    selectedObject,
+    selectedConnection,
+    selectedObjectId,
+    selectedConnectionId,
+    setSelectedObjectId,
+    setSelectedConnectionId,
+    loadMaps,
+    loadActiveMap
   } = data;
   const { hasUnsavedChanges, objectDirty, connectionDirty, resetAllDrafts } = drafts;
 
   const isEditing = Boolean(canManage && mode === "edit");
 
-  const confirmDiscardChanges = useCallback((message = "Descartar as alterações não salvas?") => {
-    if (!hasUnsavedChanges) return true;
-    return window.confirm(message);
-  }, [hasUnsavedChanges]);
+  const confirmDiscardChanges = useCallback(
+    (message = "Descartar as alterações não salvas?") => {
+      if (!hasUnsavedChanges) return true;
+      return window.confirm(message);
+    },
+    [hasUnsavedChanges]
+  );
 
   useEffect(() => {
     if (selectedObject && layers?.[selectedObject.layer] === false) {
@@ -61,10 +72,20 @@ export default function useVisualMapNavigation({ canManage, data, drafts }) {
   }
 
   return {
-    mode, showGrid, layers, cameraAction, isEditing, setLayers, confirmDiscardChanges,
+    mode,
+    showGrid,
+    layers,
+    cameraAction,
+    isEditing,
+    setLayers,
+    confirmDiscardChanges,
     toggleGrid: () => setShowGrid((current) => !current),
     toggleLayer: (key) => setLayers((current) => ({ ...current, [key]: !current[key] })),
     runCameraAction: (type) => setCameraAction((current) => ({ type, revision: current.revision + 1 })),
-    handleSelectObject, handleSelectConnection, handleMapChange, handleModeChange, handleRefresh
+    handleSelectObject,
+    handleSelectConnection,
+    handleMapChange,
+    handleModeChange,
+    handleRefresh
   };
 }

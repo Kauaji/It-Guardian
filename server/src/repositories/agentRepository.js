@@ -85,9 +85,7 @@ export async function findActiveAgentEnrollmentForAsset(assetId, db = query) {
     `,
     [assetId]
   );
-  return result.rows[0]
-    ? { assetId: result.rows[0].asset_id, enrollmentId: result.rows[0].enrollment_id }
-    : null;
+  return result.rows[0] ? { assetId: result.rows[0].asset_id, enrollmentId: result.rows[0].enrollment_id } : null;
 }
 
 export async function findAgentAssetByEnrollmentId(enrollmentId) {
@@ -131,15 +129,12 @@ export async function updateAgentAssetAlias({ assetId, alias }) {
     );
     if (!result.rows[0]) return null;
 
-    const enrollment = await db(
-      "SELECT activation_id FROM agent_enrollments WHERE id = $1 LIMIT 1",
-      [result.rows[0].enrollment_id]
-    );
+    const enrollment = await db("SELECT activation_id FROM agent_enrollments WHERE id = $1 LIMIT 1", [result.rows[0].enrollment_id]);
     if (enrollment.rows[0]?.activation_id) {
-      await db(
-        "UPDATE device_activations SET alias = $2, updated_at = NOW() WHERE id = $1",
-        [enrollment.rows[0].activation_id, alias || null]
-      );
+      await db("UPDATE device_activations SET alias = $2, updated_at = NOW() WHERE id = $1", [
+        enrollment.rows[0].activation_id,
+        alias || null
+      ]);
     }
     return assetFromRow(result.rows[0]);
   });
@@ -159,7 +154,12 @@ export async function setAgentAssetRustdeskId({ assetId, rustdeskId }) {
       WHERE asset_id = $1
       RETURNING *
     `,
-    [assetId, String(rustdeskId || "").trim().slice(0, 32) || null]
+    [
+      assetId,
+      String(rustdeskId || "")
+        .trim()
+        .slice(0, 32) || null
+    ]
   );
   return result.rows[0] ? assetFromRow(result.rows[0]) : null;
 }

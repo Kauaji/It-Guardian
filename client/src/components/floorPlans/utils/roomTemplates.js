@@ -110,9 +110,7 @@ export const ROOM_TEMPLATES = [
     width: 220,
     height: 150,
     color: ROOM_COLORS.service,
-    objects: [
-      { type: "printer", label: "Impressora", x: 72, y: 42, width: 76, height: 52, color: "#475569" }
-    ]
+    objects: [{ type: "printer", label: "Impressora", x: 72, y: 42, width: 76, height: 52, color: "#475569" }]
   },
   {
     id: "storage-room",
@@ -162,9 +160,7 @@ export const ROOM_TEMPLATES = [
     width: 230,
     height: 160,
     color: "#bbf7d0",
-    objects: [
-      { type: "cabinet", label: "Bancada", x: 42, y: 38, width: 120, height: 38, color: "#8b5e34" }
-    ]
+    objects: [{ type: "cabinet", label: "Bancada", x: 42, y: 38, width: 120, height: 38, color: "#8b5e34" }]
   },
   {
     id: "training-room",

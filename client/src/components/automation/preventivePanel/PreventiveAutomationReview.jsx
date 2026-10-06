@@ -1,8 +1,4 @@
-import {
-  getRecurrenceLabel,
-  getScopeLabel,
-  normalizeAutomationColor
-} from "./preventiveAutomationPanelUtils.js";
+import { getRecurrenceLabel, getScopeLabel, normalizeAutomationColor } from "./preventiveAutomationPanelUtils.js";
 
 // Revisao final do assistente (etapa 3), antes de gravar o plano automatizado.
 export default function PreventiveAutomationReview({ form, wizardContext, scripts, scopeSources }) {
@@ -32,7 +28,9 @@ export default function PreventiveAutomationReview({ form, wizardContext, script
         </div>
         <div>
           <dt>Horário e fuso</dt>
-          <dd>{form.preferredTime || "08:00"} - {form.timezone || "America/Sao_Paulo"}</dd>
+          <dd>
+            {form.preferredTime || "08:00"} - {form.timezone || "America/Sao_Paulo"}
+          </dd>
         </div>
         <div>
           <dt>Escopo</dt>

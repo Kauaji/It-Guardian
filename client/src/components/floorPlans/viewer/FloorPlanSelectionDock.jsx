@@ -39,7 +39,14 @@ export default function FloorPlanSelectionDock({
       >
         {locked ? <Unlock size={16} aria-hidden="true" /> : <Lock size={16} aria-hidden="true" />}
       </button>
-      <button className="danger" type="button" onClick={onDelete} disabled={!canDelete} title="Excluir seleção" aria-label="Excluir seleção">
+      <button
+        className="danger"
+        type="button"
+        onClick={onDelete}
+        disabled={!canDelete}
+        title="Excluir seleção"
+        aria-label="Excluir seleção"
+      >
         <Trash2 size={16} aria-hidden="true" />
       </button>
       <button type="button" onClick={onClear} title="Limpar seleção" aria-label="Limpar seleção">

@@ -133,10 +133,13 @@ test("controllers nao importa repositories diretamente", () => {
   assert.equal(result.layerViolations.length, 1);
   assert.match(report[0], /controllers nao pode importar repositories/);
   assert.match(report[0], /knownViolations/);
-  assert.equal(analyze({
-    "server/src/controllers/c.js": 'import "../services/s.js";\n',
-    "server/src/services/s.js": empty
-  }).result.layerViolations.length, 0);
+  assert.equal(
+    analyze({
+      "server/src/controllers/c.js": 'import "../services/s.js";\n',
+      "server/src/services/s.js": empty
+    }).result.layerViolations.length,
+    0
+  );
 });
 
 test("arquivos de teste nao sao sujeitos as regras de camada", () => {
@@ -161,7 +164,10 @@ test("excecao conhecida e tolerada, violacao nova falha e excecao obsoleta falha
 
   const withNew = analyze({ ...files, "server/src/repositories/fresh.js": 'import "../services/old.js";\n' }, known);
   assert.equal(hasProblems(withNew.result), true);
-  assert.deepEqual(withNew.result.layerViolations.map((entry) => entry.file), ["server/src/repositories/fresh.js"]);
+  assert.deepEqual(
+    withNew.result.layerViolations.map((entry) => entry.file),
+    ["server/src/repositories/fresh.js"]
+  );
 
   const obsolete = analyze({ ...files, "server/src/repositories/legacy.js": empty }, known);
   assert.equal(hasProblems(obsolete.result), true);

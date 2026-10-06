@@ -1,30 +1,16 @@
-
 import { getRemoteAssistanceConfig } from "../../config/environment.js";
 
-import {
-  deriveConnectionState
-} from "../../domain/remoteAssistancePolicy.js";
+import { deriveConnectionState } from "../../domain/remoteAssistancePolicy.js";
 
-import {
-  authenticateAgentToken,
-  findAgentAssetByEnrollmentId
-} from "../../repositories/agentRepository.js";
+import { authenticateAgentToken, findAgentAssetByEnrollmentId } from "../../repositories/agentRepository.js";
 
-import {
-  findRemoteAssistanceSessionById,
-  validateRemoteTokenHash
-} from "../../repositories/remoteAssistanceRepository.js";
+import { findRemoteAssistanceSessionById, validateRemoteTokenHash } from "../../repositories/remoteAssistanceRepository.js";
 
-import {
-  computeRelayMetrics
-} from "../remoteAssistanceRelay.js";
+import { computeRelayMetrics } from "../remoteAssistanceRelay.js";
 
 import { publicError } from "../../domain/remoteAssistance/remoteAssistanceErrors.js";
 
-import {
-  canManageSession,
-  hashToken
-} from "../../domain/remoteAssistance/remoteAssistancePayload.js";
+import { canManageSession, hashToken } from "../../domain/remoteAssistance/remoteAssistancePayload.js";
 import { closeAbandonedRemoteAssistanceSessions } from "./remoteAssistanceAudit.js";
 
 export function safeSession(session, relay = null, config = getRemoteAssistanceConfig()) {

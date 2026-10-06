@@ -2,8 +2,18 @@ import { ArrowDown, ArrowUp, ChevronDown, Edit3, Trash2 } from "lucide-react";
 import ColorPickerSegment from "../ColorPickerSegment.jsx";
 
 export default function SegmentActionStrip({
-  segment, color, collapsed, canManage, canMoveSegmentUp, canMoveSegmentDown,
-  onToggleCollapsed, closeActions, onMoveSegmentOrder, onColorChange, onRename, onDelete
+  segment,
+  color,
+  collapsed,
+  canManage,
+  canMoveSegmentUp,
+  canMoveSegmentDown,
+  onToggleCollapsed,
+  closeActions,
+  onMoveSegmentOrder,
+  onColorChange,
+  onRename,
+  onDelete
 }) {
   return (
     <div className="inline-action-strip segment-inline-actions" onClick={(event) => event.stopPropagation()}>
@@ -47,13 +57,7 @@ export default function SegmentActionStrip({
           <ArrowDown size={15} />
         </button>
       )}
-      {canManage && (
-        <ColorPickerSegment
-          color={color}
-          disabled={!canManage}
-          onChange={(nextColor) => onColorChange(segment, nextColor)}
-        />
-      )}
+      {canManage && <ColorPickerSegment color={color} disabled={!canManage} onChange={(nextColor) => onColorChange(segment, nextColor)} />}
       {canManage && (
         <button
           type="button"

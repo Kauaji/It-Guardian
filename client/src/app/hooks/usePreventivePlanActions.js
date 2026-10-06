@@ -10,10 +10,7 @@ export function usePreventivePlanActions() {
   async function handleCreatePreventivePlan(payload) {
     try {
       const response = await createPreventivePlan(token, payload);
-      setPreventivePlans((current) => [
-        response.preventivePlan,
-        ...current.filter((plan) => plan.id !== response.preventivePlan.id)
-      ]);
+      setPreventivePlans((current) => [response.preventivePlan, ...current.filter((plan) => plan.id !== response.preventivePlan.id)]);
       notify(
         payload.automation?.enabled
           ? "Plano preventivo automatizado registrado. A execução ocorrerá pela agenda."
@@ -31,13 +28,8 @@ export function usePreventivePlanActions() {
   async function handleCreatePreventivePlanServiceOrder(planId) {
     try {
       const response = await createPreventivePlanServiceOrder(token, planId);
-      setPreventivePlans((current) =>
-        current.map((plan) => (plan.id === response.preventivePlan.id ? response.preventivePlan : plan))
-      );
-      setServiceOrders((current) => [
-        response.serviceOrder,
-        ...current.filter((order) => order.id !== response.serviceOrder.id)
-      ]);
+      setPreventivePlans((current) => current.map((plan) => (plan.id === response.preventivePlan.id ? response.preventivePlan : plan)));
+      setServiceOrders((current) => [response.serviceOrder, ...current.filter((order) => order.id !== response.serviceOrder.id)]);
       notify(`OS preventiva ${response.serviceOrder.number} criada.`, "ok");
       await loadData(true);
       return response;

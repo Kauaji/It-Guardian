@@ -10,18 +10,11 @@ export const inventoryDropAnimation = {
 export function keepDragOverlayNearCursor({ activatorEvent, active, activeNodeRect, overlayNodeRect, transform }) {
   const dragType = active?.data?.current?.type;
 
-  if (
-    (dragType !== "machine" && dragType !== "segment") ||
-    !activatorEvent ||
-    !activeNodeRect ||
-    !overlayNodeRect
-  ) {
+  if ((dragType !== "machine" && dragType !== "segment") || !activatorEvent || !activeNodeRect || !overlayNodeRect) {
     return transform;
   }
 
-  const point = "touches" in activatorEvent
-    ? activatorEvent.touches?.[0]
-    : activatorEvent;
+  const point = "touches" in activatorEvent ? activatorEvent.touches?.[0] : activatorEvent;
 
   if (!point || typeof point.clientX !== "number" || typeof point.clientY !== "number") {
     return transform;
@@ -29,12 +22,11 @@ export function keepDragOverlayNearCursor({ activatorEvent, active, activeNodeRe
 
   const initialOffsetX = point.clientX - activeNodeRect.left;
   const initialOffsetY = point.clientY - activeNodeRect.top;
-  const cursorGapX = dragType === "segment"
-    ? 14
-    : Math.min(18, Math.max(12, overlayNodeRect.width * 0.06));
-  const desiredOffsetY = dragType === "segment"
-    ? Math.min(18, Math.max(10, overlayNodeRect.height * 0.4))
-    : Math.min(24, Math.max(14, overlayNodeRect.height * 0.18));
+  const cursorGapX = dragType === "segment" ? 14 : Math.min(18, Math.max(12, overlayNodeRect.width * 0.06));
+  const desiredOffsetY =
+    dragType === "segment"
+      ? Math.min(18, Math.max(10, overlayNodeRect.height * 0.4))
+      : Math.min(24, Math.max(14, overlayNodeRect.height * 0.18));
 
   return {
     ...transform,
@@ -53,10 +45,7 @@ function sidebarCandidate(container, rect, pointer) {
   const edgeDistance = Math.hypot(dx, dy);
   const centerDistance = Math.hypot(pointer.x - centerX, pointer.y - centerY);
   const insideMagneticZone =
-    pointer.x >= rect.left - 84 &&
-    pointer.x <= rect.right + 132 &&
-    pointer.y >= rect.top - 34 &&
-    pointer.y <= rect.bottom + 34;
+    pointer.x >= rect.left - 84 && pointer.x <= rect.right + 132 && pointer.y >= rect.top - 34 && pointer.y <= rect.bottom + 34;
 
   return insideMagneticZone
     ? {
@@ -71,11 +60,7 @@ function sidebarCandidate(container, rect, pointer) {
 
 // Segmento da area principal: o menor retangulo que contem o ponteiro.
 function segmentCandidate(container, rect, pointer) {
-  const inside =
-    pointer.x >= rect.left &&
-    pointer.x <= rect.right &&
-    pointer.y >= rect.top &&
-    pointer.y <= rect.bottom;
+  const inside = pointer.x >= rect.left && pointer.x <= rect.right && pointer.y >= rect.top && pointer.y <= rect.bottom;
   if (!inside) return null;
 
   return {
@@ -103,17 +88,13 @@ export function inventoryCollisionDetection(args) {
 
   if (activeType === "segment") {
     const groupContainers = droppableContainers.filter(
-      (container) =>
-        container.data.current?.type === "segment-group-drop" ||
-        container.data.current?.type === "sidebar-segment-group-drop"
+      (container) => container.data.current?.type === "segment-group-drop" || container.data.current?.type === "sidebar-segment-group-drop"
     );
     return closestCenter({ ...args, droppableContainers: groupContainers });
   }
 
   const pointerNearSidebar = !pointerCoordinates || pointerCoordinates.x <= 400;
-  const segmentContainers = droppableContainers.filter(
-    (container) => container.data.current?.type === "segment"
-  );
+  const segmentContainers = droppableContainers.filter((container) => container.data.current?.type === "segment");
   const sidebarSegmentContainers = pointerNearSidebar
     ? droppableContainers.filter((container) => container.data.current?.type === "sidebar-segment")
     : [];

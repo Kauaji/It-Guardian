@@ -6,10 +6,7 @@ import { buildHierarchyTree, isTopologySegmentEligible } from "../networkTopolog
 // organizou de verdade (segmento real, com ou sem grupo) - dispositivos
 // sem segmento continuam so no Inventario ate serem organizados.
 export default function useTopologyHierarchy({ groups, segments, devices, activeTab }) {
-  const activeGroups = useMemo(
-    () => groups.filter((group) => group.tabId === activeTab?.id),
-    [groups, activeTab]
-  );
+  const activeGroups = useMemo(() => groups.filter((group) => group.tabId === activeTab?.id), [groups, activeTab]);
   const activeSegments = useMemo(
     () => segments.filter((segment) => isTopologySegmentEligible(segment) && segment.tabId === activeTab?.id),
     [segments, activeTab]

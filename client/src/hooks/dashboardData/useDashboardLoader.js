@@ -1,11 +1,6 @@
 import { useCallback, useEffect } from "react";
 import { fetchDashboardSnapshot } from "./fetchDashboardSnapshot.js";
-import {
-  applyDashboardSnapshot,
-  hasCriticalAlert,
-  reconcileMaintenanceRecords,
-  syncSelectedDevice
-} from "./dashboardSnapshot.js";
+import { applyDashboardSnapshot, hasCriticalAlert, reconcileMaintenanceRecords, syncSelectedDevice } from "./dashboardSnapshot.js";
 
 const REFRESH_INTERVAL_MS = 15000;
 
@@ -67,7 +62,13 @@ export function useDashboardLoader({
         });
 
         await syncSelectedDevice({
-          activeView, snapshot, selectedId, canViewMachine, token, setSelectedId, setSelectedDevice
+          activeView,
+          snapshot,
+          selectedId,
+          canViewMachine,
+          token,
+          setSelectedId,
+          setSelectedDevice
         });
 
         if (!silent && hasCriticalAlert(snapshot.activeAlertData)) {

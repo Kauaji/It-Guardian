@@ -5,7 +5,11 @@ import useAutomationMachineDetails from "./useAutomationMachineDetails.js";
 const planA = { id: "pa", planName: "A", recurrenceType: "monthly", assetCount: 2 };
 const planB = { id: "pb", planName: "B", recurrenceType: "weekly", assetCount: 1 };
 const machine = { assetId: "d1", assetName: "PC-01", plans: [planA, planB] };
-const detail = { override: { active: true, recurrenceType: "weekly", preferredTime: "10:00" }, schedule: { recurrenceType: "weekly" }, plan: planA };
+const detail = {
+  override: { active: true, recurrenceType: "weekly", preferredTime: "10:00" },
+  schedule: { recurrenceType: "weekly" },
+  plan: planA
+};
 
 function setup(overrides = {}) {
   const props = {
@@ -54,8 +58,13 @@ describe("useAutomationMachineDetails", () => {
 
   it("ignora a resposta de um carregamento cancelado", async () => {
     let resolveFirst;
-    const onLoadDetails = vi.fn()
-      .mockReturnValueOnce(new Promise((resolve) => { resolveFirst = resolve; }))
+    const onLoadDetails = vi
+      .fn()
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveFirst = resolve;
+        })
+      )
       .mockResolvedValueOnce({ ...detail, history: [{ id: "segundo" }] });
     const { result } = setup({ onLoadDetails });
 
@@ -93,7 +102,11 @@ describe("useAutomationMachineDetails", () => {
     expect(result.current.overrideErrors.recurrenceIntervalDays).toBeUndefined();
     await act(async () => result.current.submitOverride(submitEvent()));
 
-    expect(onSaveOverride).toHaveBeenCalledWith("pa", "d1", expect.objectContaining({ recurrenceType: "custom_days", recurrenceIntervalDays: 20 }));
+    expect(onSaveOverride).toHaveBeenCalledWith(
+      "pa",
+      "d1",
+      expect.objectContaining({ recurrenceType: "custom_days", recurrenceIntervalDays: 20 })
+    );
     expect(result.current.detail).toBe(response);
     expect(result.current.editingOverride).toBe(false);
   });

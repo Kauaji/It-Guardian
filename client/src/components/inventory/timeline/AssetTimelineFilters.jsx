@@ -43,21 +43,11 @@ export default function AssetTimelineFilters({
       </select>
 
       <label className="asset-timeline-toggle">
-        <input
-          type="checkbox"
-          checked={onlyImportant}
-          onChange={(event) => onToggleOnlyImportant(event.target.checked)}
-        />
+        <input type="checkbox" checked={onlyImportant} onChange={(event) => onToggleOnlyImportant(event.target.checked)} />
         Só importantes
       </label>
 
-      <button
-        type="button"
-        className="icon-button"
-        onClick={onRefresh}
-        disabled={refreshing}
-        title="Atualizar"
-      >
+      <button type="button" className="icon-button" onClick={onRefresh} disabled={refreshing} title="Atualizar">
         <RefreshCw size={14} className={refreshing ? "spinning" : ""} />
       </button>
     </div>

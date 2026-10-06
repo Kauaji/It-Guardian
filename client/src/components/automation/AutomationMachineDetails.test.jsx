@@ -16,13 +16,30 @@ const planA = {
   assetCount: 3,
   scripts: [{ id: "sc1", name: "Limpar temporários" }]
 };
-const planB = { id: "pb", planName: "Auditoria", active: false, indicatorColor: "#dc2626", recurrenceType: "weekly", assetCount: 1, scriptCount: 0, scripts: [] };
+const planB = {
+  id: "pb",
+  planName: "Auditoria",
+  active: false,
+  indicatorColor: "#dc2626",
+  recurrenceType: "weekly",
+  assetCount: 1,
+  scriptCount: 0,
+  scripts: []
+};
 const machine = { assetId: "d1", assetName: "PC-01", plans: [planA, planB] };
 
 function detailResponse(overrides = {}) {
   return {
     plan: planA,
-    schedule: { recurrenceType: "weekly", recurrenceSource: "machine", preferredTime: "10:00", timezone: "UTC", nextRunAt: "2026-07-08T12:00:00.000Z", lastPreparedAt: "2026-06-01T12:00:00.000Z", latestRun: { status: "success" } },
+    schedule: {
+      recurrenceType: "weekly",
+      recurrenceSource: "machine",
+      preferredTime: "10:00",
+      timezone: "UTC",
+      nextRunAt: "2026-07-08T12:00:00.000Z",
+      lastPreparedAt: "2026-06-01T12:00:00.000Z",
+      latestRun: { status: "success" }
+    },
     override: { active: true, recurrenceType: "weekly", preferredTime: "10:00" },
     history: [{ id: "h1", message: "Recorrência alterada", userName: "Ana", createdAt: "2026-06-02T12:00:00.000Z" }],
     ...overrides
@@ -39,7 +56,16 @@ function setup(props = {}) {
     onDeletePlan: vi.fn(),
     onLoadDetails: vi.fn().mockResolvedValue(detailResponse())
   };
-  const merged = { machine, open: true, canManageOverride: true, canRemoveAsset: true, canDeletePlan: true, saving: false, ...handlers, ...props };
+  const merged = {
+    machine,
+    open: true,
+    canManageOverride: true,
+    canRemoveAsset: true,
+    canDeletePlan: true,
+    saving: false,
+    ...handlers,
+    ...props
+  };
   const view = render(<AutomationMachineDetails {...merged} />);
   return { ...handlers, ...view, props: merged, user: userEvent.setup() };
 }

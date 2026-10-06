@@ -112,10 +112,7 @@ async function recordFailure(source) {
 
 export async function getIntegrationStatus(source) {
   const integration = integrationFor(source);
-  const [state, conflicts] = await Promise.all([
-    getIntegrationState(source),
-    listOpenIntegrationConflicts(source)
-  ]);
+  const [state, conflicts] = await Promise.all([getIntegrationState(source), listOpenIntegrationConflicts(source)]);
   return {
     configuration: integration.getConfiguration(),
     state,
@@ -140,9 +137,7 @@ export async function syncOcsInventory() {
 
   try {
     const rawAssets = await ocsInventoryService.listInventory();
-    const assets = rawAssets.map((asset) =>
-      normalizeOcsAsset(asset, { includeRawData: storeRawData() })
-    );
+    const assets = rawAssets.map((asset) => normalizeOcsAsset(asset, { includeRawData: storeRawData() }));
     const result = await persistSync({ source: "ocs", assets });
     return { skipped: false, ...result };
   } catch (error) {
@@ -158,15 +153,10 @@ export async function syncZabbix() {
   }
 
   try {
-    const [rawHosts, rawProblems] = await Promise.all([
-      zabbixService.getHosts(),
-      zabbixService.getAlerts()
-    ]);
+    const [rawHosts, rawProblems] = await Promise.all([zabbixService.getHosts(), zabbixService.getAlerts()]);
     const includeRawData = storeRawData();
     const assets = rawHosts.map((host) => normalizeZabbixHost(host, { includeRawData }));
-    const alerts = rawProblems.map((problem) =>
-      normalizeZabbixProblem(problem, { includeRawData })
-    );
+    const alerts = rawProblems.map((problem) => normalizeZabbixProblem(problem, { includeRawData }));
     const result = await persistSync({ source: "zabbix", assets, alerts });
     return { skipped: false, ...result };
   } catch (error) {

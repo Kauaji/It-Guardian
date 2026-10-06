@@ -110,24 +110,21 @@ function buildOverview({
   const criticalAssets = devices.filter((device) => device.status === "problem").length;
   const warningAssets = devices.filter((device) => {
     const metrics = device.metrics;
-    return Boolean(
-      metrics && (isMetricWarning(metrics.cpu) || isMetricWarning(metrics.ram) || isMetricWarning(metrics.disk))
-    );
+    return Boolean(metrics && (isMetricWarning(metrics.cpu) || isMetricWarning(metrics.ram) || isMetricWarning(metrics.disk)));
   }).length;
 
   const openServiceOrders = serviceOrders.filter((order) => !isFinalStatus(order.status)).length;
   const criticalAlerts = activeAlerts.filter((alert) => alert.severity === "critical").length;
   const todayKey = dayKey(new Date());
-  const resolvedAlertsToday = allAlerts.filter(
-    (alert) => alert.status === "resolved" && dayKey(alert.resolvedAt) === todayKey
-  ).length;
+  const resolvedAlertsToday = allAlerts.filter((alert) => alert.status === "resolved" && dayKey(alert.resolvedAt) === todayKey).length;
 
   const criticalDiskAssets = devices.filter((device) => isMetricCritical(device.metrics?.disk)).length;
   const criticalPerformanceAssets = devices.filter(
     (device) => isMetricCritical(device.metrics?.cpu) || isMetricCritical(device.metrics?.ram)
   ).length;
   const recurringProblemAssets = new Set(
-    allAlerts.filter((alert) => Number(alert.occurrencesCount || 1) >= RECURRING_ALERT_THRESHOLD)
+    allAlerts
+      .filter((alert) => Number(alert.occurrencesCount || 1) >= RECURRING_ALERT_THRESHOLD)
       .map((alert) => alert.hostId)
       .filter(Boolean)
   ).size;
@@ -163,7 +160,11 @@ function buildOverview({
 }
 
 function buildAssetsSection(devices, activeAlerts) {
-  const byStatus = countBy(devices, (device) => device.status, (key) => statusLabels[key] || key);
+  const byStatus = countBy(
+    devices,
+    (device) => device.status,
+    (key) => statusLabels[key] || key
+  );
   const byType = countBy(devices, (device) => device.assetType || "other");
   const bySegment = countBy(devices, (device) => device.segmentName || "Nao organizadas");
 
@@ -204,8 +205,16 @@ function buildServiceOrdersSection(serviceOrders, statusSettings, isFinalStatus,
   const statusById = new Map(statusSettings.statuses.map((status) => [status.id, status]));
   const open = serviceOrders.filter((order) => !isFinalStatus(order.status));
 
-  const byStatus = countBy(serviceOrders, (order) => order.status, (id) => statusById.get(id)?.name || id);
-  const byPriority = countBy(serviceOrders, (order) => order.priority, (id) => priorityLabels[id] || id);
+  const byStatus = countBy(
+    serviceOrders,
+    (order) => order.status,
+    (id) => statusById.get(id)?.name || id
+  );
+  const byPriority = countBy(
+    serviceOrders,
+    (order) => order.priority,
+    (id) => priorityLabels[id] || id
+  );
 
   const recent = [...serviceOrders]
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
@@ -270,7 +279,11 @@ function buildServiceOrdersSection(serviceOrders, statusSettings, isFinalStatus,
 }
 
 function buildAlertsSection(allAlerts, activeAlerts, devices, sinceDate, periodDays) {
-  const bySeverity = countBy(activeAlerts, (alert) => alert.severity, (id) => severityLabels[id] || id);
+  const bySeverity = countBy(
+    activeAlerts,
+    (alert) => alert.severity,
+    (id) => severityLabels[id] || id
+  );
 
   const recent = [...activeAlerts]
     .sort((a, b) => Date.parse(b.lastSeenAt) - Date.parse(a.lastSeenAt))
@@ -342,16 +355,15 @@ export async function getDashboardSummaryReport({ period = defaultPeriod, user =
   const periodDays = resolvePeriodDays(period);
   const sinceDate = new Date(Date.now() - periodDays * 24 * 60 * 60 * 1000);
 
-  const [devices, activeAlerts, allAlerts, serviceOrders, statusSettings, maintenanceMap, systemSettings] =
-    await Promise.all([
-      listDevices({}),
-      getActiveAlertsWithAcknowledgements(),
-      listAlerts({}),
-      listServiceOrders(user),
-      getServiceOrderSettings(),
-      listActiveMaintenanceRecordsMap(),
-      getSystemSettings()
-    ]);
+  const [devices, activeAlerts, allAlerts, serviceOrders, statusSettings, maintenanceMap, systemSettings] = await Promise.all([
+    listDevices({}),
+    getActiveAlertsWithAcknowledgements(),
+    listAlerts({}),
+    listServiceOrders(user),
+    getServiceOrderSettings(),
+    listActiveMaintenanceRecordsMap(),
+    getSystemSettings()
+  ]);
 
   const isFinalStatus = buildIsFinalServiceOrderStatus(statusSettings);
 

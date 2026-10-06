@@ -41,11 +41,7 @@ export default function AlertCenterV2({
             {perms.canViewAlerts && alertActiveTab === "suggestions" && <SuggestionsSummary summary={ctl.summary} />}
 
             {perms.canUsePreventiveArea && alertActiveTab === "preventives" && (
-              <PreventiveSummary
-                summary={preventive.summary}
-                plans={ctl.preventivePlans}
-                automationPlans={ctl.preventiveAutomationPlans}
-              />
+              <PreventiveSummary summary={preventive.summary} plans={ctl.preventivePlans} automationPlans={ctl.preventiveAutomationPlans} />
             )}
 
             <AlertCenterTabs
@@ -57,11 +53,7 @@ export default function AlertCenterV2({
             />
 
             {alertActiveTab === "active" && (
-              <AlertDiagnosticsTab
-                visibleAlerts={ctl.visibleAlerts}
-                alertCorrelations={ctl.alertCorrelations}
-                commentBox={commentBox}
-              />
+              <AlertDiagnosticsTab visibleAlerts={ctl.visibleAlerts} alertCorrelations={ctl.alertCorrelations} commentBox={commentBox} />
             )}
 
             {alertActiveTab === "suggestions" && (
@@ -91,10 +83,7 @@ export default function AlertCenterV2({
             {preventive.reviewOpen && <PreventiveReviewModal preventive={preventive} />}
 
             {alertActiveTab === "history" && (
-              <AlertHistoryTab
-                resolvedAlerts={ctl.summary.resolvedAlerts}
-                handledSuggestions={ctl.summary.handledSuggestions}
-              />
+              <AlertHistoryTab resolvedAlerts={ctl.summary.resolvedAlerts} handledSuggestions={ctl.summary.handledSuggestions} />
             )}
           </>
         )}
@@ -113,9 +102,7 @@ export default function AlertCenterV2({
 
         {suggestionsCtl.scriptLog.selectedScriptLog && <ScriptLogModal scriptLog={suggestionsCtl.scriptLog} />}
 
-        {settings.settingsOpen && (
-          <AlertSettingsModal settings={settings} devices={devices} serviceOrders={serviceOrders} />
-        )}
+        {settings.settingsOpen && <AlertSettingsModal settings={settings} devices={devices} serviceOrders={serviceOrders} />}
       </section>
     </AlertCenterViewProvider>
   );

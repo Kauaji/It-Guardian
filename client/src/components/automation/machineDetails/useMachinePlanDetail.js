@@ -45,7 +45,8 @@ export function useMachinePlanDetail({ machine, open, onLoadDetails, draftState 
 
     if (!onLoadDetailsRef.current) return undefined;
 
-    onLoadDetailsRef.current(selectedPlan.id, machine.assetId)
+    onLoadDetailsRef
+      .current(selectedPlan.id, machine.assetId)
       .then((response) => {
         if (cancelled) return;
         const loadedDraft = buildAutomationOverrideDraft({

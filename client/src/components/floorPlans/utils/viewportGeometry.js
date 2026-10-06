@@ -81,7 +81,7 @@ export function getFitViewBox(floorSize) {
 /** Percentual de zoom mostrado no controle (100% = pavimento inteiro). */
 export function getZoomPercent(floor, viewBox) {
   const floorWidth = Number(floor?.width || DEFAULT_PLAN_SIZE.width);
-  return Math.round(100 * floorWidth / Number(viewBox?.width || floor?.width || DEFAULT_PLAN_SIZE.width));
+  return Math.round((100 * floorWidth) / Number(viewBox?.width || floor?.width || DEFAULT_PLAN_SIZE.width));
 }
 
 /** Converte coordenadas de tela (cliente) para o sistema de coordenadas do SVG. */

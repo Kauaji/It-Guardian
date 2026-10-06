@@ -1,16 +1,7 @@
 import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as api from "../../api.js";
-import {
-  MONITORS,
-  adminUser,
-  advance,
-  openDialog,
-  renderAction,
-  startNativeSession,
-  viewOnlyUser,
-  wireApi
-} from "./test/fixtures.jsx";
+import { MONITORS, adminUser, advance, openDialog, renderAction, startNativeSession, viewOnlyUser, wireApi } from "./test/fixtures.jsx";
 
 // Caracterizacao do ciclo de vida do transporte nativo: recusa de consentimento,
 // expiracao/queda, expiracao do login e fechamento do dialogo.

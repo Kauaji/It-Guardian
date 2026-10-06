@@ -5,9 +5,20 @@ import { filterCompatibleSegments } from "../utils/infrastructure.js";
 function PaintModeSwitch({ mode, onChange }) {
   return (
     <div className="segmented-control compact floor-plan-paint-modes">
-      <button className={mode === "brush" ? "active" : ""} type="button" onClick={() => onChange({ mode: "brush" })} title="Pincel"><Paintbrush size={16} /></button>
-      <button className={mode === "bucket" ? "active" : ""} type="button" onClick={() => onChange({ mode: "bucket" })} title="Completar cômodo"><PaintBucket size={16} /></button>
-      <button className={mode === "eraser" ? "active" : ""} type="button" onClick={() => onChange({ mode: "eraser" })} title="Borracha"><Eraser size={16} /></button>
+      <button className={mode === "brush" ? "active" : ""} type="button" onClick={() => onChange({ mode: "brush" })} title="Pincel">
+        <Paintbrush size={16} />
+      </button>
+      <button
+        className={mode === "bucket" ? "active" : ""}
+        type="button"
+        onClick={() => onChange({ mode: "bucket" })}
+        title="Completar cômodo"
+      >
+        <PaintBucket size={16} />
+      </button>
+      <button className={mode === "eraser" ? "active" : ""} type="button" onClick={() => onChange({ mode: "eraser" })} title="Borracha">
+        <Eraser size={16} />
+      </button>
     </div>
   );
 }
@@ -53,14 +64,22 @@ function SegmentFields({ draft, groupAreas, segments, onChange }) {
       <label>
         Área de grupo
         <select value={draft.parentAreaId || ""} onChange={(event) => onChange({ parentAreaId: event.target.value, cells: [] })}>
-          {groupAreas.map((area) => <option key={area.id} value={area.id}>{area.name}</option>)}
+          {groupAreas.map((area) => (
+            <option key={area.id} value={area.id}>
+              {area.name}
+            </option>
+          ))}
         </select>
       </label>
       <label>
         Segmento
         <select value={draft.segmentId || ""} onChange={(event) => onChange({ segmentId: event.target.value })}>
           <option value="">Selecione</option>
-          {compatibleSegments.map((segment) => <option key={segment.id} value={segment.id}>{segment.name}</option>)}
+          {compatibleSegments.map((segment) => (
+            <option key={segment.id} value={segment.id}>
+              {segment.name}
+            </option>
+          ))}
         </select>
       </label>
     </>
@@ -95,7 +114,11 @@ export default function PaintToolPanel({ draft, groups, segments, groupAreas, on
           Grupo
           <select value={draft.groupId || ""} onChange={(event) => onChange({ groupId: event.target.value })}>
             <option value="">Selecione</option>
-            {groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
+            {groups.map((group) => (
+              <option key={group.id} value={group.id}>
+                {group.name}
+              </option>
+            ))}
           </select>
         </label>
       )}

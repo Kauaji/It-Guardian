@@ -31,21 +31,13 @@ export default function usePreventivePlans({ data, activeTab, canCreatePlans, ha
   const [lastCreatedPlan, setLastCreatedPlan] = useState(null);
   const [reviewOpen, setReviewOpen] = useState(false);
 
-  const devicesWithAutomation = useMemo(
-    () => mergeAutomationIndicators(devices, automationMachines),
-    [devices, automationMachines]
-  );
+  const devicesWithAutomation = useMemo(() => mergeAutomationIndicators(devices, automationMachines), [devices, automationMachines]);
   const overview = useMemo(
-    () => devicesWithAutomation.map((device) =>
-      buildDevicePreventiveInfo(device, { lookups, alerts, preventivePlans, dueDays })
-    ),
+    () => devicesWithAutomation.map((device) => buildDevicePreventiveInfo(device, { lookups, alerts, preventivePlans, dueDays })),
     [devicesWithAutomation, lookups, alerts, preventivePlans, dueDays]
   );
   const summary = useMemo(() => summarizePreventiveOverview(overview), [overview]);
-  const groups = useMemo(
-    () => groupPreventiveOverview(filterPreventiveOverview(overview, { search, filter })),
-    [overview, search, filter]
-  );
+  const groups = useMemo(() => groupPreventiveOverview(filterPreventiveOverview(overview, { search, filter })), [overview, search, filter]);
   const assetIds = useMemo(() => Array.from(selection.assets).map(String).sort(), [selection.assets]);
   const [recommendations, resetRecommendations] = usePreventiveScriptRecommendations({ token, assetIds, activeScripts });
   const orderedScripts = orderPreventiveScripts(recommendations, activeScripts);
@@ -71,12 +63,14 @@ export default function usePreventivePlans({ data, activeTab, canCreatePlans, ha
 
     setSaving(true);
     try {
-      const createdPlan = await onCreatePreventivePlan(buildManualPreventivePlanPayload({
-        name: planName,
-        assetIds: [...selection.assets],
-        scriptIds: [...selection.scripts],
-        riskAcknowledged: riskScripts.length > 0
-      }));
+      const createdPlan = await onCreatePreventivePlan(
+        buildManualPreventivePlanPayload({
+          name: planName,
+          assetIds: [...selection.assets],
+          scriptIds: [...selection.scripts],
+          riskAcknowledged: riskScripts.length > 0
+        })
+      );
       selection.clearAll();
       setLastCreatedPlan(createdPlan);
       setReviewOpen(false);
@@ -100,21 +94,25 @@ export default function usePreventivePlans({ data, activeTab, canCreatePlans, ha
   }
 
   function openAutomationFromSelection() {
-    setAutomationCreateRequest(buildAutomationCreateRequest({
-      devices: selectedDevices,
-      scripts: selectedScripts,
-      riskScripts,
-      planName
-    }));
+    setAutomationCreateRequest(
+      buildAutomationCreateRequest({
+        devices: selectedDevices,
+        scripts: selectedScripts,
+        riskScripts,
+        planName
+      })
+    );
   }
 
   async function createAutomatedPlanFromSelection(automationPayload) {
-    const createdPlan = await onCreatePreventivePlan(buildAutomatedPreventivePlanPayload({
-      automationPayload,
-      planName,
-      devices: selectedDevices,
-      scripts: selectedScripts
-    }));
+    const createdPlan = await onCreatePreventivePlan(
+      buildAutomatedPreventivePlanPayload({
+        automationPayload,
+        planName,
+        devices: selectedDevices,
+        scripts: selectedScripts
+      })
+    );
 
     selection.clearSelection();
     resetRecommendations();

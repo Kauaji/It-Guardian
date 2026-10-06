@@ -68,12 +68,7 @@ export default function RemoteRustdeskPanel({ session, credentials, revealing, e
           )}
 
           {credentials?.rustdeskId && (
-            <a
-              className="secondary-action"
-              href={`rustdesk://${credentials.rustdeskId}`}
-              target="_blank"
-              rel="noreferrer"
-            >
+            <a className="secondary-action" href={`rustdesk://${credentials.rustdeskId}`} target="_blank" rel="noreferrer">
               <ExternalLink size={16} /> Abrir no cliente RustDesk
             </a>
           )}
@@ -81,14 +76,18 @@ export default function RemoteRustdeskPanel({ session, credentials, revealing, e
           <div className="remote-assistance-rustdesk-warning">
             <AlertTriangle size={16} />
             <p>
-              A senha nunca vai por link: cole-a manualmente no cliente RustDesk. Ela expira sozinha e
-              não pode ser reaproveitada. A partir da conexão no cliente nativo, esta janela deixa de
-              acompanhar a tela ou os comandos da sessão -- encerre por aqui quando o atendimento terminar.
+              A senha nunca vai por link: cole-a manualmente no cliente RustDesk. Ela expira sozinha e não pode ser reaproveitada. A partir
+              da conexão no cliente nativo, esta janela deixa de acompanhar a tela ou os comandos da sessão -- encerre por aqui quando o
+              atendimento terminar.
             </p>
           </div>
         </>
       )}
-      {error && <p className="form-error" role="alert">{error}</p>}
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

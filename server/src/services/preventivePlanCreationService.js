@@ -50,13 +50,15 @@ async function queueScriptsForAsset({ planId, assetId, scripts, normalized, user
       attentionRequired: false,
       db
     });
-    jobs.push(await queueAgentScriptJob({
-      script,
-      assetId,
-      executionLogId: executionLog.id,
-      userId: user?.id || null,
-      db
-    }));
+    jobs.push(
+      await queueAgentScriptJob({
+        script,
+        assetId,
+        executionLogId: executionLog.id,
+        userId: user?.id || null,
+        db
+      })
+    );
   }
   return jobs;
 }
@@ -72,9 +74,7 @@ async function registerAsset({ planId, assetId, scripts, normalized, automationE
     log: buildAssetRegistrationLog({ assetId, scriptNames, automationEnabled })
   });
 
-  const jobs = automationEnabled
-    ? []
-    : await queueScriptsForAsset({ planId, assetId, scripts, normalized, user, db });
+  const jobs = automationEnabled ? [] : await queueScriptsForAsset({ planId, assetId, scripts, normalized, user, db });
 
   await addAssetHistory({
     assetId,

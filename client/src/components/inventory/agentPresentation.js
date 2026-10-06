@@ -7,11 +7,8 @@ const SOURCE_LABELS = {
 };
 
 export function getMachineSourceLabel(machine) {
-  const sources = Array.isArray(machine?.dataSources) && machine.dataSources.length
-    ? machine.dataSources
-    : [machine?.source];
-  const labels = Array.from(new Set(sources.filter(Boolean)))
-    .map((source) => SOURCE_LABELS[source] || source);
+  const sources = Array.isArray(machine?.dataSources) && machine.dataSources.length ? machine.dataSources : [machine?.source];
+  const labels = Array.from(new Set(sources.filter(Boolean))).map((source) => SOURCE_LABELS[source] || source);
   return labels.join(" + ") || "Desconhecida";
 }
 
@@ -33,10 +30,7 @@ export function getAgentLastSeenAt(machine) {
   return machine?.lastSeenAt || machine?.agent?.lastSeenAt || null;
 }
 
-export function getAgentHeartbeatState(
-  machine,
-  { now = Date.now(), minimumOfflineAfterSeconds = 180 } = {}
-) {
+export function getAgentHeartbeatState(machine, { now = Date.now(), minimumOfflineAfterSeconds = 180 } = {}) {
   if (!isAgentMachine(machine)) {
     return { status: null, lastSeenAt: null };
   }

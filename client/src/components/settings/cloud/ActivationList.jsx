@@ -41,17 +41,10 @@ export default function ActivationList({ selectedKey, activations, loading, busy
         <span>{activations.length} registro(s)</span>
       </div>
       {loading && <p className="empty">Carregando computadores...</p>}
-      {!loading && activations.length === 0 && (
-        <p className="empty">Nenhum computador ativou esta chave.</p>
-      )}
+      {!loading && activations.length === 0 && <p className="empty">Nenhum computador ativou esta chave.</p>}
       <div className="cloud-activation-list">
         {activations.map((item) => (
-          <ActivationItem
-            key={item.id}
-            item={item}
-            busy={busyAction === `activation:${item.id}`}
-            onDeactivate={onDeactivate}
-          />
+          <ActivationItem key={item.id} item={item} busy={busyAction === `activation:${item.id}`} onDeactivate={onDeactivate} />
         ))}
       </div>
     </section>

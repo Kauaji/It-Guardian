@@ -14,7 +14,9 @@ export function MeasurementGlyph({ width, height, plan, selected }) {
       <line className="floor-plan-measurement-tick" x1={width} y1={midY - tickHalf} x2={width} y2={midY + tickHalf} />
       <g className="floor-plan-measurement-label" transform={`translate(${width / 2}, ${midY - tickHalf - 6})`}>
         <rect x={-(label.length * 3.6 + 8)} y={-13} width={label.length * 7.2 + 16} height={18} rx={5} />
-        <text textAnchor="middle" y={1}>{label}</text>
+        <text textAnchor="middle" y={1}>
+          {label}
+        </text>
       </g>
     </g>
   );
@@ -48,7 +50,13 @@ function DoubleDoor({ width, height, metadata, color, selected }) {
   const leftEndX = Math.max(8, center - 2);
   const rightEndX = Math.min(width - 8, center + 2);
   return (
-    <g className={`floor-plan-object-glyph opening door double ${selectedClass(selected)}`} stroke={color} strokeWidth="2" strokeLinecap="round" fill="none">
+    <g
+      className={`floor-plan-object-glyph opening door double ${selectedClass(selected)}`}
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      fill="none"
+    >
       <line x1="0" y1={hingeY} x2="7" y2={hingeY} strokeWidth="4" />
       <line x1={width - 7} y1={hingeY} x2={width} y2={hingeY} strokeWidth="4" />
       <line x1="7" y1={hingeY} x2={leftEndX} y2={openY} />
@@ -98,15 +106,17 @@ function SingleDoor({ width, height, metadata, color, selected }) {
   const hingeX = 7;
   const jambX = width - 7;
   return (
-    <g className={`floor-plan-object-glyph opening door single ${selectedClass(selected)}`} stroke={color} strokeWidth="2" strokeLinecap="round" fill="none">
+    <g
+      className={`floor-plan-object-glyph opening door single ${selectedClass(selected)}`}
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      fill="none"
+    >
       <line x1="0" y1={hingeY} x2={hingeX} y2={hingeY} strokeWidth="4" />
       <line x1={jambX} y1={hingeY} x2={width} y2={hingeY} strokeWidth="4" />
       <line x1={hingeX} y1={hingeY} x2={hingeX} y2={openY} />
-      <path
-        d={`M ${hingeX} ${openY} Q ${jambX} ${openY} ${jambX} ${hingeY}`}
-        strokeDasharray="3 2"
-        opacity="0.72"
-      />
+      <path d={`M ${hingeX} ${openY} Q ${jambX} ${openY} ${jambX} ${hingeY}`} strokeDasharray="3 2" opacity="0.72" />
       <circle cx={hingeX} cy={hingeY} r="1.6" />
     </g>
   );
@@ -121,5 +131,11 @@ export function DoorGlyph(props) {
 }
 
 export function WindowGlyph({ width, height, color, selected }) {
-  return <g className={`floor-plan-object-glyph opening window ${selectedClass(selected)}`} stroke={color}><line x1="2" y1={height * 0.34} x2={width - 2} y2={height * 0.34} /><line x1="2" y1={height * 0.66} x2={width - 2} y2={height * 0.66} /><line x1={width / 2} y1="1" x2={width / 2} y2={height - 1} /></g>;
+  return (
+    <g className={`floor-plan-object-glyph opening window ${selectedClass(selected)}`} stroke={color}>
+      <line x1="2" y1={height * 0.34} x2={width - 2} y2={height * 0.34} />
+      <line x1="2" y1={height * 0.66} x2={width - 2} y2={height * 0.66} />
+      <line x1={width / 2} y1="1" x2={width / 2} y2={height - 1} />
+    </g>
+  );
 }

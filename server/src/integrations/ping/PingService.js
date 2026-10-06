@@ -32,9 +32,7 @@ export class PingService {
   }
 
   async checkReal() {
-    const error = new Error(
-      "Ping real exige backend em VPS ou agente dentro da rede da empresa. Use PING_MODE=mock no Vercel."
-    );
+    const error = new Error("Ping real exige backend em VPS ou agente dentro da rede da empresa. Use PING_MODE=mock no Vercel.");
     error.statusCode = 501;
     throw error;
   }

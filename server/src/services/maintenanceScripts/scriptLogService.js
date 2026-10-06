@@ -66,7 +66,7 @@ export async function createScriptSimulationLog({
       suggestionId: suggestionId || null,
       preventivePlanId: preventivePlanId || null,
       mode: safeMode,
-      status: hasError ? "error" : (interpreted.status || status),
+      status: hasError ? "error" : interpreted.status || status,
       executedBy: executedBy || null,
       notes: trimString(notes, maxLengths.notes),
       rawLog: rawLog || "",
@@ -103,8 +103,7 @@ export async function applyScriptLogSuggestedSolution(id, payload = {}, user = n
   }
 
   const notes = trimString(
-    payload.notes ||
-      "Ação corretiva sugerida registrada para acompanhamento. Nenhum comando foi executado automaticamente.",
+    payload.notes || "Ação corretiva sugerida registrada para acompanhamento. Nenhum comando foi executado automaticamente.",
     maxLengths.notes
   );
   return await withTransaction(async (db) => {

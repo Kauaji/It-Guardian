@@ -240,12 +240,14 @@ export function getAlertRecommendedAction(alert = {}) {
  */
 export function getAlertChecklist(alert = {}) {
   const type = alertTypeOf(alert);
-  return alertChecklist[type] || [
-    "Validar o ativo afetado.",
-    "Conferir se o aviso se repetiu no período.",
-    "Registrar evidências.",
-    "Abrir OS somente se houver impacto confirmado."
-  ];
+  return (
+    alertChecklist[type] || [
+      "Validar o ativo afetado.",
+      "Conferir se o aviso se repetiu no período.",
+      "Registrar evidências.",
+      "Abrir OS somente se houver impacto confirmado."
+    ]
+  );
 }
 
 /**

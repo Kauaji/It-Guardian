@@ -21,11 +21,7 @@ function ProductSuggestions({ parts }) {
         );
       })}
       {!suggestions.length && typed && (
-        <button
-          type="button"
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={parts.addPart}
-        >
+        <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={parts.addPart}>
           <strong>Usar "{typed}"</strong>
           <span>Registrar peça digitada manualmente</span>
         </button>
@@ -39,12 +35,7 @@ export default function PartsEditor({ parts, products, businessMode }) {
   const { open, search, partDraft, suggestionsOpen, suggestions, selectedProduct } = parts;
   return (
     <section className={`service-order-collapsible-editor ${open ? "open" : ""}`}>
-      <button
-        type="button"
-        className="service-order-section-toggle"
-        onClick={parts.toggleOpen}
-        aria-expanded={open}
-      >
+      <button type="button" className="service-order-section-toggle" onClick={parts.toggleOpen} aria-expanded={open}>
         <span>
           <strong>Peças trocadas</strong>
           <small>Registre produtos ou peças usadas no atendimento.</small>
@@ -78,12 +69,7 @@ export default function PartsEditor({ parts, products, businessMode }) {
             </label>
             <label className="service-order-part-quantity-field">
               Quantidade
-              <input
-                type="number"
-                min="1"
-                value={partDraft.quantity}
-                onChange={(event) => parts.changeQuantity(event.target.value)}
-              />
+              <input type="number" min="1" value={partDraft.quantity} onChange={(event) => parts.changeQuantity(event.target.value)} />
             </label>
             {businessMode && (
               <label className="service-order-part-price-field">

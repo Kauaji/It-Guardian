@@ -15,11 +15,16 @@ if (!["release", "jobs"].includes(role)) {
 const { privateKeyPem, publicKeyBase64 } = generateSigningKeyPair();
 const names =
   role === "release"
-    ? { priv: "AGENT_RELEASE_PRIVATE_KEY", pub: "releasePublicKey (config do agente / installers/windows-collector/release-public-key.txt)" }
+    ? {
+        priv: "AGENT_RELEASE_PRIVATE_KEY",
+        pub: "releasePublicKey (config do agente / installers/windows-collector/release-public-key.txt)"
+      }
     : { priv: "AGENT_JOB_SIGNING_PRIVATE_KEY", pub: "jobSigningPublicKey (entregue ao agente na ativacao)" };
 
 process.stdout.write(`# Chave publica -> ${names.pub}\n${publicKeyBase64}\n\n`);
 process.stdout.write(`# Chave PRIVADA -> ${names.priv}  (segredo; nao versione, nao cole em chat/log)\n${privateKeyPem}`);
 if (role === "release") {
-  process.stdout.write("\n# Mantenha esta chave fora do servidor da API: e ela que impede que um servidor comprometido empurre um executavel malicioso.\n");
+  process.stdout.write(
+    "\n# Mantenha esta chave fora do servidor da API: e ela que impede que um servidor comprometido empurre um executavel malicioso.\n"
+  );
 }

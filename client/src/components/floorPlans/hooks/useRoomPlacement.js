@@ -14,13 +14,11 @@ export function useRoomPlacement({ doc, ui, notify, viewport }) {
 
   const getFloor = () => getActiveFloor(editor, activeFloorId);
 
-  const buildClickPreview = (template, point, rotation = 0) => (
-    buildRoomPlacementPreview({ editor, floor: getFloor(), template, point, rotation })
-  );
+  const buildClickPreview = (template, point, rotation = 0) =>
+    buildRoomPlacementPreview({ editor, floor: getFloor(), template, point, rotation });
 
-  const buildDragPreview = (template, start, end, rotation = 0) => (
-    buildDraggedRoomPreview({ editor, floor: getFloor(), template, start, end, rotation })
-  );
+  const buildDragPreview = (template, start, end, rotation = 0) =>
+    buildDraggedRoomPreview({ editor, floor: getFloor(), template, start, end, rotation });
 
   const beginRoomPlacement = (template) => {
     if (!editor) return;
@@ -62,7 +60,7 @@ export function useRoomPlacement({ doc, ui, notify, viewport }) {
   /** Primeiro clique: marca o ponto inicial do comodo (arrasto ou clique simples). */
   const confirmRoomPoint = (point) => {
     const preview = placement.preview || buildClickPreview(placement.template, point, placement.rotation);
-    setPlacement((current) => current ? { ...current, start: point, preview } : current);
+    setPlacement((current) => (current ? { ...current, start: point, preview } : current));
   };
 
   /** Soltar o ponteiro: cria o comodo com o retangulo desenhado. */

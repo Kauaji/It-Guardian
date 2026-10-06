@@ -46,14 +46,17 @@ test("job assinado amarra job, ativo, interpretador, timeout, conteudo e validad
   const job = { jobId: "job-1", assetId: "asset-1", interpreter: "powershell", timeoutSeconds: 120, content: "Get-Date" };
   const { notAfter, signature } = signJob(pair.privateKeyPem, job, { now: 1_700_000_000_000 });
   assert.equal(notAfter, 1_700_000_900);
-  const message = (overrides = {}) =>
-    buildJobMessage({ ...job, contentSha256: sha256Hex(job.content), notAfter, ...overrides });
+  const message = (overrides = {}) => buildJobMessage({ ...job, contentSha256: sha256Hex(job.content), notAfter, ...overrides });
   assert.equal(verifyMessage(pair.publicKeyBase64, message(), signature), true);
   assert.equal(verifyMessage(pair.publicKeyBase64, message({ assetId: "asset-2" }), signature), false, "outro ativo");
   assert.equal(verifyMessage(pair.publicKeyBase64, message({ jobId: "job-2" }), signature), false);
   assert.equal(verifyMessage(pair.publicKeyBase64, message({ timeoutSeconds: 600 }), signature), false);
   assert.equal(verifyMessage(pair.publicKeyBase64, message({ interpreter: "cmd" }), signature), false);
-  assert.equal(verifyMessage(pair.publicKeyBase64, message({ contentSha256: sha256Hex("Remove-Item *") }), signature), false, "conteudo trocado");
+  assert.equal(
+    verifyMessage(pair.publicKeyBase64, message({ contentSha256: sha256Hex("Remove-Item *") }), signature),
+    false,
+    "conteudo trocado"
+  );
   assert.equal(verifyMessage(pair.publicKeyBase64, message({ notAfter: notAfter + 999999 }), signature), false, "validade estendida");
 });
 
@@ -66,7 +69,10 @@ test("assinaturas malformadas nunca lancam: apenas falham", () => {
 });
 
 test("campos com quebra de linha sao recusados (injecao de campo na mensagem)", () => {
-  assert.throws(() => buildUpdateMessage({ version: "1\nsha256=" + "0".repeat(64), sha256: "a".repeat(64), url: "https://x" }), /quebra de linha/);
+  assert.throws(
+    () => buildUpdateMessage({ version: "1\nsha256=" + "0".repeat(64), sha256: "a".repeat(64), url: "https://x" }),
+    /quebra de linha/
+  );
 });
 
 test("aceita PEM com \\n literais, como vem de variavel de ambiente", () => {

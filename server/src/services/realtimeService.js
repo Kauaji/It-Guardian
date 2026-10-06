@@ -32,9 +32,10 @@ export function attachRealtimeServer(server) {
   });
 
   const interval = setInterval(
-    () => broadcastSnapshot().catch((error) => {
-      logger.error("realtime_snapshot_failed", { error });
-    }),
+    () =>
+      broadcastSnapshot().catch((error) => {
+        logger.error("realtime_snapshot_failed", { error });
+      }),
     Number(process.env.STREAM_INTERVAL_MS || 10000)
   );
 

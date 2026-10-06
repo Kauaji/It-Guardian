@@ -54,8 +54,22 @@ function EmptySelection() {
 
 // Painel inferior: detalhes da conexao, do objeto selecionado ou o vazio.
 export default function VisualMapObjectPanel({
-  mode, isEditing, saving, devices, usedAssetIds, selectedObject, selectedConnection, objectDraft, connectionDraft,
-  linkedDevice, linkedDeviceMeta, objectDirty, objectActions, connectionActions, onClearObject, onClearConnection
+  mode,
+  isEditing,
+  saving,
+  devices,
+  usedAssetIds,
+  selectedObject,
+  selectedConnection,
+  objectDraft,
+  connectionDraft,
+  linkedDevice,
+  linkedDeviceMeta,
+  objectDirty,
+  objectActions,
+  connectionActions,
+  onClearObject,
+  onClearConnection
 }) {
   let content = <EmptySelection />;
   if (selectedConnection && connectionDraft) {

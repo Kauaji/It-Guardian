@@ -84,4 +84,3 @@ export function buildDefaultConnectionDraft(layer = "infrastructure") {
 export function isLayerVisible(layers, layer) {
   return layers?.[layer] !== false;
 }
-

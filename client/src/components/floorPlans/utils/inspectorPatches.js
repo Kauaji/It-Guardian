@@ -12,9 +12,8 @@ export function buildMetadataPatch(entity, values) {
  * compativel com o novo grupo.
  */
 export function buildGroupChangePatch(entity, groupId, segments) {
-  const segmentStillValid = !entity.segmentId || segments.some((segment) => (
-    segment.id === entity.segmentId && isSegmentCompatibleWithGroup(segment, groupId)
-  ));
+  const segmentStillValid =
+    !entity.segmentId || segments.some((segment) => segment.id === entity.segmentId && isSegmentCompatibleWithGroup(segment, groupId));
   return { groupId, segmentId: segmentStillValid ? entity.segmentId : null };
 }
 
@@ -23,9 +22,7 @@ export function buildDoorTypePatch(entity, doorType) {
   const isSwing = doorType === "single" || doorType === "double";
   return buildMetadataPatch(entity, {
     doorType,
-    ...(isSwing
-      ? { swing: entity.metadata?.swing || "inward" }
-      : { slideDirection: entity.metadata?.slideDirection || "right" })
+    ...(isSwing ? { swing: entity.metadata?.swing || "inward" } : { slideDirection: entity.metadata?.slideDirection || "right" })
   });
 }
 
@@ -40,13 +37,16 @@ export function buildOpeningWallPatch(entity, wallId) {
 
 /** Patch que instala ou remove o switch de um rack. */
 export function buildRackSwitchPatch(entity, installed) {
-  return buildMetadataPatch(entity, installed
-    ? {
-      switchInstalled: true,
-      switchTotalPorts: RACK_SWITCH_DEFAULT_PORTS,
-      switchWorkingPorts: RACK_SWITCH_DEFAULT_PORTS
-    }
-    : { switchInstalled: false, switchTotalPorts: null, switchWorkingPorts: null });
+  return buildMetadataPatch(
+    entity,
+    installed
+      ? {
+          switchInstalled: true,
+          switchTotalPorts: RACK_SWITCH_DEFAULT_PORTS,
+          switchWorkingPorts: RACK_SWITCH_DEFAULT_PORTS
+        }
+      : { switchInstalled: false, switchTotalPorts: null, switchWorkingPorts: null }
+  );
 }
 
 /** Localiza a entidade selecionada na colecao correspondente do editor. */

@@ -46,9 +46,18 @@ describe("ServiceOrderDetailsModal", () => {
     expect(within(dialog).getByRole("heading", { level: 2 })).toHaveTextContent("OS-0001 - Computador não liga");
     expect(within(dialog).getByText("Demo")).toBeInTheDocument();
     expect(within(dialog).getByText("Aberta - Prioridade Alta")).toBeInTheDocument();
-    expect([...dialog.querySelectorAll(".machine-tabs button")].map((button) => button.textContent)).toEqual(
-      ["Geral", "Atendimento", "Máquina", "SLA", "Agenda", "Checklist", "Scripts", "Anexos", "Avaliação", "Histórico"]
-    );
+    expect([...dialog.querySelectorAll(".machine-tabs button")].map((button) => button.textContent)).toEqual([
+      "Geral",
+      "Atendimento",
+      "Máquina",
+      "SLA",
+      "Agenda",
+      "Checklist",
+      "Scripts",
+      "Anexos",
+      "Avaliação",
+      "Histórico"
+    ]);
     expect(within(dialog).getByText("Solicitação").closest("section")).toHaveTextContent("O computador do financeiro não liga.");
     expect(within(dialog).getByText("Observações iniciais")).toBeInTheDocument();
     const grid = dialog.querySelector(".service-order-detail-grid");
@@ -67,7 +76,14 @@ describe("ServiceOrderDetailsModal", () => {
   it("mostra origem preventiva/pública e valores no modo Business", async () => {
     await renderDetails({
       systemMode: "business",
-      serviceOrder: makeOrder({ preventivePlanId: "pl", source: "public_support_form", serviceValue: 100, totalPartsValue: 50, totalValue: 150, serviceName: "Só nome" })
+      serviceOrder: makeOrder({
+        preventivePlanId: "pl",
+        source: "public_support_form",
+        serviceValue: 100,
+        totalPartsValue: 50,
+        totalValue: 150,
+        serviceName: "Só nome"
+      })
     });
     const grid = document.querySelector(".service-order-detail-grid");
     expect(within(grid).getByText("Origem preventiva").closest("div")).toHaveTextContent("Plano Preventivo");
@@ -113,7 +129,14 @@ describe("ServiceOrderDetailsModal", () => {
 
   it("repassa dados à assistência remota", async () => {
     await renderDetails({ devices: [makeDevice({ alias: "Financeiro" })] });
-    expect(stubProps("remote")).toMatchObject({ asset: { id: "dev-1" }, alias: "Financeiro", token: "tok", compact: true, serviceOrder: { id: "os-1" }, user: { id: "u1" } });
+    expect(stubProps("remote")).toMatchObject({
+      asset: { id: "dev-1" },
+      alias: "Financeiro",
+      token: "tok",
+      compact: true,
+      serviceOrder: { id: "os-1" },
+      user: { id: "u1" }
+    });
   });
 
   describe("reabrir e excluir", () => {
@@ -162,7 +185,9 @@ describe("ServiceOrderDetailsModal", () => {
       window.confirm.mockReturnValueOnce(true);
       second.props.onDelete.mockResolvedValue(false);
       click(screen.getByTitle("Excluir Ordem de Serviço"));
-      expect(window.confirm).toHaveBeenLastCalledWith("Tem certeza que deseja excluir esta Ordem de Serviço? Essa ação não poderá ser desfeita.");
+      expect(window.confirm).toHaveBeenLastCalledWith(
+        "Tem certeza que deseja excluir esta Ordem de Serviço? Essa ação não poderá ser desfeita."
+      );
       await waitFor(() => expect(second.props.onDelete).toHaveBeenCalledWith(closed));
       expect(second.props.onClose).not.toHaveBeenCalled();
     });
@@ -176,7 +201,10 @@ describe("ServiceOrderDetailsModal", () => {
 
   describe("abas delegadas", () => {
     it("monta cada aba com suas permissões", async () => {
-      const { props } = await renderDetails({ permissions: { schedule: false, attendance: false, edit: false, runScripts: true, registerSimulation: true }, remoteScriptExecutionEnabled: true });
+      const { props } = await renderDetails({
+        permissions: { schedule: false, attendance: false, edit: false, runScripts: true, registerSimulation: true },
+        remoteScriptExecutionEnabled: true
+      });
       click(tab("SLA"));
       expect(stubProps("tab-sla").serviceOrder.id).toBe("os-1");
       click(tab("Agenda"));
@@ -185,7 +213,12 @@ describe("ServiceOrderDetailsModal", () => {
       click(tab("Checklist"));
       expect(stubProps("tab-checklist")).toMatchObject({ serviceOrderId: "os-1", token: "tok", canManage: false });
       click(tab("Scripts"));
-      expect(stubProps("tab-scripts")).toMatchObject({ canManage: true, canRegisterSimulation: true, remoteScriptExecutionEnabled: true, serviceOrder: { id: "os-1" } });
+      expect(stubProps("tab-scripts")).toMatchObject({
+        canManage: true,
+        canRegisterSimulation: true,
+        remoteScriptExecutionEnabled: true,
+        serviceOrder: { id: "os-1" }
+      });
       click(tab("Anexos"));
       expect(stubProps("tab-attachments")).toMatchObject({ serviceOrderId: "os-1", canAdd: false, canRemove: false });
       click(tab("Avaliação"));
@@ -213,7 +246,9 @@ describe("ServiceOrderDetailsModal", () => {
       ];
       const { unmount } = await renderDetails({
         serviceOrder: makeOrder({ history }),
-        devices: [makeDevice({ assetHistory: [{ id: "a1", message: "Disco trocado", createdAt: "2026-07-01T10:00:00.000Z", userName: "Bruno" }] })]
+        devices: [
+          makeDevice({ assetHistory: [{ id: "a1", message: "Disco trocado", createdAt: "2026-07-01T10:00:00.000Z", userName: "Bruno" }] })
+        ]
       });
       click(tab("Histórico"));
       const panel = document.querySelector(".service-order-history-panel");
@@ -246,7 +281,19 @@ describe("ServiceOrderDetailsModal", () => {
       vi.useFakeTimers();
       try {
         await renderDetails({
-          serviceOrder: makeOrder({ title: "<b>Titulo</b> & cia", servicePerformed: "Formatou", diagnosis: "Disco", attendanceNotes: "Ok", closedAt: "2026-08-12T10:00:00.000Z", environmentName: "", sectorName: "", requesterName: "", assignedTechnicianName: "", category: "", assetId: "" }),
+          serviceOrder: makeOrder({
+            title: "<b>Titulo</b> & cia",
+            servicePerformed: "Formatou",
+            diagnosis: "Disco",
+            attendanceNotes: "Ok",
+            closedAt: "2026-08-12T10:00:00.000Z",
+            environmentName: "",
+            sectorName: "",
+            requesterName: "",
+            assignedTechnicianName: "",
+            category: "",
+            assetId: ""
+          }),
           devices: [],
           systemMode: "business"
         });

@@ -23,7 +23,16 @@ describe("getSelectionActionState", () => {
       buildDesk(),
       buildPc(),
       buildDesk({ id: "desk-locked", metadata: { parentRoomId: "room-1", locked: true } }),
-      { id: "door-1", floorId: "floor-1", objectType: "door", x: 0, y: 0, width: 40, height: 10, metadata: { anchorType: "wall", parentObjectId: "wall-1" } }
+      {
+        id: "door-1",
+        floorId: "floor-1",
+        objectType: "door",
+        x: 0,
+        y: 0,
+        width: 40,
+        height: 10,
+        metadata: { anchorType: "wall", parentObjectId: "wall-1" }
+      }
     ]
   });
 

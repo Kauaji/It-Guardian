@@ -12,26 +12,10 @@ async function readProjectFile(...segments) {
 }
 
 test("instalador cloud usa apenas a chave e instala o coletor nativo", async () => {
-  const setup = await readProjectFile(
-    "installers",
-    "windows-collector",
-    "ITGuardianCollector.iss"
-  );
-  const postInstall = await readProjectFile(
-    "installers",
-    "windows-collector",
-    "Finalize-CollectorInstall.ps1"
-  );
-  const uninstall = await readProjectFile(
-    "installers",
-    "windows-collector",
-    "Uninstall-Collector.ps1"
-  );
-  const buildInstaller = await readProjectFile(
-    "installers",
-    "windows-collector",
-    "build-installer.ps1"
-  );
+  const setup = await readProjectFile("installers", "windows-collector", "ITGuardianCollector.iss");
+  const postInstall = await readProjectFile("installers", "windows-collector", "Finalize-CollectorInstall.ps1");
+  const uninstall = await readProjectFile("installers", "windows-collector", "Uninstall-Collector.ps1");
+  const buildInstaller = await readProjectFile("installers", "windows-collector", "build-installer.ps1");
 
   const configSection = setup.match(/ConfigJson :=([\s\S]*?)SaveStringToFile/)?.[1] || "";
   assert.doesNotMatch(configSection, /ProductKey|productKey/);
@@ -131,21 +115,13 @@ test("instalador cloud usa apenas a chave e instala o coletor nativo", async () 
   assert.match(uninstall, /Remove-LocalUser -Name \$collectorAccountName/);
   assert.doesNotMatch(setup, /OCS-Windows-Agent|zabbix_agent|vendor\\ocs|vendor\\zabbix/);
   assert.doesNotMatch(buildInstaller, /Get-OfficialMonitoringAgents|OCS-Windows-Agent|zabbix_agent/);
-  await assert.rejects(
-    access(path.join(projectRoot, "installers", "windows-collector", "Get-OfficialMonitoringAgents.ps1"))
-  );
-  await assert.rejects(
-    access(path.join(projectRoot, "installers", "windows-collector", "Install-MonitoringAgents.ps1"))
-  );
+  await assert.rejects(access(path.join(projectRoot, "installers", "windows-collector", "Get-OfficialMonitoringAgents.ps1")));
+  await assert.rejects(access(path.join(projectRoot, "installers", "windows-collector", "Install-MonitoringAgents.ps1")));
   assert.match(uninstall, /installedByItGuardian/);
 });
 
 test("coletor PowerShell permanece restrito a inventario", async () => {
-  const collector = await readProjectFile(
-    "agent",
-    "windows",
-    "it-guardian-agent.ps1"
-  );
+  const collector = await readProjectFile("agent", "windows", "it-guardian-agent.ps1");
   const forbidden = [
     /\bInvoke-Expression\b/i,
     /\biex\b/i,
@@ -160,15 +136,10 @@ test("coletor PowerShell permanece restrito a inventario", async () => {
   for (const pattern of forbidden) {
     assert.doesNotMatch(collector, pattern);
   }
-
 });
 
 test("pipe local da assistencia remota nao aceita qualquer usuario autenticado da maquina", async () => {
-  const remoteAssistance = await readProjectFile(
-    "agent",
-    "windows",
-    "ITGuardian.RemoteAssistance.cs"
-  );
+  const remoteAssistance = await readProjectFile("agent", "windows", "ITGuardian.RemoteAssistance.cs");
   assert.doesNotMatch(remoteAssistance, /WellKnownSidType\.AuthenticatedUserSid/);
   assert.match(remoteAssistance, /WellKnownSidType\.InteractiveSid/);
   assert.match(remoteAssistance, /WellKnownSidType\.LocalSystemSid,\s*null\),\s*\n\s*PipeAccessRights\.FullControl/);
@@ -176,17 +147,8 @@ test("pipe local da assistencia remota nao aceita qualquer usuario autenticado d
 });
 
 test("agente nativo mantem trabalhos remotos bloqueados por padrao e controlados", async () => {
-  const nativeCollector = await readProjectFile(
-    "agent",
-    "windows",
-    "ITGuardian.Windows.cs"
-  );
-  const nativeForbidden = [
-    /\bCreateProcess\b/i,
-    /UseShellExecute\s*=\s*true/i,
-    /\bInvoke-Expression\b/i,
-    /\bScriptBlock\.Create\b/i
-  ];
+  const nativeCollector = await readProjectFile("agent", "windows", "ITGuardian.Windows.cs");
+  const nativeForbidden = [/\bCreateProcess\b/i, /UseShellExecute\s*=\s*true/i, /\bInvoke-Expression\b/i, /\bScriptBlock\.Create\b/i];
 
   for (const pattern of nativeForbidden) {
     assert.doesNotMatch(nativeCollector, pattern);

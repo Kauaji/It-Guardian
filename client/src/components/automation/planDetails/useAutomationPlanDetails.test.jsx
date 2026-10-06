@@ -12,7 +12,10 @@ const plan = {
   indicatorColor: "#2563eb",
   defaultScriptIds: ["sc1"]
 };
-const scripts = [{ id: "sc1", name: "A" }, { id: "sc2", name: "B" }];
+const scripts = [
+  { id: "sc1", name: "A" },
+  { id: "sc2", name: "B" }
+];
 
 function setup(overrides = {}) {
   const props = {

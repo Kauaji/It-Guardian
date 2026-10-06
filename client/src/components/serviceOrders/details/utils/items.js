@@ -47,9 +47,7 @@ export const emptyPartDraft = { productId: "", quantity: 1, unitPrice: "0" };
 
 /** Linha de texto acrescentada a "pecas usadas" ao adicionar uma peca. */
 export function buildPartLine({ productName, quantity, unitPrice, subtotal }) {
-  return unitPrice
-    ? `${productName} x${quantity} - ${formatCurrency(subtotal)}`
-    : `${productName} x${quantity}`;
+  return unitPrice ? `${productName} x${quantity} - ${formatCurrency(subtotal)}` : `${productName} x${quantity}`;
 }
 
 /** Nova peca a partir do produto do catalogo (ou nome digitado) e do rascunho da peca. */

@@ -65,9 +65,7 @@ describe("isRemoteAssistanceAssetFresh", () => {
   });
 
   it("e falso quando lastSeenAt nao e uma data valida", () => {
-    expect(
-      isRemoteAssistanceAssetFresh({ source: "agent", lastSeenAt: "nao-e-data" }, now)
-    ).toBe(false);
+    expect(isRemoteAssistanceAssetFresh({ source: "agent", lastSeenAt: "nao-e-data" }, now)).toBe(false);
   });
 
   it("respeita a janela de 3x o intervalo do agente, com piso de 10 minutos", () => {
@@ -99,9 +97,7 @@ describe("remoteAssistanceStatusLabel", () => {
 
 describe("formatRemoteMonitor", () => {
   it("monta nome, resolucao e sufixo de monitor principal", () => {
-    expect(formatRemoteMonitor({ name: "Dell", width: 1920, height: 1080, primary: true }, 0)).toBe(
-      "Dell - 1920x1080 - Principal"
-    );
+    expect(formatRemoteMonitor({ name: "Dell", width: 1920, height: 1080, primary: true }, 0)).toBe("Dell - 1920x1080 - Principal");
     expect(formatRemoteMonitor({ width: 800, height: 600 }, 1)).toBe("Monitor 2 - 800x600");
   });
 });

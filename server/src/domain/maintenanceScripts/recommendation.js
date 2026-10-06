@@ -106,17 +106,21 @@ function buildRecommendationContext(context = {}) {
  * @returns {string} Categoria tecnica inferida do texto (ou a informada, ou "").
  */
 export function inferTechnicalCategory(source = {}) {
-  const text = normalizeComparableText([
-    source.alertType,
-    source.metric,
-    source.title,
-    source.description,
-    source.problemType,
-    source.probableCause,
-    source.recommendedAction,
-    source.technicalCategory,
-    source.category
-  ].filter(Boolean).join(" "));
+  const text = normalizeComparableText(
+    [
+      source.alertType,
+      source.metric,
+      source.title,
+      source.description,
+      source.problemType,
+      source.probableCause,
+      source.recommendedAction,
+      source.technicalCategory,
+      source.category
+    ]
+      .filter(Boolean)
+      .join(" ")
+  );
 
   if (/(disco|disk|storage|hd|ssd)/.test(text)) return "Armazenamento";
   if (/(ram|memoria|memory)/.test(text)) return "Memoria";
@@ -137,18 +141,7 @@ function matchesContextValue(values, candidates) {
   );
 }
 
-const CONTEXT_KEYWORDS = [
-  "disco",
-  "ram",
-  "memoria",
-  "cpu",
-  "rede",
-  "offline",
-  "ping",
-  "impressora",
-  "servico",
-  "temperatura"
-];
+const CONTEXT_KEYWORDS = ["disco", "ram", "memoria", "cpu", "rede", "offline", "ping", "impressora", "servico", "temperatura"];
 
 // Campos normalizados do script usados na comparacao com o contexto.
 /** @param {RecommendableScript} script */
@@ -157,18 +150,22 @@ function profileScriptForScoring(script) {
   const relatedProblemTypes = normalizeTokenList(script.relatedProblemTypes);
   const recommendedForCategories = normalizeTokenList(script.recommendedForCategories);
   const tags = normalizeTokenList(script.tags);
-  const fields = normalizeComparableText([
-    script.name,
-    script.description,
-    script.category,
-    script.alertType,
-    script.problemType,
-    script.estimatedSummary,
-    ...tags,
-    ...relatedAlertTypes,
-    ...relatedProblemTypes,
-    ...recommendedForCategories
-  ].filter(Boolean).join(" "));
+  const fields = normalizeComparableText(
+    [
+      script.name,
+      script.description,
+      script.category,
+      script.alertType,
+      script.problemType,
+      script.estimatedSummary,
+      ...tags,
+      ...relatedAlertTypes,
+      ...relatedProblemTypes,
+      ...recommendedForCategories
+    ]
+      .filter(Boolean)
+      .join(" ")
+  );
 
   return { relatedAlertTypes, relatedProblemTypes, recommendedForCategories, tags, fields };
 }
@@ -185,16 +182,14 @@ function collectScoreEntries(script, normalized, profile) {
 
   if (
     normalized.alertType &&
-    (normalizeComparableText(script.alertType) === normalized.alertType ||
-      profile.relatedAlertTypes.includes(normalized.alertType))
+    (normalizeComparableText(script.alertType) === normalized.alertType || profile.relatedAlertTypes.includes(normalized.alertType))
   ) {
     entries.push({ points: 40, reason: "tipo de aviso compatível" });
   }
 
   if (
     normalized.problemType &&
-    (normalizeComparableText(script.problemType) === normalized.problemType ||
-      profile.relatedProblemTypes.includes(normalized.problemType))
+    (normalizeComparableText(script.problemType) === normalized.problemType || profile.relatedProblemTypes.includes(normalized.problemType))
   ) {
     entries.push({ points: 35, reason: "tipo de problema compatível" });
   }
@@ -207,9 +202,7 @@ function collectScoreEntries(script, normalized, profile) {
     entries.push({ points: 25, reason: "categoria compatível" });
   }
 
-  const tagMatches = profile.tags.filter((tag) =>
-    tag && (normalized.normalizedText.includes(tag) || normalized.tags.includes(tag))
-  );
+  const tagMatches = profile.tags.filter((tag) => tag && (normalized.normalizedText.includes(tag) || normalized.tags.includes(tag)));
   if (tagMatches.length) {
     entries.push({ points: tagMatches.length * 10, reason: `tags relacionadas: ${tagMatches.slice(0, 3).join(", ")}` });
   }
@@ -240,9 +233,7 @@ function collectScoreEntries(script, normalized, profile) {
 function isIncompatibleWithOperatingSystem(script, normalized) {
   const supportedSystems = normalizeTokenList(script.supportedOperatingSystems || script.operatingSystems);
   return Boolean(
-    normalized.operatingSystem &&
-      supportedSystems.length &&
-      !matchesContextValue(supportedSystems, [normalized.operatingSystem])
+    normalized.operatingSystem && supportedSystems.length && !matchesContextValue(supportedSystems, [normalized.operatingSystem])
   );
 }
 
@@ -282,9 +273,7 @@ export function scoreMaintenanceScriptForContext(script = {}, context = {}) {
   return {
     ...script,
     recommendationScore: score,
-    recommendationReason: reasons.length
-      ? `Recomendado por ${reasons.join("; ")}.`
-      : "Sem correspondência forte com o contexto do aviso.",
+    recommendationReason: reasons.length ? `Recomendado por ${reasons.join("; ")}.` : "Sem correspondência forte com o contexto do aviso.",
     compatibilityWarnings,
     isRecommended: score > 0
   };

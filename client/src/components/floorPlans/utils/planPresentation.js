@@ -44,7 +44,10 @@ export function getDeviceStatusTone(status) {
 /** Tags do ativo: aceita lista ou texto separado por virgulas. */
 export function getDeviceTags(device) {
   if (Array.isArray(device?.tags)) return device.tags;
-  return String(device?.tags || "").split(",").map((tag) => tag.trim()).filter(Boolean);
+  return String(device?.tags || "")
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
 }
 
 /** Dica (title) do halo do mapa de calor sobre um objeto. */

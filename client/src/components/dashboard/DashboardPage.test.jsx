@@ -23,10 +23,18 @@ const fullReport = {
     overdueServiceOrders: 2,
     inMaintenanceAssets: 3,
     resolvedAlertsToday: 5,
-    infrastructureHealth: { score: 82, classification: "healthy", classificationLabel: "Saudável", deductions: [{ reason: "Alertas críticos", points: 5 }] }
+    infrastructureHealth: {
+      score: 82,
+      classification: "healthy",
+      classificationLabel: "Saudável",
+      deductions: [{ reason: "Alertas críticos", points: 5 }]
+    }
   },
   assets: {
-    byStatus: [{ label: "Online", count: 4 }, { label: "Offline", count: 1 }],
+    byStatus: [
+      { label: "Online", count: 4 },
+      { label: "Offline", count: 1 }
+    ],
     mostProblematic: [{ assetId: "a1", name: "SRV-01", occurrences: 6, alertCount: 2 }],
     notSeenRecently: [{ assetId: "a2", name: "PC-09", statusLabel: "Offline", segmentName: "" }]
   },
@@ -50,7 +58,15 @@ const fullReport = {
 };
 
 const devices = [
-  { id: "d1", name: "SRV-01", ip: "10.0.0.1", status: "online", statusLabel: "Online", metrics: { cpu: 40, ram: 50, disk: 60 }, hardware: { model: "Dell R740" } }
+  {
+    id: "d1",
+    name: "SRV-01",
+    ip: "10.0.0.1",
+    status: "online",
+    statusLabel: "Online",
+    metrics: { cpu: 40, ram: 50, disk: 60 },
+    hardware: { model: "Dell R740" }
+  }
 ];
 
 function baseProps(overrides = {}) {
@@ -143,7 +159,13 @@ describe("DashboardPage", () => {
   });
 
   it("OS vencidas indisponivel usa o tom muted; relatorio vazio mostra os vazios", async () => {
-    fetchDashboardSummary.mockResolvedValue({ overview: { overdueServiceOrdersAvailable: false }, assets: {}, alerts: {}, serviceOrders: {}, business: { enabled: false, message: "Modo local" } });
+    fetchDashboardSummary.mockResolvedValue({
+      overview: { overdueServiceOrdersAvailable: false },
+      assets: {},
+      alerts: {},
+      serviceOrders: {},
+      business: { enabled: false, message: "Modo local" }
+    });
     render(<DashboardPage {...baseProps({ history: [] })} />);
     expect(await screen.findByText("Indisponível", { selector: ".sr-only" })).toBeInTheDocument();
     expect(screen.getByText("Modo local")).toBeInTheDocument();

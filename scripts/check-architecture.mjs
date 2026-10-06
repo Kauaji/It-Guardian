@@ -5,8 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const extensions = [".js", ".jsx", ".mjs"];
 const ignoredDirectories = new Set(["node_modules", "dist", "coverage"]);
-const importPattern =
-  /(?:import|export)\s+(?:[^"'`]*?\s+from\s+)?["']([^"']+)["']/g;
+const importPattern = /(?:import|export)\s+(?:[^"'`]*?\s+from\s+)?["']([^"']+)["']/g;
 const dynamicImportPattern = /\bimport\(\s*["']([^"']+)["']\s*\)/g;
 const forbiddenServerPatterns = [
   { pattern: /\bchild_process\b/, label: "child_process" },
@@ -16,7 +15,7 @@ const forbiddenServerPatterns = [
   { pattern: /\bspawn\s*\(/, label: "spawn()" },
   { pattern: /\bshell\s*:\s*true\b/, label: "shell: true" },
   { pattern: /\bnew\s+Function\s*\(/, label: "new Function()" },
-  { pattern: /\beval\s*\(/, label: "eval()" },
+  { pattern: /\beval\s*\(/, label: "eval()" }
 ];
 
 /**
@@ -29,23 +28,21 @@ export const layerRules = {
     forbiddenLayers: ["repositories", "services", "controllers", "routes", "middleware"],
     // Arquivos de server/src (relativos a ele) que o dominio nao pode importar.
     forbiddenFiles: ["database.js", "config/environment.js", "config/remoteAssistanceConfig.js"],
-    forbiddenBuiltins: [
-      "fs", "fs/promises", "net", "http", "https", "http2", "dns", "tls", "dgram", "child_process", "worker_threads"
-    ],
-    reason: "domain deve ser puro (regras sem banco, rede, env ou arquivos)",
+    forbiddenBuiltins: ["fs", "fs/promises", "net", "http", "https", "http2", "dns", "tls", "dgram", "child_process", "worker_threads"],
+    reason: "domain deve ser puro (regras sem banco, rede, env ou arquivos)"
   },
   repositories: {
     forbiddenLayers: ["services", "controllers", "routes", "middleware"],
-    reason: "repositories so fazem SQL e mapeamento; orquestracao pertence aos services",
+    reason: "repositories so fazem SQL e mapeamento; orquestracao pertence aos services"
   },
   services: {
     forbiddenLayers: ["controllers", "routes", "middleware"],
-    reason: "services nao conhecem HTTP (controllers, routes, middleware)",
+    reason: "services nao conhecem HTTP (controllers, routes, middleware)"
   },
   controllers: {
     forbiddenLayers: ["repositories"],
-    reason: "controllers falam com services, nunca direto com repositories",
-  },
+    reason: "controllers falam com services, nunca direto com repositories"
+  }
 };
 
 /**
@@ -82,7 +79,7 @@ function resolveLocalImport(importer, specifier) {
   const candidates = [
     candidate,
     ...extensions.map((extension) => `${candidate}${extension}`),
-    ...extensions.map((extension) => path.join(candidate, `index${extension}`)),
+    ...extensions.map((extension) => path.join(candidate, `index${extension}`))
   ];
   return candidates.find((file) => fs.existsSync(file) && fs.statSync(file).isFile()) ?? null;
 }
@@ -153,11 +150,7 @@ export function findLayerViolations({ root, serverSrc, file, source }) {
  * Analisa o repositorio: ciclos entre modulos locais, padroes proibidos no
  * servidor e dependencias entre camadas do backend.
  */
-export function analyzeArchitecture({
-  root = process.cwd(),
-  sourceRoots = ["client/src", "server/src"],
-  known = knownViolations,
-} = {}) {
+export function analyzeArchitecture({ root = process.cwd(), sourceRoots = ["client/src", "server/src"], known = knownViolations } = {}) {
   const serverSrc = path.join(root, "server", "src");
   const files = sourceRoots
     .map((sourceRoot) => path.join(root, sourceRoot))
@@ -227,7 +220,7 @@ export function analyzeArchitecture({
     violations,
     layerViolations: newLayerViolations,
     tolerated: layerViolations.length - newLayerViolations.length,
-    obsoleteExceptions,
+    obsoleteExceptions
   };
 }
 
@@ -240,24 +233,20 @@ export function formatReport(result) {
     lines.push(violation);
   }
   for (const entry of result.layerViolations) {
-    lines.push(`Violacao de camada: ${entry.file} -> ${entry.message}. ` +
-      "Mova a chamada para a camada correta (ex.: um servico fino) ou, so se for grande demais, " +
-      "registre em knownViolations (scripts/check-architecture.mjs).");
+    lines.push(
+      `Violacao de camada: ${entry.file} -> ${entry.message}. ` +
+        "Mova a chamada para a camada correta (ex.: um servico fino) ou, so se for grande demais, " +
+        "registre em knownViolations (scripts/check-architecture.mjs)."
+    );
   }
   for (const entry of result.obsoleteExceptions) {
-    lines.push(`Excecao obsoleta em knownViolations: ${entry.file} -> "${entry.import}" ` +
-      "nao e mais uma violacao; remova-a da lista.");
+    lines.push(`Excecao obsoleta em knownViolations: ${entry.file} -> "${entry.import}" ` + "nao e mais uma violacao; remova-a da lista.");
   }
   return lines;
 }
 
 export function hasProblems(result) {
-  return Boolean(
-    result.cycles.length ||
-      result.violations.length ||
-      result.layerViolations.length ||
-      result.obsoleteExceptions.length
-  );
+  return Boolean(result.cycles.length || result.violations.length || result.layerViolations.length || result.obsoleteExceptions.length);
 }
 
 function main() {

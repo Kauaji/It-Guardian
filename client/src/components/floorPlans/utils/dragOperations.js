@@ -11,21 +11,13 @@ import {
   snapObjectToAlignment
 } from "./editorGeometry.js";
 import { isRoomZone, normalizeRoomZone, resizeRoomGeometry } from "./roomGeometry.js";
-import {
-  attachOpeningToWall,
-  isAnchoredOpening,
-  isWallObject,
-  resizeWallEndpoint,
-  syncAnchoredOpenings
-} from "./wallGeometry.js";
+import { attachOpeningToWall, isAnchoredOpening, isWallObject, resizeWallEndpoint, syncAnchoredOpenings } from "./wallGeometry.js";
 
 const OBJECT_SNAP_DRAGS = ["object", "object-resize", "point"];
 
 /** Passo de grade do arrasto: fino para objetos e pontos, grade do plano para comodos. */
 export function getDragSnapSize(drag, editor) {
-  return OBJECT_SNAP_DRAGS.includes(drag.type)
-    ? getFineSnapSize(editor)
-    : editor?.plan?.snapSize || 25;
+  return OBJECT_SNAP_DRAGS.includes(drag.type) ? getFineSnapSize(editor) : editor?.plan?.snapSize || 25;
 }
 
 /** Deslocamento (ja ajustado a grade) do arrasto em relacao a origem. */
@@ -87,11 +79,9 @@ function applyObjectDrag(draft, drag, ctx) {
   const selectedIds = new Set(origins.map((object) => object.id));
   const movedTables = [];
   const objectDelta = { x: ctx.objectDeltaX, y: ctx.objectDeltaY };
-  draft.objects = (draft.objects || []).map((object) => (
-    selectedIds.has(object.id)
-      ? moveOneObject({ object, origins, draft, draftFloor, objectDelta, movedTables })
-      : object
-  ));
+  draft.objects = (draft.objects || []).map((object) =>
+    selectedIds.has(object.id) ? moveOneObject({ object, origins, draft, draftFloor, objectDelta, movedTables }) : object
+  );
   for (const movedTable of movedTables) {
     draft.objects = centerLinkedAssetsOnTable(draft.objects, movedTable);
   }
@@ -140,9 +130,7 @@ function applyRoomResizeDrag(draft, drag, ctx) {
     floor: ctx.floor,
     snapSize: ctx.snapSize
   });
-  draft.zones = draft.zones.map((zone) => (
-    zone.id === drag.id ? normalizeRoomZone({ ...zone, geometry: resized }, draft.plan) : zone
-  ));
+  draft.zones = draft.zones.map((zone) => (zone.id === drag.id ? normalizeRoomZone({ ...zone, geometry: resized }, draft.plan) : zone));
   shiftRoomChildren(draft, drag, resized.x - drag.originGeometry.x, resized.y - drag.originGeometry.y);
 }
 
@@ -155,15 +143,15 @@ function applyObjectResizeDrag(draft, drag, ctx) {
     resizedObject = isWallObject(source)
       ? resizeWallEndpoint(source, drag.side, ctx.point, draft.objects || [], ctx.snapSize)
       : resizeObjectGeometry({
-        object: source,
-        side: drag.side,
-        deltaX: ctx.point.x - drag.startX,
-        deltaY: ctx.point.y - drag.startY,
-        editor: draft,
-        floor: draftFloor,
-        snapSize: ctx.snapSize,
-        preserveAspectRatio: Boolean(ctx.shiftKey)
-      });
+          object: source,
+          side: drag.side,
+          deltaX: ctx.point.x - drag.startX,
+          deltaY: ctx.point.y - drag.startY,
+          editor: draft,
+          floor: draftFloor,
+          snapSize: ctx.snapSize,
+          preserveAspectRatio: Boolean(ctx.shiftKey)
+        });
     return resizedObject;
   });
   if (resizedObject && isTableObject(resizedObject)) {
@@ -174,15 +162,15 @@ function applyObjectResizeDrag(draft, drag, ctx) {
 
 function applyPointDrag(draft, drag, ctx) {
   const { floor, nextX, nextY } = ctx;
-  draft.connectionPoints = draft.connectionPoints.map((pointEntry) => (
+  draft.connectionPoints = draft.connectionPoints.map((pointEntry) =>
     pointEntry.id === drag.id
       ? {
-        ...pointEntry,
-        x: clamp(nextX, 0, floor?.width || DEFAULT_PLAN_SIZE.width),
-        y: clamp(nextY, 0, floor?.height || DEFAULT_PLAN_SIZE.height)
-      }
+          ...pointEntry,
+          x: clamp(nextX, 0, floor?.width || DEFAULT_PLAN_SIZE.width),
+          y: clamp(nextY, 0, floor?.height || DEFAULT_PLAN_SIZE.height)
+        }
       : pointEntry
-  ));
+  );
 }
 
 const DRAG_APPLIERS = {

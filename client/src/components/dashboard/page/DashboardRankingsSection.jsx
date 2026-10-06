@@ -1,7 +1,14 @@
 import { AlertTriangle, Clock3, TrendingUp, Users, WifiOff } from "lucide-react";
 import DashboardRankingList from "../DashboardRankingList.jsx";
 
-export default function DashboardRankingsSection({ slices, period, pending, onNavigateInventory, onNavigateAlerts, onNavigateServiceOrders }) {
+export default function DashboardRankingsSection({
+  slices,
+  period,
+  pending,
+  onNavigateInventory,
+  onNavigateAlerts,
+  onNavigateServiceOrders
+}) {
   const { mostProblematic, notSeenRecently, topRecurringAssets, oldestOpen, byTechnician } = slices;
   return (
     <>
@@ -17,7 +24,9 @@ export default function DashboardRankingsSection({ slices, period, pending, onNa
           renderItem={(item) => (
             <>
               <strong>{item.name}</strong>
-              <span>{item.occurrences} ocorrência(s) em {item.alertCount} alerta(s)</span>
+              <span>
+                {item.occurrences} ocorrência(s) em {item.alertCount} alerta(s)
+              </span>
             </>
           )}
         />
@@ -31,7 +40,9 @@ export default function DashboardRankingsSection({ slices, period, pending, onNa
           renderItem={(item) => (
             <>
               <strong>{item.name}</strong>
-              <span>{item.statusLabel} - {item.segmentName || "Sem segmento"}</span>
+              <span>
+                {item.statusLabel} - {item.segmentName || "Sem segmento"}
+              </span>
             </>
           )}
         />
@@ -58,7 +69,9 @@ export default function DashboardRankingsSection({ slices, period, pending, onNa
           onSelectItem={onNavigateServiceOrders}
           renderItem={(item) => (
             <>
-              <strong>{item.number} - {item.title}</strong>
+              <strong>
+                {item.number} - {item.title}
+              </strong>
               <span>Aberta desde {new Date(item.createdAt).toLocaleDateString("pt-BR")}</span>
             </>
           )}

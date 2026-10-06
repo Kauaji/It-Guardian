@@ -1,7 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildAgentAlerts } from "./agentAlerts.js";
-import { getAlertCategory, getAlertCompactLabel, getAlertConfidence, getAlertTrend, getAlertTypeLabel, getPriorityLabel, suggestedPriority } from "./alertCatalog.js";
+import {
+  getAlertCategory,
+  getAlertCompactLabel,
+  getAlertConfidence,
+  getAlertTrend,
+  getAlertTypeLabel,
+  getPriorityLabel,
+  suggestedPriority
+} from "./alertCatalog.js";
 import {
   buildAlertRuleUpdate,
   decideSuggestionRefresh,
@@ -51,7 +59,15 @@ test("configuracoes de aviso: minimos, janela do script limitada e cores invalid
 });
 
 test("regra de aviso: so campos enviados mudam e numeros respeitam minimos", () => {
-  const row = { threshold: 90, duration_minutes: 5, recurrence_count: 3, recurrence_window: "same_day", suggested_priority: "high", creates_suggestion: true, enabled: true };
+  const row = {
+    threshold: 90,
+    duration_minutes: 5,
+    recurrence_count: 3,
+    recurrence_window: "same_day",
+    suggested_priority: "high",
+    creates_suggestion: true,
+    enabled: true
+  };
   assert.deepEqual(buildAlertRuleUpdate(row, {}), {
     threshold: 90,
     durationMinutes: 5,
@@ -61,7 +77,15 @@ test("regra de aviso: so campos enviados mudam e numeros respeitam minimos", () 
     createsSuggestion: true,
     enabled: true
   });
-  const changed = buildAlertRuleUpdate(row, { threshold: "95", durationMinutes: -1, recurrenceCount: 0, recurrenceWindow: " last_24h ", suggestedPriority: "inexistente", createsSuggestion: "false", enabled: false });
+  const changed = buildAlertRuleUpdate(row, {
+    threshold: "95",
+    durationMinutes: -1,
+    recurrenceCount: 0,
+    recurrenceWindow: " last_24h ",
+    suggestedPriority: "inexistente",
+    createsSuggestion: "false",
+    enabled: false
+  });
   assert.equal(changed.threshold, 95);
   assert.equal(changed.durationMinutes, 0);
   assert.equal(changed.recurrenceCount, 1);
@@ -75,7 +99,10 @@ test("regra de aviso: so campos enviados mudam e numeros respeitam minimos", () 
 test("comentarios e sugestoes: validacao, silencio e status apos observacao", () => {
   assert.equal(normalizeAlertComment("  ok  "), "ok");
   assert.equal(normalizeAlertComment("a".repeat(2000)).length, 1000);
-  assert.throws(() => normalizeAlertComment("   "), (error) => error.statusCode === 400);
+  assert.throws(
+    () => normalizeAlertComment("   "),
+    (error) => error.statusCode === 400
+  );
 
   const future = new Date(Date.now() + 3600e3).toISOString();
   const past = new Date(Date.now() - 3600e3).toISOString();
@@ -113,35 +140,79 @@ test("catalogo: rotulos, prioridade sugerida, confianca e tendencia", () => {
 });
 
 test("insights: OS relacionadas, recorrencia pos-OS, falso positivo e previsao", () => {
-  const alert = { id: "a1", type: "cpu_high", metric: "CPU", title: "CPU", hostName: "PC-1", assetId: "as1", lastSeenAt: "2026-05-10T00:00:00Z", severity: "critical", occurrencesCount: 3, value: 95, threshold: 85 };
+  const alert = {
+    id: "a1",
+    type: "cpu_high",
+    metric: "CPU",
+    title: "CPU",
+    hostName: "PC-1",
+    assetId: "as1",
+    lastSeenAt: "2026-05-10T00:00:00Z",
+    severity: "critical",
+    occurrencesCount: 3,
+    value: 95,
+    threshold: 85
+  };
   const orders = [
     { id: "o1", number: "OS-1", assetId: "as1", problemType: "cpu_high", closedAt: "2026-05-08T00:00:00Z", status: "closed" },
     { id: "o2", number: "OS-2", assetId: "outro", problemType: "cpu_high" },
     { id: "o3", number: "OS-3", relatedAssetText: "PC-1", problemType: "cpu_high", status: "open", closedAt: null }
   ];
   const related = findRelatedOrders(alert, orders);
-  assert.deepEqual(related.map((order) => order.id), ["o1", "o3"]);
+  assert.deepEqual(
+    related.map((order) => order.id),
+    ["o1", "o3"]
+  );
   const recurrence = buildRecurrenceInsight(alert, related);
   assert.equal(recurrence.type, "post_service_order_recurrence");
   assert.equal(recurrence.summary, "Aviso voltou 2 dia(s) após a OS OS-1.");
   assert.equal(buildRecurrenceInsight({ ...alert, lastSeenAt: "2026-06-30T00:00:00Z" }, related), null, "mais de 14 dias");
   assert.equal(buildRecurrenceInsight(alert, []), null);
   assert.match(buildPriorityReason(alert, related), /crítico.*3 ocorrências.*OS aberta relacionada.*histórico recente/);
-  assert.equal(buildPriorityReason({}, []), "Prioridade sugerida porque o aviso ainda tem baixa recorrência e precisa de validação manual.");
+  assert.equal(
+    buildPriorityReason({}, []),
+    "Prioridade sugerida porque o aviso ainda tem baixa recorrência e precisa de validação manual."
+  );
 
-  const suggestions = [{ alertId: "a1", status: "rejected" }, { alertId: "a1", status: "rejected" }, { alertId: "a1", status: "pending" }, { alertId: "a2", status: "rejected" }];
+  const suggestions = [
+    { alertId: "a1", status: "rejected" },
+    { alertId: "a1", status: "rejected" },
+    { alertId: "a1", status: "pending" },
+    { alertId: "a2", status: "rejected" }
+  ];
   assert.equal(buildFalsePositiveInsight(alert, suggestions).summary, "Este aviso teve 2 sugestão(ões) recusada(s).");
   assert.equal(buildFalsePositiveInsight({ id: "a2" }, suggestions), null);
 
   assert.equal(buildCapacityForecast({ type: "network_high" }).available, false);
-  assert.equal(buildCapacityForecast({ type: "cpu_high", value: 50, threshold: 85 }).summary, "Sem dados suficientes para estimar esgotamento.");
-  assert.deepEqual(buildCapacityForecast(alert), { available: true, summary: "Tendência exige acompanhamento preventivo antes de nova coleta real.", metric: "CPU", currentValue: 95, threshold: 85 });
+  assert.equal(
+    buildCapacityForecast({ type: "cpu_high", value: 50, threshold: 85 }).summary,
+    "Sem dados suficientes para estimar esgotamento."
+  );
+  assert.deepEqual(buildCapacityForecast(alert), {
+    available: true,
+    summary: "Tendência exige acompanhamento preventivo antes de nova coleta real.",
+    metric: "CPU",
+    currentValue: 95,
+    threshold: 85
+  });
 
-  const location = getAlertLocation(alert, new Map([["as1", { segmentId: "s1", segmentName: "Seg", segmentGroupId: "g1" }]]), new Map([["g1", { id: "g1", name: "Grupo" }]]));
+  const location = getAlertLocation(
+    alert,
+    new Map([["as1", { segmentId: "s1", segmentName: "Seg", segmentGroupId: "g1" }]]),
+    new Map([["g1", { id: "g1", name: "Grupo" }]])
+  );
   assert.deepEqual(location, { groupId: "g1", groupName: "Grupo", segmentId: "s1", segmentName: "Seg" });
-  assert.deepEqual(getAlertLocation({ assetId: "x" }), { groupId: null, groupName: "Sem grupo", segmentId: null, segmentName: "Não organizadas" });
+  assert.deepEqual(getAlertLocation({ assetId: "x" }), {
+    groupId: null,
+    groupName: "Sem grupo",
+    segmentId: null,
+    segmentName: "Não organizadas"
+  });
 
-  const payload = buildSuggestionPayload({ type: "disk_full", hostName: "SRV", occurrencesCount: 2, severity: "critical" }, { suggestedPriority: "high" });
+  const payload = buildSuggestionPayload(
+    { type: "disk_full", hostName: "SRV", occurrencesCount: 2, severity: "critical" },
+    { suggestedPriority: "high" }
+  );
   assert.equal(payload.title, "Disco crítico em SRV");
   assert.equal(payload.suggestedPriority, "high");
   assert.equal(payload.suggestedProblemTypeId, "disk_full");
@@ -153,8 +224,26 @@ test("insights: OS relacionadas, recorrencia pos-OS, falso positivo e previsao",
 test("aviso e sugestao enriquecidos; correlacoes e resumo de insights", () => {
   const context = { serviceOrders: [], suggestions: [], segmentMap: new Map(), groupMap: new Map() };
   const alerts = [
-    { id: "a1", type: "cpu_high", hostName: "H1", severity: "critical", occurrencesCount: 1, value: 90, threshold: 85, lastSeenAt: "2026-01-01" },
-    { id: "a2", type: "cpu_high", hostName: "H2", severity: "high", occurrencesCount: 5, value: 90, threshold: 85, lastSeenAt: "2026-01-02" },
+    {
+      id: "a1",
+      type: "cpu_high",
+      hostName: "H1",
+      severity: "critical",
+      occurrencesCount: 1,
+      value: 90,
+      threshold: 85,
+      lastSeenAt: "2026-01-01"
+    },
+    {
+      id: "a2",
+      type: "cpu_high",
+      hostName: "H2",
+      severity: "high",
+      occurrencesCount: 5,
+      value: 90,
+      threshold: 85,
+      lastSeenAt: "2026-01-02"
+    },
     { id: "a3", type: "disk_full", hostName: "H3", severity: "high", occurrencesCount: 1 }
   ].map((alert) => buildEnrichedAlert(alert, context, alert.id === "a1" ? [{ id: "c" }] : []));
   assert.equal(alerts[0].recurrenceScore, 42);
@@ -175,7 +264,14 @@ test("aviso e sugestao enriquecidos; correlacoes e resumo de insights", () => {
   assert.deepEqual(insights.falsePositives, []);
   assert.equal(insights.capacity.length, 3);
 
-  const suggestion = { id: "s1", alertId: "ghost", suggestedPriority: "", occurrencesCount: 2, alertType: "ram_high", createdAt: "2026-01-01" };
+  const suggestion = {
+    id: "s1",
+    alertId: "ghost",
+    suggestedPriority: "",
+    occurrencesCount: 2,
+    alertType: "ram_high",
+    createdAt: "2026-01-01"
+  };
   const enriched = buildEnrichedSuggestion(suggestion, undefined, context);
   assert.equal(enriched.typeLabel, "Memória RAM acima do limite");
   assert.equal(enriched.recurrenceScore, 44);
@@ -191,7 +287,17 @@ test("aviso e sugestao enriquecidos; correlacoes e resumo de insights", () => {
 
 test("avisos do agente: limite de offline vem do parametro, nao do ambiente", () => {
   const now = new Date("2026-07-29T12:00:00.000Z");
-  const asset = { id: "a", hostname: "H", lastSeenAt: "2026-07-29T11:55:00.000Z", intervalSeconds: 60, cpuUsagePercent: 10, memoryUsedBytes: 1, memoryTotalBytes: 10, diskFreeBytes: 9, diskTotalBytes: 10 };
+  const asset = {
+    id: "a",
+    hostname: "H",
+    lastSeenAt: "2026-07-29T11:55:00.000Z",
+    intervalSeconds: 60,
+    cpuUsagePercent: 10,
+    memoryUsedBytes: 1,
+    memoryTotalBytes: 10,
+    diskFreeBytes: 9,
+    diskTotalBytes: 10
+  };
   assert.equal(buildAgentAlerts(asset, now).length, 0, "5 minutos < padrao de 10 minutos");
   const offline = buildAgentAlerts(asset, now, { offlineAfterMinutesSetting: 2 });
   assert.equal(offline.length, 1);

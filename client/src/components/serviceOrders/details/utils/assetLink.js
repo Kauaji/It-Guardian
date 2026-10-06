@@ -46,14 +46,14 @@ export function filterDevicesForLink(devices, segments, linkDraft) {
     if (linkDraft.segmentId && device.segmentId !== linkDraft.segmentId) return false;
     if (linkDraft.groupId) {
       const deviceSegment = segmentById.get(device.segmentId);
-      const deviceGroupId = device.groupId || device.segmentGroupId || device.group?.id || deviceSegment?.groupId || deviceSegment?.group?.id || "ungrouped";
+      const deviceGroupId =
+        device.groupId || device.segmentGroupId || device.group?.id || deviceSegment?.groupId || deviceSegment?.group?.id || "ungrouped";
       if (String(deviceGroupId) !== linkDraft.groupId) return false;
     }
     if (!term) return true;
-    return normalizeSearchText([device.name, device.ip, device.statusLabel, device.segmentName, device.groupName, device.segmentGroupName]
-      .filter(Boolean)
-      .join(" "))
-      .includes(term);
+    return normalizeSearchText(
+      [device.name, device.ip, device.statusLabel, device.segmentName, device.groupName, device.segmentGroupName].filter(Boolean).join(" ")
+    ).includes(term);
   });
 }
 

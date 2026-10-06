@@ -21,16 +21,7 @@ export const defaultInventoryTab = {
   order: 0
 };
 
-export const segmentPalette = [
-  "#2563eb",
-  "#16a34a",
-  "#7c3aed",
-  "#0891b2",
-  "#d97706",
-  "#dc2626",
-  "#ea580c",
-  "#db2777"
-];
+export const segmentPalette = ["#2563eb", "#16a34a", "#7c3aed", "#0891b2", "#d97706", "#dc2626", "#ea580c", "#db2777"];
 
 export function pickSegmentColor(segments) {
   const lastColor = segments.filter((segment) => !segment.isDefault).at(-1)?.color;
@@ -42,11 +33,7 @@ export function pickSegmentColor(segments) {
 }
 
 export function pickUnusedPaletteColor(items = []) {
-  const usedColors = new Set(
-    items
-      .map((item) => item?.color?.toLowerCase())
-      .filter(Boolean)
-  );
+  const usedColors = new Set(items.map((item) => item?.color?.toLowerCase()).filter(Boolean));
   const unusedColor = segmentPalette.find((color) => !usedColors.has(color.toLowerCase()));
 
   return unusedColor || pickSegmentColor(items);
@@ -82,10 +69,7 @@ export function normalizeInventoryTabs(value) {
 
   for (const [index, tab] of tabs.entries()) {
     const requestedName = tab.name?.trim();
-    const name =
-      !requestedName || requestedName === "Sem nome"
-        ? getNextInventoryTabName(normalized)
-        : requestedName;
+    const name = !requestedName || requestedName === "Sem nome" ? getNextInventoryTabName(normalized) : requestedName;
 
     normalized.push({
       ...defaultInventoryTab,
@@ -119,13 +103,7 @@ export function peripheralKey(peripheral) {
   return peripheral?.id || `${peripheral?.type || "item"}-${peripheral?.brand || ""}-${peripheral?.assetTag || ""}`;
 }
 
-export function applyInventoryLocalState(
-  devices,
-  removedPeripherals,
-  peripheralHistory,
-  maintenanceRecords = {},
-  manualPeripherals = {}
-) {
+export function applyInventoryLocalState(devices, removedPeripherals, peripheralHistory, maintenanceRecords = {}, manualPeripherals = {}) {
   return devices.map((device) => {
     const removed = new Set(removedPeripherals[device.id] || []);
     const collectedPeripherals = device.hardware?.peripherals || [];

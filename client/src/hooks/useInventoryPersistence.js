@@ -30,30 +30,16 @@ function persistState(setState, key, updater) {
 
 export function useInventoryPersistence(token) {
   const [machineAliases, setMachineAliases] = useState(() => readStoredObject(aliasKey));
-  const [machineObservations, setMachineObservations] = useState(() =>
-    readStoredObject(observationsKey)
+  const [machineObservations, setMachineObservations] = useState(() => readStoredObject(observationsKey));
+  const [removedPeripherals, setRemovedPeripherals] = useState(() => readStoredObject(peripheralRemovalsKey));
+  const [peripheralHistory, setPeripheralHistory] = useState(() => readStoredObject(peripheralHistoryKey));
+  const [manualPeripherals, setManualPeripherals] = useState(() => readStoredObject(manualPeripheralsKey));
+  const [maintenanceRecords, setMaintenanceRecords] = useState(() => readStoredJson(maintenanceRecordsKey, {}));
+  const [inventoryTabs, setInventoryTabs] = useState(() => normalizeInventoryTabs(readStoredJson(inventoryTabsKey, [defaultInventoryTab])));
+  const [activeInventoryTabId, setActiveInventoryTabId] = useState(
+    () => localStorage.getItem(activeInventoryTabKey) || defaultInventoryTab.id
   );
-  const [removedPeripherals, setRemovedPeripherals] = useState(() =>
-    readStoredObject(peripheralRemovalsKey)
-  );
-  const [peripheralHistory, setPeripheralHistory] = useState(() =>
-    readStoredObject(peripheralHistoryKey)
-  );
-  const [manualPeripherals, setManualPeripherals] = useState(() =>
-    readStoredObject(manualPeripheralsKey)
-  );
-  const [maintenanceRecords, setMaintenanceRecords] = useState(() =>
-    readStoredJson(maintenanceRecordsKey, {})
-  );
-  const [inventoryTabs, setInventoryTabs] = useState(() =>
-    normalizeInventoryTabs(readStoredJson(inventoryTabsKey, [defaultInventoryTab]))
-  );
-  const [activeInventoryTabId, setActiveInventoryTabId] = useState(() =>
-    localStorage.getItem(activeInventoryTabKey) || defaultInventoryTab.id
-  );
-  const [inventoryTabMeta, setInventoryTabMeta] = useState(() =>
-    normalizeInventoryTabMeta(readStoredJson(inventoryTabMetaKey, {}))
-  );
+  const [inventoryTabMeta, setInventoryTabMeta] = useState(() => normalizeInventoryTabMeta(readStoredJson(inventoryTabMetaKey, {})));
   const inventoryPreferenceHydrated = useRef(false);
 
   useEffect(() => {
@@ -96,15 +82,7 @@ export function useInventoryPersistence(token) {
     }, 500);
 
     return () => window.clearTimeout(timeoutId);
-  }, [
-    machineAliases,
-    machineObservations,
-    maintenanceRecords,
-    manualPeripherals,
-    peripheralHistory,
-    removedPeripherals,
-    token
-  ]);
+  }, [machineAliases, machineObservations, maintenanceRecords, manualPeripherals, peripheralHistory, removedPeripherals, token]);
 
   const saveMachineAliases = useCallback((updater) => {
     persistState(setMachineAliases, aliasKey, updater);

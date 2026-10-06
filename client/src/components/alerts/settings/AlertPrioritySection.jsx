@@ -24,12 +24,7 @@ function PriorityColors({ settings, disabled }) {
           />
         </label>
       ))}
-      <button
-        type="button"
-        className="ghost-action compact-action"
-        disabled={disabled}
-        onClick={settings.resetColors}
-      >
+      <button type="button" className="ghost-action compact-action" disabled={disabled} onClick={settings.resetColors}>
         <RotateCcw size={15} />
         Padrão
       </button>

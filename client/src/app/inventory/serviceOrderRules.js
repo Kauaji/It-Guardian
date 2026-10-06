@@ -30,6 +30,8 @@ export function getServiceOrderModeError(payload, systemMode) {
 export function isMaintenanceServiceOrder(order) {
   return (
     Boolean(order?.assetId) &&
-    String(order?.category || "").trim().toLowerCase() === "manutencao"
+    String(order?.category || "")
+      .trim()
+      .toLowerCase() === "manutencao"
   );
 }

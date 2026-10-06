@@ -72,7 +72,10 @@ test("buildAlertEvents gera criado, reconhecido e resolvido quando aplicavel", (
   const events = buildAlertEvents("asset-1", [alert]);
 
   assert.equal(events.length, 3);
-  assert.deepEqual(events.map((event) => event.type), ["alert_created", "alert_acknowledged", "alert_resolved"]);
+  assert.deepEqual(
+    events.map((event) => event.type),
+    ["alert_created", "alert_acknowledged", "alert_resolved"]
+  );
   assert.equal(events[0].severity, "critical");
 });
 
@@ -116,9 +119,33 @@ test("resolveBackboneSeverity marca preventivas e topologia como info, e o resto
 
 test("buildBackboneEvents exclui prefixos ja cobertos por builders dedicados", () => {
   const rows = [
-    { id: "h1", eventType: "service_order_created", message: "OS criada", createdAt: "2026-01-01T00:00:00.000Z", oldValue: null, newValue: null, userName: null },
-    { id: "h2", eventType: "remote_assistance_session_started", message: "Sessao", createdAt: "2026-01-01T00:00:00.000Z", oldValue: null, newValue: null, userName: null },
-    { id: "h3", eventType: "maintenance", message: "Maquina colocada em manutencao", createdAt: "2026-01-01T00:00:00.000Z", oldValue: null, newValue: null, userName: "Joao" }
+    {
+      id: "h1",
+      eventType: "service_order_created",
+      message: "OS criada",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      oldValue: null,
+      newValue: null,
+      userName: null
+    },
+    {
+      id: "h2",
+      eventType: "remote_assistance_session_started",
+      message: "Sessao",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      oldValue: null,
+      newValue: null,
+      userName: null
+    },
+    {
+      id: "h3",
+      eventType: "maintenance",
+      message: "Maquina colocada em manutencao",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      oldValue: null,
+      newValue: null,
+      userName: "Joao"
+    }
   ];
 
   const events = buildBackboneEvents("asset-1", rows);

@@ -7,7 +7,11 @@ export function filterRecords(records, search) {
   const term = search.trim().toLowerCase();
   if (!term) return records;
   return records.filter((record) =>
-    Object.values(record).some((value) => String(value || "").toLowerCase().includes(term))
+    Object.values(record).some((value) =>
+      String(value || "")
+        .toLowerCase()
+        .includes(term)
+    )
   );
 }
 

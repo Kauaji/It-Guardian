@@ -9,7 +9,9 @@ function ScriptList({ preventive }) {
     <section className="preventive-script-list">
       <div>
         <h4>Verificações selecionáveis</h4>
-        <p>{recommendations.recommended?.length ? "Recomendações aparecem primeiro." : "Selecione máquinas para melhorar as recomendações."}</p>
+        <p>
+          {recommendations.recommended?.length ? "Recomendações aparecem primeiro." : "Selecione máquinas para melhorar as recomendações."}
+        </p>
       </div>
       {recommendations.loading && <p className="empty">Carregando recomendações...</p>}
       {recommendations.error && <p className="empty">{recommendations.error}</p>}
@@ -24,9 +26,7 @@ function ScriptList({ preventive }) {
           onToggleDetails={selection.toggleScriptDetails}
         />
       ))}
-      {!orderedScripts.length && (
-        <p className="empty">Nenhuma verificação/script ativo cadastrado.</p>
-      )}
+      {!orderedScripts.length && <p className="empty">Nenhuma verificação/script ativo cadastrado.</p>}
     </section>
   );
 }

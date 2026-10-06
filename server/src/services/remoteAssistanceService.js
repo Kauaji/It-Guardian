@@ -11,10 +11,7 @@
  * As regras puras (entrada permitida, normalizacao, token) estao em
  * domain/remoteAssistance/* e domain/remoteAssistancePolicy.js.
  */
-export {
-  closeAbandonedRemoteAssistanceSessions,
-  endRemoteAssistanceSessionsOnLogout
-} from "./remoteAssistance/remoteAssistanceAudit.js";
+export { closeAbandonedRemoteAssistanceSessions, endRemoteAssistanceSessionsOnLogout } from "./remoteAssistance/remoteAssistanceAudit.js";
 export {
   endRemoteAssistanceByTechnician,
   getRemoteAssistanceEventIntegrity,

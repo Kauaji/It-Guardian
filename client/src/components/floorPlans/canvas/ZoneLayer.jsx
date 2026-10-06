@@ -26,7 +26,9 @@ function GenericZone({ zone, selected, onPointerDown, onSelect }) {
         strokeDasharray={zone.zoneType === "segment" ? "8 7" : "0"}
         strokeWidth={selected ? 4 : 2}
       />
-      <text x={(geometry.x || 0) + 12} y={(geometry.y || 0) + 24}>{zone.name}</text>
+      <text x={(geometry.x || 0) + 12} y={(geometry.y || 0) + 24}>
+        {zone.name}
+      </text>
     </g>
   );
 }
@@ -48,14 +50,7 @@ export default function ZoneLayer({ zones, selected, plan, onPointerDown, onSele
       );
     }
     if (isPaintAreaZone(zone)) {
-      return (
-        <PaintAreaShape
-          key={zone.id}
-          zone={zone}
-          selected={zoneSelected}
-          onSelect={() => onSelect({ type: "zone", id: zone.id })}
-        />
-      );
+      return <PaintAreaShape key={zone.id} zone={zone} selected={zoneSelected} onSelect={() => onSelect({ type: "zone", id: zone.id })} />;
     }
     return <GenericZone key={zone.id} zone={zone} selected={zoneSelected} onPointerDown={onPointerDown} onSelect={onSelect} />;
   });

@@ -80,36 +80,131 @@ export function armchairGlyph({ width, height, inset }) {
 /** Mesa lateral, cabideiro, vaso de planta e luminaria de piso. */
 export function smallFurnitureGlyph({ type, width, height, cx, cy, inset }) {
   if (type === "potted_plant") {
-    return <><circle cx={cx} cy={cy} r={Math.min(width, height) * 0.24} /><path d={`M ${cx} ${cy} C ${cx - 18} ${cy - 18}, ${cx - 22} ${cy + 8}, ${cx} ${cy + 2} C ${cx + 18} ${cy + 18}, ${cx + 22} ${cy - 8}, ${cx} ${cy - 2}`} /><circle cx={cx} cy={cy} r="3" /></>;
+    return (
+      <>
+        <circle cx={cx} cy={cy} r={Math.min(width, height) * 0.24} />
+        <path
+          d={`M ${cx} ${cy} C ${cx - 18} ${cy - 18}, ${cx - 22} ${cy + 8}, ${cx} ${cy + 2} C ${cx + 18} ${cy + 18}, ${cx + 22} ${cy - 8}, ${cx} ${cy - 2}`}
+        />
+        <circle cx={cx} cy={cy} r="3" />
+      </>
+    );
   }
   if (type === "coat_rack") {
-    return <><circle cx={cx} cy={cy} r="5" /><line x1={cx} y1={inset} x2={cx} y2={height - inset} /><line x1={cx} y1={cy} x2={inset} y2={height - inset} /><line x1={cx} y1={cy} x2={width - inset} y2={height - inset} /><path d={`M ${cx} ${inset + 3} L ${cx - 10} ${inset + 13} M ${cx} ${inset + 3} L ${cx + 10} ${inset + 13}`} /></>;
+    return (
+      <>
+        <circle cx={cx} cy={cy} r="5" />
+        <line x1={cx} y1={inset} x2={cx} y2={height - inset} />
+        <line x1={cx} y1={cy} x2={inset} y2={height - inset} />
+        <line x1={cx} y1={cy} x2={width - inset} y2={height - inset} />
+        <path d={`M ${cx} ${inset + 3} L ${cx - 10} ${inset + 13} M ${cx} ${inset + 3} L ${cx + 10} ${inset + 13}`} />
+      </>
+    );
   }
   if (type === "floor_lamp") {
-    return <><circle cx={cx} cy={cy} r={Math.min(width, height) * 0.32} /><circle cx={cx} cy={cy} r={Math.min(width, height) * 0.16} /><line x1={cx - 8} y1={cy} x2={cx + 8} y2={cy} /></>;
+    return (
+      <>
+        <circle cx={cx} cy={cy} r={Math.min(width, height) * 0.32} />
+        <circle cx={cx} cy={cy} r={Math.min(width, height) * 0.16} />
+        <line x1={cx - 8} y1={cy} x2={cx + 8} y2={cy} />
+      </>
+    );
   }
-  return <><Rect x={inset} y={inset} width={width - inset * 2} height={height - inset * 2} rx={3} /><line x1={inset + 4} y1={cy} x2={width - inset - 4} y2={cy} /><circle cx={width - inset - 7} cy={cy - 5} r="1.7" /></>;
+  return (
+    <>
+      <Rect x={inset} y={inset} width={width - inset * 2} height={height - inset * 2} rx={3} />
+      <line x1={inset + 4} y1={cy} x2={width - inset - 4} y2={cy} />
+      <circle cx={width - inset - 7} cy={cy - 5} r="1.7" />
+    </>
+  );
 }
 
 export function bedGlyph({ type, width, height, inset }) {
-  return <><Rect x={inset} y={inset} width={width - inset * 2} height={height - inset * 2} rx={6} /><Rect x={inset + 5} y={inset + 5} width={width - inset * 2 - 10} height={Math.max(12, height * 0.22)} rx={5} /><line x1={inset - 2} y1={height * 0.25} x2={inset - 2} y2={height * 0.75} /><line x1={width - inset + 2} y1={height * 0.25} x2={width - inset + 2} y2={height * 0.75} />{type === "stretcher" ? <><circle cx={inset + 3} cy={height - 3} r="3" /><circle cx={width - inset - 3} cy={height - 3} r="3" /></> : null}</>;
+  return (
+    <>
+      <Rect x={inset} y={inset} width={width - inset * 2} height={height - inset * 2} rx={6} />
+      <Rect x={inset + 5} y={inset + 5} width={width - inset * 2 - 10} height={Math.max(12, height * 0.22)} rx={5} />
+      <line x1={inset - 2} y1={height * 0.25} x2={inset - 2} y2={height * 0.75} />
+      <line x1={width - inset + 2} y1={height * 0.25} x2={width - inset + 2} y2={height * 0.75} />
+      {type === "stretcher" ? (
+        <>
+          <circle cx={inset + 3} cy={height - 3} r="3" />
+          <circle cx={width - inset - 3} cy={height - 3} r="3" />
+        </>
+      ) : null}
+    </>
+  );
 }
 
 /** Carrinho medico, balcoes, sofa e banco de espera. */
 export function counterGlyph({ type, width, height, cy, inset }) {
   const cushioned = ["sofa", "waiting_bench"].includes(type);
-  return <><Rect x={inset} y={inset} width={width - inset * 2} height={height - inset * 2} rx={cushioned ? 10 : 3} /><line x1={inset + 5} y1={cy} x2={width - inset - 5} y2={cy} />{cushioned ? <><line x1={width * 0.34} y1={inset + 5} x2={width * 0.34} y2={height - inset - 5} /><line x1={width * 0.66} y1={inset + 5} x2={width * 0.66} y2={height - inset - 5} /></> : null}{type === "medical_cart" ? <><circle cx={inset + 5} cy={height - 3} r="3" /><circle cx={width - inset - 5} cy={height - 3} r="3" /></> : null}</>;
+  return (
+    <>
+      <Rect x={inset} y={inset} width={width - inset * 2} height={height - inset * 2} rx={cushioned ? 10 : 3} />
+      <line x1={inset + 5} y1={cy} x2={width - inset - 5} y2={cy} />
+      {cushioned ? (
+        <>
+          <line x1={width * 0.34} y1={inset + 5} x2={width * 0.34} y2={height - inset - 5} />
+          <line x1={width * 0.66} y1={inset + 5} x2={width * 0.66} y2={height - inset - 5} />
+        </>
+      ) : null}
+      {type === "medical_cart" ? (
+        <>
+          <circle cx={inset + 5} cy={height - 3} r="3" />
+          <circle cx={width - inset - 5} cy={height - 3} r="3" />
+        </>
+      ) : null}
+    </>
+  );
 }
 
 export function kitchenGlyph({ type, width, height, cy, inset }) {
-  return <><Rect x={inset} y={inset} width={width - inset * 2} height={height - inset * 2} rx={4} />{type === "fridge" ? <><line x1={inset + 4} y1={cy} x2={width - inset - 4} y2={cy} /><line x1={width - inset - 8} y1={inset + 6} x2={width - inset - 8} y2={cy - 5} /><line x1={width - inset - 8} y1={cy + 5} x2={width - inset - 8} y2={height - inset - 6} /></> : <><Rect x={inset + 6} y={inset + 6} width={width - inset * 2 - 18} height={height - inset * 2 - 12} rx={2} /><circle cx={width - inset - 6} cy={cy - 5} r="2" /><circle cx={width - inset - 6} cy={cy + 5} r="2" /></>}</>;
+  return (
+    <>
+      <Rect x={inset} y={inset} width={width - inset * 2} height={height - inset * 2} rx={4} />
+      {type === "fridge" ? (
+        <>
+          <line x1={inset + 4} y1={cy} x2={width - inset - 4} y2={cy} />
+          <line x1={width - inset - 8} y1={inset + 6} x2={width - inset - 8} y2={cy - 5} />
+          <line x1={width - inset - 8} y1={cy + 5} x2={width - inset - 8} y2={height - inset - 6} />
+        </>
+      ) : (
+        <>
+          <Rect x={inset + 6} y={inset + 6} width={width - inset * 2 - 18} height={height - inset * 2 - 12} rx={2} />
+          <circle cx={width - inset - 6} cy={cy - 5} r="2" />
+          <circle cx={width - inset - 6} cy={cy + 5} r="2" />
+        </>
+      )}
+    </>
+  );
 }
 
 export function stairsGlyph({ width, height, cx, inset }) {
   const count = 6;
-  return <>{Array.from({ length: count }, (_, index) => <line key={index} x1={inset} y1={inset + ((height - inset * 2) * index) / (count - 1)} x2={width - inset} y2={inset + ((height - inset * 2) * index) / (count - 1)} />)}<path d={`M ${cx} ${height - inset} V ${inset + 4} M ${cx} ${inset + 4} L ${cx - 6} ${inset + 12} M ${cx} ${inset + 4} L ${cx + 6} ${inset + 12}`} /></>;
+  return (
+    <>
+      {Array.from({ length: count }, (_, index) => (
+        <line
+          key={index}
+          x1={inset}
+          y1={inset + ((height - inset * 2) * index) / (count - 1)}
+          x2={width - inset}
+          y2={inset + ((height - inset * 2) * index) / (count - 1)}
+        />
+      ))}
+      <path
+        d={`M ${cx} ${height - inset} V ${inset + 4} M ${cx} ${inset + 4} L ${cx - 6} ${inset + 12} M ${cx} ${inset + 4} L ${cx + 6} ${inset + 12}`}
+      />
+    </>
+  );
 }
 
 export function fallbackGlyph({ width, height, cy, inset }) {
-  return <><Rect x={inset} y={inset} width={width - inset * 2} height={height - inset * 2} rx={5} /><line x1={inset + 5} y1={cy} x2={width - inset - 5} y2={cy} /></>;
+  return (
+    <>
+      <Rect x={inset} y={inset} width={width - inset * 2} height={height - inset * 2} rx={5} />
+      <line x1={inset + 5} y1={cy} x2={width - inset - 5} y2={cy} />
+    </>
+  );
 }

@@ -17,8 +17,7 @@ function StatusLine({ status }) {
   }
   return (
     <p className="auth-status on">
-      <ShieldCheck size={18} aria-hidden="true" /> <strong>Ativada.</strong> Códigos de recuperação restantes:{" "}
-      {status.recoveryCodesLeft}.
+      <ShieldCheck size={18} aria-hidden="true" /> <strong>Ativada.</strong> Códigos de recuperação restantes: {status.recoveryCodesLeft}.
     </p>
   );
 }
@@ -76,9 +75,7 @@ export default function MfaSection({ token, user, notify, onUserChanged }) {
   return (
     <section className="account-section" aria-labelledby="mfa-section-title">
       <h3 id="mfa-section-title">Verificação em duas etapas (MFA)</h3>
-      <p className="auth-step-text">
-        Pede um código do seu aplicativo autenticador além da senha. Protege a conta mesmo se a senha vazar.
-      </p>
+      <p className="auth-step-text">Pede um código do seu aplicativo autenticador além da senha. Protege a conta mesmo se a senha vazar.</p>
       <FormMessage>{loadError}</FormMessage>
       {status && <StatusLine status={status} />}
 

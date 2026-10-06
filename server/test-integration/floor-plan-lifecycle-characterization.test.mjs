@@ -67,7 +67,10 @@ test("planta: criar normaliza payload, atualizar preserva campos, editor substit
   const duplicateTab = await api(baseUrl, cookie, "POST", "/floor-plans", { name: "Outra", inventoryTabId: tabId });
   assert.equal(duplicateTab.status, 409);
   const listedByTab = await api(baseUrl, cookie, "GET", `/floor-plans?inventoryTabId=${tabId}`);
-  assert.deepEqual(listedByTab.body.plans.map((plan) => plan.id), [planId]);
+  assert.deepEqual(
+    listedByTab.body.plans.map((plan) => plan.id),
+    [planId]
+  );
   assert.equal((await api(baseUrl, cookie, "GET", "/floor-plans/nao-existe")).status, 404);
 
   const updated = await api(baseUrl, cookie, "PATCH", `/floor-plans/${planId}`, { name: "Planta A2", status: "active", gridSize: 40 });
@@ -91,8 +94,25 @@ test("planta: criar normaliza payload, atualizar preserva campos, editor substit
       { id: "obj-1", floorId, objectType: "server", label: "Servidor", x: 10, y: 20, width: 80, height: 50, metadata: { a: 1 } },
       { id: "obj-2", floorId: "andar-2", label: "PC", x: 30, y: 40 }
     ],
-    connectionPoints: [{ id: "pt-1", floorId, pointType: "network", label: "RJ45", linkedObjectId: "obj-1", x: 5, y: 5 }, { id: "pt-2", floorId, pointType: "power", label: "Tomada", x: 50, y: 50 }],
-    cableRoutes: [{ id: "rt-1", floorId, routeType: "network", label: "Cabo 1", color: "#112233", sourcePointId: "pt-1", targetPointId: "pt-2", path: [{ x: 5, y: 5 }, { x: 50, y: 50 }] }]
+    connectionPoints: [
+      { id: "pt-1", floorId, pointType: "network", label: "RJ45", linkedObjectId: "obj-1", x: 5, y: 5 },
+      { id: "pt-2", floorId, pointType: "power", label: "Tomada", x: 50, y: 50 }
+    ],
+    cableRoutes: [
+      {
+        id: "rt-1",
+        floorId,
+        routeType: "network",
+        label: "Cabo 1",
+        color: "#112233",
+        sourcePointId: "pt-1",
+        targetPointId: "pt-2",
+        path: [
+          { x: 5, y: 5 },
+          { x: 50, y: 50 }
+        ]
+      }
+    ]
   });
   assert.equal(saved.status, 200, JSON.stringify(saved.body));
   const editor = saved.body.plan;
@@ -114,7 +134,10 @@ test("planta: criar normaliza payload, atualizar preserva campos, editor substit
     floors: editor.floors,
     zones: editor.zones,
     objects: editor.objects,
-    connectionPoints: [{ id: "pt-a", floorId, pointType: "power", x: 1, y: 1 }, { id: "pt-b", floorId, x: 2, y: 2 }],
+    connectionPoints: [
+      { id: "pt-a", floorId, pointType: "power", x: 1, y: 1 },
+      { id: "pt-b", floorId, x: 2, y: 2 }
+    ],
     cableRoutes: [{ id: "rt-a", floorId, routeType: "network", sourcePointId: "pt-a", targetPointId: "pt-b" }]
   });
   assert.equal(withDefaults.status, 200, JSON.stringify(withDefaults.body));
@@ -132,7 +155,10 @@ test("planta: criar normaliza payload, atualizar preserva campos, editor substit
 
   const invalidEditor = await api(baseUrl, cookie, "PATCH", `/floor-plans/${planId}/editor-data`, {
     floors: [{ id: floorId, name: "Térreo" }],
-    objects: [{ id: "obj-1", floorId, label: "A" }, { id: "obj-1", floorId, label: "Repetido" }]
+    objects: [
+      { id: "obj-1", floorId, label: "A" },
+      { id: "obj-1", floorId, label: "Repetido" }
+    ]
   });
   assert.equal(invalidEditor.status, 400, JSON.stringify(invalidEditor.body));
   const unchanged = await api(baseUrl, cookie, "GET", `/floor-plans/${planId}`);

@@ -40,7 +40,10 @@ describe("sortWidgetsByPosition", () => {
   });
 
   it("nao muta o array original", () => {
-    const widgets = [{ id: "b", x: 0, y: 1 }, { id: "a", x: 0, y: 0 }];
+    const widgets = [
+      { id: "b", x: 0, y: 1 },
+      { id: "a", x: 0, y: 0 }
+    ];
     const sorted = sortWidgetsByPosition(widgets);
     expect(sorted).not.toBe(widgets);
     expect(widgets[0].id).toBe("b");
@@ -54,7 +57,10 @@ describe("sortWidgetsByPosition", () => {
 
 describe("reindexWidgetPositions", () => {
   it("reindexa y sequencialmente preservando a ordem recebida, com x sempre 0", () => {
-    const widgets = [{ id: "a", x: 3, y: 9 }, { id: "b", x: 1, y: 4 }];
+    const widgets = [
+      { id: "a", x: 3, y: 9 },
+      { id: "b", x: 1, y: 4 }
+    ];
     expect(reindexWidgetPositions(widgets)).toEqual([
       { id: "a", x: 0, y: 0 },
       { id: "b", x: 0, y: 1 }

@@ -4,10 +4,7 @@ import { linkFromRow } from "./topologyMappers.js";
 
 export async function listNetworkTopologyLinks(mapId) {
   await getMapOrThrow(mapId);
-  const result = await query(
-    "SELECT * FROM network_topology_links WHERE map_id = $1 ORDER BY created_at ASC",
-    [mapId]
-  );
+  const result = await query("SELECT * FROM network_topology_links WHERE map_id = $1 ORDER BY created_at ASC", [mapId]);
   return result.rows.map(linkFromRow);
 }
 

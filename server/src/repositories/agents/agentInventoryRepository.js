@@ -9,14 +9,9 @@ import { assetFromRow } from "./agentMappers.js";
 
 /** Estado de presenca anterior da maquina (null na primeira vez que ela aparece). */
 export async function findAgentAssetPresence(db, assetId) {
-  const previous = await db(
-    "SELECT asset_id, last_seen_at, interval_seconds FROM agent_assets WHERE asset_id = $1",
-    [assetId]
-  );
+  const previous = await db("SELECT asset_id, last_seen_at, interval_seconds FROM agent_assets WHERE asset_id = $1", [assetId]);
   const row = previous.rows[0];
-  return row
-    ? { assetId: row.asset_id, lastSeenAt: row.last_seen_at, intervalSeconds: row.interval_seconds }
-    : null;
+  return row ? { assetId: row.asset_id, lastSeenAt: row.last_seen_at, intervalSeconds: row.interval_seconds } : null;
 }
 
 /** Cria ou atualiza o ativo do agente com o inventario recebido; preserva o apelido definido pelo operador. */

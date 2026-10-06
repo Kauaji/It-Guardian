@@ -13,19 +13,17 @@ const { captured, captureStub } = vi.hoisted(() => {
   const captured = {};
   return {
     captured,
-    captureStub: (name, { render = false } = {}) => async () => {
-      const { createElement } = await import("react");
-      return {
-        default: (props) => {
-          captured[name] = props;
-          return createElement(
-            "div",
-            { "data-testid": name },
-            ...(render ? [props.floorPlansView, props.topologyView] : [])
-          );
-        }
-      };
-    }
+    captureStub:
+      (name, { render = false } = {}) =>
+      async () => {
+        const { createElement } = await import("react");
+        return {
+          default: (props) => {
+            captured[name] = props;
+            return createElement("div", { "data-testid": name }, ...(render ? [props.floorPlansView, props.topologyView] : []));
+          }
+        };
+      }
   };
 });
 
@@ -53,7 +51,9 @@ const keysOf = (value) => Object.keys(value).sort();
 // Todo callback (on*/set*) precisa ser funcao e nenhuma prop pode chegar
 // undefined: protege contra nomes trocados entre as fatias do workspace.
 function expectWired(props) {
-  const undefinedKeys = Object.entries(props).filter(([, value]) => value === undefined).map(([key]) => key);
+  const undefinedKeys = Object.entries(props)
+    .filter(([, value]) => value === undefined)
+    .map(([key]) => key);
   expect(undefinedKeys).toEqual([]);
   const notFunctions = Object.entries(props)
     .filter(([key, value]) => /^(on[A-Z]|set[A-Z])/.test(key) && typeof value !== "function")
@@ -62,34 +62,191 @@ function expectWired(props) {
 }
 
 const oldProps = {
-  InventoryBoard: ["activeTab", "activeTabId", "aliases", "bulkMoveTarget", "canManage", "devices", "floorPlansView", "groups", "isBulkSelectionDragging", "machinesBySegment", "moveModal", "moveTarget", "notify", "observations", "onAddObservation", "onAddPeripheral", "onAliasSave", "onBulkMarkBackup", "onBulkMove", "onBulkMoveTargetChange", "onBulkPrint", "onChangeDeviceType", "onChangeGroupColor", "onChangeSegmentColor", "onChangeTabColor", "onClearSelection", "onCloseMoveModal", "onCreateGroup", "onCreateManualAsset", "onCreateSegment", "onCreateTab", "onDeleteGroup", "onDeleteSegment", "onDeleteTab", "onMoveGroupOrder", "onMoveMachine", "onMoveSegmentOrder", "onMoveSegmentToGroup", "onOpenMoveModal", "onPutMaintenance", "onRefreshPing", "onRemoveMachine", "onRemovePeripheral", "onRenameGroup", "onRenameSegment", "onRenameTab", "onSelectAsset", "onSelectGroup", "onSelectSegment", "onSelectTab", "onToggleBackup", "onToggleGroup", "onToggleSelection", "search", "segments", "selectedAssetIds", "selectedGroupId", "selectedSegmentId", "setMoveTarget", "setSearch", "tabs", "token", "topologyView", "user", "userName"],
-  ServiceOrdersBoard: ["activeTab", "devices", "groups", "notify", "onAddHistory", "onCreate", "onDelete", "onOpenCalendar", "onReleaseBackup", "onReopen", "onSelectBackup", "onStatusChange", "onUpdate", "permissions", "remoteScriptExecutionEnabled", "saving", "segments", "serviceOrders", "systemMode", "tabs", "token", "user"],
-  TechnicalCalendarPage: ["devices", "focusServiceOrder", "groups", "notify", "onFocusHandled", "permissions", "segments", "serviceOrders", "tabs", "token"],
+  InventoryBoard: [
+    "activeTab",
+    "activeTabId",
+    "aliases",
+    "bulkMoveTarget",
+    "canManage",
+    "devices",
+    "floorPlansView",
+    "groups",
+    "isBulkSelectionDragging",
+    "machinesBySegment",
+    "moveModal",
+    "moveTarget",
+    "notify",
+    "observations",
+    "onAddObservation",
+    "onAddPeripheral",
+    "onAliasSave",
+    "onBulkMarkBackup",
+    "onBulkMove",
+    "onBulkMoveTargetChange",
+    "onBulkPrint",
+    "onChangeDeviceType",
+    "onChangeGroupColor",
+    "onChangeSegmentColor",
+    "onChangeTabColor",
+    "onClearSelection",
+    "onCloseMoveModal",
+    "onCreateGroup",
+    "onCreateManualAsset",
+    "onCreateSegment",
+    "onCreateTab",
+    "onDeleteGroup",
+    "onDeleteSegment",
+    "onDeleteTab",
+    "onMoveGroupOrder",
+    "onMoveMachine",
+    "onMoveSegmentOrder",
+    "onMoveSegmentToGroup",
+    "onOpenMoveModal",
+    "onPutMaintenance",
+    "onRefreshPing",
+    "onRemoveMachine",
+    "onRemovePeripheral",
+    "onRenameGroup",
+    "onRenameSegment",
+    "onRenameTab",
+    "onSelectAsset",
+    "onSelectGroup",
+    "onSelectSegment",
+    "onSelectTab",
+    "onToggleBackup",
+    "onToggleGroup",
+    "onToggleSelection",
+    "search",
+    "segments",
+    "selectedAssetIds",
+    "selectedGroupId",
+    "selectedSegmentId",
+    "setMoveTarget",
+    "setSearch",
+    "tabs",
+    "token",
+    "topologyView",
+    "user",
+    "userName"
+  ],
+  ServiceOrdersBoard: [
+    "activeTab",
+    "devices",
+    "groups",
+    "notify",
+    "onAddHistory",
+    "onCreate",
+    "onDelete",
+    "onOpenCalendar",
+    "onReleaseBackup",
+    "onReopen",
+    "onSelectBackup",
+    "onStatusChange",
+    "onUpdate",
+    "permissions",
+    "remoteScriptExecutionEnabled",
+    "saving",
+    "segments",
+    "serviceOrders",
+    "systemMode",
+    "tabs",
+    "token",
+    "user"
+  ],
+  TechnicalCalendarPage: [
+    "devices",
+    "focusServiceOrder",
+    "groups",
+    "notify",
+    "onFocusHandled",
+    "permissions",
+    "segments",
+    "serviceOrders",
+    "tabs",
+    "token"
+  ],
   PartsInventoryPage: ["devices", "groups", "notify", "onOpenAsset", "permissions", "segments", "serviceOrders", "tabs", "token"],
-  AlertCenterV2: ["devices", "inventoryTabs", "onOpenServiceOrders", "remoteScriptExecutionEnabled", "segmentGroups", "segments", "serviceOrders", "token"],
+  AlertCenterV2: [
+    "devices",
+    "inventoryTabs",
+    "onOpenServiceOrders",
+    "remoteScriptExecutionEnabled",
+    "segmentGroups",
+    "segments",
+    "serviceOrders",
+    "token"
+  ],
   FloorPlansModule: ["activeTab", "devices", "groups", "notify", "permissions", "segments", "token"],
   InventoryNetworkTopologyView: ["activeTab", "devices", "groups", "notify", "onSelectTab", "segments", "tabs", "token"],
   DashboardWorkspace: ["canCustomize", "notify", "token"],
   alertCenterValue: [
-    "alertCorrelations", "alertPriorityColors", "alertPrioritySettings", "alerts", "history",
-    "onAcceptSuggestion", "onAddAlertComment", "onAnalyzeMaintenanceScript", "onApplyScriptLogSuggestedSolution",
-    "onCancelScriptValidation", "onCreatePreventivePlan", "onCreatePreventivePlanServiceOrder",
-    "onDeactivateMaintenanceScript", "onDeletePreventiveAutomationPlan", "onDisablePreventiveAutomationPlan",
-    "onEvaluateAlerts", "onFetchPreventiveAutomationAsset", "onReactivatePreventiveAutomationPlan",
-    "onRefreshPreventiveAutomationManagement", "onRegisterMaintenanceScriptSimulation",
-    "onRejectSuggestion", "onRemoveAssetFromPreventiveAutomationPlan", "onRemovePreventiveAutomationAssetOverride",
-    "onSaveAlertPrioritySettings", "onSaveMaintenanceScript", "onSavePreventiveAutomationAssetOverride",
-    "onSavePreventiveAutomationPlan", "onUpdateRule", "onAcknowledgeScriptLog", "onUseSuggestionScript",
-    "preventiveAutomationManagement", "preventiveAutomationManagementError", "preventiveAutomationManagementLoading",
-    "preventiveAutomationPlans", "preventivePlans", "rules", "scripts", "setSeverityFilter", "setStatusFilter",
-    "setSuggestionStatusFilter", "severityFilter", "statusFilter", "suggestions", "suggestionStatusFilter"
+    "alertCorrelations",
+    "alertPriorityColors",
+    "alertPrioritySettings",
+    "alerts",
+    "history",
+    "onAcceptSuggestion",
+    "onAddAlertComment",
+    "onAnalyzeMaintenanceScript",
+    "onApplyScriptLogSuggestedSolution",
+    "onCancelScriptValidation",
+    "onCreatePreventivePlan",
+    "onCreatePreventivePlanServiceOrder",
+    "onDeactivateMaintenanceScript",
+    "onDeletePreventiveAutomationPlan",
+    "onDisablePreventiveAutomationPlan",
+    "onEvaluateAlerts",
+    "onFetchPreventiveAutomationAsset",
+    "onReactivatePreventiveAutomationPlan",
+    "onRefreshPreventiveAutomationManagement",
+    "onRegisterMaintenanceScriptSimulation",
+    "onRejectSuggestion",
+    "onRemoveAssetFromPreventiveAutomationPlan",
+    "onRemovePreventiveAutomationAssetOverride",
+    "onSaveAlertPrioritySettings",
+    "onSaveMaintenanceScript",
+    "onSavePreventiveAutomationAssetOverride",
+    "onSavePreventiveAutomationPlan",
+    "onUpdateRule",
+    "onAcknowledgeScriptLog",
+    "onUseSuggestionScript",
+    "preventiveAutomationManagement",
+    "preventiveAutomationManagementError",
+    "preventiveAutomationManagementLoading",
+    "preventiveAutomationPlans",
+    "preventivePlans",
+    "rules",
+    "scripts",
+    "setSeverityFilter",
+    "setStatusFilter",
+    "setSuggestionStatusFilter",
+    "severityFilter",
+    "statusFilter",
+    "suggestions",
+    "suggestionStatusFilter"
   ]
 };
 
 const permissionKeys = {
   calendar: ["assignTechnician", "cancel", "create", "delete", "update", "viewAllTechnicians"],
   parts: ["assignAssets", "create", "importInvoice", "manageCategories", "moveStock", "reconcileHardware", "update"],
-  serviceOrders: ["attendance", "changeSector", "changeStatus", "create", "edit", "finish", "manageChecklists", "parts", "print", "registerSimulation", "reopen", "runScripts", "schedule", "settings", "viewAll"],
+  serviceOrders: [
+    "attendance",
+    "changeSector",
+    "changeStatus",
+    "create",
+    "edit",
+    "finish",
+    "manageChecklists",
+    "parts",
+    "print",
+    "registerSimulation",
+    "reopen",
+    "runScripts",
+    "schedule",
+    "settings",
+    "viewAll"
+  ],
   floorPlans: ["create", "delete", "linkInventory", "update", "uploadBackground", "viewHeatmaps"]
 };
 

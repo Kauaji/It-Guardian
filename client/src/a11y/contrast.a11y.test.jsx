@@ -15,36 +15,48 @@ afterEach(() => cleanup());
 
 describe("contraste das telas principais (claro e escuro)", () => {
   for (const { name, path, marker } of viewScenarios) {
-    it(name, async () => {
-      renderA11yApp(path);
-      await waitForAppReady(marker);
-      expectNoContrastFailures();
-    }, 40000);
+    it(
+      name,
+      async () => {
+        renderA11yApp(path);
+        await waitForAppReady(marker);
+        expectNoContrastFailures();
+      },
+      40000
+    );
   }
 });
 
 describe("contraste dos modais principais (claro e escuro)", () => {
   for (const { name, path, marker, open } of modalScenarios) {
-    it(name, async () => {
-      const user = userEvent.setup();
-      renderA11yApp(path);
-      await waitForAppReady(marker);
-      await open(user);
-      await screen.findByRole("dialog");
-      expectNoContrastFailures();
-    }, 40000);
+    it(
+      name,
+      async () => {
+        const user = userEvent.setup();
+        renderA11yApp(path);
+        await waitForAppReady(marker);
+        await open(user);
+        await screen.findByRole("dialog");
+        expectNoContrastFailures();
+      },
+      40000
+    );
   }
 });
 
 describe("abas internas", () => {
   for (const { name, path, marker, open } of tabScenarios) {
-    it(name, async () => {
-      const user = userEvent.setup();
-      renderA11yApp(path);
-      await waitForAppReady(marker);
-      await open(user);
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      expectNoContrastFailures();
-    }, 40000);
+    it(
+      name,
+      async () => {
+        const user = userEvent.setup();
+        renderA11yApp(path);
+        await waitForAppReady(marker);
+        await open(user);
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        expectNoContrastFailures();
+      },
+      40000
+    );
   }
 });

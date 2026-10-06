@@ -14,16 +14,17 @@ export default function BulkActionsBar({
   if (count < 2) return null;
 
   return (
-    <section
-      className={`bulk-actions-bar ${isDragActive ? "drag-safe-zone" : ""}`}
-      aria-label="Ações em massa"
-    >
+    <section className={`bulk-actions-bar ${isDragActive ? "drag-safe-zone" : ""}`} aria-label="Ações em massa">
       <strong>{count} selecionados</strong>
       <select aria-label="Segmento de destino" value={currentTarget} onChange={(event) => onTargetChange(event.target.value)}>
         <option value="">Alterar segmento...</option>
-        {segments.filter((segment) => !segment.isBackupSegment).map((segment) => (
-          <option key={segment.id} value={segment.id}>{segment.name}</option>
-        ))}
+        {segments
+          .filter((segment) => !segment.isBackupSegment)
+          .map((segment) => (
+            <option key={segment.id} value={segment.id}>
+              {segment.name}
+            </option>
+          ))}
       </select>
       <button type="button" disabled={!currentTarget} onClick={onMove}>
         <Send size={14} />

@@ -49,10 +49,9 @@ function fromResultRow(row) {
 }
 
 async function listTemplateItems(templateId, db = query) {
-  const result = await db(
-    "SELECT * FROM service_order_checklist_template_items WHERE template_id = $1 ORDER BY order_index ASC",
-    [templateId]
-  );
+  const result = await db("SELECT * FROM service_order_checklist_template_items WHERE template_id = $1 ORDER BY order_index ASC", [
+    templateId
+  ]);
   return result.rows.map(fromTemplateItemRow);
 }
 
@@ -63,9 +62,7 @@ export async function listChecklistTemplates({ activeOnly = false } = {}) {
       : "SELECT * FROM service_order_checklist_templates ORDER BY name ASC"
   );
   const templates = result.rows.map(fromTemplateRow);
-  return Promise.all(
-    templates.map(async (template) => ({ ...template, items: await listTemplateItems(template.id) }))
-  );
+  return Promise.all(templates.map(async (template) => ({ ...template, items: await listTemplateItems(template.id) })));
 }
 
 export async function findChecklistTemplateById(id) {
@@ -140,10 +137,9 @@ export async function createChecklistTemplate({ name, problemTypeKey, active = t
     }
 
     const templateResult = await db("SELECT * FROM service_order_checklist_templates WHERE id = $1", [id]);
-    const itemsResult = await db(
-      "SELECT * FROM service_order_checklist_template_items WHERE template_id = $1 ORDER BY order_index ASC",
-      [id]
-    );
+    const itemsResult = await db("SELECT * FROM service_order_checklist_template_items WHERE template_id = $1 ORDER BY order_index ASC", [
+      id
+    ]);
     return { ...fromTemplateRow(templateResult.rows[0]), items: itemsResult.rows.map(fromTemplateItemRow) };
   });
 }
@@ -155,7 +151,7 @@ export async function updateChecklistTemplate(id, { name, problemTypeKey, active
     const existing = fromTemplateRow(existingResult.rows[0]);
 
     const normalizedName = name !== undefined ? String(name || "").trim() || existing.name : existing.name;
-    const normalizedProblemTypeKey = problemTypeKey !== undefined ? (problemTypeKey || null) : existing.problemTypeKey;
+    const normalizedProblemTypeKey = problemTypeKey !== undefined ? problemTypeKey || null : existing.problemTypeKey;
     const normalizedActive = active !== undefined ? Boolean(active) : existing.active;
 
     await db(
@@ -187,10 +183,9 @@ export async function updateChecklistTemplate(id, { name, problemTypeKey, active
     }
 
     const templateResult = await db("SELECT * FROM service_order_checklist_templates WHERE id = $1", [id]);
-    const itemsResult = await db(
-      "SELECT * FROM service_order_checklist_template_items WHERE template_id = $1 ORDER BY order_index ASC",
-      [id]
-    );
+    const itemsResult = await db("SELECT * FROM service_order_checklist_template_items WHERE template_id = $1 ORDER BY order_index ASC", [
+      id
+    ]);
     return { ...fromTemplateRow(templateResult.rows[0]), items: itemsResult.rows.map(fromTemplateItemRow) };
   });
 }
@@ -201,10 +196,9 @@ export async function deleteChecklistTemplate(id) {
 }
 
 export async function listChecklistResults(serviceOrderId) {
-  const result = await query(
-    "SELECT * FROM service_order_checklist_results WHERE service_order_id = $1 ORDER BY order_index ASC",
-    [serviceOrderId]
-  );
+  const result = await query("SELECT * FROM service_order_checklist_results WHERE service_order_id = $1 ORDER BY order_index ASC", [
+    serviceOrderId
+  ]);
   return result.rows.map(fromResultRow);
 }
 

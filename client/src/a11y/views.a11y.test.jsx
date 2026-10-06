@@ -38,13 +38,17 @@ describe("modais principais", () => {
 
 describe("abas internas", () => {
   for (const { name, path, marker, open } of tabScenarios) {
-    it(name, async () => {
-      const user = userEvent.setup();
-      renderA11yApp(path);
-      await waitForAppReady(marker);
-      await open(user);
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      await expectNoAxeViolations();
-    }, 40000);
+    it(
+      name,
+      async () => {
+        const user = userEvent.setup();
+        renderA11yApp(path);
+        await waitForAppReady(marker);
+        await open(user);
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        await expectNoAxeViolations();
+      },
+      40000
+    );
   }
 });

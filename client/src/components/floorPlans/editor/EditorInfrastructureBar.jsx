@@ -29,7 +29,14 @@ export default function EditorInfrastructureBar({ workspace, groups, segments, p
         backgroundSettings={background.settings}
         onBackgroundSettings={background.updateSettings}
       />
-      <input ref={background.inputRef} className="floor-plan-background-input" type="file" accept="image/png,image/jpeg,image/webp" onChange={background.upload} disabled={background.busy} />
+      <input
+        ref={background.inputRef}
+        className="floor-plan-background-input"
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        onChange={background.upload}
+        disabled={background.busy}
+      />
     </>
   );
 }

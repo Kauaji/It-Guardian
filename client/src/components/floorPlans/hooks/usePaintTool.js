@@ -17,14 +17,22 @@ import {
 export function usePaintTool({ doc, ui, groups, segments, notify }) {
   const { editor, activeFloorId, commitEditor } = doc;
   const {
-    paintDraft, setPaintDraft, setSelectedTool, setSelected, setSelectedObjectIds,
-    setSelectionBox, setPlacement, setMode, setActiveCatalog
+    paintDraft,
+    setPaintDraft,
+    setSelectedTool,
+    setSelected,
+    setSelectedObjectIds,
+    setSelectionBox,
+    setPlacement,
+    setMode,
+    setActiveCatalog
   } = ui;
   const paintPointerRef = useRef(false);
 
-  const savedGroupAreas = useMemo(() => (editor?.zones || []).filter((zone) => (
-    zone.floorId === activeFloorId && zone.zoneType === "group" && isPaintAreaZone(zone)
-  )), [activeFloorId, editor?.zones]);
+  const savedGroupAreas = useMemo(
+    () => (editor?.zones || []).filter((zone) => zone.floorId === activeFloorId && zone.zoneType === "group" && isPaintAreaZone(zone)),
+    [activeFloorId, editor?.zones]
+  );
 
   const stopPainting = () => {
     setPaintDraft(null);
@@ -69,9 +77,7 @@ export function usePaintTool({ doc, ui, groups, segments, notify }) {
   };
 
   const updatePaintDraft = (patch) => {
-    setPaintDraft((current) => (
-      current ? reducePaintDraftPatch(current, patch, { groups, segments, savedGroupAreas }) : current
-    ));
+    setPaintDraft((current) => (current ? reducePaintDraftPatch(current, patch, { groups, segments, savedGroupAreas }) : current));
   };
 
   const applyPaint = (point) => {

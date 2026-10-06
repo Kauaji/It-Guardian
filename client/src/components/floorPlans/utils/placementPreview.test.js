@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildDesk, buildEditor, buildPc } from "../test/fixtures.js";
-import {
-  buildCatalogPlacementPreview,
-  buildDraggedRoomPreview,
-  buildRoomPlacementPreview
-} from "./placementPreview.js";
+import { buildCatalogPlacementPreview, buildDraggedRoomPreview, buildRoomPlacementPreview } from "./placementPreview.js";
 
 const editor = buildEditor();
 const floor = editor.floors[0];
@@ -29,7 +25,10 @@ describe("buildCatalogPlacementPreview", () => {
     const item = { id: "cable", category: "route", color: "#2563eb" };
     const inside = buildCatalogPlacementPreview({ editor, floor, item, point: { x: 400, y: 300 } });
     expect(inside.type).toBe("route");
-    expect(inside.path).toEqual([{ x: 310, y: 300 }, { x: 490, y: 300 }]);
+    expect(inside.path).toEqual([
+      { x: 310, y: 300 },
+      { x: 490, y: 300 }
+    ]);
     expect(inside.valid).toBe(true);
     const outside = buildCatalogPlacementPreview({ editor, floor, item, point: { x: 20, y: 300 } });
     expect(outside).toMatchObject({ valid: false, reason: "O trecho ultrapassa a planta" });
@@ -56,7 +55,12 @@ describe("buildCatalogPlacementPreview", () => {
 
   it("centraliza equipamentos sobre a mesa mais proxima sem acusar colisao com ela", () => {
     const item = { id: "pc", objectType: "pc", category: "asset", width: 60, height: 40, label: "PC" };
-    const preview = buildCatalogPlacementPreview({ editor: buildEditor({ objects: [buildDesk()] }), floor, item, point: { x: 280, y: 240 } });
+    const preview = buildCatalogPlacementPreview({
+      editor: buildEditor({ objects: [buildDesk()] }),
+      floor,
+      item,
+      point: { x: 280, y: 240 }
+    });
     expect(preview.valid).toBe(true);
     expect(preview.object.x).toBe(250);
     expect(preview.object.y).toBe(220);

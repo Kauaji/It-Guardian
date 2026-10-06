@@ -3,25 +3,31 @@ import AutomationIndicatorDots from "../../AutomationIndicatorDots.jsx";
 import RemoteAssistanceAction from "../../remoteAssistance/RemoteAssistanceAction.jsx";
 
 export default function MachineModalHeader({
-  machine, alias, token, user, notify, eyebrow, inMaintenance, backupInUse,
-  onPutMaintenance, onToggleBackup, onRemoveMachine, onClose
+  machine,
+  alias,
+  token,
+  user,
+  notify,
+  eyebrow,
+  inMaintenance,
+  backupInUse,
+  onPutMaintenance,
+  onToggleBackup,
+  onRemoveMachine,
+  onClose
 }) {
   return (
     <header className="asset-modal-header">
       <div>
         <span className="asset-eyebrow">{eyebrow}</span>
         <h2>{alias || machine.name}</h2>
-        <p>{machine.name} - {machine.ip}</p>
+        <p>
+          {machine.name} - {machine.ip}
+        </p>
         <AutomationIndicatorDots indicators={machine.automationIndicators} maxVisible={4} />
       </div>
       <div className="asset-modal-header-actions">
-        <RemoteAssistanceAction
-          asset={machine}
-          alias={alias}
-          token={token}
-          user={user}
-          notify={notify}
-        />
+        <RemoteAssistanceAction asset={machine} alias={alias} token={token} user={user} notify={notify} />
         <button
           type="button"
           className={`ghost-action maintenance-action ${inMaintenance ? "active" : ""}`}

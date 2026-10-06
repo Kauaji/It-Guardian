@@ -3,7 +3,15 @@ import { getAggregateStatusColorToken } from "../networkTopologyHierarchy.js";
 import HierarchySegmentRow from "./HierarchySegmentRow.jsx";
 
 export default function HierarchyGroupBranch({
-  group, collapsed, selectedGroupId, selectedSegmentId, expandedSegmentIds, onToggleCollapsed, onToggleSegmentExpanded, onSelectGroup, onSelectSegment
+  group,
+  collapsed,
+  selectedGroupId,
+  selectedSegmentId,
+  expandedSegmentIds,
+  onToggleCollapsed,
+  onToggleSegmentExpanded,
+  onSelectGroup,
+  onSelectSegment
 }) {
   return (
     <div className="network-topology-hierarchy-group">
@@ -23,12 +31,11 @@ export default function HierarchyGroupBranch({
           onClick={() => onSelectGroup(group.id)}
         >
           <FolderTree size={15} />
-          <span
-            className="network-topology-hierarchy-status-dot"
-            style={{ background: getAggregateStatusColorToken(group.status) }}
-          />
+          <span className="network-topology-hierarchy-status-dot" style={{ background: getAggregateStatusColorToken(group.status) }} />
           <strong>{group.name}</strong>
-          <span className="network-topology-hierarchy-count" title={`${group.deviceCount} ativo(s) em ${group.segmentCount} segmento(s)`}>{group.deviceCount}</span>
+          <span className="network-topology-hierarchy-count" title={`${group.deviceCount} ativo(s) em ${group.segmentCount} segmento(s)`}>
+            {group.deviceCount}
+          </span>
         </button>
       </div>
       {!collapsed ? (
@@ -44,9 +51,7 @@ export default function HierarchyGroupBranch({
               onSelectSegment={onSelectSegment}
             />
           ))}
-          {!group.segments.length ? (
-            <p className="network-topology-hierarchy-empty">Sem segmentos.</p>
-          ) : null}
+          {!group.segments.length ? <p className="network-topology-hierarchy-empty">Sem segmentos.</p> : null}
         </div>
       ) : null}
     </div>

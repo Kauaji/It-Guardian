@@ -74,7 +74,9 @@ describe("skip-link e ordem de tab", () => {
     const order = [];
     for (let index = 0; index < 8; index += 1) {
       await user.tab();
-      order.push(document.activeElement.textContent.trim() || document.activeElement.getAttribute("aria-label") || document.activeElement.title);
+      order.push(
+        document.activeElement.textContent.trim() || document.activeElement.getAttribute("aria-label") || document.activeElement.title
+      );
     }
     expect(order[0]).toBe("Pular para o conteúdo");
     expect(order[1]).toMatch(/IT Guardian/);

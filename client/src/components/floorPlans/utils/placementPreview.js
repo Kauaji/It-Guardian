@@ -28,8 +28,7 @@ function isInsideRect(rect, { x, y, width, height }) {
 }
 
 function buildPointPreview(item, snappedPoint, floorSize) {
-  const valid = snappedPoint.x >= 0 && snappedPoint.x <= floorSize.width
-    && snappedPoint.y >= 0 && snappedPoint.y <= floorSize.height;
+  const valid = snappedPoint.x >= 0 && snappedPoint.x <= floorSize.width && snappedPoint.y >= 0 && snappedPoint.y <= floorSize.height;
   return { type: "point", point: snappedPoint, color: item.color, valid, reason: valid ? PLACEMENT_OK : "Fora dos limites da planta" };
 }
 
@@ -39,7 +38,14 @@ function buildRoutePreview(item, snappedPoint, floorSize, fineSnapSize) {
     { x: snap(snappedPoint.x + 90, fineSnapSize), y: snappedPoint.y }
   ];
   const valid = path.every((entry) => entry.x >= 0 && entry.x <= floorSize.width && entry.y >= 0 && entry.y <= floorSize.height);
-  return { type: "route", point: snappedPoint, path, color: item.color, valid, reason: valid ? PLACEMENT_OK : "O trecho ultrapassa a planta" };
+  return {
+    type: "route",
+    point: snappedPoint,
+    path,
+    color: item.color,
+    valid,
+    reason: valid ? PLACEMENT_OK : "O trecho ultrapassa a planta"
+  };
 }
 
 function collidesWithObjects(candidate, floor, objects) {
@@ -49,10 +55,12 @@ function collidesWithObjects(candidate, floor, objects) {
     if (isDesktopObject(candidate) && isTableObject(object)) return false;
     if (isPowerAccessoryObject(candidate) && isDesktopObject(object)) return false;
     const otherSize = getObjectSize(object);
-    return candidate.x < Number(object.x || 0) + otherSize.width
-      && candidate.x + width > Number(object.x || 0)
-      && candidate.y < Number(object.y || 0) + otherSize.height
-      && candidate.y + height > Number(object.y || 0);
+    return (
+      candidate.x < Number(object.x || 0) + otherSize.width &&
+      candidate.x + width > Number(object.x || 0) &&
+      candidate.y < Number(object.y || 0) + otherSize.height &&
+      candidate.y + height > Number(object.y || 0)
+    );
   });
 }
 
@@ -84,7 +92,8 @@ function buildObjectPreview({ editor, floor, item, snappedPoint, floorSize, fine
   const withinFloor = isInsideRect({ x: 0, y: 0, ...floorSize }, { x: candidate.x, y: candidate.y, width, height });
   const rooms = (editor.zones || []).filter((zone) => zone.floorId === floor.id && isRoomZone(zone));
   const room = getRoomForObject(editor, candidate, floor);
-  const withinRoom = !rooms.length || Boolean(room && isInsideRect(getRoomGeometry(room), { x: candidate.x, y: candidate.y, width, height }));
+  const withinRoom =
+    !rooms.length || Boolean(room && isInsideRect(getRoomGeometry(room), { x: candidate.x, y: candidate.y, width, height }));
   const collides = collidesWithObjects(candidate, floor, editor.objects || []);
   const valid = withinFloor && withinRoom && !collides;
   const reason = getPlacementFailure({ withinFloor, withinRoom, collides });
@@ -109,25 +118,28 @@ export function buildCatalogPlacementPreview({ editor, floor, item, point }) {
 }
 
 function createRoomPreview({ editor, floor, template, geometry, rotation }) {
-  const zone = normalizeRoomZone({
-    id: "placement-preview",
-    planId: editor.plan.id,
-    floorId: floor.id,
-    zoneType: "room",
-    name: template.label,
-    color: template.color,
-    geometry,
-    metadata: {
-      room: {
-        templateId: template.id,
-        shape: "rect",
-        rotation,
-        wallThickness: 10,
-        wallHeight: 110,
-        metersPerGridCell: editor.plan.metersPerGridCell || 0.5
+  const zone = normalizeRoomZone(
+    {
+      id: "placement-preview",
+      planId: editor.plan.id,
+      floorId: floor.id,
+      zoneType: "room",
+      name: template.label,
+      color: template.color,
+      geometry,
+      metadata: {
+        room: {
+          templateId: template.id,
+          shape: "rect",
+          rotation,
+          wallThickness: 10,
+          wallHeight: 110,
+          metersPerGridCell: editor.plan.metersPerGridCell || 0.5
+        }
       }
-    }
-  }, editor.plan);
+    },
+    editor.plan
+  );
   return {
     zone,
     geometry,
@@ -141,12 +153,16 @@ export function buildRoomPlacementPreview({ editor, floor, template, point, rota
   if (!floor || !template) return null;
   const snapSize = editor?.plan?.snapSize || DEFAULT_PLAN_SIZE.snapSize;
   const size = rotateRoomSize(template.width, template.height, rotation);
-  const geometry = clampRoomGeometry({
-    x: snapToGrid(point.x - size.width / 2, snapSize),
-    y: snapToGrid(point.y - size.height / 2, snapSize),
-    width: size.width,
-    height: size.height
-  }, floor, snapSize);
+  const geometry = clampRoomGeometry(
+    {
+      x: snapToGrid(point.x - size.width / 2, snapSize),
+      y: snapToGrid(point.y - size.height / 2, snapSize),
+      width: size.width,
+      height: size.height
+    },
+    floor,
+    snapSize
+  );
   return createRoomPreview({ editor, floor, template, geometry, rotation });
 }
 
@@ -167,11 +183,15 @@ export function buildDraggedRoomPreview({ editor, floor, template, start, end, r
     return buildRoomPlacementPreview({ editor, floor, template, point: start, rotation });
   }
 
-  const geometry = clampRoomGeometry({
-    x: Math.min(snappedStart.x, snappedEnd.x),
-    y: Math.min(snappedStart.y, snappedEnd.y),
-    width: Math.max(defaultSize.width, draggedWidth),
-    height: Math.max(defaultSize.height, draggedHeight)
-  }, floor, snapSize);
+  const geometry = clampRoomGeometry(
+    {
+      x: Math.min(snappedStart.x, snappedEnd.x),
+      y: Math.min(snappedStart.y, snappedEnd.y),
+      width: Math.max(defaultSize.width, draggedWidth),
+      height: Math.max(defaultSize.height, draggedHeight)
+    },
+    floor,
+    snapSize
+  );
   return createRoomPreview({ editor, floor, template, geometry, rotation });
 }

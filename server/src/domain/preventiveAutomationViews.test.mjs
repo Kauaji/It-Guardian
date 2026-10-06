@@ -48,8 +48,15 @@ const schedule = (assetId, overrides = {}) => ({
 });
 
 test("agrupa itens por plano e monta a chave de ultima execucao", () => {
-  const grouped = groupByPlanId([{ planId: 1, v: "a" }, { planId: "1", v: "b" }, { planId: 2, v: "c" }]);
-  assert.deepEqual(grouped.get("1").map((item) => item.v), ["a", "b"]);
+  const grouped = groupByPlanId([
+    { planId: 1, v: "a" },
+    { planId: "1", v: "b" },
+    { planId: 2, v: "c" }
+  ]);
+  assert.deepEqual(
+    grouped.get("1").map((item) => item.v),
+    ["a", "b"]
+  );
   assert.equal(grouped.get("2").length, 1);
   assert.equal(latestRunKey(7, "asset"), "7:asset");
 });
@@ -63,12 +70,7 @@ test("plano do gerenciamento conta maquinas, erros e agendas sem proxima execuca
   const built = buildManagementPlan({
     plan: plan({ excludedAssetIds: ["a-excluida"] }),
     overrides: [{ active: true }, { active: false }],
-    schedules: [
-      schedule("a1"),
-      schedule("a2", { nextRunAt: null }),
-      schedule("a3", { active: false }),
-      schedule("a-excluida")
-    ],
+    schedules: [schedule("a1"), schedule("a2", { nextRunAt: null }), schedule("a3", { active: false }), schedule("a-excluida")],
     runsByAsset,
     scriptsById: new Map([["s1", { id: "s1", name: "Script 1" }]])
   });
@@ -83,7 +85,13 @@ test("plano do gerenciamento conta maquinas, erros e agendas sem proxima execuca
   assert.equal(built.withoutScheduleCount, 1);
   assert.equal(built.latestRun.createdAt, "2026-06-10T00:00:00.000Z");
 
-  const paused = buildManagementPlan({ plan: plan({ active: false }), overrides: [], schedules: [schedule("a1")], runsByAsset: new Map(), scriptsById: new Map() });
+  const paused = buildManagementPlan({
+    plan: plan({ active: false }),
+    overrides: [],
+    schedules: [schedule("a1")],
+    runsByAsset: new Map(),
+    scriptsById: new Map()
+  });
   assert.equal(paused.activeScheduleCount, 0);
   assert.equal(paused.latestRun, null);
 });
@@ -104,7 +112,19 @@ test("maquinas reunem planos, ignoram dispositivos ausentes e agendas desvincula
     scriptsById: new Map()
   });
   const devicesById = new Map([
-    ["a1", { id: "a1", name: "NB-01", assetType: "notebook", segmentId: "seg", segmentName: "Seg", segmentGroupId: "g1", hardware: { os: "Win", loggedUser: "ana" }, status: "online" }],
+    [
+      "a1",
+      {
+        id: "a1",
+        name: "NB-01",
+        assetType: "notebook",
+        segmentId: "seg",
+        segmentName: "Seg",
+        segmentGroupId: "g1",
+        hardware: { os: "Win", loggedUser: "ana" },
+        status: "online"
+      }
+    ],
     ["a9", { id: "a9", type: "desktop" }]
   ]);
 
@@ -142,9 +162,30 @@ test("maquinas reunem planos, ignoram dispositivos ausentes e agendas desvincula
 
 test("filtros de maquinas combinam busca, segmento, grupo e situacao", () => {
   const machines = [
-    { assetName: "NB-01", segmentName: "Diretoria", groupName: "Matriz", segmentId: "s1", groupId: "g1", plans: [{ name: "Limpeza", active: true, nextRunAt: "x" }] },
-    { assetName: "SRV-02", segmentName: "Servidores", groupName: "Infra", segmentId: "s2", groupId: "g2", plans: [{ name: "Banco", active: false, nextRunAt: null, latestRun: { status: "error" } }] },
-    { assetName: "PC-03", segmentName: "Diretoria", groupName: "Matriz", segmentId: "s1", groupId: "g1", plans: [{ name: "Disco", active: true, nextRunAt: "x", latestRun: { errorDetected: true } }] }
+    {
+      assetName: "NB-01",
+      segmentName: "Diretoria",
+      groupName: "Matriz",
+      segmentId: "s1",
+      groupId: "g1",
+      plans: [{ name: "Limpeza", active: true, nextRunAt: "x" }]
+    },
+    {
+      assetName: "SRV-02",
+      segmentName: "Servidores",
+      groupName: "Infra",
+      segmentId: "s2",
+      groupId: "g2",
+      plans: [{ name: "Banco", active: false, nextRunAt: null, latestRun: { status: "error" } }]
+    },
+    {
+      assetName: "PC-03",
+      segmentName: "Diretoria",
+      groupName: "Matriz",
+      segmentId: "s1",
+      groupId: "g1",
+      plans: [{ name: "Disco", active: true, nextRunAt: "x", latestRun: { errorDetected: true } }]
+    }
   ];
   const names = (options) => filterManagementMachines(machines, options).map((machine) => machine.assetName);
 
@@ -222,12 +263,58 @@ test("situacao do item da agenda segue pausa, erro, falta de data e atraso", () 
 
 test("itens da agenda cruzam dispositivo e ultima execucao; filtros locais e resumo", () => {
   const rows = [
-    { planId: "p1", planName: "Plano um", assetId: "a1", indicatorColor: "#ABCDEF", nextRunAt: new Date("2026-06-15T12:01:00.000Z"), recurrenceType: "weekly", recurrenceInterval: 7, recurrenceSource: "machine", planActive: true, scheduleActive: true, lastPreparedAt: null },
-    { planId: "p1", planName: "Plano um", assetId: "a2", indicatorColor: "invalida", nextRunAt: "2026-06-10T00:00:00.000Z", recurrenceType: "daily", recurrenceInterval: null, recurrenceSource: null, planActive: true, scheduleActive: true, lastPreparedAt: "2026-06-01T00:00:00.000Z" },
-    { planId: "p1", planName: "Plano um", assetId: "a3", indicatorColor: "#111111", nextRunAt: null, recurrenceType: "daily", recurrenceInterval: 1, planActive: true, scheduleActive: true },
-    { planId: "p1", planName: "Plano um", assetId: "a4", indicatorColor: "#111111", nextRunAt: "2026-06-17T00:00:00.000Z", recurrenceType: "daily", recurrenceInterval: 1, planActive: true, scheduleActive: true }
+    {
+      planId: "p1",
+      planName: "Plano um",
+      assetId: "a1",
+      indicatorColor: "#ABCDEF",
+      nextRunAt: new Date("2026-06-15T12:01:00.000Z"),
+      recurrenceType: "weekly",
+      recurrenceInterval: 7,
+      recurrenceSource: "machine",
+      planActive: true,
+      scheduleActive: true,
+      lastPreparedAt: null
+    },
+    {
+      planId: "p1",
+      planName: "Plano um",
+      assetId: "a2",
+      indicatorColor: "invalida",
+      nextRunAt: "2026-06-10T00:00:00.000Z",
+      recurrenceType: "daily",
+      recurrenceInterval: null,
+      recurrenceSource: null,
+      planActive: true,
+      scheduleActive: true,
+      lastPreparedAt: "2026-06-01T00:00:00.000Z"
+    },
+    {
+      planId: "p1",
+      planName: "Plano um",
+      assetId: "a3",
+      indicatorColor: "#111111",
+      nextRunAt: null,
+      recurrenceType: "daily",
+      recurrenceInterval: 1,
+      planActive: true,
+      scheduleActive: true
+    },
+    {
+      planId: "p1",
+      planName: "Plano um",
+      assetId: "a4",
+      indicatorColor: "#111111",
+      nextRunAt: "2026-06-17T00:00:00.000Z",
+      recurrenceType: "daily",
+      recurrenceInterval: 1,
+      planActive: true,
+      scheduleActive: true
+    }
   ];
-  const devicesById = new Map([["a1", { id: "a1", name: "NB-01", assetType: "notebook", segmentId: "s1", segmentName: "Diretoria", segmentGroupId: "g1" }]]);
+  const devicesById = new Map([
+    ["a1", { id: "a1", name: "NB-01", assetType: "notebook", segmentId: "s1", segmentName: "Diretoria", segmentGroupId: "g1" }]
+  ]);
   const latestRunsByAsset = new Map([[latestRunKey("p1", "a4"), { status: "error", errorDetected: true }]]);
 
   const items = buildAgendaItems({ rows, devicesById, latestRunsByAsset, now: NOW });
@@ -248,33 +335,61 @@ test("itens da agenda cruzam dispositivo e ultima execucao; filtros locais e res
   assert.equal(items[3].latestRun.status, "error");
 
   assert.equal(filterAgendaItemsAfterLoad(items, { segmentId: null, status: "all" }).length, 4);
-  assert.deepEqual(filterAgendaItemsAfterLoad(items, { segmentId: "s1", status: "all" }).map((item) => item.assetId), ["a1"]);
-  assert.deepEqual(filterAgendaItemsAfterLoad(items, { segmentId: null, status: "error" }).map((item) => item.assetId), ["a4"]);
+  assert.deepEqual(
+    filterAgendaItemsAfterLoad(items, { segmentId: "s1", status: "all" }).map((item) => item.assetId),
+    ["a1"]
+  );
+  assert.deepEqual(
+    filterAgendaItemsAfterLoad(items, { segmentId: null, status: "error" }).map((item) => item.assetId),
+    ["a4"]
+  );
 
   assert.deepEqual(summarizeAgenda(items, NOW), { today: 1, nextSevenDays: 2, overdue: 1, withoutSchedule: 1, errors: 1 });
 });
 
 test("paginacao da agenda usa o total do banco, exceto com filtros locais", () => {
   const items = [{}, {}, {}];
-  assert.deepEqual(buildAgendaPagination({ normalized: { status: "all", segmentId: null, limit: 3, offset: 0 }, items, pageRowCount: 3, totalCount: 10 }), {
-    limit: 3,
-    offset: 0,
-    total: 10,
-    hasMore: true
-  });
-  assert.deepEqual(buildAgendaPagination({ normalized: { status: "all", segmentId: null, limit: 3, offset: 9 }, items, pageRowCount: 1, totalCount: 10 }), {
-    limit: 3,
-    offset: 9,
-    total: 10,
-    hasMore: false
-  });
-  assert.deepEqual(buildAgendaPagination({ normalized: { status: "error", segmentId: null, limit: 3, offset: 0 }, items, pageRowCount: 3, totalCount: 10 }), {
-    limit: 3,
-    offset: 0,
-    total: 3,
-    hasMore: false
-  });
-  assert.equal(buildAgendaPagination({ normalized: { status: "all", segmentId: "s1", limit: 1, offset: 0 }, items: [], pageRowCount: 0, totalCount: 0 }).total, 0);
+  assert.deepEqual(
+    buildAgendaPagination({ normalized: { status: "all", segmentId: null, limit: 3, offset: 0 }, items, pageRowCount: 3, totalCount: 10 }),
+    {
+      limit: 3,
+      offset: 0,
+      total: 10,
+      hasMore: true
+    }
+  );
+  assert.deepEqual(
+    buildAgendaPagination({ normalized: { status: "all", segmentId: null, limit: 3, offset: 9 }, items, pageRowCount: 1, totalCount: 10 }),
+    {
+      limit: 3,
+      offset: 9,
+      total: 10,
+      hasMore: false
+    }
+  );
+  assert.deepEqual(
+    buildAgendaPagination({
+      normalized: { status: "error", segmentId: null, limit: 3, offset: 0 },
+      items,
+      pageRowCount: 3,
+      totalCount: 10
+    }),
+    {
+      limit: 3,
+      offset: 0,
+      total: 3,
+      hasMore: false
+    }
+  );
+  assert.equal(
+    buildAgendaPagination({
+      normalized: { status: "all", segmentId: "s1", limit: 1, offset: 0 },
+      items: [],
+      pageRowCount: 0,
+      totalCount: 0
+    }).total,
+    0
+  );
 
   assert.deepEqual(emptyAutomationAgenda({ limit: 5, offset: 10 }), {
     items: [],

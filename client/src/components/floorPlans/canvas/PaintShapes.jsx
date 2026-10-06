@@ -1,12 +1,14 @@
 import { getPaintCellSize, getPaintCells, parseCellKey } from "../utils/paintAreaGeometry.js";
 
 export function paintCellsPath(cells, cellSize) {
-  return cells.map((key) => {
-    const { column, row } = parseCellKey(key);
-    const x = column * cellSize;
-    const y = row * cellSize;
-    return `M${x} ${y}h${cellSize}v${cellSize}h-${cellSize}Z`;
-  }).join(" ");
+  return cells
+    .map((key) => {
+      const { column, row } = parseCellKey(key);
+      const x = column * cellSize;
+      const y = row * cellSize;
+      return `M${x} ${y}h${cellSize}v${cellSize}h-${cellSize}Z`;
+    })
+    .join(" ");
 }
 
 function getPaintLabelPosition(cells, cellSize) {

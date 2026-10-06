@@ -35,11 +35,9 @@ export function normalizeOverridePayload(item = {}) {
     throw badRequest("Informe apenas uma máquina ou um segmento para a recorrência personalizada.");
   }
 
-  const recurrenceIntervalDays = normalizeRecurrenceIntervalDays(
-    item.recurrenceIntervalDays ?? item.recurrenceInterval,
-    recurrenceType,
-    { strict: recurrenceType === "custom_days" }
-  );
+  const recurrenceIntervalDays = normalizeRecurrenceIntervalDays(item.recurrenceIntervalDays ?? item.recurrenceInterval, recurrenceType, {
+    strict: recurrenceType === "custom_days"
+  });
 
   // Os dois nomes ficam presentes: o plano lido do banco tem `recurrenceIntervalDays`
   // e, ao mesclar com o override, ele precisa ser sobrescrito pelo valor do override.
@@ -99,12 +97,11 @@ function normalizeNonAssetListPayload(value, hasIncomingValue) {
 function normalizeScopeSelection(payload, current, scopeType) {
   const rawAssetIds = payload.assetIds ?? payload.asset_ids;
   const hasIncomingAssetIds = rawAssetIds !== undefined;
-  const assetIds = scopeType === "asset_list"
-    ? normalizeAssetListPayload(hasIncomingAssetIds ? rawAssetIds : current?.assetIds)
-    : normalizeNonAssetListPayload(rawAssetIds, hasIncomingAssetIds);
-  const scopeId = scopeType === "all" || scopeType === "asset_list"
-    ? null
-    : trimString(payload.scopeId ?? current?.scopeId, 120) || null;
+  const assetIds =
+    scopeType === "asset_list"
+      ? normalizeAssetListPayload(hasIncomingAssetIds ? rawAssetIds : current?.assetIds)
+      : normalizeNonAssetListPayload(rawAssetIds, hasIncomingAssetIds);
+  const scopeId = scopeType === "all" || scopeType === "asset_list" ? null : trimString(payload.scopeId ?? current?.scopeId, 120) || null;
 
   return { assetIds, scopeId };
 }
@@ -152,9 +149,7 @@ export function normalizePlanPayload(payload = {}, current = null) {
     defaultScriptIds,
     notes: trimString(payload.notes ?? current?.notes, 1000),
     indicatorColor: normalizeIndicatorColor(payload.indicatorColor ?? current?.indicatorColor),
-    overrides: Array.isArray(payload.overrides)
-      ? payload.overrides.map(normalizeOverridePayload).filter(Boolean)
-      : undefined
+    overrides: Array.isArray(payload.overrides) ? payload.overrides.map(normalizeOverridePayload).filter(Boolean) : undefined
   };
 }
 

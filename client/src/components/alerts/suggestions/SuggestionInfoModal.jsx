@@ -27,12 +27,8 @@ function InfoHeader({ suggestion, model, index, title, onClose }) {
           {model.machineLabel} - {model.location.groupName} - {model.location.segmentName}
         </p>
         <div className="suggestion-info-badges">
-          <span className={`pill ${statusTone(suggestion.status)}`}>
-            {getSafeStatusLabel(suggestion.status)}
-          </span>
-          <span className={`pill ${model.priority === "critical" ? "danger" : "warning"}`}>
-            {model.priorityLabel}
-          </span>
+          <span className={`pill ${statusTone(suggestion.status)}`}>{getSafeStatusLabel(suggestion.status)}</span>
+          <span className={`pill ${model.priority === "critical" ? "danger" : "warning"}`}>{model.priorityLabel}</span>
           <span className="pill">{formatDisplayText(suggestion.category, getAlertCategory(model.alert))}</span>
         </div>
       </div>

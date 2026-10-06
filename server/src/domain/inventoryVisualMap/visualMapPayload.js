@@ -83,7 +83,9 @@ function normalizePoint(point) {
   /** @type {Record<string, unknown>} */
   const source = Array.isArray(point)
     ? { x: point[0], y: point[1], z: point[2] }
-    : point && typeof point === "object" ? /** @type {Record<string, unknown>} */ (point) : {};
+    : point && typeof point === "object"
+      ? /** @type {Record<string, unknown>} */ (point)
+      : {};
 
   return {
     x: numberInRange(source.x ?? source.positionX, 0, -200, 200),

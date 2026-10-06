@@ -34,14 +34,8 @@ test("calcula proxima preparacao respeitando fuso horario", () => {
     timezone: "America/Sao_Paulo"
   };
 
-  assert.equal(
-    computeNextScheduledFor(schedule, new Date("2026-06-14T10:00:00.000Z")),
-    "2026-06-14T11:00:00.000Z"
-  );
-  assert.equal(
-    computeNextScheduledFor(schedule, new Date("2026-06-14T12:00:00.000Z")),
-    "2026-06-15T11:00:00.000Z"
-  );
+  assert.equal(computeNextScheduledFor(schedule, new Date("2026-06-14T10:00:00.000Z")), "2026-06-14T11:00:00.000Z");
+  assert.equal(computeNextScheduledFor(schedule, new Date("2026-06-14T12:00:00.000Z")), "2026-06-15T11:00:00.000Z");
 });
 
 test("aplica prioridade de recorrencia: maquina acima de segmento e plano", () => {
@@ -88,14 +82,8 @@ test("gera chave idempotente estavel para o mesmo plano, ativo e janela", () => 
 
 test("recorrencia personalizada exige quantidade explicita de dias", () => {
   assert.equal(normalizeRecurrenceIntervalDays(45, "custom_days", { strict: true }), 45);
-  assert.throws(
-    () => normalizeRecurrenceIntervalDays(undefined, "custom_days", { strict: true }),
-    /quantidade de dias/
-  );
-  assert.throws(
-    () => normalizeRecurrenceIntervalDays(366, "custom_days", { strict: true }),
-    /quantidade de dias/
-  );
+  assert.throws(() => normalizeRecurrenceIntervalDays(undefined, "custom_days", { strict: true }), /quantidade de dias/);
+  assert.throws(() => normalizeRecurrenceIntervalDays(366, "custom_days", { strict: true }), /quantidade de dias/);
 });
 
 test("identifica quando agenda individual precisa recalcular proxima execucao", () => {
@@ -216,17 +204,14 @@ test("lista de preventivas usa indicadores apenas visuais", () => {
   // A Central de Avisos foi dividida: a juncao dos indicadores mora em preventiveUtils.js e a
   // linha da maquina (com os indicadores visuais) em PreventiveDeviceRow.jsx.
   const alertsDir = "../../../client/src/components/alerts/";
-  const source = ["AlertCenterV2.jsx", "preventiveUtils.js", "preventives/PreventiveDeviceRow.jsx"]
+  const source = ["AlertCenterV2.jsx", "hooks/useAlertCenterController.js", "preventiveUtils.js", "preventives/PreventiveDeviceRow.jsx"]
     .map((file) => readFileSync(fileURLToPath(new URL(`${alertsDir}${file}`, import.meta.url)), "utf8"))
     .join("\n");
 
   assert.match(source, /preventiveAutomationManagement\?\.machines/);
   assert.match(source, /managementMachine\?\.plans/);
   assert.match(source, /automationIndicators:\s*\[\.\.\.indicatorsByPlanId\.values\(\)\]/);
-  assert.match(
-    source,
-    /<AutomationIndicatorDots[\s\S]*?indicators=\{device\.automationIndicators\}[\s\S]*?interactive=\{false\}/
-  );
+  assert.match(source, /<AutomationIndicatorDots[\s\S]*?indicators=\{device\.automationIndicators\}[\s\S]*?interactive=\{false\}/);
 });
 
 test("criacao e edicao de automacao validam nome e cor unicos", () => {
@@ -265,7 +250,9 @@ test("repositorio de automacao nao usa primitivas de execucao de comandos", () =
     "../services/preventiveAutomationScheduleService.js",
     "../services/preventiveAutomationScopeService.js",
     "../services/maintenanceScripts/maintenanceScriptsFacade.js"
-  ].map(sourceOf).join("\n");
+  ]
+    .map(sourceOf)
+    .join("\n");
 
   assert.doesNotMatch(source, /child_process/);
   assert.doesNotMatch(source, /\bexec\s*\(/);

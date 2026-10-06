@@ -62,10 +62,7 @@ test("normaliza conexoes tecnicas com pontos manuais", () => {
     layer: "infrastructure",
     connectionType: "network_cable",
     label: " Cabo rack ",
-    points: [
-      { x: "-999", y: 0.2, z: 1 },
-      [4, 0.2, "999"]
-    ],
+    points: [{ x: "-999", y: 0.2, z: 1 }, [4, 0.2, "999"]],
     thickness: "20",
     dashed: true,
     color: "invalid",
@@ -85,10 +82,7 @@ test("normaliza conexoes tecnicas com pontos manuais", () => {
 
 test("rejeita conexoes com camada, tipo ou pontos invalidos", () => {
   assert.throws(() => normalizeConnectionPayload({ layer: "assets", points: [{}, {}] }), /camada/i);
-  assert.throws(
-    () => normalizeConnectionPayload({ layer: "electrical", connectionType: "network_cable", points: [{}, {}] }),
-    /tipo/i
-  );
+  assert.throws(() => normalizeConnectionPayload({ layer: "electrical", connectionType: "network_cable", points: [{}, {}] }), /tipo/i);
   assert.throws(() => normalizeConnectionPayload({ layer: "electrical", connectionType: "power_line", points: [{}] }), /dois pontos/i);
 });
 
@@ -130,10 +124,7 @@ test("listagem de mapas evita recursos SQL nao suportados pelo pg-mem", () => {
 
 test("vinculos de ativos sao validados e nao podem se repetir no mesmo mapa", () => {
   // A validacao mora nos guardas do repositorio; as chamadas, nos servicos de objeto.
-  const repository = [
-    source("visualMapGuards.js"),
-    source("../../services/inventoryVisualMap/visualMapObjectService.js")
-  ].join("\n");
+  const repository = [source("visualMapGuards.js"), source("../../services/inventoryVisualMap/visualMapObjectService.js")].join("\n");
 
   assert.match(repository, /removed_at IS NULL/);
   assert.match(repository, /ensureAssetLinkAvailable\(mapId, data\.linkedAssetId/);

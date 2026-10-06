@@ -6,9 +6,7 @@ import { ACCOUNT_VIEW_ID, BLOCKED_VIEW_ID, DEFAULT_VIEW_ID, pathForView, viewIdF
 const OPEN_INVENTORY_BOARD_EVENT = "it-guardian:open-inventory-board";
 
 function dispatchOpenInventoryBoard(detail) {
-  window.dispatchEvent(
-    detail ? new CustomEvent(OPEN_INVENTORY_BOARD_EVENT, { detail }) : new CustomEvent(OPEN_INVENTORY_BOARD_EVENT)
-  );
+  window.dispatchEvent(detail ? new CustomEvent(OPEN_INVENTORY_BOARD_EVENT, { detail }) : new CustomEvent(OPEN_INVENTORY_BOARD_EVENT));
 }
 
 // Liga a URL ao restante do app: calcula a visao ativa (ja respeitando as

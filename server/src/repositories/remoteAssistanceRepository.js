@@ -186,14 +186,7 @@ export async function findPendingRemoteAssistanceSessionForAsset(assetId, db = q
   return sessionFromRow(result.rows[0]);
 }
 
-export async function setRemoteAssistanceConsent({
-  id,
-  granted,
-  controlAllowed,
-  selectedMonitorId = null,
-  monitorCount = 0,
-  db = query
-}) {
+export async function setRemoteAssistanceConsent({ id, granted, controlAllowed, selectedMonitorId = null, monitorCount = 0, db = query }) {
   const status = granted ? "active" : "consent_denied";
   const consentStatus = granted ? "granted" : "denied";
   const result = await db(
@@ -311,11 +304,7 @@ export async function failStaleRemoteAssistanceSessions(staleBefore, db = query)
   return result.rows.map(sessionFromRow);
 }
 
-export async function endRemoteAssistanceSessionsForTechnician(
-  technicianUserId,
-  endReason = "technician_logout",
-  db = query
-) {
+export async function endRemoteAssistanceSessionsForTechnician(technicianUserId, endReason = "technician_logout", db = query) {
   const result = await db(
     `
       UPDATE remote_assistance_sessions

@@ -11,7 +11,11 @@ function PlanSelect({ machine, selectedPlan, onChange }) {
     <label className="automation-machine-plan-select">
       Plano que deseja gerenciar
       <select value={selectedPlan.id} onChange={(event) => onChange(event.target.value)}>
-        {machine.plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.planName || plan.name}</option>)}
+        {machine.plans.map((plan) => (
+          <option key={plan.id} value={plan.id}>
+            {plan.planName || plan.name}
+          </option>
+        ))}
       </select>
     </label>
   );
@@ -100,14 +104,22 @@ export default function AutomationMachineDetails({
         if (event.target === event.currentTarget) requestClose();
       }}
     >
-      <section ref={dialogRef} className="modal-panel automation-machine-details" role="dialog" aria-modal="true" aria-labelledby="automation-machine-title">
+      <section
+        ref={dialogRef}
+        className="modal-panel automation-machine-details"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="automation-machine-title"
+      >
         <header>
           <div>
             <span>Configuração desta máquina</span>
             <h2 id="automation-machine-title">{machine.assetName}</h2>
             <p>Alterações nesta tela afetam somente esta máquina.</p>
           </div>
-          <button type="button" className="icon-button" onClick={requestClose} aria-label="Fechar ações da máquina"><X size={18} /></button>
+          <button type="button" className="icon-button" onClick={requestClose} aria-label="Fechar ações da máquina">
+            <X size={18} />
+          </button>
         </header>
 
         {machine.plans.length > 1 && <PlanSelect machine={machine} selectedPlan={selectedPlan} onChange={state.switchPlan} />}

@@ -47,19 +47,22 @@ export async function findActiveScriptValidationForSuggestion(suggestionId, scri
  * Cria a observacao ativa em 'waiting_agent'. Devolve a linha criada ou null
  * se outra chamada concorrente ja criou a observacao ativa (ON CONFLICT).
  */
-export async function insertActiveValidationRun(db, {
-  id,
-  suggestionId,
-  alertId,
-  assetId,
-  scriptId,
-  startedBy,
-  validationWindowMinutes,
-  validationDueAt,
-  resultSummary,
-  activeKey,
-  observationSlot
-}) {
+export async function insertActiveValidationRun(
+  db,
+  {
+    id,
+    suggestionId,
+    alertId,
+    assetId,
+    scriptId,
+    startedBy,
+    validationWindowMinutes,
+    validationDueAt,
+    resultSummary,
+    activeKey,
+    observationSlot
+  }
+) {
   const validationInsert = await db(
     `
       INSERT INTO script_validation_runs (

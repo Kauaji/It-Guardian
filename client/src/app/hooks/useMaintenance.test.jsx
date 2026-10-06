@@ -75,11 +75,10 @@ describe("useMaintenanceExit", () => {
     });
 
     expect(ok).toBe(true);
-    expect(context.deps.moves.handleMoveMachine).toHaveBeenCalledWith(
-      { ...inMaintenance, maintenance: true },
-      "s1",
-      { reason: "maintenance_exit", targetTabId: "tab-a" }
-    );
+    expect(context.deps.moves.handleMoveMachine).toHaveBeenCalledWith({ ...inMaintenance, maintenance: true }, "s1", {
+      reason: "maintenance_exit",
+      targetTabId: "tab-a"
+    });
     expect(context.deps.deviceState.updateDeviceSegmentInState).toHaveBeenCalledWith("d1", "s1", "Redes", {
       maintenance: false,
       maintenanceOrigin: null
@@ -160,14 +159,22 @@ describe("useMaintenanceEntry.putMachineInMaintenance", () => {
       segmentId: "s1",
       segmentName: "Redes"
     });
-    expect(context.deps.deviceState.updateDeviceSegmentInState).toHaveBeenCalledWith("d1", "m1", "Manutenção", expect.objectContaining({ maintenance: true }));
-    expect(createServiceOrder).toHaveBeenCalledWith("token-1", expect.objectContaining({
-      title: "Manutenção - PC-01",
-      category: "Manutenção",
-      assetId: "d1",
-      environmentId: "tab-a",
-      notes: "Origem: Redes"
-    }));
+    expect(context.deps.deviceState.updateDeviceSegmentInState).toHaveBeenCalledWith(
+      "d1",
+      "m1",
+      "Manutenção",
+      expect.objectContaining({ maintenance: true })
+    );
+    expect(createServiceOrder).toHaveBeenCalledWith(
+      "token-1",
+      expect.objectContaining({
+        title: "Manutenção - PC-01",
+        category: "Manutenção",
+        assetId: "d1",
+        environmentId: "tab-a",
+        notes: "Origem: Redes"
+      })
+    );
     expect(context.ordersStore.get()[0].id).toBe("os-1");
     expect(context.session.notify).toHaveBeenCalledWith("PC-01 colocada em manutenção.", "ok");
   });
@@ -215,9 +222,12 @@ describe("useMaintenanceEntry.ensureMachineInMaintenanceForServiceOrder", () => 
     const { result } = renderEntry(context);
     const ok = await result.current.ensureMachineInMaintenanceForServiceOrder({ ...machine, maintenance: true }, { id: "os-1" });
     expect(ok).toBe(true);
-    expect(context.deps.serviceOrderCore.addServiceOrderSystemHistory).toHaveBeenCalledWith("os-1", expect.objectContaining({
-      message: "Máquina vinculada. Ela já estava em manutenção."
-    }));
+    expect(context.deps.serviceOrderCore.addServiceOrderSystemHistory).toHaveBeenCalledWith(
+      "os-1",
+      expect.objectContaining({
+        message: "Máquina vinculada. Ela já estava em manutenção."
+      })
+    );
     expect(context.deps.moves.handleMoveMachine).not.toHaveBeenCalled();
   });
 
@@ -237,11 +247,14 @@ describe("useMaintenanceEntry.ensureMachineInMaintenanceForServiceOrder", () => 
     expect(context.deps.deviceState.appendDeviceHistoryEvent.mock.calls[0][1].message).toBe(
       "Máquina colocada em manutenção automaticamente pela OS #3."
     );
-    expect(context.deps.serviceOrderCore.addServiceOrderSystemHistory).toHaveBeenCalledWith("os-1", expect.objectContaining({
-      message: "Máquina vinculada e colocada em manutenção.",
-      oldValue: "Redes",
-      newValue: "Manutenção"
-    }));
+    expect(context.deps.serviceOrderCore.addServiceOrderSystemHistory).toHaveBeenCalledWith(
+      "os-1",
+      expect.objectContaining({
+        message: "Máquina vinculada e colocada em manutenção.",
+        oldValue: "Redes",
+        newValue: "Manutenção"
+      })
+    );
   });
 
   it("usa a aba da OS para maquinas nao organizadas e trata falhas", async () => {

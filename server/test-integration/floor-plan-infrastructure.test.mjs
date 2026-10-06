@@ -41,7 +41,12 @@ test("mapa de infraestrutura protege upload e calcula resumo e calor com dados p
   const png = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 0]);
   const uploaded = await fetch(`${baseUrl}/api/floor-plans/${planId}/floors/${floorId}/background`, {
     method: "POST",
-    headers: { cookie, origin: "http://localhost:5173", "content-type": "image/png", "x-file-name": encodeURIComponent("Planta térreo.png") },
+    headers: {
+      cookie,
+      origin: "http://localhost:5173",
+      "content-type": "image/png",
+      "x-file-name": encodeURIComponent("Planta térreo.png")
+    },
     body: png
   });
   assert.equal(uploaded.status, 201);
@@ -71,19 +76,21 @@ test("mapa de infraestrutura protege upload e calcula resumo e calor com dados p
     body: JSON.stringify({
       floors: bundle.floors,
       zones: [],
-      objects: [{
-        id: objectId,
-        floorId,
-        objectType: "server",
-        category: "asset",
-        label: "Servidor financeiro",
-        linkedAssetId: "asset-sem-agente",
-        x: 100,
-        y: 120,
-        width: 80,
-        height: 56,
-        metadata: { criticality: "critical", description: "Servidor central" }
-      }],
+      objects: [
+        {
+          id: objectId,
+          floorId,
+          objectType: "server",
+          category: "asset",
+          label: "Servidor financeiro",
+          linkedAssetId: "asset-sem-agente",
+          x: 100,
+          y: 120,
+          width: 80,
+          height: 56,
+          metadata: { criticality: "critical", description: "Servidor central" }
+        }
+      ],
       connectionPoints: [],
       cableRoutes: []
     })
@@ -97,7 +104,9 @@ test("mapa de infraestrutura protege upload e calcula resumo e calor com dados p
   assert.equal(summary.linkedAssets, 1);
   assert.equal(summary.assetsWithoutAgent, 1);
 
-  const assetHeatmapResponse = await fetch(`${baseUrl}/api/floor-plans/${planId}/heatmap/assets?metric=availability`, { headers: { cookie } });
+  const assetHeatmapResponse = await fetch(`${baseUrl}/api/floor-plans/${planId}/heatmap/assets?metric=availability`, {
+    headers: { cookie }
+  });
   assert.equal(assetHeatmapResponse.status, 200);
   const assetHeatmap = (await assetHeatmapResponse.json()).heatmap;
   assert.equal(assetHeatmap.components[0].componentId, objectId);
@@ -108,7 +117,10 @@ test("mapa de infraestrutura protege upload e calcula resumo e calor com dados p
 
   const startDate = new Date(Date.now() - 86_400_000).toISOString();
   const endDate = new Date(Date.now() + 86_400_000).toISOString();
-  const osHeatmapResponse = await fetch(`${baseUrl}/api/floor-plans/${planId}/heatmap/service-orders?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`, { headers: { cookie } });
+  const osHeatmapResponse = await fetch(
+    `${baseUrl}/api/floor-plans/${planId}/heatmap/service-orders?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`,
+    { headers: { cookie } }
+  );
   assert.equal(osHeatmapResponse.status, 200);
   assert.equal((await osHeatmapResponse.json()).heatmap.components[0].totalServiceOrders, 0);
 

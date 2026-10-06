@@ -1,12 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
-  buildSentryEvent,
-  parseSentryDsn,
-  reportError,
-  resetErrorReporterState,
-  setErrorReporterTransport
-} from "./errorReporter.js";
+import { buildSentryEvent, parseSentryDsn, reportError, resetErrorReporterState, setErrorReporterTransport } from "./errorReporter.js";
 
 function withEnv(values, fn) {
   const previous = {};
@@ -45,7 +39,10 @@ test("envia envelope ao Sentry e JSON ao webhook, sem token na URL", async () =>
   try {
     await withEnv({ SENTRY_DSN: "https://chave@o1.ingest.sentry.io/123", ERROR_WEBHOOK_URL: "https://hooks.example.com/x" }, async () => {
       const error = new Error("falha de teste");
-      assert.equal(await reportError(error, { requestId: "req-12345678", method: "GET", path: "/api/public/service-orders/track/SEGREDO?a=1" }), true);
+      assert.equal(
+        await reportError(error, { requestId: "req-12345678", method: "GET", path: "/api/public/service-orders/track/SEGREDO?a=1" }),
+        true
+      );
     });
   } finally {
     setErrorReporterTransport(null);
@@ -65,7 +62,9 @@ test("envia envelope ao Sentry e JSON ao webhook, sem token na URL", async () =>
 test("limita a taxa de erros iguais", async () => {
   resetErrorReporterState();
   let sent = 0;
-  setErrorReporterTransport(async () => { sent += 1; });
+  setErrorReporterTransport(async () => {
+    sent += 1;
+  });
   try {
     await withEnv({ ERROR_WEBHOOK_URL: "https://hooks.example.com/x", SENTRY_DSN: undefined }, async () => {
       const error = new Error("repetido");

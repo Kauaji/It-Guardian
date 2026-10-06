@@ -63,15 +63,26 @@ export const migration035IdentityHardening = {
     const byEmail = new Map(users.map((user) => [String(user.email || "").toLowerCase(), user]));
     const namesCount = new Map();
     for (const user of users) {
-      const key = String(user.name || "").trim().toLowerCase();
+      const key = String(user.name || "")
+        .trim()
+        .toLowerCase();
       namesCount.set(key, (namesCount.get(key) || 0) + 1);
     }
     for (const technician of technicians) {
-      const emailKey = String(technician.email || "").trim().toLowerCase();
-      const nameKey = String(technician.name || "").trim().toLowerCase();
+      const emailKey = String(technician.email || "")
+        .trim()
+        .toLowerCase();
+      const nameKey = String(technician.name || "")
+        .trim()
+        .toLowerCase();
       let match = emailKey ? byEmail.get(emailKey) : null;
       if (!match && nameKey && namesCount.get(nameKey) === 1) {
-        match = users.find((user) => String(user.name || "").trim().toLowerCase() === nameKey);
+        match = users.find(
+          (user) =>
+            String(user.name || "")
+              .trim()
+              .toLowerCase() === nameKey
+        );
       }
       if (match) {
         await db("UPDATE technicians SET user_id = $2 WHERE id = $1", [technician.id, match.id]);

@@ -13,29 +13,27 @@ function MonthPopover({ monthFilter, picker, onSelectMonth, onClearMonth, onClos
       </header>
       {mode === "years" ? (
         <div className="service-order-year-grid">
-          {availableYears.length ? availableYears.map((value) => (
-            <button
-              key={value}
-              type="button"
-              className={value === year ? "active" : ""}
-              onClick={() => picker.pickYear(value)}
-            >
-              {value}
-            </button>
-          )) : <p className="empty">Nenhuma OS cadastrada.</p>}
+          {availableYears.length ? (
+            availableYears.map((value) => (
+              <button key={value} type="button" className={value === year ? "active" : ""} onClick={() => picker.pickYear(value)}>
+                {value}
+              </button>
+            ))
+          ) : (
+            <p className="empty">Nenhuma OS cadastrada.</p>
+          )}
         </div>
       ) : (
         <div className="service-order-month-grid">
-          {monthsForYear.length ? monthsForYear.map((value) => (
-            <button
-              key={value}
-              type="button"
-              className={value === monthFilter ? "active" : ""}
-              onClick={() => onSelectMonth(value)}
-            >
-              {formatShortMonth(value)}
-            </button>
-          )) : <p className="empty">Sem OS neste ano.</p>}
+          {monthsForYear.length ? (
+            monthsForYear.map((value) => (
+              <button key={value} type="button" className={value === monthFilter ? "active" : ""} onClick={() => onSelectMonth(value)}>
+                {formatShortMonth(value)}
+              </button>
+            ))
+          ) : (
+            <p className="empty">Sem OS neste ano.</p>
+          )}
         </div>
       )}
       <div className="service-order-month-popover-actions">

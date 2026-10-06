@@ -1,6 +1,12 @@
 import HierarchySegmentRow from "./HierarchySegmentRow.jsx";
 
-export default function HierarchyUngroupedBranch({ segments, selectedSegmentId, expandedSegmentIds, onToggleSegmentExpanded, onSelectSegment }) {
+export default function HierarchyUngroupedBranch({
+  segments,
+  selectedSegmentId,
+  expandedSegmentIds,
+  onToggleSegmentExpanded,
+  onSelectSegment
+}) {
   return (
     <div className="network-topology-hierarchy-group">
       <div className="network-topology-hierarchy-row">

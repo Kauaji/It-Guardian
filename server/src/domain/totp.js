@@ -30,7 +30,10 @@ export function base32Encode(buffer) {
  * @throws {Error} Para caracteres fora do alfabeto.
  */
 export function base32Decode(text) {
-  const clean = String(text || "").toUpperCase().replace(/=+$/g, "").replace(/\s+/g, "");
+  const clean = String(text || "")
+    .toUpperCase()
+    .replace(/=+$/g, "")
+    .replace(/\s+/g, "");
   let bits = 0;
   let value = 0;
   /** @type {number[]} */
@@ -149,5 +152,7 @@ export function generateRecoveryCode() {
 
 /** @param {unknown} value */
 export function normalizeRecoveryCode(value) {
-  return String(value || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return String(value || "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
 }

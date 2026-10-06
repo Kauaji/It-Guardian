@@ -1,12 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
-  generateProductKey,
-  hashMachineFingerprint,
-  hashProductKey,
-  normalizeProductKey,
-  productKeyHint
-} from "./productKey.js";
+import { generateProductKey, hashMachineFingerprint, hashProductKey, normalizeProductKey, productKeyHint } from "./productKey.js";
 
 test("chaves de produto sao normalizadas, mascaradas e armazenadas por hash", () => {
   const productKey = generateProductKey();
@@ -20,9 +14,6 @@ test("chaves de produto sao normalizadas, mascaradas e armazenadas por hash", ()
 });
 
 test("fingerprint e normalizado antes do hash para reinstalacao idempotente", () => {
-  assert.equal(
-    hashMachineFingerprint("  MACHINE-FINGERPRINT  "),
-    hashMachineFingerprint("machine-fingerprint")
-  );
+  assert.equal(hashMachineFingerprint("  MACHINE-FINGERPRINT  "), hashMachineFingerprint("machine-fingerprint"));
   assert.match(hashMachineFingerprint("machine-fingerprint"), /^[a-f0-9]{64}$/);
 });

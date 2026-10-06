@@ -19,7 +19,10 @@ test("configuracoes vazias normalizam para os padroes", () => {
   assert.equal(settings.numberFormat.prefix, "OS");
   assert.equal(settings.numberFormat.nextNumber, null);
   assert.equal(settings.boardLayout, "horizontal");
-  assert.deepEqual(settings.statuses.map((status) => status.id), ["open", "in_progress", "waiting", "closed"]);
+  assert.deepEqual(
+    settings.statuses.map((status) => status.id),
+    ["open", "in_progress", "waiting", "closed"]
+  );
   assert.equal(isDefaultSettings(settings), true);
   assert.equal(isDefaultSettings(mergeServiceOrderSettingsUpdate(settings, { numberFormat: { prefix: "x" } })), false);
 });
@@ -56,7 +59,10 @@ test("status: limite, ids unicos, um inicial e um final", () => {
       { id: "feito", name: "Feito", isFinal: true, color: "invalida" }
     ]
   }).statuses;
-  assert.deepEqual(statuses.map((status) => status.id), ["novo_chamado", "feito"]);
+  assert.deepEqual(
+    statuses.map((status) => status.id),
+    ["novo_chamado", "feito"]
+  );
   assert.equal(statuses.filter((status) => status.isInitial).length, 1);
   assert.equal(statuses.filter((status) => status.isFinal).length, 1);
   assert.equal(statuses[1].isFinal, true);
@@ -68,7 +74,12 @@ test("status: limite, ids unicos, um inicial e um final", () => {
 test("status inicial/final e existencia por id", () => {
   assert.equal(getInitialStatus().id, "open");
   assert.equal(getFinalStatus().id, "closed");
-  const custom = { statuses: [{ id: "a", name: "A", isInitial: true }, { id: "b", name: "B", isFinal: true }] };
+  const custom = {
+    statuses: [
+      { id: "a", name: "A", isInitial: true },
+      { id: "b", name: "B", isFinal: true }
+    ]
+  };
   assert.equal(getInitialStatus(custom).id, "a");
   assert.equal(getFinalStatus(custom).id, "b");
   assert.equal(hasServiceOrderStatus(custom, "b"), true);
@@ -109,18 +120,12 @@ test("prioridade: saneamento, escolha da maior e regras configuradas", () => {
     { ruleType: "problem_type", targetValue: "rede", priority: "high" },
     { ruleType: "sector", targetValue: "", priority: "critical" }
   ];
-  assert.equal(
-    resolveConfiguredPriority({ priority: "low", environmentName: "cliente vip" }, { sectorName: "TI" }, {}, rules),
-    "critical"
-  );
+  assert.equal(resolveConfiguredPriority({ priority: "low", environmentName: "cliente vip" }, { sectorName: "TI" }, {}, rules), "critical");
   assert.equal(
     resolveConfiguredPriority({ category: "Servidor" }, { sectorName: "TI" }, { defaultPriority: "low" }, rules),
     "low",
     "regra inativa e ignorada"
   );
-  assert.equal(
-    resolveConfiguredPriority({ problemType: "Rede" }, { sectorName: "TI" }, {}, rules),
-    "high"
-  );
+  assert.equal(resolveConfiguredPriority({ problemType: "Rede" }, { sectorName: "TI" }, {}, rules), "high");
   assert.equal(resolveConfiguredPriority({}, {}, { defaultPriority: "invalida" }, []), "medium");
 });

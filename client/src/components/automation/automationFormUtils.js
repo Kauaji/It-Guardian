@@ -88,7 +88,5 @@ function normalizeComparable(value) {
 
 export function automationDraftsEqual(left = {}, right = {}) {
   const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
-  return [...keys].every((key) => (
-    JSON.stringify(normalizeComparable(left[key])) === JSON.stringify(normalizeComparable(right[key]))
-  ));
+  return [...keys].every((key) => JSON.stringify(normalizeComparable(left[key])) === JSON.stringify(normalizeComparable(right[key])));
 }

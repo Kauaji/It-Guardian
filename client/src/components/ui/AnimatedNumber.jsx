@@ -59,7 +59,9 @@ export default function AnimatedNumber({ value, className = "" }) {
           return /[0-9]/.test(char) ? (
             <Digit key={placeKey} char={char} />
           ) : (
-            <span key={placeKey} className="animated-number-static">{char}</span>
+            <span key={placeKey} className="animated-number-static">
+              {char}
+            </span>
           );
         })}
       </span>

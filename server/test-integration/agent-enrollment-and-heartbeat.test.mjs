@@ -25,16 +25,8 @@ const {
   updateAgentAssetAlias
 } = await import("../src/repositories/agentRepository.js");
 const { verifyPublicMachineToken } = await import("../src/services/publicMachineToken.js");
-const {
-  agentHeaders,
-  bearerHeaders,
-  bearerUser,
-  browserHeaders,
-  heartbeatPayload,
-  listen,
-  login,
-  sendHeartbeat
-} = await import("../test-support/scriptFixtures.mjs");
+const { agentHeaders, bearerHeaders, bearerUser, browserHeaders, heartbeatPayload, listen, login, sendHeartbeat } =
+  await import("../test-support/scriptFixtures.mjs");
 
 test.after(closeDatabase);
 
@@ -129,7 +121,11 @@ test("gestao de tokens do agente: criar, listar, revogar e restringir a administ
   assert.equal(await revokeAgentEnrollment("inexistente"), null);
 
   const { token: operatorToken } = await bearerUser({ role: "operator" });
-  for (const [method, path] of [["GET", "/enrollments"], ["POST", "/enrollments"], ["POST", "/enrollments/x/revoke"]]) {
+  for (const [method, path] of [
+    ["GET", "/enrollments"],
+    ["POST", "/enrollments"],
+    ["POST", "/enrollments/x/revoke"]
+  ]) {
     const response = await fetch(`${baseUrl}/api/agents${path}`, {
       method,
       headers: bearerHeaders(operatorToken),
@@ -190,10 +186,9 @@ test("heartbeat registra o agente, a reconexao apos inatividade e sincroniza a a
   const enrollment = await createAgentEnrollment({ name: "Agente de presenca" });
   const activationId = await createActivation(enrollment.enrollment.id);
   const machineId = "heartbeat-presence";
-  const countHistory = async (eventType) => (await query(
-    "SELECT COUNT(*)::INTEGER AS total FROM asset_history WHERE asset_id = $1 AND event_type = $2",
-    [machineId, eventType]
-  )).rows[0].total;
+  const countHistory = async (eventType) =>
+    (await query("SELECT COUNT(*)::INTEGER AS total FROM asset_history WHERE asset_id = $1 AND event_type = $2", [machineId, eventType]))
+      .rows[0].total;
 
   const first = await sendHeartbeat(baseUrl, enrollment.token, machineId, {
     machineAlias: "Notebook da recepcao",
@@ -208,7 +203,9 @@ test("heartbeat registra o agente, a reconexao apos inatividade e sincroniza a a
   assert.ok(Date.parse(first.body.acceptedAt));
   assert.equal(await countHistory("agent_enrolled"), 1);
 
-  const activation = (await query("SELECT hostname, alias, collector_version, last_seen_at FROM device_activations WHERE id = $1", [activationId])).rows[0];
+  const activation = (
+    await query("SELECT hostname, alias, collector_version, last_seen_at FROM device_activations WHERE id = $1", [activationId])
+  ).rows[0];
   assert.equal(activation.hostname, "RECEPCAO-01");
   assert.equal(activation.alias, "Notebook da recepcao");
   assert.equal(activation.collector_version, "1.2.3");
@@ -345,9 +342,10 @@ test("link de suporte do agente exige token valido e ativacao vinculada", async 
   const withoutActivation = await createAgentEnrollment({ name: "Agente sem ativacao" });
   const withActivation = await createAgentEnrollment({ name: "Agente com ativacao" });
   const activationId = await createActivation(withActivation.enrollment.id);
-  const supportLink = (token) => fetch(`${baseUrl}/api/agents/support-link`, {
-    headers: token ? { authorization: `Bearer ${token}` } : {}
-  });
+  const supportLink = (token) =>
+    fetch(`${baseUrl}/api/agents/support-link`, {
+      headers: token ? { authorization: `Bearer ${token}` } : {}
+    });
 
   assert.equal((await supportLink()).status, 401);
   assert.equal((await supportLink("itg_token_invalido")).status, 401);

@@ -1,8 +1,4 @@
-import {
-  isColorUsedByOtherPlan,
-  normalizeAutomationColor,
-  preventiveAutomationColorOptions
-} from "./preventiveAutomationPanelUtils.js";
+import { isColorUsedByOtherPlan, normalizeAutomationColor, preventiveAutomationColorOptions } from "./preventiveAutomationPanelUtils.js";
 
 export default function PreventiveAutomationColorField({ form, plans, duplicateColorPlan, onChange }) {
   const currentColor = normalizeAutomationColor(form.indicatorColor);
@@ -12,12 +8,7 @@ export default function PreventiveAutomationColorField({ form, plans, duplicateC
       Cor de identificação do plano
       <div>
         <span className="automation-color-dot" style={{ background: currentColor }} />
-        <input
-          type="color"
-          value={currentColor}
-          onChange={(event) => onChange(event.target.value)}
-          aria-label="Escolher cor do plano"
-        />
+        <input type="color" value={currentColor} onChange={(event) => onChange(event.target.value)} aria-label="Escolher cor do plano" />
         <input
           value={form.indicatorColor}
           onChange={(event) => onChange(event.target.value)}
@@ -25,9 +16,7 @@ export default function PreventiveAutomationColorField({ form, plans, duplicateC
           aria-label="Valor hexadecimal da cor"
         />
       </div>
-      {duplicateColorPlan && (
-        <span className="form-error">Essa cor já identifica a automatização "{duplicateColorPlan.name}".</span>
-      )}
+      {duplicateColorPlan && <span className="form-error">Essa cor já identifica a automatização "{duplicateColorPlan.name}".</span>}
       <div className="automation-color-palette" aria-label="Cores sugeridas">
         {preventiveAutomationColorOptions.map((color) => (
           <button

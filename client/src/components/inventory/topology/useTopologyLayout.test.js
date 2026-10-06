@@ -23,7 +23,10 @@ function inventoryNode(nodeType, reference, overrides = {}) {
     nodeType,
     assetId: nodeType === "asset" ? reference : null,
     refId: nodeType === "asset" ? null : reference,
-    x: 800, y: 500, pinned: false, automatic: true,
+    x: 800,
+    y: 500,
+    pinned: false,
+    automatic: true,
     ...overrides
   };
 }
@@ -41,8 +44,12 @@ function persistedNode(node, overrides = {}) {
   return {
     id: "saved:" + node.nodeType + ":" + (node.assetId || node.refId),
     mapId: MAP_ID,
-    nodeType: node.nodeType, assetId: node.assetId, refId: node.refId,
-    x: node.x, y: node.y, pinned: Boolean(node.pinned),
+    nodeType: node.nodeType,
+    assetId: node.assetId,
+    refId: node.refId,
+    x: node.x,
+    y: node.y,
+    pinned: Boolean(node.pinned),
     labelOverride: node.labelOverride || null,
     ...overrides
   };
@@ -68,33 +75,53 @@ function deferred() {
 function renderLayout(overrides = {}) {
   const { initialBundle = makeBundle(), initialSelection = ASSET.id, ...options } = overrides;
   const props = {
-    token: "layout-test-session", mapId: MAP_ID, scopeKey: "scope-one", enabled: true,
-    inventoryNodes: [ASSET, GROUP], devicesById: DEVICES,
+    token: "layout-test-session",
+    mapId: MAP_ID,
+    scopeKey: "scope-one",
+    enabled: true,
+    inventoryNodes: [ASSET, GROUP],
+    devicesById: DEVICES,
     ...options
   };
   const notify = vi.fn();
   const onAutoLayout = vi.fn();
   const onMaterialized = vi.fn();
   const onMerge = vi.fn();
-  const rendered = renderHook((current) => {
-    const [bundle, updateBundle] = useState(initialBundle);
-    const [selection, setSelection] = useState(initialSelection);
-    const setBundle = useCallback((updater) => {
-      onMerge();
-      updateBundle(updater);
-    }, [onMerge]);
-    const materialized = useCallback((saved, original) => {
-      onMaterialized(saved, original);
-      setSelection((selected) => selected === original.id ? saved.id : selected);
-    }, [onMaterialized]);
-    const nodes = resolveTopologyDisplayNodes(bundle.nodes, current.inventoryNodes);
-    const layout = useTopologyLayout({
-      token: current.token, mapId: current.mapId, scopeKey: current.scopeKey,
-      nodes, devicesById: current.devicesById, enabled: current.enabled,
-      setBundle, onMaterialized: materialized, onAutoLayout, notify
-    });
-    return { ...layout, bundle, selection, nodes, setLocalBundle: updateBundle, setLocalSelection: setSelection };
-  }, { initialProps: props });
+  const rendered = renderHook(
+    (current) => {
+      const [bundle, updateBundle] = useState(initialBundle);
+      const [selection, setSelection] = useState(initialSelection);
+      const setBundle = useCallback(
+        (updater) => {
+          onMerge();
+          updateBundle(updater);
+        },
+        [onMerge]
+      );
+      const materialized = useCallback(
+        (saved, original) => {
+          onMaterialized(saved, original);
+          setSelection((selected) => (selected === original.id ? saved.id : selected));
+        },
+        [onMaterialized]
+      );
+      const nodes = resolveTopologyDisplayNodes(bundle.nodes, current.inventoryNodes);
+      const layout = useTopologyLayout({
+        token: current.token,
+        mapId: current.mapId,
+        scopeKey: current.scopeKey,
+        nodes,
+        devicesById: current.devicesById,
+        enabled: current.enabled,
+        setBundle,
+        onMaterialized: materialized,
+        onAutoLayout,
+        notify
+      });
+      return { ...layout, bundle, selection, nodes, setLocalBundle: updateBundle, setLocalSelection: setSelection };
+    },
+    { initialProps: props }
+  );
   return { ...rendered, props, notify, onAutoLayout, onMaterialized, onMerge };
 }
 
@@ -189,10 +216,13 @@ describe("useTopologyLayout", () => {
     const { result, onMaterialized, notify } = renderLayout({ initialBundle: makeBundle([extra]) });
     drag(result, ASSET, 950, 620);
     drag(result, GROUP, 450, 350);
-    await act(async () => { await result.current.saveLayout(); });
+    await act(async () => {
+      await result.current.saveLayout();
+    });
     expect(saveTopologyPositions).toHaveBeenCalledOnce();
     expect(saveTopologyPositions.mock.calls[0][0].changes).toEqual([
-      { node: ASSET, x: 950, y: 620 }, { node: GROUP, x: 450, y: 350 }
+      { node: ASSET, x: 950, y: 620 },
+      { node: GROUP, x: 450, y: 350 }
     ]);
     expect(result.current.dirtyPositions.size).toBe(0);
     expect(result.current.bundle.nodes).toContainEqual(extra);
@@ -212,13 +242,17 @@ describe("useTopologyLayout", () => {
     });
     const { result, notify } = renderLayout();
     drag(result);
-    await act(async () => { await result.current.saveLayout(); });
+    await act(async () => {
+      await result.current.saveLayout();
+    });
     expect(result.current.bundle.nodes).toEqual([saved]);
     expect(result.current.dirtyPositions.get("asset:shared")).toEqual({ x: 950, y: 620 });
     expect(result.current.selection).toBe(saved.id);
     expect(result.current.saving).toBe(false);
     expect(notify).toHaveBeenCalledWith("error", "Falha ao salvar posições");
-    await act(async () => { await result.current.saveLayout(); });
+    await act(async () => {
+      await result.current.saveLayout();
+    });
     expect(saveTopologyPositions.mock.calls[1][0].changes).toEqual([{ node: saved, x: 950, y: 620 }]);
     expect(result.current.bundle.nodes).toEqual([{ ...saved, x: 950, y: 620 }]);
     expect(result.current.bundle.links).toBe(LINKS);
@@ -244,27 +278,34 @@ describe("useTopologyLayout", () => {
     expect(generateNetworkTopologyAutoLayout).not.toHaveBeenCalled();
     expect(updateNetworkTopologyNode).not.toHaveBeenCalled();
     expect(result.current.dirtyPositions.get("asset:shared")).toEqual({ x: 950, y: 620 });
-    await act(async () => { pending.resolve({ nodes: [{ ...persistedNode(ASSET), x: 950, y: 620 }] }); await request; });
+    await act(async () => {
+      pending.resolve({ nodes: [{ ...persistedNode(ASSET), x: 950, y: 620 }] });
+      await request;
+    });
     expect(result.current.saving).toBe(false);
     expect(result.current.dirtyPositions.size).toBe(0);
   });
 
-  it.each([
-    { scopeKey: "scope-two" }, { token: "another-session" }, { mapId: "other-map" }, { enabled: false }
-  ])("ignora conclusão de save após mudar o contexto: %j", async (change) => {
-    const pending = deferred();
-    saveTopologyPositions.mockReturnValueOnce(pending.promise);
-    const { result, props, rerender, onMerge, notify } = renderLayout();
-    drag(result);
-    const request = startOperation(result, "save");
-    rerender({ ...props, ...change });
-    expect(result.current.dirtyPositions.size).toBe(0);
-    expect(result.current.saving).toBe(false);
-    await act(async () => { pending.resolve({ nodes: [persistedNode(ASSET)] }); await request; });
-    expect(onMerge).not.toHaveBeenCalled();
-    expect(notify).not.toHaveBeenCalled();
-    expect(result.current.bundle.nodes).toEqual([]);
-  });
+  it.each([{ scopeKey: "scope-two" }, { token: "another-session" }, { mapId: "other-map" }, { enabled: false }])(
+    "ignora conclusão de save após mudar o contexto: %j",
+    async (change) => {
+      const pending = deferred();
+      saveTopologyPositions.mockReturnValueOnce(pending.promise);
+      const { result, props, rerender, onMerge, notify } = renderLayout();
+      drag(result);
+      const request = startOperation(result, "save");
+      rerender({ ...props, ...change });
+      expect(result.current.dirtyPositions.size).toBe(0);
+      expect(result.current.saving).toBe(false);
+      await act(async () => {
+        pending.resolve({ nodes: [persistedNode(ASSET)] });
+        await request;
+      });
+      expect(onMerge).not.toHaveBeenCalled();
+      expect(notify).not.toHaveBeenCalled();
+      expect(result.current.bundle.nodes).toEqual([]);
+    }
+  );
 
   it.each(["generate", "pin"])("não continua %s quando muda o mapa durante a materialização", async (operation) => {
     const pending = deferred();
@@ -272,7 +313,10 @@ describe("useTopologyLayout", () => {
     const { result, props, rerender, onMerge, notify } = renderLayout();
     const request = startOperation(result, operation);
     rerender({ ...props, mapId: "other-map", scopeKey: "scope-two" });
-    await act(async () => { pending.resolve(persistedNode(ASSET)); await request; });
+    await act(async () => {
+      pending.resolve(persistedNode(ASSET));
+      await request;
+    });
     expect(generateNetworkTopologyAutoLayout).not.toHaveBeenCalled();
     expect(updateNetworkTopologyNode).not.toHaveBeenCalled();
     expect(onMerge).not.toHaveBeenCalled();
@@ -309,7 +353,10 @@ describe("useTopologyLayout", () => {
     drag(result);
     const request = startOperation(result, "save");
     rerender({ ...props, token: "another-session" });
-    await act(async () => { pending.reject(new Error("Resposta atrasada")); await request; });
+    await act(async () => {
+      pending.reject(new Error("Resposta atrasada"));
+      await request;
+    });
     expect(notify).not.toHaveBeenCalled();
   });
 
@@ -318,9 +365,12 @@ describe("useTopologyLayout", () => {
     const placed = [pinned, persistedNode(GROUP, { x: 300, y: 700 }), persistedNode(SECOND_ASSET, { x: 1100, y: 700 })];
     generateNetworkTopologyAutoLayout.mockResolvedValue({ nodes: placed });
     const { result, onAutoLayout } = renderLayout({
-      initialBundle: makeBundle([pinned]), inventoryNodes: [ASSET, GROUP, SECOND_ASSET]
+      initialBundle: makeBundle([pinned]),
+      inventoryNodes: [ASSET, GROUP, SECOND_ASSET]
     });
-    await act(async () => { await result.current.generateAutoLayout(); });
+    await act(async () => {
+      await result.current.generateAutoLayout();
+    });
     expect(ensureTopologyNode).toHaveBeenCalledTimes(3);
     expect(ensureTopologyNode.mock.calls.map(([args]) => args.node.id)).toEqual([pinned.id, GROUP.id, SECOND_ASSET.id]);
     expect(generateNetworkTopologyAutoLayout.mock.calls[0][1]).toBe(MAP_ID);
@@ -334,11 +384,11 @@ describe("useTopologyLayout", () => {
   it("fixa um item automático pela posição-base sem descartar o arraste pendente", async () => {
     const { result } = renderLayout();
     drag(result);
-    await act(async () => { await result.current.togglePinned({ ...ASSET, x: 950, y: 620 }); });
+    await act(async () => {
+      await result.current.togglePinned({ ...ASSET, x: 950, y: 620 });
+    });
     expect(ensureTopologyNode.mock.calls[0][0].node).toEqual(ASSET);
-    expect(updateNetworkTopologyNode).toHaveBeenCalledExactlyOnceWith(
-      "layout-test-session", persistedNode(ASSET).id, { pinned: true }
-    );
+    expect(updateNetworkTopologyNode).toHaveBeenCalledExactlyOnceWith("layout-test-session", persistedNode(ASSET).id, { pinned: true });
     expect(result.current.bundle.nodes[0]).toMatchObject({ x: 800, y: 500, pinned: true, labelOverride: "Financeiro" });
     expect(result.current.dirtyPositions.get("asset:shared")).toEqual({ x: 950, y: 620 });
     expect(result.current.selection).toBe(persistedNode(ASSET).id);

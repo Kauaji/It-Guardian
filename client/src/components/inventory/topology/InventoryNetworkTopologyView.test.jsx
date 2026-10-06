@@ -20,10 +20,20 @@ vi.mock("../../../api.js", () => ({
 
 const permissions = vi.hoisted(() => ({ view: true, manage: true, link: true }));
 vi.mock("../../../context/AppSessionContext.jsx", () => ({
-  useAppSession: () => ({ can: (permission) => permission === "inventory.topology.view" ? permissions.view : permission === "inventory.topology.link_assets" ? permissions.link : permissions.manage })
+  useAppSession: () => ({
+    can: (permission) =>
+      permission === "inventory.topology.view"
+        ? permissions.view
+        : permission === "inventory.topology.link_assets"
+          ? permissions.link
+          : permissions.manage
+  })
 }));
 
-const tabs = [{ id: "t1", name: "Ambiente A" }, { id: "t2", name: "Ambiente B" }];
+const tabs = [
+  { id: "t1", name: "Ambiente A" },
+  { id: "t2", name: "Ambiente B" }
+];
 const props = {
   token: "test-token",
   notify: vi.fn(),
@@ -70,17 +80,32 @@ describe("InventoryNetworkTopologyView", () => {
     permissions.link = true;
     api.fetchNetworkTopologyMaps.mockResolvedValue({ maps: [] });
     api.fetchNetworkTopologyMapByScope.mockImplementation(async (_token, scopeType, scopeId) => ({
-      map: { id: `map-${scopeType}-${scopeId}`, scopeType, scopeId }, nodes: [], links: []
+      map: { id: `map-${scopeType}-${scopeId}`, scopeType, scopeId },
+      nodes: [],
+      links: []
     }));
   });
 
   it("clique simples inspeciona máquinas e conexões internas sem navegar nem criar mapa", async () => {
     api.fetchNetworkTopologyMaps.mockResolvedValue({ maps: [{ id: "existing-group-map", scopeType: "group", scopeId: "g1" }] });
     api.fetchNetworkTopologyMap.mockResolvedValue({
-      map: { id: "existing-group-map" }, nodes: [],
-      links: [{ id: "inside", sourceType: "segment", targetType: "segment", sourceAssetId: "s1", targetAssetId: "s3", type: "fiber", label: "Backbone" }]
+      map: { id: "existing-group-map" },
+      nodes: [],
+      links: [
+        {
+          id: "inside",
+          sourceType: "segment",
+          targetType: "segment",
+          sourceAssetId: "s1",
+          targetAssetId: "s3",
+          type: "fiber",
+          label: "Backbone"
+        }
+      ]
     });
-    render(<InventoryNetworkTopologyView {...props} segments={[...props.segments, { id: "s3", name: "Arquivos", groupId: "g1", tabId: "t1" }]} />);
+    render(
+      <InventoryNetworkTopologyView {...props} segments={[...props.segments, { id: "s3", name: "Arquivos", groupId: "g1", tabId: "t1" }]} />
+    );
     const group = await screen.findByRole("button", { name: "Grupo A, ver grupo" });
     fireEvent.keyDown(group, { key: "Enter" });
     const inspector = await screen.findByRole("complementary", { name: "Detalhes do grupo" });
@@ -119,7 +144,10 @@ describe("InventoryNetworkTopologyView", () => {
     expect(await screen.findByRole("button", { name: "Conexão entre Desktop A e Desktop B" })).toBeInTheDocument();
     expect(screen.getByText("1 conexão(ões)")).toBeVisible();
     expect(api.createNetworkTopologyLink).toHaveBeenCalledExactlyOnceWith("test-token", "map-segment-s1", {
-      sourceType: "asset", targetType: "asset", sourceAssetId: "d1", targetAssetId: "d2"
+      sourceType: "asset",
+      targetType: "asset",
+      sourceAssetId: "d1",
+      targetAssetId: "d2"
     });
     expect(api.createNetworkTopologyNode).not.toHaveBeenCalled();
     expect(api.saveNetworkTopologyNodePositions).not.toHaveBeenCalled();
@@ -129,11 +157,9 @@ describe("InventoryNetworkTopologyView", () => {
     api.createNetworkTopologyLink.mockImplementation(async (_token, mapId, payload) => ({
       link: { id: "group-link", mapId, ...payload, type: "ethernet" }
     }));
-    render(<InventoryNetworkTopologyView {...props} groups={[
-      props.groups[0],
-      { id: "g3", name: "Grupo C", tabId: "t1" },
-      props.groups[1]
-    ]} />);
+    render(
+      <InventoryNetworkTopologyView {...props} groups={[props.groups[0], { id: "g3", name: "Grupo C", tabId: "t1" }, props.groups[1]]} />
+    );
 
     expect(await screen.findByRole("button", { name: "Visualizando" })).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Conectar grupos" }));
@@ -142,11 +168,14 @@ describe("InventoryNetworkTopologyView", () => {
     expect(screen.getByText(/Grupo de origem selecionado/)).toBeVisible();
     fireEvent.keyDown(screen.getByRole("button", { name: "Grupo C, ver grupo" }), { key: "Enter" });
 
-    await waitFor(() => expect(api.createNetworkTopologyLink).toHaveBeenCalledExactlyOnceWith(
-      "test-token", "map-inventory_tab-t1", {
-        sourceType: "group", targetType: "group", sourceAssetId: "g1", targetAssetId: "g3"
-      }
-    ));
+    await waitFor(() =>
+      expect(api.createNetworkTopologyLink).toHaveBeenCalledExactlyOnceWith("test-token", "map-inventory_tab-t1", {
+        sourceType: "group",
+        targetType: "group",
+        sourceAssetId: "g1",
+        targetAssetId: "g3"
+      })
+    );
     expect(screen.getByRole("button", { name: "Conexão entre Grupo A e Grupo C" })).toBeVisible();
   });
 
@@ -154,10 +183,9 @@ describe("InventoryNetworkTopologyView", () => {
     api.createNetworkTopologyLink.mockImplementation(async (_token, mapId, payload) => ({
       link: { id: "segment-link", mapId, ...payload, type: "fiber" }
     }));
-    render(<InventoryNetworkTopologyView {...props} segments={[
-      ...props.segments,
-      { id: "s3", name: "Arquivos", groupId: "g1", tabId: "t1" }
-    ]} />);
+    render(
+      <InventoryNetworkTopologyView {...props} segments={[...props.segments, { id: "s3", name: "Arquivos", groupId: "g1", tabId: "t1" }]} />
+    );
 
     fireEvent.doubleClick(await screen.findByRole("button", { name: "Grupo A, ver grupo" }));
     expect(await screen.findByRole("button", { name: "Estações, ver segmento" })).toBeVisible();
@@ -169,23 +197,25 @@ describe("InventoryNetworkTopologyView", () => {
     expect(screen.getByText(/Segmento de origem selecionado/)).toBeVisible();
     fireEvent.keyDown(screen.getByRole("button", { name: "Arquivos, ver segmento" }), { key: "Enter" });
 
-    await waitFor(() => expect(api.createNetworkTopologyLink).toHaveBeenCalledExactlyOnceWith(
-      "test-token", "map-group-g1", {
-        sourceType: "segment", targetType: "segment", sourceAssetId: "s1", targetAssetId: "s3"
-      }
-    ));
+    await waitFor(() =>
+      expect(api.createNetworkTopologyLink).toHaveBeenCalledExactlyOnceWith("test-token", "map-group-g1", {
+        sourceType: "segment",
+        targetType: "segment",
+        sourceAssetId: "s1",
+        targetAssetId: "s3"
+      })
+    );
     expect(screen.getByRole("button", { name: "Conexão entre Estações e Arquivos" })).toBeVisible();
   });
 
   it("trata aba com grupo e segmento avulso como mista sem oferecer um par impossível", async () => {
-    render(<InventoryNetworkTopologyView
-      {...props}
-      groups={[props.groups[0]]}
-      segments={[
-        ...props.segments,
-        { id: "standalone", name: "Laboratório", groupId: null, tabId: "t1" }
-      ]}
-    />);
+    render(
+      <InventoryNetworkTopologyView
+        {...props}
+        groups={[props.groups[0]]}
+        segments={[...props.segments, { id: "standalone", name: "Laboratório", groupId: null, tabId: "t1" }]}
+      />
+    );
 
     expect(await screen.findByRole("button", { name: "Grupo A, ver grupo" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Laboratório, ver segmento" })).toBeVisible();
@@ -195,7 +225,8 @@ describe("InventoryNetworkTopologyView", () => {
 
   it("exibe vínculos salvos mesmo quando as posições ainda são prévias", async () => {
     api.fetchNetworkTopologyMapByScope.mockImplementation(async (_token, scopeType, scopeId) => ({
-      map: { id: "map-" + scopeType + "-" + scopeId, scopeType, scopeId }, nodes: [],
+      map: { id: "map-" + scopeType + "-" + scopeId, scopeType, scopeId },
+      nodes: [],
       links: scopeType === "segment" ? [{ id: "saved-line", sourceAssetId: "d1", targetAssetId: "d2", type: "ethernet" }] : []
     }));
     render(<InventoryNetworkTopologyView {...props} />);
@@ -207,7 +238,9 @@ describe("InventoryNetworkTopologyView", () => {
 
   it("permissão de conectar não concede edição de posições", async () => {
     permissions.manage = false;
-    api.createNetworkTopologyLink.mockResolvedValue({ link: { id: "permitted", sourceAssetId: "d1", targetAssetId: "d2", type: "ethernet" } });
+    api.createNetworkTopologyLink.mockResolvedValue({
+      link: { id: "permitted", sourceAssetId: "d1", targetAssetId: "d2", type: "ethernet" }
+    });
     render(<InventoryNetworkTopologyView {...props} />);
     await openSegment();
     expect(screen.getByRole("button", { name: "Editando" })).toBeVisible();
@@ -296,7 +329,8 @@ describe("InventoryNetworkTopologyView", () => {
 
   it("omite Manutenção e Backup mesmo com posições antigas salvas, sem alterar registros", async () => {
     api.fetchNetworkTopologyMapByScope.mockResolvedValue({
-      map: { id: "root-map" }, links: [],
+      map: { id: "root-map" },
+      links: [],
       nodes: [
         { id: "maintenance-node", nodeType: "segment", refId: "m1", x: 100, y: 100 },
         { id: "backup-node", nodeType: "segment", refId: "b1", x: 300, y: 100 }
@@ -316,10 +350,13 @@ describe("InventoryNetworkTopologyView", () => {
   it("preserva nós, posições, rótulos e conexões já salvos", async () => {
     api.fetchNetworkTopologyMapByScope.mockImplementation(async (_token, scopeType, scopeId) => ({
       map: { id: "map-" + scopeType + "-" + scopeId },
-      nodes: scopeType === "segment" ? [
-        { id: "n1", assetId: "d1", x: -800, y: 4500, pinned: true, labelOverride: "Meu PC" },
-        { id: "n2", assetId: "d2", x: 300, y: 100, pinned: false }
-      ] : [],
+      nodes:
+        scopeType === "segment"
+          ? [
+              { id: "n1", assetId: "d1", x: -800, y: 4500, pinned: true, labelOverride: "Meu PC" },
+              { id: "n2", assetId: "d2", x: 300, y: 100, pinned: false }
+            ]
+          : [],
       links: scopeType === "segment" ? [{ id: "l1", sourceAssetId: "d1", targetAssetId: "d2", label: "Rede física", type: "ethernet" }] : []
     }));
     render(<InventoryNetworkTopologyView {...props} />);
@@ -348,7 +385,13 @@ describe("InventoryNetworkTopologyView", () => {
     expect(screen.queryByPlaceholderText("Adicionar ativo ao mapa...")).not.toBeInTheDocument();
     assertNoTopologyWrites();
     const svg = device.closest("svg");
-    svg.createSVGPoint = () => ({ x: 0, y: 0, matrixTransform() { return { x: this.x, y: this.y }; } });
+    svg.createSVGPoint = () => ({
+      x: 0,
+      y: 0,
+      matrixTransform() {
+        return { x: this.x, y: this.y };
+      }
+    });
     svg.getScreenCTM = () => ({ inverse: () => ({}) });
     const pointer = (target, type, clientX, clientY) => {
       const event = new MouseEvent(type, { bubbles: true, button: 0, clientX, clientY });
@@ -360,9 +403,11 @@ describe("InventoryNetworkTopologyView", () => {
     pointer(svg, "pointerup", 160, 140);
     assertNoTopologyWrites();
     fireEvent.click(screen.getByRole("button", { name: "Salvar layout" }));
-    await waitFor(() => expect(api.saveNetworkTopologyNodePositions).toHaveBeenCalledExactlyOnceWith(
-      "test-token", "map-segment-s1", [{ nodeId: "persisted-node", x: 745, y: 540 }]
-    ));
+    await waitFor(() =>
+      expect(api.saveNetworkTopologyNodePositions).toHaveBeenCalledExactlyOnceWith("test-token", "map-segment-s1", [
+        { nodeId: "persisted-node", x: 745, y: 540 }
+      ])
+    );
     const [_token, mapId, payload] = api.createNetworkTopologyNode.mock.calls[0];
     expect(mapId).toBe("map-segment-s1");
     expect(payload).toEqual({ nodeType: "asset", assetId: "d1", x: 685, y: 500, pinned: false });
@@ -397,9 +442,12 @@ describe("InventoryNetworkTopologyView", () => {
   });
 
   it("um segmento vazio sem grupo também permite voltar à raiz", async () => {
-    render(<InventoryNetworkTopologyView {...props} segments={[
-      ...props.segments, { id: "standalone", name: "Laboratório", groupId: null, tabId: "t1" }
-    ]} />);
+    render(
+      <InventoryNetworkTopologyView
+        {...props}
+        segments={[...props.segments, { id: "standalone", name: "Laboratório", groupId: null, tabId: "t1" }]}
+      />
+    );
     fireEvent.doubleClick(await screen.findByRole("button", { name: "Laboratório, ver segmento" }));
     expect(await screen.findByText("Não há ativos neste segmento")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Voltar para Ambiente A" }));
@@ -410,15 +458,19 @@ describe("InventoryNetworkTopologyView", () => {
 
   it("mantém itens novos visíveis quando o mapa tem uma única posição salva sem conexões", async () => {
     api.fetchNetworkTopologyMapByScope.mockImplementation(async (_token, scopeType, scopeId) => ({
-      map: { id: "map-" + scopeType + "-" + scopeId }, links: [],
+      map: { id: "map-" + scopeType + "-" + scopeId },
+      links: [],
       nodes: scopeType === "segment" ? [{ id: "saved-a", assetId: "d1", x: 600, y: 400, pinned: true }] : []
     }));
     const { rerender } = render(<InventoryNetworkTopologyView {...props} />);
     await openSegment();
     expect(screen.getByRole("button", { name: "Desktop B, ver ativo" })).toBeVisible();
-    rerender(<InventoryNetworkTopologyView {...props} devices={[
-      ...props.devices, { id: "new-machine", name: "Desktop novo", segmentId: "s1", tabId: "t1", status: "online" }
-    ]} />);
+    rerender(
+      <InventoryNetworkTopologyView
+        {...props}
+        devices={[...props.devices, { id: "new-machine", name: "Desktop novo", segmentId: "s1", tabId: "t1", status: "online" }]}
+      />
+    );
     expect(await screen.findByRole("button", { name: "Desktop novo, ver ativo" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Desktop A, ver ativo" }).closest("g")).toHaveAttribute("transform", "translate(542, 350)");
     expect(screen.getByText("3 ativo(s)")).toBeVisible();
@@ -428,7 +480,11 @@ describe("InventoryNetworkTopologyView", () => {
   it("retornar ao ambiente limpa o filtro implícito do segmento", async () => {
     render(<InventoryNetworkTopologyView {...props} />);
     await openSegment();
-    fireEvent.click(within(screen.getByRole("navigation", { name: "Navegação da hierarquia do mapa de rede" })).getByRole("button", { name: "Ambiente A" }));
+    fireEvent.click(
+      within(screen.getByRole("navigation", { name: "Navegação da hierarquia do mapa de rede" })).getByRole("button", {
+        name: "Ambiente A"
+      })
+    );
     expect(await screen.findByRole("button", { name: "Grupo A, ver grupo" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Manutenção, ver segmento" })).not.toBeInTheDocument();
     assertNoTopologyWrites();
@@ -442,10 +498,12 @@ describe("InventoryNetworkTopologyView", () => {
   });
 
   it("visão global abre o mapa legado salvo, não o último mapa de segmento", async () => {
-    api.fetchNetworkTopologyMaps.mockResolvedValue({ maps: [
-      { id: "map-segment-s1", scopeType: "segment" },
-      { id: "legacy-map", scopeType: "global" }
-    ] });
+    api.fetchNetworkTopologyMaps.mockResolvedValue({
+      maps: [
+        { id: "map-segment-s1", scopeType: "segment" },
+        { id: "legacy-map", scopeType: "global" }
+      ]
+    });
     api.fetchNetworkTopologyMap.mockResolvedValue({
       map: { id: "legacy-map", scopeType: "global" },
       nodes: [{ id: "legacy-node", assetId: "d3", x: 150, y: 150 }],

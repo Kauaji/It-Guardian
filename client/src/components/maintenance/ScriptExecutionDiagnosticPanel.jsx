@@ -14,14 +14,7 @@ function formatDate(value) {
 }
 
 function DiagnosticRow({ state, label, detail }) {
-  const icon =
-    state === "pass" ? (
-      <CheckCircle size={15} />
-    ) : state === "fail" ? (
-      <XCircle size={15} />
-    ) : (
-      <HelpCircle size={15} />
-    );
+  const icon = state === "pass" ? <CheckCircle size={15} /> : state === "fail" ? <XCircle size={15} /> : <HelpCircle size={15} />;
   return (
     <li className={`script-diagnostic-row script-diagnostic-${state}`}>
       {icon}
@@ -82,9 +75,7 @@ export default function ScriptExecutionDiagnosticPanel({ token, assetId, scriptI
     {
       state: diagnosis.agentActive ? "pass" : "fail",
       label: "Agente com contato recente",
-      detail: diagnosis.agentLastSeenAt
-        ? `Último contato: ${formatDate(diagnosis.agentLastSeenAt)}.`
-        : "Sem contato recente registrado."
+      detail: diagnosis.agentLastSeenAt ? `Último contato: ${formatDate(diagnosis.agentLastSeenAt)}.` : "Sem contato recente registrado."
     },
     {
       state: "unknown",

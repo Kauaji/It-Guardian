@@ -2,12 +2,7 @@ import { lazy, Suspense } from "react";
 import { useAppSession } from "../../context/AppSessionContext.jsx";
 import ViewErrorBoundary from "../../components/ui/ViewErrorBoundary.jsx";
 import ViewLoadingState from "../../components/ui/ViewLoadingState.jsx";
-import {
-  useInventory,
-  useNavigation,
-  useServiceOrderActions,
-  useWorkspaceData
-} from "../context/workspaceContexts.js";
+import { useInventory, useNavigation, useServiceOrderActions, useWorkspaceData } from "../context/workspaceContexts.js";
 import { serviceOrderPermissions } from "../viewAccess.js";
 
 const ServiceOrdersBoard = lazy(() => import("../../components/serviceOrders/ServiceOrdersBoard.jsx"));

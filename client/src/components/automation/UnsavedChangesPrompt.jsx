@@ -1,10 +1,6 @@
 import { useModalLifecycle } from "../../hooks/useModalLifecycle.js";
 
-export default function UnsavedChangesPrompt({
-  open,
-  onContinueEditing,
-  onDiscard
-}) {
+export default function UnsavedChangesPrompt({ open, onContinueEditing, onDiscard }) {
   // Escape = continuar editando; o aviso fica no topo da pilha de modais e prende o foco.
   const dialogRef = useModalLifecycle(open, onContinueEditing);
   if (!open) return null;

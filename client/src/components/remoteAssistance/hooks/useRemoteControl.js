@@ -1,12 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { sendRemoteAssistanceInput, updateRemoteAssistanceControl } from "../../../api.js";
-import {
-  MOUSE_MOVE_MIN_INTERVAL_MS,
-  isForwardableKey,
-  mouseButtonName,
-  normalizeKey,
-  pointerPosition
-} from "../utils/input.js";
+import { MOUSE_MOVE_MIN_INTERVAL_MS, isForwardableKey, mouseButtonName, normalizeKey, pointerPosition } from "../utils/input.js";
 import { isControlActive } from "../utils/viewState.js";
 
 // Controle remoto: liberar/solicitar controle, travar entrada local e

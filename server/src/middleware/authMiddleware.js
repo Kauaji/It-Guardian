@@ -20,11 +20,7 @@ function normalizeClientIds(value) {
 // Rotas liberadas enquanto a conta ainda precisa trocar a senha ou cadastrar
 // o MFA: so o necessario para regularizar a conta e sair.
 /** @type {Set<string>} */
-const PASSWORD_CHANGE_ALLOWED = new Set([
-  "/api/auth/me",
-  "/api/auth/logout",
-  "/api/auth/password"
-]);
+const PASSWORD_CHANGE_ALLOWED = new Set(["/api/auth/me", "/api/auth/logout", "/api/auth/password"]);
 /** @type {Set<string>} */
 const MFA_ENROLLMENT_ALLOWED = new Set([
   "/api/auth/me",

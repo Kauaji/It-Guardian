@@ -51,12 +51,7 @@ function removeNulCharacters(value) {
   if (Array.isArray(value)) return value.map(removeNulCharacters);
   if (!value || typeof value !== "object") return value;
 
-  return Object.fromEntries(
-    Object.entries(value).map(([key, nestedValue]) => [
-      removeNulFromText(key),
-      removeNulCharacters(nestedValue)
-    ])
-  );
+  return Object.fromEntries(Object.entries(value).map(([key, nestedValue]) => [removeNulFromText(key), removeNulCharacters(nestedValue)]));
 }
 
 /**
@@ -224,25 +219,13 @@ export function validateAgentPayload(input) {
     inventoryDetails: structuredObject(fields.inventoryDetails, "inventoryDetails")
   };
 
-  if (
-    payload.diskTotalBytes != null &&
-    payload.diskFreeBytes != null &&
-    payload.diskFreeBytes > payload.diskTotalBytes
-  ) {
+  if (payload.diskTotalBytes != null && payload.diskFreeBytes != null && payload.diskFreeBytes > payload.diskTotalBytes) {
     throw badRequest("diskFreeBytes nao pode ser maior que diskTotalBytes.");
   }
-  if (
-    payload.memoryTotalBytes != null &&
-    payload.memoryUsedBytes != null &&
-    payload.memoryUsedBytes > payload.memoryTotalBytes
-  ) {
+  if (payload.memoryTotalBytes != null && payload.memoryUsedBytes != null && payload.memoryUsedBytes > payload.memoryTotalBytes) {
     throw badRequest("memoryUsedBytes nao pode ser maior que memoryTotalBytes.");
   }
-  if (
-    payload.memoryTotalBytes != null &&
-    payload.memoryFreeBytes != null &&
-    payload.memoryFreeBytes > payload.memoryTotalBytes
-  ) {
+  if (payload.memoryTotalBytes != null && payload.memoryFreeBytes != null && payload.memoryFreeBytes > payload.memoryTotalBytes) {
     throw badRequest("memoryFreeBytes nao pode ser maior que memoryTotalBytes.");
   }
 
@@ -271,8 +254,7 @@ export function validateJobResultPayload({ jobId, body: rawBody }) {
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     throw badRequest("Resultado de execucao invalido.");
   }
-  const exitCode =
-    body.exitCode == null ? null : integer(body.exitCode, "exitCode", { min: -2147483648, max: 2147483647 });
+  const exitCode = body.exitCode == null ? null : integer(body.exitCode, "exitCode", { min: -2147483648, max: 2147483647 });
 
   return {
     jobId: text(jobId, "jobId", { required: true, max: 180 }),

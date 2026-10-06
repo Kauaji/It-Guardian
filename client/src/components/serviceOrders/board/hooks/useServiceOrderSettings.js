@@ -26,10 +26,7 @@ export function useServiceOrderSettings({ token, notify, serviceOrders }) {
   const [serviceOrderSettings, setServiceOrderSettings] = useState(defaultServiceOrderSettings);
   const [priorityColors, setPriorityColors] = useState(defaultPriorityColors);
   const [settingsSaving, setSettingsSaving] = useState(false);
-  const configuredStatuses = useMemo(
-    () => normalizeStatuses(serviceOrderSettings.statuses),
-    [serviceOrderSettings.statuses]
-  );
+  const configuredStatuses = useMemo(() => normalizeStatuses(serviceOrderSettings.statuses), [serviceOrderSettings.statuses]);
   const finalStatusIds = useMemo(
     () => configuredStatuses.filter((status) => status.isFinal).map((status) => status.id),
     [configuredStatuses]

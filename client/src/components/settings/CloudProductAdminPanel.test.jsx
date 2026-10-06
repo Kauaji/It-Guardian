@@ -29,7 +29,15 @@ const keyActive = {
 };
 const keyInactive = { ...keyActive, id: "k2", displayName: "Antiga", active: false, expiresAt: null };
 const activationFixture = [
-  { id: "a1", hostname: "PC-01", alias: "Recepção", status: "active", collectorVersion: "1.6.3", firstSeenAt: "2026-01-01T10:00:00Z", lastSeenAt: "bad-date" },
+  {
+    id: "a1",
+    hostname: "PC-01",
+    alias: "Recepção",
+    status: "active",
+    collectorVersion: "1.6.3",
+    firstSeenAt: "2026-01-01T10:00:00Z",
+    lastSeenAt: "bad-date"
+  },
   { id: "a2", hostname: "PC-02", alias: "", status: "inactive", collectorVersion: "", firstSeenAt: null, lastSeenAt: null }
 ];
 
@@ -43,11 +51,15 @@ function mount(props = {}) {
 
 beforeEach(() => {
   api.fetchProductKeys.mockResolvedValue({ productKeys: [keyActive, keyInactive] });
-  api.fetchIntegrationStatus.mockImplementation(async (_token, source) => (
+  api.fetchIntegrationStatus.mockImplementation(async (_token, source) =>
     source === "ocs"
-      ? { configuration: { enabled: true, mode: "read_only", configured: true }, state: { lastSyncAt: "2026-02-03T10:00:00Z" }, conflicts: [1, 2] }
+      ? {
+          configuration: { enabled: true, mode: "read_only", configured: true },
+          state: { lastSyncAt: "2026-02-03T10:00:00Z" },
+          conflicts: [1, 2]
+        }
       : { configuration: { enabled: false, mode: "disabled" } }
-  ));
+  );
   api.fetchProductKeyActivations.mockResolvedValue({ activations: activationFixture });
 });
 
@@ -104,11 +116,11 @@ describe("CloudProductAdminPanel - carga inicial", () => {
   });
 
   it("estados Incompleta e Com erro e Configurada", async () => {
-    api.fetchIntegrationStatus.mockImplementation(async (_t, source) => (
+    api.fetchIntegrationStatus.mockImplementation(async (_t, source) =>
       source === "ocs"
         ? { configuration: { enabled: true, mode: "read_only", configured: false } }
         : { configuration: { enabled: true, mode: "read_only", configured: true }, state: { lastError: "x" } }
-    ));
+    );
     mount();
     expect(await screen.findByText("Incompleta")).toBeInTheDocument();
     expect(screen.getByText("Com erro")).toBeInTheDocument();

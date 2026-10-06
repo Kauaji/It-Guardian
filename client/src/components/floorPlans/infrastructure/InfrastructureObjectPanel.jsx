@@ -24,19 +24,25 @@ export default function InfrastructureObjectPanel({ object, device, heatmap, mod
           <small>Componente semântico</small>
           <strong>{object.label}</strong>
         </div>
-        <button type="button" className="icon-button" aria-label="Fechar detalhes" onClick={onClose}><X size={16} /></button>
+        <button type="button" className="icon-button" aria-label="Fechar detalhes" onClick={onClose}>
+          <X size={16} />
+        </button>
       </header>
       {object.metadata?.description ? <p>{object.metadata.description}</p> : null}
       <dl>
         <DetailRow label="Tipo">{object.objectType}</DetailRow>
         <DetailRow label="Criticidade">{object.metadata?.criticality || "normal"}</DetailRow>
-        <DetailRow label="Ativo">{device ? device.alias || device.hostname || device.name : object.linkedAssetId || "Não vinculado"}</DetailRow>
+        <DetailRow label="Ativo">
+          {device ? device.alias || device.hostname || device.name : object.linkedAssetId || "Não vinculado"}
+        </DetailRow>
         <DetailRow label="Status">{device?.status || heatmap?.status || object.metadata?.manualStatus || "Sem dados"}</DetailRow>
         <DetailRow label="CPU / RAM / Disco">{formatMetrics(metrics)}</DetailRow>
         {mode === "heatmap-os" ? (
           <>
             <DetailRow label="OS no período">{heatmap?.totalServiceOrders || 0}</DetailRow>
-            <DetailRow label="Abertas / vencidas">{heatmap?.openServiceOrders || 0} / {heatmap?.overdueServiceOrders || 0}</DetailRow>
+            <DetailRow label="Abertas / vencidas">
+              {heatmap?.openServiceOrders || 0} / {heatmap?.overdueServiceOrders || 0}
+            </DetailRow>
           </>
         ) : null}
       </dl>

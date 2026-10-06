@@ -29,15 +29,17 @@ function ObjectNode({ object, objects, state, plan, handlers }) {
       }}
     >
       <g transform={`rotate(${object.rotation || 0} ${objectWidth / 2} ${objectHeight / 2})`}>
-        {showHeatmap ? <rect className={`floor-plan-heatmap-halo severity-${heatmap.severity}`} x="-12" y="-12" width={objectWidth + 24} height={objectHeight + 24} rx="18" /> : null}
-        <rect
-          className="floor-plan-object-hit-target"
-          x="-3"
-          y="-3"
-          width={objectWidth + 6}
-          height={objectHeight + 6}
-          rx="5"
-        />
+        {showHeatmap ? (
+          <rect
+            className={`floor-plan-heatmap-halo severity-${heatmap.severity}`}
+            x="-12"
+            y="-12"
+            width={objectWidth + 24}
+            height={objectHeight + 24}
+            rx="18"
+          />
+        ) : null}
+        <rect className="floor-plan-object-hit-target" x="-3" y="-3" width={objectWidth + 6} height={objectHeight + 6} rx="5" />
         <FloorPlanObjectGlyph
           object={object}
           width={objectWidth}
@@ -46,9 +48,15 @@ function ObjectNode({ object, objects, state, plan, handlers }) {
           selected={objectSelected}
           openings={getWallOpenings(object, objects)}
         />
-        {objectSelected ? <rect className="floor-plan-object-selection-outline" x="-3" y="-3" width={objectWidth + 6} height={objectHeight + 6} rx="5" /> : null}
+        {objectSelected ? (
+          <rect className="floor-plan-object-selection-outline" x="-3" y="-3" width={objectWidth + 6} height={objectHeight + 6} rx="5" />
+        ) : null}
       </g>
-      {!shouldHideLabel(object) ? <text className="floor-plan-object-label" x={objectWidth / 2} y={objectHeight + 15} textAnchor="middle">{object.label}</text> : null}
+      {!shouldHideLabel(object) ? (
+        <text className="floor-plan-object-label" x={objectWidth / 2} y={objectHeight + 15} textAnchor="middle">
+          {object.label}
+        </text>
+      ) : null}
       {showHeatmap ? <title>{getHeatmapTitle(heatmapMode, heatmap)}</title> : null}
     </g>
   );

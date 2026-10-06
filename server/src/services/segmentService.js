@@ -1,17 +1,7 @@
 import { badRequest, conflict } from "../lib/errors.js";
 import { addLog } from "../repositories/logRepository.js";
-import {
-  createSegment,
-  deleteSegment,
-  listSegments,
-  renameSegment
-} from "../repositories/segmentRepository.js";
-import {
-  createSegmentGroup,
-  deleteSegmentGroup,
-  listSegmentGroups,
-  updateSegmentGroup
-} from "../repositories/segmentGroupRepository.js";
+import { createSegment, deleteSegment, listSegments, renameSegment } from "../repositories/segmentRepository.js";
+import { createSegmentGroup, deleteSegmentGroup, listSegmentGroups, updateSegmentGroup } from "../repositories/segmentGroupRepository.js";
 import { broadcastSnapshot } from "./realtimeService.js";
 import { logger } from "../lib/logger.js";
 

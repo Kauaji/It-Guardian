@@ -10,25 +10,25 @@ function TabButton({ id, activeTab, onChange, children }) {
 }
 
 // Barra de abas internas da Central de Avisos, com os atalhos de log e configuracoes.
-export default function AlertCenterTabs({
-  activeTab,
-  canShowAutomationManagement,
-  onChange,
-  onOpenLog,
-  onOpenSettings
-}) {
+export default function AlertCenterTabs({ activeTab, canShowAutomationManagement, onChange, onOpenLog, onOpenSettings }) {
   const { perms } = useAlertCenterView();
 
   return (
     <nav className="alerts-internal-tabs" aria-label="Áreas da Central de Avisos">
       {perms.canViewAlerts && (
-        <TabButton id="suggestions" activeTab={activeTab} onChange={onChange}>Sugestões de OS</TabButton>
+        <TabButton id="suggestions" activeTab={activeTab} onChange={onChange}>
+          Sugestões de OS
+        </TabButton>
       )}
       {perms.canUsePreventiveArea && (
-        <TabButton id="preventives" activeTab={activeTab} onChange={onChange}>Preventivas</TabButton>
+        <TabButton id="preventives" activeTab={activeTab} onChange={onChange}>
+          Preventivas
+        </TabButton>
       )}
       {canShowAutomationManagement && (
-        <TabButton id="automation" activeTab={activeTab} onChange={onChange}>Automatizações</TabButton>
+        <TabButton id="automation" activeTab={activeTab} onChange={onChange}>
+          Automatizações
+        </TabButton>
       )}
       {perms.canViewScriptLogs && (
         <button

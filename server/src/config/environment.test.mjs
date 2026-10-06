@@ -47,10 +47,7 @@ test("isRemoteScriptExecutionEnabled reflete ENABLE_REMOTE_SCRIPT_EXECUTION sem 
   assert.equal(isRemoteScriptExecutionEnabled({ ENABLE_REMOTE_SCRIPT_EXECUTION: "sim" }), true);
   // Diferente de getRemoteAssistanceConfig, nao ha allow-list de ambiente aqui -
   // a flag liga em qualquer deploy, inclusive Vercel/producao, por design.
-  assert.equal(
-    isRemoteScriptExecutionEnabled({ ENABLE_REMOTE_SCRIPT_EXECUTION: "true", VERCEL: "1", VERCEL_ENV: "production" }),
-    true
-  );
+  assert.equal(isRemoteScriptExecutionEnabled({ ENABLE_REMOTE_SCRIPT_EXECUTION: "true", VERCEL: "1", VERCEL_ENV: "production" }), true);
 });
 
 function autoUpdateEnv(overrides = {}) {
@@ -77,9 +74,7 @@ test("getAgentAutoUpdateInfo fica inativo se qualquer uma das tres variaveis fal
 });
 
 test("getAgentAutoUpdateInfo rejeita URL de download que nao seja https", () => {
-  const info = getAgentAutoUpdateInfo(
-    autoUpdateEnv({ AGENT_LATEST_VERSION_URL: "http://cdn.example.com/ITGuardian.exe" })
-  );
+  const info = getAgentAutoUpdateInfo(autoUpdateEnv({ AGENT_LATEST_VERSION_URL: "http://cdn.example.com/ITGuardian.exe" }));
   assert.equal(info.version, null, "download de binario sobre HTTP nao deve ser aceito");
 
   const malformed = getAgentAutoUpdateInfo(autoUpdateEnv({ AGENT_LATEST_VERSION_URL: "nao-e-uma-url" }));
@@ -96,27 +91,21 @@ test("getAgentAutoUpdateInfo rejeita hash que nao seja hexadecimal de 64 caracte
 });
 
 test("uses a single short-lived database connection in serverless environments", () => {
-  assert.deepEqual(
-    resolveDatabasePoolConfig({ env: {}, serverless: true }),
-    {
-      max: 1,
-      connectionTimeoutMillis: 10000,
-      idleTimeoutMillis: 5000,
-      allowExitOnIdle: true
-    }
-  );
+  assert.deepEqual(resolveDatabasePoolConfig({ env: {}, serverless: true }), {
+    max: 1,
+    connectionTimeoutMillis: 10000,
+    idleTimeoutMillis: 5000,
+    allowExitOnIdle: true
+  });
 });
 
 test("keeps the traditional server pool defaults outside serverless environments", () => {
-  assert.deepEqual(
-    resolveDatabasePoolConfig({ env: {}, serverless: false }),
-    {
-      max: 10,
-      connectionTimeoutMillis: 10000,
-      idleTimeoutMillis: 30000,
-      allowExitOnIdle: false
-    }
-  );
+  assert.deepEqual(resolveDatabasePoolConfig({ env: {}, serverless: false }), {
+    max: 10,
+    connectionTimeoutMillis: 10000,
+    idleTimeoutMillis: 30000,
+    allowExitOnIdle: false
+  });
 });
 
 test("caps explicit database pool limits in serverless environments", () => {
@@ -149,10 +138,7 @@ test("honors explicit database pool limits outside serverless environments", () 
 });
 
 test("isAllowedVercelOrigin rejects any origin when not running on Vercel", () => {
-  assert.equal(
-    isAllowedVercelOrigin("https://it-guardian-server.vercel.app", {}),
-    false
-  );
+  assert.equal(isAllowedVercelOrigin("https://it-guardian-server.vercel.app", {}), false);
 });
 
 test("isAllowedVercelOrigin trusts only the project's own production domain", () => {
@@ -168,10 +154,7 @@ test("isAllowedVercelOrigin no longer trusts an arbitrary third-party *.vercel.a
 
 test("isAllowedVercelOrigin does not fall for a project name crafted to end with a trusted-looking suffix", () => {
   const env = { VERCEL: "1", VERCEL_PROJECT_PRODUCTION_URL: "it-guardian-server.vercel.app" };
-  assert.equal(
-    isAllowedVercelOrigin("https://attacker-project-it-guardian-server.vercel.app", env),
-    false
-  );
+  assert.equal(isAllowedVercelOrigin("https://attacker-project-it-guardian-server.vercel.app", env), false);
 });
 
 test("isAllowedVercelOrigin rejects preview/branch deployments of the same project (no pattern trust)", () => {

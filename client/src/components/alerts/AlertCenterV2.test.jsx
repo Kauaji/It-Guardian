@@ -120,7 +120,14 @@ describe("AlertCenterV2 - aba de sugestões", () => {
   it("filtra as sugestões pelo status recebido do contexto", () => {
     const suggestions = [
       ...baseSuggestions,
-      { ...baseSuggestions[1], id: "sug5", status: "observed_persistent", assetId: "d3", hostName: "Servidor-01", title: "Verificação preventiva: RAM acima do limite em Servidor-01" }
+      {
+        ...baseSuggestions[1],
+        id: "sug5",
+        status: "observed_persistent",
+        assetId: "d3",
+        hostName: "Servidor-01",
+        title: "Verificação preventiva: RAM acima do limite em Servidor-01"
+      }
     ];
     renderCenter({ center: { suggestions, suggestionStatusFilter: "observed_persistent" } });
 
@@ -172,7 +179,15 @@ describe("AlertCenterV2 - detalhes da sugestão", () => {
     const user = userEvent.setup();
     renderCenter({
       center: {
-        alertCorrelations: [{ correlationId: "c1", relatedHosts: ["PC-01"], relatedAlerts: [], confidenceLevel: "Alta", correlationSummary: "CPU em vários PCs" }]
+        alertCorrelations: [
+          {
+            correlationId: "c1",
+            relatedHosts: ["PC-01"],
+            relatedAlerts: [],
+            confidenceLevel: "Alta",
+            correlationSummary: "CPU em vários PCs"
+          }
+        ]
       }
     });
 
@@ -317,7 +332,9 @@ describe("AlertCenterV2 - scripts da sugestão", () => {
     const user = userEvent.setup();
     api.fetchSuggestionRecommendedScripts.mockResolvedValue({ recommended: [{ id: "sc1", name: "Limpar temporários" }], others: [] });
     const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
-    const { center } = renderCenter({ props: { devices: baseDevices.map((device) => ({ ...device, source: undefined, agent: undefined })) } });
+    const { center } = renderCenter({
+      props: { devices: baseDevices.map((device) => ({ ...device, source: undefined, agent: undefined })) }
+    });
 
     await user.click(within(suggestionCards()[0]).getByRole("button", { name: "Scripts disponíveis" }));
     const option = await screen.findByRole("button", { name: /Limpar temporários/ });
@@ -525,7 +542,11 @@ describe("AlertCenterV2 - configurações", () => {
   it("fecha o modal pelo botão de fechar", async () => {
     const { user, dialog } = await openSettings();
 
-    await user.click(within(dialog).getAllByRole("button").find((button) => button.classList.contains("icon-button")));
+    await user.click(
+      within(dialog)
+        .getAllByRole("button")
+        .find((button) => button.classList.contains("icon-button"))
+    );
 
     expect(screen.queryByRole("dialog")).toBeNull();
   });
@@ -612,7 +633,13 @@ describe("AlertCenterV2 - navegação por abas e permissões", () => {
     const user = userEvent.setup();
     const management = {
       plans: [{ id: "ap1", name: "Limpeza mensal", active: true, indicatorColor: "#2563eb", assetCount: 1, scriptCount: 1 }],
-      machines: [{ assetId: "d1", assetName: "PC-01", plans: [{ id: "ap1", planName: "Limpeza mensal", active: true, nextRunAt: "2026-07-01T10:00:00.000Z" }] }],
+      machines: [
+        {
+          assetId: "d1",
+          assetName: "PC-01",
+          plans: [{ id: "ap1", planName: "Limpeza mensal", active: true, nextRunAt: "2026-07-01T10:00:00.000Z" }]
+        }
+      ],
       metadata: { planCount: 1, machineCount: 1 }
     };
     renderCenter({ center: { preventiveAutomationManagement: management, preventiveAutomationPlans: management.plans } });

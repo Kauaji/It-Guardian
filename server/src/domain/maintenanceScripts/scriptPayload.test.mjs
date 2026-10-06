@@ -78,9 +78,15 @@ test("payload invalido e recusado antes de qualquer gravacao", () => {
     [{ name: "Valido", content: "echo {{SEGREDO}}" }, /Variaveis nao permitidas/]
   ];
   for (const [payload, message] of cases) {
-    assert.throws(() => normalizeScriptPayload(payload), (error) => error.statusCode === 400 && message.test(error.message));
+    assert.throws(
+      () => normalizeScriptPayload(payload),
+      (error) => error.statusCode === 400 && message.test(error.message)
+    );
   }
-  assert.throws(() => normalizeScriptPayload({}, { name: "Atual", content: "" }), (error) => error.statusCode === 400);
+  assert.throws(
+    () => normalizeScriptPayload({}, { name: "Atual", content: "" }),
+    (error) => error.statusCode === 400
+  );
 });
 
 test("variaveis detectadas no conteudo entram nas variaveis suportadas", () => {

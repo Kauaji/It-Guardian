@@ -44,21 +44,23 @@ export function createSharedResources({ textures }) {
     if (materials.has(materialKey)) return materials.get(materialKey);
     const textureMaps = texturePreset ? textures.getMaterialTextureMaps(texturePreset, normalizedTextureKind) : {};
     const Material = options.glass ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
-    const material = new Material(withoutUndefined({
-      color: toColor(color, "#1f7a61"),
-      ...textureMaps,
-      transparent: opacity < 1,
-      opacity,
-      roughness: options.roughness ?? (metalness > 0.2 ? 0.34 : 0.64),
-      metalness,
-      normalScale: textureMaps.normalMap ? new THREE.Vector2(0.38, 0.38) : undefined,
-      emissive: options.emissive ? new THREE.Color(options.emissive) : undefined,
-      emissiveIntensity: Number(options.emissiveIntensity || 0),
-      transmission: options.glass ? 0.28 : undefined,
-      thickness: options.glass ? 0.6 : undefined,
-      depthWrite: !options.glass,
-      envMapIntensity: options.glass ? 1.18 : 0.82
-    }));
+    const material = new Material(
+      withoutUndefined({
+        color: toColor(color, "#1f7a61"),
+        ...textureMaps,
+        transparent: opacity < 1,
+        opacity,
+        roughness: options.roughness ?? (metalness > 0.2 ? 0.34 : 0.64),
+        metalness,
+        normalScale: textureMaps.normalMap ? new THREE.Vector2(0.38, 0.38) : undefined,
+        emissive: options.emissive ? new THREE.Color(options.emissive) : undefined,
+        emissiveIntensity: Number(options.emissiveIntensity || 0),
+        transmission: options.glass ? 0.28 : undefined,
+        thickness: options.glass ? 0.6 : undefined,
+        depthWrite: !options.glass,
+        envMapIntensity: options.glass ? 1.18 : 0.82
+      })
+    );
     materials.set(materialKey, material);
     sharedMaterials.add(material);
     return material;

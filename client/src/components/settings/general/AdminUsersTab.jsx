@@ -52,9 +52,13 @@ function UserForm({ admin }) {
           Setor
           <select value={userForm.sectorId} onChange={(event) => setField("sectorId", event.target.value)}>
             <option value="">Sem setor</option>
-            {sectors.filter((sector) => sector.active !== false).map((sector) => (
-              <option key={sector.id} value={sector.id}>{sector.name}</option>
-            ))}
+            {sectors
+              .filter((sector) => sector.active !== false)
+              .map((sector) => (
+                <option key={sector.id} value={sector.id}>
+                  {sector.name}
+                </option>
+              ))}
           </select>
         </label>
         <label>
@@ -65,17 +69,15 @@ function UserForm({ admin }) {
           Perfil
           <select value={userForm.role} onChange={(event) => setField("role", event.target.value)}>
             {Object.entries(roleLabels).map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
+              <option key={value} value={value}>
+                {label}
+              </option>
             ))}
           </select>
         </label>
       </div>
       <label className="admin-inline-check">
-        <input
-          type="checkbox"
-          checked={userForm.active}
-          onChange={(event) => setField("active", event.target.checked)}
-        />
+        <input type="checkbox" checked={userForm.active} onChange={(event) => setField("active", event.target.checked)} />
         Usuário ativo
       </label>
       <section className={`admin-form-collapsible${userPermissionsOpen ? " open" : ""}`}>
@@ -131,13 +133,7 @@ function UserRecord({ item, admin, token, currentUser, notify }) {
         <button type="button" className="secondary-action compact-action" onClick={() => editUser(item)}>
           Editar
         </button>
-        <UserSecurityActions
-          token={token}
-          target={item}
-          currentUserId={currentUser?.id}
-          disabled={savingAdmin}
-          notify={notify}
-        />
+        <UserSecurityActions token={token} target={item} currentUserId={currentUser?.id} disabled={savingAdmin} notify={notify} />
         <button
           type="button"
           className="danger-action compact-action icon-only"

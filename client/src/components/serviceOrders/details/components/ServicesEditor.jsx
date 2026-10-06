@@ -6,12 +6,7 @@ export default function ServicesEditor({ selector, services, businessMode, draft
   const typed = search.trim();
   return (
     <section className={`service-order-collapsible-editor ${open ? "open" : ""}`}>
-      <button
-        type="button"
-        className="service-order-section-toggle"
-        onClick={selector.toggleOpen}
-        aria-expanded={open}
-      >
+      <button type="button" className="service-order-section-toggle" onClick={selector.toggleOpen} aria-expanded={open}>
         <span>
           <strong>Serviços realizados</strong>
           <small>Classifique o procedimento feito pelo técnico.</small>
@@ -45,11 +40,7 @@ export default function ServicesEditor({ selector, services, businessMode, draft
                     </button>
                   ))}
                   {!suggestions.length && typed && (
-                    <button
-                      type="button"
-                      onMouseDown={(event) => event.preventDefault()}
-                      onClick={selector.confirmService}
-                    >
+                    <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={selector.confirmService}>
                       <strong>Usar "{typed}"</strong>
                       <span>Registrar serviço digitado manualmente</span>
                     </button>
@@ -70,15 +61,15 @@ export default function ServicesEditor({ selector, services, businessMode, draft
           </button>
           {businessMode && (
             <label className="service-order-service-value-field">
-            Valor do serviço
-            <input
-              type="text"
-              inputMode="decimal"
-              value={draft.serviceValue}
-              onChange={(event) => updateDraft("serviceValue", event.target.value)}
-              onBlur={() => updateDraft("serviceValue", String(serviceValueNumber))}
-              placeholder="R$ 0,00"
-            />
+              Valor do serviço
+              <input
+                type="text"
+                inputMode="decimal"
+                value={draft.serviceValue}
+                onChange={(event) => updateDraft("serviceValue", event.target.value)}
+                onBlur={() => updateDraft("serviceValue", String(serviceValueNumber))}
+                placeholder="R$ 0,00"
+              />
             </label>
           )}
           {!services.length && <p className="empty">Nenhum serviço cadastrado. Cadastre serviços nas Configurações da OS.</p>}

@@ -1,10 +1,5 @@
 import { CloudCog, PlugZap, RefreshCw } from "lucide-react";
-import {
-  formatDateTime,
-  integrationBadgeClass,
-  integrationNames,
-  integrationStateLabel
-} from "./cloudAdminModel.js";
+import { formatDateTime, integrationBadgeClass, integrationNames, integrationStateLabel } from "./cloudAdminModel.js";
 
 function IntegrationCard({ source, name, integration, busyAction, onRun }) {
   return (
@@ -13,9 +8,7 @@ function IntegrationCard({ source, name, integration, busyAction, onRun }) {
         <CloudCog size={20} />
         <div>
           <strong>{name}</strong>
-          <span className={`cloud-integration-badge ${integrationBadgeClass(integration)}`}>
-            {integrationStateLabel(integration)}
-          </span>
+          <span className={`cloud-integration-badge ${integrationBadgeClass(integration)}`}>{integrationStateLabel(integration)}</span>
         </div>
       </div>
       <dl>
@@ -32,9 +25,7 @@ function IntegrationCard({ source, name, integration, busyAction, onRun }) {
           <dd>{integration.conflicts?.length || 0}</dd>
         </div>
       </dl>
-      {integration.error && (
-        <small className="cloud-integration-error">{integration.error}</small>
-      )}
+      {integration.error && <small className="cloud-integration-error">{integration.error}</small>}
       <div className="cloud-integration-actions">
         <button
           type="button"

@@ -1,16 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchAuthSession, logoutSession } from "../api.js";
-import {
-  AUTH_EXPIRED_EVENT,
-  SESSION_EXPIRED_MESSAGE,
-  clearAuthSession,
-  readAuthSession,
-  writeAuthSession
-} from "../authSession.js";
-import {
-  applyStoredGeneralPreferences,
-  clearRuntimeAppearancePreferences
-} from "../components/settings/GeneralSettingsModal.jsx";
+import { AUTH_EXPIRED_EVENT, SESSION_EXPIRED_MESSAGE, clearAuthSession, readAuthSession, writeAuthSession } from "../authSession.js";
+import { applyStoredGeneralPreferences, clearRuntimeAppearancePreferences } from "../components/settings/GeneralSettingsModal.jsx";
 
 const themeKey = "it_guardian_theme";
 

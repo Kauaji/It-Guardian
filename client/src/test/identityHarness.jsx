@@ -29,5 +29,12 @@ export function renderWithSession(ui, { user = baseUser, overrides = {}, path = 
     toggleTheme: vi.fn(),
     ...overrides
   };
-  return { session, tree: <MemoryRouter initialEntries={[path]}><AppSessionProvider value={session}>{ui}</AppSessionProvider></MemoryRouter> };
+  return {
+    session,
+    tree: (
+      <MemoryRouter initialEntries={[path]}>
+        <AppSessionProvider value={session}>{ui}</AppSessionProvider>
+      </MemoryRouter>
+    )
+  };
 }

@@ -10,10 +10,7 @@ import { fromAgendaRow, fromAssetHistoryRow, fromAuditLogRow, fromScriptSummaryR
 export async function listScriptSummariesByIds(scriptIds, db = query) {
   if (!scriptIds.length) return new Map();
   const placeholders = scriptIds.map((_, index) => `$${index + 1}`).join(", ");
-  const result = await db(
-    `SELECT id, name, category, risk_level FROM maintenance_scripts WHERE id IN (${placeholders})`,
-    scriptIds
-  );
+  const result = await db(`SELECT id, name, category, risk_level FROM maintenance_scripts WHERE id IN (${placeholders})`, scriptIds);
   return new Map(result.rows.map((row) => [String(row.id), fromScriptSummaryRow(row)]));
 }
 

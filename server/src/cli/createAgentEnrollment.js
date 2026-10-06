@@ -15,12 +15,14 @@ async function main() {
 
   await initializeRuntime();
   const result = await createAgentEnrollment({ name });
-  process.stdout.write([
-    `Enrollment criado: ${result.enrollment.name}`,
-    `Token: ${result.token}`,
-    "Guarde o token agora. O valor completo nao sera exibido novamente.",
-    ""
-  ].join("\n"));
+  process.stdout.write(
+    [
+      `Enrollment criado: ${result.enrollment.name}`,
+      `Token: ${result.token}`,
+      "Guarde o token agora. O valor completo nao sera exibido novamente.",
+      ""
+    ].join("\n")
+  );
 }
 
 main()

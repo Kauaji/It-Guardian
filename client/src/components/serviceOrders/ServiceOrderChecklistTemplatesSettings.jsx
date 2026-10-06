@@ -67,7 +67,9 @@ function TemplateEditor({ template, problemTypes, notify, onSaved, onDeleted }) 
         <select aria-label="Tipo de problema" value={problemTypeKey} onChange={(event) => setProblemTypeKey(event.target.value)}>
           <option value="">Tipo de problema...</option>
           {problemTypes.map((problemType) => (
-            <option key={problemType.id} value={problemType.id}>{problemType.name}</option>
+            <option key={problemType.id} value={problemType.id}>
+              {problemType.name}
+            </option>
           ))}
         </select>
         <label className="settings-inline-check">
@@ -169,9 +171,8 @@ export default function ServiceOrderChecklistTemplatesSettings({ token, notify }
   return (
     <section className="service-order-checklist-templates-panel">
       <p className="service-order-checklist-templates-hint">
-        Templates são aplicados automaticamente em novas OS cujo tipo de problema corresponda. Configure
-        "Exigir checklist para finalizar" na aba SLA para bloquear a finalização até os itens obrigatórios
-        estarem marcados.
+        Templates são aplicados automaticamente em novas OS cujo tipo de problema corresponda. Configure "Exigir checklist para finalizar"
+        na aba SLA para bloquear a finalização até os itens obrigatórios estarem marcados.
       </p>
 
       {templates.map((template) => (

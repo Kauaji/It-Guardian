@@ -55,9 +55,11 @@ export function buildActiveAlerts(machine) {
   const alerts = [];
   const metrics = machine.metrics || {};
 
-  [buildMetricAlert({ metric: "cpu", label: "CPU", value: metrics.cpu }),
+  [
+    buildMetricAlert({ metric: "cpu", label: "CPU", value: metrics.cpu }),
     buildMetricAlert({ metric: "ram", label: "RAM", value: metrics.ram }),
-    buildMetricAlert({ metric: "disk", label: "Disco", value: metrics.disk })]
+    buildMetricAlert({ metric: "disk", label: "Disco", value: metrics.disk })
+  ]
     .filter(Boolean)
     .forEach((alert) => alerts.push(alert));
 
@@ -142,11 +144,7 @@ export function normalizeSoftware(software) {
 }
 
 export function getDiskHealth(hardware = {}) {
-  const directHealth =
-    hardware.diskHealth ||
-    hardware.storageHealth ||
-    hardware.smartHealth ||
-    hardware.smartStatus;
+  const directHealth = hardware.diskHealth || hardware.storageHealth || hardware.smartHealth || hardware.smartStatus;
 
   if (directHealth) {
     if (typeof directHealth === "object") {
@@ -155,8 +153,8 @@ export function getDiskHealth(hardware = {}) {
     return directHealth;
   }
 
-  const diskWithHealth = (hardware.disks || []).find((disk) =>
-    disk.health || disk.smartStatus || disk.healthPercent !== undefined || disk.status
+  const diskWithHealth = (hardware.disks || []).find(
+    (disk) => disk.health || disk.smartStatus || disk.healthPercent !== undefined || disk.status
   );
 
   if (!diskWithHealth) return "Não disponível";
@@ -165,11 +163,13 @@ export function getDiskHealth(hardware = {}) {
 }
 
 export function isMaintenanceSegmentName(name = "") {
-  return name
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .trim()
-    .toLowerCase() === "manutencao";
+  return (
+    name
+      .normalize("NFD")
+      .replace(/\p{Diacritic}/gu, "")
+      .trim()
+      .toLowerCase() === "manutencao"
+  );
 }
 
 export const MACHINE_TABS = [

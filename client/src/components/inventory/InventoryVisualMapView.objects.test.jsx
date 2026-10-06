@@ -1,13 +1,21 @@
 import { screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  api, armApi, connections, notify, objects, openEditing, renderView, sceneState, settle
-} from "./visualMap/visualMapTestUtils.jsx";
+import { api, armApi, connections, notify, objects, openEditing, renderView, sceneState, settle } from "./visualMap/visualMapTestUtils.jsx";
 
 vi.mock("../../api.js", () => {
-  const names = ["fetchInventoryVisualMaps", "fetchInventoryVisualMap", "createInventoryVisualMap", "updateInventoryVisualMap", "deleteInventoryVisualMap",
-    "createInventoryVisualMapObject", "updateInventoryVisualMapObject", "deleteInventoryVisualMapObject",
-    "createInventoryVisualMapConnection", "updateInventoryVisualMapConnection", "deleteInventoryVisualMapConnection"];
+  const names = [
+    "fetchInventoryVisualMaps",
+    "fetchInventoryVisualMap",
+    "createInventoryVisualMap",
+    "updateInventoryVisualMap",
+    "deleteInventoryVisualMap",
+    "createInventoryVisualMapObject",
+    "updateInventoryVisualMapObject",
+    "deleteInventoryVisualMapObject",
+    "createInventoryVisualMapConnection",
+    "updateInventoryVisualMapConnection",
+    "deleteInventoryVisualMapConnection"
+  ];
   return Object.fromEntries(names.map((name) => [name, vi.fn()]));
 });
 
@@ -15,12 +23,24 @@ vi.mock("../../api.js", () => {
 vi.mock("./InventoryVisualMapScene.jsx", () => ({
   default: ({ map, selectedObjectId, selectedConnectionId, layers, showGrid, cameraAction, onSelectObject, onSelectConnection }) => (
     <div data-testid="scene">
-      <output data-testid="scene-state">{JSON.stringify({ map: map?.id, selectedObjectId, selectedConnectionId, layers, showGrid, cameraAction })}</output>
-      <button type="button" onClick={() => onSelectObject("o1")}>sel-o1</button>
-      <button type="button" onClick={() => onSelectObject("o2")}>sel-o2</button>
-      <button type="button" onClick={() => onSelectObject(null)}>sel-none</button>
-      <button type="button" onClick={() => onSelectConnection("c1")}>sel-c1</button>
-      <button type="button" onClick={() => onSelectConnection("c2")}>sel-c2</button>
+      <output data-testid="scene-state">
+        {JSON.stringify({ map: map?.id, selectedObjectId, selectedConnectionId, layers, showGrid, cameraAction })}
+      </output>
+      <button type="button" onClick={() => onSelectObject("o1")}>
+        sel-o1
+      </button>
+      <button type="button" onClick={() => onSelectObject("o2")}>
+        sel-o2
+      </button>
+      <button type="button" onClick={() => onSelectObject(null)}>
+        sel-none
+      </button>
+      <button type="button" onClick={() => onSelectConnection("c1")}>
+        sel-c1
+      </button>
+      <button type="button" onClick={() => onSelectConnection("c2")}>
+        sel-c2
+      </button>
     </div>
   )
 }));
@@ -36,10 +56,18 @@ describe("InventoryVisualMapView — objetos", () => {
     const { user } = await openEditing();
     await user.click(screen.getByRole("button", { name: "Parede" }));
     await settle();
-    expect(api.createInventoryVisualMapObject).toHaveBeenLastCalledWith("tok", "m1", expect.objectContaining({ presetType: "wall", layer: "structure", label: "Parede", positionX: -5.3, positionZ: -9 }));
+    expect(api.createInventoryVisualMapObject).toHaveBeenLastCalledWith(
+      "tok",
+      "m1",
+      expect.objectContaining({ presetType: "wall", layer: "structure", label: "Parede", positionX: -5.3, positionZ: -9 })
+    );
     await user.click(screen.getByRole("button", { name: "Notebook" }));
     await settle();
-    expect(api.createInventoryVisualMapObject).toHaveBeenLastCalledWith("tok", "m1", expect.objectContaining({ presetType: "notebook", layer: "assets" }));
+    expect(api.createInventoryVisualMapObject).toHaveBeenLastCalledWith(
+      "tok",
+      "m1",
+      expect.objectContaining({ presetType: "notebook", layer: "assets" })
+    );
     expect(sceneState().selectedObjectId).toBe("n2");
     expect(notify).toHaveBeenCalledWith("Objeto adicionado ao mapa.", "success");
     for (const heading of ["Estrutura", "Ativos", "Infraestrutura", "Elétrica"]) {
@@ -58,7 +86,11 @@ describe("InventoryVisualMapView — objetos", () => {
     await user.selectOptions(screen.getByLabelText("Vincular ativo real"), "d2");
     await user.click(screen.getByRole("button", { name: "Adicionar ativo" }));
     await settle();
-    expect(api.createInventoryVisualMapObject).toHaveBeenCalledWith("tok", "m1", expect.objectContaining({ presetType: "server", layer: "assets", label: "srv", linkedAssetId: "d2" }));
+    expect(api.createInventoryVisualMapObject).toHaveBeenCalledWith(
+      "tok",
+      "m1",
+      expect.objectContaining({ presetType: "server", layer: "assets", label: "srv", linkedAssetId: "d2" })
+    );
     expect(notify).toHaveBeenCalledWith("Ativo vinculado ao mapa.", "success");
     expect(screen.getByLabelText("Vincular ativo real")).toHaveValue("");
   });
@@ -76,12 +108,26 @@ describe("InventoryVisualMapView — objetos", () => {
     await user.selectOptions(within(panel).getByLabelText("Ativo vinculado"), "");
     await user.click(within(panel).getByRole("button", { name: "Salvar objeto" }));
     await settle();
-    expect(api.updateInventoryVisualMapObject).toHaveBeenCalledWith("tok", "o1", expect.objectContaining({
-      linkedAssetId: null, positionX: 1, positionZ: 1.5, rotationY: 15, height: 2, notes: "n"
-    }));
+    expect(api.updateInventoryVisualMapObject).toHaveBeenCalledWith(
+      "tok",
+      "o1",
+      expect.objectContaining({
+        linkedAssetId: null,
+        positionX: 1,
+        positionZ: 1.5,
+        rotationY: 15,
+        height: 2,
+        notes: "n"
+      })
+    );
     await user.click(within(panel).getByRole("button", { name: "Duplicar" }));
     await settle();
-    expect(api.createInventoryVisualMapObject.mock.calls.at(-1)[2]).toMatchObject({ label: "Desktop A (cópia)", linkedAssetId: null, positionX: 1.5, positionZ: 2 });
+    expect(api.createInventoryVisualMapObject.mock.calls.at(-1)[2]).toMatchObject({
+      label: "Desktop A (cópia)",
+      linkedAssetId: null,
+      positionX: 1.5,
+      positionZ: 2
+    });
     await user.click(screen.getByRole("button", { name: "sel-o1" }));
     await user.click(screen.getByRole("button", { name: "Girar" }));
     await user.click(screen.getByRole("button", { name: "Cancelar" }));
@@ -197,7 +243,18 @@ describe("InventoryVisualMapView — conexões", () => {
     api.fetchInventoryVisualMap.mockResolvedValue({
       map: { id: "m1", name: "Térreo" },
       objects,
-      connections: [...connections, { id: "c2", layer: "electrical", label: "Cabo 2", points: [{ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 1 }] }]
+      connections: [
+        ...connections,
+        {
+          id: "c2",
+          layer: "electrical",
+          label: "Cabo 2",
+          points: [
+            { x: 0, y: 0, z: 0 },
+            { x: 1, y: 0, z: 1 }
+          ]
+        }
+      ]
     });
     const { user } = await openEditing();
     await user.click(screen.getByRole("button", { name: "sel-c1" }));
@@ -218,7 +275,10 @@ describe("InventoryVisualMapView — conexões", () => {
     expect(await screen.findByText("Não foi possível adicionar a conexão.")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "sel-c1" }));
     const editor = document.querySelector(".inventory-visual-connection-editor");
-    const named = (re) => within(editor).getAllByRole("button").find((button) => re.test(button.textContent));
+    const named = (re) =>
+      within(editor)
+        .getAllByRole("button")
+        .find((button) => re.test(button.textContent));
     api.updateInventoryVisualMapConnection.mockRejectedValueOnce({});
     await user.click(named(/salvar/i));
     expect(await screen.findByText("Não foi possível salvar a conexão.")).toBeInTheDocument();

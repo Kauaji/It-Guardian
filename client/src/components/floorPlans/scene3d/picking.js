@@ -7,17 +7,7 @@ import { CAMERA_DRAG_THRESHOLD } from "./constants.js";
  * orbitar a camera) e cancelamento. Os ouvintes sao registrados no canvas e
  * removidos em `dispose`.
  */
-export function createPicking({
-  renderer,
-  camera,
-  controls,
-  objectGroups,
-  activeObjects,
-  offsets,
-  callbacksRef,
-  editableRef,
-  highlights
-}) {
+export function createPicking({ renderer, camera, controls, objectGroups, activeObjects, offsets, callbacksRef, editableRef, highlights }) {
   const canvas = renderer.domElement;
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();

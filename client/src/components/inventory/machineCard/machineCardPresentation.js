@@ -1,28 +1,34 @@
 const pingTimeFormatter = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
 export function statusLabel(status) {
-  return {
-    online: "Online",
-    offline: "Offline",
-    problem: "Erro",
-    unknown: "Sem dados"
-  }[status] || "Sem dados";
+  return (
+    {
+      online: "Online",
+      offline: "Offline",
+      problem: "Erro",
+      unknown: "Sem dados"
+    }[status] || "Sem dados"
+  );
 }
 
 export function statusTone(status) {
-  return {
-    online: "online",
-    offline: "unknown",
-    problem: "error"
-  }[status] || "unknown";
+  return (
+    {
+      online: "online",
+      offline: "unknown",
+      problem: "error"
+    }[status] || "unknown"
+  );
 }
 
 export function pulseTone(status) {
-  return {
-    online: "ok",
-    offline: "offline",
-    problem: "danger"
-  }[status] || "offline";
+  return (
+    {
+      online: "ok",
+      offline: "offline",
+      problem: "danger"
+    }[status] || "offline"
+  );
 }
 
 export function metricTone(value) {

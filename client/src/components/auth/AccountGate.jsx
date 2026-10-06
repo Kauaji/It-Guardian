@@ -70,15 +70,15 @@ export default function AccountGate({ children }) {
   if (mustChange) {
     return (
       <Suspense fallback={<ViewLoadingState />}>
-      <ForcedPasswordChange
-        token={token}
-        user={user}
-        onSignOut={signOut}
-        onChanged={(session) => {
-          handleAuth({ token: session.token, user: session.user });
-          notify("Senha alterada com sucesso.", "ok");
-        }}
-      />
+        <ForcedPasswordChange
+          token={token}
+          user={user}
+          onSignOut={signOut}
+          onChanged={(session) => {
+            handleAuth({ token: session.token, user: session.user });
+            notify("Senha alterada com sucesso.", "ok");
+          }}
+        />
       </Suspense>
     );
   }
@@ -88,17 +88,17 @@ export default function AccountGate({ children }) {
   if (enrollment.required) {
     return (
       <Suspense fallback={<ViewLoadingState />}>
-      <MfaEnrollmentGate
-        token={token}
-        onSignOut={signOut}
-        onComplete={async () => {
-          // Se a releitura falhar, o MFA ja esta ativo no servidor: segue com o usuario local.
-          const fresh = await fetchMe(token).catch(() => ({ user: { ...user, mfaEnabled: true } }));
-          enrollment.clear();
-          handleAuth({ token: fresh.token || token, user: fresh.user });
-          notify("Verificação em duas etapas ativada.", "ok");
-        }}
-      />
+        <MfaEnrollmentGate
+          token={token}
+          onSignOut={signOut}
+          onComplete={async () => {
+            // Se a releitura falhar, o MFA ja esta ativo no servidor: segue com o usuario local.
+            const fresh = await fetchMe(token).catch(() => ({ user: { ...user, mfaEnabled: true } }));
+            enrollment.clear();
+            handleAuth({ token: fresh.token || token, user: fresh.user });
+            notify("Verificação em duas etapas ativada.", "ok");
+          }}
+        />
       </Suspense>
     );
   }

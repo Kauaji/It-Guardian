@@ -10,5 +10,7 @@ export function createAgentToken() {
  * @returns {string} SHA-256 hexadecimal (o servidor so guarda o hash).
  */
 export function hashAgentToken(token) {
-  return createHash("sha256").update(String(token || ""), "utf8").digest("hex");
+  return createHash("sha256")
+    .update(String(token || ""), "utf8")
+    .digest("hex");
 }

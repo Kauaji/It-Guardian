@@ -117,9 +117,10 @@ export function normalizeStatus(status = {}, index = 0) {
     color: "#64748b",
     order: index
   };
-  const name = String(status.name || status.label || fallback.name)
-    .trim()
-    .slice(0, 60) || fallback.name;
+  const name =
+    String(status.name || status.label || fallback.name)
+      .trim()
+      .slice(0, 60) || fallback.name;
   const id = slugifyStatusId(status.id || status.value || name, fallback.id);
   const order = Number(status.order);
 
@@ -138,8 +139,7 @@ export function normalizeStatus(status = {}, index = 0) {
  * @returns {ServiceOrderStatus[]} Entre 2 e 10 status unicos, com exatamente um inicial e um final.
  */
 export function normalizeStatuses(statuses = []) {
-  const source = (Array.isArray(statuses) && statuses.length ? statuses : defaultServiceOrderStatuses)
-    .slice(0, maxServiceOrderStatuses);
+  const source = (Array.isArray(statuses) && statuses.length ? statuses : defaultServiceOrderStatuses).slice(0, maxServiceOrderStatuses);
   const seen = new Set();
   const normalized = [];
 
@@ -163,7 +163,10 @@ export function normalizeStatuses(statuses = []) {
   const preferredInitial =
     normalized.findIndex((status) => status.isInitial) >= 0
       ? normalized.findIndex((status) => status.isInitial)
-      : Math.max(0, normalized.findIndex((status) => status.id === "open"));
+      : Math.max(
+          0,
+          normalized.findIndex((status) => status.id === "open")
+        );
   let initialIndex = preferredInitial >= 0 ? preferredInitial : 0;
   const preferredFinal =
     normalized.findIndex((status) => status.isFinal) >= 0
@@ -195,7 +198,11 @@ export function normalizeServiceOrderSettings(value = {}) {
 
   return {
     numberFormat: {
-      prefix: String(merged.numberFormat.prefix || "OS").trim().toUpperCase().slice(0, 12) || "OS",
+      prefix:
+        String(merged.numberFormat.prefix || "OS")
+          .trim()
+          .toUpperCase()
+          .slice(0, 12) || "OS",
       useYear: Boolean(merged.numberFormat.useYear),
       useMonth: Boolean(merged.numberFormat.useMonth),
       nextNumber: Number.isFinite(nextNumber) && nextNumber > 0 ? Math.trunc(nextNumber) : null
@@ -245,8 +252,7 @@ export function formatServiceOrderNumber(sequence, settings = defaultServiceOrde
  * @returns {ServiceOrderStatus}
  */
 export function getInitialStatus(settings = defaultServiceOrderSettings) {
-  return normalizeServiceOrderSettings(settings).statuses.find((status) => status.isInitial)
-    || defaultServiceOrderStatuses[0];
+  return normalizeServiceOrderSettings(settings).statuses.find((status) => status.isInitial) || defaultServiceOrderStatuses[0];
 }
 
 /**
@@ -254,8 +260,10 @@ export function getInitialStatus(settings = defaultServiceOrderSettings) {
  * @returns {ServiceOrderStatus}
  */
 export function getFinalStatus(settings = defaultServiceOrderSettings) {
-  return normalizeServiceOrderSettings(settings).statuses.find((status) => status.isFinal)
-    || defaultServiceOrderStatuses[defaultServiceOrderStatuses.length - 1];
+  return (
+    normalizeServiceOrderSettings(settings).statuses.find((status) => status.isFinal) ||
+    defaultServiceOrderStatuses[defaultServiceOrderStatuses.length - 1]
+  );
 }
 
 /**
@@ -272,8 +280,9 @@ export function hasServiceOrderStatus(settings, statusId) {
  * @returns {boolean}
  */
 export function isDefaultSettings(settings) {
-  return JSON.stringify(normalizeServiceOrderSettings(settings)) ===
-    JSON.stringify(normalizeServiceOrderSettings(defaultServiceOrderSettings));
+  return (
+    JSON.stringify(normalizeServiceOrderSettings(settings)) === JSON.stringify(normalizeServiceOrderSettings(defaultServiceOrderSettings))
+  );
 }
 
 /**
@@ -305,8 +314,6 @@ export function mergeServiceOrderSettingsUpdate(current, payload = {}) {
       ...(payload.sla || {})
     },
     requireChecklistBeforeFinish:
-      payload.requireChecklistBeforeFinish !== undefined
-        ? payload.requireChecklistBeforeFinish
-        : current.requireChecklistBeforeFinish
+      payload.requireChecklistBeforeFinish !== undefined ? payload.requireChecklistBeforeFinish : current.requireChecklistBeforeFinish
   });
 }

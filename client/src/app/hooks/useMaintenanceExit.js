@@ -28,9 +28,7 @@ export function useMaintenanceExit({ data, deviceState, inventory, moves }) {
     const serviceOrderLabel = options.serviceOrder?.number ? `#${options.serviceOrder.number}` : "";
     const record = maintenanceRecords[machine.id];
     const origin = record?.origin || machine.maintenanceOrigin;
-    const fallbackSegment =
-      activeSegments.find((segment) => segment.isDefault) ||
-      decoratedSegments.find((segment) => segment.isDefault);
+    const fallbackSegment = activeSegments.find((segment) => segment.isDefault) || decoratedSegments.find((segment) => segment.isDefault);
     const originSegment =
       origin?.segmentId &&
       !isMaintenanceSegmentName(origin.segmentName) &&

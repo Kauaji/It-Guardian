@@ -10,7 +10,9 @@ vi.mock("../remoteAssistance/RemoteAssistanceAction.jsx", () => ({ default: () =
 
 function Probe({ onContext }) {
   const context = useDndContext();
-  useEffect(() => { onContext(context); }, [context, onContext]);
+  useEffect(() => {
+    onContext(context);
+  }, [context, onContext]);
   return null;
 }
 
@@ -22,14 +24,42 @@ const machines = [
 
 function renderSegment(overrides = {}, onContext = () => {}) {
   const props = {
-    segment, machines, segments: [segment], aliases: { m1: "Apelido" }, selectedAssetIds: new Set(["m2"]), canManage: true,
-    onRename: vi.fn(), onDelete: vi.fn(), onColorChange: vi.fn(), onMoveMachine: vi.fn(), onOpenDetails: vi.fn(), onOpenMoveModal: vi.fn(),
-    onRefreshPing: vi.fn(), onSelectAsset: vi.fn(), onToggleSelection: vi.fn(), onMoveSegmentOrder: vi.fn(), canMoveSegmentUp: true, canMoveSegmentDown: true,
-    selected: false, onSelectSegment: vi.fn(), onAddPeripheral: vi.fn(), onRemovePeripheral: vi.fn(), activePopoverId: null, setActivePopoverId: vi.fn(),
-    token: "t", user: {}, notify: vi.fn(), ...overrides
+    segment,
+    machines,
+    segments: [segment],
+    aliases: { m1: "Apelido" },
+    selectedAssetIds: new Set(["m2"]),
+    canManage: true,
+    onRename: vi.fn(),
+    onDelete: vi.fn(),
+    onColorChange: vi.fn(),
+    onMoveMachine: vi.fn(),
+    onOpenDetails: vi.fn(),
+    onOpenMoveModal: vi.fn(),
+    onRefreshPing: vi.fn(),
+    onSelectAsset: vi.fn(),
+    onToggleSelection: vi.fn(),
+    onMoveSegmentOrder: vi.fn(),
+    canMoveSegmentUp: true,
+    canMoveSegmentDown: true,
+    selected: false,
+    onSelectSegment: vi.fn(),
+    onAddPeripheral: vi.fn(),
+    onRemovePeripheral: vi.fn(),
+    activePopoverId: null,
+    setActivePopoverId: vi.fn(),
+    token: "t",
+    user: {},
+    notify: vi.fn(),
+    ...overrides
   };
   const user = userEvent.setup();
-  const tree = (next) => <DndContext><Probe onContext={onContext} /><SegmentCard {...props} {...next} /></DndContext>;
+  const tree = (next) => (
+    <DndContext>
+      <Probe onContext={onContext} />
+      <SegmentCard {...props} {...next} />
+    </DndContext>
+  );
   const utils = render(tree());
   return { props, user, ...utils, rerenderSegment: (next) => utils.rerender(tree(next)) };
 }
@@ -154,7 +184,12 @@ describe("SegmentCard", () => {
   });
 
   it("aceita os callbacks opcionais ausentes", async () => {
-    const { user } = renderSegment({ setActivePopoverId: undefined, onSelectSegment: undefined, onMoveSegmentOrder: undefined, activePopoverId: "segment-actions-s1" });
+    const { user } = renderSegment({
+      setActivePopoverId: undefined,
+      onSelectSegment: undefined,
+      onMoveSegmentOrder: undefined,
+      activePopoverId: "segment-actions-s1"
+    });
     await user.click(screen.getByRole("button", { name: "Subir segmento" }));
     fireEvent.click(screen.getByTitle("Mover segmento"), { ctrlKey: true });
     fireEvent.pointerDown(screen.getByTitle("Mover segmento"));

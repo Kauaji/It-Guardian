@@ -7,8 +7,8 @@ export function AutomationPlanDeleteConfirmation({ plan, deleteConfirmation, bus
       <h3>Excluir plano</h3>
       <p>
         Você está prestes a excluir o plano <strong>{plan.name}</strong>. Ele será removido de{" "}
-        {plan.assetCount || plan.assetSchedules?.filter((item) => item.active !== false).length || 0} máquina(s).
-        Agendas futuras serão desativadas e o histórico será preservado.
+        {plan.assetCount || plan.assetSchedules?.filter((item) => item.active !== false).length || 0} máquina(s). Agendas futuras serão
+        desativadas e o histórico será preservado.
       </p>
       <label>
         Digite o nome do plano para confirmar

@@ -64,10 +64,7 @@ export function applyOrderedIds(current, kind, orderedIds, tabId) {
 export function reassignTabMeta(current, fromTabId, toTabId) {
   const reassign = (collection) =>
     Object.fromEntries(
-      Object.entries(collection || {}).map(([id, meta]) => [
-        id,
-        meta.tabId === fromTabId ? { ...meta, tabId: toTabId } : meta
-      ])
+      Object.entries(collection || {}).map(([id, meta]) => [id, meta.tabId === fromTabId ? { ...meta, tabId: toTabId } : meta])
     );
 
   return {

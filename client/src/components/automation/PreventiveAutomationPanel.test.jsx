@@ -348,7 +348,14 @@ describe("PreventiveAutomationPanel - variante embutida e assistente", () => {
       name: "Rotina semanal",
       description: "Automação criada a partir da seleção preventiva: PC-01, PC-02.",
       defaultScriptIds: ["sc1"],
-      context: { selectionKey: "k", assetCount: 2, assetNames: ["PC-01", "PC-02"], assetIds: ["d1", "d2"], scriptNames: ["Limpar temporários"], riskCount: 0 },
+      context: {
+        selectionKey: "k",
+        assetCount: 2,
+        assetNames: ["PC-01", "PC-02"],
+        assetIds: ["d1", "d2"],
+        scriptNames: ["Limpar temporários"],
+        riskCount: 0
+      },
       scopeType: "asset_list",
       scopeId: "",
       assetIds: ["d1", "d2"]

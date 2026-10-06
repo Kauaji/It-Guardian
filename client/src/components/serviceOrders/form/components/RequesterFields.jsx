@@ -14,7 +14,9 @@ export default function RequesterFields({ form, technicians, thirdPartyRequester
           <select value={form.requesterName} onChange={(event) => updateField("requesterName", event.target.value)}>
             <option value="">Selecione o técnico</option>
             {technicians.map((technician) => (
-              <option key={technician.id} value={technician.name}>{technician.name}</option>
+              <option key={technician.id} value={technician.name}>
+                {technician.name}
+              </option>
             ))}
           </select>
         ) : (
@@ -24,11 +26,7 @@ export default function RequesterFields({ form, technicians, thirdPartyRequester
 
       <label className="service-order-third-party-field">
         <span className="service-order-third-party-check">
-          <input
-            type="checkbox"
-            checked={thirdPartyRequester}
-            onChange={(event) => onToggleThirdParty(event.target.checked)}
-          />
+          <input type="checkbox" checked={thirdPartyRequester} onChange={(event) => onToggleThirdParty(event.target.checked)} />
           <span>É uma OS de terceiros?</span>
         </span>
       </label>

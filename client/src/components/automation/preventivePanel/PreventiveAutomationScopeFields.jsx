@@ -1,7 +1,4 @@
-import {
-  getScopeOptions,
-  preventiveAutomationScopeLabels
-} from "./preventiveAutomationPanelUtils.js";
+import { getScopeOptions, preventiveAutomationScopeLabels } from "./preventiveAutomationPanelUtils.js";
 
 // Escopo do plano: tipo, lista de maquinas herdadas (assistente) ou alvo unico.
 export default function PreventiveAutomationScopeFields({ form, scopeSources, onChange }) {
@@ -13,7 +10,9 @@ export default function PreventiveAutomationScopeFields({ form, scopeSources, on
           {Object.entries(preventiveAutomationScopeLabels)
             .filter(([value]) => value !== "asset_list" || form.scopeType === "asset_list")
             .map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
+              <option key={value} value={value}>
+                {label}
+              </option>
             ))}
         </select>
       </label>
@@ -40,7 +39,9 @@ export default function PreventiveAutomationScopeFields({ form, scopeSources, on
           <select value={form.scopeId} onChange={(event) => onChange("scopeId", event.target.value)} required>
             <option value="">Selecione</option>
             {getScopeOptions(form.scopeType, scopeSources).map((option) => (
-              <option key={option.id} value={option.id}>{option.label}</option>
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
             ))}
           </select>
         </label>

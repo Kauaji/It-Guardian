@@ -98,7 +98,9 @@ export function resolveSignedUpdate(autoUpdate, env = process.env) {
   if (!autoUpdate?.version) return empty;
   const signature = String(env.AGENT_LATEST_VERSION_SIGNATURE || "").trim();
   if (!signature) {
-    logger.warn("agent_update_unsigned", { message: "AGENT_LATEST_VERSION_SIGNATURE ausente: atualizacao NAO oferecida (agentes exigem assinatura)." });
+    logger.warn("agent_update_unsigned", {
+      message: "AGENT_LATEST_VERSION_SIGNATURE ausente: atualizacao NAO oferecida (agentes exigem assinatura)."
+    });
     return empty;
   }
   const releaseKey = String(env.AGENT_RELEASE_PUBLIC_KEY || "").trim();

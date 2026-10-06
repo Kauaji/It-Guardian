@@ -1,7 +1,9 @@
 import { forwardRef } from "react";
 
 export function sanitizeOneTimeCode(value) {
-  return String(value || "").replace(/\D/g, "").slice(0, 6);
+  return String(value || "")
+    .replace(/\D/g, "")
+    .slice(0, 6);
 }
 
 // Campo do codigo TOTP de 6 digitos: teclado numerico no celular e sugestao

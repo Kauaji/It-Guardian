@@ -1,11 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
-  clearSessionCookie,
-  readSessionCookie,
-  sessionCookieName,
-  setSessionCookie
-} from "./sessionCookie.js";
+import { clearSessionCookie, readSessionCookie, sessionCookieName, setSessionCookie } from "./sessionCookie.js";
 
 function responseProbe() {
   const headers = new Map();

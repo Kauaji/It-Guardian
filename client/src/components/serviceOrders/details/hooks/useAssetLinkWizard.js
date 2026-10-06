@@ -11,18 +11,9 @@ export function useAssetLinkWizard({ serviceOrder, devices, segments, groups, in
     setLinking(false);
   }, [serviceOrder?.id]);
 
-  const visibleGroups = useMemo(
-    () => buildGroupOptions(segments, groups, linkDraft.tabId),
-    [groups, segments, linkDraft.tabId]
-  );
-  const visibleSegments = useMemo(
-    () => filterSegmentsForLink(segments, linkDraft),
-    [segments, linkDraft.groupId, linkDraft.tabId]
-  );
-  const visibleDevices = useMemo(
-    () => filterDevicesForLink(devices, segments, linkDraft),
-    [devices, linkDraft, segments]
-  );
+  const visibleGroups = useMemo(() => buildGroupOptions(segments, groups, linkDraft.tabId), [groups, segments, linkDraft.tabId]);
+  const visibleSegments = useMemo(() => filterSegmentsForLink(segments, linkDraft), [segments, linkDraft.groupId, linkDraft.tabId]);
+  const visibleDevices = useMemo(() => filterDevicesForLink(devices, segments, linkDraft), [devices, linkDraft, segments]);
 
   function toggleLinking() {
     setLinking((current) => !current);

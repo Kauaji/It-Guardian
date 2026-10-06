@@ -102,9 +102,7 @@ export function buildRecurrenceInsight(alert = {}, relatedOrders = []) {
  * @returns {FalsePositiveInsight | null}
  */
 export function buildFalsePositiveInsight(alert = {}, suggestions = []) {
-  const rejectedCount = suggestions.filter((suggestion) =>
-    suggestion.alertId === alert.id && suggestion.status === "rejected"
-  ).length;
+  const rejectedCount = suggestions.filter((suggestion) => suggestion.alertId === alert.id && suggestion.status === "rejected").length;
 
   if (rejectedCount < 2) return null;
 
@@ -221,7 +219,7 @@ export function buildEnrichedAlert(alert, context, comments = []) {
     confidenceLevel: getAlertConfidence(alert),
     trend: getAlertTrend(alert),
     priorityReason: buildPriorityReason(alert, relatedOrders),
-    recurrenceScore: Math.min(100, Math.max(10, (Number(alert.occurrencesCount || 1) * 22) + (alert.severity === "critical" ? 20 : 0))),
+    recurrenceScore: Math.min(100, Math.max(10, Number(alert.occurrencesCount || 1) * 22 + (alert.severity === "critical" ? 20 : 0))),
     capacityForecast: buildCapacityForecast(alert),
     recurrenceInsight: buildRecurrenceInsight(alert, relatedOrders),
     falsePositiveInsight: buildFalsePositiveInsight(alert, context.suggestions),
@@ -329,16 +327,20 @@ export function buildAlertCorrelations(alerts) {
  */
 export function buildAlertInsights(alerts) {
   return {
-    recurrences: alerts.filter((alert) => alert.recurrenceInsight).map((alert) => ({
-      alertId: alert.id,
-      hostName: alert.hostName,
-      ...alert.recurrenceInsight
-    })),
-    falsePositives: alerts.filter((alert) => alert.falsePositiveInsight).map((alert) => ({
-      alertId: alert.id,
-      hostName: alert.hostName,
-      ...alert.falsePositiveInsight
-    })),
+    recurrences: alerts
+      .filter((alert) => alert.recurrenceInsight)
+      .map((alert) => ({
+        alertId: alert.id,
+        hostName: alert.hostName,
+        ...alert.recurrenceInsight
+      })),
+    falsePositives: alerts
+      .filter((alert) => alert.falsePositiveInsight)
+      .map((alert) => ({
+        alertId: alert.id,
+        hostName: alert.hostName,
+        ...alert.falsePositiveInsight
+      })),
     capacity: alerts.map((alert) => ({
       alertId: alert.id,
       hostName: alert.hostName,

@@ -24,11 +24,7 @@ function SectorForm({ admin }) {
         <textarea value={sectorForm.description} onChange={(event) => setField("description", event.target.value)} />
       </label>
       <label className="admin-inline-check">
-        <input
-          type="checkbox"
-          checked={sectorForm.active}
-          onChange={(event) => setField("active", event.target.checked)}
-        />
+        <input type="checkbox" checked={sectorForm.active} onChange={(event) => setField("active", event.target.checked)} />
         Setor ativo
       </label>
       <div className="admin-permission-editor">

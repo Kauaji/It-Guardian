@@ -1,8 +1,5 @@
 import { X } from "lucide-react";
-import {
-  AutomationPlanDeleteConfirmation,
-  AutomationPlanStatusConfirmation
-} from "./planDetails/AutomationPlanConfirmations.jsx";
+import { AutomationPlanDeleteConfirmation, AutomationPlanStatusConfirmation } from "./planDetails/AutomationPlanConfirmations.jsx";
 import AutomationPlanEditForm from "./planDetails/AutomationPlanEditForm.jsx";
 import AutomationPlanOverview from "./planDetails/AutomationPlanOverview.jsx";
 import AutomationPlanTabPanel, { AutomationPlanTabNav } from "./planDetails/AutomationPlanTabPanel.jsx";
@@ -118,7 +115,13 @@ export default function AutomationPlanDetails({
         if (event.target === event.currentTarget) requestClose();
       }}
     >
-      <section ref={dialogRef} className="modal-panel automation-plan-details" role="dialog" aria-modal="true" aria-labelledby="automation-plan-title">
+      <section
+        ref={dialogRef}
+        className="modal-panel automation-plan-details"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="automation-plan-title"
+      >
         <header>
           <div>
             <span>Configuração geral do plano</span>

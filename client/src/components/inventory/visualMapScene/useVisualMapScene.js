@@ -25,15 +25,9 @@ export default function useVisualMapScene({
   selectObjectRef.current = onSelectObject;
   selectConnectionRef.current = onSelectConnection;
 
-  const visibleObjects = useMemo(
-    () => objects.filter((object) => layers?.[object.layer] !== false),
-    [layers, objects]
-  );
+  const visibleObjects = useMemo(() => objects.filter((object) => layers?.[object.layer] !== false), [layers, objects]);
 
-  const visibleConnections = useMemo(
-    () => connections.filter((connection) => layers?.[connection.layer] !== false),
-    [connections, layers]
-  );
+  const visibleConnections = useMemo(() => connections.filter((connection) => layers?.[connection.layer] !== false), [connections, layers]);
 
   useEffect(() => {
     const host = hostRef.current;

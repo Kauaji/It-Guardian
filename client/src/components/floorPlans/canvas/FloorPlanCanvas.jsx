@@ -10,11 +10,7 @@ import EditorEmptyState from "./EditorEmptyState.jsx";
 import ObjectLayer from "./ObjectLayer.jsx";
 import ObjectSelectionOverlay from "./ObjectSelectionOverlay.jsx";
 import { PaintDraftOverlay } from "./PaintShapes.jsx";
-import {
-  CatalogPlacementPreview,
-  MeasurementPlacementPreview,
-  WallPlacementPreview
-} from "./PlacementPreviews.jsx";
+import { CatalogPlacementPreview, MeasurementPlacementPreview, WallPlacementPreview } from "./PlacementPreviews.jsx";
 import ZoneLayer from "./ZoneLayer.jsx";
 
 const EMPTY_HEATMAP = new Map();
@@ -22,11 +18,13 @@ const NO_GUIDES = [];
 const NO_IDS = [];
 
 function AlignmentGuides({ guides, width, height }) {
-  return guides.map((guide) => (
-    guide.axis === "x"
-      ? <line key={`x-${guide.value}`} className="floor-plan-alignment-guide" x1={guide.value} y1="0" x2={guide.value} y2={height} />
-      : <line key={`y-${guide.value}`} className="floor-plan-alignment-guide" x1="0" y1={guide.value} x2={width} y2={guide.value} />
-  ));
+  return guides.map((guide) =>
+    guide.axis === "x" ? (
+      <line key={`x-${guide.value}`} className="floor-plan-alignment-guide" x1={guide.value} y1="0" x2={guide.value} y2={height} />
+    ) : (
+      <line key={`y-${guide.value}`} className="floor-plan-alignment-guide" x1="0" y1={guide.value} x2={width} y2={guide.value} />
+    )
+  );
 }
 
 function getWrapClassName({ viewport, placement }) {
@@ -93,8 +91,21 @@ export default function FloorPlanCanvas({ editor, activeFloorId, selection, hand
         onPointerLeave={handlers.onPointerUp}
         onWheel={handlers.onWheel}
       >
-        <CanvasBackdrop width={width} height={height} gridSize={gridSize} showGrid={showGrid} backgroundSrc={backgroundSrc} backgroundSettings={backgroundSettings} />
-        <ZoneLayer zones={[...scene.roomZones, ...scene.areaZones]} selected={selected} plan={editor.plan} onPointerDown={handlers.onPointerDown} onSelect={handlers.onSelect} />
+        <CanvasBackdrop
+          width={width}
+          height={height}
+          gridSize={gridSize}
+          showGrid={showGrid}
+          backgroundSrc={backgroundSrc}
+          backgroundSettings={backgroundSettings}
+        />
+        <ZoneLayer
+          zones={[...scene.roomZones, ...scene.areaZones]}
+          selected={selected}
+          plan={editor.plan}
+          onPointerDown={handlers.onPointerDown}
+          onSelect={handlers.onSelect}
+        />
         {layerState.areas && paintDraft?.cells?.length ? <PaintDraftOverlay paintDraft={paintDraft} /> : null}
         <RouteLayer routes={scene.routes} selected={selected} onSelect={handlers.onSelect} />
         <PowerLinkLayer powerLinks={scene.powerLinks} />

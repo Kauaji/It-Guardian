@@ -57,5 +57,8 @@ export function buildConnectionLine(connection, selectedConnectionId) {
   addEndpoints(group, connection, points, color, selected);
   addMidpointLabel(group, connection, points);
 
-  return { group, selectable: [line, ...group.children.filter((child) => child.userData.connectionId === connection.id && child !== line)] };
+  return {
+    group,
+    selectable: [line, ...group.children.filter((child) => child.userData.connectionId === connection.id && child !== line)]
+  };
 }

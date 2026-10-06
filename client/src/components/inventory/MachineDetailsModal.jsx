@@ -84,12 +84,8 @@ export default function MachineDetailsModal({
             />
           )}
           {activeTab === "hardware" && <MachineHardwareTab model={model} />}
-          {activeTab === "alerts" && (
-            <ErrorAlertList alerts={model.activeAlerts} resolvedAlerts={model.resolvedAlerts} />
-          )}
-          {activeTab === "software" && (
-            <MachineSoftwareTab softwareRows={model.softwareRows} isManualAsset={model.isManualAsset} />
-          )}
+          {activeTab === "alerts" && <ErrorAlertList alerts={model.activeAlerts} resolvedAlerts={model.resolvedAlerts} />}
+          {activeTab === "software" && <MachineSoftwareTab softwareRows={model.softwareRows} isManualAsset={model.isManualAsset} />}
           {activeTab === "network" && <MachineNetworkTab model={model} />}
           {activeTab === "peripherals" && (
             <MachinePeripheralsTab
@@ -100,20 +96,9 @@ export default function MachineDetailsModal({
               onRemovePeripheral={onRemovePeripheral}
             />
           )}
-          {activeTab === "notes" && (
-            <ObservationTimeline
-              observations={observations}
-              userName={userName}
-              onAdd={onAddObservation}
-            />
-          )}
+          {activeTab === "notes" && <ObservationTimeline observations={observations} userName={userName} onAdd={onAddObservation} />}
           {activeTab === "history" && (
-            <AssetTechnicalTimeline
-              assetId={machine.id}
-              token={token}
-              observations={observations}
-              onOpenNetworkMap={onOpenNetworkMap}
-            />
+            <AssetTechnicalTimeline assetId={machine.id} token={token} observations={observations} onOpenNetworkMap={onOpenNetworkMap} />
           )}
         </div>
       </section>

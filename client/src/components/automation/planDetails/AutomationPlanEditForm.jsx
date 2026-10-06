@@ -1,8 +1,5 @@
 import { Save } from "lucide-react";
-import {
-  automationColorOptions,
-  automationTimezoneOptions
-} from "../automationFormUtils.js";
+import { automationColorOptions, automationTimezoneOptions } from "../automationFormUtils.js";
 import { recurrenceLabels } from "../automationUtils.js";
 
 function FieldError({ message }) {
@@ -24,7 +21,11 @@ function ColorFieldset({ draft, error, onChange }) {
             aria-label={`Usar cor ${color}`}
           />
         ))}
-        <input aria-label="Código da cor do indicador" value={draft.indicatorColor} onChange={(event) => onChange("indicatorColor", event.target.value)} />
+        <input
+          aria-label="Código da cor do indicador"
+          value={draft.indicatorColor}
+          onChange={(event) => onChange("indicatorColor", event.target.value)}
+        />
       </div>
       <FieldError message={error} />
     </fieldset>
@@ -39,7 +40,10 @@ function ScriptPicker({ scripts, draft, error, onToggle }) {
         {scripts.map((script) => (
           <label key={script.id}>
             <input type="checkbox" checked={draft.defaultScriptIds.includes(script.id)} onChange={() => onToggle(script.id)} />
-            <span><strong>{script.name}</strong><small>{script.category || "Sem categoria"}</small></span>
+            <span>
+              <strong>{script.name}</strong>
+              <small>{script.category || "Sem categoria"}</small>
+            </span>
           </label>
         ))}
       </div>
@@ -61,14 +65,24 @@ export default function AutomationPlanEditForm({ draft, errors, scripts, busy, o
         <label>
           Recorrência
           <select value={draft.recurrenceType} onChange={(event) => onChange("recurrenceType", event.target.value)}>
-            {Object.entries(recurrenceLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            {Object.entries(recurrenceLabels).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
           </select>
           <FieldError message={errors.recurrenceType} />
         </label>
         {draft.recurrenceType === "custom_days" && (
           <label>
             Dias
-            <input type="number" min="1" max="365" value={draft.recurrenceIntervalDays} onChange={(event) => onChange("recurrenceIntervalDays", Number(event.target.value))} />
+            <input
+              type="number"
+              min="1"
+              max="365"
+              value={draft.recurrenceIntervalDays}
+              onChange={(event) => onChange("recurrenceIntervalDays", Number(event.target.value))}
+            />
             <FieldError message={errors.recurrenceIntervalDays} />
           </label>
         )}
@@ -80,12 +94,22 @@ export default function AutomationPlanEditForm({ draft, errors, scripts, busy, o
         <label>
           Fuso horário
           <select value={draft.timezone} onChange={(event) => onChange("timezone", event.target.value)}>
-            {automationTimezoneOptions.map((timezone) => <option key={timezone} value={timezone}>{timezone}</option>)}
+            {automationTimezoneOptions.map((timezone) => (
+              <option key={timezone} value={timezone}>
+                {timezone}
+              </option>
+            ))}
           </select>
           <FieldError message={errors.timezone} />
         </label>
-        <label className="automation-plan-wide">Descrição<textarea value={draft.description} onChange={(event) => onChange("description", event.target.value)} /></label>
-        <label className="automation-plan-wide">Observações<textarea value={draft.notes} onChange={(event) => onChange("notes", event.target.value)} /></label>
+        <label className="automation-plan-wide">
+          Descrição
+          <textarea value={draft.description} onChange={(event) => onChange("description", event.target.value)} />
+        </label>
+        <label className="automation-plan-wide">
+          Observações
+          <textarea value={draft.notes} onChange={(event) => onChange("notes", event.target.value)} />
+        </label>
         <ColorFieldset draft={draft} error={errors.indicatorColor} onChange={onChange} />
       </div>
       <ScriptPicker scripts={scripts} draft={draft} error={errors.defaultScriptIds} onToggle={onToggleScript} />

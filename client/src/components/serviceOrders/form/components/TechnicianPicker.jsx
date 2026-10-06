@@ -16,7 +16,9 @@ export default function TechnicianPicker({ technicians, selectedNames, onToggle 
             );
           })}
         </div>
-      ) : <div className="service-order-inline-empty">Não existem técnicos cadastrados.</div>}
+      ) : (
+        <div className="service-order-inline-empty">Não existem técnicos cadastrados.</div>
+      )}
     </fieldset>
   );
 }

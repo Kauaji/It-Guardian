@@ -47,9 +47,5 @@ export {
 export { registerMaintenanceScriptSimulation } from "./scriptSimulationService.js";
 export { useScriptFromSuggestion } from "./suggestionScriptUsageService.js";
 export { useScriptForServiceOrder } from "./serviceOrderScriptUsageService.js";
-export {
-  cancelScriptValidation,
-  listScriptValidationsForSuggestion,
-  refreshDueScriptValidations
-} from "./scriptValidationService.js";
+export { cancelScriptValidation, listScriptValidationsForSuggestion, refreshDueScriptValidations } from "./scriptValidationService.js";
 export { listRecommendedScriptsForSuggestion } from "./suggestionRecommendationService.js";

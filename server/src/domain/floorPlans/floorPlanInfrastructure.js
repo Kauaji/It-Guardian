@@ -24,11 +24,22 @@ export function assetHeatmapSeverity(metric, value, status) {
  */
 export function assetSnapshot(asset) {
   if (!asset) return { status: "no_agent", cpu: null, ram: null, disk: null, lastSeenAt: null };
-  const ram = Number(asset.memory_total_bytes) > 0 ? Math.round(Number(asset.memory_used_bytes || 0) / Number(asset.memory_total_bytes) * 100) : null;
-  const disk = Number(asset.disk_total_bytes) > 0 ? Math.round((1 - Number(asset.disk_free_bytes || 0) / Number(asset.disk_total_bytes)) * 100) : null;
+  const ram =
+    Number(asset.memory_total_bytes) > 0
+      ? Math.round((Number(asset.memory_used_bytes || 0) / Number(asset.memory_total_bytes)) * 100)
+      : null;
+  const disk =
+    Number(asset.disk_total_bytes) > 0 ? Math.round((1 - Number(asset.disk_free_bytes || 0) / Number(asset.disk_total_bytes)) * 100) : null;
   const age = Date.now() - new Date(asset.last_seen_at ?? 0).getTime();
   const status = age <= Math.max(180_000, Number(asset.interval_seconds || 60) * 3_000) ? "online" : "offline";
-  return { status, cpu: asset.cpu_usage_percent == null ? null : Number(asset.cpu_usage_percent), ram, disk, lastSeenAt: asset.last_seen_at, name: asset.machine_alias || asset.hostname };
+  return {
+    status,
+    cpu: asset.cpu_usage_percent == null ? null : Number(asset.cpu_usage_percent),
+    ram,
+    disk,
+    lastSeenAt: asset.last_seen_at,
+    name: asset.machine_alias || asset.hostname
+  };
 }
 
 /**
@@ -37,10 +48,7 @@ export function assetSnapshot(asset) {
  * @returns {InfrastructureObjectRow[]}
  */
 export function filterInfrastructureObjects(objects, { groupId, segmentId } = {}) {
-  return objects.filter((item) => (
-    (!groupId || item.group_id === groupId)
-    && (!segmentId || item.segment_id === segmentId)
-  ));
+  return objects.filter((item) => (!groupId || item.group_id === groupId) && (!segmentId || item.segment_id === segmentId));
 }
 
 /**
@@ -132,7 +140,7 @@ export function buildAssetHeatmap(data, metric, filters = {}) {
 export function parseHeatmapPeriod(startDate, endDate) {
   const start = new Date(startDate);
   const end = new Date(endDate);
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start || (end.getTime() - start.getTime()) > 366 * 86400000) {
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start || end.getTime() - start.getTime() > 366 * 86400000) {
     throw makeHttpError(400, "Informe um período válido de até 366 dias.");
   }
   return { start, end };
@@ -205,7 +213,9 @@ export function buildInfrastructureSummary(data, filters = {}) {
     offlineAssets: snapshots.filter((item) => item.status === "offline").length,
     assetsWithoutAgent: snapshots.filter((item) => item.status === "no_agent").length,
     openServiceOrders: data.orders.filter((item) => linkedIds.has(item.asset_id) && !item.closed_at).length,
-    overdueServiceOrders: data.orders.filter((item) => linkedIds.has(item.asset_id) && !item.closed_at && item.sla_due_at && new Date(item.sla_due_at) < new Date()).length,
+    overdueServiceOrders: data.orders.filter(
+      (item) => linkedIds.has(item.asset_id) && !item.closed_at && item.sla_due_at && new Date(item.sla_due_at) < new Date()
+    ).length,
     criticalAlerts: data.alerts.filter((item) => linkedIds.has(item.asset_id) && ["critical", "high"].includes(item.severity)).length,
     segmentsRepresented: new Set(objects.map((item) => item.segment_id).filter(Boolean)).size,
     groupsRepresented: new Set(objects.map((item) => item.group_id).filter(Boolean)).size

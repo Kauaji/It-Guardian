@@ -15,7 +15,16 @@ function AssetPreview({ asset }) {
 }
 
 // Cliente (Business) ou aba do inventario (Local) e maquina/ativo vinculado.
-export default function EnvironmentAssetFields({ form, businessMode, environmentLabel, clients, tabs, devices, selectedAsset, updateField }) {
+export default function EnvironmentAssetFields({
+  form,
+  businessMode,
+  environmentLabel,
+  clients,
+  tabs,
+  devices,
+  selectedAsset,
+  updateField
+}) {
   return (
     <>
       <label>
@@ -28,7 +37,9 @@ export default function EnvironmentAssetFields({ form, businessMode, environment
             </option>
           ))}
         </select>
-        {!businessMode ? <small className="service-order-field-help">Define em qual aba do inventário a OS será contextualizada.</small> : null}
+        {!businessMode ? (
+          <small className="service-order-field-help">Define em qual aba do inventário a OS será contextualizada.</small>
+        ) : null}
       </label>
 
       <label>
@@ -39,7 +50,8 @@ export default function EnvironmentAssetFields({ form, businessMode, environment
             const context = getDeviceContext(device);
             return (
               <option key={device.id} value={device.id}>
-                {device.name} - {device.ip}{context ? ` - ${context}` : ""}
+                {device.name} - {device.ip}
+                {context ? ` - ${context}` : ""}
               </option>
             );
           })}

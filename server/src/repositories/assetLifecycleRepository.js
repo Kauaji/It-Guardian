@@ -3,11 +3,7 @@ import { query } from "../database.js";
 import { badRequest, conflict, notFoundError } from "../lib/errors.js";
 import { addAssetHistory } from "./assetHistoryRepository.js";
 import { findDeviceMetadata, updateDeviceBackup } from "./deviceMetadataRepository.js";
-import {
-  DEFAULT_SEGMENT_ID,
-  DEFAULT_SEGMENT_NAME,
-  updateDeviceSegment
-} from "./segmentRepository.js";
+import { DEFAULT_SEGMENT_ID, DEFAULT_SEGMENT_NAME, updateDeviceSegment } from "./segmentRepository.js";
 import { addServiceOrderHistory } from "./serviceOrderRepository.js";
 
 function normalizeReservedName(name = "") {
@@ -20,20 +16,41 @@ function normalizeReservedName(name = "") {
 }
 
 function userLabel(user) {
-  return { id: user.id || null, name: user.name || "Sistema"
-  };
+  return { id: user.id || null, name: user.name || "Sistema" };
 }
 
 function fromMaintenanceRow(row) {
   if (!row) return null;
-  return { id: row.id, assetId: row.asset_id, serviceOrderId: row.service_order_id, status: row.status, originalSegmentId: row.original_segment_id, originalSegmentName: row.original_segment_name, maintenanceSegmentId: row.maintenance_segment_id, startedAt: row.started_at, finishedAt: row.finished_at, notes: row.notes, createdAt: row.created_at, updatedAt: row.updated_at, origin: { segmentId: row.original_segment_id, segmentName: row.original_segment_name
-    }
+  return {
+    id: row.id,
+    assetId: row.asset_id,
+    serviceOrderId: row.service_order_id,
+    status: row.status,
+    originalSegmentId: row.original_segment_id,
+    originalSegmentName: row.original_segment_name,
+    maintenanceSegmentId: row.maintenance_segment_id,
+    startedAt: row.started_at,
+    finishedAt: row.finished_at,
+    notes: row.notes,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    origin: { segmentId: row.original_segment_id, segmentName: row.original_segment_name }
   };
 }
 
 function fromBackupAssignmentRow(row) {
   if (!row) return null;
-  return { id: row.id, backupAssetId: row.backup_asset_id, serviceOrderId: row.service_order_id, originalAssetId: row.original_asset_id, status: row.status, assignedAt: row.assigned_at, releasedAt: row.released_at, notes: row.notes, createdAt: row.created_at, updatedAt: row.updated_at
+  return {
+    id: row.id,
+    backupAssetId: row.backup_asset_id,
+    serviceOrderId: row.service_order_id,
+    originalAssetId: row.original_asset_id,
+    status: row.status,
+    assignedAt: row.assigned_at,
+    releasedAt: row.released_at,
+    notes: row.notes,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
   };
 }
 
@@ -93,12 +110,10 @@ async function getCurrentDeviceSegment(assetId) {
   );
 
   if (result.rows[0]) {
-    return { id: result.rows[0].id, name: result.rows[0].name, groupId: result.rows[0].group_id || null
-    };
+    return { id: result.rows[0].id, name: result.rows[0].name, groupId: result.rows[0].group_id || null };
   }
 
-  return { id: DEFAULT_SEGMENT_ID, name: DEFAULT_SEGMENT_NAME, groupId: null
-  };
+  return { id: DEFAULT_SEGMENT_ID, name: DEFAULT_SEGMENT_NAME, groupId: null };
 }
 
 async function ensureMaintenanceSegment(userId = null) {
@@ -115,8 +130,7 @@ async function ensureMaintenanceSegment(userId = null) {
   const existing = result.rows[0];
 
   if (existing) {
-    return { id: existing.id, name: existing.name, groupId: existing.group_id || null
-    };
+    return { id: existing.id, name: existing.name, groupId: existing.group_id || null };
   }
 
   let insert;
@@ -131,13 +145,15 @@ async function ensureMaintenanceSegment(userId = null) {
     );
   } catch (error) {
     if (error.code !== "23505") throw error;
-    const concurrent = await query("SELECT id, name, color, group_id FROM inventory_segments WHERE lower(name) IN ('manutencao', 'manutenção') ORDER BY created_at ASC LIMIT 1");
-    if (concurrent.rowCount) return { id: concurrent.rows[0].id, name: concurrent.rows[0].name, groupId: concurrent.rows[0].group_id || null };
+    const concurrent = await query(
+      "SELECT id, name, color, group_id FROM inventory_segments WHERE lower(name) IN ('manutencao', 'manutenção') ORDER BY created_at ASC LIMIT 1"
+    );
+    if (concurrent.rowCount)
+      return { id: concurrent.rows[0].id, name: concurrent.rows[0].name, groupId: concurrent.rows[0].group_id || null };
     throw error;
   }
 
-  return { id: insert.rows[0].id, name: insert.rows[0].name, groupId: insert.rows[0].group_id || null
-  };
+  return { id: insert.rows[0].id, name: insert.rows[0].name, groupId: insert.rows[0].group_id || null };
 }
 
 export async function listActiveMaintenanceRecordsMap() {
@@ -188,12 +204,7 @@ export async function hasActiveMaintenanceForServiceOrder(serviceOrderId) {
   return Boolean(await findActiveMaintenanceByServiceOrder(serviceOrderId));
 }
 
-export async function startMaintenanceForAsset({
-  assetId,
-  serviceOrderId = null,
-  notes = null,
-  user
-}) {
+export async function startMaintenanceForAsset({ assetId, serviceOrderId = null, notes = null, user }) {
   if (!assetId) {
     throw badRequest("assetId e obrigatorio.");
   }
@@ -209,8 +220,7 @@ export async function startMaintenanceForAsset({
   }
 
   const maintenanceSegment = await ensureMaintenanceSegment(user.id || null);
-  await updateDeviceSegment({ deviceId: assetId, segmentId: maintenanceSegment.id, userId: user.id || null
-  });
+  await updateDeviceSegment({ deviceId: assetId, segmentId: maintenanceSegment.id, userId: user.id || null });
 
   const result = await query(
     `
@@ -221,30 +231,28 @@ export async function startMaintenanceForAsset({
       VALUES ($1, $2, $3, 'active', $4, $5, $6, $7, $8)
       RETURNING *
     `,
-    [
-      randomUUID(),
-      assetId,
-      serviceOrderId || null,
-      currentSegment.id,
-      currentSegment.name,
-      maintenanceSegment.id,
-      user.id || null,
-      notes
-    ]
+    [randomUUID(), assetId, serviceOrderId || null, currentSegment.id, currentSegment.name, maintenanceSegment.id, user.id || null, notes]
   );
   const record = fromMaintenanceRow(result.rows[0]);
   const userInfo = userLabel(user);
 
   await addAssetHistory({
-    assetId, eventType: "maintenance", message: serviceOrderId
-      ?
-       "Máquina colocada em manutenção por Ordem de Serviço."
-      : "Máquina colocada em manutenção.", oldValue: currentSegment.name, newValue: maintenanceSegment.name, userId: userInfo.id, userName: userInfo.name
+    assetId,
+    eventType: "maintenance",
+    message: serviceOrderId ? "Máquina colocada em manutenção por Ordem de Serviço." : "Máquina colocada em manutenção.",
+    oldValue: currentSegment.name,
+    newValue: maintenanceSegment.name,
+    userId: userInfo.id,
+    userName: userInfo.name
   });
 
   if (serviceOrderId) {
     await addServiceOrderHistory({
-      serviceOrderId, eventType: "maintenance", message: "Máquina vinculada e colocada em manutenção.", oldValue: currentSegment.name, newValue: maintenanceSegment.name,
+      serviceOrderId,
+      eventType: "maintenance",
+      message: "Máquina vinculada e colocada em manutenção.",
+      oldValue: currentSegment.name,
+      newValue: maintenanceSegment.name,
       user
     });
   }
@@ -252,13 +260,7 @@ export async function startMaintenanceForAsset({
   return record;
 }
 
-export async function finishMaintenanceForAsset({
-  assetId,
-  serviceOrderId = null,
-  notes = null,
-  user,
-  allowMissing = false
-}) {
+export async function finishMaintenanceForAsset({ assetId, serviceOrderId = null, notes = null, user, allowMissing = false }) {
   const active = assetId
     ? await findActiveMaintenanceByAsset(assetId)
     : serviceOrderId
@@ -270,16 +272,13 @@ export async function finishMaintenanceForAsset({
     throw notFoundError("Não existe manutenção ativa para esta máquina.");
   }
 
-  const targetSegment =
-    (await findSegmentByIdRaw(active.originalSegmentId)) ||
-    (await findSegmentByIdRaw(DEFAULT_SEGMENT_ID));
+  const targetSegment = (await findSegmentByIdRaw(active.originalSegmentId)) || (await findSegmentByIdRaw(DEFAULT_SEGMENT_ID));
 
   if (!targetSegment.id) {
     throw conflict("Não foi possível localizar o segmento de retorno.");
   }
 
-  await updateDeviceSegment({ deviceId: active.assetId, segmentId: targetSegment.id, userId: user.id || null
-  });
+  await updateDeviceSegment({ deviceId: active.assetId, segmentId: targetSegment.id, userId: user.id || null });
 
   const result = await query(
     `
@@ -298,18 +297,26 @@ export async function finishMaintenanceForAsset({
   const userInfo = userLabel(user);
   const fallbackUsed = targetSegment.id !== active.originalSegmentId;
 
-  await addAssetHistory({ assetId: active.assetId, eventType: "maintenance", message: fallbackUsed
-      ?
-       "Máquina retirada da manutenção; segmento original indisponível, movida para Não organizadas."
-      : "Máquina retirada da manutenção.", oldValue: "Manutenção", newValue: targetSegment.name, userId: userInfo.id, userName: userInfo.name
+  await addAssetHistory({
+    assetId: active.assetId,
+    eventType: "maintenance",
+    message: fallbackUsed
+      ? "Máquina retirada da manutenção; segmento original indisponível, movida para Não organizadas."
+      : "Máquina retirada da manutenção.",
+    oldValue: "Manutenção",
+    newValue: targetSegment.name,
+    userId: userInfo.id,
+    userName: userInfo.name
   });
 
   const orderId = serviceOrderId || active.serviceOrderId;
   if (orderId) {
-    await addServiceOrderHistory({ serviceOrderId: orderId, eventType: "maintenance", message: fallbackUsed
-        ?
-         "Máquina saiu da manutenção, mas o segmento original não existe mais."
-        : "Máquina saiu da manutenção.", oldValue: "Manutenção", newValue: targetSegment.name,
+    await addServiceOrderHistory({
+      serviceOrderId: orderId,
+      eventType: "maintenance",
+      message: fallbackUsed ? "Máquina saiu da manutenção, mas o segmento original não existe mais." : "Máquina saiu da manutenção.",
+      oldValue: "Manutenção",
+      newValue: targetSegment.name,
       user
     });
   }
@@ -383,17 +390,14 @@ export async function assignBackupToServiceOrder({ serviceOrderId, backupAssetId
     throw badRequest("Selecione uma máquina marcada como Backup.");
   }
 
-  if (metadata.backupStatus === "in_use" || await findActiveBackupAssignmentByAsset(backupAssetId)) {
+  if (metadata.backupStatus === "in_use" || (await findActiveBackupAssignmentByAsset(backupAssetId))) {
     throw conflict("Esta máquina Backup já está em uso em outra OS.");
   }
 
   let maintenance = await findActiveMaintenanceByAsset(order.asset_id);
   if (!maintenance) {
     try {
-      maintenance = await startMaintenanceForAsset({ assetId: order.asset_id,
-        serviceOrderId,
-        user
-      });
+      maintenance = await startMaintenanceForAsset({ assetId: order.asset_id, serviceOrderId, user });
     } catch (error) {
       if (error.statusCode !== 409) throw error;
       maintenance = await findActiveMaintenanceByAsset(order.asset_id);
@@ -401,17 +405,22 @@ export async function assignBackupToServiceOrder({ serviceOrderId, backupAssetId
   }
 
   const backupCurrentSegment = await getCurrentDeviceSegment(backupAssetId);
-  const targetSegment =
-    (await findSegmentByIdRaw(maintenance.originalSegmentId)) ||
-    (await findSegmentByIdRaw(DEFAULT_SEGMENT_ID));
+  const targetSegment = (await findSegmentByIdRaw(maintenance.originalSegmentId)) || (await findSegmentByIdRaw(DEFAULT_SEGMENT_ID));
 
   if (!targetSegment.id) {
     throw conflict("Não foi possível localizar o segmento de destino do Backup.");
   }
 
-  await updateDeviceSegment({ deviceId: backupAssetId, segmentId: targetSegment.id, userId: user.id || null
-  });
-  await updateDeviceBackup({ deviceId: backupAssetId, assetType: metadata.assetType || "desktop", isBackup: true, backupStatus: "in_use", backupOrderId: serviceOrderId, backupOriginalSegmentId: backupCurrentSegment.id, backupOriginalSegmentName: backupCurrentSegment.name, userId: user.id || null
+  await updateDeviceSegment({ deviceId: backupAssetId, segmentId: targetSegment.id, userId: user.id || null });
+  await updateDeviceBackup({
+    deviceId: backupAssetId,
+    assetType: metadata.assetType || "desktop",
+    isBackup: true,
+    backupStatus: "in_use",
+    backupOrderId: serviceOrderId,
+    backupOriginalSegmentId: backupCurrentSegment.id,
+    backupOriginalSegmentName: backupCurrentSegment.name,
+    userId: user.id || null
   });
   await setServiceOrderBackupAsset(serviceOrderId, backupAssetId);
 
@@ -429,12 +438,30 @@ export async function assignBackupToServiceOrder({ serviceOrderId, backupAssetId
   const userInfo = userLabel(user);
 
   await addServiceOrderHistory({
-    serviceOrderId, eventType: "backup", message: "Backup selecionado e movido para o local da máquina principal.", oldValue: "", newValue: backupAssetId,
+    serviceOrderId,
+    eventType: "backup",
+    message: "Backup selecionado e movido para o local da máquina principal.",
+    oldValue: "",
+    newValue: backupAssetId,
     user
   });
-  await addAssetHistory({ assetId: order.asset_id, eventType: "backup", message: `Substituída temporariamente por máquina Backup na OS #${order.number}.`, oldValue: order.asset_id, newValue: backupAssetId, userId: userInfo.id, userName: userInfo.name
+  await addAssetHistory({
+    assetId: order.asset_id,
+    eventType: "backup",
+    message: `Substituída temporariamente por máquina Backup na OS #${order.number}.`,
+    oldValue: order.asset_id,
+    newValue: backupAssetId,
+    userId: userInfo.id,
+    userName: userInfo.name
   });
-  await addAssetHistory({ assetId: backupAssetId, eventType: "backup", message: `Usada como substituta na OS #${order.number}.`, oldValue: backupCurrentSegment.name, newValue: targetSegment.name, userId: userInfo.id, userName: userInfo.name
+  await addAssetHistory({
+    assetId: backupAssetId,
+    eventType: "backup",
+    message: `Usada como substituta na OS #${order.number}.`,
+    oldValue: backupCurrentSegment.name,
+    newValue: targetSegment.name,
+    userId: userInfo.id,
+    userName: userInfo.name
   });
 
   return assignment;
@@ -451,17 +478,22 @@ export async function releaseBackupFromServiceOrder({ serviceOrderId, user, allo
   }
 
   const metadata = await findDeviceMetadata(backupAssetId);
-  const targetSegment =
-    (await findSegmentByIdRaw(metadata.backupOriginalSegmentId)) ||
-    (await findSegmentByIdRaw(DEFAULT_SEGMENT_ID));
+  const targetSegment = (await findSegmentByIdRaw(metadata.backupOriginalSegmentId)) || (await findSegmentByIdRaw(DEFAULT_SEGMENT_ID));
 
   if (!targetSegment.id) {
     throw conflict("Não foi possível localizar o retorno do Backup.");
   }
 
-  await updateDeviceSegment({ deviceId: backupAssetId, segmentId: targetSegment.id, userId: user.id || null
-  });
-  await updateDeviceBackup({ deviceId: backupAssetId, assetType: metadata.assetType || "desktop", isBackup: true, backupStatus: "available", backupOrderId: null, backupOriginalSegmentId: targetSegment.id, backupOriginalSegmentName: targetSegment.name, userId: user.id || null
+  await updateDeviceSegment({ deviceId: backupAssetId, segmentId: targetSegment.id, userId: user.id || null });
+  await updateDeviceBackup({
+    deviceId: backupAssetId,
+    assetType: metadata.assetType || "desktop",
+    isBackup: true,
+    backupStatus: "available",
+    backupOrderId: null,
+    backupOriginalSegmentId: targetSegment.id,
+    backupOriginalSegmentName: targetSegment.name,
+    userId: user.id || null
   });
   await setServiceOrderBackupAsset(serviceOrderId, null);
 
@@ -481,10 +513,21 @@ export async function releaseBackupFromServiceOrder({ serviceOrderId, user, allo
 
   const userInfo = userLabel(user);
   await addServiceOrderHistory({
-    serviceOrderId, eventType: "backup", message: "Máquina Backup devolvida para a área Backup.", oldValue: backupAssetId, newValue: "Disponivel",
+    serviceOrderId,
+    eventType: "backup",
+    message: "Máquina Backup devolvida para a área Backup.",
+    oldValue: backupAssetId,
+    newValue: "Disponivel",
     user
   });
-  await addAssetHistory({ assetId: backupAssetId, eventType: "backup", message: order.number ? `Devolvida pela OS #${order.number}.`: "Backup liberado.", oldValue: "Em uso", newValue: targetSegment.name, userId: userInfo.id, userName: userInfo.name
+  await addAssetHistory({
+    assetId: backupAssetId,
+    eventType: "backup",
+    message: order.number ? `Devolvida pela OS #${order.number}.` : "Backup liberado.",
+    oldValue: "Em uso",
+    newValue: targetSegment.name,
+    userId: userInfo.id,
+    userName: userInfo.name
   });
-return active || { backupAssetId, serviceOrderId, status: "released" };
+  return active || { backupAssetId, serviceOrderId, status: "released" };
 }

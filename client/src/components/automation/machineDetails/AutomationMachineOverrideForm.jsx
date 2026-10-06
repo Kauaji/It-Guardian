@@ -23,14 +23,24 @@ export default function AutomationMachineOverrideForm({
       <label>
         Recorrência
         <select value={draft.recurrenceType} onChange={(event) => onChange("recurrenceType", event.target.value)}>
-          {Object.entries(recurrenceLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          {Object.entries(recurrenceLabels).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
         </select>
         <FieldError message={errors.recurrenceType} />
       </label>
       {draft.recurrenceType === "custom_days" && (
         <label>
           Dias
-          <input type="number" min="1" max="365" value={draft.recurrenceIntervalDays} onChange={(event) => onChange("recurrenceIntervalDays", Number(event.target.value))} />
+          <input
+            type="number"
+            min="1"
+            max="365"
+            value={draft.recurrenceIntervalDays}
+            onChange={(event) => onChange("recurrenceIntervalDays", Number(event.target.value))}
+          />
           <FieldError message={errors.recurrenceIntervalDays} />
         </label>
       )}
@@ -48,7 +58,9 @@ export default function AutomationMachineOverrideForm({
         <button type="button" className="secondary-action compact-action" onClick={onCancel}>
           Cancelar
         </button>
-        <button type="submit" className="primary-action compact-action" disabled={busy}>Salvar recorrência</button>
+        <button type="submit" className="primary-action compact-action" disabled={busy}>
+          Salvar recorrência
+        </button>
       </footer>
     </form>
   );

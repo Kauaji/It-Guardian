@@ -50,23 +50,27 @@ export function useCanvasViewport({ doc, ui }) {
     if (!zoomMode) return;
     event.preventDefault();
     if (!activeFloorRecord) return;
-    setCanvasViewBox(zoomViewBoxAtPoint({
-      viewBox: canvasViewBox,
-      floorSize: getFloorDimensions(),
-      pointer: getSvgPoint(event),
-      factor: event.deltaY < 0 ? WHEEL_ZOOM_IN : WHEEL_ZOOM_OUT
-    }));
+    setCanvasViewBox(
+      zoomViewBoxAtPoint({
+        viewBox: canvasViewBox,
+        floorSize: getFloorDimensions(),
+        pointer: getSvgPoint(event),
+        factor: event.deltaY < 0 ? WHEEL_ZOOM_IN : WHEEL_ZOOM_OUT
+      })
+    );
   };
 
   /** Clique no modo zoom: aproxima (ou afasta com Shift) no ponto clicado. */
   const zoomAtClick = (event) => {
     if (!activeFloorRecord) return;
-    setCanvasViewBox(zoomViewBoxAtPoint({
-      viewBox: canvasViewBox,
-      floorSize: getFloorDimensions(),
-      pointer: getSvgPoint(event),
-      factor: event.shiftKey ? CLICK_ZOOM_OUT : CLICK_ZOOM_IN
-    }));
+    setCanvasViewBox(
+      zoomViewBoxAtPoint({
+        viewBox: canvasViewBox,
+        floorSize: getFloorDimensions(),
+        pointer: getSvgPoint(event),
+        factor: event.shiftKey ? CLICK_ZOOM_OUT : CLICK_ZOOM_IN
+      })
+    );
   };
 
   /** Inicia o pan e devolve o estado do arrasto a ser guardado pelo chamador. */
@@ -83,13 +87,15 @@ export function useCanvasViewport({ doc, ui }) {
   const movePan = (event, drag) => {
     const bounds = svgRef.current?.getBoundingClientRect();
     if (!bounds?.width || !bounds?.height) return;
-    setCanvasViewBox(panViewBox({
-      origin: drag.viewBox,
-      startClient: { x: drag.clientX, y: drag.clientY },
-      currentClient: { x: event.clientX, y: event.clientY },
-      bounds,
-      floorSize: getFloorDimensions()
-    }));
+    setCanvasViewBox(
+      panViewBox({
+        origin: drag.viewBox,
+        startClient: { x: drag.clientX, y: drag.clientY },
+        currentClient: { x: event.clientX, y: event.clientY },
+        bounds,
+        floorSize: getFloorDimensions()
+      })
+    );
   };
 
   const endPan = (event) => {

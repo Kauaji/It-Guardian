@@ -13,18 +13,11 @@ export function buildMaintenanceRecord({ tabId, groupId, segmentId, segmentName 
 
 /** Aba de destino da OS: a da máquina, ou a do ambiente da OS / aba ativa para máquinas não organizadas. */
 export function resolveServiceOrderTargetTabId(machine, serviceOrder, activeInventoryTab) {
-  return machine.tabId && machine.tabId !== "global-unorganized"
-    ? machine.tabId
-    : serviceOrder.environmentId || activeInventoryTab.id;
+  return machine.tabId && machine.tabId !== "global-unorganized" ? machine.tabId : serviceOrder.environmentId || activeInventoryTab.id;
 }
 
 export function hasOpenMaintenanceOrder(serviceOrders, assetId) {
-  return serviceOrders.some(
-    (order) =>
-      order.assetId === assetId &&
-      isMaintenanceServiceOrder(order) &&
-      order.status !== "closed"
-  );
+  return serviceOrders.some((order) => order.assetId === assetId && isMaintenanceServiceOrder(order) && order.status !== "closed");
 }
 
 export function buildMaintenanceOrderPayload({ machine, activeInventoryTab, user, previousSegment }) {

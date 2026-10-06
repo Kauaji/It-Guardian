@@ -12,18 +12,14 @@ export function useIntegrations({ token, showMessage, setBusyAction }) {
   });
 
   const loadIntegrations = useCallback(async () => {
-    const results = await Promise.allSettled(
-      sources.map((source) => fetchIntegrationStatus(token, source))
-    );
+    const results = await Promise.allSettled(sources.map((source) => fetchIntegrationStatus(token, source)));
     setIntegrations((current) => mergeIntegrationResults(current, sources, results));
   }, [token]);
 
   async function runIntegrationAction(source, action) {
     setBusyAction(`${action}:${source}`);
     try {
-      const response = action === "test"
-        ? await testIntegrationConnection(token, source)
-        : await synchronizeIntegration(token, source);
+      const response = action === "test" ? await testIntegrationConnection(token, source) : await synchronizeIntegration(token, source);
       showMessage(integrationActionMessage(source, action, response));
       await loadIntegrations();
     } catch (error) {

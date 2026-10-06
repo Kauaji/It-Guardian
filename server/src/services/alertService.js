@@ -22,10 +22,7 @@ import {
   updateAlertSettings,
   updateAlertRule
 } from "../repositories/alertRepository.js";
-import {
-  addServiceOrderHistory,
-  findServiceOrderById
-} from "../repositories/serviceOrderRepository.js";
+import { addServiceOrderHistory, findServiceOrderById } from "../repositories/serviceOrderRepository.js";
 import { createServiceOrder } from "./serviceOrders/serviceOrderCreationService.js";
 import { createSuggestionForAlert } from "./alerts/alertSuggestionCreationService.js";
 import { buildAgentAlertsFromEnvironment, syncAgentAlerts } from "./alerts/agentAlertSyncService.js";

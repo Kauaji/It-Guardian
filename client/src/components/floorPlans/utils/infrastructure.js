@@ -50,7 +50,5 @@ export const BACKGROUND_UPLOAD_TYPES = ["image/png", "image/jpeg", "image/webp"]
 
 /** Valida o arquivo escolhido para fundo (tipo e tamanho). */
 export function isValidBackgroundFile(file) {
-  return Boolean(file)
-    && BACKGROUND_UPLOAD_TYPES.includes(file.type)
-    && file.size <= BACKGROUND_UPLOAD_MAX_BYTES;
+  return Boolean(file) && BACKGROUND_UPLOAD_TYPES.includes(file.type) && file.size <= BACKGROUND_UPLOAD_MAX_BYTES;
 }

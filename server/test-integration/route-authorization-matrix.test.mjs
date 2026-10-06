@@ -46,12 +46,7 @@ const publicRoutes = new Map([
 ]);
 
 // Rotas do coletor/cron: autenticam com token do agente ou segredo proprio.
-const ownAuthPrefixes = [
-  "/api/agents/",
-  "/agent/",
-  "/api/preventive-automation-plans/process-due/cron",
-  "/api/maintenance/retention/cron"
-];
+const ownAuthPrefixes = ["/api/agents/", "/agent/", "/api/preventive-automation-plans/process-due/cron", "/api/maintenance/retention/cron"];
 
 // So autenticacao (sem permissao especifica): dados do proprio usuario.
 const authenticatedOnly = new Set([
@@ -128,7 +123,7 @@ test("toda rota exige login e permissao, salvo as excecoes explicitas", async (t
       continue;
     }
     if (isOwnAuth(route.path)) {
-      if (![200, 400, 401, 403, 503].includes(anonymous.status) || anonymous.status >= 500 && anonymous.status !== 503) {
+      if (![200, 400, 401, 403, 503].includes(anonymous.status) || (anonymous.status >= 500 && anonymous.status !== 503)) {
         failures.push(`${key}: rota de agente/cron respondeu ${anonymous.status} sem credencial`);
       }
       continue;

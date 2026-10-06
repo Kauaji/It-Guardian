@@ -1,10 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
-  applyExclusiveFlags,
-  sanitizeStatusPayload,
-  slugifyStatusId
-} from "./serviceOrderStatusService.js";
+import { applyExclusiveFlags, sanitizeStatusPayload, slugifyStatusId } from "./serviceOrderStatusService.js";
 
 function baseStatus(overrides = {}) {
   return {
@@ -27,10 +23,7 @@ test("slugifyStatusId usa o fallback quando o slug resultante fica vazio", () =>
 });
 
 test("sanitizeStatusPayload aplica slug ao id explicito e usa precedencia id > value > name", () => {
-  assert.equal(
-    sanitizeStatusPayload({ id: "Custom ID!", value: "ignored value", name: "Ignored Name" }).id,
-    "custom_id"
-  );
+  assert.equal(sanitizeStatusPayload({ id: "Custom ID!", value: "ignored value", name: "Ignored Name" }).id, "custom_id");
   assert.equal(sanitizeStatusPayload({ value: "Valor X", name: "Nome Y" }).id, "valor_x");
   assert.equal(sanitizeStatusPayload({ name: "Em Aberto" }).id, "em_aberto");
 });

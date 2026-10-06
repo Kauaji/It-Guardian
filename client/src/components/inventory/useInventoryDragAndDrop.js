@@ -27,17 +27,12 @@ export function useInventoryDragAndDrop({
     });
   }, [devices]);
 
-  const deviceById = useMemo(
-    () => new Map(devices.map((device) => [device.id, device])),
-    [devices]
-  );
+  const deviceById = useMemo(() => new Map(devices.map((device) => [device.id, device])), [devices]);
 
   const sortedDevices = useMemo(() => {
     const orderMap = new Map(orderedIds.map((id, index) => [id, index]));
 
-    return [...filteredDevices].sort(
-      (left, right) => (orderMap.get(left.id) ?? 9999) - (orderMap.get(right.id) ?? 9999)
-    );
+    return [...filteredDevices].sort((left, right) => (orderMap.get(left.id) ?? 9999) - (orderMap.get(right.id) ?? 9999));
   }, [filteredDevices, orderedIds]);
 
   const machinesBySegment = useMemo(() => {
@@ -51,32 +46,33 @@ export function useInventoryDragAndDrop({
     return grouped;
   }, [segments, sortedDevices]);
 
-  const handleDragEnd = useCallback((event) => {
-    const machineId = event.active?.data?.current?.machineId;
-    const targetSegmentId = event.over?.data?.current?.segmentId;
-    const targetType = event.over?.data?.current?.type;
+  const handleDragEnd = useCallback(
+    (event) => {
+      const machineId = event.active?.data?.current?.machineId;
+      const targetSegmentId = event.over?.data?.current?.segmentId;
+      const targetType = event.over?.data?.current?.type;
 
-    if (!machineId || !targetSegmentId) return null;
+      if (!machineId || !targetSegmentId) return null;
 
-    const machine = deviceById.get(machineId);
-    if (!machine) return null;
-    const selectedIds = selectedAssetIds.has(machineId) ? Array.from(selectedAssetIds) : [machineId];
-    const movingMachines = selectedIds
-      .map((id) => deviceById.get(id))
-      .filter(Boolean);
+      const machine = deviceById.get(machineId);
+      if (!machine) return null;
+      const selectedIds = selectedAssetIds.has(machineId) ? Array.from(selectedAssetIds) : [machineId];
+      const movingMachines = selectedIds.map((id) => deviceById.get(id)).filter(Boolean);
 
-    const alreadyInTarget = movingMachines.every((item) => item.segmentId === targetSegmentId);
-    if (alreadyInTarget) {
-      return { machine, machineIds: selectedIds, targetSegmentId, targetType, moved: false };
-    }
+      const alreadyInTarget = movingMachines.every((item) => item.segmentId === targetSegmentId);
+      if (alreadyInTarget) {
+        return { machine, machineIds: selectedIds, targetSegmentId, targetType, moved: false };
+      }
 
-    if (selectedIds.length > 1 && onMoveMachines) {
-      onMoveMachines(selectedIds, targetSegmentId);
-    } else {
-      onMoveMachine(machine, targetSegmentId);
-    }
-    return { machine, machineIds: selectedIds, targetSegmentId, targetType, moved: true };
-  }, [deviceById, onMoveMachine, onMoveMachines, selectedAssetIds]);
+      if (selectedIds.length > 1 && onMoveMachines) {
+        onMoveMachines(selectedIds, targetSegmentId);
+      } else {
+        onMoveMachine(machine, targetSegmentId);
+      }
+      return { machine, machineIds: selectedIds, targetSegmentId, targetType, moved: true };
+    },
+    [deviceById, onMoveMachine, onMoveMachines, selectedAssetIds]
+  );
 
   return {
     handleDragEnd,

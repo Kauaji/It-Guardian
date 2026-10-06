@@ -44,11 +44,7 @@ export default function CloudProductAdminPanel({ token, notify }) {
         />
       )}
 
-      <IntegrationGrid
-        integrations={admin.integrations}
-        busyAction={admin.busyAction}
-        onRun={admin.runIntegrationAction}
-      />
+      <IntegrationGrid integrations={admin.integrations} busyAction={admin.busyAction} onRun={admin.runIntegrationAction} />
     </div>
   );
 }

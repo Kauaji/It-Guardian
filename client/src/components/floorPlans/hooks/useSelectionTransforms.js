@@ -1,17 +1,8 @@
 import { DEFAULT_PLAN_SIZE, getActiveFloor } from "../utils/editorGeometry.js";
-import {
-  duplicateObjectInDraft,
-  filterUnlockedObjectIds,
-  rotateObjectsInDraft
-} from "../utils/entityMutations.js";
+import { duplicateObjectInDraft, filterUnlockedObjectIds, rotateObjectsInDraft } from "../utils/entityMutations.js";
 import { createId } from "../utils/ids.js";
 import { isRoomPlacementValid, isRoomZone } from "../utils/roomGeometry.js";
-import {
-  duplicateRoomInDraft,
-  findRoomDuplicateGeometry,
-  getRotatedRoomGeometry,
-  rotateRoomInDraft
-} from "../utils/roomMutations.js";
+import { duplicateRoomInDraft, findRoomDuplicateGeometry, getRotatedRoomGeometry, rotateRoomInDraft } from "../utils/roomMutations.js";
 import { isAnchoredOpening } from "../utils/wallGeometry.js";
 
 function findRoomZone(editor, selected) {
@@ -85,7 +76,7 @@ export function useSelectionTransforms({ doc, ui, notify }) {
     } else if (selected?.type === "zone") {
       rotateRoom();
     } else if (placement) {
-      setPlacement((current) => current ? { ...current, rotation: (current.rotation + 90) % 180, preview: null } : current);
+      setPlacement((current) => (current ? { ...current, rotation: (current.rotation + 90) % 180, preview: null } : current));
     }
   };
 

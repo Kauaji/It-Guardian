@@ -8,10 +8,16 @@ const DEVICES = [
 ];
 const SEGMENT_NODE = { id: "node-servers", nodeType: "segment", refId: "servers", pinned: false };
 const SEGMENT = { id: "servers", name: "Servidores", status: "atencao", deviceCount: 2 };
-const CONNECTIONS = [{
-  id: "connection-1", label: "Uplink principal", type: "ethernet", sourceName: "Servidor Financeiro",
-  targetName: "Servidor de Arquivos", scopeLabel: "Dentro de Servidores"
-}];
+const CONNECTIONS = [
+  {
+    id: "connection-1",
+    label: "Uplink principal",
+    type: "ethernet",
+    sourceName: "Servidor Financeiro",
+    targetName: "Servidor de Arquivos",
+    scopeLabel: "Dentro de Servidores"
+  }
+];
 
 function renderNode(overrides = {}) {
   const props = {
@@ -175,7 +181,9 @@ describe("NetworkTopologyNodeInspector", () => {
 
   it.each(["segment", "group"])("mostra estado vazio de máquinas para um %s", (nodeType) => {
     renderNode({ node: { ...SEGMENT_NODE, nodeType }, clusterDevices: [], clusterInfo: { ...SEGMENT, deviceCount: 0 } });
-    expect(screen.getByText(nodeType === "group" ? "Nenhuma máquina nos segmentos deste grupo." : "Nenhuma máquina neste segmento.")).toBeInTheDocument();
+    expect(
+      screen.getByText(nodeType === "group" ? "Nenhuma máquina nos segmentos deste grupo." : "Nenhuma máquina neste segmento.")
+    ).toBeInTheDocument();
   });
 
   it("um cluster removido mantém o histórico das conexões, sem ações de navegar ou conectar", () => {
@@ -221,8 +229,12 @@ describe("NetworkTopologyNodeInspector", () => {
 
 describe("NetworkTopologyLinkInspector", () => {
   const link = {
-    id: "link-1", label: "Uplink principal", type: "ethernet", description: "Rack principal",
-    sourceType: "asset", targetType: "asset"
+    id: "link-1",
+    label: "Uplink principal",
+    type: "ethernet",
+    description: "Rack principal",
+    sourceType: "asset",
+    targetType: "asset"
   };
 
   it("preserva rótulo, tipo e descrição da conexão em somente leitura", () => {
@@ -238,7 +250,17 @@ describe("NetworkTopologyLinkInspector", () => {
   it("preserva edição e remoção de conexões", () => {
     const onSave = vi.fn();
     const onRemove = vi.fn();
-    render(<NetworkTopologyLinkInspector link={link} sourceEntity={DEVICES[0]} targetEntity={DEVICES[1]} editMode onSave={onSave} onRemove={onRemove} onClose={vi.fn()} />);
+    render(
+      <NetworkTopologyLinkInspector
+        link={link}
+        sourceEntity={DEVICES[0]}
+        targetEntity={DEVICES[1]}
+        editMode
+        onSave={onSave}
+        onRemove={onRemove}
+        onClose={vi.fn()}
+      />
+    );
     fireEvent.change(screen.getByLabelText("Rótulo"), { target: { value: "Backup" } });
     fireEvent.change(screen.getByLabelText("Tipo"), { target: { value: "fiber" } });
     fireEvent.click(screen.getByRole("button", { name: "Salvar conexão" }));

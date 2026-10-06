@@ -7,7 +7,10 @@ describe("getWallOpeningCuts", () => {
       { width: 40, metadata: { anchorOffset: 0.75 } },
       { width: 20, metadata: { anchorOffset: 0.25 } }
     ]);
-    expect(cuts).toEqual([{ start: 40, end: 60 }, { start: 130, end: 170 }]);
+    expect(cuts).toEqual([
+      { start: 40, end: 60 },
+      { start: 130, end: 170 }
+    ]);
   });
 
   it("usa 0,5 por padrao e limita o vao a 12 px minimo e a largura da parede", () => {
@@ -31,12 +34,28 @@ describe("getWallSolidSegments", () => {
   });
 
   it("devolve os trechos entre os vaos", () => {
-    expect(getWallSolidSegments(200, [{ start: 40, end: 60 }, { start: 130, end: 170 }]))
-      .toEqual([{ start: 0, end: 40 }, { start: 60, end: 130 }, { start: 170, end: 200 }]);
+    expect(
+      getWallSolidSegments(200, [
+        { start: 40, end: 60 },
+        { start: 130, end: 170 }
+      ])
+    ).toEqual([
+      { start: 0, end: 40 },
+      { start: 60, end: 130 },
+      { start: 170, end: 200 }
+    ]);
   });
 
   it("une vaos sobrepostos e nao devolve trechos vazios", () => {
-    expect(getWallSolidSegments(100, [{ start: 10, end: 50 }, { start: 30, end: 60 }])).toEqual([{ start: 0, end: 10 }, { start: 60, end: 100 }]);
+    expect(
+      getWallSolidSegments(100, [
+        { start: 10, end: 50 },
+        { start: 30, end: 60 }
+      ])
+    ).toEqual([
+      { start: 0, end: 10 },
+      { start: 60, end: 100 }
+    ]);
     expect(getWallSolidSegments(100, [{ start: 0, end: 100 }])).toEqual([]);
   });
 });

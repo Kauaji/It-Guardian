@@ -24,9 +24,7 @@ export function useRemoteChat({ token, session, viewerToken, setError }) {
         const result = await sendRemoteAssistanceChatMessage({ token, sessionId: session.id, viewerToken, text });
         setDraft("");
         if (result.message) {
-          setMessages((previous) =>
-            previous.some((item) => item.id === result.message.id) ? previous : [...previous, result.message]
-          );
+          setMessages((previous) => (previous.some((item) => item.id === result.message.id) ? previous : [...previous, result.message]));
         }
       } catch (chatError) {
         setError(chatError.message);

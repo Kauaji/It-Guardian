@@ -33,10 +33,7 @@ export function useServiceOrderForm({
     setForm((current) => ({ ...current, ...buildResetFields({ businessMode, activeTab, serviceOrderSettings }) }));
   }, [activeTab?.id, businessMode, open, serviceOrderSettings?.autoPriority?.enabled]);
 
-  const selectedAsset = useMemo(
-    () => devices.find((device) => device.id === form.assetId),
-    [devices, form.assetId]
-  );
+  const selectedAsset = useMemo(() => devices.find((device) => device.id === form.assetId), [devices, form.assetId]);
   const selectedEnvironment = tabs.find((tab) => tab.id === form.environmentId) || activeTab;
   const selectedClient = clients.find((client) => client.id === form.environmentId);
   const availableSectors = sectors.length ? sectors : defaultSectors;

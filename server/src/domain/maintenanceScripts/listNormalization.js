@@ -33,9 +33,13 @@ export function parseArrayValue(value) {
  * @returns {string[]} Itens unicos, aparados e nao vazios.
  */
 export function normalizeTextList(value) {
-  return [...new Set(parseArrayValue(value)
-    .map((item) => trimString(item, maxLengths.listItem))
-    .filter(Boolean))];
+  return [
+    ...new Set(
+      parseArrayValue(value)
+        .map((item) => trimString(item, maxLengths.listItem))
+        .filter(Boolean)
+    )
+  ];
 }
 
 /**
@@ -66,7 +70,11 @@ export function normalizeTokenList(value) {
  * @returns {string[]} Variaveis permitidas (`{{NOME}}` vira `NOME`).
  */
 export function normalizeVariableList(value) {
-  return [...new Set(parseArrayValue(value)
-    .map((item) => trimString(item, maxLengths.listItem).replace(/[{}]/g, "").toUpperCase())
-    .filter((item) => allowedScriptVariables.has(item)))];
+  return [
+    ...new Set(
+      parseArrayValue(value)
+        .map((item) => trimString(item, maxLengths.listItem).replace(/[{}]/g, "").toUpperCase())
+        .filter((item) => allowedScriptVariables.has(item))
+    )
+  ];
 }

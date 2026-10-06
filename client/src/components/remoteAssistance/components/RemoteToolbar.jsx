@@ -1,15 +1,4 @@
-import {
-  Lock,
-  Maximize2,
-  MessageCircle,
-  Minimize2,
-  MousePointer2,
-  Pause,
-  Play,
-  Power,
-  RefreshCw,
-  Unlock
-} from "lucide-react";
+import { Lock, Maximize2, MessageCircle, Minimize2, MousePointer2, Pause, Play, Power, RefreshCw, Unlock } from "lucide-react";
 import RemoteMonitorPicker from "./RemoteMonitorPicker.jsx";
 import RemoteStatus from "./RemoteStatus.jsx";
 

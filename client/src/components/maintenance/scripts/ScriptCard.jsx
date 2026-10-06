@@ -21,7 +21,9 @@ export default function ScriptCard({
       <div className="script-card-header">
         <div>
           <h3>{script.name}</h3>
-          <span>{scriptTypeLabels[script.type] || script.type} - {script.category || "Sem categoria"}</span>
+          <span>
+            {scriptTypeLabels[script.type] || script.type} - {script.category || "Sem categoria"}
+          </span>
         </div>
         <span className={`script-risk-pill ${script.riskLevel}`}>{formatRisk(script.riskLevel)}</span>
       </div>
@@ -61,13 +63,7 @@ export default function ScriptCard({
         </div>
       )}
       {showSimulationForm && (
-        <SimulationForm
-          script={script}
-          devices={devices}
-          serviceOrders={serviceOrders}
-          alerts={alerts}
-          onRegister={onRegisterSimulation}
-        />
+        <SimulationForm script={script} devices={devices} serviceOrders={serviceOrders} alerts={alerts} onRegister={onRegisterSimulation} />
       )}
     </article>
   );

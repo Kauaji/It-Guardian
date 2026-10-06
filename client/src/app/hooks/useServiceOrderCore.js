@@ -1,10 +1,5 @@
 import { useState } from "react";
-import {
-  addServiceOrderHistory,
-  createServiceOrder,
-  reopenServiceOrder,
-  updateServiceOrder
-} from "../../api.js";
+import { addServiceOrderHistory, createServiceOrder, reopenServiceOrder, updateServiceOrder } from "../../api.js";
 import { useAppSession } from "../../context/AppSessionContext.jsx";
 import { getServiceOrderModeError } from "../inventory/serviceOrderRules.js";
 
@@ -19,9 +14,7 @@ export function useServiceOrderCore({ data }) {
     if (!event) return;
 
     setServiceOrders((current) =>
-      current.map((order) =>
-        order.id === orderId ? { ...order, history: [event, ...(order.history || [])] } : order
-      )
+      current.map((order) => (order.id === orderId ? { ...order, history: [event, ...(order.history || [])] } : order))
     );
   }
 
@@ -62,9 +55,7 @@ export function useServiceOrderCore({ data }) {
     setServiceOrderSaving(true);
     try {
       const response = await updateServiceOrder(token, id, payload);
-      setServiceOrders((current) =>
-        current.map((order) => (order.id === id ? response.serviceOrder : order))
-      );
+      setServiceOrders((current) => current.map((order) => (order.id === id ? response.serviceOrder : order)));
       notify("Ordem de Serviço atualizada.", "ok");
       await loadData(true);
       return response.serviceOrder;
@@ -80,9 +71,7 @@ export function useServiceOrderCore({ data }) {
     setServiceOrderSaving(true);
     try {
       const response = await reopenServiceOrder(token, id, reason);
-      setServiceOrders((current) =>
-        current.map((order) => (order.id === id ? response.serviceOrder : order))
-      );
+      setServiceOrders((current) => current.map((order) => (order.id === id ? response.serviceOrder : order)));
       notify("Ordem de Serviço reaberta.", "ok");
       await loadData(true);
       return response.serviceOrder;
@@ -98,9 +87,7 @@ export function useServiceOrderCore({ data }) {
     try {
       const response = await addServiceOrderHistory(token, id, payload);
       setServiceOrders((current) =>
-        current.map((order) =>
-          order.id === id ? { ...order, history: [response.event, ...(order.history || [])] } : order
-        )
+        current.map((order) => (order.id === id ? { ...order, history: [response.event, ...(order.history || [])] } : order))
       );
       notify("Registro adicionado ao histórico.", "ok");
       return response.event;

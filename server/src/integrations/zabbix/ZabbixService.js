@@ -1,7 +1,4 @@
-import {
-  ExternalIntegrationError,
-  requestJson
-} from "../httpJsonClient.js";
+import { ExternalIntegrationError, requestJson } from "../httpJsonClient.js";
 
 export class ZabbixService {
   constructor({
@@ -14,9 +11,7 @@ export class ZabbixService {
     fetchImpl = globalThis.fetch
   } = {}) {
     this.mode = mode === "real" ? "real" : "disabled";
-    this.enabled = enabled ?? (
-      this.mode === "real" && String(process.env.ZABBIX_ENABLED || "").toLowerCase() === "true"
-    );
+    this.enabled = enabled ?? (this.mode === "real" && String(process.env.ZABBIX_ENABLED || "").toLowerCase() === "true");
     this.apiUrl = apiUrl.replace(/\/+$/, "");
     this.token = token;
     this.timeoutMs = Math.max(250, timeoutMs);
@@ -52,10 +47,7 @@ export class ZabbixService {
 
   async rpc(method, params = {}) {
     if (!this.apiUrl || !this.token) {
-      throw new ExternalIntegrationError(
-        "Zabbix",
-        "A integracao Zabbix nao esta completamente configurada."
-      );
+      throw new ExternalIntegrationError("Zabbix", "A integracao Zabbix nao esta completamente configurada.");
     }
     const payload = await requestJson({
       source: "Zabbix",
@@ -76,10 +68,7 @@ export class ZabbixService {
       fetchImpl: this.fetchImpl
     });
     if (payload?.error || !Array.isArray(payload?.result)) {
-      throw new ExternalIntegrationError(
-        "Zabbix",
-        "A integracao Zabbix recusou a consulta. Verifique token e permissoes."
-      );
+      throw new ExternalIntegrationError("Zabbix", "A integracao Zabbix recusou a consulta. Verifique token e permissoes.");
     }
     return payload.result;
   }
@@ -107,11 +96,7 @@ export class ZabbixService {
       id: host.hostid,
       name: host.name || host.host,
       ip: host.interfaces?.find((item) => item.main === "1")?.ip || host.interfaces?.[0]?.ip || null,
-      status: host.interfaces?.some((item) => item.available === "2")
-        ? "problem"
-        : host.status === "1"
-          ? "offline"
-          : "online",
+      status: host.interfaces?.some((item) => item.available === "2") ? "problem" : host.status === "1" ? "offline" : "online",
       metrics: {},
       history: [],
       collectedAt: new Date().toISOString()
@@ -127,9 +112,7 @@ export class ZabbixService {
       sortorder: "DESC",
       limit: 500
     });
-    const triggerIds = Array.from(
-      new Set(problems.map((problem) => problem.objectid).filter(Boolean))
-    );
+    const triggerIds = Array.from(new Set(problems.map((problem) => problem.objectid).filter(Boolean)));
     if (!triggerIds.length) return problems;
 
     const triggers = await this.rpc("trigger.get", {
@@ -137,9 +120,7 @@ export class ZabbixService {
       output: ["triggerid"],
       selectHosts: ["hostid", "host", "name"]
     });
-    const hostsByTrigger = new Map(
-      triggers.map((trigger) => [String(trigger.triggerid), trigger.hosts?.[0] || null])
-    );
+    const hostsByTrigger = new Map(triggers.map((trigger) => [String(trigger.triggerid), trigger.hosts?.[0] || null]));
     return problems.map((problem) => {
       const host = hostsByTrigger.get(String(problem.objectid));
       return {

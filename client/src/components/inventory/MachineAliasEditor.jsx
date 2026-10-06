@@ -29,7 +29,15 @@ export default function MachineAliasEditor({ alias, originalName, onSave }) {
         <button type="button" onClick={save} title="Salvar nome fantasia" disabled={saving}>
           <Save size={14} />
         </button>
-        <button type="button" onClick={() => { setValue(alias || ""); setEditing(false); }} title="Cancelar" disabled={saving}>
+        <button
+          type="button"
+          onClick={() => {
+            setValue(alias || "");
+            setEditing(false);
+          }}
+          title="Cancelar"
+          disabled={saving}
+        >
           <X size={14} />
         </button>
       </div>

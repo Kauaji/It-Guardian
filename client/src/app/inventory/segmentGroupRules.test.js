@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import { countSegmentsInGroup, deleteGroupConfirmation, hasDuplicateGroupName } from "./segmentGroupRules.js";
 
 describe("segmentGroupRules", () => {
-  const groups = [{ id: "g1", name: "Andar 1" }, { id: "g2", name: " Andar 2 " }];
+  const groups = [
+    { id: "g1", name: "Andar 1" },
+    { id: "g2", name: " Andar 2 " }
+  ];
 
   it("hasDuplicateGroupName ignora caixa, espacos e o proprio grupo", () => {
     expect(hasDuplicateGroupName(groups, "andar 1", undefined)).toBe(true);
@@ -12,7 +15,11 @@ describe("segmentGroupRules", () => {
   });
 
   it("countSegmentsInGroup conta os segmentos do grupo", () => {
-    const segments = [{ id: "s1", groupId: "g1" }, { id: "s2", groupId: "g1" }, { id: "s3", groupId: "g2" }];
+    const segments = [
+      { id: "s1", groupId: "g1" },
+      { id: "s2", groupId: "g1" },
+      { id: "s3", groupId: "g2" }
+    ];
     expect(countSegmentsInGroup(segments, groups, "g1")).toBe(2);
     expect(countSegmentsInGroup(segments, groups, "g9")).toBe(0);
   });

@@ -32,9 +32,7 @@ function createMemoryLimiterStore() {
         }
       }
       const current = buckets.get(key);
-      const bucket = !current || current.resetAt <= now
-        ? { count: 0, resetAt: now + windowMs }
-        : current;
+      const bucket = !current || current.resetAt <= now ? { count: 0, resetAt: now + windowMs } : current;
       bucket.count += 1;
       buckets.set(key, bucket);
       return { count: bucket.count, resetAt: bucket.resetAt };
@@ -110,9 +108,7 @@ export function createRateLimiter({
   limiterInstanceCounter += 1;
   const limiterName = name || `limiter-${limiterInstanceCounter}`;
   const redisClient = getSharedRedisClient();
-  const store = redisClient
-    ? createRedisLimiterStore(redisClient, limiterName)
-    : createMemoryLimiterStore();
+  const store = redisClient ? createRedisLimiterStore(redisClient, limiterName) : createMemoryLimiterStore();
 
   return async (req, res, next) => {
     const key = String(keyGenerator(req) || req.ip || "unknown").toLowerCase();
@@ -125,7 +121,11 @@ export function createRateLimiter({
       // registra e deixa passar, em vez de transformar uma instabilidade do
       // store num 500 para todo mundo.
       rateLimitStoreErrors.inc({ limiter: limiterName, store: store.name });
-      logger.warn("rate_limit_store_error", { limiter: limiterName, store: store.name, message: error instanceof Error ? error.message : String(error) });
+      logger.warn("rate_limit_store_error", {
+        limiter: limiterName,
+        store: store.name,
+        message: error instanceof Error ? error.message : String(error)
+      });
       return next();
     }
 
@@ -147,6 +147,9 @@ export function createRateLimiter({
 export const authRateLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000,
   max: positiveInteger(process.env.AUTH_RATE_LIMIT_MAX, 12),
-  keyGenerator: (req) => `${req.ip}:${String(req.body?.email || "").trim().toLowerCase()}`,
+  keyGenerator: (req) =>
+    `${req.ip}:${String(req.body?.email || "")
+      .trim()
+      .toLowerCase()}`,
   name: "auth"
 });

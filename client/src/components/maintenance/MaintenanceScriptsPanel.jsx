@@ -50,14 +50,16 @@ export default function MaintenanceScriptsPanel({
       {showSafetyBanner && (
         <div className="script-safety-banner">
           <ShieldCheck size={18} />
-          <span>
-            Execução real indisponível nesta versão. Somente registro/simulação. Nenhum comando será executado.
-          </span>
+          <span>Execução real indisponível nesta versão. Somente registro/simulação. Nenhum comando será executado.</span>
         </div>
       )}
 
       {canManage && showForm && (
-        <form ref={scriptForm.formRef} className={`maintenance-script-form ${analysis ? "has-analysis" : "needs-analysis"}`} onSubmit={scriptForm.handleSubmit}>
+        <form
+          ref={scriptForm.formRef}
+          className={`maintenance-script-form ${analysis ? "has-analysis" : "needs-analysis"}`}
+          onSubmit={scriptForm.handleSubmit}
+        >
           <ScriptFormFields form={form} onChange={scriptForm.updateForm} onChangeContent={scriptForm.changeContent} />
           <ScriptAnalysis analysis={analysis} />
           <div className="script-form-actions">

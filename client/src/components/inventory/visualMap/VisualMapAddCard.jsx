@@ -3,7 +3,14 @@ import { ADD_PRESET_GROUPS } from "./visualMapPresets.js";
 import { getDeviceName } from "./visualMapDevices.js";
 
 export default function VisualMapAddCard({
-  devices, usedAssetIds, assetToAdd, saving, onAssetToAddChange, onAddObject, onAddAssetObject, onAddConnection
+  devices,
+  usedAssetIds,
+  assetToAdd,
+  saving,
+  onAssetToAddChange,
+  onAddObject,
+  onAddAssetObject,
+  onAddConnection
 }) {
   return (
     <section className="inventory-visual-map-card">
@@ -31,7 +38,12 @@ export default function VisualMapAddCard({
         Adicionar ativo
       </button>
       <div className="inventory-visual-connection-actions">
-        <button type="button" className="secondary-action compact-action" onClick={() => onAddConnection("infrastructure")} disabled={saving}>
+        <button
+          type="button"
+          className="secondary-action compact-action"
+          onClick={() => onAddConnection("infrastructure")}
+          disabled={saving}
+        >
           <Cable size={15} />
           Cabo/infra
         </button>

@@ -43,9 +43,7 @@ function optionalDate(value) {
 
 function monitoringAddress(value, field) {
   const normalized = text(value, field, { required: true, max: 500 });
-  const hasControlCharacter = [...normalized].some(
-    (character) => character.charCodeAt(0) < 32
-  );
+  const hasControlCharacter = [...normalized].some((character) => character.charCodeAt(0) < 32);
   if (normalized.includes('"') || normalized.includes("\\") || hasControlCharacter) {
     throw badRequest(`O campo ${field} possui caracteres invalidos.`);
   }
@@ -74,10 +72,7 @@ export function validateMonitoringConfig(input) {
   return {
     ocsServerUrl: parsedOcsUrl.toString().replace(/\/$/, ""),
     zabbixServer: monitoringAddress(input.zabbixServer, "zabbixServer"),
-    zabbixServerActive: monitoringAddress(
-      input.zabbixServerActive,
-      "zabbixServerActive"
-    )
+    zabbixServerActive: monitoringAddress(input.zabbixServerActive, "zabbixServerActive")
   };
 }
 
@@ -122,9 +117,7 @@ export async function activateCollector(input) {
 }
 
 export async function createManagedProductKey(input, userId) {
-  const monitoring = input?.monitoring == null
-    ? null
-    : validateMonitoringConfig(input.monitoring);
+  const monitoring = input?.monitoring == null ? null : validateMonitoringConfig(input.monitoring);
   return createProductKeyRecord({
     displayName: text(input?.displayName, "displayName", { required: true, max: 120 }),
     organizationName: text(input?.organizationName, "organizationName", {

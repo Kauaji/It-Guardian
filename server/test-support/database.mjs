@@ -37,10 +37,9 @@ export async function useTestDatabase() {
     const cleaner = new pg.Client({ connectionString: adminUrl });
     await cleaner.connect();
     try {
-      await cleaner.query(
-        "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()",
-        [databaseName]
-      );
+      await cleaner.query("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()", [
+        databaseName
+      ]);
       await cleaner.query(`DROP DATABASE IF EXISTS ${databaseName}`);
     } finally {
       await cleaner.end();

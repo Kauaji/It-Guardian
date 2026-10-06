@@ -21,7 +21,11 @@ test("contador e histograma saem no formato do Prometheus", () => {
 
 test("expoe metricas padrao do processo", () => {
   const text = renderMetrics();
-  for (const name of ["itguardian_process_uptime_seconds", "itguardian_process_resident_memory_bytes", "itguardian_nodejs_eventloop_lag_p99_seconds"]) {
+  for (const name of [
+    "itguardian_process_uptime_seconds",
+    "itguardian_process_resident_memory_bytes",
+    "itguardian_nodejs_eventloop_lag_p99_seconds"
+  ]) {
     assert.match(text, new RegExp(`^${name} `, "m"));
   }
 });

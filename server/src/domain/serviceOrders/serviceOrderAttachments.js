@@ -1,19 +1,17 @@
 import { makeHttpError } from "./serviceOrderErrors.js";
 
-const BLOCKED_ATTACHMENT_EXTENSIONS = new Set([
-  ".exe", ".bat", ".cmd", ".ps1", ".js", ".vbs", ".msi", ".scr", ".jar", ".com"
-]);
+const BLOCKED_ATTACHMENT_EXTENSIONS = new Set([".exe", ".bat", ".cmd", ".ps1", ".js", ".vbs", ".msi", ".scr", ".jar", ".com"]);
 
-export const serviceOrderAttachmentCategories = new Set([
-  "evidencia", "orcamento", "foto", "documento", "print", "outro"
-]);
+export const serviceOrderAttachmentCategories = new Set(["evidencia", "orcamento", "foto", "documento", "print", "outro"]);
 
 /**
  * @param {unknown} value
  * @returns {string}
  */
 function fileExtension(value) {
-  const match = String(value || "").trim().match(/\.[a-z0-9]+$/i);
+  const match = String(value || "")
+    .trim()
+    .match(/\.[a-z0-9]+$/i);
   return match ? match[0].toLowerCase() : "";
 }
 
@@ -37,14 +35,7 @@ export function assertSafeAttachmentReference(value, fieldLabel) {
  * @param {{ fileName?: unknown, fileType?: unknown, fileSize?: unknown, storageKey?: unknown, category?: unknown, description?: unknown }} input
  * @returns {{ fileName: string, fileType: string | null, fileSize: number | null, storageKey: string | null, category: string, description: string | null, historyName: string }}
  */
-export function normalizeServiceOrderAttachmentInput({
-  fileName,
-  fileType,
-  fileSize,
-  storageKey,
-  category,
-  description
-}) {
+export function normalizeServiceOrderAttachmentInput({ fileName, fileType, fileSize, storageKey, category, description }) {
   const normalizedFileName = String(fileName || "").trim();
   if (normalizedFileName.length < 1) {
     throw makeHttpError("Informe o nome do anexo.");

@@ -18,7 +18,16 @@ function mergeSavedNodes(bundle, mapId, updates) {
 
 /** Inventory membership is automatic; only explicit layout actions write positions. */
 export default function useTopologyLayout({
-  token, mapId, scopeKey, nodes, devicesById, enabled, setBundle, onMaterialized, onAutoLayout, notify
+  token,
+  mapId,
+  scopeKey,
+  nodes,
+  devicesById,
+  enabled,
+  setBundle,
+  onMaterialized,
+  onAutoLayout,
+  notify
 }) {
   const [dirtyPositions, setDirtyPositions] = useState(new Map());
   const [saving, setSaving] = useState(false);
@@ -32,30 +41,41 @@ export default function useTopologyLayout({
     setDirtyPositions(new Map());
     setSaving(false);
     setGeneratingLayout(false);
-    return () => { version.current += 1; };
+    return () => {
+      version.current += 1;
+    };
   }, [token, mapId, scopeKey, enabled]);
 
-  const mergeNodes = useCallback((updates) => {
-    setBundle((current) => mergeSavedNodes(current, mapId, updates));
-  }, [mapId, setBundle]);
+  const mergeNodes = useCallback(
+    (updates) => {
+      setBundle((current) => mergeSavedNodes(current, mapId, updates));
+    },
+    [mapId, setBundle]
+  );
 
-  const materialized = useCallback((savedNode, originalNode) => {
-    mergeNodes([savedNode]);
-    onMaterialized?.(savedNode, originalNode);
-  }, [mergeNodes, onMaterialized]);
+  const materialized = useCallback(
+    (savedNode, originalNode) => {
+      mergeNodes([savedNode]);
+      onMaterialized?.(savedNode, originalNode);
+    },
+    [mergeNodes, onMaterialized]
+  );
 
-  const onNodeDrag = useCallback((nodeId, x, y) => {
-    if (!enabled || busyRef.current || !Number.isFinite(x) || !Number.isFinite(y)) return;
-    const node = nodes.find((entry) => entry.id === nodeId);
-    if (!node) return;
-    setDirtyPositions((current) => {
-      const next = new Map(current);
-      const key = topologyNodeKey(node);
-      if (node.x === x && node.y === y) next.delete(key);
-      else next.set(key, { x, y });
-      return next;
-    });
-  }, [enabled, nodes]);
+  const onNodeDrag = useCallback(
+    (nodeId, x, y) => {
+      if (!enabled || busyRef.current || !Number.isFinite(x) || !Number.isFinite(y)) return;
+      const node = nodes.find((entry) => entry.id === nodeId);
+      if (!node) return;
+      setDirtyPositions((current) => {
+        const next = new Map(current);
+        const key = topologyNodeKey(node);
+        if (node.x === x && node.y === y) next.delete(key);
+        else next.set(key, { x, y });
+        return next;
+      });
+    },
+    [enabled, nodes]
+  );
 
   const resetLayout = useCallback(() => {
     if (!busyRef.current) setDirtyPositions(new Map());
@@ -64,7 +84,8 @@ export default function useTopologyLayout({
   const saveLayout = useCallback(async () => {
     if (!enabled || !mapId || busyRef.current || !dirtyPositions.size) return;
     const snapshot = new Map(dirtyPositions);
-    const changes = nodes.filter((node) => snapshot.has(topologyNodeKey(node)))
+    const changes = nodes
+      .filter((node) => snapshot.has(topologyNodeKey(node)))
       .map((node) => ({ node, ...snapshot.get(topologyNodeKey(node)) }));
     const requestVersion = version.current;
     const isCurrent = () => version.current === requestVersion;
@@ -105,10 +126,12 @@ export default function useTopologyLayout({
         const saved = await ensureTopologyNode({ token, mapId, node, isCurrent, onMaterialized: materialized });
         if (!isCurrent() || !saved) return;
       }
-      const hints = nodes.filter((node) => (node.nodeType || "asset") === "asset").map((node) => ({
-        assetId: node.assetId,
-        assetType: resolveAssetType(devicesById.get(node.assetId))
-      }));
+      const hints = nodes
+        .filter((node) => (node.nodeType || "asset") === "asset")
+        .map((node) => ({
+          assetId: node.assetId,
+          assetType: resolveAssetType(devicesById.get(node.assetId))
+        }));
       const response = await generateNetworkTopologyAutoLayout(token, mapId, hints);
       if (!isCurrent()) return;
       mergeNodes(response.nodes);
@@ -125,29 +148,32 @@ export default function useTopologyLayout({
     }
   }, [enabled, mapId, nodes, token, materialized, devicesById, mergeNodes, notify, onAutoLayout]);
 
-  const togglePinned = useCallback(async (selectedNode) => {
-    if (!enabled || !mapId || busyRef.current) return;
-    // A dirty screen position is not the saved base position used for materialization.
-    const node = nodes.find((entry) => topologyNodeKey(entry) === topologyNodeKey(selectedNode));
-    if (!node) return;
-    const requestVersion = version.current;
-    const isCurrent = () => version.current === requestVersion;
-    busyRef.current = true;
-    setSaving(true);
-    try {
-      const saved = await ensureTopologyNode({ token, mapId, node, isCurrent, onMaterialized: materialized });
-      if (!isCurrent() || !saved) return;
-      const response = await updateNetworkTopologyNode(token, saved.id, { pinned: !saved.pinned });
-      if (isCurrent()) mergeNodes([response.node]);
-    } catch (error) {
-      if (isCurrent()) notify?.("error", error.message);
-    } finally {
-      if (isCurrent()) {
-        busyRef.current = false;
-        setSaving(false);
+  const togglePinned = useCallback(
+    async (selectedNode) => {
+      if (!enabled || !mapId || busyRef.current) return;
+      // A dirty screen position is not the saved base position used for materialization.
+      const node = nodes.find((entry) => topologyNodeKey(entry) === topologyNodeKey(selectedNode));
+      if (!node) return;
+      const requestVersion = version.current;
+      const isCurrent = () => version.current === requestVersion;
+      busyRef.current = true;
+      setSaving(true);
+      try {
+        const saved = await ensureTopologyNode({ token, mapId, node, isCurrent, onMaterialized: materialized });
+        if (!isCurrent() || !saved) return;
+        const response = await updateNetworkTopologyNode(token, saved.id, { pinned: !saved.pinned });
+        if (isCurrent()) mergeNodes([response.node]);
+      } catch (error) {
+        if (isCurrent()) notify?.("error", error.message);
+      } finally {
+        if (isCurrent()) {
+          busyRef.current = false;
+          setSaving(false);
+        }
       }
-    }
-  }, [enabled, mapId, nodes, token, materialized, mergeNodes, notify]);
+    },
+    [enabled, mapId, nodes, token, materialized, mergeNodes, notify]
+  );
 
   return { dirtyPositions, saving, generatingLayout, onNodeDrag, resetLayout, saveLayout, generateAutoLayout, togglePinned };
 }

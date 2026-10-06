@@ -157,16 +157,18 @@ describe("PublicSupportRequest - validacao, resumo e envio", () => {
     await user.click(screen.getByRole("button", { name: "Enviar chamado" }));
 
     await waitFor(() => expect(api.createPublicServiceOrder).toHaveBeenCalled());
-    expect(api.createPublicServiceOrder).toHaveBeenCalledWith(expect.objectContaining({
-      title: "Computador não inicia",
-      problemType: "Não liga",
-      category: "Computador",
-      contactInfo: "",
-      extension: "123",
-      department: "RH",
-      relatedAssetText: "",
-      website: ""
-    }));
+    expect(api.createPublicServiceOrder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Computador não inicia",
+        problemType: "Não liga",
+        category: "Computador",
+        contactInfo: "",
+        extension: "123",
+        department: "RH",
+        relatedAssetText: "",
+        website: ""
+      })
+    );
     expect((await screen.findAllByText("OS-9", { exact: false })).length).toBeGreaterThan(0);
     expect(screen.queryByLabelText("Título")).not.toBeInTheDocument();
   });
@@ -192,9 +194,15 @@ describe("PublicSupportRequest - validacao, resumo e envio", () => {
     await user.click(screen.getByRole("button", { name: "Revisar e enviar" }));
     expect(screen.getByText("11999990000")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Enviar chamado" }));
-    await waitFor(() => expect(api.createPublicServiceOrder).toHaveBeenCalledWith(expect.objectContaining({
-      contactInfo: "11999990000", extension: "", environmentName: "Acme"
-    })));
+    await waitFor(() =>
+      expect(api.createPublicServiceOrder).toHaveBeenCalledWith(
+        expect.objectContaining({
+          contactInfo: "11999990000",
+          extension: "",
+          environmentName: "Acme"
+        })
+      )
+    );
   });
 
   it("maquina 'outra' vai no resumo e no texto do ativo relacionado", async () => {
@@ -207,10 +215,14 @@ describe("PublicSupportRequest - validacao, resumo e envio", () => {
     await user.click(screen.getByRole("button", { name: "Revisar e enviar" }));
     expect(screen.getByText("outra máquina/equipamento (não vinculada automaticamente)")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Enviar chamado" }));
-    await waitFor(() => expect(api.createPublicServiceOrder).toHaveBeenCalledWith(expect.objectContaining({
-      relatedAssetText: "Nome da máquina: PC-9 | Patrimônio: PAT-1 | Localização: Sala 2",
-      machineScope: "other"
-    })));
+    await waitFor(() =>
+      expect(api.createPublicServiceOrder).toHaveBeenCalledWith(
+        expect.objectContaining({
+          relatedAssetText: "Nome da máquina: PC-9 | Patrimônio: PAT-1 | Localização: Sala 2",
+          machineScope: "other"
+        })
+      )
+    );
   });
 });
 
@@ -230,9 +242,16 @@ describe("PublicSupportRequest - contexto da maquina", () => {
     await user.click(screen.getByRole("button", { name: "Revisar e enviar" }));
     expect(screen.getByText("PC-RECEPCAO", { selector: "dd" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Enviar chamado" }));
-    await waitFor(() => expect(api.createPublicServiceOrder).toHaveBeenCalledWith(expect.objectContaining({
-      deviceToken: "abc123", assetId: "m1", machineScope: "mine", environmentName: "Matriz"
-    })));
+    await waitFor(() =>
+      expect(api.createPublicServiceOrder).toHaveBeenCalledWith(
+        expect.objectContaining({
+          deviceToken: "abc123",
+          assetId: "m1",
+          machineScope: "mine",
+          environmentName: "Matriz"
+        })
+      )
+    );
   });
 
   it("mostra o carregando e depois o aviso quando a maquina nao e identificada", async () => {

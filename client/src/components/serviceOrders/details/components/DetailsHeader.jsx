@@ -28,17 +28,13 @@ export default function DetailsHeader({
           {serviceOrder.number} - {serviceOrder.title}
           {serviceOrder.isDemo && <span className="demo-data-badge">Demo</span>}
         </h2>
-        <p>{statusLabelMap[serviceOrder.status] || serviceOrder.status} - Prioridade {priorityLabels[serviceOrder.priority]}</p>
+        <p>
+          {statusLabelMap[serviceOrder.status] || serviceOrder.status} - Prioridade {priorityLabels[serviceOrder.priority]}
+        </p>
       </div>
       <div className="asset-modal-header-actions">
         {can.reopen && serviceOrder.closedAt && (
-          <button
-            type="button"
-            className="icon-button"
-            onClick={onReopen}
-            disabled={reopening}
-            title="Reabrir Ordem de Serviço"
-          >
+          <button type="button" className="icon-button" onClick={onReopen} disabled={reopening} title="Reabrir Ordem de Serviço">
             <Undo2 size={18} />
           </button>
         )}

@@ -1,9 +1,6 @@
 import { normalizeFeedbackRating } from "../../domain/serviceOrders/serviceOrderFeedback.js";
 import { upsertServiceOrderFeedback } from "../../repositories/serviceOrders/serviceOrderFeedbackRepository.js";
-import {
-  addServiceOrderAssetHistory,
-  addServiceOrderHistory
-} from "../../repositories/serviceOrders/serviceOrderHistoryRepository.js";
+import { addServiceOrderAssetHistory, addServiceOrderHistory } from "../../repositories/serviceOrders/serviceOrderHistoryRepository.js";
 import { findServiceOrderById } from "../../repositories/serviceOrders/serviceOrderReadRepository.js";
 
 // Avaliacao interna (registrada por admin/tecnico dentro da OS) - sem

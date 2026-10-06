@@ -13,11 +13,7 @@ export {
   saveFloorPlanEditorData,
   updateFloorPlan
 } from "./floorPlans/floorPlanCommandService.js";
-export {
-  getFloorPlanBackground,
-  removeFloorPlanBackground,
-  saveFloorPlanBackground
-} from "./floorPlans/floorPlanBackgroundService.js";
+export { getFloorPlanBackground, removeFloorPlanBackground, saveFloorPlanBackground } from "./floorPlans/floorPlanBackgroundService.js";
 export {
   getFloorPlanAssetHeatmap,
   getFloorPlanInfrastructureSummary,

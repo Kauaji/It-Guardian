@@ -24,5 +24,8 @@ test("conexao valida normaliza pontos em formato de lista e objeto", () => {
   const connection = normalizeConnectionPayload({ points: [[1, 2, 3], { positionX: 4 }] });
   assert.equal(connection.layer, "infrastructure");
   assert.equal(connection.connectionType, "network_cable");
-  assert.deepEqual(connection.points, [{ x: 1, y: 2, z: 3 }, { x: 4, y: 0.08, z: 0 }]);
+  assert.deepEqual(connection.points, [
+    { x: 1, y: 2, z: 3 },
+    { x: 4, y: 0.08, z: 0 }
+  ]);
 });

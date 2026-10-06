@@ -10,15 +10,7 @@ import {
   buildRack,
   buildTv
 } from "./equipmentBuilders.js";
-import {
-  buildCabinet,
-  buildChair,
-  buildGenericBox,
-  buildShelf,
-  buildTable,
-  buildWall,
-  buildWindow
-} from "./furnitureBuilders.js";
+import { buildCabinet, buildChair, buildGenericBox, buildShelf, buildTable, buildWall, buildWindow } from "./furnitureBuilders.js";
 
 const TABLE_TYPES = ["desk", "table", "meeting_table", "meeting-table"];
 const POWER_TYPES = ["outlet", "power_cable", "stabilizer_600", "stabilizer_1000", "extension_cord", "power_strip"];

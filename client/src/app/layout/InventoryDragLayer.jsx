@@ -25,11 +25,7 @@ export default function InventoryDragLayer() {
             selectionCount={machineSelected ? selectedAssetIds.size : 0}
           />
         ) : activeDragSegment ? (
-          <SegmentDragOverlay
-            segment={activeDragSegment}
-            count={drag.activeDragSegmentCount}
-            groupName={drag.activeDragSegmentGroupName}
-          />
+          <SegmentDragOverlay segment={activeDragSegment} count={drag.activeDragSegmentCount} groupName={drag.activeDragSegmentGroupName} />
         ) : null}
       </DragOverlay>
       <BulkAssetLabelPrint

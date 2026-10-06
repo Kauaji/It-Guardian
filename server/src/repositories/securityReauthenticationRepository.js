@@ -40,27 +40,11 @@ export async function addSecurityReauthenticationAttempt({
       )
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     `,
-    [
-      randomUUID(),
-      userId,
-      action,
-      assetId,
-      serviceOrderId,
-      Boolean(succeeded),
-      requestIp,
-      String(userAgent || "").slice(0, 500) || null
-    ]
+    [randomUUID(), userId, action, assetId, serviceOrderId, Boolean(succeeded), requestIp, String(userAgent || "").slice(0, 500) || null]
   );
 }
 
-export async function consumeSecurityReauthentication({
-  userId,
-  action,
-  assetId = null,
-  serviceOrderId = null,
-  tokenHash,
-  db = query
-}) {
+export async function consumeSecurityReauthentication({ userId, action, assetId = null, serviceOrderId = null, tokenHash, db = query }) {
   const result = await db(
     `
       UPDATE security_reauthentications

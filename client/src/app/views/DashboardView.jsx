@@ -9,11 +9,7 @@ export default function DashboardView() {
 
   return (
     <ViewErrorBoundary label="o Dashboard" resetKey="dashboard">
-      <DashboardWorkspace
-        token={token}
-        canCustomize={canCustomizeDashboard}
-        notify={notify}
-      />
+      <DashboardWorkspace token={token} canCustomize={canCustomizeDashboard} notify={notify} />
     </ViewErrorBoundary>
   );
 }

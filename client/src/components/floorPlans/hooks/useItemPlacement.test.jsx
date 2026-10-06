@@ -173,7 +173,10 @@ describe("useItemPlacement - paredes", () => {
   const floor = { id: "floor-1" };
 
   it("primeiro clique fixa o inicio (na grade fina); o segundo cria a parede e reinicia", () => {
-    const ctx = setup({ placement: { kind: "wall", item: wallItem, start: null, end: null, gridSize: 5 }, editor: buildEditor({ zones: [], objects: [] }) });
+    const ctx = setup({
+      placement: { kind: "wall", item: wallItem, start: null, end: null, gridSize: 5 },
+      editor: buildEditor({ zones: [], objects: [] })
+    });
     act(() => ctx.result.current.confirmWallPoint({ x: 103, y: 207 }, floor));
     expect(ctx.placementStore.box.value).toMatchObject({ start: { x: 105, y: 205 }, end: { x: 105, y: 205 } });
     expect(ctx.commitEditor).not.toHaveBeenCalled();
@@ -230,7 +233,10 @@ describe("useItemPlacement - medidas", () => {
   });
 
   it("Enter sem fim ou sem andar nao faz nada", () => {
-    const noEnd = setup({ placement: { kind: "measurement", start: { x: 1, y: 1 }, end: null }, editor: buildEditor({ zones: [], objects: [] }) });
+    const noEnd = setup({
+      placement: { kind: "measurement", start: { x: 1, y: 1 }, end: null },
+      editor: buildEditor({ zones: [], objects: [] })
+    });
     act(() => noEnd.result.current.commitMeasurementFromKeyboard());
     expect(noEnd.commitEditor).not.toHaveBeenCalled();
     const noFloor = setup({ placement: { kind: "measurement", start: { x: 1, y: 1 }, end: { x: 5, y: 5 } }, floors: false });
@@ -239,10 +245,13 @@ describe("useItemPlacement - medidas", () => {
   });
 
   it("setPlacement tolera estado nulo ao reiniciar", () => {
-    const ctx = setup({ placement: { kind: "measurement", start: { x: 1, y: 1 }, end: { x: 9, y: 1 } }, editor: buildEditor({ zones: [], objects: [] }) });
+    const ctx = setup({
+      placement: { kind: "measurement", start: { x: 1, y: 1 }, end: { x: 9, y: 1 } },
+      editor: buildEditor({ zones: [], objects: [] })
+    });
     act(() => ctx.result.current.commitMeasurementFromKeyboard());
     ctx.placementStore.box.value = null;
-    ctx.ui.setPlacement((current) => current ? { ...current, start: null } : current);
+    ctx.ui.setPlacement((current) => (current ? { ...current, start: null } : current));
     expect(ctx.placementStore.box.value).toBeNull();
   });
 });
@@ -267,11 +276,13 @@ describe("useItemPlacement.handlePointerMove", () => {
   it("catalogo: atualiza a pre-visualizacao", () => {
     const ctx = setup({ placement: { kind: "catalog", item: cabinet }, editor: buildEditor({ zones: [], objects: [] }) });
     let handled;
-    act(() => { handled = ctx.result.current.handlePointerMove({ x: 500, y: 420 }); });
+    act(() => {
+      handled = ctx.result.current.handlePointerMove({ x: 500, y: 420 });
+    });
     expect(handled).toBe(true);
     expect(ctx.placementStore.box.value.preview).toMatchObject({ valid: true });
     ctx.placementStore.box.value = { kind: "wall" };
-    ctx.ui.setPlacement((current) => current?.kind === "catalog" ? { ...current, preview: 1 } : current);
+    ctx.ui.setPlacement((current) => (current?.kind === "catalog" ? { ...current, preview: 1 } : current));
     expect(ctx.placementStore.box.value).toEqual({ kind: "wall" });
   });
 
@@ -281,7 +292,9 @@ describe("useItemPlacement.handlePointerMove", () => {
       editor: buildEditor({ zones: [], objects: [wallObject()] })
     });
     let handled;
-    act(() => { handled = ctx.result.current.handlePointerMove({ x: 302, y: 104 }); });
+    act(() => {
+      handled = ctx.result.current.handlePointerMove({ x: 302, y: 104 });
+    });
     expect(handled).toBe(true);
     expect(Math.round(ctx.placementStore.box.value.end.x)).toBe(300);
     expect(Math.round(ctx.placementStore.box.value.end.y)).toBe(100);

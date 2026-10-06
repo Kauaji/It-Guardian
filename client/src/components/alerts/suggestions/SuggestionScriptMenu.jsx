@@ -19,8 +19,7 @@ function ScriptPopover({ suggestion, scriptMenu, agentActive }) {
   const others = state.others || [];
   const error = state.error || "";
   const loading = scriptMenu.loadingId === suggestion.id;
-  const isDisabled = (script) =>
-    !perms.canUseScriptsFromAlerts || !agentActive || scriptMenu.usingKey === `${suggestion.id}:${script.id}`;
+  const isDisabled = (script) => !perms.canUseScriptsFromAlerts || !agentActive || scriptMenu.usingKey === `${suggestion.id}:${script.id}`;
   const useScript = (script) => scriptMenu.useScript(suggestion, script);
 
   return (

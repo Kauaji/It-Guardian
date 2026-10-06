@@ -46,9 +46,7 @@ describe("useWidgetData", () => {
   });
 
   it("nao busca nada quando enabled e false", async () => {
-    renderHook(() =>
-      useWidgetData({ token: "tok", type: "asset_availability", config: {}, refreshIntervalSeconds: 60, enabled: false })
-    );
+    renderHook(() => useWidgetData({ token: "tok", type: "asset_availability", config: {}, refreshIntervalSeconds: 60, enabled: false }));
     await act(async () => vi.advanceTimersByTimeAsync(0));
     expect(previewDashboardWidget).not.toHaveBeenCalled();
   });
@@ -79,9 +77,7 @@ describe("useWidgetData", () => {
 
   it("expoe o erro sem inventar dado quando a chamada falha", async () => {
     previewDashboardWidget.mockRejectedValue(new Error("Falha real do servidor"));
-    const { result } = renderHook(() =>
-      useWidgetData({ token: "tok", type: "t", config: {}, refreshIntervalSeconds: 60 })
-    );
+    const { result } = renderHook(() => useWidgetData({ token: "tok", type: "t", config: {}, refreshIntervalSeconds: 60 }));
     await act(async () => vi.advanceTimersByTimeAsync(0));
 
     expect(result.current.error).toBe("Falha real do servidor");
@@ -95,9 +91,7 @@ describe("useWidgetData", () => {
       return new Promise(() => {}); // nunca resolve, simula requisicao em andamento
     });
 
-    const { unmount } = renderHook(() =>
-      useWidgetData({ token: "tok", type: "t", config: {}, refreshIntervalSeconds: 60 })
-    );
+    const { unmount } = renderHook(() => useWidgetData({ token: "tok", type: "t", config: {}, refreshIntervalSeconds: 60 }));
 
     expect(capturedSignal).not.toBeNull();
     expect(capturedSignal.aborted).toBe(false);
@@ -107,21 +101,16 @@ describe("useWidgetData", () => {
 
   it("refaz a busca quando a config muda, mesmo antes do proximo poll agendado", async () => {
     previewDashboardWidget.mockResolvedValue({ type: "t", data: { value: 1 } });
-    const { rerender } = renderHook(
-      ({ config }) => useWidgetData({ token: "tok", type: "t", config, refreshIntervalSeconds: 60 }),
-      { initialProps: { config: { assetId: "a" } } }
-    );
+    const { rerender } = renderHook(({ config }) => useWidgetData({ token: "tok", type: "t", config, refreshIntervalSeconds: 60 }), {
+      initialProps: { config: { assetId: "a" } }
+    });
     await act(async () => vi.advanceTimersByTimeAsync(0));
     expect(previewDashboardWidget).toHaveBeenCalledTimes(1);
 
     rerender({ config: { assetId: "b" } });
     await act(async () => vi.advanceTimersByTimeAsync(0));
     expect(previewDashboardWidget).toHaveBeenCalledTimes(2);
-    expect(previewDashboardWidget).toHaveBeenLastCalledWith(
-      "tok",
-      { type: "t", config: { assetId: "b" } },
-      expect.anything()
-    );
+    expect(previewDashboardWidget).toHaveBeenLastCalledWith("tok", { type: "t", config: { assetId: "b" } }, expect.anything());
   });
 
   it("envia filtros separados do config salvo e refaz a query quando a selecao muda", async () => {
@@ -164,9 +153,7 @@ describe("useWidgetData", () => {
 
   it("remove imediatamente os dados do recorte anterior enquanto o novo filtro carrega", async () => {
     const next = deferred();
-    previewDashboardWidget
-      .mockResolvedValueOnce({ data: { total: 8 } })
-      .mockImplementationOnce(() => next.promise);
+    previewDashboardWidget.mockResolvedValueOnce({ data: { total: 8 } }).mockImplementationOnce(() => next.promise);
     const { result, rerender } = renderHook(
       ({ filters }) => useWidgetData({ token: "tok", type: "asset_availability", config: {}, filters, refreshIntervalSeconds: 60 }),
       { initialProps: { filters: { assetStatus: "online" } } }
@@ -181,23 +168,25 @@ describe("useWidgetData", () => {
     expect(result.current.error).toBe("");
     expect(result.current.loading).toBe(true);
 
-    await act(async () => { next.resolve({ data: { total: 2 } }); });
+    await act(async () => {
+      next.resolve({ data: { total: 2 } });
+    });
     expect(result.current.data).toEqual({ total: 2 });
     expect(result.current.loading).toBe(false);
   });
 
   it("falha do novo filtro nao reapresenta dados validos de outro recorte", async () => {
     const next = deferred();
-    previewDashboardWidget
-      .mockResolvedValueOnce({ data: { total: 8 } })
-      .mockImplementationOnce(() => next.promise);
+    previewDashboardWidget.mockResolvedValueOnce({ data: { total: 8 } }).mockImplementationOnce(() => next.promise);
     const { result, rerender } = renderHook(
       ({ filters }) => useWidgetData({ token: "tok", type: "asset_availability", config: {}, filters, refreshIntervalSeconds: 60 }),
       { initialProps: { filters: {} } }
     );
     await act(async () => vi.advanceTimersByTimeAsync(0));
     rerender({ filters: { alertSeverity: "critical" } });
-    await act(async () => { next.reject(new Error("Recorte indisponivel")); });
+    await act(async () => {
+      next.reject(new Error("Recorte indisponivel"));
+    });
 
     expect(result.current.data).toBeNull();
     expect(result.current.error).toBe("Recorte indisponivel");
@@ -220,9 +209,13 @@ describe("useWidgetData", () => {
     expect(oldSignal.aborted).toBe(true);
     expect(previewDashboardWidget.mock.calls[1][2].signal.aborted).toBe(false);
 
-    await act(async () => { newQuery.resolve({ data: { total: 3 } }); });
+    await act(async () => {
+      newQuery.resolve({ data: { total: 3 } });
+    });
     expect(result.current.data).toEqual({ total: 3 });
-    await act(async () => { oldQuery.resolve({ data: { total: 99 } }); });
+    await act(async () => {
+      oldQuery.resolve({ data: { total: 99 } });
+    });
     expect(result.current.data).toEqual({ total: 3 });
     expect(result.current.error).toBe("");
 
@@ -236,9 +229,7 @@ describe("useWidgetData", () => {
   it("erro tardio da query cancelada nao contamina nem encerra o carregamento do novo filtro", async () => {
     const oldQuery = deferred();
     const newQuery = deferred();
-    previewDashboardWidget
-      .mockImplementationOnce(() => oldQuery.promise)
-      .mockImplementationOnce(() => newQuery.promise);
+    previewDashboardWidget.mockImplementationOnce(() => oldQuery.promise).mockImplementationOnce(() => newQuery.promise);
     const { result, rerender } = renderHook(
       ({ filters }) => useWidgetData({ token: "tok", type: "asset_availability", config: {}, filters, refreshIntervalSeconds: 60 }),
       { initialProps: { filters: { assetStatus: "online" } } }
@@ -246,12 +237,16 @@ describe("useWidgetData", () => {
     rerender({ filters: { assetStatus: "offline" } });
     // apiFetch may wrap AbortError in a generic connection error; cancellation
     // must still be authoritative and prevent this old error from surfacing.
-    await act(async () => { oldQuery.reject(new Error("Nao foi possivel conectar ao servidor")); });
+    await act(async () => {
+      oldQuery.reject(new Error("Nao foi possivel conectar ao servidor"));
+    });
     expect(result.current.data).toBeNull();
     expect(result.current.error).toBe("");
     expect(result.current.loading).toBe(true);
 
-    await act(async () => { newQuery.resolve({ data: { total: 3 } }); });
+    await act(async () => {
+      newQuery.resolve({ data: { total: 3 } });
+    });
     expect(result.current.data).toEqual({ total: 3 });
     expect(result.current.loading).toBe(false);
   });
@@ -272,10 +267,14 @@ describe("useWidgetData", () => {
     rerender({ filters: {} });
     expect(result.current.data).toBeNull();
     expect(previewDashboardWidget).toHaveBeenLastCalledWith(
-      "tok", { type: "metric_gauge_cpu", config }, expect.objectContaining({ signal: expect.any(AbortSignal) })
+      "tok",
+      { type: "metric_gauge_cpu", config },
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
     );
     expect(previewDashboardWidget.mock.calls[1][1]).not.toHaveProperty("filters");
-    await act(async () => { globalQuery.resolve({ data: { assetId: "configured-asset", value: 22 } }); });
+    await act(async () => {
+      globalQuery.resolve({ data: { assetId: "configured-asset", value: 22 } });
+    });
     expect(result.current.data).toEqual({ assetId: "configured-asset", value: 22 });
 
     rerender({ filters: undefined });
@@ -288,9 +287,15 @@ describe("useWidgetData", () => {
     previewDashboardWidget
       .mockResolvedValueOnce({ data: { total: 5 } })
       .mockRejectedValueOnce(new Error("Atualizacao temporariamente indisponivel"));
-    const { result } = renderHook(() => useWidgetData({
-      token: "tok", type: "asset_availability", config: {}, filters: { assetStatus: "online" }, refreshIntervalSeconds: 60
-    }));
+    const { result } = renderHook(() =>
+      useWidgetData({
+        token: "tok",
+        type: "asset_availability",
+        config: {},
+        filters: { assetStatus: "online" },
+        refreshIntervalSeconds: 60
+      })
+    );
     await act(async () => vi.advanceTimersByTimeAsync(0));
     await act(async () => vi.advanceTimersByTimeAsync(60000));
 
@@ -301,11 +306,10 @@ describe("useWidgetData", () => {
 
   it("trocar o usuario invalida o snapshot mesmo com tipo, config e filtros identicos", async () => {
     const secondUser = deferred();
-    previewDashboardWidget
-      .mockResolvedValueOnce({ data: { total: 12 } })
-      .mockImplementationOnce(() => secondUser.promise);
+    previewDashboardWidget.mockResolvedValueOnce({ data: { total: 12 } }).mockImplementationOnce(() => secondUser.promise);
     const { result, rerender } = renderHook(
-      ({ token }) => useWidgetData({ token, type: "asset_availability", config: {}, filters: { assetStatus: "online" }, refreshIntervalSeconds: 60 }),
+      ({ token }) =>
+        useWidgetData({ token, type: "asset_availability", config: {}, filters: { assetStatus: "online" }, refreshIntervalSeconds: 60 }),
       { initialProps: { token: "first-user" } }
     );
     await act(async () => vi.advanceTimersByTimeAsync(0));
@@ -314,7 +318,9 @@ describe("useWidgetData", () => {
     rerender({ token: "second-user" });
     expect(oldSignal.aborted).toBe(true);
     expect(result.current.data).toBeNull();
-    await act(async () => { secondUser.resolve({ data: { total: 1 } }); });
+    await act(async () => {
+      secondUser.resolve({ data: { total: 1 } });
+    });
     expect(result.current.data).toEqual({ total: 1 });
   });
 });

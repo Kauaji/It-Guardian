@@ -33,6 +33,8 @@
     "test:integration": "npm run test:integration --workspace server",
     "test:e2e": "playwright test",
     "lint": "eslint . --max-warnings=0",
+    "format": "prettier --write \"client/src/**/*.{js,jsx}\" \"server/src/**/*.{js,mjs}\" \"server/test-integration/**/*.mjs\" \"server/test-support/**/*.mjs\" \"scripts/**/*.mjs\" \"tests/**/*.js\" playwright.config.js eslint.config.js",
+    "format:check": "prettier --check \"client/src/**/*.{js,jsx}\" \"server/src/**/*.{js,mjs}\" \"server/test-integration/**/*.mjs\" \"server/test-support/**/*.mjs\" \"scripts/**/*.mjs\" \"tests/**/*.js\" playwright.config.js eslint.config.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "check:architecture": "node scripts/check-architecture.mjs",
     "check:env": "node scripts/check-env-docs.mjs",
@@ -63,6 +65,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
     "globals": "^17.7.0",
+    "prettier": "^3.9.9",
     "typescript": "^7.0.2"
   }
 }

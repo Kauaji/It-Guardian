@@ -11,7 +11,10 @@ const devices = [
   { id: "d2", name: "PC-02", segmentId: "s1" }
 ];
 const lookups = createAlertLookups({ devices, segments: [{ id: "s1", name: "Recepção" }] });
-const activeScripts = [{ id: "sc1", name: "Limpar", riskLevel: "low" }, { id: "sc2", name: "Reiniciar", riskLevel: "high" }];
+const activeScripts = [
+  { id: "sc1", name: "Limpar", riskLevel: "low" },
+  { id: "sc2", name: "Reiniciar", riskLevel: "high" }
+];
 
 function setup({ activeTab = "preventives", canCreatePlans = true, handlers = {}, data = {} } = {}) {
   const props = {
@@ -218,15 +221,19 @@ describe("usePreventivePlans - automação", () => {
     act(() => hook.result.current.openAutomationFromSelection());
 
     let created;
-    await act(async () => { created = await hook.result.current.createAutomatedPlanFromSelection({ name: "Rotina", recurrenceType: "weekly" }); });
+    await act(async () => {
+      created = await hook.result.current.createAutomatedPlanFromSelection({ name: "Rotina", recurrenceType: "weekly" });
+    });
 
     expect(created).toEqual({ id: "pp1", name: "Plano" });
-    expect(hook.props.handlers.onCreatePreventivePlan).toHaveBeenCalledWith(expect.objectContaining({
-      name: "Rotina",
-      source: "automated",
-      assetIds: ["d1"],
-      scriptIds: ["sc1"]
-    }));
+    expect(hook.props.handlers.onCreatePreventivePlan).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Rotina",
+        source: "automated",
+        assetIds: ["d1"],
+        scriptIds: ["sc1"]
+      })
+    );
     expect(hook.result.current.selection.assets.size + hook.result.current.selection.scripts.size).toBe(0);
     expect(hook.result.current.selection.expandedScripts.size).toBe(1);
     expect(hook.result.current.automationCreateRequest).toBeNull();

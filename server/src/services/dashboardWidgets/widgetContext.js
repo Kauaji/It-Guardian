@@ -22,13 +22,16 @@ export function createWidgetContext({ user, filters = {} } = {}) {
     return cache.get(key);
   }
 
-  return withDashboardFilters({
-    getDevices: () => memo("devices", () => listDevices({})),
-    getActiveAlerts: () => memo("activeAlerts", () => getActiveAlertsWithAcknowledgements()),
-    getAllAlerts: () => memo("allAlerts", () => listAlerts({})),
-    getServiceOrders: () => memo("serviceOrders", () => listServiceOrders(user)),
-    getServiceOrderSettings: () => memo("serviceOrderSettings", () => getServiceOrderSettings()),
-    getRecentEventLogs: () => memo("eventLogs", () => listLogs()),
-    getRecentScriptExecutionLogs: (limit) => memo(`scriptLogs:${limit}`, () => listRecentScriptExecutionLogs({ limit }))
-  }, filters);
+  return withDashboardFilters(
+    {
+      getDevices: () => memo("devices", () => listDevices({})),
+      getActiveAlerts: () => memo("activeAlerts", () => getActiveAlertsWithAcknowledgements()),
+      getAllAlerts: () => memo("allAlerts", () => listAlerts({})),
+      getServiceOrders: () => memo("serviceOrders", () => listServiceOrders(user)),
+      getServiceOrderSettings: () => memo("serviceOrderSettings", () => getServiceOrderSettings()),
+      getRecentEventLogs: () => memo("eventLogs", () => listLogs()),
+      getRecentScriptExecutionLogs: (limit) => memo(`scriptLogs:${limit}`, () => listRecentScriptExecutionLogs({ limit }))
+    },
+    filters
+  );
 }

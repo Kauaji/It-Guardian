@@ -1,7 +1,4 @@
-import {
-  getInventoryVisualMap,
-  listInventoryVisualMaps
-} from "../repositories/inventoryVisualMap/visualMapRepository.js";
+import { getInventoryVisualMap, listInventoryVisualMaps } from "../repositories/inventoryVisualMap/visualMapRepository.js";
 import { listInventoryVisualMapConnections } from "../repositories/inventoryVisualMap/visualMapConnectionRepository.js";
 import { listInventoryVisualMapObjects } from "../repositories/inventoryVisualMap/visualMapObjectRepository.js";
 import {

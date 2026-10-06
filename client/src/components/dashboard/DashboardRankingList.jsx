@@ -13,7 +13,12 @@ export default function DashboardRankingList({ title, icon: Icon, items, loading
       ) : !items?.length ? (
         <p className="dashboard-empty-state">{emptyMessage}</p>
       ) : (
-        <ol ref={scroll.ref} className="dashboard-ranking-list" tabIndex={scroll.tabIndex} aria-label={scroll.scrollable ? title : undefined}>
+        <ol
+          ref={scroll.ref}
+          className="dashboard-ranking-list"
+          tabIndex={scroll.tabIndex}
+          aria-label={scroll.scrollable ? title : undefined}
+        >
           {items.map((item, index) => (
             <li key={item.id || item.assetId || item.key || index}>
               {onSelectItem ? (

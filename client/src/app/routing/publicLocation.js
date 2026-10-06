@@ -7,9 +7,7 @@ export function parsePublicLocation({ pathname = "/", search = "" } = {}) {
   const isSupportFormPath = supportFormPaths.includes(pathname);
   const trackingToken = pathname.match(/^\/chamado\/([^/]+)/)?.[1];
   const pathAssetId = pathname.match(/^\/assets\/([^/]+)/)?.[1];
-  const assetId = pathAssetId
-    ? decodeURIComponent(pathAssetId)
-    : new URLSearchParams(search).get("asset");
+  const assetId = pathAssetId ? decodeURIComponent(pathAssetId) : new URLSearchParams(search).get("asset");
   const isPublicSupportPath = isSupportFormPath || Boolean(trackingToken);
 
   let kind = null;

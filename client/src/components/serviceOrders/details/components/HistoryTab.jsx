@@ -7,9 +7,13 @@ function HistoryEvent({ event }) {
       <Clock3 size={15} />
       <div>
         <strong>{event.message}</strong>
-        <span>{formatDate(event.createdAt)} - {event.userName || "Sistema"}</span>
+        <span>
+          {formatDate(event.createdAt)} - {event.userName || "Sistema"}
+        </span>
         {(event.oldValue || event.newValue) && (
-          <small>{event.oldValue || "-"} {"->"} {event.newValue || "-"}</small>
+          <small>
+            {event.oldValue || "-"} {"->"} {event.newValue || "-"}
+          </small>
         )}
       </div>
     </article>
@@ -23,9 +27,9 @@ export default function HistoryTab({ serviceOrder, asset }) {
     <section className="service-order-history-panel">
       {!asset && <p className="empty">Vincule uma máquina para visualizar o histórico técnico do ativo.</p>}
       <div className="service-order-history-list">
-        {history.length ? history.map((event) => (
-          <HistoryEvent key={event.id} event={event} />
-        )) : (
+        {history.length ? (
+          history.map((event) => <HistoryEvent key={event.id} event={event} />)
+        ) : (
           <p className="empty">Sem histórico de OS registrado.</p>
         )}
         {(asset?.assetHistory || []).map((event) => (

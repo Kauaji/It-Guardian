@@ -57,16 +57,12 @@ export function useSegmentMutations({ data, deviceState, inventory, meta }) {
   }
 
   async function handleDeleteSegment(segment) {
-    const confirmed = window.confirm(
-      `Excluir o segmento "${segment.name}"? As máquinas vão voltar para Não organizadas.`
-    );
+    const confirmed = window.confirm(`Excluir o segmento "${segment.name}"? As máquinas vão voltar para Não organizadas.`);
     if (!confirmed) return;
 
     try {
       const wasMaintenanceSegment = isMaintenanceSegmentName(segment.name);
-      const affectedMaintenanceMachines = wasMaintenanceSegment
-        ? activeAllDevices.filter((device) => device.segmentId === segment.id)
-        : [];
+      const affectedMaintenanceMachines = wasMaintenanceSegment ? activeAllDevices.filter((device) => device.segmentId === segment.id) : [];
       await deleteSegment(token, segment.id);
       setSegmentGroups(assignSegmentToGroup(segmentGroups, segment.id, ""));
       setSegments((current) => current.filter((item) => item.id !== segment.id));
@@ -92,9 +88,7 @@ export function useSegmentMutations({ data, deviceState, inventory, meta }) {
       tabId: activeInventoryTab.id,
       order: targetSiblings.length
     });
-    setSegments((current) =>
-      current.map((segment) => (segment.id === segmentId ? { ...segment, groupId: groupId || "" } : segment))
-    );
+    setSegments((current) => current.map((segment) => (segment.id === segmentId ? { ...segment, groupId: groupId || "" } : segment)));
     renameSegment(token, segmentId, { groupId: groupId || null }).catch(async (error) => {
       setSegmentGroups(previousGroups);
       await loadData(true);

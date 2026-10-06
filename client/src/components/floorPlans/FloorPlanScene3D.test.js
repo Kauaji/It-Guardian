@@ -3,11 +3,16 @@ import { getFloorPlanCameraPreset, getFloorPlanContentFrame } from "./FloorPlanS
 
 describe("getFloorPlanContentFrame", () => {
   it("prioriza o conteudo ocupado sem perder a referencia do pavimento", () => {
-    const frame = getFloorPlanContentFrame({
-      zones: [{ floorId: "floor-a", geometry: { x: 180, y: 140, width: 720, height: 480 } }],
-      objects: [{ floorId: "floor-a", x: 330, y: 290, width: 180, height: 90 }],
-      cableRoutes: []
-    }, "floor-a", 1280, 820);
+    const frame = getFloorPlanContentFrame(
+      {
+        zones: [{ floorId: "floor-a", geometry: { x: 180, y: 140, width: 720, height: 480 } }],
+        objects: [{ floorId: "floor-a", x: 330, y: 290, width: 180, height: 90 }],
+        cableRoutes: []
+      },
+      "floor-a",
+      1280,
+      820
+    );
 
     expect(frame.width).toBeGreaterThan(720);
     expect(frame.width).toBeLessThan(1280);

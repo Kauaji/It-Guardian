@@ -6,7 +6,16 @@ import { DEFAULT_FLOOR_PLAN_LAYERS } from "./layers.js";
 const extras = {
   objects: [
     buildDesk(),
-    { id: "strip-1", floorId: "floor-1", objectType: "power_strip", x: 210, y: 200, width: 40, height: 10, metadata: { parentRoomId: "room-1" } },
+    {
+      id: "strip-1",
+      floorId: "floor-1",
+      objectType: "power_strip",
+      x: 210,
+      y: 200,
+      width: 40,
+      height: 10,
+      metadata: { parentRoomId: "room-1" }
+    },
     { id: "pc-1", floorId: "floor-1", objectType: "pc", x: 260, y: 210, width: 60, height: 40, metadata: { parentRoomId: "room-1" } },
     { id: "other", floorId: "floor-2", objectType: "desk", x: 0, y: 0, width: 10, height: 10, metadata: {} }
   ],

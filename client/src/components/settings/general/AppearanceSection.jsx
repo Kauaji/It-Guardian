@@ -34,11 +34,7 @@ function PresetGrid({ preferences, onSelectPreset }) {
           <small>{preset.description}</small>
         </button>
       ))}
-      <button
-        type="button"
-        className={presetCardClass(preferences.appearancePreset === "custom")}
-        onClick={() => onSelectPreset("custom")}
-      >
+      <button type="button" className={presetCardClass(preferences.appearancePreset === "custom")} onClick={() => onSelectPreset("custom")}>
         <span
           className="appearance-preset-preview"
           style={{
@@ -63,11 +59,7 @@ function CustomThemePanel({ customTheme, onChangeCustomTheme }) {
         {customThemeFields.map(({ field, label }) => (
           <label key={field}>
             {label}
-            <input
-              type="color"
-              value={customTheme[field]}
-              onChange={(event) => onChangeCustomTheme(field, event.target.value)}
-            />
+            <input type="color" value={customTheme[field]} onChange={(event) => onChangeCustomTheme(field, event.target.value)} />
           </label>
         ))}
       </div>
@@ -83,14 +75,7 @@ function CustomThemePanel({ customTheme, onChangeCustomTheme }) {
   );
 }
 
-export default function AppearanceSection({
-  preferences,
-  theme,
-  onToggleTheme,
-  onRestoreDefault,
-  onSelectPreset,
-  onChangeCustomTheme
-}) {
+export default function AppearanceSection({ preferences, theme, onToggleTheme, onRestoreDefault, onSelectPreset, onChangeCustomTheme }) {
   return (
     <div className="general-settings-section">
       <Palette size={22} />

@@ -76,9 +76,7 @@ for (const line of importLines) {
 }
 if (new Set(imported).size !== imported.length) fail("index.css: arquivo importado mais de uma vez");
 
-const onDisk = fs
-  .readdirSync(stylesDir)
-  .filter((name) => name.endsWith(".css") && name !== "index.css");
+const onDisk = fs.readdirSync(stylesDir).filter((name) => name.endsWith(".css") && name !== "index.css");
 for (const name of onDisk) {
   if (!imported.includes(name)) fail(`${name} existe em styles/ mas nao esta em index.css`);
 }
@@ -130,7 +128,9 @@ if (failures.length > 0) {
 }
 
 if (!byteExact) {
-  console.log(`verify-css-split: OK (estrutura). ${imported.length} arquivos, ${joined.length} bytes; use --byte-exact para a prova historica do corte.`);
+  console.log(
+    `verify-css-split: OK (estrutura). ${imported.length} arquivos, ${joined.length} bytes; use --byte-exact para a prova historica do corte.`
+  );
   process.exit(0);
 }
 

@@ -10,8 +10,7 @@ export const identityMessages = {
   MFA_ENROLLMENT_REQUIRED: "Cadastre a verificação em duas etapas para continuar.",
   CURRENT_PASSWORD_INVALID: "A senha atual está incorreta.",
   PASSWORD_REUSED: "A nova senha precisa ser diferente da atual.",
-  SETUP_DISABLED:
-    "O cadastro inicial pela internet está desativado. Peça a um administrador ou crie o primeiro acesso pelo servidor.",
+  SETUP_DISABLED: "O cadastro inicial pela internet está desativado. Peça a um administrador ou crie o primeiro acesso pelo servidor.",
   SETUP_TOKEN_INVALID: "Token de configuração inicial inválido.",
   MFA_REQUIRED: "A verificação em duas etapas é obrigatória para administradores.",
   MFA_ALREADY_ENABLED: "A verificação em duas etapas já está ativa.",

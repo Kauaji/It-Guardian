@@ -26,7 +26,12 @@ describe("scriptRules", () => {
 
   it("monta contexto e notas com padrões", () => {
     expect(buildRecommendationContext(undefined)).toEqual({ category: "", problemType: "", title: "", description: "" });
-    expect(buildRecommendationContext({ category: "c", problemType: "p", title: "t", description: "d" })).toEqual({ category: "c", problemType: "p", title: "t", description: "d" });
+    expect(buildRecommendationContext({ category: "c", problemType: "p", title: "t", description: "d" })).toEqual({
+      category: "c",
+      problemType: "p",
+      title: "t",
+      description: "d"
+    });
     expect(buildSimulationNotes({ number: "OS-1" }, "id")).toContain("OS OS-1.");
     expect(buildSimulationNotes(undefined, "id")).toContain("OS id.");
   });
@@ -37,7 +42,14 @@ describe("scriptRules", () => {
   });
 
   it("devolve o primeiro bloqueio aplicável, na ordem de prioridade", () => {
-    const ok = { hasAsset: true, isFinalOrder: false, remoteScriptExecutionEnabled: true, agentPresent: true, agentFresh: true, canManage: true };
+    const ok = {
+      hasAsset: true,
+      isFinalOrder: false,
+      remoteScriptExecutionEnabled: true,
+      agentPresent: true,
+      agentFresh: true,
+      canManage: true
+    };
     expect(getScriptBlockReason(ok)).toBe("");
     expect(getScriptBlockReason({ ...ok, hasAsset: false, isFinalOrder: true })).toContain("máquina/ativo");
     expect(getScriptBlockReason({ ...ok, isFinalOrder: true })).toContain("finalizada");

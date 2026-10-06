@@ -44,7 +44,10 @@ process.on("unhandledRejection", (error) => {
 process.on("uncaughtException", async (error) => {
   logger.error("uncaughtException", { error });
   try {
-    await Promise.race([reportError(toError(error), { extra: { event: "uncaughtException" } }), new Promise((resolve) => setTimeout(resolve, 2000))]);
+    await Promise.race([
+      reportError(toError(error), { extra: { event: "uncaughtException" } }),
+      new Promise((resolve) => setTimeout(resolve, 2000))
+    ]);
   } finally {
     process.exit(1);
   }

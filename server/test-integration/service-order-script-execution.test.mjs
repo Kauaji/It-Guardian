@@ -128,7 +128,10 @@ test("execucao real de script via Ordem de Servico: recomendacao, enfileiramento
   const recommendationsBody = await recommendationsResponse.json();
   assert.equal(recommendationsResponse.status, 200, JSON.stringify(recommendationsBody));
   const allRecommended = [...recommendationsBody.recommended, ...recommendationsBody.others];
-  assert.ok(allRecommended.some((item) => item.id === script.id), "o script cadastrado deve aparecer na recomendacao para a OS");
+  assert.ok(
+    allRecommended.some((item) => item.id === script.id),
+    "o script cadastrado deve aparecer na recomendacao para a OS"
+  );
 
   const useResponse = await fetch(`${baseUrl}/api/service-orders/${order.id}/scripts/${script.id}/use`, {
     method: "POST",

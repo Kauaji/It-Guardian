@@ -14,9 +14,26 @@ import useMachineDetailsProps from "./board/useMachineDetailsProps.js";
 // Props repassadas igualmente a todos os cartoes de segmento do quadro.
 function buildSegmentCardProps(props, state) {
   const {
-    segments, groups, aliases, selectedAssetIds, canManage, token, user, notify,
-    onRenameSegment, onDeleteSegment, onChangeSegmentColor, onMoveMachine, onOpenMoveModal, onRefreshPing,
-    onSelectAsset, onToggleSelection, onMoveSegmentToGroup, onMoveSegmentOrder, onAddPeripheral, onRemovePeripheral
+    segments,
+    groups,
+    aliases,
+    selectedAssetIds,
+    canManage,
+    token,
+    user,
+    notify,
+    onRenameSegment,
+    onDeleteSegment,
+    onChangeSegmentColor,
+    onMoveMachine,
+    onOpenMoveModal,
+    onRefreshPing,
+    onSelectAsset,
+    onToggleSelection,
+    onMoveSegmentToGroup,
+    onMoveSegmentOrder,
+    onAddPeripheral,
+    onRemovePeripheral
   } = props;
   return {
     segments,
@@ -122,10 +139,7 @@ export default function InventoryBoard(rawProps) {
   }
 
   return (
-    <section
-      className="inventory-board-view"
-      style={{ "--active-tab-color": activeTab?.color || "#2563eb" }}
-    >
+    <section className="inventory-board-view" style={{ "--active-tab-color": activeTab?.color || "#2563eb" }}>
       <InventoryTabs
         tabs={props.tabs}
         activeTabId={props.activeTabId}

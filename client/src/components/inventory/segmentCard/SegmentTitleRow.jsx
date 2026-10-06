@@ -1,6 +1,14 @@
 export default function SegmentTitleRow({
-  isDefaultSegment, canManage, isSegmentDragging, dnd, displayName, machineCount, health, healthDescription,
-  setActivePopoverId, onTitleClick
+  isDefaultSegment,
+  canManage,
+  isSegmentDragging,
+  dnd,
+  displayName,
+  machineCount,
+  health,
+  healthDescription,
+  setActivePopoverId,
+  onTitleClick
 }) {
   const { dragAttributes, dragListeners, setDragNodeRef } = dnd;
   return (
@@ -22,7 +30,9 @@ export default function SegmentTitleRow({
         <span className="segment-color-mark" aria-hidden="true" />
         <span className="segment-title-copy">
           <h3>{displayName}</h3>
-          <span>{machineCount} {machineCount === 1 ? "máquina" : "máquinas"}</span>
+          <span>
+            {machineCount} {machineCount === 1 ? "máquina" : "máquinas"}
+          </span>
         </span>
       </button>
       <span

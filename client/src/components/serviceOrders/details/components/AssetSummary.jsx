@@ -16,7 +16,9 @@ export default function AssetSummary({ asset, serviceOrder, environmentLabel }) 
       <div>
         <Monitor size={18} />
         <strong>{asset.name}</strong>
-        <span>{asset.ip} - {assetTypeLabel(asset.assetType)} - {asset.statusLabel}</span>
+        <span>
+          {asset.ip} - {assetTypeLabel(asset.assetType)} - {asset.statusLabel}
+        </span>
       </div>
       <div className="service-order-detail-grid">
         <DetailItem label="Nome fantasia" value={asset.alias || asset.displayName || asset.name} />

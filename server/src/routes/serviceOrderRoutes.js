@@ -20,14 +20,8 @@ import {
   update,
   updateSettings
 } from "../controllers/serviceOrderController.js";
-import {
-  getChecklistHandler,
-  updateChecklistItemHandler
-} from "../controllers/serviceOrderChecklistController.js";
-import {
-  serviceOrderScriptActivity,
-  useForServiceOrder
-} from "../controllers/maintenanceScriptController.js";
+import { getChecklistHandler, updateChecklistItemHandler } from "../controllers/serviceOrderChecklistController.js";
+import { serviceOrderScriptActivity, useForServiceOrder } from "../controllers/maintenanceScriptController.js";
 import { requireAuth, requirePermission } from "../middleware/authMiddleware.js";
 
 const router = Router();

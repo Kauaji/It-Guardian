@@ -13,15 +13,9 @@ const { createApp } = await import("../src/app.js");
 const { initializeRuntime } = await import("../src/bootstrap.js");
 const { closeDatabase, query } = await import("../src/database.js");
 const { createAgentEnrollment, revokeAgentEnrollment } = await import("../src/repositories/agentRepository.js");
-const {
-  claimNextAgentScriptJob,
-  completeAgentScriptJob,
-  queueAgentScriptJob
-} = await import("../src/services/agentScriptJobService.js");
-const {
-  createMaintenanceScript,
-  createScriptSimulationLog
-} = await import("../src/services/maintenanceScripts/maintenanceScriptsFacade.js");
+const { claimNextAgentScriptJob, completeAgentScriptJob, queueAgentScriptJob } = await import("../src/services/agentScriptJobService.js");
+const { createMaintenanceScript, createScriptSimulationLog } =
+  await import("../src/services/maintenanceScripts/maintenanceScriptsFacade.js");
 const { agentHeaders, listen, sendHeartbeat } = await import("../test-support/scriptFixtures.mjs");
 
 test.after(closeDatabase);
@@ -97,10 +91,7 @@ test("fila recusa script invalido, sem conteudo, sem agente ativo e limita o tim
     queueAgentScriptJob({ ...base, script: { ...script, type: "shell" } }),
     (error) => error.statusCode === 400 && /BAT, CMD e PowerShell/.test(error.message)
   );
-  await assert.rejects(
-    queueAgentScriptJob({ ...base, script: { ...script, type: "other" } }),
-    (error) => error.statusCode === 400
-  );
+  await assert.rejects(queueAgentScriptJob({ ...base, script: { ...script, type: "other" } }), (error) => error.statusCode === 400);
   await assert.rejects(
     queueAgentScriptJob({ ...base, script: { ...script, content: "   " } }),
     (error) => error.statusCode === 400 && /nao possui conteudo executavel/.test(error.message)
@@ -177,7 +168,13 @@ test("entrega respeita a flag do servidor, a ordem de chegada, a maquina e o enr
   const claimedFirst = await deliver(agentA);
   assert.equal(claimedFirst.id, first.job.id, "entrega na ordem de enfileiramento");
   assert.deepEqual(
-    { name: claimedFirst.name, type: claimedFirst.type, content: claimedFirst.content, requiresAdmin: claimedFirst.requiresAdmin, requiresLoggedUser: claimedFirst.requiresLoggedUser },
+    {
+      name: claimedFirst.name,
+      type: claimedFirst.type,
+      content: claimedFirst.content,
+      requiresAdmin: claimedFirst.requiresAdmin,
+      requiresLoggedUser: claimedFirst.requiresLoggedUser
+    },
     { name: "Script com requisitos", type: "powershell", content: adminScript.content, requiresAdmin: true, requiresLoggedUser: true }
   );
   assert.equal(claimedFirst.scriptId, adminScript.id);
@@ -217,10 +214,9 @@ test("trabalho adulterado ou desativado e recusado e encerra a observacao vincul
   assert.equal(jobRow.rows[0].status, "failed");
   assert.ok(jobRow.rows[0].completed_at);
   assert.match(jobRow.rows[0].error_message, /Nenhum comando foi enviado ao agente/);
-  const validationRow = await query(
-    "SELECT status, finished_at, active_key, result_summary FROM script_validation_runs WHERE id = $1",
-    [validationId]
-  );
+  const validationRow = await query("SELECT status, finished_at, active_key, result_summary FROM script_validation_runs WHERE id = $1", [
+    validationId
+  ]);
   assert.equal(validationRow.rows[0].status, "execution_failed");
   assert.equal(validationRow.rows[0].active_key, null);
   assert.ok(validationRow.rows[0].finished_at);
@@ -273,9 +269,17 @@ test("resultado do agente: autenticacao, escopo, estados e idempotencia", async 
   assert.equal(accepted.response.status, 200);
   assert.deepEqual(accepted.body, { id: job.id, status: "succeeded", exitCode: 0, timedOut: false });
 
-  const jobRow = await query("SELECT status, stdout, stderr, error_message, timed_out, completed_at FROM agent_script_jobs WHERE id = $1", [job.id]);
+  const jobRow = await query("SELECT status, stdout, stderr, error_message, timed_out, completed_at FROM agent_script_jobs WHERE id = $1", [
+    job.id
+  ]);
   assert.deepEqual(
-    { status: jobRow.rows[0].status, stdout: jobRow.rows[0].stdout, stderr: jobRow.rows[0].stderr, error: jobRow.rows[0].error_message, timedOut: jobRow.rows[0].timed_out },
+    {
+      status: jobRow.rows[0].status,
+      stdout: jobRow.rows[0].stdout,
+      stderr: jobRow.rows[0].stderr,
+      error: jobRow.rows[0].error_message,
+      timedOut: jobRow.rows[0].timed_out
+    },
     { status: "succeeded", stdout: "saida padrao", stderr: "aviso", error: "", timedOut: false }
   );
   assert.ok(jobRow.rows[0].completed_at);
@@ -305,10 +309,38 @@ test("resultado do agente: classifica sucesso, falha e tempo limite e monta o lo
   const agent = await enroll(baseUrl, "job-result-status");
 
   const scenarios = [
-    { name: "falha por codigo", body: { exitCode: 3, stderr: "falhou" }, status: "failed", exitCode: 3, summary: /terminou com falha/, raw: "STDERR:\nfalhou" },
-    { name: "sem codigo de saida", body: { stdout: "x" }, status: "failed", exitCode: null, summary: /terminou com falha/, raw: "STDOUT:\nx" },
-    { name: "sucesso com erro textual", body: { exitCode: 0, errorMessage: "excecao no script" }, status: "failed", exitCode: 0, summary: /terminou com falha/, raw: "ERRO:\nexcecao no script" },
-    { name: "tempo limite", body: { exitCode: 0, timedOut: true, stdout: "parcial", errorMessage: "tempo esgotado" }, status: "timed_out", exitCode: 0, summary: /interrompido por tempo limite/, raw: "STDOUT:\nparcial\n\nERRO:\ntempo esgotado" },
+    {
+      name: "falha por codigo",
+      body: { exitCode: 3, stderr: "falhou" },
+      status: "failed",
+      exitCode: 3,
+      summary: /terminou com falha/,
+      raw: "STDERR:\nfalhou"
+    },
+    {
+      name: "sem codigo de saida",
+      body: { stdout: "x" },
+      status: "failed",
+      exitCode: null,
+      summary: /terminou com falha/,
+      raw: "STDOUT:\nx"
+    },
+    {
+      name: "sucesso com erro textual",
+      body: { exitCode: 0, errorMessage: "excecao no script" },
+      status: "failed",
+      exitCode: 0,
+      summary: /terminou com falha/,
+      raw: "ERRO:\nexcecao no script"
+    },
+    {
+      name: "tempo limite",
+      body: { exitCode: 0, timedOut: true, stdout: "parcial", errorMessage: "tempo esgotado" },
+      status: "timed_out",
+      exitCode: 0,
+      summary: /interrompido por tempo limite/,
+      raw: "STDOUT:\nparcial\n\nERRO:\ntempo esgotado"
+    },
     { name: "tudo vazio", body: { exitCode: 0 }, status: "succeeded", exitCode: 0, summary: /executado com sucesso/, raw: "" }
   ];
 
@@ -330,10 +362,10 @@ test("resultado do agente: classifica sucesso, falha e tempo limite e monta o lo
     assert.match(logRow.rows[0].parsed_summary, scenario.summary);
     assert.equal(logRow.rows[0].error_detected, scenario.status !== "succeeded");
     assert.equal(logRow.rows[0].attention_required, scenario.status !== "succeeded");
-    const history = await query(
-      "SELECT event_type, new_value FROM asset_history WHERE asset_id = $1 AND new_value LIKE $2",
-      [agent.machineId, `%${job.id}%`]
-    );
+    const history = await query("SELECT event_type, new_value FROM asset_history WHERE asset_id = $1 AND new_value LIKE $2", [
+      agent.machineId,
+      `%${job.id}%`
+    ]);
     assert.equal(history.rows[0].event_type, scenario.status === "succeeded" ? "script_execution_succeeded" : "script_execution_failed");
     assert.equal(JSON.parse(history.rows[0].new_value).requestedBy, "Sistema");
   }
@@ -402,10 +434,9 @@ test("conclusao fecha a execucao de automacao preventiva somente quando todos os
     return queueJob({ machineId: agent.machineId, queueOverrides: { automationRunId: runId } });
   }
   async function runState(runId) {
-    return (await query(
-      "SELECT status, result, log_summary, error_detected, finished_at FROM preventive_automation_runs WHERE id = $1",
-      [runId]
-    )).rows[0];
+    return (
+      await query("SELECT status, result, log_summary, error_detected, finished_at FROM preventive_automation_runs WHERE id = $1", [runId])
+    ).rows[0];
   }
   const finish = (jobId, exitCode) => postResult(baseUrl, agent.token, jobId, { exitCode });
 
@@ -452,21 +483,26 @@ test("conclusao fecha o plano preventivo por ativo e depois o plano inteiro", as
     const planId = randomUUID();
     await query("INSERT INTO preventive_plans (id, name, status) VALUES ($1, $2, 'running')", [planId, "Plano preventivo do teste"]);
     for (const machineId of machineIds) {
-      await query(
-        "INSERT INTO preventive_plan_assets (id, preventive_plan_id, asset_id, status) VALUES ($1, $2, $3, 'running')",
-        [randomUUID(), planId, machineId]
-      );
+      await query("INSERT INTO preventive_plan_assets (id, preventive_plan_id, asset_id, status) VALUES ($1, $2, $3, 'running')", [
+        randomUUID(),
+        planId,
+        machineId
+      ]);
     }
     return planId;
   }
-  const queueForPlan = (agent, planId) => queueJob({
-    machineId: agent.machineId,
-    logOverrides: { preventivePlanId: planId }
-  });
-  const planAsset = async (planId, machineId) => (await query(
-    "SELECT status, log, completed_at FROM preventive_plan_assets WHERE preventive_plan_id = $1 AND asset_id = $2",
-    [planId, machineId]
-  )).rows[0];
+  const queueForPlan = (agent, planId) =>
+    queueJob({
+      machineId: agent.machineId,
+      logOverrides: { preventivePlanId: planId }
+    });
+  const planAsset = async (planId, machineId) =>
+    (
+      await query("SELECT status, log, completed_at FROM preventive_plan_assets WHERE preventive_plan_id = $1 AND asset_id = $2", [
+        planId,
+        machineId
+      ])
+    ).rows[0];
   const planStatus = async (planId) => (await query("SELECT status FROM preventive_plans WHERE id = $1", [planId])).rows[0].status;
   const finish = (agent, jobId, exitCode) => postResult(baseUrl, agent.token, jobId, { exitCode });
 

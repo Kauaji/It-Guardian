@@ -15,7 +15,10 @@ const dangerousContentPatterns = [
   { pattern: /\bnet\s+localgroup\s+administrators\s+\S+\s+\/add\b/i, reason: "adicao de usuario ao grupo administradores" },
   { pattern: /\breg\s+add\s+["']?hklm[^\r\n]*\\run\b/i, reason: "persistencia via chave de registro Run" },
   { pattern: /\bschtasks\s+\/create\b/i, reason: "criacao de tarefa agendada (schtasks /create)" },
-  { pattern: /(?=[\s\S]*\binvoke-webrequest\b)(?=[\s\S]*\bstart-process\b)/i, reason: "download seguido de execucao (Invoke-WebRequest + Start-Process)" },
+  {
+    pattern: /(?=[\s\S]*\binvoke-webrequest\b)(?=[\s\S]*\bstart-process\b)/i,
+    reason: "download seguido de execucao (Invoke-WebRequest + Start-Process)"
+  },
   { pattern: /\b(curl|wget)\b[^\r\n]*\.exe\b/i, reason: "download de executavel externo (curl/wget para .exe)" },
   { pattern: /\bcertutil\s+.*-urlcache\b/i, reason: "download disfarcado via certutil -urlcache" },
   { pattern: /\bvssadmin\s+delete\s+shadows\b/i, reason: "exclusao de copias de sombra (vssadmin delete shadows)" },

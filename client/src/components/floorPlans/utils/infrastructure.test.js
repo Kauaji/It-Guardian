@@ -36,7 +36,11 @@ describe("getInfrastructurePeriodRange", () => {
 });
 
 describe("segmentos compativeis", () => {
-  const segments = [{ id: "a", groupId: "g1" }, { id: "b", groupId: "g2" }, { id: "c", groupId: null }];
+  const segments = [
+    { id: "a", groupId: "g1" },
+    { id: "b", groupId: "g2" },
+    { id: "c", groupId: null }
+  ];
 
   it("aceita segmentos sem grupo ou do mesmo grupo", () => {
     expect(isSegmentCompatibleWithGroup(segments[0], "g1")).toBe(true);
@@ -59,7 +63,12 @@ describe("filtros e fundo", () => {
   });
 
   it("escala o fundo proporcionalmente ao pavimento", () => {
-    expect(buildBackgroundScaleSettings({ opacity: 0.5 }, { width: 1000, height: 500 }, 1.5)).toEqual({ opacity: 0.5, scale: 1.5, width: 1500, height: 750 });
+    expect(buildBackgroundScaleSettings({ opacity: 0.5 }, { width: 1000, height: 500 }, 1.5)).toEqual({
+      opacity: 0.5,
+      scale: 1.5,
+      width: 1500,
+      height: 750
+    });
     expect(buildBackgroundScaleSettings({}, null, 1)).toMatchObject({ width: 1280, height: 820 });
   });
 

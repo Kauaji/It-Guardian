@@ -14,12 +14,7 @@ import { maxLengths } from "../../domain/maintenanceScripts/scriptVocabulary.js"
 import { notFoundError } from "../../lib/errors.js";
 import { trimString } from "../../lib/textUtils.js";
 import { queueAgentScriptJob } from "../agentScriptJobService.js";
-import {
-  addAlertComment,
-  findAlertById,
-  findServiceOrderSuggestionById,
-  getAlertSettings
-} from "../../repositories/alertRepository.js";
+import { addAlertComment, findAlertById, findServiceOrderSuggestionById, getAlertSettings } from "../../repositories/alertRepository.js";
 import { addAssetHistory } from "../../repositories/assetHistoryRepository.js";
 import { addLog } from "../../repositories/logRepository.js";
 import { findMaintenanceScriptById } from "../../repositories/maintenanceScripts/scriptCatalogRepository.js";
@@ -59,7 +54,10 @@ async function buildReusedResult({ suggestion, script }, validation) {
   return { suggestion, script, log, validation, reused: true };
 }
 
-async function recordSuggestionQueueAudit(db, { suggestion, script, assetId, job, validation, validationDue, validationWindowMinutes, user }) {
+async function recordSuggestionQueueAudit(
+  db,
+  { suggestion, script, assetId, job, validation, validationDue, validationWindowMinutes, user }
+) {
   const userName = user?.name || "Usuário";
 
   if (assetId) {
@@ -179,10 +177,7 @@ export async function useScriptFromSuggestion({ suggestionId, scriptId, payload 
   assertExecutionConfirmed(payload);
   assertRiskAcknowledged(script, payload, HIGH_RISK_USAGE_MESSAGE);
 
-  const validationWindowMinutes = clampValidationWindowMinutes(
-    payload.validationWindowMinutes,
-    settings.scriptValidationWindowMinutes
-  );
+  const validationWindowMinutes = clampValidationWindowMinutes(payload.validationWindowMinutes, settings.scriptValidationWindowMinutes);
   const alert = suggestion.alertId ? await findAlertById(suggestion.alertId) : null;
   const request = {
     suggestion,

@@ -1,9 +1,5 @@
 import { useMemo, useState } from "react";
-import {
-  buildSuggestionInfoModel,
-  buildVisibleSuggestions,
-  findSuggestionCodeIndex
-} from "../alertViewModel.js";
+import { buildSuggestionInfoModel, buildVisibleSuggestions, findSuggestionCodeIndex } from "../alertViewModel.js";
 
 // Lista de sugestoes visiveis (consolidadas por maquina) e o modal de detalhes.
 export default function useAlertSuggestions({ suggestions, devices, statusFilter, lookups, alertCorrelations }) {

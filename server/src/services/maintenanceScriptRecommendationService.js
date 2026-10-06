@@ -1,7 +1,4 @@
-import {
-  buildRecommendationContexts,
-  rankScriptsForContexts
-} from "../domain/maintenanceScripts/recommendationContexts.js";
+import { buildRecommendationContexts, rankScriptsForContexts } from "../domain/maintenanceScripts/recommendationContexts.js";
 import { toRecommendedScriptResponse } from "../domain/maintenanceScripts/recommendation.js";
 import { findAlertById, listAlerts } from "../repositories/alertRepository.js";
 import { listMaintenanceScripts } from "../repositories/maintenanceScripts/scriptCatalogRepository.js";

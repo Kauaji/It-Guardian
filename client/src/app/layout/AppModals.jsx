@@ -5,12 +5,7 @@ import ManualAssetForm from "../../components/inventory/ManualAssetForm.jsx";
 import SegmentFormModal from "../../components/inventory/SegmentFormModal.jsx";
 import SegmentGroupFormModal from "../../components/inventory/SegmentGroupFormModal.jsx";
 import { pickUnusedPaletteColor } from "../../components/inventory/inventoryLocalState.js";
-import {
-  useInventory,
-  useInventoryActions,
-  useNavigation,
-  useWorkspaceData
-} from "../context/workspaceContexts.js";
+import { useInventory, useInventoryActions, useNavigation, useWorkspaceData } from "../context/workspaceContexts.js";
 import { useSystemModeChange } from "../hooks/useSystemModeChange.js";
 
 // Modais globais do app (formularios do inventario e configuracoes gerais).

@@ -225,7 +225,11 @@ test("diagnostico: risco alto/critico reflete controle duplo por identidade e po
   });
   assert.equal(sameAuthorResult.status, 200);
   assert.equal(sameAuthorResult.json.diagnosis.script.riskRequiresSecondReviewer, true);
-  assert.equal(sameAuthorResult.json.diagnosis.script.secondReviewerSatisfied, false, "admin editou o script, nao pode ser o proprio segundo revisor");
+  assert.equal(
+    sameAuthorResult.json.diagnosis.script.secondReviewerSatisfied,
+    false,
+    "admin editou o script, nao pode ser o proprio segundo revisor"
+  );
   assert.equal(sameAuthorResult.json.diagnosis.userHasHighRiskApproval, true, "admin sempre tem todas as permissoes");
   assert.equal(sameAuthorResult.json.diagnosis.overallAvailable, false);
 

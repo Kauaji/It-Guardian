@@ -66,30 +66,59 @@ export default function AssetPublicView({ assetId }) {
           <div>
             <span>Ficha técnica IT Guardian</span>
             <h1>{machine.name}</h1>
-            <p>{machine.ip} - {machine.statusLabel} - {assetTypeLabel(machine.assetType)}</p>
+            <p>
+              {machine.ip} - {machine.statusLabel} - {assetTypeLabel(machine.assetType)}
+            </p>
           </div>
         </header>
 
         <div className="asset-public-metrics">
           {isManualAsset ? (
             <>
-              <article><AssetTypeIcon type={machine.assetType} size={16} />Tipo <strong>{assetTypeLabel(machine.assetType)}</strong></article>
-              <article><Clock3 size={16} />Último ping <strong>{formatDate(machine.lastPingAt)}</strong></article>
-              <article><Network size={16} />Status <strong>{machine.statusLabel}</strong></article>
-              <article><HardDrive size={16} />Patrimônio <strong>{hardware.assetTag}</strong></article>
+              <article>
+                <AssetTypeIcon type={machine.assetType} size={16} />
+                Tipo <strong>{assetTypeLabel(machine.assetType)}</strong>
+              </article>
+              <article>
+                <Clock3 size={16} />
+                Último ping <strong>{formatDate(machine.lastPingAt)}</strong>
+              </article>
+              <article>
+                <Network size={16} />
+                Status <strong>{machine.statusLabel}</strong>
+              </article>
+              <article>
+                <HardDrive size={16} />
+                Patrimônio <strong>{hardware.assetTag}</strong>
+              </article>
             </>
           ) : (
             <>
-              <article><Monitor size={16} />CPU <strong>{machine.metrics.cpu}%</strong></article>
-              <article><MemoryStick size={16} />RAM <strong>{machine.metrics.ram}%</strong></article>
-              <article><HardDrive size={16} />Disco <strong>{machine.metrics.disk}%</strong></article>
-              <article><Network size={16} />Rede <strong>{machine.metrics.networkInMbps} Mbps</strong></article>
+              <article>
+                <Monitor size={16} />
+                CPU <strong>{machine.metrics.cpu}%</strong>
+              </article>
+              <article>
+                <MemoryStick size={16} />
+                RAM <strong>{machine.metrics.ram}%</strong>
+              </article>
+              <article>
+                <HardDrive size={16} />
+                Disco <strong>{machine.metrics.disk}%</strong>
+              </article>
+              <article>
+                <Network size={16} />
+                Rede <strong>{machine.metrics.networkInMbps} Mbps</strong>
+              </article>
             </>
           )}
         </div>
 
         <div className="detail-grid">
-          <DetailItem label={isManualAsset ? "Tipo" : "Sistema operacional"} value={isManualAsset ? assetTypeLabel(machine.assetType) : hardware.os} />
+          <DetailItem
+            label={isManualAsset ? "Tipo" : "Sistema operacional"}
+            value={isManualAsset ? assetTypeLabel(machine.assetType) : hardware.os}
+          />
           <DetailItem label="Fabricante" value={hardware.manufacturer} />
           <DetailItem label="Modelo" value={hardware.model} />
           <DetailItem label="Serial" value={hardware.serialNumber} />
@@ -110,7 +139,9 @@ export default function AssetPublicView({ assetId }) {
           </section>
         )}
 
-        <button className="ghost-action print-action" onClick={() => window.print()}>Imprimir ficha</button>
+        <button className="ghost-action print-action" onClick={() => window.print()}>
+          Imprimir ficha
+        </button>
       </section>
     </main>
   );

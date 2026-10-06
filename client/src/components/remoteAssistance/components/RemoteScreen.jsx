@@ -30,7 +30,9 @@ function ScreenContent({ view, screen }) {
       icon={session.status === "active" ? <RefreshCw size={24} className="spin" /> : <ShieldCheck size={28} />}
       title={remoteAssistanceStatusLabel(connectionState)}
     >
-      {session.status === "waiting_consent" ? "Aguardando resposta na máquina." : "A imagem aparecerá quando o agente iniciar a transmissão."}
+      {session.status === "waiting_consent"
+        ? "Aguardando resposta na máquina."
+        : "A imagem aparecerá quando o agente iniciar a transmissão."}
     </RemoteWaitingState>
   );
 }

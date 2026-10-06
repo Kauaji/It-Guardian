@@ -17,9 +17,20 @@ describe("keepDragOverlayNearCursor", () => {
   };
 
   it("nao altera o transform de outros tipos de arraste ou sem dados do ponteiro", () => {
-    expect(keepDragOverlayNearCursor({ ...nodes, active: { data: { current: { type: "other" } } }, activatorEvent: {}, transform })).toBe(transform);
-    expect(keepDragOverlayNearCursor({ ...nodes, active: { data: { current: { type: "machine" } } }, activatorEvent: null, transform })).toBe(transform);
-    expect(keepDragOverlayNearCursor({ ...nodes, active: { data: { current: { type: "machine" } } }, activatorEvent: { clientX: "x" }, transform })).toBe(transform);
+    expect(keepDragOverlayNearCursor({ ...nodes, active: { data: { current: { type: "other" } } }, activatorEvent: {}, transform })).toBe(
+      transform
+    );
+    expect(
+      keepDragOverlayNearCursor({ ...nodes, active: { data: { current: { type: "machine" } } }, activatorEvent: null, transform })
+    ).toBe(transform);
+    expect(
+      keepDragOverlayNearCursor({
+        ...nodes,
+        active: { data: { current: { type: "machine" } } },
+        activatorEvent: { clientX: "x" },
+        transform
+      })
+    ).toBe(transform);
   });
 
   it("posiciona o overlay de ativo ao lado do cursor", () => {

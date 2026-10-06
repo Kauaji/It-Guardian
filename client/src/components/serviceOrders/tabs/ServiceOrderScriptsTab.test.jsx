@@ -10,7 +10,9 @@ vi.mock("../../maintenance/ScriptExecutionDiagnosticPanel.jsx", () => ({
 }));
 
 const scripts = {
-  recommended: [{ id: "sc1", name: "Limpar temp", riskLevel: "low", recommendationReason: "Disco cheio", estimatedSummary: "Remove arquivos" }],
+  recommended: [
+    { id: "sc1", name: "Limpar temp", riskLevel: "low", recommendationReason: "Disco cheio", estimatedSummary: "Remove arquivos" }
+  ],
   others: [{ id: "sc2", name: "Reiniciar spooler", riskLevel: "high", requiresAdmin: true, requiresLoggedUser: false }]
 };
 const agentAsset = { id: "dev-1", name: "PC-FIN-01", source: "agent", lastSeenAt: new Date().toISOString() };
@@ -18,7 +20,16 @@ const agentAsset = { id: "dev-1", name: "PC-FIN-01", source: "agent", lastSeenAt
 function renderTab(props = {}) {
   const handlers = { notify: vi.fn() };
   const view = render(
-    <ServiceOrderScriptsTab serviceOrder={makeOrder({ number: "OS-7" })} asset={agentAsset} token="tok" canManage canRegisterSimulation remoteScriptExecutionEnabled {...handlers} {...props} />
+    <ServiceOrderScriptsTab
+      serviceOrder={makeOrder({ number: "OS-7" })}
+      asset={agentAsset}
+      token="tok"
+      canManage
+      canRegisterSimulation
+      remoteScriptExecutionEnabled
+      {...handlers}
+      {...props}
+    />
   );
   return { ...view, ...handlers };
 }
@@ -70,9 +81,17 @@ describe("ServiceOrderScriptsTab", () => {
   });
 
   it.each([
-    ["OS finalizada", { serviceOrder: makeOrder({ closedAt: "2026-08-12T10:00:00.000Z" }) }, "Esta OS está finalizada. Reabra a OS para executar scripts."],
+    [
+      "OS finalizada",
+      { serviceOrder: makeOrder({ closedAt: "2026-08-12T10:00:00.000Z" }) },
+      "Esta OS está finalizada. Reabra a OS para executar scripts."
+    ],
     ["sem agente", { asset: { id: "dev-1" } }, "Esta máquina não possui agente registrado."],
-    ["agente desatualizado", { asset: { ...agentAsset, lastSeenAt: "2020-01-01T00:00:00.000Z" } }, "O agente desta máquina está offline ou desatualizado."],
+    [
+      "agente desatualizado",
+      { asset: { ...agentAsset, lastSeenAt: "2020-01-01T00:00:00.000Z" } },
+      "O agente desta máquina está offline ou desatualizado."
+    ],
     ["sem permissão", { canManage: false }, "Você não tem permissão para executar scripts nesta OS."]
   ])("bloqueia a execução real: %s", async (_name, props, message) => {
     await renderReady(props);
@@ -91,7 +110,9 @@ describe("ServiceOrderScriptsTab", () => {
 
   it("confirma e enfileira a execução, exigindo reconhecimento de risco alto", async () => {
     const { notify } = await renderReady();
-    api.fetchServiceOrderScriptActivity.mockResolvedValue({ activity: [{ id: "a1", scriptName: "Reiniciar spooler", status: "succeeded", executedAt: "2026-08-12T10:00:00.000Z" }] });
+    api.fetchServiceOrderScriptActivity.mockResolvedValue({
+      activity: [{ id: "a1", scriptName: "Reiniciar spooler", status: "succeeded", executedAt: "2026-08-12T10:00:00.000Z" }]
+    });
     click(screen.getAllByRole("button", { name: /Executar no agente/ })[1]);
     const dialog = screen.getByRole("dialog", { name: "Confirmar execução de script" });
     expect(within(dialog).getByRole("heading", { name: "Confirmar execução" })).toBeInTheDocument();
@@ -122,7 +143,11 @@ describe("ServiceOrderScriptsTab", () => {
   it("mostra 'Enviando...' e bloqueia cancelamento durante o envio", async () => {
     await renderReady();
     let finish;
-    api.useServiceOrderScript.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+    api.useServiceOrderScript.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      })
+    );
     click(screen.getAllByRole("button", { name: /Executar no agente/ })[0]);
     click(screen.getByRole("button", { name: "Confirmar execução" }));
     expect(screen.getByRole("button", { name: "Enviando..." })).toBeDisabled();
@@ -156,7 +181,10 @@ describe("ServiceOrderScriptsTab", () => {
     click(within(dialog).getByRole("button", { name: "Confirmar simulação" }));
     await waitFor(() => expect(notify).toHaveBeenCalledWith("Simulação registrada. Nenhum comando foi executado.", "success"));
     expect(api.registerMaintenanceScriptSimulation).toHaveBeenCalledWith("tok", "sc2", {
-      confirmed: true, riskAcknowledged: true, assetId: "dev-1", serviceOrderId: "os-1",
+      confirmed: true,
+      riskAcknowledged: true,
+      assetId: "dev-1",
+      serviceOrderId: "os-1",
       notes: "Simulação registrada pela aba Scripts da OS OS-7."
     });
     expect(api.useServiceOrderScript).not.toHaveBeenCalled();
@@ -202,12 +230,19 @@ describe("ServiceOrderScriptsTab", () => {
     cleanup();
     api.fetchServiceOrderScriptActivity.mockClear();
     renderTab();
-    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
     await vi.waitFor(() => expect(screen.queryByText("Carregando scripts...")).toBeNull());
     api.fetchServiceOrderScriptActivity.mockClear();
-    await act(async () => { vi.advanceTimersByTime(5000); });
+    await act(async () => {
+      vi.advanceTimersByTime(5000);
+    });
     expect(api.fetchServiceOrderScriptActivity).toHaveBeenCalledTimes(1);
-    await act(async () => { vi.advanceTimersByTime(5000 * 100); });
+    await act(async () => {
+      vi.advanceTimersByTime(5000 * 100);
+    });
     expect(api.fetchServiceOrderScriptActivity).toHaveBeenCalledTimes(90);
   });
 

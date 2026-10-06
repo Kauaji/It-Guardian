@@ -59,8 +59,19 @@ export function PointLayer({ points, selected, onPointerDown, onSelect }) {
           onSelect({ type: "point", id: point.id });
         }}
       >
-        <rect x={(point.x || 0) - 11} y={(point.y || 0) - 11} width="22" height="22" rx="5" fill="#ffffff" stroke={point.pointType === "power" ? "#d97706" : "#2563eb"} strokeWidth={pointSelected ? 4 : 2} />
-        <text x={(point.x || 0) - 4} y={(point.y || 0) + 5}>{point.pointType === "power" ? "E" : "R"}</text>
+        <rect
+          x={(point.x || 0) - 11}
+          y={(point.y || 0) - 11}
+          width="22"
+          height="22"
+          rx="5"
+          fill="#ffffff"
+          stroke={point.pointType === "power" ? "#d97706" : "#2563eb"}
+          strokeWidth={pointSelected ? 4 : 2}
+        />
+        <text x={(point.x || 0) - 4} y={(point.y || 0) + 5}>
+          {point.pointType === "power" ? "E" : "R"}
+        </text>
       </g>
     );
   });

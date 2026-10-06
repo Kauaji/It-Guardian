@@ -7,11 +7,7 @@ import {
   removeObjectsFromDraft,
   setObjectsLockedInDraft
 } from "../utils/entityMutations.js";
-import {
-  getActionObjectIds,
-  getPrimarySelection,
-  toggleIdInSelection
-} from "../utils/selectionActions.js";
+import { getActionObjectIds, getPrimarySelection, toggleIdInSelection } from "../utils/selectionActions.js";
 
 function isMultiSelectModifier(event) {
   return Boolean(event?.shiftKey || event?.ctrlKey || event?.metaKey);
@@ -23,9 +19,7 @@ function isMultiSelectModifier(event) {
  */
 export function useEntityActions({ doc, ui, notify }) {
   const { editor, activeFloorId, commitEditor } = doc;
-  const {
-    selected, setSelected, selectedObjectIds, setSelectedObjectIds, selectedTool, paintDraft
-  } = ui;
+  const { selected, setSelected, selectedObjectIds, setSelectedObjectIds, selectedTool, paintDraft } = ui;
 
   const removeEntity = (target) => {
     if (!target) return;
@@ -37,7 +31,7 @@ export function useEntityActions({ doc, ui, notify }) {
       }
     }
     commitEditor((draft) => removeEntityFromDraft(draft, target));
-    setSelected((current) => current?.type === target.type && current?.id === target.id ? null : current);
+    setSelected((current) => (current?.type === target.type && current?.id === target.id ? null : current));
     if (target.type === "object") {
       setSelectedObjectIds((current) => current.filter((id) => id !== target.id));
     }
@@ -71,7 +65,7 @@ export function useEntityActions({ doc, ui, notify }) {
         });
         return;
       }
-      setSelectedObjectIds((current) => current.includes(target.id) ? current : [target.id]);
+      setSelectedObjectIds((current) => (current.includes(target.id) ? current : [target.id]));
     } else {
       setSelectedObjectIds([]);
     }

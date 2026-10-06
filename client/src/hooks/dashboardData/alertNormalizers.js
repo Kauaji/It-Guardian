@@ -49,9 +49,7 @@ export function normalizeAlertRecord(alert = {}) {
     probableCause: formatDisplayText(alert.probableCause, ""),
     recommendedAction: formatDisplayText(alert.recommendedAction, ""),
     location: normalizeAlertLocation(alert.location),
-    checklist: Array.isArray(alert.checklist)
-      ? alert.checklist.map((item) => formatDisplayText(item, "Item"))
-      : [],
+    checklist: Array.isArray(alert.checklist) ? alert.checklist.map((item) => formatDisplayText(item, "Item")) : [],
     comments: Array.isArray(alert.comments)
       ? alert.comments.map((comment) => ({
           ...comment,

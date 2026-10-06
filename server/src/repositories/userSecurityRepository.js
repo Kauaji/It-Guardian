@@ -47,10 +47,7 @@ export async function getSecurityState(userId) {
 export async function recordFailedLogin(userId, { threshold, lockoutSeconds }) {
   return withTransaction(async (db) => {
     /** @type {QueryResult<{ failed_login_attempts: number | string | null, lockout_count: number | string | null }>} */
-    const current = await db(
-      "SELECT failed_login_attempts, lockout_count FROM users WHERE id = $1 FOR UPDATE",
-      [userId]
-    );
+    const current = await db("SELECT failed_login_attempts, lockout_count FROM users WHERE id = $1 FOR UPDATE", [userId]);
     if (!current.rows[0]) return { lockedUntil: null, attempts: 0 };
     const attempts = Number(current.rows[0].failed_login_attempts || 0) + 1;
     if (attempts < threshold) {
@@ -60,10 +57,11 @@ export async function recordFailedLogin(userId, { threshold, lockoutSeconds }) {
     const lockoutCount = Number(current.rows[0].lockout_count || 0);
     const seconds = lockoutSeconds[Math.min(lockoutCount, lockoutSeconds.length - 1)];
     const lockedUntil = new Date(Date.now() + seconds * 1000);
-    await db(
-      "UPDATE users SET failed_login_attempts = 0, lockout_count = $2, locked_until = $3 WHERE id = $1",
-      [userId, lockoutCount + 1, lockedUntil]
-    );
+    await db("UPDATE users SET failed_login_attempts = 0, lockout_count = $2, locked_until = $3 WHERE id = $1", [
+      userId,
+      lockoutCount + 1,
+      lockedUntil
+    ]);
     return { lockedUntil, attempts };
   });
 }
@@ -88,10 +86,7 @@ export async function recordSuccessfulLogin(userId) {
  * @returns {Promise<void>}
  */
 export async function clearLockout(userId) {
-  await query(
-    "UPDATE users SET failed_login_attempts = 0, lockout_count = 0, locked_until = NULL WHERE id = $1",
-    [userId]
-  );
+  await query("UPDATE users SET failed_login_attempts = 0, lockout_count = 0, locked_until = NULL WHERE id = $1", [userId]);
 }
 
 /**
@@ -129,10 +124,7 @@ export async function setUserPassword(userId, passwordHash, { mustChangePassword
  */
 export async function bumpTokenVersion(userId) {
   /** @type {QueryResult<{ token_version: number | string }>} */
-  const result = await query(
-    "UPDATE users SET token_version = token_version + 1 WHERE id = $1 RETURNING token_version",
-    [userId]
-  );
+  const result = await query("UPDATE users SET token_version = token_version + 1 WHERE id = $1 RETURNING token_version", [userId]);
   return result.rows[0] ? Number(result.rows[0].token_version) : null;
 }
 
@@ -214,10 +206,7 @@ export async function replaceRecoveryCodes(userId, codeHashes) {
   await withTransaction(async (db) => {
     await db("DELETE FROM user_recovery_codes WHERE user_id = $1", [userId]);
     for (const codeHash of codeHashes) {
-      await db(
-        "INSERT INTO user_recovery_codes (id, user_id, code_hash) VALUES ($1, $2, $3)",
-        [randomUUID(), userId, codeHash]
-      );
+      await db("INSERT INTO user_recovery_codes (id, user_id, code_hash) VALUES ($1, $2, $3)", [randomUUID(), userId, codeHash]);
     }
   });
 }
@@ -245,9 +234,6 @@ export async function consumeRecoveryCode(userId, codeHash) {
  */
 export async function countUnusedRecoveryCodes(userId) {
   /** @type {QueryResult<{ total: number }>} */
-  const result = await query(
-    "SELECT COUNT(*)::int AS total FROM user_recovery_codes WHERE user_id = $1 AND used_at IS NULL",
-    [userId]
-  );
+  const result = await query("SELECT COUNT(*)::int AS total FROM user_recovery_codes WHERE user_id = $1 AND used_at IS NULL", [userId]);
   return Number(result.rows[0]?.total || 0);
 }

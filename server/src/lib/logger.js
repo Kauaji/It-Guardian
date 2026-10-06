@@ -5,7 +5,8 @@ import { AsyncLocalStorage } from "node:async_hooks";
 
 /** @type {Record<string, number>} */
 const LEVELS = { debug: 10, info: 20, warn: 30, error: 40, silent: 100 };
-const SENSITIVE_KEY = /^(authorization|cookie|set-cookie|password|senha|token|secret|mfa_?token|recovery_?code|agent_?token|session_?token|viewer_?token|api_?key|dsn)$|(password|secret|token)$/i;
+const SENSITIVE_KEY =
+  /^(authorization|cookie|set-cookie|password|senha|token|secret|mfa_?token|recovery_?code|agent_?token|session_?token|viewer_?token|api_?key|dsn)$|(password|secret|token)$/i;
 const MAX_DEPTH = 4;
 
 /** @type {AsyncLocalStorage<{ requestId: string }>} */
@@ -68,7 +69,7 @@ function write(level, event, fields = {}) {
     event,
     time: new Date().toISOString(),
     ...(store?.requestId ? { requestId: store.requestId } : {}),
-    ...(/** @type {LogFields} */ (redact(fields)))
+    .../** @type {LogFields} */ (redact(fields))
   };
   const line = JSON.stringify(entry);
   if (level === "error") console.error(line);

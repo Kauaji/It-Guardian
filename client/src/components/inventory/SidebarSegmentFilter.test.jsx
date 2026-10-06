@@ -17,7 +17,9 @@ const devices = [
 
 function DndProbe({ onContext }) {
   const context = useDndContext();
-  useEffect(() => { onContext?.(context); }, [context, onContext]);
+  useEffect(() => {
+    onContext?.(context);
+  }, [context, onContext]);
   return null;
 }
 
@@ -45,22 +47,25 @@ function buttonForLabel(label) {
 }
 
 describe("SidebarSegmentFilter — manutenção independente", () => {
-  it.each(["Manutenção", "Manutencao", " manutenção ".toUpperCase()])("mostra %s fora dos grupos e exclui suas máquinas das contagens dos grupos", (name) => {
-    renderFilter({ segments: [regular, ungrouped, { ...maintenance, name }] });
-    const maintenanceButton = buttonForLabel(name.trim());
-    const groupButton = buttonForLabel("Escritório");
-    const ungroupedButton = buttonForLabel("Sem grupo");
+  it.each(["Manutenção", "Manutencao", " manutenção ".toUpperCase()])(
+    "mostra %s fora dos grupos e exclui suas máquinas das contagens dos grupos",
+    (name) => {
+      renderFilter({ segments: [regular, ungrouped, { ...maintenance, name }] });
+      const maintenanceButton = buttonForLabel(name.trim());
+      const groupButton = buttonForLabel("Escritório");
+      const ungroupedButton = buttonForLabel("Sem grupo");
 
-    expect(maintenanceButton.parentElement).toHaveClass("sidebar-segment-filter");
-    expect(maintenanceButton.closest(".sidebar-segment-group")).toBeNull();
-    expect(maintenanceButton.querySelector("small")).toHaveTextContent("2");
-    expect(groupButton.querySelector("small")).toHaveTextContent("1");
-    expect(ungroupedButton.querySelector("small")).toHaveTextContent("1");
-    expect(buttonForLabel("Todos").querySelector("small")).toHaveTextContent("4");
-    expect(within(groupButton.closest("section")).queryByText(name.trim())).not.toBeInTheDocument();
-    expect(within(ungroupedButton.closest("section")).queryByText(name.trim())).not.toBeInTheDocument();
-    expect(screen.getAllByText(name.trim())).toHaveLength(1);
-  });
+      expect(maintenanceButton.parentElement).toHaveClass("sidebar-segment-filter");
+      expect(maintenanceButton.closest(".sidebar-segment-group")).toBeNull();
+      expect(maintenanceButton.querySelector("small")).toHaveTextContent("2");
+      expect(groupButton.querySelector("small")).toHaveTextContent("1");
+      expect(ungroupedButton.querySelector("small")).toHaveTextContent("1");
+      expect(buttonForLabel("Todos").querySelector("small")).toHaveTextContent("4");
+      expect(within(groupButton.closest("section")).queryByText(name.trim())).not.toBeInTheDocument();
+      expect(within(ungroupedButton.closest("section")).queryByText(name.trim())).not.toBeInTheDocument();
+      expect(screen.getAllByText(name.trim())).toHaveLength(1);
+    }
+  );
 
   it("ignora o vínculo legado em segmentIds sem modificar os dados", () => {
     const segment = Object.freeze({ id: maintenance.id, name: maintenance.name });
@@ -129,16 +134,21 @@ describe("SidebarSegmentFilter — manutenção independente", () => {
     const context = onContext.mock.calls.at(-1)[0];
 
     expect(context.draggableNodes.get(`sidebar-segment-drag-${regular.id}`).data.current).toEqual({
-      type: "segment", segmentId: regular.id, origin: "sidebar"
+      type: "segment",
+      segmentId: regular.id,
+      origin: "sidebar"
     });
     expect(context.droppableContainers.get(`sidebar-segment-${regular.id}`).data.current).toEqual({
-      type: "sidebar-segment", segmentId: regular.id
+      type: "sidebar-segment",
+      segmentId: regular.id
     });
     expect(context.droppableContainers.get(`sidebar-segment-${maintenance.id}`).data.current).toEqual({
-      type: "sidebar-segment", segmentId: maintenance.id
+      type: "sidebar-segment",
+      segmentId: maintenance.id
     });
     expect(context.droppableContainers.get(`sidebar-group-${group.id}`).data.current).toEqual({
-      type: "sidebar-segment-group-drop", groupId: group.id
+      type: "sidebar-segment-group-drop",
+      groupId: group.id
     });
     expect(context.droppableContainers.get("sidebar-group-ungrouped").data.current.groupId).toBe("");
     expect(buttonForLabel("Estações").querySelector(".sidebar-segment-drag-handle")).toHaveAttribute("aria-disabled", "false");

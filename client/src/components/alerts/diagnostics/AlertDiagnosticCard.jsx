@@ -17,12 +17,30 @@ import AlertCommentBox from "./AlertCommentBox.jsx";
 function MetricsList({ alert }) {
   return (
     <dl>
-      <div><dt>Valor atual</dt><dd>{formatAlertValue(alert)}</dd></div>
-      <div><dt>Limite</dt><dd>{formatAlertThreshold(alert)}</dd></div>
-      <div><dt>Ocorrências</dt><dd>{alert.occurrencesCount || 1}</dd></div>
-      <div><dt>Confiança</dt><dd>{formatDisplayText(alert.confidenceLevel, getAlertConfidence(alert))}</dd></div>
-      <div><dt>Tendência</dt><dd>{formatDisplayText(alert.trend, getAlertTrend(alert))}</dd></div>
-      <div><dt>Score</dt><dd>{Math.round(alert.recurrenceScore || 0) || "N/D"}</dd></div>
+      <div>
+        <dt>Valor atual</dt>
+        <dd>{formatAlertValue(alert)}</dd>
+      </div>
+      <div>
+        <dt>Limite</dt>
+        <dd>{formatAlertThreshold(alert)}</dd>
+      </div>
+      <div>
+        <dt>Ocorrências</dt>
+        <dd>{alert.occurrencesCount || 1}</dd>
+      </div>
+      <div>
+        <dt>Confiança</dt>
+        <dd>{formatDisplayText(alert.confidenceLevel, getAlertConfidence(alert))}</dd>
+      </div>
+      <div>
+        <dt>Tendência</dt>
+        <dd>{formatDisplayText(alert.trend, getAlertTrend(alert))}</dd>
+      </div>
+      <div>
+        <dt>Score</dt>
+        <dd>{Math.round(alert.recurrenceScore || 0) || "N/D"}</dd>
+      </div>
     </dl>
   );
 }
@@ -33,7 +51,9 @@ function AlertComments({ alert, comments, commentBox }) {
       <strong>Comentários internos</strong>
       {comments.slice(-2).map((comment) => (
         <p key={comment.id}>
-          <span>{formatDisplayText(comment.userName, "Usuário")} · {formatDate(comment.createdAt)}</span>
+          <span>
+            {formatDisplayText(comment.userName, "Usuário")} · {formatDate(comment.createdAt)}
+          </span>
           {getSafeCommentMessage(comment)}
         </p>
       ))}
@@ -62,25 +82,41 @@ export default function AlertDiagnosticCard({ alert, commentBox }) {
         <div>
           <span>{formatDisplayText(alert.category, getAlertCategory(alert))}</span>
           <h3>{lookups.getResolvedAlertTitle(alert)}</h3>
-          <small>{lookups.getAlertMachineLabel(alert)} · {location.groupName} · {location.segmentName}</small>
+          <small>
+            {lookups.getAlertMachineLabel(alert)} · {location.groupName} · {location.segmentName}
+          </small>
         </div>
         <span className={`pill ${alert.severity === "critical" ? "danger" : "warning"}`}>
           {alert.severity === "critical" ? "Crítico" : "Atenção"}
         </span>
       </header>
       <MetricsList alert={alert} />
-      <p><strong>Motivo da prioridade:</strong> {formatDisplayText(alert.priorityReason, "Prioridade definida pela regra atual do aviso.")}</p>
-      <p><strong>Impacto:</strong> {formatDisplayText(alert.operationalImpact, getAlertImpact(alert))}</p>
-      <p><strong>Causa provável:</strong> {formatDisplayText(alert.probableCause, getAlertProbableCause(alert))}</p>
-      <p><strong>Ação recomendada:</strong> {formatDisplayText(alert.recommendedAction, getAlertRecommendedAction(alert))}</p>
+      <p>
+        <strong>Motivo da prioridade:</strong> {formatDisplayText(alert.priorityReason, "Prioridade definida pela regra atual do aviso.")}
+      </p>
+      <p>
+        <strong>Impacto:</strong> {formatDisplayText(alert.operationalImpact, getAlertImpact(alert))}
+      </p>
+      <p>
+        <strong>Causa provável:</strong> {formatDisplayText(alert.probableCause, getAlertProbableCause(alert))}
+      </p>
+      <p>
+        <strong>Ação recomendada:</strong> {formatDisplayText(alert.recommendedAction, getAlertRecommendedAction(alert))}
+      </p>
       {alert.recurrenceInsight && (
-        <p><strong>Reincidência:</strong> {getSafeSummary(alert.recurrenceInsight)}</p>
+        <p>
+          <strong>Reincidência:</strong> {getSafeSummary(alert.recurrenceInsight)}
+        </p>
       )}
       {alert.falsePositiveInsight && (
-        <p><strong>Possível falso positivo:</strong> {getSafeSummary(alert.falsePositiveInsight)}</p>
+        <p>
+          <strong>Possível falso positivo:</strong> {getSafeSummary(alert.falsePositiveInsight)}
+        </p>
       )}
       {alert.capacityForecast?.summary && (
-        <p><strong>Capacidade:</strong> {getSafeSummary(alert.capacityForecast)}</p>
+        <p>
+          <strong>Capacidade:</strong> {getSafeSummary(alert.capacityForecast)}
+        </p>
       )}
       {!!checklist.length && (
         <div className="alert-checklist">

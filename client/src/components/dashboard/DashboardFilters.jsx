@@ -15,7 +15,9 @@ export default function DashboardFilters({ period, onChangePeriod, onRefresh, re
         <span className="sr-only">Período do resumo</span>
         <select value={period} onChange={(event) => onChangePeriod(event.target.value)}>
           {periods.map((item) => (
-            <option key={item.value} value={item.value}>{item.label}</option>
+            <option key={item.value} value={item.value}>
+              {item.label}
+            </option>
           ))}
         </select>
       </label>

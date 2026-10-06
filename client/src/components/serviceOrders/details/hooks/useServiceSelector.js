@@ -48,17 +48,16 @@ export function useServiceSelector({ serviceOrder, services, businessMode, setDr
       ...current,
       servicePerformed: service.name,
       serviceValue: businessMode
-        ? (!parseCurrency(current.serviceValue) && service.defaultValue != null
+        ? !parseCurrency(current.serviceValue) && service.defaultValue != null
           ? String(service.defaultValue)
-          : current.serviceValue)
+          : current.serviceValue
         : "0"
     }));
   }
 
   function confirmService() {
     const typedService = search.trim();
-    const matchedService = services.find((service) => service.id === selectedServiceId)
-      || findServiceByName(services, typedService);
+    const matchedService = services.find((service) => service.id === selectedServiceId) || findServiceByName(services, typedService);
     if (matchedService) {
       selectService(matchedService);
       return;

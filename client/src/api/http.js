@@ -113,12 +113,7 @@ export async function apiFetch(path, { token, ...options } = {}) {
   if (!response.ok) {
     const message = data.message || "Request failed";
 
-    if (
-      response.status === 401 &&
-      token &&
-      /token|sess/i.test(message) &&
-      typeof window !== "undefined"
-    ) {
+    if (response.status === 401 && token && /token|sess/i.test(message) && typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("it-guardian:auth-expired", { detail: { message } }));
     }
 

@@ -7,48 +7,138 @@ import MachineDetailsModal from "./MachineDetailsModal.jsx";
 vi.mock("../../api.js", () => ({ fetchAssetTimeline: vi.fn(), fetchDeviceMetricHistory: vi.fn() }));
 vi.mock("qrcode", () => ({ default: { toDataURL: vi.fn(async () => "data:image/png;base64,AAA") } }));
 vi.mock("../remoteAssistance/RemoteAssistanceAction.jsx", () => ({
-  default: ({ asset, alias }) => <span data-testid="remote">{asset?.id}|{alias}</span>
+  default: ({ asset, alias }) => (
+    <span data-testid="remote">
+      {asset?.id}|{alias}
+    </span>
+  )
 }));
 
 const agentMachine = {
-  id: "a1", name: "PC-AGENTE", ip: "10.0.0.5", source: "agent", dataSources: ["agent", "ocs"], assetType: "desktop", status: "offline", statusLabel: "Offline",
-  uptimeHours: 12, lastSeenAt: "2026-01-02T10:00:00Z", isBackup: false, backupStatus: "available",
-  sourceCollections: { agent: "2026-01-02T10:00:00Z", ocs: "2026-01-01T10:00:00Z", zabbix: null }, sourceConflicts: [{ field: "ip" }],
+  id: "a1",
+  name: "PC-AGENTE",
+  ip: "10.0.0.5",
+  source: "agent",
+  dataSources: ["agent", "ocs"],
+  assetType: "desktop",
+  status: "offline",
+  statusLabel: "Offline",
+  uptimeHours: 12,
+  lastSeenAt: "2026-01-02T10:00:00Z",
+  isBackup: false,
+  backupStatus: "available",
+  sourceCollections: { agent: "2026-01-02T10:00:00Z", ocs: "2026-01-01T10:00:00Z", zabbix: null },
+  sourceConflicts: [{ field: "ip" }],
   automationIndicators: [{ id: "i1", label: "Auto", status: "ok" }],
   metrics: { cpu: 91, ram: 75, disk: 10 },
-  alerts: [{ id: "al1", status: "active", severity: "critical", title: "CPU alta", description: "CPU 91%", startedAt: "2026-01-02T09:00:00Z", metric: "cpu", value: "91%", limit: "85%" }, { id: "al2", status: "resolved" }],
-  assetHistory: [{ id: "h1", change: "Alerta resolvido: RAM normal", detectedAt: "2026-01-01T12:00:00Z", field: "ram", newValue: "40%", oldValue: "90%" }],
-  agent: { lastSeenAt: "2026-01-02T10:00:00Z", agentVersion: "1.2.3", diskFreeBytes: 5 * 1024 ** 3, diskTotalBytes: 500 * 1024 ** 3, memoryTotalBytes: 16 * 1024 ** 3, uptimeSeconds: 90000, loggedUser: "ana", intervalSeconds: 60, macAddress: "AA:BB", hostname: "pc-agente" },
+  alerts: [
+    {
+      id: "al1",
+      status: "active",
+      severity: "critical",
+      title: "CPU alta",
+      description: "CPU 91%",
+      startedAt: "2026-01-02T09:00:00Z",
+      metric: "cpu",
+      value: "91%",
+      limit: "85%"
+    },
+    { id: "al2", status: "resolved" }
+  ],
+  assetHistory: [
+    { id: "h1", change: "Alerta resolvido: RAM normal", detectedAt: "2026-01-01T12:00:00Z", field: "ram", newValue: "40%", oldValue: "90%" }
+  ],
+  agent: {
+    lastSeenAt: "2026-01-02T10:00:00Z",
+    agentVersion: "1.2.3",
+    diskFreeBytes: 5 * 1024 ** 3,
+    diskTotalBytes: 500 * 1024 ** 3,
+    memoryTotalBytes: 16 * 1024 ** 3,
+    uptimeSeconds: 90000,
+    loggedUser: "ana",
+    intervalSeconds: 60,
+    macAddress: "AA:BB",
+    hostname: "pc-agente"
+  },
   hardware: {
-    architecture: "x64", assetTag: "PAT-1", os: "Windows 11", osVersion: "23H2", manufacturer: "Dell", model: "Optiplex", serialNumber: "SN1",
-    cpuModel: "i7", cpuDetails: { name: "Intel i7", logicalProcessors: 16, maxClockMhz: 4700, virtualizationEnabled: false },
-    ramGb: 16, memoryHealth: { status: "OK", moduleDetails: [{ bank: "A1", status: "OK", capacityGb: 8, speedMhz: 3200, manufacturer: "Kingston" }, { capacityGb: 8 }] },
+    architecture: "x64",
+    assetTag: "PAT-1",
+    os: "Windows 11",
+    osVersion: "23H2",
+    manufacturer: "Dell",
+    model: "Optiplex",
+    serialNumber: "SN1",
+    cpuModel: "i7",
+    cpuDetails: { name: "Intel i7", logicalProcessors: 16, maxClockMhz: 4700, virtualizationEnabled: false },
+    ramGb: 16,
+    memoryHealth: {
+      status: "OK",
+      moduleDetails: [{ bank: "A1", status: "OK", capacityGb: 8, speedMhz: 3200, manufacturer: "Kingston" }, { capacityGb: 8 }]
+    },
     graphics: [{ name: "RTX", status: "OK", memoryBytes: 8 * 1024 ** 3, resolution: "1920x1080" }, {}],
     motherboard: { manufacturer: "Dell", product: "X" },
     disks: [{ label: "C:", sizeGb: 500, type: "SSD", smartStatus: "OK", healthPercent: 90, temperatureC: 40 }, { type: "HDD" }],
     battery: { name: "Bat", chargePercent: 80, estimatedMinutes: 120 },
     licenses: { windowsKey: "W-KEY" },
-    software: ["Chrome", { name: "Office", version: "16", manufacturer: "MS", installedAt: "2025-01-01T00:00:00Z" }, { title: "Zoom", publisher: "ZoomCo" }, {}],
+    software: [
+      "Chrome",
+      { name: "Office", version: "16", manufacturer: "MS", installedAt: "2025-01-01T00:00:00Z" },
+      { title: "Zoom", publisher: "ZoomCo" },
+      {}
+    ],
     networkAdapters: [{ name: "Ethernet" }, { name: "Wi-Fi" }, {}],
     peripherals: [{ id: "p1", type: "Monitor", brand: "LG", model: "24", assetTag: "M1" }],
     changeHistory: [{ id: "c1", message: "Valor voltou ao normal", createdAt: "2026-01-01T00:00:00Z" }]
   }
 };
 const manualMachine = {
-  id: "m1", name: "SW-CORE", ip: "10.0.0.2", source: "manual", assetType: "switch", status: "online", statusLabel: "Online", segmentName: "Manutenção",
-  isBackup: true, backupStatus: "in_use", lastPingAt: "2026-01-02T09:00:00Z",
-  manualAsset: { identificationMode: "fixed_ip", assetTag: "NET-1", location: "Sala 1", hostname: "sw-core" }, hardware: { macAddress: "AA:11" }
+  id: "m1",
+  name: "SW-CORE",
+  ip: "10.0.0.2",
+  source: "manual",
+  assetType: "switch",
+  status: "online",
+  statusLabel: "Online",
+  segmentName: "Manutenção",
+  isBackup: true,
+  backupStatus: "in_use",
+  lastPingAt: "2026-01-02T09:00:00Z",
+  manualAsset: { identificationMode: "fixed_ip", assetTag: "NET-1", location: "Sala 1", hostname: "sw-core" },
+  hardware: { macAddress: "AA:11" }
 };
 const monitoredMachine = {
-  id: "z1", name: "SRV-ZBX", ip: "10.0.0.9", source: "zabbix", assetType: "server", status: "problem", statusLabel: "Problema", uptimeHours: 100,
-  metrics: { cpu: 10, ram: 72, disk: null, networkInMbps: 1, networkOutMbps: 2 }, hardware: { disks: [{ health: "Saudável" }] }
+  id: "z1",
+  name: "SRV-ZBX",
+  ip: "10.0.0.9",
+  source: "zabbix",
+  assetType: "server",
+  status: "problem",
+  statusLabel: "Problema",
+  uptimeHours: 100,
+  metrics: { cpu: 10, ram: 72, disk: null, networkInMbps: 1, networkOutMbps: 2 },
+  hardware: { disks: [{ health: "Saudável" }] }
 };
 
 function handlers() {
   return {
-    token: "t", user: { id: "u" }, notify: vi.fn(), alias: "Apelido", observations: [], segmentColor: "#ff0000", userName: "Ana",
-    onAliasSave: vi.fn(), onAddObservation: vi.fn(), onChangeDeviceType: vi.fn(), onRefreshPing: vi.fn(), onPutMaintenance: vi.fn(), onToggleBackup: vi.fn(),
-    onRemoveMachine: vi.fn(), onAddPeripheral: vi.fn(), onRemovePeripheral: vi.fn(), onOpenNetworkMap: vi.fn(), onClose: vi.fn()
+    token: "t",
+    user: { id: "u" },
+    notify: vi.fn(),
+    alias: "Apelido",
+    observations: [],
+    segmentColor: "#ff0000",
+    userName: "Ana",
+    onAliasSave: vi.fn(),
+    onAddObservation: vi.fn(),
+    onChangeDeviceType: vi.fn(),
+    onRefreshPing: vi.fn(),
+    onPutMaintenance: vi.fn(),
+    onToggleBackup: vi.fn(),
+    onRemoveMachine: vi.fn(),
+    onAddPeripheral: vi.fn(),
+    onRemovePeripheral: vi.fn(),
+    onOpenNetworkMap: vi.fn(),
+    onClose: vi.fn()
   };
 }
 
@@ -56,7 +146,9 @@ async function renderModal(machine, overrides = {}) {
   const props = { machine, canManage: true, ...handlers(), ...overrides };
   const user = userEvent.setup();
   const utils = render(<MachineDetailsModal {...props} />);
-  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
   return { props, user, ...utils };
 }
 const tab = (name) => screen.getByRole("button", { name });
@@ -84,7 +176,9 @@ describe("MachineDetailsModal — estrutura", () => {
     expect(screen.getByRole("heading", { level: 2, name: "Apelido" })).toBeInTheDocument();
     expect(screen.getByText("PC-AGENTE - 10.0.0.5")).toBeInTheDocument();
     expect(screen.getByTestId("remote")).toHaveTextContent("a1|Apelido");
-    const names = within(screen.getByRole("navigation", { name: "Detalhes da máquina" })).getAllByRole("button").map((button) => button.textContent);
+    const names = within(screen.getByRole("navigation", { name: "Detalhes da máquina" }))
+      .getAllByRole("button")
+      .map((button) => button.textContent);
     expect(names).toEqual(["Geral", "Alertas", "Hardware", "Softwares", "Rede", "Periféricos", "Observações", "Prontuário Técnico"]);
   });
 
@@ -203,7 +297,16 @@ describe("MachineDetailsModal — demais abas", () => {
   it("mostra todas as seções de hardware", async () => {
     const { user } = await renderModal(agentMachine);
     await user.click(tab("Hardware"));
-    for (const title of ["Sistema e equipamento", "Processador", "Memória", "Vídeo", "Placa-mãe", "Armazenamento", "Energia", "Licenciamento"]) {
+    for (const title of [
+      "Sistema e equipamento",
+      "Processador",
+      "Memória",
+      "Vídeo",
+      "Placa-mãe",
+      "Armazenamento",
+      "Energia",
+      "Licenciamento"
+    ]) {
       expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
     }
     expect(screen.getByText("Kingston")).toBeInTheDocument();
@@ -277,11 +380,15 @@ describe("MachineDetailsModal — demais abas", () => {
   });
 
   it("carrega o prontuário técnico e as observações", async () => {
-    const { user, props } = await renderModal(agentMachine, { observations: [{ id: "o1", text: "Troca de pasta térmica", author: "ana", createdAt: "2026-01-01T00:00:00Z" }] });
+    const { user, props } = await renderModal(agentMachine, {
+      observations: [{ id: "o1", text: "Troca de pasta térmica", author: "ana", createdAt: "2026-01-01T00:00:00Z" }]
+    });
     await user.click(tab("Observações"));
     expect(screen.getByText("Troca de pasta térmica")).toBeInTheDocument();
     await user.click(tab("Prontuário Técnico"));
-    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
     expect(api.fetchAssetTimeline).toHaveBeenCalledWith("t", "a1", expect.any(Object));
     expect(props.onOpenNetworkMap).not.toHaveBeenCalled();
   });

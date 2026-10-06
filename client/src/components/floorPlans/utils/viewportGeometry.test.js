@@ -40,7 +40,12 @@ describe("zoomViewBoxAtPoint", () => {
   });
 
   it("limita o zoom entre 20% e 140% do pavimento", () => {
-    const tooClose = zoomViewBoxAtPoint({ viewBox: { x: 0, y: 0, width: 210, height: 105 }, floorSize, pointer: { x: 0, y: 0 }, factor: 0.1 });
+    const tooClose = zoomViewBoxAtPoint({
+      viewBox: { x: 0, y: 0, width: 210, height: 105 },
+      floorSize,
+      pointer: { x: 0, y: 0 },
+      factor: 0.1
+    });
     expect(tooClose.width).toBe(200);
     expect(tooClose.height).toBe(100);
     const tooFar = zoomViewBoxAtPoint({ viewBox: getBaseViewBox(floorSize), floorSize, pointer: { x: 500, y: 250 }, factor: 10 });

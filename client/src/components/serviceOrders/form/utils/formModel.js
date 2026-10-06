@@ -52,16 +52,16 @@ export function buildInitialForm(serviceOrderSettings) {
 /** Inclui ou remove um tecnico; o primeiro da lista passa a ser o principal. */
 export function toggleTechnician(form, name) {
   const selected = form.assignedTechnicianNames || [];
-  const assignedTechnicianNames = selected.includes(name)
-    ? selected.filter((item) => item !== name)
-    : [...selected, name];
+  const assignedTechnicianNames = selected.includes(name) ? selected.filter((item) => item !== name) : [...selected, name];
   return { ...form, assignedTechnicianNames, assignedTechnicianName: assignedTechnicianNames[0] || "" };
 }
 
 export function resolveSector(availableSectors, sectorId) {
-  return availableSectors.find((sector) => sector.id === sectorId)
-    || availableSectors.find((sector) => sector.name === "Geral")
-    || availableSectors[0];
+  return (
+    availableSectors.find((sector) => sector.id === sectorId) ||
+    availableSectors.find((sector) => sector.name === "Geral") ||
+    availableSectors[0]
+  );
 }
 
 /** Mensagem do primeiro campo invalido, ou "" quando o formulario pode ser enviado. */
@@ -93,8 +93,6 @@ export function buildSubmitPayload({ form, fields, businessMode, selectedClient,
     notes: "",
     sectorId: selectedSector?.id || GENERAL_SECTOR_ID,
     sectorName: selectedSector?.name || "Geral",
-    environmentName: businessMode
-      ? selectedClient?.tradeName || selectedClient?.legalName || ""
-      : selectedEnvironment?.name || ""
+    environmentName: businessMode ? selectedClient?.tradeName || selectedClient?.legalName || "" : selectedEnvironment?.name || ""
   };
 }

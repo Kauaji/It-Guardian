@@ -94,18 +94,15 @@ async function startActiveSession(baseUrl, cookie, enrollmentToken, machineId) {
   const pendingSession = (await pending.json()).session;
   assert.equal(pendingSession.id, session.id);
 
-  const consent = await fetch(
-    `${baseUrl}/api/agents/remote-assistance/sessions/${session.id}/consent`,
-    {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${enrollmentToken}`,
-        "x-remote-session-token": pendingSession.sessionToken,
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({ granted: true, controlAllowed: false, monitors: [], selectedMonitorId: null })
-    }
-  );
+  const consent = await fetch(`${baseUrl}/api/agents/remote-assistance/sessions/${session.id}/consent`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${enrollmentToken}`,
+      "x-remote-session-token": pendingSession.sessionToken,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({ granted: true, controlAllowed: false, monitors: [], selectedMonitorId: null })
+  });
   assert.equal(consent.status, 200);
   return { sessionId: session.id, viewerToken, agentSessionToken: pendingSession.sessionToken };
 }
@@ -166,10 +163,9 @@ test("com relay proprio configurado, agente reporta id e tecnico revela credenci
   const cookie = await login(baseUrl);
   const { sessionId, viewerToken } = await startActiveSession(baseUrl, cookie, enrollment.token, machineId);
 
-  const credentials = await fetch(
-    `${baseUrl}/api/remote-assistance/sessions/${sessionId}/rustdesk-credentials`,
-    { headers: browserHeaders(cookie, { "x-remote-viewer-token": viewerToken }) }
-  );
+  const credentials = await fetch(`${baseUrl}/api/remote-assistance/sessions/${sessionId}/rustdesk-credentials`, {
+    headers: browserHeaders(cookie, { "x-remote-viewer-token": viewerToken })
+  });
   assert.equal(credentials.status, 200);
   const credentialsBody = await credentials.json();
   assert.equal(credentialsBody.rustdeskId, "987654321");
@@ -193,9 +189,8 @@ test("com relay proprio configurado, agente reporta id e tecnico revela credenci
   // Encerrar a sessao invalida o proprio viewer token (nao so o status) --
   // uma tentativa de reler a credencial com o token antigo cai em 401 antes
   // mesmo de chegar na checagem de sessao ativa.
-  const credentialsAfterEnd = await fetch(
-    `${baseUrl}/api/remote-assistance/sessions/${sessionId}/rustdesk-credentials`,
-    { headers: browserHeaders(cookie, { "x-remote-viewer-token": viewerToken }) }
-  );
+  const credentialsAfterEnd = await fetch(`${baseUrl}/api/remote-assistance/sessions/${sessionId}/rustdesk-credentials`, {
+    headers: browserHeaders(cookie, { "x-remote-viewer-token": viewerToken })
+  });
   assert.equal(credentialsAfterEnd.status, 401);
 });

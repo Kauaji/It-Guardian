@@ -6,11 +6,7 @@ import { badRequest, forbidden, tooManyRequests, unauthorized } from "../lib/err
 import { authEvents } from "../lib/metrics.js";
 import { query, withTransaction } from "../database.js";
 import { addLog } from "../repositories/logRepository.js";
-import {
-  findUserByEmail,
-  findUserById,
-  toPublicUser
-} from "../repositories/userRepository.js";
+import { findUserByEmail, findUserById, toPublicUser } from "../repositories/userRepository.js";
 import {
   claimMfaStep,
   consumeRecoveryCode,
@@ -21,12 +17,7 @@ import {
 } from "../repositories/userSecurityRepository.js";
 import { hashPassword, burnPasswordComparison, passwordNeedsRehash, verifyPassword } from "../security/passwordHasher.js";
 import { openSecret } from "../security/secretBox.js";
-import {
-  issueMfaChallengeToken,
-  revokeAllSessions,
-  startSession,
-  verifyMfaChallengeToken
-} from "./sessionService.js";
+import { issueMfaChallengeToken, revokeAllSessions, startSession, verifyMfaChallengeToken } from "./sessionService.js";
 
 /** @import { QueryResult } from "pg" */
 /** @import { AuthSession, PublicUser, RequestContext, User } from "../types/identity.js" */
@@ -114,7 +105,9 @@ function assertSetupAllowed(setupToken) {
 export async function registerFirstAdmin({ name, email, password, setupToken }, context = {}) {
   assertSetupAllowed(setupToken);
   const cleanName = String(name || "").trim();
-  const cleanEmail = String(email || "").trim().toLowerCase();
+  const cleanEmail = String(email || "")
+    .trim()
+    .toLowerCase();
   if (!cleanName || !cleanEmail || !cleanEmail.includes("@")) {
     throw badRequest("Informe nome, e-mail válido e senha.");
   }
@@ -126,9 +119,7 @@ export async function registerFirstAdmin({ name, email, password, setupToken }, 
       await db("SELECT pg_advisory_xact_lock($1)", [813_724_602]);
     }
     /** @type {QueryResult<{ total: number }>} */
-    const admins = await db(
-      "SELECT COUNT(*)::int AS total FROM users WHERE active = TRUE AND (role = 'admin' OR is_admin = TRUE)"
-    );
+    const admins = await db("SELECT COUNT(*)::int AS total FROM users WHERE active = TRUE AND (role = 'admin' OR is_admin = TRUE)");
     if (Number(admins.rows[0]?.total || 0) > 0) return null;
     /** @type {QueryResult<{ id: string }>} */
     const inserted = await db(
@@ -218,7 +209,10 @@ export async function authenticateWithCredentials({ email, password }, context =
   if (!user || user.active === false) {
     await burnPasswordComparison(password);
     await auditAuth("auth_login_failed", "Falha de login (usuário desconhecido ou inativo).", null, context, {
-      email: String(email || "").trim().toLowerCase().slice(0, 120)
+      email: String(email || "")
+        .trim()
+        .toLowerCase()
+        .slice(0, 120)
     });
     throw invalidCredentials();
   }

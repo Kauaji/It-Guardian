@@ -16,17 +16,23 @@ export function buildPrintDocument({
   totalValue
 }) {
   const itemsRows = serviceItems.length
-    ? serviceItems.map((item) => `
+    ? serviceItems
+        .map(
+          (item) => `
           <tr>
             <td>${escapeHtml(item.productName)}</td>
             <td>${escapeHtml(item.quantity)}</td>
             <td>${escapeHtml(formatCurrency(item.unitPrice))}</td>
             <td>${escapeHtml(formatCurrency(item.subtotal))}</td>
           </tr>
-        `).join("")
+        `
+        )
+        .join("")
     : `<tr><td colspan="4">Sem peças/produtos com valor registrados.</td></tr>`;
 
-  const financialSection = (businessMode || serviceValueNumber || partsTotal || serviceItems.length) ? `
+  const financialSection =
+    businessMode || serviceValueNumber || partsTotal || serviceItems.length
+      ? `
       <section>
         <h2>Valores</h2>
         <div class="totals">
@@ -46,7 +52,8 @@ export function buildPrintDocument({
           <tbody>${itemsRows}</tbody>
         </table>
       </section>
-    ` : "";
+    `
+      : "";
 
   return `
       <!doctype html>
@@ -101,11 +108,19 @@ export function buildPrintDocument({
           </section>
           <section>
             <h2>Atendimento</h2>
-            <div class="text">${escapeHtml([
-              draft.servicePerformed || serviceOrder.servicePerformed ? `Serviço realizado: ${draft.servicePerformed || serviceOrder.servicePerformed}` : "",
-              draft.diagnosis || serviceOrder.diagnosis ? `Diagnóstico: ${draft.diagnosis || serviceOrder.diagnosis}` : "",
-              draft.attendanceNotes || serviceOrder.attendanceNotes ? `Observações: ${draft.attendanceNotes || serviceOrder.attendanceNotes}` : ""
-            ].filter(Boolean).join("\n\n") || "Sem atendimento registrado.")}</div>
+            <div class="text">${escapeHtml(
+              [
+                draft.servicePerformed || serviceOrder.servicePerformed
+                  ? `Serviço realizado: ${draft.servicePerformed || serviceOrder.servicePerformed}`
+                  : "",
+                draft.diagnosis || serviceOrder.diagnosis ? `Diagnóstico: ${draft.diagnosis || serviceOrder.diagnosis}` : "",
+                draft.attendanceNotes || serviceOrder.attendanceNotes
+                  ? `Observações: ${draft.attendanceNotes || serviceOrder.attendanceNotes}`
+                  : ""
+              ]
+                .filter(Boolean)
+                .join("\n\n") || "Sem atendimento registrado."
+            )}</div>
           </section>
           ${financialSection}
         </body>

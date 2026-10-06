@@ -43,7 +43,13 @@ describe("ServiceOrderDetailsModal - atendimento", () => {
 
   it("mostra os campos do rascunho a partir da OS e salva o payload no modo Local", async () => {
     const { props } = await openAttendance({
-      serviceOrder: makeOrder({ diagnosis: "Fonte", attendanceNotes: "Notas", autoPriorityEnabled: true, serviceValue: 99, items: [{ id: "i1", productName: "Fonte", quantity: 2, unitPrice: 10 }] })
+      serviceOrder: makeOrder({
+        diagnosis: "Fonte",
+        attendanceNotes: "Notas",
+        autoPriorityEnabled: true,
+        serviceValue: 99,
+        items: [{ id: "i1", productName: "Fonte", quantity: 2, unitPrice: 10 }]
+      })
     });
     expect(field("Título")).toHaveValue("Computador não liga");
     expect(field("Prioridade")).toHaveValue("high");
@@ -58,11 +64,21 @@ describe("ServiceOrderDetailsModal - atendimento", () => {
     click(within(form()).getByRole("checkbox"));
     expect(screen.getByText("Manual")).toBeInTheDocument();
     fireEvent.submit(form());
-    expect(props.onUpdate).toHaveBeenCalledWith("os-1", expect.objectContaining({
-      title: "Novo título", priority: "low", attendanceNotes: "Mais notas", diagnosis: "Outro", assignedTechnicianName: "Bruno Silva",
-      autoPriorityEnabled: false, serviceValue: 0, totalPartsValue: 0, totalValue: 0,
-      items: [expect.objectContaining({ id: "i1", productName: "Fonte", quantity: 2, unitPrice: 10, subtotal: 20 })]
-    }));
+    expect(props.onUpdate).toHaveBeenCalledWith(
+      "os-1",
+      expect.objectContaining({
+        title: "Novo título",
+        priority: "low",
+        attendanceNotes: "Mais notas",
+        diagnosis: "Outro",
+        assignedTechnicianName: "Bruno Silva",
+        autoPriorityEnabled: false,
+        serviceValue: 0,
+        totalPartsValue: 0,
+        totalValue: 0,
+        items: [expect.objectContaining({ id: "i1", productName: "Fonte", quantity: 2, unitPrice: 10, subtotal: 20 })]
+      })
+    );
     expect(form().querySelector(".service-order-financial-panel")).toBeNull();
   });
 
@@ -98,7 +114,10 @@ describe("ServiceOrderDetailsModal - atendimento", () => {
       expect(within(form()).getByLabelText("Valor do serviço")).toHaveValue("1234.5");
       expect(form().querySelector(".service-order-totals")).toHaveTextContent("Total estimado R$ 1.234,50");
       fireEvent.submit(form());
-      expect(props.onUpdate).toHaveBeenCalledWith("os-1", expect.objectContaining({ servicePerformed: "Formatação", serviceValue: 1234.5, totalValue: 1234.5 }));
+      expect(props.onUpdate).toHaveBeenCalledWith(
+        "os-1",
+        expect.objectContaining({ servicePerformed: "Formatação", serviceValue: 1234.5, totalValue: 1234.5 })
+      );
     });
 
     it("no modo Local zera o valor e aceita serviço digitado manualmente", async () => {
@@ -247,7 +266,13 @@ describe("ServiceOrderDetailsModal - máquina", () => {
   ];
 
   it("mostra a ficha da máquina e lista backups disponíveis", async () => {
-    api.fetchDevice.mockResolvedValue({ device: makeDevice({ hardware: { os: "Windows 11", lastInventoryAt: "2026-08-01T10:00:00.000Z" }, metrics: { cpu: 10, ram: 0 }, alias: "Fin" }) });
+    api.fetchDevice.mockResolvedValue({
+      device: makeDevice({
+        hardware: { os: "Windows 11", lastInventoryAt: "2026-08-01T10:00:00.000Z" },
+        metrics: { cpu: 10, ram: 0 },
+        alias: "Fin"
+      })
+    });
     const { props } = await renderDetails({ devices: [makeDevice(), ...backups] });
     click(tab("Máquina"));
     const panel = document.querySelector(".service-order-asset-panel");
@@ -269,7 +294,10 @@ describe("ServiceOrderDetailsModal - máquina", () => {
   });
 
   it("devolve o backup vinculado e informa quando não há disponíveis", async () => {
-    const { props, unmount } = await renderDetails({ serviceOrder: makeOrder({ backupAssetId: "bk-1" }), devices: [makeDevice(), ...backups] });
+    const { props, unmount } = await renderDetails({
+      serviceOrder: makeOrder({ backupAssetId: "bk-1" }),
+      devices: [makeDevice(), ...backups]
+    });
     click(tab("Máquina"));
     const linked = document.querySelector(".service-order-linked-backup");
     expect(linked).toHaveTextContent("BK-01");
@@ -284,7 +312,12 @@ describe("ServiceOrderDetailsModal - máquina", () => {
   it("sem máquina vinculada orienta e abre o assistente de vínculo", async () => {
     const { props } = await renderDetails({
       serviceOrder: makeOrder({ assetId: "" }),
-      devices: [makeDevice(), makeDevice({ id: "dev-2", name: "PC-02", ip: "", statusLabel: "", segmentId: "seg-1", tabId: "tab-1", groupId: "g1" }), makeDevice({ id: "dev-3", name: "PC-03", segmentId: "seg-2", tabId: "tab-1", isGlobalUnorganized: true }), makeDevice({ id: "dev-4", name: "PC-04", segmentId: "seg-4", tabId: "tab-2", segmentGroupId: "g2" })]
+      devices: [
+        makeDevice(),
+        makeDevice({ id: "dev-2", name: "PC-02", ip: "", statusLabel: "", segmentId: "seg-1", tabId: "tab-1", groupId: "g1" }),
+        makeDevice({ id: "dev-3", name: "PC-03", segmentId: "seg-2", tabId: "tab-1", isGlobalUnorganized: true }),
+        makeDevice({ id: "dev-4", name: "PC-04", segmentId: "seg-4", tabId: "tab-2", segmentGroupId: "g2" })
+      ]
     });
     click(tab("Máquina"));
     expect(screen.getByText("Nenhuma máquina ou ativo vinculado a esta OS.")).toBeInTheDocument();
@@ -317,19 +350,26 @@ describe("ServiceOrderDetailsModal - máquina", () => {
     fireEvent.change(select("3. Segmento"), { target: { value: "seg-4" } });
     expect(cards()).toEqual(["PC-0410.0.0.10 - Online"]);
     click(wizard.querySelector(".service-order-link-cards button"));
-    await waitFor(() => expect(props.onUpdate).toHaveBeenCalledWith("os-1", { assetId: "dev-4", environmentId: "tab-2", environmentName: "Acme" }));
+    await waitFor(() =>
+      expect(props.onUpdate).toHaveBeenCalledWith("os-1", { assetId: "dev-4", environmentId: "tab-2", environmentName: "Acme" })
+    );
     await waitFor(() => expect(document.querySelector(".service-order-link-wizard")).toBeNull());
   });
 
   it("vincula usando a aba escolhida quando o ativo não tem aba conhecida", async () => {
-    const { props } = await renderDetails({ serviceOrder: makeOrder({ assetId: "", environmentId: "env", environmentName: "Env" }), devices: [makeDevice({ id: "d9", name: "PC-09", tabId: "tab-x", isGlobalUnorganized: true, segmentId: "seg-1" })] });
+    const { props } = await renderDetails({
+      serviceOrder: makeOrder({ assetId: "", environmentId: "env", environmentName: "Env" }),
+      devices: [makeDevice({ id: "d9", name: "PC-09", tabId: "tab-x", isGlobalUnorganized: true, segmentId: "seg-1" })]
+    });
     click(tab("Máquina"));
     click(screen.getByRole("button", { name: "Vincular máquina" }));
     const wizard = document.querySelector(".service-order-link-wizard");
     fireEvent.change(within(wizard).getByText("1. Aba/Ambiente").closest("label").querySelector("select"), { target: { value: "tab-1" } });
     fireEvent.change(within(wizard).getByText("3. Segmento").closest("label").querySelector("select"), { target: { value: "seg-1" } });
     click(wizard.querySelector(".service-order-link-cards button"));
-    await waitFor(() => expect(props.onUpdate).toHaveBeenCalledWith("os-1", { assetId: "d9", environmentId: "tab-1", environmentName: "Matriz" }));
+    await waitFor(() =>
+      expect(props.onUpdate).toHaveBeenCalledWith("os-1", { assetId: "d9", environmentId: "tab-1", environmentName: "Matriz" })
+    );
     click(screen.getByRole("button", { name: "Vincular máquina" }));
     fireEvent.click(screen.getByRole("button", { name: "Vincular máquina" }));
   });

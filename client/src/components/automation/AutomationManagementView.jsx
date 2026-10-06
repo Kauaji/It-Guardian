@@ -59,7 +59,13 @@ export default function AutomationManagementView({
           <h2>Automatizações</h2>
           <p>Máquinas com planos de automatização</p>
         </div>
-        <button type="button" className="icon-button" onClick={onRetry} title="Atualizar automatizações" aria-label="Atualizar automatizações">
+        <button
+          type="button"
+          className="icon-button"
+          onClick={onRetry}
+          title="Atualizar automatizações"
+          aria-label="Atualizar automatizações"
+        >
           <RefreshCw size={18} />
         </button>
       </div>
@@ -76,13 +82,17 @@ export default function AutomationManagementView({
 
       {loading && (
         <div className="automation-management-skeleton" aria-label="Carregando automatizações">
-          <span /><span /><span />
+          <span />
+          <span />
+          <span />
         </div>
       )}
       {!loading && error && (
         <div className="automation-management-error">
           <p>{error}</p>
-          <button type="button" className="secondary-action compact-action" onClick={onRetry}>Tentar novamente</button>
+          <button type="button" className="secondary-action compact-action" onClick={onRetry}>
+            Tentar novamente
+          </button>
         </div>
       )}
       {ready && activeView === "machines" && groups.length > 0 && (

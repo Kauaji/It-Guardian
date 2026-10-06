@@ -21,9 +21,7 @@ export function setSettingValue(settings, field, value) {
 export function patchStatus(settings, statusId, patch) {
   return {
     ...settings,
-    statuses: normalizeStatuses(
-      settings.statuses.map((status) => (status.id === statusId ? { ...status, ...patch } : status))
-    )
+    statuses: normalizeStatuses(settings.statuses.map((status) => (status.id === statusId ? { ...status, ...patch } : status)))
   };
 }
 

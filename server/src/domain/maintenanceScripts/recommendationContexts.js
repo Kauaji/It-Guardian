@@ -85,13 +85,27 @@ export function rankScriptsForContexts(scripts, contexts) {
       const best = matches.sort((left, right) => right.result.recommendationScore - left.result.recommendationScore)[0];
       return {
         ...best.result,
-        matchedAssetIds: [...new Set(matches.map((item) => item.context.assetId).filter(Boolean).map(String))],
-        matchedAlertIds: [...new Set(matches.map((item) => item.context.alertId).filter(Boolean).map(String))]
+        matchedAssetIds: [
+          ...new Set(
+            matches
+              .map((item) => item.context.assetId)
+              .filter(Boolean)
+              .map(String)
+          )
+        ],
+        matchedAlertIds: [
+          ...new Set(
+            matches
+              .map((item) => item.context.alertId)
+              .filter(Boolean)
+              .map(String)
+          )
+        ]
       };
     })
     .filter((item) => item !== null)
-    .sort((left, right) => (
-      right.recommendationScore - left.recommendationScore
-      || String(left.name || "").localeCompare(String(right.name || ""))
-    ));
+    .sort(
+      (left, right) =>
+        right.recommendationScore - left.recommendationScore || String(left.name || "").localeCompare(String(right.name || ""))
+    );
 }

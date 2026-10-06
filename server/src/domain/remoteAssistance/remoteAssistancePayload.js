@@ -17,7 +17,9 @@ import { publicError } from "./remoteAssistanceErrors.js";
  * @returns {string} SHA-256 hexadecimal.
  */
 export function hashToken(token) {
-  return createHash("sha256").update(String(token || "")).digest("hex");
+  return createHash("sha256")
+    .update(String(token || ""))
+    .digest("hex");
 }
 
 /** @returns {string} Token opaco de 256 bits em base64url. */
@@ -31,7 +33,10 @@ export function issueSessionToken() {
  * @throws {Error} Motivo com menos de 5 caracteres.
  */
 export function normalizeReason(value) {
-  const reason = String(value || "").trim().replace(/\s+/g, " ").slice(0, 500);
+  const reason = String(value || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .slice(0, 500);
   if (reason.length < 5) {
     throw publicError("Descreva brevemente o motivo da assistencia remota.");
   }
@@ -46,7 +51,9 @@ const MAX_CHAT_MESSAGE_LENGTH = 2000;
  * @throws {Error} Mensagem vazia.
  */
 export function normalizeChatMessageText(value) {
-  const text = String(value || "").trim().slice(0, MAX_CHAT_MESSAGE_LENGTH);
+  const text = String(value || "")
+    .trim()
+    .slice(0, MAX_CHAT_MESSAGE_LENGTH);
   if (!text) throw publicError("Mensagem vazia.");
   return text;
 }
@@ -58,8 +65,13 @@ export function normalizeChatMessageText(value) {
 export function normalizeMonitors(monitors) {
   if (!Array.isArray(monitors)) return [];
   return monitors.slice(0, 8).map((/** @type {Record<string, unknown> | null | undefined} */ monitor, index) => ({
-    id: String(monitor?.id ?? index).trim().slice(0, 100) || String(index),
-    name: String(monitor?.name || `Monitor ${index + 1}`).trim().slice(0, 100),
+    id:
+      String(monitor?.id ?? index)
+        .trim()
+        .slice(0, 100) || String(index),
+    name: String(monitor?.name || `Monitor ${index + 1}`)
+      .trim()
+      .slice(0, 100),
     primary: Boolean(monitor?.primary),
     width: Math.max(1, Math.min(16384, Number(monitor?.width) || 1)),
     height: Math.max(1, Math.min(16384, Number(monitor?.height) || 1))
@@ -108,9 +120,5 @@ export function decodeFrame(dataUrl, maxFrameBytes) {
  * @returns {boolean}
  */
 export function canManageSession(user, session) {
-  return Boolean(
-    user &&
-      session &&
-      (session.technicianUserId === user.id || hasPermission(user, "remote_assistance.manage"))
-  );
+  return Boolean(user && session && (session.technicianUserId === user.id || hasPermission(user, "remote_assistance.manage")));
 }

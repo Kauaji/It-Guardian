@@ -27,8 +27,8 @@ export default function DashboardBusinessSection({ business, byEnvironment, pend
         )}
         {business?.enabled && !business.clientsWithMostAlertsAvailable && (
           <p className="dashboard-empty-state dashboard-business-note">
-            Alertas e ativos ainda não têm vínculo com o cadastro de clientes — essa métrica ficará disponível
-            quando esse vínculo existir no sistema.
+            Alertas e ativos ainda não têm vínculo com o cadastro de clientes — essa métrica ficará disponível quando esse vínculo existir
+            no sistema.
           </p>
         )}
       </section>

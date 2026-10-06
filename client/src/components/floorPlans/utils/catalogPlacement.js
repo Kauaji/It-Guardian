@@ -87,13 +87,17 @@ function createCatalogObject({ draft, floor, item, targetPoint, candidate, paren
  */
 export function addCatalogEntityToDraft({ draft, item, floor, targetPoint, candidate, createId }) {
   const fineSnapSize = getFineSnapSize(draft);
-  const room = getRoomForObject(draft, {
-    x: targetPoint.x,
-    y: targetPoint.y,
-    width: 0,
-    height: 0,
-    metadata: {}
-  }, floor);
+  const room = getRoomForObject(
+    draft,
+    {
+      x: targetPoint.x,
+      y: targetPoint.y,
+      width: 0,
+      height: 0,
+      metadata: {}
+    },
+    floor
+  );
   const context = { draft, floor, item, targetPoint, candidate, parentRoomId: room?.id || null, fineSnapSize, createId };
 
   if (item.category === "point") {

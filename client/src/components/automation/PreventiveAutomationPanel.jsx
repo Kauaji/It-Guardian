@@ -46,12 +46,7 @@ export default function PreventiveAutomationPanel({
       )}
 
       {formState.modalOpen && (
-        <PreventiveAutomationModal
-          formState={formState}
-          plans={plans}
-          activeScripts={activeScripts}
-          scopeSources={scopeSources}
-        />
+        <PreventiveAutomationModal formState={formState} plans={plans} activeScripts={activeScripts} scopeSources={scopeSources} />
       )}
     </section>
   );

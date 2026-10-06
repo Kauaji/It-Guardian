@@ -40,8 +40,5 @@ test("usuário ausente (null/undefined) não tem permissões e não lança erro"
 });
 
 test("normalizePermissions ignora entradas que não são texto", () => {
-  assert.deepEqual(
-    sharedPermissions.normalizePermissions(["inventory.view", 7, null, { id: "x" }, "inventory.view"]),
-    ["inventory.view"]
-  );
+  assert.deepEqual(sharedPermissions.normalizePermissions(["inventory.view", 7, null, { id: "x" }, "inventory.view"]), ["inventory.view"]);
 });

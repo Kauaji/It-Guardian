@@ -2,7 +2,17 @@ import ViewLoadingState from "../../../ui/ViewLoadingState.jsx";
 
 // Estados que substituem o canvas: erro, carregamento ou ausencia de mapa legado.
 // Devolve null quando o canvas pode ser exibido.
-export default function topologyLevelStatus({ error, viewLevel, maps, legacyActiveMapId, loadingBundle, bundle, canManageMap, creatingMap, handleCreateMap }) {
+export default function topologyLevelStatus({
+  error,
+  viewLevel,
+  maps,
+  legacyActiveMapId,
+  loadingBundle,
+  bundle,
+  canManageMap,
+  creatingMap,
+  handleCreateMap
+}) {
   // A failed first load has no bundle; report it before the loading guard.
   if (error) {
     return (
@@ -21,8 +31,8 @@ export default function topologyLevelStatus({ error, viewLevel, maps, legacyActi
       <div className="network-topology-empty-state">
         <h3>Nenhum mapa de rede criado</h3>
         <p>
-          Gere uma topologia inicial a partir dos ativos do inventário ou crie um mapa manual para começar a
-          desenhar as conexões da sua rede.
+          Gere uma topologia inicial a partir dos ativos do inventário ou crie um mapa manual para começar a desenhar as conexões da sua
+          rede.
         </p>
         {canManageMap ? (
           <button type="button" className="network-topology-toolbar-button" disabled={creatingMap} onClick={handleCreateMap}>

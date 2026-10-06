@@ -1,11 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchMaintenanceScriptRecommendations, fetchServiceOrderScriptActivity } from "../../../../api.js";
-import {
-  ACTIVE_POLL_INTERVAL_MS,
-  ACTIVE_POLL_MAX_ATTEMPTS,
-  buildRecommendationContext,
-  hasActiveJob
-} from "../utils/scriptRules.js";
+import { ACTIVE_POLL_INTERVAL_MS, ACTIVE_POLL_MAX_ATTEMPTS, buildRecommendationContext, hasActiveJob } from "../utils/scriptRules.js";
 
 // Carrega atividade e recomendacoes da OS e atualiza a atividade enquanto ha job ativo.
 export function useScriptCatalog({ serviceOrder, token, notify }) {

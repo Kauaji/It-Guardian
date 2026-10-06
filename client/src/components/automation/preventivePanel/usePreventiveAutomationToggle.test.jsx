@@ -43,16 +43,25 @@ describe("usePreventiveAutomationToggle", () => {
 
   it("marca o plano em processamento e ignora cliques repetidos", async () => {
     let finish;
-    const onDisable = vi.fn().mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+    const onDisable = vi.fn().mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      })
+    );
     const { result } = renderHook(() => usePreventiveAutomationToggle({ onDisable }));
 
     let first;
-    act(() => { first = result.current.toggleAutomationPlan({ id: "p1", active: true }); });
+    act(() => {
+      first = result.current.toggleAutomationPlan({ id: "p1", active: true });
+    });
     expect(result.current.togglingId).toBe("p1");
     await act(async () => result.current.toggleAutomationPlan({ id: "p2", active: true }));
     expect(onDisable).toHaveBeenCalledTimes(1);
 
-    await act(async () => { finish(); await first; });
+    await act(async () => {
+      finish();
+      await first;
+    });
     expect(result.current.togglingId).toBeNull();
   });
 

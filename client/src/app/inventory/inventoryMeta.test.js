@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  applyOrderedIds,
-  assignDevicesToTab,
-  mergeInventoryMeta,
-  reassignTabMeta
-} from "./inventoryMeta.js";
+import { applyOrderedIds, assignDevicesToTab, mergeInventoryMeta, reassignTabMeta } from "./inventoryMeta.js";
 
 describe("mergeInventoryMeta", () => {
   it("mescla campos sem perder os existentes nem as outras colecoes", () => {

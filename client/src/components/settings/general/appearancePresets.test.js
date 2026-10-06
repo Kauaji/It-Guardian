@@ -8,10 +8,21 @@ describe("appearancePresets", () => {
     expect(others.map((preset) => preset.id)).toEqual(["aurora", "nebula", "ocean", "sunset", "emerald", "cyber", "midnight"]);
     for (const preset of others) {
       expect(Object.keys(preset.values)).toEqual([
-        "--app-bg", "--app-bg-layer", "--surface", "--surface-soft", "--surface-muted",
-        "--accent", "--accent-hover", "--primary-button-bg", "--primary-button-hover",
-        "--sidebar-bg", "--sidebar-bg-2", "--sidebar-text", "--sidebar-muted",
-        "--border", "--border-strong"
+        "--app-bg",
+        "--app-bg-layer",
+        "--surface",
+        "--surface-soft",
+        "--surface-muted",
+        "--accent",
+        "--accent-hover",
+        "--primary-button-bg",
+        "--primary-button-hover",
+        "--sidebar-bg",
+        "--sidebar-bg-2",
+        "--sidebar-text",
+        "--sidebar-muted",
+        "--border",
+        "--border-strong"
       ]);
       expect(Object.values(preset.values).every(Boolean)).toBe(true);
       for (const name of Object.keys(preset.values)) expect(appearanceVariableNames).toContain(name);

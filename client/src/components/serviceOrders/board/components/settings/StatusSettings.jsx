@@ -37,7 +37,13 @@ function StatusRow({ status, index, total, editor }) {
         <button type="button" className="icon-button" onClick={() => editor.moveStatus(status.id, -1)} disabled={index === 0} title="Subir">
           <ArrowUp size={16} />
         </button>
-        <button type="button" className="icon-button" onClick={() => editor.moveStatus(status.id, 1)} disabled={index === total - 1} title="Descer">
+        <button
+          type="button"
+          className="icon-button"
+          onClick={() => editor.moveStatus(status.id, 1)}
+          disabled={index === total - 1}
+          title="Descer"
+        >
           <ArrowDown size={16} />
         </button>
         <button
@@ -61,7 +67,9 @@ export default function StatusSettings({ editor }) {
   return (
     <>
       <div className="service-order-status-header-actions service-order-status-header-inline">
-        <span>{configuredStatuses.length}/{maxServiceOrderStatuses} status</span>
+        <span>
+          {configuredStatuses.length}/{maxServiceOrderStatuses} status
+        </span>
         <button
           type="button"
           className="secondary-action compact-action"

@@ -17,10 +17,7 @@ export default function useVisualMapData({ token, devices }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const selectedObject = useMemo(
-    () => objects.find((object) => object.id === selectedObjectId) || null,
-    [objects, selectedObjectId]
-  );
+  const selectedObject = useMemo(() => objects.find((object) => object.id === selectedObjectId) || null, [objects, selectedObjectId]);
   const selectedConnection = useMemo(
     () => connections.find((connection) => connection.id === selectedConnectionId) || null,
     [connections, selectedConnectionId]
@@ -30,14 +27,8 @@ export default function useVisualMapData({ token, devices }) {
     [devices, selectedObject]
   );
   const linkedDeviceMeta = useMemo(() => getDeviceMeta(linkedDevice), [linkedDevice]);
-  const activeMapOption = useMemo(
-    () => maps.find((map) => map.id === activeMapId) || null,
-    [activeMapId, maps]
-  );
-  const usedAssetIds = useMemo(
-    () => new Set(objects.map((object) => object.linkedAssetId).filter(Boolean)),
-    [objects]
-  );
+  const activeMapOption = useMemo(() => maps.find((map) => map.id === activeMapId) || null, [activeMapId, maps]);
+  const usedAssetIds = useMemo(() => new Set(objects.map((object) => object.linkedAssetId).filter(Boolean)), [objects]);
 
   const loadMaps = useCallback(async () => {
     setLoading(true);
@@ -113,10 +104,32 @@ export default function useVisualMapData({ token, devices }) {
   }, []);
 
   return {
-    maps, activeMapId, setActiveMapId, activeMap, setActiveMap, activeMapOption,
-    mapDraft, setMapDraft, objects, setObjects, connections, setConnections,
-    selectedObjectId, setSelectedObjectId, selectedConnectionId, setSelectedConnectionId,
-    selectedObject, selectedConnection, linkedDevice, linkedDeviceMeta, usedAssetIds,
-    loading, saving, error, loadMaps, loadActiveMap, runSaving
+    maps,
+    activeMapId,
+    setActiveMapId,
+    activeMap,
+    setActiveMap,
+    activeMapOption,
+    mapDraft,
+    setMapDraft,
+    objects,
+    setObjects,
+    connections,
+    setConnections,
+    selectedObjectId,
+    setSelectedObjectId,
+    selectedConnectionId,
+    setSelectedConnectionId,
+    selectedObject,
+    selectedConnection,
+    linkedDevice,
+    linkedDeviceMeta,
+    usedAssetIds,
+    loading,
+    saving,
+    error,
+    loadMaps,
+    loadActiveMap,
+    runSaving
   };
 }

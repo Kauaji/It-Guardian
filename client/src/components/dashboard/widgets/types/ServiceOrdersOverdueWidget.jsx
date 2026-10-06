@@ -8,7 +8,9 @@ export default function ServiceOrdersOverdueWidget({ data }) {
       emptyMessage="Nenhuma ordem de serviço vencida no momento."
       renderItem={(order) => (
         <>
-          <span>{order.number} - {order.title}</span>
+          <span>
+            {order.number} - {order.title}
+          </span>
           <strong className="danger">{Math.round(order.overdueMinutes / 60)}h vencida</strong>
           <small>Prazo era {formatDateTime(order.dueAt)}</small>
         </>

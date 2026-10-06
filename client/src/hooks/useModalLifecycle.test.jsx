@@ -94,14 +94,10 @@ describe("useModalLifecycle", () => {
     // que produziria um "previouslyFocused" capturado antes de qualquer
     // timer de foco rodar e não corresponderia ao cenário real.
     async function openOuterThenInner(onCloseOuter, onCloseInner) {
-      const utils = render(
-        <NestedModals outerOpen innerOpen={false} onCloseOuter={onCloseOuter} onCloseInner={onCloseInner} />
-      );
+      const utils = render(<NestedModals outerOpen innerOpen={false} onCloseOuter={onCloseOuter} onCloseInner={onCloseInner} />);
       await waitFor(() => expect(screen.getByText("Botao externo")).toHaveFocus());
 
-      utils.rerender(
-        <NestedModals outerOpen innerOpen onCloseOuter={onCloseOuter} onCloseInner={onCloseInner} />
-      );
+      utils.rerender(<NestedModals outerOpen innerOpen onCloseOuter={onCloseOuter} onCloseInner={onCloseInner} />);
       await waitFor(() => expect(screen.getByText("Botao interno")).toHaveFocus());
 
       return utils;
@@ -123,9 +119,7 @@ describe("useModalLifecycle", () => {
       const onCloseInner = vi.fn();
       const { rerender } = await openOuterThenInner(onCloseOuter, onCloseInner);
 
-      rerender(
-        <NestedModals outerOpen innerOpen={false} onCloseOuter={onCloseOuter} onCloseInner={onCloseInner} />
-      );
+      rerender(<NestedModals outerOpen innerOpen={false} onCloseOuter={onCloseOuter} onCloseInner={onCloseInner} />);
       await waitFor(() => expect(screen.getByText("Botao externo")).toHaveFocus());
 
       fireEvent.keyDown(window, { key: "Escape" });
@@ -149,9 +143,7 @@ describe("useModalLifecycle", () => {
       const onCloseInner = vi.fn();
       const { rerender } = await openOuterThenInner(onCloseOuterFirst, onCloseInner);
 
-      rerender(
-        <NestedModals outerOpen innerOpen onCloseOuter={onCloseOuterSecond} onCloseInner={onCloseInner} />
-      );
+      rerender(<NestedModals outerOpen innerOpen onCloseOuter={onCloseOuterSecond} onCloseInner={onCloseInner} />);
 
       fireEvent.keyDown(window, { key: "Escape" });
 

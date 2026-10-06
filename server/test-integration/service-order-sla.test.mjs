@@ -89,17 +89,17 @@ test("OS com prazo vencido so recebe sla_breached_at persistido apos o job de cr
   const afterSyncRow = await query("SELECT sla_breached_at FROM service_orders WHERE id = $1", [created.id]);
   assert.ok(afterSyncRow.rows[0].sla_breached_at, "o job agendado deve persistir sla_breached_at");
 
-  const historyAfterSync = await query(
-    "SELECT * FROM service_order_history WHERE service_order_id = $1 AND event_type = 'sla_breached'",
-    [created.id]
-  );
+  const historyAfterSync = await query("SELECT * FROM service_order_history WHERE service_order_id = $1 AND event_type = 'sla_breached'", [
+    created.id
+  ]);
   assert.equal(historyAfterSync.rowCount, 1);
 
   const secondSync = await syncSlaBreaches();
-  const historyStillOne = (await query(
-    "SELECT COUNT(*)::int AS total FROM service_order_history WHERE service_order_id = $1 AND event_type = 'sla_breached'",
-    [created.id]
-  )).rows[0].total;
+  const historyStillOne = (
+    await query("SELECT COUNT(*)::int AS total FROM service_order_history WHERE service_order_id = $1 AND event_type = 'sla_breached'", [
+      created.id
+    ])
+  ).rows[0].total;
   assert.ok(secondSync.breached === 0 || historyStillOne === 1, "rodar o job de novo nao deve duplicar o evento");
 });
 

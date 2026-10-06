@@ -10,12 +10,7 @@ import {
   findDraggableEntity,
   getDragObjectIds
 } from "./dragState.js";
-import {
-  applyDragToDraft,
-  computeDragDeltas,
-  computeObjectDragAlignment,
-  getDragSnapSize
-} from "./dragOperations.js";
+import { applyDragToDraft, computeDragDeltas, computeObjectDragAlignment, getDragSnapSize } from "./dragOperations.js";
 
 const editor = buildEditor({
   objects: [buildDesk(), buildPc({ metadata: { parentRoomId: "room-1", anchorObjectId: "desk-1" } })],
@@ -34,7 +29,12 @@ function runDrag(drag, point, { altKey = false, shiftKey = false } = {}) {
 
 describe("estados de arrasto", () => {
   it("cria estados de pan e de selecao por retangulo", () => {
-    expect(createPanDrag({ clientX: 1, clientY: 2, viewBox: { x: 0 } })).toEqual({ type: "pan", clientX: 1, clientY: 2, viewBox: { x: 0 } });
+    expect(createPanDrag({ clientX: 1, clientY: 2, viewBox: { x: 0 } })).toEqual({
+      type: "pan",
+      clientX: 1,
+      clientY: 2,
+      viewBox: { x: 0 }
+    });
     expect(createMarqueeDrag({ x: 3, y: 4 }, true)).toEqual({ type: "marquee", startX: 3, startY: 4, additive: true });
   });
 
@@ -91,12 +91,23 @@ describe("deslocamento e alinhamento", () => {
   });
 
   it("arredonda o deslocamento a grade", () => {
-    expect(computeDragDeltas({ originX: 200, originY: 200, startX: 0, startY: 0 }, { x: 33, y: -12 }, 5))
-      .toEqual({ nextX: 235, nextY: 190, deltaX: 35, deltaY: -10 });
+    expect(computeDragDeltas({ originX: 200, originY: 200, startX: 0, startY: 0 }, { x: 33, y: -12 }, 5)).toEqual({
+      nextX: 235,
+      nextY: 190,
+      deltaX: 35,
+      deltaY: -10
+    });
   });
 
   it("imanta objetos em alinhamentos e devolve guias, exceto com Alt", () => {
-    const drag = createEntityDrag({ editor, type: "object", id: "desk-1", entity: editor.objects.find((object) => object.id === "desk-1"), point: { x: 0, y: 0 }, objectIds: ["desk-1"] });
+    const drag = createEntityDrag({
+      editor,
+      type: "object",
+      id: "desk-1",
+      entity: editor.objects.find((object) => object.id === "desk-1"),
+      point: { x: 0, y: 0 },
+      objectIds: ["desk-1"]
+    });
     const deltas = { deltaX: 2, deltaY: 0 };
     const aligned = computeObjectDragAlignment({ drag, deltas, editor, floor, snapSize: 5, altKey: false });
     expect(aligned.guides.length).toBeGreaterThan(0);
@@ -107,7 +118,14 @@ describe("deslocamento e alinhamento", () => {
 
 describe("applyDragToDraft", () => {
   it("move objetos selecionados e recentraliza equipamentos da mesa", () => {
-    const drag = createEntityDrag({ editor, type: "object", id: "desk-1", entity: editor.objects.find((object) => object.id === "desk-1"), point: { x: 0, y: 0 }, objectIds: ["desk-1"] });
+    const drag = createEntityDrag({
+      editor,
+      type: "object",
+      id: "desk-1",
+      entity: editor.objects.find((object) => object.id === "desk-1"),
+      point: { x: 0, y: 0 },
+      objectIds: ["desk-1"]
+    });
     const { draft } = runDrag(drag, { x: 50, y: 30 }, { altKey: true });
     const desk = draft.objects.find((object) => object.id === "desk-1");
     const pc = draft.objects.find((object) => object.id === "pc-1");

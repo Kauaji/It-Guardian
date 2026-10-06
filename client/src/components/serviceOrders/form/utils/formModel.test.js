@@ -9,7 +9,15 @@ import {
   validateServiceOrderForm
 } from "./formModel.js";
 
-const valid = { title: "Título", description: "d", requesterName: "r", category: "c", assetId: "a", businessMode: false, selectedClient: null };
+const valid = {
+  title: "Título",
+  description: "d",
+  requesterName: "r",
+  category: "c",
+  assetId: "a",
+  businessMode: false,
+  selectedClient: null
+};
 
 describe("formModel", () => {
   it("descreve o contexto do ativo por grupo e segmento", () => {
@@ -21,7 +29,11 @@ describe("formModel", () => {
   });
 
   it("cria o formulário inicial e os campos de reinício", () => {
-    expect(buildInitialForm({ autoPriority: { enabled: true } })).toMatchObject({ autoPriorityEnabled: true, environmentId: "", sectorId: "sector-geral" });
+    expect(buildInitialForm({ autoPriority: { enabled: true } })).toMatchObject({
+      autoPriorityEnabled: true,
+      environmentId: "",
+      sectorId: "sector-geral"
+    });
     expect(buildInitialForm(undefined).autoPriorityEnabled).toBe(false);
     expect(buildResetFields({ businessMode: false, activeTab: { id: "t" }, serviceOrderSettings: {} }).environmentId).toBe("t");
     expect(buildResetFields({ businessMode: true, activeTab: { id: "t" }, serviceOrderSettings: {} }).environmentId).toBe("");
@@ -38,7 +50,10 @@ describe("formModel", () => {
   });
 
   it("resolve o setor com queda para Geral e para o primeiro", () => {
-    const sectors = [{ id: "a", name: "A" }, { id: "g", name: "Geral" }];
+    const sectors = [
+      { id: "a", name: "A" },
+      { id: "g", name: "Geral" }
+    ];
     expect(resolveSector(sectors, "a").id).toBe("a");
     expect(resolveSector(sectors, "x").id).toBe("g");
     expect(resolveSector([{ id: "a", name: "A" }], "x").id).toBe("a");
@@ -65,11 +80,50 @@ describe("formModel", () => {
   it("monta o payload com setor e ambiente do modo", () => {
     const form = { priority: "low", assignedTechnicianNames: ["A", "B"], assetId: "a" };
     const fields = { title: "T", description: "D", requesterName: "R", category: "C" };
-    const local = buildSubmitPayload({ form, fields, businessMode: false, selectedClient: undefined, selectedEnvironment: { name: "Matriz" }, selectedSector: { id: "s", name: "TI" } });
-    expect(local).toMatchObject({ title: "T", assignedTechnicianName: "A", notes: "", sectorId: "s", sectorName: "TI", environmentName: "Matriz" });
-    const business = buildSubmitPayload({ form, fields, businessMode: true, selectedClient: { legalName: "Razão" }, selectedEnvironment: undefined, selectedSector: undefined });
+    const local = buildSubmitPayload({
+      form,
+      fields,
+      businessMode: false,
+      selectedClient: undefined,
+      selectedEnvironment: { name: "Matriz" },
+      selectedSector: { id: "s", name: "TI" }
+    });
+    expect(local).toMatchObject({
+      title: "T",
+      assignedTechnicianName: "A",
+      notes: "",
+      sectorId: "s",
+      sectorName: "TI",
+      environmentName: "Matriz"
+    });
+    const business = buildSubmitPayload({
+      form,
+      fields,
+      businessMode: true,
+      selectedClient: { legalName: "Razão" },
+      selectedEnvironment: undefined,
+      selectedSector: undefined
+    });
     expect(business).toMatchObject({ environmentName: "Razão", sectorId: "sector-geral", sectorName: "Geral" });
-    expect(buildSubmitPayload({ form: { assignedTechnicianNames: [] }, fields, businessMode: true, selectedClient: undefined, selectedEnvironment: undefined, selectedSector: undefined })).toMatchObject({ environmentName: "", assignedTechnicianName: "" });
-    expect(buildSubmitPayload({ form: { assignedTechnicianNames: [] }, fields, businessMode: false, selectedClient: undefined, selectedEnvironment: undefined, selectedSector: undefined }).environmentName).toBe("");
+    expect(
+      buildSubmitPayload({
+        form: { assignedTechnicianNames: [] },
+        fields,
+        businessMode: true,
+        selectedClient: undefined,
+        selectedEnvironment: undefined,
+        selectedSector: undefined
+      })
+    ).toMatchObject({ environmentName: "", assignedTechnicianName: "" });
+    expect(
+      buildSubmitPayload({
+        form: { assignedTechnicianNames: [] },
+        fields,
+        businessMode: false,
+        selectedClient: undefined,
+        selectedEnvironment: undefined,
+        selectedSector: undefined
+      }).environmentName
+    ).toBe("");
   });
 });

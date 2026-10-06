@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  labelForView,
-  pathForView,
-  resolveLoginDestination,
-  viewIdFromPath,
-  viewRoutes
-} from "./routes.js";
+import { labelForView, pathForView, resolveLoginDestination, viewIdFromPath, viewRoutes } from "./routes.js";
 
 describe("tabela de rotas", () => {
   it("mapeia cada URL em portugues para a visao correspondente", () => {

@@ -2,9 +2,7 @@ import { useState } from "react";
 import { buildScriptLogFromValidation } from "../alertDisplayUtils.js";
 
 function validationRecency(validation) {
-  return new Date(
-    validation.finishedAt || validation.job?.completedAt || validation.startedAt || 0
-  ).getTime();
+  return new Date(validation.finishedAt || validation.job?.completedAt || validation.startedAt || 0).getTime();
 }
 
 // Modal de log de script: abertura (por card ou pela barra de abas) e as

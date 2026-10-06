@@ -38,7 +38,10 @@ test("migracoes aplicam, o status zera e o modo check passa", async () => {
   await runMigrations();
   const status = await assertSchemaUpToDate();
   assert.deepEqual(status.pending, []);
-  assert.equal(status.migrations.every((migration) => migration.applied), true);
+  assert.equal(
+    status.migrations.every((migration) => migration.applied),
+    true
+  );
 });
 
 test("migracao faltando volta a aparecer como pendente", async () => {

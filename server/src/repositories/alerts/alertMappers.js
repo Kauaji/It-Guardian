@@ -86,34 +86,38 @@ export function fromLatestSuggestionValidationRow(row) {
     finishedAt: row.finished_at,
     resultSummary: row.result_summary || "",
     logId: row.log_id,
-    log: row.log_id ? {
-      id: row.log_id,
-      status: row.log_status,
-      rawLog: row.log_raw_log || "",
-      errorDetected: row.log_error_detected === true,
-      errorType: row.log_error_type,
-      errorCode: row.log_error_code,
-      errorCategory: row.log_error_category,
-      errorSeverity: row.log_error_severity,
-      parsedSummary: row.log_parsed_summary,
-      probableCause: row.log_probable_cause,
-      suggestedSolution: row.log_suggested_solution,
-      requiresAdmin: row.log_requires_admin === true,
-      requiresLoggedUser: row.log_requires_logged_user === true,
-      attentionRequired: row.log_attention_required === true,
-      acknowledgedAt: row.log_acknowledged_at
-    } : null,
-    job: row.job_id ? {
-      id: row.job_id,
-      status: row.job_status,
-      claimedAt: row.job_claimed_at,
-      completedAt: row.job_completed_at,
-      exitCode: row.job_exit_code,
-      timedOut: row.job_timed_out === true,
-      stdout: row.job_stdout || "",
-      stderr: row.job_stderr || "",
-      errorMessage: row.job_error_message || ""
-    } : null
+    log: row.log_id
+      ? {
+          id: row.log_id,
+          status: row.log_status,
+          rawLog: row.log_raw_log || "",
+          errorDetected: row.log_error_detected === true,
+          errorType: row.log_error_type,
+          errorCode: row.log_error_code,
+          errorCategory: row.log_error_category,
+          errorSeverity: row.log_error_severity,
+          parsedSummary: row.log_parsed_summary,
+          probableCause: row.log_probable_cause,
+          suggestedSolution: row.log_suggested_solution,
+          requiresAdmin: row.log_requires_admin === true,
+          requiresLoggedUser: row.log_requires_logged_user === true,
+          attentionRequired: row.log_attention_required === true,
+          acknowledgedAt: row.log_acknowledged_at
+        }
+      : null,
+    job: row.job_id
+      ? {
+          id: row.job_id,
+          status: row.job_status,
+          claimedAt: row.job_claimed_at,
+          completedAt: row.job_completed_at,
+          exitCode: row.job_exit_code,
+          timedOut: row.job_timed_out === true,
+          stdout: row.job_stdout || "",
+          stderr: row.job_stderr || "",
+          errorMessage: row.job_error_message || ""
+        }
+      : null
   };
 }
 

@@ -6,7 +6,20 @@ import { emptyStateVariant } from "./topologyViewConstants.js";
 
 function NodeInspector({ view, ctx }) {
   const { selectedNode, selectedClusterInfo, selectedConnections, internalConnections } = view.inspector;
-  const { devicesById, clusterSummaryByRefId, canEditMap, canLinkAssets, canManageMap, editMode, layoutBusy, linkBusy, linkCreation, visibleNodes, layout, selection } = ctx;
+  const {
+    devicesById,
+    clusterSummaryByRefId,
+    canEditMap,
+    canLinkAssets,
+    canManageMap,
+    editMode,
+    layoutBusy,
+    linkBusy,
+    linkCreation,
+    visibleNodes,
+    layout,
+    selection
+  } = ctx;
   const { setSelectedNodeId, setSelectedLinkId } = selection;
   return (
     <NetworkTopologyNodeInspector
@@ -19,11 +32,15 @@ function NodeInspector({ view, ctx }) {
       connectionsError={internalConnections.error}
       canEditCluster={canEditMap}
       connecting={linkBusy}
-      onConnectNode={editMode && canLinkAssets && !layoutBusy && hasTopologyConnectionPartner(visibleNodes, selectedNode) ? (node) => {
-        setSelectedNodeId(null);
-        setSelectedLinkId(null);
-        linkCreation.start(node);
-      } : undefined}
+      onConnectNode={
+        editMode && canLinkAssets && !layoutBusy && hasTopologyConnectionPartner(visibleNodes, selectedNode)
+          ? (node) => {
+              setSelectedNodeId(null);
+              setSelectedLinkId(null);
+              linkCreation.start(node);
+            }
+          : undefined
+      }
       editMode={editMode && canManageMap && !layoutBusy}
       onOpenDetails={ctx.onOpenDetails}
       onOpenCluster={ctx.handleNodeOpen}
@@ -59,8 +76,23 @@ function LinkInspector({ selectedLink, ctx }) {
 // Corpo do mapa: canvas e inspetores de no/conexao.
 export default function TopologyCanvasBody({ ctx, view }) {
   const {
-    bundle, viewLevel, devicesById, segments, clusterSummaryByRefId, editMode, canManageMap, layoutBusy, selection, linkCreation,
-    linkBusy, layout, displayNodes, visibleNodes, visibleLinks, canvasRef, nav
+    bundle,
+    viewLevel,
+    devicesById,
+    segments,
+    clusterSummaryByRefId,
+    editMode,
+    canManageMap,
+    layoutBusy,
+    selection,
+    linkCreation,
+    linkBusy,
+    layout,
+    displayNodes,
+    visibleNodes,
+    visibleLinks,
+    canvasRef,
+    nav
   } = ctx;
   const { selectedNode, selectedLink } = view.inspector;
   return (
@@ -93,9 +125,11 @@ export default function TopologyCanvasBody({ ctx, view }) {
         onNodeOpen={ctx.handleNodeOpen}
         onNavigateBack={nav.onNavigateBack}
         backLabel={nav.backLabel}
-        emptyState={!displayNodes.length && viewLevel !== "global-legado" ? (
-          <NetworkTopologyLevelEmptyState variant={emptyStateVariant(viewLevel)} />
-        ) : null}
+        emptyState={
+          !displayNodes.length && viewLevel !== "global-legado" ? (
+            <NetworkTopologyLevelEmptyState variant={emptyStateVariant(viewLevel)} />
+          ) : null
+        }
         onSelectLink={(linkId) => {
           selection.setSelectedLinkId(linkId);
           selection.setSelectedNodeId(null);

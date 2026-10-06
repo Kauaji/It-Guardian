@@ -202,7 +202,12 @@ describe("useMaintenanceScriptActions", () => {
   });
 
   it("registra simulacao, revisao de log, acao corretiva e cancelamento recarregando os dados", async () => {
-    for (const fn of ["registerMaintenanceScriptSimulation", "acknowledgeScriptLog", "applyScriptLogSuggestedSolution", "cancelScriptValidation"]) {
+    for (const fn of [
+      "registerMaintenanceScriptSimulation",
+      "acknowledgeScriptLog",
+      "applyScriptLogSuggestedSolution",
+      "cancelScriptValidation"
+    ]) {
       api[fn].mockResolvedValue({});
     }
     const { result, data, session } = setup(() => useMaintenanceScriptActions());
@@ -301,7 +306,9 @@ describe("usePreventiveAutomationActions", () => {
     expect(automationSaveMessage({ isUpdate: true, payload: {}, previousPlan: { active: true } })).toBe("Automação preventiva atualizada.");
     expect(automationSaveMessage({ isUpdate: true, payload: { active: false }, previousPlan: { active: true } })).toMatch(/pausada/);
     expect(automationSaveMessage({ isUpdate: true, payload: { active: true }, previousPlan: { active: false } })).toMatch(/reativada/);
-    expect(automationSaveMessage({ isUpdate: true, payload: { active: true }, previousPlan: { active: true } })).toBe("Automação preventiva atualizada.");
+    expect(automationSaveMessage({ isUpdate: true, payload: { active: true }, previousPlan: { active: true } })).toBe(
+      "Automação preventiva atualizada."
+    );
   });
 
   it("cria e atualiza planos de automacao", async () => {

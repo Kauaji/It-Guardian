@@ -11,11 +11,8 @@ const { createApp } = await import("../src/app.js");
 const { initializeRuntime } = await import("../src/bootstrap.js");
 const { closeDatabase, query } = await import("../src/database.js");
 const { createAgentEnrollment } = await import("../src/repositories/agentRepository.js");
-const {
-  addRemoteAssistanceEvent,
-  createRemoteAssistanceSession,
-  verifyRemoteAssistanceEventChain
-} = await import("../src/repositories/remoteAssistanceRepository.js");
+const { addRemoteAssistanceEvent, createRemoteAssistanceSession, verifyRemoteAssistanceEventChain } =
+  await import("../src/repositories/remoteAssistanceRepository.js");
 
 function heartbeatPayload(overrides = {}) {
   return {
@@ -110,10 +107,10 @@ test("a cadeia de hash da trilha de auditoria detecta adulteracao de um evento h
 
   // Adulteracao direta no banco (fora do caminho normal do app) -- exatamente o
   // cenario que "insert-only por convencao de codigo" nao consegue detectar.
-  await query(
-    "UPDATE remote_assistance_events SET message = $2 WHERE id = $1",
-    [thirdEvent.id, "Sessao encerrada pelo tecnico. (mensagem adulterada)"]
-  );
+  await query("UPDATE remote_assistance_events SET message = $2 WHERE id = $1", [
+    thirdEvent.id,
+    "Sessao encerrada pelo tecnico. (mensagem adulterada)"
+  ]);
 
   const tamperedChain = await verifyRemoteAssistanceEventChain(session.id);
   assert.equal(tamperedChain.valid, false);

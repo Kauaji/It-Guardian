@@ -17,7 +17,12 @@ export default function WidgetList({ items, emptyMessage, renderItem, onSelectIt
       {items.map((item, index) => (
         <li key={item.id || item.assetId || item.key || index}>
           {onSelectItem ? (
-            <button type="button" className="dashboard-ranking-item clickable" aria-pressed={isSelected?.(item)} onClick={() => onSelectItem(item)}>
+            <button
+              type="button"
+              className="dashboard-ranking-item clickable"
+              aria-pressed={isSelected?.(item)}
+              onClick={() => onSelectItem(item)}
+            >
               {renderItem(item, index)}
             </button>
           ) : (

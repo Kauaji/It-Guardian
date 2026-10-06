@@ -23,8 +23,7 @@ export function filterVisibleAlerts(history, severityFilter, statusFilter) {
 
 function suggestionWeight(suggestion) {
   const occurrences = Number(suggestion.occurrencesCount || 1);
-  return (suggestionPriorityWeight[suggestion.suggestedPriority] || 0) +
-    (occurrences > 1 ? Math.min(occurrences, 8) * 3 : 0);
+  return (suggestionPriorityWeight[suggestion.suggestedPriority] || 0) + (occurrences > 1 ? Math.min(occurrences, 8) * 3 : 0);
 }
 
 // Sugestoes acionaveis filtradas por status, consolidadas por maquina e
@@ -63,19 +62,12 @@ export function buildAlertSummary({ alerts, history, suggestions, devices, looku
   return {
     activeMachines: machineGroups.length,
     criticalAlerts: machineGroups.filter((group) => group.some((alert) => alert.severity === "critical")).length,
-    pendingSuggestions: consolidateSuggestionsByMachine(
-      suggestions.filter(canCreateServiceOrderFromSuggestion),
-      devices
-    ).length,
+    pendingSuggestions: consolidateSuggestionsByMachine(suggestions.filter(canCreateServiceOrderFromSuggestion), devices).length,
     acceptedSuggestions: suggestions.filter((suggestion) => suggestion.status === "accepted").length,
-    recurringAlerts: machineGroups.filter((group) =>
-      group.some((alert) => (alert.occurrencesCount || 0) >= 3)
-    ).length,
+    recurringAlerts: machineGroups.filter((group) => group.some((alert) => (alert.occurrencesCount || 0) >= 3)).length,
     machinesAtRisk: machineGroups.length,
     resolvedAlerts: history.filter((alert) => alert.status === "resolved"),
-    handledSuggestions: suggestions.filter(
-      (suggestion) => suggestion.status === "accepted" || suggestion.status === "rejected"
-    )
+    handledSuggestions: suggestions.filter((suggestion) => suggestion.status === "accepted" || suggestion.status === "rejected")
   };
 }
 
@@ -84,7 +76,10 @@ export function findSuggestionCodeIndex(visibleSuggestions, suggestions, selecte
   const visibleIndex = visibleSuggestions.findIndex((suggestion) => suggestion.id === selectedId);
   return visibleIndex >= 0
     ? visibleIndex
-    : Math.max(0, suggestions.findIndex((suggestion) => suggestion.id === selectedId));
+    : Math.max(
+        0,
+        suggestions.findIndex((suggestion) => suggestion.id === selectedId)
+      );
 }
 
 // Representa a sugestao como um aviso para reaproveitar os formatadores de aviso.

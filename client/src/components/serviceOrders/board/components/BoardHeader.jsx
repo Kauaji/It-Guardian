@@ -7,10 +7,10 @@ function BoardHeading({ businessMode }) {
   return (
     <div className="service-orders-heading">
       <div className="service-orders-title-row">
-      <h2>Ordens de Serviço</h2>
-      <span className={`service-order-mode-badge ${businessMode ? "business" : "internal"}`}>
-        {businessMode ? "Modo Business" : "Modo Local"}
-      </span>
+        <h2>Ordens de Serviço</h2>
+        <span className={`service-order-mode-badge ${businessMode ? "business" : "internal"}`}>
+          {businessMode ? "Modo Business" : "Modo Local"}
+        </span>
       </div>
     </div>
   );
@@ -20,20 +20,26 @@ function HeaderButtons({ can, panels }) {
   return (
     <>
       {can.manageSettings && (
-      <button
-        type="button"
-        className={`secondary-action compact-action service-order-settings-button icon-only ${panels.settingsOpen ? "active" : ""}`}
-        onClick={panels.toggleSettings}
-        title="Configurações da Ordem de Serviço"
-        aria-label="Configurações da Ordem de Serviço"
-      >
-        <Settings size={18} />
-      </button>
+        <button
+          type="button"
+          className={`secondary-action compact-action service-order-settings-button icon-only ${panels.settingsOpen ? "active" : ""}`}
+          onClick={panels.toggleSettings}
+          title="Configurações da Ordem de Serviço"
+          aria-label="Configurações da Ordem de Serviço"
+        >
+          <Settings size={18} />
+        </button>
       )}
       {can.createOrders && (
-      <button type="button" className="primary-action compact-action service-order-new-button icon-only" onClick={panels.openForm} title="Nova Ordem de Serviço" aria-label="Nova Ordem de Serviço">
-        <Plus size={18} />
-      </button>
+        <button
+          type="button"
+          className="primary-action compact-action service-order-new-button icon-only"
+          onClick={panels.openForm}
+          title="Nova Ordem de Serviço"
+          aria-label="Nova Ordem de Serviço"
+        >
+          <Plus size={18} />
+        </button>
       )}
       <button
         type="button"

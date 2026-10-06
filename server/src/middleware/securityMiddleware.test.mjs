@@ -5,11 +5,25 @@ import { rejectDangerousInput, requireMetricsToken } from "./securityMiddleware.
 function probe() {
   const result = { status: null, body: null, headers: {}, nexted: false };
   const res = {
-    status(code) { result.status = code; return this; },
-    json(body) { result.body = body; return this; },
-    setHeader(name, value) { result.headers[name] = value; }
+    status(code) {
+      result.status = code;
+      return this;
+    },
+    json(body) {
+      result.body = body;
+      return this;
+    },
+    setHeader(name, value) {
+      result.headers[name] = value;
+    }
   };
-  return { result, res, next: () => { result.nexted = true; } };
+  return {
+    result,
+    res,
+    next: () => {
+      result.nexted = true;
+    }
+  };
 }
 
 test("recusa corpo com chave de poluicao de prototipo, em qualquer profundidade", () => {

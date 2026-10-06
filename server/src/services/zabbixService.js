@@ -1,8 +1,4 @@
-import {
-  findIntegrationAsset,
-  listIntegrationAlerts,
-  listIntegrationAssets
-} from "../repositories/integrationRepository.js";
+import { findIntegrationAsset, listIntegrationAlerts, listIntegrationAssets } from "../repositories/integrationRepository.js";
 
 function toLegacyHost(asset) {
   return {
@@ -18,9 +14,7 @@ function toLegacyHost(asset) {
     history: [],
     collectedAt: asset.collectedAt,
     lastSeenAt: asset.lastSeenAt,
-    sourceConflicts: asset.correlation?.conflict
-      ? [{ source: "zabbix", externalId: asset.externalId }]
-      : []
+    sourceConflicts: asset.correlation?.conflict ? [{ source: "zabbix", externalId: asset.externalId }] : []
   };
 }
 

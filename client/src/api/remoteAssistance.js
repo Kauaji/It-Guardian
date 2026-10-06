@@ -31,14 +31,7 @@ export function reauthenticateRemoteAssistance({ token, password, assetId, servi
  * @param {{ token: AuthToken, assetId: EntityId, serviceOrderId?: EntityId, reason: string, requestedMode: string, reauthenticationToken: string }} args
  * @returns {Promise<ApiObject>}
  */
-export function createRemoteAssistanceSession({
-  token,
-  assetId,
-  serviceOrderId,
-  reason,
-  requestedMode,
-  reauthenticationToken
-}) {
+export function createRemoteAssistanceSession({ token, assetId, serviceOrderId, reason, requestedMode, reauthenticationToken }) {
   return apiFetch(`/remote-assistance/assets/${encodeURIComponent(assetId)}/sessions`, {
     token,
     method: "POST",

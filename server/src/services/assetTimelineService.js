@@ -427,9 +427,7 @@ export async function getAssetTechnicalTimeline(assetId, options = {}, user = {}
 
   events.sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime());
 
-  const availableCategories = TIMELINE_CATEGORIES.filter((candidate) =>
-    events.some((event) => event.category === candidate)
-  );
+  const availableCategories = TIMELINE_CATEGORIES.filter((candidate) => events.some((event) => event.category === candidate));
 
   const summary = buildSummary(events, topologyReferences);
 

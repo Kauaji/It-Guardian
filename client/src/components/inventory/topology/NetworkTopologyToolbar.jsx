@@ -78,7 +78,9 @@ export default function NetworkTopologyToolbar({
           <span key={nodeCount} className="network-topology-toolbar-counter-pop">
             {nodeCount} {isClusterLevel ? "item(ns)" : "ativo(s)"}
           </span>
-          <span key={`links-${linkCount}`} className="network-topology-toolbar-counter-pop">{linkCount} conexão(ões)</span>
+          <span key={`links-${linkCount}`} className="network-topology-toolbar-counter-pop">
+            {linkCount} conexão(ões)
+          </span>
         </div>
       </div>
 

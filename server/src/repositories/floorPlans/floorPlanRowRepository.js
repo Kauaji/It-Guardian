@@ -129,7 +129,17 @@ export async function insertConnectionPoint(db, point) {
       )
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)
     `,
-    [point.id, point.planId, point.floorId, point.pointType, point.label, point.linkedObjectId, point.x, point.y, JSON.stringify(point.metadata)]
+    [
+      point.id,
+      point.planId,
+      point.floorId,
+      point.pointType,
+      point.label,
+      point.linkedObjectId,
+      point.x,
+      point.y,
+      JSON.stringify(point.metadata)
+    ]
   );
 }
 

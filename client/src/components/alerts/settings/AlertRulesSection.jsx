@@ -1,11 +1,5 @@
 import { useAlertCenterData } from "../../../context/AlertCenterContext.jsx";
-import {
-  alertTypeLabels,
-  isDurationDisabled,
-  isPercentThresholdRule,
-  isThresholdDisabled,
-  priorityLabels
-} from "../alertUtils.js";
+import { alertTypeLabels, isDurationDisabled, isPercentThresholdRule, isThresholdDisabled, priorityLabels } from "../alertUtils.js";
 import { useAlertCenterView } from "../AlertCenterViewContext.jsx";
 
 const operationalWindowFields = [
@@ -61,7 +55,7 @@ function RuleRow({ rule, disabled, onUpdate }) {
           <input
             type="number"
             min="0"
-            value={thresholdOff ? "" : rule.threshold ?? ""}
+            value={thresholdOff ? "" : (rule.threshold ?? "")}
             disabled={disabled || thresholdOff}
             onChange={(event) => onUpdate(rule.id, { threshold: event.target.value })}
           />
@@ -112,7 +106,9 @@ function RuleRow({ rule, disabled, onUpdate }) {
           onChange={(event) => onUpdate(rule.id, { suggestedPriority: event.target.value })}
         >
           {Object.entries(priorityLabels).map(([value, label]) => (
-            <option key={value} value={value}>{label}</option>
+            <option key={value} value={value}>
+              {label}
+            </option>
           ))}
         </select>
       </span>

@@ -32,7 +32,16 @@ export function freshAgentDevice(overrides = {}) {
 export const baseDevices = [
   freshAgentDevice(),
   { id: "d2", name: "PC-02", ip: "10.0.0.2", segmentId: "s1", status: "online", statusLabel: "Online", type: "Desktop" },
-  { id: "d3", name: "Servidor-01", ip: "10.0.0.3", segmentId: "s2", status: "offline", statusLabel: "Offline", type: "Servidor", isBackup: true }
+  {
+    id: "d3",
+    name: "Servidor-01",
+    ip: "10.0.0.3",
+    segmentId: "s2",
+    status: "offline",
+    statusLabel: "Offline",
+    type: "Servidor",
+    isBackup: true
+  }
 ];
 
 export const baseSegments = [
@@ -101,22 +110,83 @@ export const baseSuggestions = [
 ];
 
 export const baseAlerts = [
-  { id: "al1", status: "active", severity: "critical", type: "cpu_high", metric: "cpu", value: 95, threshold: 90, hostName: "PC-01", assetId: "d1", title: "CPU acima do limite em PC-01", occurrencesCount: 3 },
-  { id: "al2", status: "active", severity: "warning", type: "ram_high", metric: "ram", value: 88, threshold: 85, hostName: "PC-02", assetId: "d2", title: "RAM acima do limite em PC-02", occurrencesCount: 1 }
+  {
+    id: "al1",
+    status: "active",
+    severity: "critical",
+    type: "cpu_high",
+    metric: "cpu",
+    value: 95,
+    threshold: 90,
+    hostName: "PC-01",
+    assetId: "d1",
+    title: "CPU acima do limite em PC-01",
+    occurrencesCount: 3
+  },
+  {
+    id: "al2",
+    status: "active",
+    severity: "warning",
+    type: "ram_high",
+    metric: "ram",
+    value: 88,
+    threshold: 85,
+    hostName: "PC-02",
+    assetId: "d2",
+    title: "RAM acima do limite em PC-02",
+    occurrencesCount: 1
+  }
 ];
 
 export const baseHistory = [
   ...baseAlerts,
-  { id: "al3", status: "resolved", severity: "warning", type: "disk_high", metric: "disk", value: 91, threshold: 90, hostName: "Servidor-01", assetId: "d3", title: "Disco acima do limite em Servidor-01", updatedAt: "2026-05-03T10:00:00.000Z" }
+  {
+    id: "al3",
+    status: "resolved",
+    severity: "warning",
+    type: "disk_high",
+    metric: "disk",
+    value: 91,
+    threshold: 90,
+    hostName: "Servidor-01",
+    assetId: "d3",
+    title: "Disco acima do limite em Servidor-01",
+    updatedAt: "2026-05-03T10:00:00.000Z"
+  }
 ];
 
 export const baseRules = [
-  { id: "r-cpu", type: "cpu_high", threshold: 90, durationMinutes: 10, recurrenceCount: 3, recurrenceWindow: "same_day", suggestedPriority: "high", enabled: true },
-  { id: "r-off", type: "machine_offline", threshold: null, durationMinutes: 0, recurrenceCount: 2, recurrenceWindow: "last_24h", suggestedPriority: "critical", enabled: false }
+  {
+    id: "r-cpu",
+    type: "cpu_high",
+    threshold: 90,
+    durationMinutes: 10,
+    recurrenceCount: 3,
+    recurrenceWindow: "same_day",
+    suggestedPriority: "high",
+    enabled: true
+  },
+  {
+    id: "r-off",
+    type: "machine_offline",
+    threshold: null,
+    durationMinutes: 0,
+    recurrenceCount: 2,
+    recurrenceWindow: "last_24h",
+    suggestedPriority: "critical",
+    enabled: false
+  }
 ];
 
 export const baseScripts = [
-  { id: "sc1", name: "Limpar temporários", category: "Limpeza", riskLevel: "low", active: true, description: "Remove arquivos temporários." },
+  {
+    id: "sc1",
+    name: "Limpar temporários",
+    category: "Limpeza",
+    riskLevel: "low",
+    active: true,
+    description: "Remove arquivos temporários."
+  },
   { id: "sc2", name: "Reiniciar spooler", category: "Impressão", riskLevel: "high", active: true },
   { id: "sc3", name: "Script antigo", category: "Legado", riskLevel: "low", active: false }
 ];
@@ -145,8 +215,12 @@ export function buildCenterValue(overrides = {}) {
     onEvaluateAlerts: vi.fn(),
     onAcceptSuggestion: vi.fn().mockResolvedValue(undefined),
     onRejectSuggestion: vi.fn().mockResolvedValue(undefined),
-    onCreatePreventivePlan: vi.fn().mockResolvedValue({ id: "pp1", name: "Plano preventivo", assets: [{}], scripts: [{}, {}], createdAt: "2026-06-01T10:00:00.000Z" }),
-    onCreatePreventivePlanServiceOrder: vi.fn().mockResolvedValue({ preventivePlan: { id: "pp1", name: "Plano preventivo", serviceOrderId: "OS-9", assets: [], scripts: [] } }),
+    onCreatePreventivePlan: vi
+      .fn()
+      .mockResolvedValue({ id: "pp1", name: "Plano preventivo", assets: [{}], scripts: [{}, {}], createdAt: "2026-06-01T10:00:00.000Z" }),
+    onCreatePreventivePlanServiceOrder: vi
+      .fn()
+      .mockResolvedValue({ preventivePlan: { id: "pp1", name: "Plano preventivo", serviceOrderId: "OS-9", assets: [], scripts: [] } }),
     onSavePreventiveAutomationPlan: vi.fn().mockResolvedValue(undefined),
     onDisablePreventiveAutomationPlan: vi.fn().mockResolvedValue(undefined),
     onReactivatePreventiveAutomationPlan: vi.fn().mockResolvedValue(undefined),

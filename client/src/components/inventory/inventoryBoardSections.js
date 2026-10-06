@@ -10,9 +10,7 @@ export function getOccupiedInventorySegmentIds({ devices, machinesBySegment = ne
   if (Array.isArray(devices)) {
     return new Set(devices.map((device) => device.segmentId).filter(Boolean));
   }
-  return new Set(
-    [...machinesBySegment].filter(([, machines]) => machines.length > 0).map(([segmentId]) => segmentId)
-  );
+  return new Set([...machinesBySegment].filter(([, machines]) => machines.length > 0).map(([segmentId]) => segmentId));
 }
 
 export function buildInventoryBoardSections({
@@ -27,9 +25,9 @@ export function buildInventoryBoardSections({
   const segmentGroupIds = new Map();
   const searching = Boolean(search.trim());
   const occupiedSegmentIds = getOccupiedInventorySegmentIds({ devices, machinesBySegment });
-  const availableSegments = segments.filter((segment) => (
-    !isMaintenanceSegmentName(segment.name || "") || occupiedSegmentIds.has(segment.id)
-  ));
+  const availableSegments = segments.filter(
+    (segment) => !isMaintenanceSegmentName(segment.name || "") || occupiedSegmentIds.has(segment.id)
+  );
 
   for (const group of groups) {
     for (const segmentId of group.segmentIds || []) {

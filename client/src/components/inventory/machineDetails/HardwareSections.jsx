@@ -35,15 +35,10 @@ export function ProcessorSection({ hardware }) {
         <DetailItem label="Processadores lógicos" value={hardware.cpuDetails?.logicalProcessors} />
         <DetailItem label="Sockets" value={hardware.cpuDetails?.sockets} />
         <DetailItem label="Socket" value={hardware.cpuDetails?.socket} />
-        <DetailItem
-          label="Clock máximo"
-          value={hardware.cpuDetails?.maxClockMhz ? `${hardware.cpuDetails.maxClockMhz} MHz` : null}
-        />
+        <DetailItem label="Clock máximo" value={hardware.cpuDetails?.maxClockMhz ? `${hardware.cpuDetails.maxClockMhz} MHz` : null} />
         <DetailItem
           label="Virtualização"
-          value={hardware.cpuDetails?.virtualizationEnabled == null
-            ? null
-            : hardware.cpuDetails.virtualizationEnabled}
+          value={hardware.cpuDetails?.virtualizationEnabled == null ? null : hardware.cpuDetails.virtualizationEnabled}
         />
       </div>
     </HardwareSection>
@@ -57,10 +52,7 @@ export function MemorySection({ hardware, agent, isAgentAsset, memoryModules }) 
         <DetailItem label="Total instalado" value={hardware.ramGb ? `${hardware.ramGb} GB` : null} />
         {isAgentAsset && <DetailItem label="Total detectado" value={formatBytes(agent?.memoryTotalBytes)} />}
         <DetailItem label="Saúde geral" value={hardware.memoryHealth?.status || hardware.memoryHealth} />
-        <DetailItem
-          label="Módulos detectados"
-          value={memoryModules.length || hardware.memoryHealth?.modules}
-        />
+        <DetailItem label="Módulos detectados" value={memoryModules.length || hardware.memoryHealth?.modules} />
       </div>
       <div className="hardware-component-list">
         {memoryModules.map((module, index) => (
@@ -71,11 +63,26 @@ export function MemorySection({ hardware, agent, isAgentAsset, memoryModules }) 
               <span>{formatHardwareValue(module.status, "Status não informado")}</span>
             </header>
             <dl>
-              <div><dt>Capacidade</dt><dd>{formatHardwareValue(module.capacityGb ? `${module.capacityGb} GB` : null)}</dd></div>
-              <div><dt>Velocidade</dt><dd>{formatHardwareValue(module.speedMhz ? `${module.speedMhz} MHz` : null)}</dd></div>
-              <div><dt>Fabricante</dt><dd>{formatHardwareValue(module.manufacturer)}</dd></div>
-              <div><dt>Part number</dt><dd>{formatHardwareValue(module.partNumber)}</dd></div>
-              <div><dt>Serial</dt><dd>{formatHardwareValue(module.serialNumber)}</dd></div>
+              <div>
+                <dt>Capacidade</dt>
+                <dd>{formatHardwareValue(module.capacityGb ? `${module.capacityGb} GB` : null)}</dd>
+              </div>
+              <div>
+                <dt>Velocidade</dt>
+                <dd>{formatHardwareValue(module.speedMhz ? `${module.speedMhz} MHz` : null)}</dd>
+              </div>
+              <div>
+                <dt>Fabricante</dt>
+                <dd>{formatHardwareValue(module.manufacturer)}</dd>
+              </div>
+              <div>
+                <dt>Part number</dt>
+                <dd>{formatHardwareValue(module.partNumber)}</dd>
+              </div>
+              <div>
+                <dt>Serial</dt>
+                <dd>{formatHardwareValue(module.serialNumber)}</dd>
+              </div>
             </dl>
           </article>
         ))}
@@ -97,10 +104,22 @@ export function VideoSection({ graphicsAdapters }) {
               <span>{formatHardwareValue(adapter.status, "Status não informado")}</span>
             </header>
             <dl>
-              <div><dt>Processador gráfico</dt><dd>{formatHardwareValue(adapter.videoProcessor)}</dd></div>
-              <div><dt>Memória</dt><dd>{formatHardwareValue(adapter.memoryBytes ? formatBytes(adapter.memoryBytes) : null)}</dd></div>
-              <div><dt>Driver</dt><dd>{formatHardwareValue(adapter.driverVersion)}</dd></div>
-              <div><dt>Resolução</dt><dd>{formatHardwareValue(adapter.resolution)}</dd></div>
+              <div>
+                <dt>Processador gráfico</dt>
+                <dd>{formatHardwareValue(adapter.videoProcessor)}</dd>
+              </div>
+              <div>
+                <dt>Memória</dt>
+                <dd>{formatHardwareValue(adapter.memoryBytes ? formatBytes(adapter.memoryBytes) : null)}</dd>
+              </div>
+              <div>
+                <dt>Driver</dt>
+                <dd>{formatHardwareValue(adapter.driverVersion)}</dd>
+              </div>
+              <div>
+                <dt>Resolução</dt>
+                <dd>{formatHardwareValue(adapter.resolution)}</dd>
+              </div>
             </dl>
           </article>
         ))}
@@ -144,7 +163,10 @@ export function StorageSection({ agent, isAgentAsset, isManualAsset, diskHealth,
             <strong>{formatHardwareValue(disk.label, `Disco ${index + 1}`)}</strong>
             <span>{formatHardwareValue(disk.sizeGb ? `${disk.sizeGb} GB - ${disk.type || "tipo não informado"}` : disk.type)}</span>
             <small>SMART: {formatHardwareValue(disk.smartStatus || disk.health)}</small>
-            <small>Saúde estimada: {formatHardwareValue(disk.healthEstimate || (disk.healthPercent != null ? `${disk.healthPercent}% (estimativa)` : null))}</small>
+            <small>
+              Saúde estimada:{" "}
+              {formatHardwareValue(disk.healthEstimate || (disk.healthPercent != null ? `${disk.healthPercent}% (estimativa)` : null))}
+            </small>
             <small>Temperatura: {formatHardwareValue(disk.temperatureC ? `${disk.temperatureC} C` : null)}</small>
             <small>Horas ligadas: {formatHardwareValue(disk.powerOnHours)}</small>
             <small>Setores realocados: {formatHardwareValue(disk.reallocatedSectors)}</small>
@@ -153,9 +175,7 @@ export function StorageSection({ agent, isAgentAsset, isManualAsset, diskHealth,
         ))}
         {!disks.length && (
           <p className="empty">
-            {isManualAsset
-              ? "Ativo de rede sem coleta automática de discos."
-              : "Nenhuma unidade física identificada."}
+            {isManualAsset ? "Ativo de rede sem coleta automática de discos." : "Nenhuma unidade física identificada."}
           </p>
         )}
       </div>
@@ -168,16 +188,11 @@ export function PowerSection({ hardware }) {
     <HardwareSection icon={Battery} title="Energia">
       <div className="detail-grid hardware-detail-grid">
         <DetailItem label="Bateria" value={hardware.battery?.name} />
-        <DetailItem
-          label="Carga"
-          value={hardware.battery?.chargePercent != null ? `${hardware.battery.chargePercent}%` : null}
-        />
+        <DetailItem label="Carga" value={hardware.battery?.chargePercent != null ? `${hardware.battery.chargePercent}%` : null} />
         <DetailItem label="Status" value={hardware.battery?.status} />
         <DetailItem
           label="Autonomia estimada"
-          value={hardware.battery?.estimatedMinutes
-            ? `${hardware.battery.estimatedMinutes} min`
-            : null}
+          value={hardware.battery?.estimatedMinutes ? `${hardware.battery.estimatedMinutes} min` : null}
         />
       </div>
     </HardwareSection>

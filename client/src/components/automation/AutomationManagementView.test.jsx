@@ -31,8 +31,28 @@ const planPaused = { ...planActive, id: "p2", name: "Auditoria", active: false, 
 const management = {
   plans: [planActive, planPaused],
   machines: [
-    { assetId: "d1", assetName: "PC-01", assetType: "Desktop", plans: [{ id: "p1", automationPlanId: "p1", planName: "Limpeza mensal", active: true, nextRunAt: "2026-07-01T12:00:00.000Z", indicatorColor: "#2563eb", assetCount: 2 }] },
-    { assetId: "d2", assetName: "PC-02", assetType: "Notebook", plans: [{ id: "p2", automationPlanId: "p2", planName: "Auditoria", active: false, indicatorColor: "#dc2626", assetCount: 1 }] }
+    {
+      assetId: "d1",
+      assetName: "PC-01",
+      assetType: "Desktop",
+      plans: [
+        {
+          id: "p1",
+          automationPlanId: "p1",
+          planName: "Limpeza mensal",
+          active: true,
+          nextRunAt: "2026-07-01T12:00:00.000Z",
+          indicatorColor: "#2563eb",
+          assetCount: 2
+        }
+      ]
+    },
+    {
+      assetId: "d2",
+      assetName: "PC-02",
+      assetType: "Notebook",
+      plans: [{ id: "p2", automationPlanId: "p2", planName: "Auditoria", active: false, indicatorColor: "#dc2626", assetCount: 1 }]
+    }
   ],
   metadata: { planCount: 2, machineCount: 2 }
 };
@@ -53,7 +73,19 @@ function setup(props = {}) {
     onFetchAgenda: vi.fn().mockResolvedValue({ items: [], summary: {} }),
     onFetchPlanHistory: vi.fn().mockResolvedValue({ items: [] })
   };
-  const merged = { management, devices, segments, segmentGroups, inventoryTabs, scripts, loading: false, error: "", permissions, ...handlers, ...props };
+  const merged = {
+    management,
+    devices,
+    segments,
+    segmentGroups,
+    inventoryTabs,
+    scripts,
+    loading: false,
+    error: "",
+    permissions,
+    ...handlers,
+    ...props
+  };
   const view = render(<AutomationManagementView {...merged} />);
   return { ...handlers, ...view, props: merged, user: userEvent.setup() };
 }
@@ -111,7 +143,10 @@ describe("AutomationManagementView - máquinas", () => {
 
   it("fecha os detalhes da máquina ao remover a última associação", async () => {
     const { user, onRemoveAsset } = setup({
-      management: { ...management, machines: [{ ...management.machines[0], plans: [{ ...management.machines[0].plans[0], assetCount: 1 }] }] }
+      management: {
+        ...management,
+        machines: [{ ...management.machines[0], plans: [{ ...management.machines[0].plans[0], assetCount: 1 }] }]
+      }
     });
 
     await user.click(screen.getByRole("button", { name: "Gerenciar automações de PC-01" }));
@@ -125,7 +160,10 @@ describe("AutomationManagementView - máquinas", () => {
 
   it("exclui o plano a partir dos detalhes da máquina e fecha o diálogo", async () => {
     const { user, onDeletePlan } = setup({
-      management: { ...management, machines: [{ ...management.machines[0], plans: [{ ...management.machines[0].plans[0], assetCount: 1 }] }] }
+      management: {
+        ...management,
+        machines: [{ ...management.machines[0], plans: [{ ...management.machines[0].plans[0], assetCount: 1 }] }]
+      }
     });
 
     await user.click(screen.getByRole("button", { name: "Gerenciar automações de PC-01" }));

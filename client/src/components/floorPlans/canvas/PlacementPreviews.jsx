@@ -46,7 +46,11 @@ function CatalogObjectPreview({ preview, tone }) {
   const centerX = Number(object.x || 0) + width / 2;
   const centerY = Number(object.y || 0) + height / 2;
   return (
-    <g className={`floor-plan-catalog-placement-preview ${tone}`} pointerEvents="none" transform={`rotate(${Number(object.rotation || 0)} ${centerX} ${centerY})`}>
+    <g
+      className={`floor-plan-catalog-placement-preview ${tone}`}
+      pointerEvents="none"
+      transform={`rotate(${Number(object.rotation || 0)} ${centerX} ${centerY})`}
+    >
       <rect className="placement-outline" x={object.x - 5} y={object.y - 5} width={width + 10} height={height + 10} rx="9" />
       <g transform={`translate(${object.x} ${object.y})`} opacity="0.76">
         <FloorPlanObjectGlyph object={object} width={width} height={height} />

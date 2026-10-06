@@ -33,7 +33,9 @@ export default function ScriptActivityList({ activity }) {
       <h4>Atividade</h4>
       {!activity.length && <p className="empty">Nenhum script executado nesta OS ainda.</p>}
       <ul>
-        {activity.map((entry) => <ScriptActivityEntry key={entry.id} entry={entry} />)}
+        {activity.map((entry) => (
+          <ScriptActivityEntry key={entry.id} entry={entry} />
+        ))}
       </ul>
     </div>
   );

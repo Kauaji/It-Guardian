@@ -7,7 +7,11 @@
  * @returns {boolean} `true` para "1", "true", "yes" ou "sim" (sem diferenciar caixa).
  */
 export function isTruthyEnv(value) {
-  return ["1", "true", "yes", "sim"].includes(String(value || "").trim().toLowerCase());
+  return ["1", "true", "yes", "sim"].includes(
+    String(value || "")
+      .trim()
+      .toLowerCase()
+  );
 }
 
 /**

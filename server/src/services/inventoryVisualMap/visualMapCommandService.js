@@ -3,11 +3,7 @@ import { withTransaction } from "../../database.js";
 import { normalizeMapPayload } from "../../domain/inventoryVisualMap/visualMapPayload.js";
 import { addLog } from "../../repositories/logRepository.js";
 import { getMapOrThrow } from "../../repositories/inventoryVisualMap/visualMapGuards.js";
-import {
-  deleteVisualMapRow,
-  insertVisualMapRow,
-  updateVisualMapRow
-} from "../../repositories/inventoryVisualMap/visualMapRepository.js";
+import { deleteVisualMapRow, insertVisualMapRow, updateVisualMapRow } from "../../repositories/inventoryVisualMap/visualMapRepository.js";
 
 export async function createInventoryVisualMap(payload, user) {
   const data = normalizeMapPayload(payload);

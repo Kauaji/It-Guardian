@@ -64,13 +64,7 @@ export function chooseScheduleRecalculationBase({ existing, plan }) {
     return new Date().toISOString();
   }
 
-  return (
-    existing?.lastScheduledAt ||
-    plan.scheduleAnchorAt ||
-    existing?.createdAt ||
-    plan.createdAt ||
-    new Date().toISOString()
-  );
+  return existing?.lastScheduledAt || plan.scheduleAnchorAt || existing?.createdAt || plan.createdAt || new Date().toISOString();
 }
 
 /**
@@ -108,9 +102,7 @@ export function resolveEffectiveRecurrence(plan, asset) {
     };
   }
 
-  const segmentOverride = activeOverrides.find(
-    (override) => override.segmentId && String(override.segmentId) === String(asset.segmentId)
-  );
+  const segmentOverride = activeOverrides.find((override) => override.segmentId && String(override.segmentId) === String(asset.segmentId));
   if (segmentOverride) {
     return {
       ...normalizePreventiveSchedule({ ...plan, ...segmentOverride }),
@@ -198,9 +190,7 @@ export function resolveAssetListDevices(assetIds = [], devices = []) {
 export function getAssetScheduleSyncActions(existingSchedules = [], nextAssetIds = []) {
   const nextIds = normalizeAssetIds(nextAssetIds);
   const existingActiveIds = new Set(
-    existingSchedules
-      .filter((schedule) => schedule.active !== false)
-      .map((schedule) => String(schedule.assetId))
+    existingSchedules.filter((schedule) => schedule.active !== false).map((schedule) => String(schedule.assetId))
   );
   const nextIdSet = new Set(nextIds.map(String));
 

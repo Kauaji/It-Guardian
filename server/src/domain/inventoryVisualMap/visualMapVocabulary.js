@@ -31,28 +31,11 @@ export const INFRASTRUCTURE_PRESETS = new Set([
   "ip_camera"
 ]);
 
-export const ELECTRICAL_PRESETS = new Set([
-  "power_point",
-  "outlet",
-  "power_line",
-  "circuit",
-  "electrical_panel",
-  "ups"
-]);
+export const ELECTRICAL_PRESETS = new Set(["power_point", "outlet", "power_line", "circuit", "electrical_panel", "ups"]);
 
-export const INFRASTRUCTURE_CONNECTION_TYPES = new Set([
-  "network_cable",
-  "backbone",
-  "uplink",
-  "rack_link",
-  "ap_coverage_link"
-]);
+export const INFRASTRUCTURE_CONNECTION_TYPES = new Set(["network_cable", "backbone", "uplink", "rack_link", "ap_coverage_link"]);
 
-export const ELECTRICAL_CONNECTION_TYPES = new Set([
-  "power_line",
-  "circuit_line",
-  "ups_line"
-]);
+export const ELECTRICAL_CONNECTION_TYPES = new Set(["power_line", "circuit_line", "ups_line"]);
 
 /** @type {Record<string, PresetDimensions>} */
 export const DEFAULT_STRUCTURE_DIMENSIONS = {
@@ -101,12 +84,7 @@ export const DEFAULT_ELECTRICAL_DIMENSIONS = {
   ups: { width: 0.55, depth: 0.6, height: 0.55, color: "#9333ea", label: "Nobreak" }
 };
 
-export const ALL_PRESETS = new Set([
-  ...STRUCTURE_PRESETS,
-  ...ASSET_PRESETS,
-  ...INFRASTRUCTURE_PRESETS,
-  ...ELECTRICAL_PRESETS
-]);
+export const ALL_PRESETS = new Set([...STRUCTURE_PRESETS, ...ASSET_PRESETS, ...INFRASTRUCTURE_PRESETS, ...ELECTRICAL_PRESETS]);
 
 /** @type {Record<string, Set<string>>} */
 export const CONNECTION_TYPES_BY_LAYER = {

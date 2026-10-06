@@ -1,14 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  fetchFloorPlanAssetHeatmap,
-  fetchFloorPlanServiceOrderHeatmap,
-  fetchFloorPlanSummary
-} from "../../../api.js";
-import {
-  buildInfrastructureFilters,
-  getInfrastructurePeriodRange,
-  isSegmentCompatibleWithGroup
-} from "../utils/infrastructure.js";
+import { fetchFloorPlanAssetHeatmap, fetchFloorPlanServiceOrderHeatmap, fetchFloorPlanSummary } from "../../../api.js";
+import { buildInfrastructureFilters, getInfrastructurePeriodRange, isSegmentCompatibleWithGroup } from "../utils/infrastructure.js";
 
 function requestInfrastructureData({ token, planId, mode, metric, period, filters }) {
   if (mode === "dashboard") return fetchFloorPlanSummary(token, planId, filters);
@@ -43,7 +35,9 @@ export function useInfrastructureView({ token, permissions, notify, planId, segm
         if (payload.heatmap) setHeatmap(payload.heatmap);
       })
       .catch((requestError) => notify?.(requestError.message, "danger"));
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [planId, metric, period, filters, mode, notify, permissions.viewHeatmaps, token]);
 
   const changeMode = (nextMode) => {

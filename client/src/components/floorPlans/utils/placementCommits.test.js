@@ -64,7 +64,13 @@ describe("addMeasurementToDraft", () => {
 
   it("prioriza o comprimento digitado em metros", () => {
     const draft = cloneEditor(buildEditor({ zones: [], objects: [] }));
-    addMeasurementToDraft({ draft, floorId: "floor-1", placement: { ...placement, lengthBuffer: "2,5" }, end: { x: 300, y: 100 }, createId: createIdSequence() });
+    addMeasurementToDraft({
+      draft,
+      floorId: "floor-1",
+      placement: { ...placement, lengthBuffer: "2,5" },
+      end: { x: 300, y: 100 },
+      createId: createIdSequence()
+    });
     // 0.5 m por celula de 25 px => 2,5 m = 125 px
     expect(Math.round(draft.objects[0].width)).toBe(125);
   });
@@ -103,9 +109,24 @@ describe("addOpeningToDraft", () => {
   });
 
   it("usa altura 3D menor para janelas", () => {
-    const wall = createWallObjectFromPoints({ id: "wall-a", planId: "plan-1", floorId: "floor-1", item: wallItem, start: { x: 100, y: 100 }, end: { x: 300, y: 100 }, gridSize: 5 });
+    const wall = createWallObjectFromPoints({
+      id: "wall-a",
+      planId: "plan-1",
+      floorId: "floor-1",
+      item: wallItem,
+      start: { x: 100, y: 100 },
+      end: { x: 300, y: 100 },
+      gridSize: 5
+    });
     const draft = cloneEditor(buildEditor({ objects: [wall] }));
-    const id = addOpeningToDraft({ draft, floorId: "floor-1", item: { objectType: "window", label: "Janela" }, wall, point: { x: 200, y: 100 }, createId: createIdSequence() });
+    const id = addOpeningToDraft({
+      draft,
+      floorId: "floor-1",
+      item: { objectType: "window", label: "Janela" },
+      wall,
+      point: { x: 200, y: 100 },
+      createId: createIdSequence()
+    });
     expect(draft.objects.find((object) => object.id === id).height3d).toBe(48);
   });
 });

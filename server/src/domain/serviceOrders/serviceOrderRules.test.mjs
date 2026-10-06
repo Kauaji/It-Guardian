@@ -45,13 +45,27 @@ test("prioridade por tempo so exibe escalonamento quando habilitada e a OS nao e
 });
 
 test("SLA considera status final configurado ao resolver a OS", () => {
-  const custom = normalizeServiceOrderSettings({ statuses: [{ id: "novo", isInitial: true, name: "Novo" }, { id: "fim", name: "Fim", isFinal: true }] });
-  const order = { status: "fim", priority: "high", slaDueAt: new Date(Date.now() + 3600 * 1000).toISOString(), closedAt: new Date().toISOString() };
+  const custom = normalizeServiceOrderSettings({
+    statuses: [
+      { id: "novo", isInitial: true, name: "Novo" },
+      { id: "fim", name: "Fim", isFinal: true }
+    ]
+  });
+  const order = {
+    status: "fim",
+    priority: "high",
+    slaDueAt: new Date(Date.now() + 3600 * 1000).toISOString(),
+    closedAt: new Date().toISOString()
+  };
   assert.equal(calculateServiceOrderSla(order, custom).status, "resolved");
 });
 
 test("mudanca de status descreve fechamento, reabertura e transicao comum", () => {
-  assert.deepEqual(describeStatusChange("closed", settings), { eventType: "closed", message: "OS finalizada.", assetMessage: "finalizada." });
+  assert.deepEqual(describeStatusChange("closed", settings), {
+    eventType: "closed",
+    message: "OS finalizada.",
+    assetMessage: "finalizada."
+  });
   assert.equal(describeStatusChange("open", settings).eventType, "reopened");
   assert.equal(describeStatusChange("waiting", settings).eventType, "status");
 });
@@ -59,8 +73,14 @@ test("mudanca de status descreve fechamento, reabertura e transicao comum", () =
 test("reabertura exige OS finalizada e motivo, e reinicia o prazo de SLA", () => {
   const now = new Date("2026-03-01T10:00:00.000Z");
   const closed = { status: "closed", priority: "critical" };
-  assert.throws(() => planServiceOrderReopen({ current: { ...closed, status: "open" }, settings, reason: "x motivo" }), (error) => error.statusCode === 400 && /finalizada/.test(error.message));
-  assert.throws(() => planServiceOrderReopen({ current: closed, settings, reason: " a " }), (error) => error.statusCode === 400 && /motivo/.test(error.message));
+  assert.throws(
+    () => planServiceOrderReopen({ current: { ...closed, status: "open" }, settings, reason: "x motivo" }),
+    (error) => error.statusCode === 400 && /finalizada/.test(error.message)
+  );
+  assert.throws(
+    () => planServiceOrderReopen({ current: closed, settings, reason: " a " }),
+    (error) => error.statusCode === 400 && /motivo/.test(error.message)
+  );
   const plan = planServiceOrderReopen({ current: closed, settings, reason: "  Voltou a falhar ", now });
   assert.equal(plan.reason, "Voltou a falhar");
   assert.equal(plan.initialStatusId, "open");
@@ -71,7 +91,10 @@ test("avaliacao aceita notas de 1 a 5 (truncando) e rejeita o restante", () => {
   assert.equal(normalizeFeedbackRating("4.9"), 4);
   assert.equal(normalizeFeedbackRating(5), 5);
   for (const invalid of [0, 6, "x", undefined, null, NaN]) {
-    assert.throws(() => normalizeFeedbackRating(invalid), (error) => error.statusCode === 400 && error.expose === true);
+    assert.throws(
+      () => normalizeFeedbackRating(invalid),
+      (error) => error.statusCode === 400 && error.expose === true
+    );
   }
 });
 

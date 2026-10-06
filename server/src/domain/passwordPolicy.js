@@ -6,7 +6,7 @@ export const PASSWORD_MIN_LENGTH = 12;
 export const PASSWORD_MAX_BYTES = 72;
 
 /** @type {Record<string, string>} */
-const leetMap = { "@": "a", "4": "a", "3": "e", "1": "i", "!": "i", "0": "o", "$": "s", "5": "s", "7": "t" };
+const leetMap = { "@": "a", 4: "a", 3: "e", 1: "i", "!": "i", 0: "o", $: "s", 5: "s", 7: "t" };
 
 /** @param {unknown} value */
 function foldAccents(value) {
@@ -41,12 +41,7 @@ function normalizeForComparison(value) {
 function commonRootCandidates(value) {
   const folded = foldAccents(value);
   const trimmed = folded.replace(/^[^a-z]+/, "").replace(/[^a-z]+$/, "");
-  return new Set([
-    alnumOnly(folded),
-    alnumOnly(folded).replace(/[0-9]/g, ""),
-    alnumOnly(trimmed),
-    alnumOnly(applyLeet(trimmed))
-  ]);
+  return new Set([alnumOnly(folded), alnumOnly(folded).replace(/[0-9]/g, ""), alnumOnly(trimmed), alnumOnly(applyLeet(trimmed))]);
 }
 
 const sequenceHaystacks = commonSequences.map((sequence) => sequence + sequence);

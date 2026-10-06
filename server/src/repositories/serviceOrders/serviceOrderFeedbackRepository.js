@@ -3,10 +3,7 @@ import { query } from "../../database.js";
 import { fromFeedbackRow } from "./serviceOrderMappers.js";
 
 export async function findServiceOrderFeedback(serviceOrderId) {
-  const result = await query(
-    "SELECT * FROM service_order_feedback WHERE service_order_id = $1",
-    [serviceOrderId]
-  );
+  const result = await query("SELECT * FROM service_order_feedback WHERE service_order_id = $1", [serviceOrderId]);
   return fromFeedbackRow(result.rows[0]);
 }
 
@@ -16,10 +13,7 @@ export async function listServiceOrderFeedbackByOrderIds(orderIds = []) {
   if (!ids.length) return feedbackByOrder;
 
   const placeholders = ids.map((_, index) => `$${index + 1}`).join(", ");
-  const result = await query(
-    `SELECT * FROM service_order_feedback WHERE service_order_id IN (${placeholders})`,
-    ids
-  );
+  const result = await query(`SELECT * FROM service_order_feedback WHERE service_order_id IN (${placeholders})`, ids);
   for (const row of result.rows.map(fromFeedbackRow)) {
     feedbackByOrder.set(row.serviceOrderId, row);
   }

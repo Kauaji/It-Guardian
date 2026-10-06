@@ -1,9 +1,5 @@
 import { getAgentAutoUpdateInfo, getFrontendUrl, isRemoteScriptExecutionEnabled } from "../config/environment.js";
-import {
-  validateAgentPayload,
-  validateEnrollmentName,
-  validateJobResultPayload
-} from "../domain/agentPayload.js";
+import { validateAgentPayload, validateEnrollmentName, validateJobResultPayload } from "../domain/agentPayload.js";
 import { isUpdateAvailable } from "../domain/agentVersion.js";
 import { createPublicMachineToken } from "./publicMachineToken.js";
 import { AppError, conflict } from "../lib/errors.js";

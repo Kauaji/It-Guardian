@@ -26,7 +26,9 @@ function validationError(message) {
  * @returns {string} Um de daily, weekly, biweekly, monthly, custom_days (ou `fallback`).
  */
 export function normalizeRecurrenceType(value, fallback = "monthly") {
-  const normalized = String(value || "").trim().toLowerCase();
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase();
   return recurrenceTypes.has(normalized) ? normalized : fallback;
 }
 
@@ -60,7 +62,10 @@ export function normalizeRecurrenceIntervalDays(value, type = "monthly", options
  * @returns {string} `HH:MM`.
  */
 export function normalizePreferredTime(value, fallback = DEFAULT_PREFERRED_TIME) {
-  const text = String(value ?? "").trim().slice(0, 5) || fallback;
+  const text =
+    String(value ?? "")
+      .trim()
+      .slice(0, 5) || fallback;
   return /^\d{2}:\d{2}$/.test(text) ? text : fallback;
 }
 
@@ -70,7 +75,10 @@ export function normalizePreferredTime(value, fallback = DEFAULT_PREFERRED_TIME)
  * @returns {string}
  */
 export function normalizeTimezone(value, fallback = DEFAULT_TIMEZONE) {
-  const timezone = String(value ?? "").trim().slice(0, 80) || fallback;
+  const timezone =
+    String(value ?? "")
+      .trim()
+      .slice(0, 80) || fallback;
   try {
     new Intl.DateTimeFormat("en-US", { timeZone: timezone }).format(new Date());
     return timezone;
@@ -111,9 +119,7 @@ function getZonedDateParts(date, timeZone) {
     hourCycle: "h23"
   }).formatToParts(date);
   /** @type {Record<string, number>} */
-  const values = Object.fromEntries(
-    parts.filter((part) => part.type !== "literal").map((part) => [part.type, Number(part.value)])
-  );
+  const values = Object.fromEntries(parts.filter((part) => part.type !== "literal").map((part) => [part.type, Number(part.value)]));
   return {
     year: values.year,
     month: values.month,

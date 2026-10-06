@@ -27,10 +27,7 @@ export default function SidebarSegmentFilter({
     () => getOccupiedMaintenanceSegments(visibleSegments, countBySegment),
     [countBySegment, visibleSegments]
   );
-  const segmentsByGroupId = useMemo(
-    () => groupSegmentsByGroupId(visibleSegments, groups),
-    [groups, visibleSegments]
-  );
+  const segmentsByGroupId = useMemo(() => groupSegmentsByGroupId(visibleSegments, groups), [groups, visibleSegments]);
   const ungrouped = segmentsByGroupId.get("") || [];
 
   function renderSegmentItems(list) {

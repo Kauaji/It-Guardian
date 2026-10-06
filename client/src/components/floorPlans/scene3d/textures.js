@@ -86,9 +86,10 @@ export function createSurfaceTexture(preset, kind = "floor") {
   canvas.width = TEXTURE_SIZE;
   canvas.height = TEXTURE_SIZE;
   const context = canvas.getContext("2d");
-  context.fillStyle = kind === "wall"
-    ? WALL_TEXTURE_COLORS[preset] || WALL_TEXTURE_COLORS.paint
-    : FLOOR_TEXTURE_COLORS[preset] || FLOOR_TEXTURE_COLORS.ceramic;
+  context.fillStyle =
+    kind === "wall"
+      ? WALL_TEXTURE_COLORS[preset] || WALL_TEXTURE_COLORS.paint
+      : FLOOR_TEXTURE_COLORS[preset] || FLOOR_TEXTURE_COLORS.ceramic;
   context.fillRect(0, 0, TEXTURE_SIZE, TEXTURE_SIZE);
 
   if (preset === "wood") drawWoodGrain(context, kind);

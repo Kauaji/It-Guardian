@@ -144,10 +144,7 @@ export function analyzeMaintenanceScriptContent(content = "") {
       variableValidationStatus: "valid",
       allowedVariables,
       safePreview: "",
-      safetyWarnings: [
-        "Nenhum comando foi executado.",
-        "O conteúdo é tratado apenas como texto armazenado."
-      ]
+      safetyWarnings: ["Nenhum comando foi executado.", "O conteúdo é tratado apenas como texto armazenado."]
     };
   }
 

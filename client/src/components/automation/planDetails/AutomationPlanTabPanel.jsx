@@ -12,7 +12,14 @@ export function AutomationPlanTabNav({ activeTab, onChange }) {
   return (
     <nav className="automation-plan-detail-tabs" role="tablist" aria-label="Detalhes do plano">
       {automationPlanTabs.map(([id, label]) => (
-        <button key={id} type="button" role="tab" aria-selected={activeTab === id} className={activeTab === id ? "active" : ""} onClick={() => onChange(id)}>
+        <button
+          key={id}
+          type="button"
+          role="tab"
+          aria-selected={activeTab === id}
+          className={activeTab === id ? "active" : ""}
+          onClick={() => onChange(id)}
+        >
           {label}
         </button>
       ))}
@@ -60,7 +67,13 @@ function ScriptsPanel({ linkedScripts }) {
     <section className="automation-plan-tab-panel">
       <h3>Scripts vinculados</h3>
       <div className="automation-plan-list">
-        {linkedScripts.map((script) => <article key={script.id}><strong>{script.name}</strong><span>{script.category || "Sem categoria"}</span><span>{script.risk || "Risco não informado"}</span></article>)}
+        {linkedScripts.map((script) => (
+          <article key={script.id}>
+            <strong>{script.name}</strong>
+            <span>{script.category || "Sem categoria"}</span>
+            <span>{script.risk || "Risco não informado"}</span>
+          </article>
+        ))}
       </div>
       {!linkedScripts.length && <p className="empty">Nenhum script vinculado.</p>}
     </section>
@@ -73,7 +86,13 @@ function HistoryPanel({ history, historyLoading }) {
       <h3>Histórico do plano</h3>
       {historyLoading && <p>Carregando histórico...</p>}
       <div className="automation-plan-list">
-        {history.map((item) => <article key={item.id}><strong>{item.message}</strong><span>{item.userName}</span><time>{formatAutomationDate(item.createdAt)}</time></article>)}
+        {history.map((item) => (
+          <article key={item.id}>
+            <strong>{item.message}</strong>
+            <span>{item.userName}</span>
+            <time>{formatAutomationDate(item.createdAt)}</time>
+          </article>
+        ))}
       </div>
       {!historyLoading && !history.length && <p className="empty">Nenhum evento registrado.</p>}
     </section>

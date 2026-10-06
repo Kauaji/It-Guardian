@@ -1,9 +1,6 @@
 import { badRequest, conflict, notFoundError } from "../lib/errors.js";
 import { listNetworkTopologyLinks } from "../repositories/networkTopology/topologyLinkRepository.js";
-import {
-  getNetworkTopologyMap,
-  listNetworkTopologyMaps
-} from "../repositories/networkTopology/topologyMapRepository.js";
+import { getNetworkTopologyMap, listNetworkTopologyMaps } from "../repositories/networkTopology/topologyMapRepository.js";
 import { listNetworkTopologyNodes } from "../repositories/networkTopology/topologyNodeRepository.js";
 import {
   createNetworkTopologyLink,
@@ -79,11 +76,7 @@ export async function listMaps() {
 }
 
 export async function getMapWithNodesAndLinks(id) {
-  const [map, nodes, links] = await Promise.all([
-    getNetworkTopologyMap(id),
-    listNetworkTopologyNodes(id),
-    listNetworkTopologyLinks(id)
-  ]);
+  const [map, nodes, links] = await Promise.all([getNetworkTopologyMap(id), listNetworkTopologyNodes(id), listNetworkTopologyLinks(id)]);
   return { map, nodes, links };
 }
 
@@ -116,10 +109,7 @@ export async function getMapByScope(scopeType, scopeId, user, scopeName) {
   }
 
   const map = await getOrCreateNetworkTopologyMapByScope(scopeType, scopeId, defaultName, user);
-  const [nodes, links] = await Promise.all([
-    listNetworkTopologyNodes(map.id),
-    listNetworkTopologyLinks(map.id)
-  ]);
+  const [nodes, links] = await Promise.all([listNetworkTopologyNodes(map.id), listNetworkTopologyLinks(map.id)]);
   return { map, nodes, links };
 }
 
@@ -212,15 +202,10 @@ export async function removeLink(id, user) {
  * assetIds contam como "centrais" (server/switch/router/nas).
  */
 export async function generateAutoLayout(mapId, hints, user) {
-  const [nodes, links] = await Promise.all([
-    listNetworkTopologyNodes(mapId),
-    listNetworkTopologyLinks(mapId)
-  ]);
+  const [nodes, links] = await Promise.all([listNetworkTopologyNodes(mapId), listNetworkTopologyLinks(mapId)]);
 
   const centralAssetIds = new Set(
-    (Array.isArray(hints) ? hints : [])
-      .filter((hint) => CENTRAL_ASSET_TYPES.has(hint?.assetType))
-      .map((hint) => hint.assetId)
+    (Array.isArray(hints) ? hints : []).filter((hint) => CENTRAL_ASSET_TYPES.has(hint?.assetType)).map((hint) => hint.assetId)
   );
 
   const positions = computeAutoLayout({ nodes, links, centralAssetIds });

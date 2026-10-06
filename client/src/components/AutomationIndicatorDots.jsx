@@ -49,13 +49,7 @@ export function formatAutomationIndicatorLabel(indicator = {}) {
   return `${name}. ${recurrenceText}. Horário: ${preferredTime}. Próxima preparação: ${nextRun}. Scripts: ${scriptCount}. Status: ${status}.`;
 }
 
-export default function AutomationIndicatorDots({
-  indicators = [],
-  maxVisible = 4,
-  onSelectPlan,
-  compact = false,
-  interactive = true
-}) {
+export default function AutomationIndicatorDots({ indicators = [], maxVisible = 4, onSelectPlan, compact = false, interactive = true }) {
   const [open, setOpen] = useState(false);
   const popoverId = useId();
   const containerRef = useRef(null);
@@ -130,8 +124,8 @@ export default function AutomationIndicatorDots({
             />
           );
         })}
-        {hiddenCount > 0 && (
-          interactive ? (
+        {hiddenCount > 0 &&
+          (interactive ? (
             <button
               type="button"
               className="automation-indicator-more"
@@ -151,8 +145,7 @@ export default function AutomationIndicatorDots({
             <span className="automation-indicator-more is-visual" title={`Mais ${hiddenCount} plano(s)`}>
               +{hiddenCount}
             </span>
-          )
-        )}
+          ))}
       </div>
 
       {interactive && open && (

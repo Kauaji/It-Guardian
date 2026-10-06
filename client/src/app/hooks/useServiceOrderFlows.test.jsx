@@ -14,7 +14,16 @@ vi.mock("../../api.js", () => ({
 const defaultSegment = { id: "def", name: "Não organizadas", isDefault: true };
 const redes = { id: "s1", name: "Redes" };
 const main = { id: "main", name: "PC principal", segmentId: "s1", segmentName: "Redes", tabId: "tab-a" };
-const backup = { id: "bk", name: "Reserva", isBackup: true, backupStatus: "available", segmentId: "system-backup", segmentName: "Backup", backupRealSegmentId: "def", tabId: "global-backup" };
+const backup = {
+  id: "bk",
+  name: "Reserva",
+  isBackup: true,
+  backupStatus: "available",
+  segmentId: "system-backup",
+  segmentName: "Backup",
+  backupRealSegmentId: "def",
+  tabId: "global-backup"
+};
 const order = { id: "os-1", number: 4, assetId: "main", environmentId: "tab-a" };
 
 function build({ devices = [main, backup] } = {}) {
@@ -122,7 +131,8 @@ describe("useServiceOrderBackupFlow.handleSelectBackupForServiceOrder", () => {
     const first = renderBackupFlow(noOrigin);
     expect(await first.result.current.handleSelectBackupForServiceOrder(order, backup)).toBe(false);
     expect(noOrigin.session.notify).toHaveBeenLastCalledWith(
-      "Não foi possível localizar o segmento original da máquina principal.", "danger"
+      "Não foi possível localizar o segmento original da máquina principal.",
+      "danger"
     );
 
     const noTarget = build();
@@ -131,9 +141,7 @@ describe("useServiceOrderBackupFlow.handleSelectBackupForServiceOrder", () => {
     noTarget.shared.inventory.model.decoratedSegments = [];
     const second = renderBackupFlow(noTarget);
     expect(await second.result.current.handleSelectBackupForServiceOrder(order, backup)).toBe(false);
-    expect(noTarget.session.notify).toHaveBeenLastCalledWith(
-      "Não foi possível localizar o segmento de destino do Backup.", "danger"
-    );
+    expect(noTarget.session.notify).toHaveBeenLastCalledWith("Não foi possível localizar o segmento de destino do Backup.", "danger");
     expect(noTarget.shared.moves.handleMoveMachine).not.toHaveBeenCalled();
   });
 
@@ -174,10 +182,17 @@ describe("useServiceOrderBackupFlow.releaseBackupForServiceOrder", () => {
 
     expect(ok).toBe(true);
     expect(context.shared.moves.handleMoveMachine).toHaveBeenCalledWith(inUse, "def", expect.objectContaining({ reason: "backup_return" }));
-    expect(updateDeviceBackup).toHaveBeenCalledWith("token-1", "bk", expect.objectContaining({ status: "available", serviceOrderId: null }));
-    expect(context.shared.serviceOrderCore.addServiceOrderSystemHistory).toHaveBeenCalledWith("os-1", expect.objectContaining({
-      message: "OS finalizada e máquina Backup devolvida para a área Backup."
-    }));
+    expect(updateDeviceBackup).toHaveBeenCalledWith(
+      "token-1",
+      "bk",
+      expect.objectContaining({ status: "available", serviceOrderId: null })
+    );
+    expect(context.shared.serviceOrderCore.addServiceOrderSystemHistory).toHaveBeenCalledWith(
+      "os-1",
+      expect.objectContaining({
+        message: "OS finalizada e máquina Backup devolvida para a área Backup."
+      })
+    );
     expect(context.session.notify).toHaveBeenLastCalledWith("Reserva devolvida para Backup.", "ok");
   });
 
@@ -298,14 +313,16 @@ describe("useServiceOrderLifecycle.handleChangeServiceOrderStatus", () => {
 
     expect(updated).toBe(closed);
     expect(backupFlow.releaseBackupForServiceOrder).toHaveBeenCalledWith(closed, { finalized: true });
-    expect(maintenanceExit.removeMachineFromMaintenance).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "main" }),
-      { serviceOrder: closed }
+    expect(maintenanceExit.removeMachineFromMaintenance).toHaveBeenCalledWith(expect.objectContaining({ id: "main" }), {
+      serviceOrder: closed
+    });
+    expect(context.shared.serviceOrderCore.addServiceOrderSystemHistory).toHaveBeenCalledWith(
+      "os-1",
+      expect.objectContaining({
+        message: "OS finalizada e máquina retirada da manutenção.",
+        oldValue: "Manutenção"
+      })
     );
-    expect(context.shared.serviceOrderCore.addServiceOrderSystemHistory).toHaveBeenCalledWith("os-1", expect.objectContaining({
-      message: "OS finalizada e máquina retirada da manutenção.",
-      oldValue: "Manutenção"
-    }));
   });
 
   it("nao registra historico quando a maquina nao saiu da manutencao e trata erro da API", async () => {

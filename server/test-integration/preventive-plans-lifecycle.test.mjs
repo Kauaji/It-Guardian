@@ -18,7 +18,11 @@ let closeServer;
 let scripts;
 
 test.before(async () => {
-  const holder = { after: (callback) => { closeServer = callback; } };
+  const holder = {
+    after: (callback) => {
+      closeServer = callback;
+    }
+  };
   baseUrl = await fx.startServer(holder);
   api = fx.createClient(baseUrl, await fx.login(baseUrl));
   scripts = {
@@ -66,8 +70,14 @@ test("plano preventivo manual registra maquinas, scripts e enfileira a execucao 
   assert.deepEqual(plan.automation, { enabled: false });
   assert.ok(plan.preparedAt);
 
-  assert.deepEqual(plan.scripts.map((script) => script.orderIndex), [0, 1]);
-  assert.deepEqual(plan.scripts.map((script) => script.scriptName), ["Verificacao preventiva um", "Verificacao preventiva dois"]);
+  assert.deepEqual(
+    plan.scripts.map((script) => script.orderIndex),
+    [0, 1]
+  );
+  assert.deepEqual(
+    plan.scripts.map((script) => script.scriptName),
+    ["Verificacao preventiva um", "Verificacao preventiva dois"]
+  );
   assert.equal(plan.scripts[1].category, "Disco");
   assert.equal(plan.scripts[0].riskLevel, "low");
   assert.equal(plan.scripts[0].scriptType, "powershell");
@@ -88,7 +98,10 @@ test("plano preventivo manual registra maquinas, scripts e enfileira a execucao 
   const history = await fx.rows(
     "SELECT asset_id, new_value FROM asset_history WHERE event_type = 'preventive_execution_queued' ORDER BY asset_id"
   );
-  assert.deepEqual(history.map((row) => row.asset_id), ["pp-a1", "pp-a2"]);
+  assert.deepEqual(
+    history.map((row) => row.asset_id),
+    ["pp-a1", "pp-a2"]
+  );
   const payload = JSON.parse(history[0].new_value);
   assert.equal(payload.preventivePlanId, plan.id);
   assert.equal(payload.status, "queued");
@@ -140,9 +153,7 @@ test("plano preventivo com automacao vinculada cria a agenda e nao enfileira job
     assert.equal((await jobsForAsset(assetId)).length, 0, "a agenda e quem dispara a execucao");
   }
 
-  const events = await fx.rows(
-    "SELECT event_type FROM asset_history WHERE asset_id = 'pp-a3' ORDER BY created_at ASC"
-  );
+  const events = await fx.rows("SELECT event_type FROM asset_history WHERE asset_id = 'pp-a3' ORDER BY created_at ASC");
   const types = events.map((row) => row.event_type);
   assert.ok(types.includes("preventive_plan_prepared"));
   assert.ok(types.includes("preventive_automation_enabled"));
@@ -165,20 +176,24 @@ test("plano preventivo com automacao vinculada cria a agenda e nao enfileira job
   assert.equal(fromList.assets.length, 2);
 });
 
-test("plano com automacao invalida desfaz o registro inteiro (PostgreSQL real)", {
-  skip: database.mode !== "postgres" && "pg-mem ignora ROLLBACK"
-}, async () => {
-  const response = await api.post(base, {
-    name: "Preventiva com automacao quebrada",
-    assetIds: ["pp-a3"],
-    scriptIds: [scripts.first.id],
-    automation: { enabled: true, recurrenceType: "custom_days" }
-  });
-  assert.equal(response.status, 400, JSON.stringify(response.body));
-  assert.match(response.body.message, /quantidade de dias/);
-  const stored = await fx.rows("SELECT id FROM preventive_plans WHERE name = 'Preventiva com automacao quebrada'");
-  assert.equal(stored.length, 0);
-});
+test(
+  "plano com automacao invalida desfaz o registro inteiro (PostgreSQL real)",
+  {
+    skip: database.mode !== "postgres" && "pg-mem ignora ROLLBACK"
+  },
+  async () => {
+    const response = await api.post(base, {
+      name: "Preventiva com automacao quebrada",
+      assetIds: ["pp-a3"],
+      scriptIds: [scripts.first.id],
+      automation: { enabled: true, recurrenceType: "custom_days" }
+    });
+    assert.equal(response.status, 400, JSON.stringify(response.body));
+    assert.match(response.body.message, /quantidade de dias/);
+    const stored = await fx.rows("SELECT id FROM preventive_plans WHERE name = 'Preventiva com automacao quebrada'");
+    assert.equal(stored.length, 0);
+  }
+);
 
 test("valida payload, scripts e risco antes de registrar o plano", async () => {
   const cases = [
@@ -250,10 +265,9 @@ test("detalhe, logs e confirmacao do registro preventivo", async () => {
   assert.equal(prepared.status, 200, JSON.stringify(prepared.body));
   assert.equal(prepared.body.preventivePlan.status, "simulated");
   assert.ok(prepared.body.preventivePlan.assets.every((asset) => asset.status === "prepared"));
-  const audit = await fx.rows(
-    "SELECT message FROM audit_logs WHERE type = 'preventive_plan_prepared' AND meta->>'preventivePlanId' = $1",
-    [plan.id]
-  );
+  const audit = await fx.rows("SELECT message FROM audit_logs WHERE type = 'preventive_plan_prepared' AND meta->>'preventivePlanId' = $1", [
+    plan.id
+  ]);
   assert.equal(audit.length, 1);
   assert.match(audit[0].message, /Nenhum comando foi executado/);
 
@@ -261,12 +275,14 @@ test("detalhe, logs e confirmacao do registro preventivo", async () => {
 });
 
 test("OS preventiva e criada manualmente a partir do plano e nao duplica", async () => {
-  const single = (await api.post(base, {
-    name: "Plano para gerar OS",
-    assetIds: ["pp-a4"],
-    scriptIds: [scripts.first.id],
-    automation: { enabled: true, indicatorColor: "#facade" }
-  })).body.preventivePlan;
+  const single = (
+    await api.post(base, {
+      name: "Plano para gerar OS",
+      assetIds: ["pp-a4"],
+      scriptIds: [scripts.first.id],
+      automation: { enabled: true, indicatorColor: "#facade" }
+    })
+  ).body.preventivePlan;
 
   const created = await api.post(`${base}/${single.id}/service-order`);
   assert.equal(created.status, 201, JSON.stringify(created.body));
@@ -279,10 +295,7 @@ test("OS preventiva e criada manualmente a partir do plano e nao duplica", async
   assert.match(serviceOrder.description, /Plano para gerar OS/);
   assert.match(serviceOrder.description, /Nenhum comando foi executado automaticamente/);
 
-  const history = await fx.rows(
-    "SELECT event_type FROM service_order_history WHERE service_order_id = $1",
-    [serviceOrder.id]
-  );
+  const history = await fx.rows("SELECT event_type FROM service_order_history WHERE service_order_id = $1", [serviceOrder.id]);
   assert.ok(history.some((row) => row.event_type === "preventive_plan_origin"));
   const assetEvents = await fx.rows(
     "SELECT message FROM asset_history WHERE asset_id = 'pp-a4' AND event_type = 'preventive_plan_service_order'"
@@ -295,12 +308,14 @@ test("OS preventiva e criada manualmente a partir do plano e nao duplica", async
 
   assert.equal((await api.post(`${base}/plano-inexistente/service-order`)).status, 404);
 
-  const multi = (await api.post(base, {
-    name: "Plano multiplas maquinas OS",
-    assetIds: ["pp-a1", "pp-a2"],
-    scriptIds: [scripts.first.id],
-    automation: { enabled: true, indicatorColor: "#decade" }
-  })).body.preventivePlan;
+  const multi = (
+    await api.post(base, {
+      name: "Plano multiplas maquinas OS",
+      assetIds: ["pp-a1", "pp-a2"],
+      scriptIds: [scripts.first.id],
+      automation: { enabled: true, indicatorColor: "#decade" }
+    })
+  ).body.preventivePlan;
   const multiOrder = await api.post(`${base}/${multi.id}/service-order`);
   assert.equal(multiOrder.status, 201, JSON.stringify(multiOrder.body));
   assert.equal(multiOrder.body.serviceOrder.title, "Manutenção preventiva — 2 máquina(s)");

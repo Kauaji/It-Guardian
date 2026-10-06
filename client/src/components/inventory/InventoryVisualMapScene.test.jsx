@@ -17,9 +17,18 @@ vi.mock("three", async (importOriginal) => {
       globalThis.__visualMapTrace.renderers.push(this);
     }
     setPixelRatio() {}
-    setSize(width, height) { this.sizes.push([width, height]); }
-    render(scene, camera) { scene.updateMatrixWorld(); camera.updateMatrixWorld(); this.renders += 1; this.last = { scene, camera }; }
-    dispose() { this.disposed = true; }
+    setSize(width, height) {
+      this.sizes.push([width, height]);
+    }
+    render(scene, camera) {
+      scene.updateMatrixWorld();
+      camera.updateMatrixWorld();
+      this.renders += 1;
+      this.last = { scene, camera };
+    }
+    dispose() {
+      this.disposed = true;
+    }
   }
   return { ...actual, WebGLRenderer: FakeRenderer };
 });
@@ -27,7 +36,9 @@ vi.mock("three", async (importOriginal) => {
 beforeAll(() => {
   globalThis.__visualMapTrace = trace;
   globalThis.ResizeObserver = class {
-    constructor(callback) { trace.resize.push(callback); }
+    constructor(callback) {
+      trace.resize.push(callback);
+    }
     observe() {}
     disconnect() {}
   };
@@ -44,8 +55,18 @@ beforeAll(() => {
   HTMLCanvasElement.prototype.hasPointerCapture = () => false;
   HTMLCanvasElement.prototype.getContext = () => new Proxy({}, { get: () => () => {}, set: () => true });
   HTMLCanvasElement.prototype.getBoundingClientRect = () => ({ left: 0, top: 0, width: 800, height: 600, right: 800, bottom: 600 });
-  Object.defineProperty(HTMLElement.prototype, "clientWidth", { configurable: true, get() { return 800; } });
-  Object.defineProperty(HTMLElement.prototype, "clientHeight", { configurable: true, get() { return 600; } });
+  Object.defineProperty(HTMLElement.prototype, "clientWidth", {
+    configurable: true,
+    get() {
+      return 800;
+    }
+  });
+  Object.defineProperty(HTMLElement.prototype, "clientHeight", {
+    configurable: true,
+    get() {
+      return 600;
+    }
+  });
 });
 
 beforeEach(() => {
@@ -56,22 +77,62 @@ afterEach(() => cleanup());
 
 const map = { id: "m1", name: "Térreo", width: 30, depth: 20, scale: 1 };
 const objects = [
-  { id: "o1", layer: "assets", label: "Servidor com um nome bem longo para cortar", presetType: "server", positionX: 0, positionY: 0, positionZ: 0, width: 2, depth: 2, height: 2, rotationY: 45 },
+  {
+    id: "o1",
+    layer: "assets",
+    label: "Servidor com um nome bem longo para cortar",
+    presetType: "server",
+    positionX: 0,
+    positionY: 0,
+    positionZ: 0,
+    width: 2,
+    depth: 2,
+    height: 2,
+    rotationY: 45
+  },
   { id: "o2", layer: "structure", label: "Sala", presetType: "room", positionX: 8, positionZ: 5, width: "x", color: "#123456" },
   { id: "o3", layer: "infrastructure", label: "Rack", presetType: "rack", positionX: -8, positionZ: -5 }
 ];
 const connections = [
-  { id: "c1", layer: "infrastructure", label: "Cabo", points: [{ x: 4, y: 0.1, z: 4 }, { x: 6, y: 0.1, z: 6 }, { x: 8, z: 4 }], thickness: 3 },
-  { id: "c2", layer: "electrical", connectionType: "power", dashed: true, points: [{ x: -5, y: 0.1, z: 0 }, { x: -3, y: 0.1, z: 2 }], color: "#ff0000" },
+  {
+    id: "c1",
+    layer: "infrastructure",
+    label: "Cabo",
+    points: [
+      { x: 4, y: 0.1, z: 4 },
+      { x: 6, y: 0.1, z: 6 },
+      { x: 8, z: 4 }
+    ],
+    thickness: 3
+  },
+  {
+    id: "c2",
+    layer: "electrical",
+    connectionType: "power",
+    dashed: true,
+    points: [
+      { x: -5, y: 0.1, z: 0 },
+      { x: -3, y: 0.1, z: 2 }
+    ],
+    color: "#ff0000"
+  },
   { id: "c3", layer: "electrical", points: [{ x: 0, y: 0, z: 0 }] },
   { id: "c4", layer: "electrical" }
 ];
 
 function renderScene(overrides = {}) {
   const props = {
-    map, objects, connections, selectedObjectId: null, selectedConnectionId: null,
-    layers: undefined, showGrid: true, cameraAction: { type: "fit", revision: 0 },
-    onSelectObject: vi.fn(), onSelectConnection: vi.fn(), ...overrides
+    map,
+    objects,
+    connections,
+    selectedObjectId: null,
+    selectedConnectionId: null,
+    layers: undefined,
+    showGrid: true,
+    cameraAction: { type: "fit", revision: 0 },
+    onSelectObject: vi.fn(),
+    onSelectConnection: vi.fn(),
+    ...overrides
   };
   const utils = render(<InventoryVisualMapScene {...props} />);
   return { props, ...utils, rerenderScene: (next) => utils.rerender(<InventoryVisualMapScene {...props} {...next} />) };
@@ -80,13 +141,17 @@ function renderScene(overrides = {}) {
 const lastRenderer = () => trace.renderers.at(-1);
 const children = (type) => {
   const found = [];
-  lastRenderer().last.scene.traverse((child) => { if (child.type === type) found.push(child); });
+  lastRenderer().last.scene.traverse((child) => {
+    if (child.type === type) found.push(child);
+  });
   return found;
 };
 const pointerDown = (x = 400, y = 300) => {
   const canvas = lastRenderer().domElement;
   const event = new PointerEvent("pointerdown", { clientX: x, clientY: y, bubbles: true });
-  act(() => { canvas.dispatchEvent(event); });
+  act(() => {
+    canvas.dispatchEvent(event);
+  });
 };
 
 describe("InventoryVisualMapScene", () => {
@@ -159,7 +224,19 @@ describe("InventoryVisualMapScene", () => {
     expect(first.props.onSelectObject).toHaveBeenLastCalledWith(null);
     cleanup();
 
-    const second = renderScene({ objects: [], connections: [{ id: "c9", layer: "infrastructure", points: [{ x: -3, y: 0.1, z: 0 }, { x: 3, y: 0.1, z: 0 }] }] });
+    const second = renderScene({
+      objects: [],
+      connections: [
+        {
+          id: "c9",
+          layer: "infrastructure",
+          points: [
+            { x: -3, y: 0.1, z: 0 },
+            { x: 3, y: 0.1, z: 0 }
+          ]
+        }
+      ]
+    });
     pointerDown();
     expect(second.props.onSelectConnection).toHaveBeenCalledWith("c9");
   });

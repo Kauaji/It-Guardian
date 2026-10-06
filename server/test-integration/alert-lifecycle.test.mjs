@@ -66,7 +66,10 @@ test("aviso: reconhecer, comentar, remover reconhecimento e consultar historico/
   const activeResponse = await fetch(`${baseUrl}/api/alerts`, { headers: { cookie } });
   assert.equal(activeResponse.status, 200);
   const active = (await activeResponse.json()).alerts;
-  assert.ok(active.some((alert) => alert.id === alertId), "aviso semeado deve aparecer nos avisos ativos");
+  assert.ok(
+    active.some((alert) => alert.id === alertId),
+    "aviso semeado deve aparecer nos avisos ativos"
+  );
 
   const acknowledgeResponse = await fetch(`${baseUrl}/api/alerts/${alertId}/acknowledge`, {
     method: "POST",

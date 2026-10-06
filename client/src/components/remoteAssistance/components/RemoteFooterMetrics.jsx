@@ -1,8 +1,4 @@
-import {
-  formatBytesPerSecond,
-  formatFrameSize,
-  remoteAssistanceTransportLabel
-} from "../remoteAssistanceModel.js";
+import { formatBytesPerSecond, formatFrameSize, remoteAssistanceTransportLabel } from "../remoteAssistanceModel.js";
 
 // Rodape: transporte e metricas (as metricas nao se aplicam ao RustDesk).
 export default function RemoteFooterMetrics({ session, isRustdesk, metrics, latency, controlActive }) {

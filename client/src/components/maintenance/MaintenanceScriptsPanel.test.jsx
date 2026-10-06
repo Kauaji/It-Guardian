@@ -22,9 +22,15 @@ const scripts = [
   { id: "s2", name: "Reiniciar spooler", type: "cmd", riskLevel: "low", content: "net stop spooler", active: true },
   { id: "s3", name: "Antigo", type: "cmd", riskLevel: "low", content: "x", active: false }
 ];
-const devices = [{ id: "d1", name: "PC-01", ip: "10.0.0.5" }, { id: "d2", name: "PC-02" }];
+const devices = [
+  { id: "d1", name: "PC-01", ip: "10.0.0.5" },
+  { id: "d2", name: "PC-02" }
+];
 const serviceOrders = [{ id: "o1", number: "OS-1", title: "Trocar HD" }];
-const alerts = [{ id: "a1", title: "Disco cheio", hostName: "PC-01" }, { id: "a2", title: "Sem ping" }];
+const alerts = [
+  { id: "a1", title: "Disco cheio", hostName: "PC-01" },
+  { id: "a2", title: "Sem ping" }
+];
 
 const analysisResult = {
   estimatedSummary: "Limpa a pasta temporaria",
@@ -63,7 +69,10 @@ function mount(props = {}) {
 }
 
 beforeEach(() => {
-  window.requestAnimationFrame = (cb) => { cb(); return 0; };
+  window.requestAnimationFrame = (cb) => {
+    cb();
+    return 0;
+  };
   Element.prototype.scrollIntoView = vi.fn();
 });
 
@@ -120,7 +129,9 @@ describe("MaintenanceScriptsPanel - cadastro", () => {
     expect(screen.queryByRole("button", { name: "Cadastrar script" })).not.toBeInTheDocument();
     await user.type(prompt, "Get-Process | Stop-Process disco");
     await user.click(screen.getByRole("button", { name: "Analisar texto" }));
-    await waitFor(() => expect(handlers.onAnalyze).toHaveBeenCalledWith({ content: "Get-Process | Stop-Process disco", type: "powershell" }));
+    await waitFor(() =>
+      expect(handlers.onAnalyze).toHaveBeenCalledWith({ content: "Get-Process | Stop-Process disco", type: "powershell" })
+    );
 
     expect(await screen.findByText("Limpa a pasta temporaria", { selector: ".script-analysis-box p" })).toBeInTheDocument();
     expect(screen.getByText("Risco sugerido: Médio")).toBeInTheDocument();
@@ -273,7 +284,9 @@ describe("MaintenanceScriptsPanel - edicao e desativacao", () => {
     expect(screen.getByText("Resumo salvo anteriormente. Revise manualmente antes de usar.")).toBeInTheDocument();
     expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Salvar alterações" }));
-    await waitFor(() => expect(handlers.onSave).toHaveBeenCalledWith(expect.objectContaining({ name: "Limpar disco", tags: ["disco", "limpeza"] }), "s1"));
+    await waitFor(() =>
+      expect(handlers.onSave).toHaveBeenCalledWith(expect.objectContaining({ name: "Limpar disco", tags: ["disco", "limpeza"] }), "s1")
+    );
   });
 
   it("editar script minimo usa padroes (tipo other, risco medio)", async () => {
@@ -320,7 +333,13 @@ describe("MaintenanceScriptsPanel - simulacao", () => {
     await waitFor(() => expect(handlers.onRegisterSimulation).toHaveBeenCalled());
     expect(confirm).toHaveBeenCalledTimes(1);
     expect(handlers.onRegisterSimulation).toHaveBeenCalledWith("s2", {
-      assetId: "d1", serviceOrderId: "o1", alertId: "a1", mode: "prepared", notes: "teste", confirmed: true, riskAcknowledged: false
+      assetId: "d1",
+      serviceOrderId: "o1",
+      alertId: "a1",
+      mode: "prepared",
+      notes: "teste",
+      confirmed: true,
+      riskAcknowledged: false
     });
     await waitFor(() => expect(form.getByLabelText("Observação")).toHaveValue(""));
   });
@@ -334,7 +353,9 @@ describe("MaintenanceScriptsPanel - simulacao", () => {
     expect(confirm).toHaveBeenCalledTimes(2);
     expect(handlers.onRegisterSimulation).not.toHaveBeenCalled();
     await user.click(form);
-    await waitFor(() => expect(handlers.onRegisterSimulation).toHaveBeenCalledWith("s1", expect.objectContaining({ riskAcknowledged: true })));
+    await waitFor(() =>
+      expect(handlers.onRegisterSimulation).toHaveBeenCalledWith("s1", expect.objectContaining({ riskAcknowledged: true }))
+    );
   });
 
   it("cancelar a primeira confirmacao nao registra; erro no registro e ignorado e preserva a observacao", async () => {

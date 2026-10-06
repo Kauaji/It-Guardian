@@ -4,9 +4,32 @@ import VisualMapAddCard from "./VisualMapAddCard.jsx";
 import VisualMapDataCard from "./VisualMapDataCard.jsx";
 
 export default function VisualMapSidebar({
-  maps, activeMapId, mode, canManage, isEditing, saving, mapDraft, tabs, groups, segments, devices, usedAssetIds,
-  assetToAdd, layers, onMapChange, onModeChange, onMapDraftChange, onToggleGrid, onSaveMap, onDeleteMap,
-  onLayersChange, onToggleLayer, onAssetToAddChange, onAddObject, onAddAssetObject, onAddConnection
+  maps,
+  activeMapId,
+  mode,
+  canManage,
+  isEditing,
+  saving,
+  mapDraft,
+  tabs,
+  groups,
+  segments,
+  devices,
+  usedAssetIds,
+  assetToAdd,
+  layers,
+  onMapChange,
+  onModeChange,
+  onMapDraftChange,
+  onToggleGrid,
+  onSaveMap,
+  onDeleteMap,
+  onLayersChange,
+  onToggleLayer,
+  onAssetToAddChange,
+  onAddObject,
+  onAddAssetObject,
+  onAddConnection
 }) {
   return (
     <aside className="inventory-visual-map-sidebar">

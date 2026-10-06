@@ -12,16 +12,8 @@ const { createApp } = await import("../src/app.js");
 const { initializeRuntime } = await import("../src/bootstrap.js");
 const { closeDatabase, query } = await import("../src/database.js");
 const { seedDefaultMaintenanceScripts } = await import("../src/services/maintenanceScripts/maintenanceScriptsFacade.js");
-const {
-  browserHeaders,
-  bearerHeaders,
-  bearerUser,
-  createScriptViaApi,
-  createServiceOrderViaApi,
-  enrollAndHeartbeat,
-  listen,
-  login
-} = await import("../test-support/scriptFixtures.mjs");
+const { browserHeaders, bearerHeaders, bearerUser, createScriptViaApi, createServiceOrderViaApi, enrollAndHeartbeat, listen, login } =
+  await import("../test-support/scriptFixtures.mjs");
 
 const basePath = "/api/maintenance-scripts";
 
@@ -71,7 +63,11 @@ test("analise de conteudo: vazio, variaveis permitidas e desconhecidas, padroes 
     ["HOSTNAME", "ASSET_IP"]
   );
 
-  const highRisk = await analyze(baseUrl, cookie, "Restart-Service Spooler\nshutdown /r /t 0\nRemove-Item C:\\temp -Recurse\nreg add HKCU\\x");
+  const highRisk = await analyze(
+    baseUrl,
+    cookie,
+    "Restart-Service Spooler\nshutdown /r /t 0\nRemove-Item C:\\temp -Recurse\nreg add HKCU\\x"
+  );
   assert.equal(highRisk.suggestedRiskLevel, "high");
   assert.ok(highRisk.detectedActions.length >= 3);
   assert.match(highRisk.estimatedSummary, /serviços do sistema/);
@@ -277,9 +273,8 @@ test("listagem coloca ativos primeiro e includeInactive=false oculta desativados
 test("semente dos scripts padrao e idempotente e restaura a definicao oficial", async (t) => {
   await startServer(t);
 
-  const countDefaults = async () => (
-    await query("SELECT COUNT(*)::INTEGER AS total FROM maintenance_scripts WHERE id LIKE 'demo-script-%'")
-  ).rows[0].total;
+  const countDefaults = async () =>
+    (await query("SELECT COUNT(*)::INTEGER AS total FROM maintenance_scripts WHERE id LIKE 'demo-script-%'")).rows[0].total;
 
   await seedDefaultMaintenanceScripts();
   const initial = await countDefaults();
@@ -291,9 +286,11 @@ test("semente dos scripts padrao e idempotente e restaura a definicao oficial", 
   await seedDefaultMaintenanceScripts();
 
   assert.equal(await countDefaults(), initial, "reexecutar a semente nao duplica scripts");
-  const restored = (await query(
-    "SELECT name, active, content, risk_level, requires_confirmation, tags FROM maintenance_scripts WHERE id = 'demo-script-disk-check'"
-  )).rows[0];
+  const restored = (
+    await query(
+      "SELECT name, active, content, risk_level, requires_confirmation, tags FROM maintenance_scripts WHERE id = 'demo-script-disk-check'"
+    )
+  ).rows[0];
   assert.equal(restored.name, "Verificação de disco");
   assert.equal(restored.active, true);
   assert.match(restored.content, /Get-PhysicalDisk/);
@@ -319,11 +316,12 @@ test("simulacao exige confirmacao, script ativo e confirmacao extra para risco a
     content: "Restart-Service Spooler",
     riskLevel: "high"
   });
-  const simulate = (scriptId, body) => fetch(`${baseUrl}${basePath}/${scriptId}/register-simulation`, {
-    method: "POST",
-    headers: browserHeaders(cookie),
-    body: JSON.stringify(body)
-  });
+  const simulate = (scriptId, body) =>
+    fetch(`${baseUrl}${basePath}/${scriptId}/register-simulation`, {
+      method: "POST",
+      headers: browserHeaders(cookie),
+      body: JSON.stringify(body)
+    });
 
   const missing = await simulate("nao-existe", { confirmed: true });
   assert.equal(missing.status, 404);
@@ -353,10 +351,9 @@ test("simulacao exige confirmacao, script ativo e confirmacao extra para risco a
   assert.equal(fullBody.log.status, "registered");
   assert.equal(fullBody.script.id, lowScript.id);
 
-  const assetHistory = await query(
-    "SELECT message FROM asset_history WHERE asset_id = $1 AND event_type = 'script_simulation'",
-    [machineId]
-  );
+  const assetHistory = await query("SELECT message FROM asset_history WHERE asset_id = $1 AND event_type = 'script_simulation'", [
+    machineId
+  ]);
   assert.equal(assetHistory.rowCount, 1);
   assert.match(assetHistory.rows[0].message, /Nenhum comando foi executado/);
   const orderHistory = await query(

@@ -6,13 +6,7 @@ import { useAlertCenterView } from "../AlertCenterViewContext.jsx";
 // Painel "Central de avisos": filtros e resumo dos avisos do historico.
 export default function AlertsCompactPanel({ visibleAlerts }) {
   const { perms, lookups } = useAlertCenterView();
-  const {
-    severityFilter,
-    setSeverityFilter,
-    statusFilter,
-    setStatusFilter,
-    onEvaluateAlerts
-  } = useAlertCenterData();
+  const { severityFilter, setSeverityFilter, statusFilter, setStatusFilter, onEvaluateAlerts } = useAlertCenterData();
 
   return (
     <section className="panel alerts-compact-panel">
@@ -52,7 +46,9 @@ export default function AlertsCompactPanel({ visibleAlerts }) {
               </span>
             </div>
             <h3>{lookups.getResolvedAlertTitle(alert)}</h3>
-            <p>{lookups.getAlertMachineLabel(alert)} · {formatAlertValue(alert)}</p>
+            <p>
+              {lookups.getAlertMachineLabel(alert)} · {formatAlertValue(alert)}
+            </p>
             <small>{alertTypeLabels[alert.type] || formatDisplayText(alert.type || alert.metric, "Aviso")}</small>
           </article>
         ))}

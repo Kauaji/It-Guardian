@@ -33,8 +33,7 @@ if (!roots.length) roots.push("server/src", "client/src");
 
 const results = [];
 const fileResults = [];
-const declaration =
-  /^\s*(export\s+)?(default\s+)?(async\s+)?function\s*\*?\s*([A-Za-z0-9_$]*)\s*\(/;
+const declaration = /^\s*(export\s+)?(default\s+)?(async\s+)?function\s*\*?\s*([A-Za-z0-9_$]*)\s*\(/;
 
 function walk(dir) {
   if (!fs.existsSync(dir)) return;
@@ -67,11 +66,7 @@ function isBarrel(source) {
 
 function isExcludedFromFileLimit(file, source) {
   const normalized = file.split(path.sep).join("/");
-  return (
-    /\/migrations\//.test(normalized) ||
-    /\/schema\/legacy\//.test(normalized) ||
-    isBarrel(source)
-  );
+  return /\/migrations\//.test(normalized) || /\/schema\/legacy\//.test(normalized) || isBarrel(source);
 }
 
 function scan(file) {

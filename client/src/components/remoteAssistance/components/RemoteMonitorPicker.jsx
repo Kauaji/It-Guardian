@@ -12,18 +12,16 @@ export default function RemoteMonitorPicker({ session, monitors, changingMonitor
           disabled={changingMonitor || terminal}
         >
           {monitors.map((monitor, index) => (
-            <option key={monitor.id} value={monitor.id}>{formatRemoteMonitor(monitor, index)}</option>
+            <option key={monitor.id} value={monitor.id}>
+              {formatRemoteMonitor(monitor, index)}
+            </option>
           ))}
         </select>
       </label>
     );
   }
   if (monitors.length === 1) {
-    return (
-      <span className="remote-assistance-single-monitor">
-        {formatRemoteMonitor(monitors[0], 0)} (único monitor)
-      </span>
-    );
+    return <span className="remote-assistance-single-monitor">{formatRemoteMonitor(monitors[0], 0)} (único monitor)</span>;
   }
   return null;
 }

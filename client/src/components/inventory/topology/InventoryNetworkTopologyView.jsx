@@ -47,29 +47,54 @@ export default function InventoryNetworkTopologyView({
   const nav = useTopologyNavigation({ activeTab, tree });
   const mapData = useTopologyMapData({ token, canView, canEditMap, activeTab, nav, selection });
   const { filters, setFilters, filterPredicate, hasActiveFilter } = useTopologyFilters({
-    viewLevel: nav.viewLevel, selectedSegmentId: nav.selectedSegmentId
+    viewLevel: nav.viewLevel,
+    selectedSegmentId: nav.selectedSegmentId
   });
   const { bundle, setBundle, scopeKey } = mapData;
   const { devicesById, displayNodes } = useTopologyDisplayNodes({
-    bundle, viewLevel: nav.viewLevel, tree, selectedGroupId: nav.selectedGroupId, selectedSegmentId: nav.selectedSegmentId, segments, devices
+    bundle,
+    viewLevel: nav.viewLevel,
+    tree,
+    selectedGroupId: nav.selectedGroupId,
+    selectedSegmentId: nav.selectedSegmentId,
+    segments,
+    devices
   });
 
-  const handleMaterializedNode = useCallback((savedNode, originalNode) => {
-    selection.setSelectedNodeId((current) => current === originalNode.id ? savedNode.id : current);
-  }, [selection.setSelectedNodeId]);
+  const handleMaterializedNode = useCallback(
+    (savedNode, originalNode) => {
+      selection.setSelectedNodeId((current) => (current === originalNode.id ? savedNode.id : current));
+    },
+    [selection.setSelectedNodeId]
+  );
   const handleAutoLayout = useCallback(() => {
     requestAnimationFrame(() => canvasRef.current?.fitToNodes());
   }, []);
   const layout = useTopologyLayout({
-    token, mapId: bundle?.map.id, scopeKey, nodes: displayNodes, devicesById,
-    enabled: canManageMap, setBundle, onMaterialized: handleMaterializedNode,
-    onAutoLayout: handleAutoLayout, notify
+    token,
+    mapId: bundle?.map.id,
+    scopeKey,
+    nodes: displayNodes,
+    devicesById,
+    enabled: canManageMap,
+    setBundle,
+    onMaterialized: handleMaterializedNode,
+    onAutoLayout: handleAutoLayout,
+    notify
   });
   const { dirtyPositions, saving, generatingLayout } = layout;
   const layoutBusy = saving || generatingLayout;
 
   const visibility = useTopologyVisibility({
-    bundle, viewLevel: nav.viewLevel, tree, devices, devicesById, displayNodes, filterPredicate, hasActiveFilter, dirtyPositions
+    bundle,
+    viewLevel: nav.viewLevel,
+    tree,
+    devices,
+    devicesById,
+    displayNodes,
+    filterPredicate,
+    hasActiveFilter,
+    dirtyPositions
   });
   const { visibleNodes, visibleLinks, clusterSummaryByRefId } = visibility;
 
@@ -77,22 +102,41 @@ export default function InventoryNetworkTopologyView({
   const selectedLink = selection.selectedLinkId ? visibleLinks.find((link) => link.id === selection.selectedLinkId) : null;
   const selectedClusterInfo = clusterSummaryByRefId.get(selectedNode?.refId) || null;
   const internalConnections = useTopologyInspectorConnections({
-    token, node: selectedNode, scopeKey, enabled: canView && Boolean(selectedClusterInfo)
+    token,
+    node: selectedNode,
+    scopeKey,
+    enabled: canView && Boolean(selectedClusterInfo)
   });
   const selectedConnections = inspectorConnections({
-    node: selectedNode, links: bundle?.links, internalLinks: internalConnections.links,
-    devicesById, clustersById: clusterSummaryByRefId, clusterName: selectedClusterInfo?.name
+    node: selectedNode,
+    links: bundle?.links,
+    internalLinks: internalConnections.links,
+    devicesById,
+    clustersById: clusterSummaryByRefId,
+    clusterName: selectedClusterInfo?.name
   });
 
   const mutations = useTopologyMutations({ token, notify, canManageMap, mapData, selection });
   const linkCreation = useTopologyLinkCreation({
-    token, mapId: bundle?.map.id, scopeKey, enabled: canLinkAssets && !layoutBusy,
-    nodes: visibleNodes, links: bundle?.links || [], onCreated: mutations.handleLinkCreated, notify
+    token,
+    mapId: bundle?.map.id,
+    scopeKey,
+    enabled: canLinkAssets && !layoutBusy,
+    nodes: visibleNodes,
+    links: bundle?.links || [],
+    onCreated: mutations.handleLinkCreated,
+    notify
   });
   const linkBusy = linkCreation.active || linkCreation.busy;
   const interactions = useTopologyInteractions({
-    nav, selection, linkCreation, visibleNodes, clusterSummaryByRefId, canEditMap,
-    linkDraftActive: linkCreation.active, creatingLink: linkCreation.busy
+    nav,
+    selection,
+    linkCreation,
+    visibleNodes,
+    clusterSummaryByRefId,
+    canEditMap,
+    linkDraftActive: linkCreation.active,
+    creatingLink: linkCreation.busy
   });
 
   if (!canView) {
@@ -100,9 +144,31 @@ export default function InventoryNetworkTopologyView({
   }
 
   const ctx = {
-    ...mapData, ...visibility, ...mutations, ...interactions, nav, selection, layout, linkCreation, linkBusy, layoutBusy,
-    viewLevel: nav.viewLevel, canvasRef, devicesById, displayNodes, segments, filters, setFilters, dirtyPositions, saving, generatingLayout,
-    editMode: selection.editMode, canManageMap, canLinkAssets, canEditMap, onOpenDetails
+    ...mapData,
+    ...visibility,
+    ...mutations,
+    ...interactions,
+    nav,
+    selection,
+    layout,
+    linkCreation,
+    linkBusy,
+    layoutBusy,
+    viewLevel: nav.viewLevel,
+    canvasRef,
+    devicesById,
+    displayNodes,
+    segments,
+    filters,
+    setFilters,
+    dirtyPositions,
+    saving,
+    generatingLayout,
+    editMode: selection.editMode,
+    canManageMap,
+    canLinkAssets,
+    canEditMap,
+    onOpenDetails
   };
   const view = { inspector: { selectedNode, selectedLink, selectedClusterInfo, selectedConnections, internalConnections } };
 
@@ -132,7 +198,9 @@ export default function InventoryNetworkTopologyView({
             onSelectSegment={nav.goToSegmentLevel}
           />
         </NetworkTopologyNavigation>
-        <div className="network-topology-hierarchy-main"><TopologyCanvasLevel ctx={ctx} view={view} /></div>
+        <div className="network-topology-hierarchy-main">
+          <TopologyCanvasLevel ctx={ctx} view={view} />
+        </div>
       </div>
     </div>
   );

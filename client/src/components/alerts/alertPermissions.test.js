@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { buildAlertCenterPermissions } from "./alertPermissions.js";
 
-const canOnly = (...granted) => (permission) => granted.includes(permission);
+const canOnly =
+  (...granted) =>
+  (permission) =>
+    granted.includes(permission);
 
 describe("buildAlertCenterPermissions", () => {
   it("nega tudo quando o usuário não tem permissões", () => {
@@ -33,7 +36,9 @@ describe("buildAlertCenterPermissions", () => {
   });
 
   it("exige criar OS preventiva e criar OS em geral", () => {
-    expect(buildAlertCenterPermissions(canOnly("preventive_plans.create_service_order"), false).canCreatePreventiveServiceOrder).toBe(false);
+    expect(buildAlertCenterPermissions(canOnly("preventive_plans.create_service_order"), false).canCreatePreventiveServiceOrder).toBe(
+      false
+    );
     expect(
       buildAlertCenterPermissions(canOnly("preventive_plans.create_service_order", "service_orders.create"), false)
         .canCreatePreventiveServiceOrder

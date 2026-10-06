@@ -87,15 +87,16 @@ describe("room wall generation", () => {
     const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
     assert.equal(walls.length, 4);
-    assert.deepEqual(walls.map((wall) => wall.id), [
-      getRoomWallId(room.id, "top"),
-      getRoomWallId(room.id, "right"),
-      getRoomWallId(room.id, "bottom"),
-      getRoomWallId(room.id, "left")
-    ]);
+    assert.deepEqual(
+      walls.map((wall) => wall.id),
+      [getRoomWallId(room.id, "top"), getRoomWallId(room.id, "right"), getRoomWallId(room.id, "bottom"), getRoomWallId(room.id, "left")]
+    );
     assert.equal(new Set(walls.map((wall) => wall.id)).size, 4);
     assert.ok(walls.every((wall) => uuidPattern.test(wall.id)));
-    assert.deepEqual(createRoomWallObjects(room).map((wall) => wall.id), walls.map((wall) => wall.id));
+    assert.deepEqual(
+      createRoomWallObjects(room).map((wall) => wall.id),
+      walls.map((wall) => wall.id)
+    );
     assert.ok(walls.every((wall) => wall.metadata.generatedFromRoom && wall.metadata.startPoint && wall.metadata.endPoint));
   });
 

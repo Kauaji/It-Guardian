@@ -83,7 +83,10 @@ test("plano de automacao preventiva: criar, listar, pausar, reativar e excluir",
   const listResponse = await fetch(baseUrl + basePath, { headers: { cookie } });
   assert.equal(listResponse.status, 200);
   const listedPlans = (await listResponse.json()).preventiveAutomationPlans;
-  assert.ok(listedPlans.some((plan) => plan.id === created.id), "plano recem-criado deve aparecer na listagem");
+  assert.ok(
+    listedPlans.some((plan) => plan.id === created.id),
+    "plano recem-criado deve aparecer na listagem"
+  );
 
   const detailResponse = await fetch(`${baseUrl}${basePath}/${created.id}`, { headers: { cookie } });
   assert.equal(detailResponse.status, 200);

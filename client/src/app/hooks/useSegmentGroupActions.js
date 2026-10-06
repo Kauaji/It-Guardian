@@ -31,11 +31,7 @@ export function useSegmentGroupActions({ data, inventory, meta }) {
 
     try {
       const response = await updateSegmentGroup(token, groupId, { color });
-      setSegmentGroups(
-        segmentGroups.map((item) =>
-          item.id === groupId ? { ...item, ...response.group } : item
-        )
-      );
+      setSegmentGroups(segmentGroups.map((item) => (item.id === groupId ? { ...item, ...response.group } : item)));
     } catch (error) {
       setSegmentGroups(segmentGroups);
       notify(error.message, "danger");
@@ -52,9 +48,7 @@ export function useSegmentGroupActions({ data, inventory, meta }) {
     try {
       await deleteSegmentGroupApi(token, groupId);
       setSegmentGroups(segmentGroups.filter((item) => item.id !== groupId));
-      setSegments((current) =>
-        current.map((segment) => (segment.groupId === groupId ? { ...segment, groupId: "" } : segment))
-      );
+      setSegments((current) => current.map((segment) => (segment.groupId === groupId ? { ...segment, groupId: "" } : segment)));
 
       if (filters.selectedInventoryGroup === groupId) {
         filters.setSelectedInventoryGroup("all");
@@ -73,9 +67,7 @@ export function useSegmentGroupActions({ data, inventory, meta }) {
     const nextIds = moveIdInList(orderedIds, groupId, direction);
     if (nextIds === orderedIds) return;
 
-    persistence.saveInventoryTabMeta((current) =>
-      applyOrderedIds(current, "groups", nextIds, activeInventoryTab.id)
-    );
+    persistence.saveInventoryTabMeta((current) => applyOrderedIds(current, "groups", nextIds, activeInventoryTab.id));
   }
 
   return {

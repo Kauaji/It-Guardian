@@ -1,11 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  validateAgentPayload,
-  validateEnrollmentName,
-  validateJobResultPayload
-} from "./agentPayload.js";
+import { validateAgentPayload, validateEnrollmentName, validateJobResultPayload } from "./agentPayload.js";
 import { compareVersions, isUpdateAvailable } from "./agentVersion.js";
 
 function validInput(overrides = {}) {
@@ -31,10 +27,12 @@ test("payload minimo valido recebe valores padrao e data normalizada", () => {
 });
 
 test("remove caracteres NUL de textos, chaves e valores aninhados", () => {
-  const payload = validateAgentPayload(validInput({
-    hostname: "PC\u0000-01",
-    inventoryDetails: { "chave\u0000": ["a\u0000b", { "x\u0000": "y\u0000" }], numero: 3, nulo: null }
-  }));
+  const payload = validateAgentPayload(
+    validInput({
+      hostname: "PC\u0000-01",
+      inventoryDetails: { "chave\u0000": ["a\u0000b", { "x\u0000": "y\u0000" }], numero: 3, nulo: null }
+    })
+  );
 
   assert.equal(payload.hostname, "PC-01");
   assert.deepEqual(payload.inventoryDetails, { chave: ["ab", { x: "y" }], numero: 3, nulo: null });
@@ -61,33 +59,51 @@ test("rejeita payload invalido com erro 400", () => {
     validInput({ inventoryDetails: { grande: "x".repeat(1024 * 1024 + 1) } })
   ];
   for (const input of invalid) {
-    assert.throws(() => validateAgentPayload(input), (error) => error.statusCode === 400, JSON.stringify(input)?.slice(0, 60));
+    assert.throws(
+      () => validateAgentPayload(input),
+      (error) => error.statusCode === 400,
+      JSON.stringify(input)?.slice(0, 60)
+    );
   }
 
   const circular = {};
   circular.self = circular;
-  assert.throws(() => validateAgentPayload(validInput({ inventoryDetails: circular })), (error) => error.statusCode === 400);
+  assert.throws(
+    () => validateAgentPayload(validInput({ inventoryDetails: circular })),
+    (error) => error.statusCode === 400
+  );
 });
 
 test("aceita limites exatos de memoria e disco", () => {
-  const payload = validateAgentPayload(validInput({
-    diskTotalBytes: 10,
-    diskFreeBytes: 10,
-    memoryTotalBytes: 8,
-    memoryUsedBytes: 8,
-    memoryFreeBytes: 8,
-    cpuUsagePercent: 100,
-    intervalSeconds: 30
-  }));
+  const payload = validateAgentPayload(
+    validInput({
+      diskTotalBytes: 10,
+      diskFreeBytes: 10,
+      memoryTotalBytes: 8,
+      memoryUsedBytes: 8,
+      memoryFreeBytes: 8,
+      cpuUsagePercent: 100,
+      intervalSeconds: 30
+    })
+  );
   assert.equal(payload.diskFreeBytes, 10);
   assert.equal(payload.intervalSeconds, 30);
 });
 
 test("nome do enrollment e obrigatorio e limitado a 120 caracteres", () => {
   assert.equal(validateEnrollmentName("  Laboratorio  "), "Laboratorio");
-  assert.throws(() => validateEnrollmentName(""), (error) => error.statusCode === 400);
-  assert.throws(() => validateEnrollmentName(undefined), (error) => error.statusCode === 400);
-  assert.throws(() => validateEnrollmentName("x".repeat(121)), (error) => error.statusCode === 400);
+  assert.throws(
+    () => validateEnrollmentName(""),
+    (error) => error.statusCode === 400
+  );
+  assert.throws(
+    () => validateEnrollmentName(undefined),
+    (error) => error.statusCode === 400
+  );
+  assert.throws(
+    () => validateEnrollmentName("x".repeat(121)),
+    (error) => error.statusCode === 400
+  );
 });
 
 test("resultado do trabalho valida corpo, codigo de saida e tamanhos", () => {
@@ -120,7 +136,11 @@ test("resultado do trabalho valida corpo, codigo de saida e tamanhos", () => {
     { jobId: "j".repeat(181), body: {} }
   ];
   for (const input of invalid) {
-    assert.throws(() => validateJobResultPayload(input), (error) => error.statusCode === 400, JSON.stringify(input).slice(0, 60));
+    assert.throws(
+      () => validateJobResultPayload(input),
+      (error) => error.statusCode === 400,
+      JSON.stringify(input).slice(0, 60)
+    );
   }
 });
 

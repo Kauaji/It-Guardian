@@ -8,8 +8,7 @@ import { formatDayLabel } from "./assetTimelineFormatters.js";
 import { filterTimelineEvents, groupTimelineEventsByDay, mergeObservationsIntoEvents } from "./assetTimelineModel.js";
 
 const PAGE_SIZE = 50;
-const NETWORK_TOPOLOGY_DISCLAIMER =
-  "Conexões do Mapa de Rede representam relação cadastrada manualmente e não medição real do enlace.";
+const NETWORK_TOPOLOGY_DISCLAIMER = "Conexões do Mapa de Rede representam relação cadastrada manualmente e não medição real do enlace.";
 
 export default function AssetTechnicalTimeline({ assetId, token, observations = [], onOpenNetworkMap }) {
   const [events, setEvents] = useState([]);

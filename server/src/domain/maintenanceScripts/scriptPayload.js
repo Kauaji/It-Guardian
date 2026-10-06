@@ -34,10 +34,7 @@ export function normalizeScriptPayload(payload = {}, current = {}) {
   if (analysis.unknownVariables?.length) {
     throw badRequest(`Variaveis nao permitidas no script: ${analysis.unknownVariables.join(", ")}.`);
   }
-  const suggestedRiskLevel = normalizeRiskLevel(
-    payload.suggestedRiskLevel ?? current.suggestedRiskLevel,
-    analysis.suggestedRiskLevel
-  );
+  const suggestedRiskLevel = normalizeRiskLevel(payload.suggestedRiskLevel ?? current.suggestedRiskLevel, analysis.suggestedRiskLevel);
   const tags = normalizeTextList(payload.tags ?? current.tags);
   const relatedAlertTypes = normalizeTextList(payload.relatedAlertTypes ?? current.relatedAlertTypes);
   const relatedProblemTypes = normalizeTextList(payload.relatedProblemTypes ?? current.relatedProblemTypes);

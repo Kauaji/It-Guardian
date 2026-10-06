@@ -25,20 +25,27 @@ export function reconcileMaintenanceRecords(allDevices, maintenanceRecords) {
 /** Copia a resposta da API para o estado, aplicando o estado local do inventário. */
 export function applyDashboardSnapshot(state, snapshot, { inventory, activeMaintenanceRecords }) {
   const {
-    deviceData, allDeviceData, segmentData, groupData, activeAlertData, alertHistoryData,
-    alertCorrelationData, alertRuleData, suggestionData, maintenanceScriptData, preventivePlanData,
-    preventiveAutomationData, preventiveAutomationManagementData, serviceOrderData,
-    alertSettingsData, systemSettingsData
+    deviceData,
+    allDeviceData,
+    segmentData,
+    groupData,
+    activeAlertData,
+    alertHistoryData,
+    alertCorrelationData,
+    alertRuleData,
+    suggestionData,
+    maintenanceScriptData,
+    preventivePlanData,
+    preventiveAutomationData,
+    preventiveAutomationManagementData,
+    serviceOrderData,
+    alertSettingsData,
+    systemSettingsData
   } = snapshot;
   const { applyInventoryLocalState, applySegmentGroups, removedPeripherals, peripheralHistory, manualPeripherals } = inventory;
 
-  const localState = (list) => applyInventoryLocalState(
-    list,
-    removedPeripherals,
-    peripheralHistory,
-    activeMaintenanceRecords,
-    manualPeripherals
-  );
+  const localState = (list) =>
+    applyInventoryLocalState(list, removedPeripherals, peripheralHistory, activeMaintenanceRecords, manualPeripherals);
   const nextGroups = groupData.groups || [];
 
   state.setDevices(localState(deviceData.devices));
@@ -77,9 +84,7 @@ export function applyDashboardSnapshot(state, snapshot, { inventory, activeMaint
 }
 
 /** Mantém a máquina selecionada (ou a primeira visível) e carrega seu detalhe. */
-export async function syncSelectedDevice({
-  activeView, snapshot, selectedId, canViewMachine, token, setSelectedId, setSelectedDevice
-}) {
+export async function syncSelectedDevice({ activeView, snapshot, selectedId, canViewMachine, token, setSelectedId, setSelectedDevice }) {
   const visibleForSelection = activeView === "dashboard" ? snapshot.deviceData.devices : snapshot.allDeviceData.devices;
   const selectedStillVisible = visibleForSelection.some((device) => device.id === selectedId);
   const nextId = selectedStillVisible ? selectedId : visibleForSelection[0]?.id;

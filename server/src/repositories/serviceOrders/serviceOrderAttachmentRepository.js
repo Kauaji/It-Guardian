@@ -3,10 +3,9 @@ import { query } from "../../database.js";
 import { fromAttachmentRow } from "./serviceOrderMappers.js";
 
 export async function listServiceOrderAttachments(serviceOrderId) {
-  const result = await query(
-    "SELECT * FROM service_order_attachments WHERE service_order_id = $1 ORDER BY uploaded_at DESC",
-    [serviceOrderId]
-  );
+  const result = await query("SELECT * FROM service_order_attachments WHERE service_order_id = $1 ORDER BY uploaded_at DESC", [
+    serviceOrderId
+  ]);
   return result.rows.map(fromAttachmentRow);
 }
 
@@ -35,9 +34,9 @@ export async function insertServiceOrderAttachment({ serviceOrderId, attachment,
 }
 
 export async function deleteServiceOrderAttachmentRow(serviceOrderId, attachmentId) {
-  const result = await query(
-    "DELETE FROM service_order_attachments WHERE id = $1 AND service_order_id = $2 RETURNING *",
-    [attachmentId, serviceOrderId]
-  );
+  const result = await query("DELETE FROM service_order_attachments WHERE id = $1 AND service_order_id = $2 RETURNING *", [
+    attachmentId,
+    serviceOrderId
+  ]);
   return result.rows[0] ? fromAttachmentRow(result.rows[0]) : null;
 }

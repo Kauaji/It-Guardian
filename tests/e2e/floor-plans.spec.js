@@ -46,14 +46,16 @@ function buildFloorPlanFixture() {
       activeFloorId: floorId
     },
     floors: [{ id: floorId, name: "Térreo", level: 1, width: 1280, height: 820 }],
-    zones: [{
-      id: roomId,
-      floorId,
-      zoneType: "room",
-      name: "Sala de operacoes",
-      color: "#dbeafe",
-      geometry: { x: 180, y: 140, width: 720, height: 480 }
-    }],
+    zones: [
+      {
+        id: roomId,
+        floorId,
+        zoneType: "room",
+        name: "Sala de operacoes",
+        color: "#dbeafe",
+        geometry: { x: 180, y: 140, width: 720, height: 480 }
+      }
+    ],
     objects: [
       {
         id: deskId,
@@ -223,7 +225,9 @@ test("editor de plantas renderiza 2D e 3D em desktop e mobile", async ({ page, c
     await expect(sceneShell).toHaveAttribute("data-scene-ready", "true", { timeout: 30_000 });
     await expect(page.getByRole("toolbar", { name: "Vistas e controles 3D" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Perspectiva" })).toHaveAttribute("aria-pressed", "true");
-    await canvas3d.evaluate((canvas) => { canvas.dataset.stabilityMarker = "same-canvas"; });
+    await canvas3d.evaluate((canvas) => {
+      canvas.dataset.stabilityMarker = "same-canvas";
+    });
     await page.getByRole("button", { name: "Superior" }).click();
     await expect(page.getByRole("button", { name: "Superior" })).toHaveAttribute("aria-pressed", "true");
     await expect(canvas3d).toHaveAttribute("data-stability-marker", "same-canvas");
@@ -235,10 +239,12 @@ test("editor de plantas renderiza 2D e 3D em desktop e mobile", async ({ page, c
     await expect(page.locator(".floor-plan-editor-topbar")).toBeVisible();
     await expect(canvas3d).toBeVisible();
     await expect(sceneShell).toHaveAttribute("data-scene-ready", "true");
-    const controlSizes = await page.locator(".floor-plan-scene-toolbar button").evaluateAll((buttons) => buttons.map((button) => {
-      const box = button.getBoundingClientRect();
-      return { width: box.width, height: box.height };
-    }));
+    const controlSizes = await page.locator(".floor-plan-scene-toolbar button").evaluateAll((buttons) =>
+      buttons.map((button) => {
+        const box = button.getBoundingClientRect();
+        return { width: box.width, height: box.height };
+      })
+    );
     expect(controlSizes.length).toBeGreaterThanOrEqual(5);
     expect(controlSizes.every(({ width, height }) => width >= 40 && height >= 40)).toBeTruthy();
     expect(await page.evaluate(() => globalThis.document.documentElement.scrollWidth <= globalThis.innerWidth + 1)).toBeTruthy();

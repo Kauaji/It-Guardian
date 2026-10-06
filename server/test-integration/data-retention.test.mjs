@@ -58,10 +58,12 @@ const count = async (table, where = "TRUE", params = []) =>
   Number((await query(`SELECT COUNT(*)::int AS total FROM ${table} WHERE ${where}`, params)).rows[0].total);
 
 async function seedHeartbeat(receivedAt) {
-  await query(
-    "INSERT INTO agent_heartbeats (id, asset_id, enrollment_id, collected_at, received_at) VALUES ($1, $2, $3, $4, $4)",
-    [randomUUID(), assetId, enrollmentId, receivedAt]
-  );
+  await query("INSERT INTO agent_heartbeats (id, asset_id, enrollment_id, collected_at, received_at) VALUES ($1, $2, $3, $4, $4)", [
+    randomUUID(),
+    assetId,
+    enrollmentId,
+    receivedAt
+  ]);
 }
 
 test("apaga so o que passou do prazo, em lotes, e preserva o recente", async () => {
@@ -69,10 +71,13 @@ test("apaga so o que passou do prazo, em lotes, e preserva o recente", async () 
   for (let i = 0; i < 250; i += 1) await seedHeartbeat(ago(45));
   for (let i = 0; i < 5; i += 1) await seedHeartbeat(ago(2));
 
-  await query(
-    "INSERT INTO asset_metric_history (id, asset_id, collected_at) VALUES ($1, $2, $3), ($4, $2, $5)",
-    [randomUUID(), assetId, ago(120), randomUUID(), ago(10)]
-  );
+  await query("INSERT INTO asset_metric_history (id, asset_id, collected_at) VALUES ($1, $2, $3), ($4, $2, $5)", [
+    randomUUID(),
+    assetId,
+    ago(120),
+    randomUUID(),
+    ago(10)
+  ]);
 
   const oldSession = randomUUID();
   const freshSession = randomUUID();
@@ -91,10 +96,12 @@ test("apaga so o que passou do prazo, em lotes, e preserva o recente", async () 
 
   const logOld = randomUUID();
   const logRecent = randomUUID();
-  await query(
-    "INSERT INTO audit_logs (id, type, message, created_at) VALUES ($1, 't', 'antigo', $3), ($2, 't', 'recente', $4)",
-    [logOld, logRecent, ago(400), ago(5)]
-  );
+  await query("INSERT INTO audit_logs (id, type, message, created_at) VALUES ($1, 't', 'antigo', $3), ($2, 't', 'recente', $4)", [
+    logOld,
+    logRecent,
+    ago(400),
+    ago(5)
+  ]);
 
   const result = await runDataRetention();
   assert.equal(result.removed.agentHeartbeats, 250);
@@ -137,9 +144,9 @@ test("tokens de reautenticacao: apaga os expirados nao usados, preserva os usado
   const result = await runDataRetention();
   assert.equal(result.removed.reauthTokens, 1);
   const remaining = new Set(
-    (await query("SELECT id FROM security_reauthentications WHERE id IN ($1, $2, $3, $4)", [unusedExpired, used, referenced, recent])).rows.map(
-      (row) => row.id
-    )
+    (
+      await query("SELECT id FROM security_reauthentications WHERE id IN ($1, $2, $3, $4)", [unusedExpired, used, referenced, recent])
+    ).rows.map((row) => row.id)
   );
   assert.equal(remaining.has(unusedExpired), false);
   assert.equal(remaining.has(used), true);

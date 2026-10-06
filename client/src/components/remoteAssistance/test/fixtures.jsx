@@ -124,15 +124,7 @@ export async function advance(ms = 0) {
 
 export async function renderAction(Action, props = {}) {
   const notify = props.notify || vi.fn();
-  const view = render(
-    <Action
-      asset={makeAsset()}
-      token="tok-1"
-      user={adminUser}
-      notify={notify}
-      {...props}
-    />
-  );
+  const view = render(<Action asset={makeAsset()} token="tok-1" user={adminUser} notify={notify} {...props} />);
   await advance(0);
   return { ...view, notify };
 }

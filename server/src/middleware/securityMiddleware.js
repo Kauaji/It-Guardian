@@ -114,8 +114,12 @@ export function globalApiRateLimit(req, res, next) {
   const authenticated = Boolean(credentialOf(req));
   const write = unsafeMethods.has(req.method);
   const limiter = authenticated
-    ? write ? limiters.userWrite : limiters.userRead
-    : write ? limiters.anonymousWrite : limiters.anonymousRead;
+    ? write
+      ? limiters.userWrite
+      : limiters.userRead
+    : write
+      ? limiters.anonymousWrite
+      : limiters.anonymousRead;
   return limiter(req, res, next);
 }
 

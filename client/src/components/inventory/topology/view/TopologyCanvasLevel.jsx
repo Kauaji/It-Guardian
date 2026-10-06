@@ -7,9 +7,29 @@ import { CONNECTION_ITEM_LABELS_BY_TYPE } from "./topologyViewConstants.js";
 
 function TopologyToolbarSection({ ctx }) {
   const {
-    editMode, canEditMap, canManageMap, canLinkAssets, canStartLink, viewLevel, canvasRef, layout, dirtyPositions, saving, generatingLayout,
-    linkCreation, availableDevicesToAdd, addingAsset, visibleNodes, visibleLinks, filters, setFilters, segments, connectionItemLabels,
-    handleAddAsset, handleToggleLinkDraft, selection
+    editMode,
+    canEditMap,
+    canManageMap,
+    canLinkAssets,
+    canStartLink,
+    viewLevel,
+    canvasRef,
+    layout,
+    dirtyPositions,
+    saving,
+    generatingLayout,
+    linkCreation,
+    availableDevicesToAdd,
+    addingAsset,
+    visibleNodes,
+    visibleLinks,
+    filters,
+    setFilters,
+    segments,
+    connectionItemLabels,
+    handleAddAsset,
+    handleToggleLinkDraft,
+    selection
   } = ctx;
   return (
     <NetworkTopologyToolbar
@@ -68,7 +88,11 @@ export default function TopologyCanvasLevel({ ctx, view }) {
         labels={guideLabels}
         onCancel={linkCreation.reset}
       />
-      {linkCreation.error ? <p className="network-topology-connection-error" role="alert">{linkCreation.error}</p> : null}
+      {linkCreation.error ? (
+        <p className="network-topology-connection-error" role="alert">
+          {linkCreation.error}
+        </p>
+      ) : null}
       <TopologyCanvasBody ctx={ctx} view={view} />
     </>
   );

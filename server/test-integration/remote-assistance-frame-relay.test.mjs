@@ -98,23 +98,20 @@ async function startActiveSession(baseUrl, cookie, enrollmentToken, machineId) {
   });
   const pendingSession = (await pending.json()).session;
 
-  const consent = await fetch(
-    `${baseUrl}/api/agents/remote-assistance/sessions/${session.id}/consent`,
-    {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${enrollmentToken}`,
-        "x-remote-session-token": pendingSession.sessionToken,
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({
-        granted: true,
-        controlAllowed: false,
-        monitors: [{ id: "display-1", name: "Monitor 1", primary: true, width: 1920, height: 1080 }],
-        selectedMonitorId: "display-1"
-      })
-    }
-  );
+  const consent = await fetch(`${baseUrl}/api/agents/remote-assistance/sessions/${session.id}/consent`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${enrollmentToken}`,
+      "x-remote-session-token": pendingSession.sessionToken,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      granted: true,
+      controlAllowed: false,
+      monitors: [{ id: "display-1", name: "Monitor 1", primary: true, width: 1920, height: 1080 }],
+      selectedMonitorId: "display-1"
+    })
+  });
   assert.equal(consent.status, 200);
   return { sessionId: session.id, viewerToken, agentSessionToken: pendingSession.sessionToken };
 }

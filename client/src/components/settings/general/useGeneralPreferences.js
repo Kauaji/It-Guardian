@@ -1,9 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  accentColorKey,
-  defaultCustomTheme,
-  generalPreferencesKey
-} from "./appearancePresets.js";
+import { accentColorKey, defaultCustomTheme, generalPreferencesKey } from "./appearancePresets.js";
 import { applyGeneralPreferences, readGeneralPreferences } from "./generalPreferences.js";
 
 /** Estado das preferências de usabilidade/aparência; cada mudança persiste e aplica no <html>. */

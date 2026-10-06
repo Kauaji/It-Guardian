@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  getBackupOrigin,
-  getDefaultInventorySegment,
-  getRealBackupLocation,
-  getServiceOrderAssetOrigin
-} from "./segmentLookups.js";
+import { getBackupOrigin, getDefaultInventorySegment, getRealBackupLocation, getServiceOrderAssetOrigin } from "./segmentLookups.js";
 
 const defaultSegment = { id: "seg-default", name: "Não organizadas", isDefault: true };
 const redes = { id: "s1", name: "Redes", groupId: "g1" };
@@ -120,8 +115,6 @@ describe("getServiceOrderAssetOrigin", () => {
 
   it("devolve null quando nao ha nenhum segmento padrao", () => {
     const empty = { activeSegments: [], decoratedSegments: [], segments: [] };
-    expect(
-      getServiceOrderAssetOrigin({ ...base, lists: empty, machine: { id: "m1", segmentName: "Manutenção" } })
-    ).toBeNull();
+    expect(getServiceOrderAssetOrigin({ ...base, lists: empty, machine: { id: "m1", segmentName: "Manutenção" } })).toBeNull();
   });
 });

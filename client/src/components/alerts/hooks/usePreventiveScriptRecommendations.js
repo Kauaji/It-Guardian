@@ -12,12 +12,7 @@ export default function usePreventiveScriptRecommendations({ token, assetIds, ac
   useEffect(() => {
     if (!token || !assetIds.length) {
       setRecommendations((current) => {
-        if (
-          !current.loading &&
-          !current.error &&
-          current.recommended.length === 0 &&
-          current.others.length === 0
-        ) {
+        if (!current.loading && !current.error && current.recommended.length === 0 && current.others.length === 0) {
           return current;
         }
         return emptyRecommendations;

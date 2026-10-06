@@ -6,10 +6,7 @@ const CSS_VARIABLE = "--floor-plan-inspector-max-height";
 
 /** Altura maxima do inspetor: o que cabe entre o topo do palco e o catalogo. */
 export function computeInspectorMaxHeight(stageBox, catalogBox) {
-  return Math.max(MIN_INSPECTOR_HEIGHT, Math.min(
-    stageBox.height - INSPECTOR_MARGIN,
-    catalogBox.top - stageBox.top - INSPECTOR_MARGIN
-  ));
+  return Math.max(MIN_INSPECTOR_HEIGHT, Math.min(stageBox.height - INSPECTOR_MARGIN, catalogBox.top - stageBox.top - INSPECTOR_MARGIN));
 }
 
 /**

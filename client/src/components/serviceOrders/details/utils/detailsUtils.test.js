@@ -75,7 +75,13 @@ describe("items", () => {
 
   it("monta o rascunho com padrões e origem alternativa dos itens", () => {
     expect(buildDraft(null)).toMatchObject({ title: "", priority: "medium", autoPriorityEnabled: false, serviceValue: "0", items: [] });
-    const draft = buildDraft({ title: "T", priority: "high", serviceValue: 12, serviceItems: [{ id: "i", productName: "P", quantity: 1, unitPrice: 2 }], autoPriorityEnabled: true });
+    const draft = buildDraft({
+      title: "T",
+      priority: "high",
+      serviceValue: 12,
+      serviceItems: [{ id: "i", productName: "P", quantity: 1, unitPrice: 2 }],
+      autoPriorityEnabled: true
+    });
     expect(draft).toMatchObject({ title: "T", priority: "high", serviceValue: "12", autoPriorityEnabled: true });
     expect(draft.items).toHaveLength(1);
   });
@@ -84,7 +90,11 @@ describe("items", () => {
     expect(buildPartLine({ productName: "A", quantity: 1, unitPrice: 0, subtotal: 0 })).toBe("A x1");
     expect(buildPartLine({ productName: "A", quantity: 2, unitPrice: 5, subtotal: 10 })).toBe("A x2 - R$ 10,00");
     vi.spyOn(Date, "now").mockReturnValue(99);
-    const item = buildPartItem({ product: { id: "p1", name: "SSD" }, manualProductName: "x", partDraft: { quantity: "2", unitPrice: "5" } });
+    const item = buildPartItem({
+      product: { id: "p1", name: "SSD" },
+      manualProductName: "x",
+      partDraft: { quantity: "2", unitPrice: "5" }
+    });
     expect(item).toEqual({ id: "p1-99", productId: "p1", productName: "SSD", quantity: 2, unitPrice: 5, subtotal: 10, notes: "" });
     const manual = buildPartItem({ product: undefined, manualProductName: "Avulsa", partDraft: { quantity: 1, unitPrice: "0" } });
     expect(manual).toMatchObject({ id: "manual-99", productId: "", productName: "Avulsa" });
@@ -97,8 +107,15 @@ describe("items", () => {
 });
 
 describe("catalog", () => {
-  const products = Array.from({ length: 9 }, (_, index) => ({ id: `p${index}`, name: `Peça ${index}`, category: index === 3 ? "Memória" : "Geral" }));
-  const services = [{ id: "s1", name: "Formatação", category: "Software" }, { id: "s2", name: "Troca" }];
+  const products = Array.from({ length: 9 }, (_, index) => ({
+    id: `p${index}`,
+    name: `Peça ${index}`,
+    category: index === 3 ? "Memória" : "Geral"
+  }));
+  const services = [
+    { id: "s1", name: "Formatação", category: "Software" },
+    { id: "s2", name: "Troca" }
+  ];
 
   it("filtra por termo sem acento e limita a sete sugestões", () => {
     expect(filterProductSuggestions(products, "")).toHaveLength(7);
@@ -127,9 +144,17 @@ describe("assetLink", () => {
   const groups = [{ id: "g1", name: "Andar 1" }];
 
   it("lista grupos ordenados, com 'Sem grupo' e nomes alternativos", () => {
-    expect(buildGroupOptions(segments, groups, "t1")).toEqual([{ id: "g1", name: "Andar 1" }, { id: "ungrouped", name: "Sem grupo" }]);
-    expect(buildGroupOptions(segments, groups, "t2")).toEqual([{ id: "g2", name: "Do segmento" }, { id: "g9", name: "Nome do segmento" }]);
-    expect(buildGroupOptions([{ id: "x", tabId: "t", groupId: "gx", groupName: "Via segmento" }], [], "")).toEqual([{ id: "gx", name: "Via segmento" }]);
+    expect(buildGroupOptions(segments, groups, "t1")).toEqual([
+      { id: "g1", name: "Andar 1" },
+      { id: "ungrouped", name: "Sem grupo" }
+    ]);
+    expect(buildGroupOptions(segments, groups, "t2")).toEqual([
+      { id: "g2", name: "Do segmento" },
+      { id: "g9", name: "Nome do segmento" }
+    ]);
+    expect(buildGroupOptions([{ id: "x", tabId: "t", groupId: "gx", groupName: "Via segmento" }], [], "")).toEqual([
+      { id: "gx", name: "Via segmento" }
+    ]);
   });
 
   it("filtra segmentos por aba e grupo", () => {
@@ -144,7 +169,8 @@ describe("assetLink", () => {
       { id: "d2", name: "PC Dois", tabId: "t9", isGlobalUnorganized: true, segmentId: "s2" },
       { id: "d3", name: "Outro", tabId: "t2", segmentId: "s4", groupId: "g9" }
     ];
-    const run = (draft) => filterDevicesForLink(devices, segments, { tabId: "", groupId: "", segmentId: "", search: "", ...draft }).map((device) => device.id);
+    const run = (draft) =>
+      filterDevicesForLink(devices, segments, { tabId: "", groupId: "", segmentId: "", search: "", ...draft }).map((device) => device.id);
     expect(run({})).toEqual(["d1", "d2", "d3"]);
     expect(run({ tabId: "t1" })).toEqual(["d1", "d2"]);
     expect(run({ segmentId: "s2" })).toEqual(["d2"]);
@@ -176,7 +202,11 @@ describe("orderLookups e permissões", () => {
   });
 
   it("lista setores ativos com o Geral sempre presente", () => {
-    expect(buildAvailableSectors([{ id: "a", name: "A" }, { id: "b", name: "B", active: false }, null, { name: "sem id" }]).map((sector) => sector.id)).toEqual(["sector-geral", "a"]);
+    expect(
+      buildAvailableSectors([{ id: "a", name: "A" }, { id: "b", name: "B", active: false }, null, { name: "sem id" }]).map(
+        (sector) => sector.id
+      )
+    ).toEqual(["sector-geral", "a"]);
     expect(buildAvailableSectors([{ id: "sector-geral", name: "Outro" }])[0].name).toBe("Outro");
   });
 
@@ -193,7 +223,17 @@ describe("orderLookups e permissões", () => {
   });
 
   it("aplica os padrões de permissão", () => {
-    expect(buildDetailPermissions()).toEqual({ edit: true, changeStatus: true, finish: true, attendance: true, print: true, reopen: false, runScripts: false, registerSimulation: false, schedule: true });
+    expect(buildDetailPermissions()).toEqual({
+      edit: true,
+      changeStatus: true,
+      finish: true,
+      attendance: true,
+      print: true,
+      reopen: false,
+      runScripts: false,
+      registerSimulation: false,
+      schedule: true
+    });
     expect(buildDetailPermissions({ changeStatus: false }).finish).toBe(false);
     expect(buildDetailPermissions({ changeStatus: false, finish: true }).finish).toBe(true);
   });

@@ -12,7 +12,9 @@ export default function FinancialPanel({ finance, onRemovePart }) {
             <article key={item.id}>
               <div>
                 <strong>{item.productName}</strong>
-                <span>{item.quantity} x {formatCurrency(item.unitPrice)}</span>
+                <span>
+                  {item.quantity} x {formatCurrency(item.unitPrice)}
+                </span>
               </div>
               <strong>{formatCurrency(item.subtotal)}</strong>
               <button type="button" className="icon-button danger" onClick={() => onRemovePart(item.id)} title="Remover peça">
@@ -25,9 +27,15 @@ export default function FinancialPanel({ finance, onRemovePart }) {
         <p className="empty">Nenhuma peça com valor adicionada.</p>
       )}
       <div className="service-order-totals">
-        <span>Total de peças <strong>{formatCurrency(partsTotal)}</strong></span>
-        <span>Serviço <strong>{formatCurrency(serviceValueNumber)}</strong></span>
-        <span className="grand-total">Total estimado <strong>{formatCurrency(totalValue)}</strong></span>
+        <span>
+          Total de peças <strong>{formatCurrency(partsTotal)}</strong>
+        </span>
+        <span>
+          Serviço <strong>{formatCurrency(serviceValueNumber)}</strong>
+        </span>
+        <span className="grand-total">
+          Total estimado <strong>{formatCurrency(totalValue)}</strong>
+        </span>
       </div>
     </div>
   );

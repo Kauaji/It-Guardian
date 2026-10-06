@@ -9,7 +9,11 @@ import AlertDiagnosticsTab from "./AlertDiagnosticsTab.jsx";
 import AlertHistoryTab from "./AlertHistoryTab.jsx";
 
 const devices = [{ id: "d1", name: "PC-01", displayName: "Computador da Ana", segmentId: "s1" }];
-const lookups = createAlertLookups({ devices, segments: [{ id: "s1", name: "Recepção", groupId: "g1" }], segmentGroups: [{ id: "g1", name: "Matriz" }] });
+const lookups = createAlertLookups({
+  devices,
+  segments: [{ id: "s1", name: "Recepção", groupId: "g1" }],
+  segmentGroups: [{ id: "g1", name: "Matriz" }]
+});
 
 function renderWithView(ui, { granted = () => true, center = {} } = {}) {
   const viewValue = { perms: buildAlertCenterPermissions(granted, true), lookups };
@@ -50,7 +54,13 @@ function commentBox(overrides = {}) {
 
 describe("AlertDiagnosticsTab", () => {
   it("mostra o diagnóstico completo de um aviso ativo", () => {
-    renderWithView(<AlertDiagnosticsTab visibleAlerts={[alert, { ...alert, id: "a2", status: "resolved" }]} alertCorrelations={[]} commentBox={commentBox()} />);
+    renderWithView(
+      <AlertDiagnosticsTab
+        visibleAlerts={[alert, { ...alert, id: "a2", status: "resolved" }]}
+        alertCorrelations={[]}
+        commentBox={commentBox()}
+      />
+    );
 
     const card = document.querySelector(".alert-diagnostic-card");
     expect(document.querySelectorAll(".alert-diagnostic-card")).toHaveLength(1);
@@ -92,7 +102,11 @@ describe("AlertDiagnosticsTab", () => {
 
   it("esconde o campo de comentário sem permissão e mostra mensagem sem comentários", () => {
     renderWithView(
-      <AlertDiagnosticsTab visibleAlerts={[{ ...alert, comments: undefined }]} alertCorrelations={[]} commentBox={commentBox({ canComment: false })} />
+      <AlertDiagnosticsTab
+        visibleAlerts={[{ ...alert, comments: undefined }]}
+        alertCorrelations={[]}
+        commentBox={commentBox({ canComment: false })}
+      />
     );
 
     expect(screen.queryByPlaceholderText("Adicionar comentário interno")).toBeNull();
@@ -102,8 +116,15 @@ describe("AlertDiagnosticsTab", () => {
   it("lista até quatro correlações e o botão de avaliar para quem gerencia sugestões", async () => {
     const user = userEvent.setup();
     const onEvaluateAlerts = vi.fn();
-    const correlations = Array.from({ length: 5 }, (_, index) => ({ id: `c${index}`, correlationSummary: `Padrão ${index}`, impactLevel: index === 0 ? "critical" : "warning", relatedHosts: ["PC-01"] }));
-    renderWithView(<AlertDiagnosticsTab visibleAlerts={[]} alertCorrelations={correlations} commentBox={commentBox()} />, { center: { onEvaluateAlerts } });
+    const correlations = Array.from({ length: 5 }, (_, index) => ({
+      id: `c${index}`,
+      correlationSummary: `Padrão ${index}`,
+      impactLevel: index === 0 ? "critical" : "warning",
+      relatedHosts: ["PC-01"]
+    }));
+    renderWithView(<AlertDiagnosticsTab visibleAlerts={[]} alertCorrelations={correlations} commentBox={commentBox()} />, {
+      center: { onEvaluateAlerts }
+    });
 
     expect(screen.getByLabelText("Avisos correlacionados")).toBeInTheDocument();
     expect(document.querySelectorAll(".alert-correlation-card")).toHaveLength(4);
@@ -126,10 +147,34 @@ describe("AlertHistoryTab", () => {
   it("lista avisos resolvidos e sugestões tratadas", () => {
     renderWithView(
       <AlertHistoryTab
-        resolvedAlerts={[{ id: "a1", assetId: "d1", hostName: "PC-01", title: "CPU alta em PC-01", metric: "cpu", value: 80, updatedAt: "2026-05-03T10:00:00.000Z" }]}
+        resolvedAlerts={[
+          {
+            id: "a1",
+            assetId: "d1",
+            hostName: "PC-01",
+            title: "CPU alta em PC-01",
+            metric: "cpu",
+            value: 80,
+            updatedAt: "2026-05-03T10:00:00.000Z"
+          }
+        ]}
         handledSuggestions={[
-          { id: "s1", status: "accepted", assetId: "d1", alertType: "cpu_high", createdAt: "2026-05-01T00:00:00.000Z", createdServiceOrderId: "OS-5" },
-          { id: "s2", status: "rejected", assetId: "d1", alertType: "ram_high", createdAt: "2026-05-02T00:00:00.000Z", rejectionReason: "Falso positivo" },
+          {
+            id: "s1",
+            status: "accepted",
+            assetId: "d1",
+            alertType: "cpu_high",
+            createdAt: "2026-05-01T00:00:00.000Z",
+            createdServiceOrderId: "OS-5"
+          },
+          {
+            id: "s2",
+            status: "rejected",
+            assetId: "d1",
+            alertType: "ram_high",
+            createdAt: "2026-05-02T00:00:00.000Z",
+            rejectionReason: "Falso positivo"
+          },
           { id: "s3", status: "rejected", assetId: "d1", alertType: "ram_high", createdAt: "2026-05-02T00:00:00.000Z" }
         ]}
       />

@@ -10,13 +10,11 @@ function SectorField({ serviceOrder, canChangeSector, availableSectors, saving, 
   return (
     <label className="service-order-detail-item service-order-sector-edit">
       <span>Setor responsável</span>
-      <select
-        value={serviceOrder.sectorId || "sector-geral"}
-        disabled={saving}
-        onChange={(event) => onChangeSector(event.target.value)}
-      >
+      <select value={serviceOrder.sectorId || "sector-geral"} disabled={saving} onChange={(event) => onChangeSector(event.target.value)}>
         {availableSectors.map((sector) => (
-          <option key={sector.id} value={sector.id}>{sector.name}</option>
+          <option key={sector.id} value={sector.id}>
+            {sector.name}
+          </option>
         ))}
       </select>
     </label>
@@ -58,12 +56,8 @@ export default function GeneralTab({
         <DetailItem label="Número" value={serviceOrder.number} />
         <DetailItem label="Status" value={statusLabelMap[serviceOrder.status] || serviceOrder.status} />
         <DetailItem label="Prioridade" value={priorityLabels[serviceOrder.priority]} />
-        {serviceOrder.preventivePlanId && (
-          <DetailItem label="Origem preventiva" value="Plano Preventivo" />
-        )}
-        {serviceOrder.source === "public_support_form" && (
-          <DetailItem label="Origem" value={getServiceOrderOriginLabel(serviceOrder)} />
-        )}
+        {serviceOrder.preventivePlanId && <DetailItem label="Origem preventiva" value="Plano Preventivo" />}
+        {serviceOrder.source === "public_support_form" && <DetailItem label="Origem" value={getServiceOrderOriginLabel(serviceOrder)} />}
         <SectorField
           serviceOrder={serviceOrder}
           canChangeSector={canChangeSector}
@@ -83,7 +77,10 @@ export default function GeneralTab({
         <DetailItem label="Finalizada em" value={formatDate(serviceOrder.closedAt)} />
         {businessMode && (
           <>
-            <DetailItem label="Valor do serviço" value={serviceOrder.serviceValue ? formatCurrency(serviceOrder.serviceValue) : "Não informado"} />
+            <DetailItem
+              label="Valor do serviço"
+              value={serviceOrder.serviceValue ? formatCurrency(serviceOrder.serviceValue) : "Não informado"}
+            />
             <DetailItem label="Total de peças" value={formatCurrency(serviceOrder.totalPartsValue)} />
             <DetailItem label="Total estimado" value={formatCurrency(serviceOrder.totalValue)} />
           </>

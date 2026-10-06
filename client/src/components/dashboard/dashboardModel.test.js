@@ -57,12 +57,8 @@ describe("subtitles do dashboard", () => {
   });
 
   it("overdueSubtitle avisa quando o dado ainda nao esta disponivel", () => {
-    expect(overdueSubtitle({ overdueServiceOrdersAvailable: false })).toBe(
-      "Depende de prazo/SLA persistido (ainda não disponível)"
-    );
-    expect(overdueSubtitle({ overdueServiceOrdersAvailable: true, overdueServiceOrders: 4 })).toBe(
-      "4 ordem(ns) vencida(s)"
-    );
+    expect(overdueSubtitle({ overdueServiceOrdersAvailable: false })).toBe("Depende de prazo/SLA persistido (ainda não disponível)");
+    expect(overdueSubtitle({ overdueServiceOrdersAvailable: true, overdueServiceOrders: 4 })).toBe("4 ordem(ns) vencida(s)");
   });
 
   it("healthSubtitle e um texto fixo, sem depender de overview", () => {

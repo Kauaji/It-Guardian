@@ -92,10 +92,7 @@ export async function resolveInactiveAgentAlerts({
     params.push(id);
     return `$${params.length}`;
   });
-  const normalizedInactiveHours = Math.max(
-    1,
-    toNumber(inactiveHours, defaultAlertSettings.inactiveAlertAutoResolveHours)
-  );
+  const normalizedInactiveHours = Math.max(1, toNumber(inactiveHours, defaultAlertSettings.inactiveAlertAutoResolveHours));
   params.push(new Date(Date.now() - normalizedInactiveHours * 60 * 60 * 1000).toISOString());
   const inactiveBeforeParam = `$${params.length}`;
   const result = await query(

@@ -34,9 +34,7 @@ export default function NetworkTopologyAddClusterPicker({ items, onPick, disable
 
   const results = useMemo(() => {
     const entries = query.trim() ? searchCatalogItems(sections, query) : sections[0].items;
-    return entries
-      .map((entry) => ({ entry, item: items.find((candidate) => candidate.id === entry.id) }))
-      .filter((row) => row.item);
+    return entries.map((entry) => ({ entry, item: items.find((candidate) => candidate.id === entry.id) })).filter((row) => row.item);
   }, [sections, query, items]);
 
   useEffect(() => {
@@ -108,10 +106,7 @@ export default function NetworkTopologyAddClusterPicker({ items, onPick, disable
                 disabled={disabled}
                 onClick={() => handlePick(item)}
               >
-                <span
-                  className="network-topology-hierarchy-status-dot"
-                  style={{ background: getAggregateStatusColorToken(item.status) }}
-                />
+                <span className="network-topology-hierarchy-status-dot" style={{ background: getAggregateStatusColorToken(item.status) }} />
                 {item.nodeType === "group" ? <FolderTree size={16} /> : <Layers size={16} />}
                 <span className="network-topology-add-asset-item-body">
                   <strong>{entry.label}</strong>

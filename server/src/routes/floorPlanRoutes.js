@@ -24,7 +24,12 @@ router.use(requireAuth);
 router.get("/", requirePermission("floor_plans.view"), listFloorPlanController);
 router.post("/", requirePermission("floor_plans.create"), createFloorPlanController);
 router.patch("/objects/:objectId/link-equipment", requirePermission("floor_plans.link_inventory"), linkFloorPlanObjectController);
-router.post("/:id/floors/:floorId/background", requirePermission("floor_plans.upload_background"), raw({ type: ["image/png", "image/jpeg", "image/webp"], limit: "8mb" }), uploadFloorPlanBackgroundController);
+router.post(
+  "/:id/floors/:floorId/background",
+  requirePermission("floor_plans.upload_background"),
+  raw({ type: ["image/png", "image/jpeg", "image/webp"], limit: "8mb" }),
+  uploadFloorPlanBackgroundController
+);
 router.get("/:id/floors/:floorId/background", requirePermission("floor_plans.view"), getFloorPlanBackgroundController);
 router.delete("/:id/floors/:floorId/background", requirePermission("floor_plans.upload_background"), deleteFloorPlanBackgroundController);
 router.get("/:id/summary", requirePermission("floor_plans.view_heatmaps"), floorPlanSummaryController);

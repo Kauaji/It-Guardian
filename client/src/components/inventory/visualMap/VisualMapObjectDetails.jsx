@@ -20,7 +20,8 @@ function ObjectFields({ draft, selectedObject, devices, usedAssetIds, isEditing,
           <option value="">Não vinculado</option>
           {devices.map((device) => (
             <option key={device.id} value={device.id} disabled={usedAssetIds.has(device.id) && device.id !== selectedObject.linkedAssetId}>
-              {getDeviceName(device)}{usedAssetIds.has(device.id) && device.id !== selectedObject.linkedAssetId ? " (já posicionado)" : ""}
+              {getDeviceName(device)}
+              {usedAssetIds.has(device.id) && device.id !== selectedObject.linkedAssetId ? " (já posicionado)" : ""}
             </option>
           ))}
         </select>
@@ -112,12 +113,32 @@ function ObjectFooter({ saving, objectDirty, onSave, onDuplicate, onCancel, onDe
 
 // Corpo do painel de um objeto selecionado (campos, ajustes, ativo vinculado e rodape).
 export default function VisualMapObjectDetails({
-  draft, selectedObject, devices, usedAssetIds, linkedDevice, linkedDeviceMeta, isEditing, saving, objectDirty,
-  onChange, onMetadataChange, onSave, onDuplicate, onCancel, onDelete
+  draft,
+  selectedObject,
+  devices,
+  usedAssetIds,
+  linkedDevice,
+  linkedDeviceMeta,
+  isEditing,
+  saving,
+  objectDirty,
+  onChange,
+  onMetadataChange,
+  onSave,
+  onDuplicate,
+  onCancel,
+  onDelete
 }) {
   return (
     <>
-      <ObjectFields draft={draft} selectedObject={selectedObject} devices={devices} usedAssetIds={usedAssetIds} isEditing={isEditing} onChange={onChange} />
+      <ObjectFields
+        draft={draft}
+        selectedObject={selectedObject}
+        devices={devices}
+        usedAssetIds={usedAssetIds}
+        isEditing={isEditing}
+        onChange={onChange}
+      />
       <NudgeRow draft={draft} isEditing={isEditing} onChange={onChange} />
       <label>
         Notas
@@ -128,7 +149,14 @@ export default function VisualMapObjectDetails({
         <MetadataFields metadata={draft.metadata} isEditing={isEditing} onChange={onMetadataChange} />
       )}
       {isEditing && (
-        <ObjectFooter saving={saving} objectDirty={objectDirty} onSave={onSave} onDuplicate={onDuplicate} onCancel={onCancel} onDelete={onDelete} />
+        <ObjectFooter
+          saving={saving}
+          objectDirty={objectDirty}
+          onSave={onSave}
+          onDuplicate={onDuplicate}
+          onCancel={onCancel}
+          onDelete={onDelete}
+        />
       )}
     </>
   );

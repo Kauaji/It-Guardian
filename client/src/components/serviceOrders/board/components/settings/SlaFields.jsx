@@ -8,12 +8,7 @@ export default function SlaFields({ settings, updateField, updateSetting }) {
       {Object.entries(priorityLabels).map(([priority, label]) => (
         <label key={priority}>
           {label} (horas)
-          <input
-            type="number"
-            min="1"
-            value={sla[priority]}
-            onChange={(event) => updateField("sla", priority, event.target.value)}
-          />
+          <input type="number" min="1" value={sla[priority]} onChange={(event) => updateField("sla", priority, event.target.value)} />
         </label>
       ))}
       <label>

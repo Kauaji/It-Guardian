@@ -10,30 +10,22 @@ import { buildNewServiceOrderRow } from "../../domain/serviceOrders/serviceOrder
 import { getInitialStatus } from "../../domain/serviceOrders/serviceOrderSettings.js";
 import { computeServiceOrderSlaDueAt } from "../../domain/serviceOrders/serviceOrderSla.js";
 import { replaceServiceOrderItems } from "../../repositories/serviceOrders/serviceOrderItemRepository.js";
-import {
-  addServiceOrderAssetHistory,
-  addServiceOrderHistory
-} from "../../repositories/serviceOrders/serviceOrderHistoryRepository.js";
+import { addServiceOrderAssetHistory, addServiceOrderHistory } from "../../repositories/serviceOrders/serviceOrderHistoryRepository.js";
 import { fromOrderRow } from "../../repositories/serviceOrders/serviceOrderMappers.js";
 import { getServiceOrderSettings } from "../../repositories/serviceOrders/serviceOrderSettingsRepository.js";
-import {
-  insertServiceOrderRow,
-  setAssignedTechnicianNames
-} from "../../repositories/serviceOrders/serviceOrderWriteRepository.js";
+import { insertServiceOrderRow, setAssignedTechnicianNames } from "../../repositories/serviceOrders/serviceOrderWriteRepository.js";
 import { nextServiceOrderNumber } from "./serviceOrderNumberService.js";
-import {
-  calculateConfiguredPriority,
-  resolveServiceOrderSector,
-  resolveServiceOrderService
-} from "./serviceOrderResolutionService.js";
+import { calculateConfiguredPriority, resolveServiceOrderSector, resolveServiceOrderService } from "./serviceOrderResolutionService.js";
 
 const maxNumberAttempts = 5;
 
 function isDuplicateServiceOrderNumberError(error) {
-  return error?.code === "23505" &&
+  return (
+    error?.code === "23505" &&
     /service_orders.*number|idx_service_orders_number_unique|number/i.test(
       `${error.constraint || ""} ${error.detail || ""} ${error.message || ""}`
-    );
+    )
+  );
 }
 
 // Insere a OS gerando um numero novo a cada tentativa: duas criacoes
@@ -70,20 +62,21 @@ export async function createServiceOrder({ payload, user, db = query }) {
   const created = await insertWithNewNumber({
     db,
     assignedTechnicianNames,
-    buildRow: (id, number) => buildNewServiceOrderRow({
-      payload,
-      id,
-      number,
-      settings,
-      initialStatus,
-      priority,
-      sector,
-      service,
-      money,
-      assignedTechnicianNames,
-      user,
-      slaDueAt
-    })
+    buildRow: (id, number) =>
+      buildNewServiceOrderRow({
+        payload,
+        id,
+        number,
+        settings,
+        initialStatus,
+        priority,
+        sector,
+        service,
+        money,
+        assignedTechnicianNames,
+        user,
+        slaDueAt
+      })
   });
 
   if (!created?.row) {

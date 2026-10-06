@@ -16,10 +16,7 @@ export function enrollmentFromRow(row) {
 }
 
 export function assetFromRow(row) {
-  const inventoryDetails =
-    row.inventory_details && typeof row.inventory_details === "object"
-      ? row.inventory_details
-      : {};
+  const inventoryDetails = row.inventory_details && typeof row.inventory_details === "object" ? row.inventory_details : {};
   return {
     id: row.asset_id,
     enrollmentId: row.enrollment_id,

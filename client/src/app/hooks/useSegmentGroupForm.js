@@ -1,8 +1,5 @@
 import { useState } from "react";
-import {
-  createSegmentGroup as createSegmentGroupApi,
-  updateSegmentGroup
-} from "../../api.js";
+import { createSegmentGroup as createSegmentGroupApi, updateSegmentGroup } from "../../api.js";
 import { useAppSession } from "../../context/AppSessionContext.jsx";
 import { pickUnusedPaletteColor } from "../../components/inventory/inventoryLocalState.js";
 import { hasDuplicateGroupName } from "../inventory/segmentGroupRules.js";
@@ -56,11 +53,7 @@ export function useSegmentGroupForm({ data, inventory, meta }) {
           name: cleanName,
           color: nextColor
         });
-        setSegmentGroups(
-          segmentGroups.map((item) =>
-            item.id === segmentGroupForm.group.id ? { ...item, ...response.group } : item
-          )
-        );
+        setSegmentGroups(segmentGroups.map((item) => (item.id === segmentGroupForm.group.id ? { ...item, ...response.group } : item)));
         notify("Grupo renomeado.", "ok");
       }
 

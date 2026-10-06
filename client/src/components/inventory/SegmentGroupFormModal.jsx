@@ -5,15 +5,7 @@ import { useModalLifecycle } from "../../hooks/useModalLifecycle.js";
 
 const fallbackGroupColor = "#2563eb";
 
-export default function SegmentGroupFormModal({
-  mode,
-  group,
-  groups,
-  suggestedColor,
-  saving,
-  onClose,
-  onSubmit
-}) {
+export default function SegmentGroupFormModal({ mode, group, groups, suggestedColor, saving, onClose, onSubmit }) {
   const [name, setName] = useState("");
   const [color, setColor] = useState("");
   const dialogRef = useModalLifecycle(Boolean(mode), onClose);
@@ -25,9 +17,7 @@ export default function SegmentGroupFormModal({
 
   const normalizedName = name.trim().toLowerCase();
   const duplicateName = useMemo(
-    () =>
-      Boolean(normalizedName) &&
-      groups.some((item) => item.id !== group?.id && item.name.trim().toLowerCase() === normalizedName),
+    () => Boolean(normalizedName) && groups.some((item) => item.id !== group?.id && item.name.trim().toLowerCase() === normalizedName),
     [normalizedName, group?.id, groups]
   );
   const isCreate = mode === "create";
@@ -42,15 +32,18 @@ export default function SegmentGroupFormModal({
 
   return (
     <div className="modal-backdrop" role="presentation">
-      <form ref={dialogRef} className="modal-panel segment-form-modal" role="dialog" aria-modal="true" aria-labelledby="segment-group-form-title" onSubmit={submit}>
+      <form
+        ref={dialogRef}
+        className="modal-panel segment-form-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="segment-group-form-title"
+        onSubmit={submit}
+      >
         <header>
           <div>
             <h2 id="segment-group-form-title">{isCreate ? "Novo grupo" : "Renomear grupo"}</h2>
-            <p>
-              {isCreate
-                ? "Crie um agrupador para organizar segmentos relacionados."
-                : "Atualize o nome do agrupador de segmentos."}
-            </p>
+            <p>{isCreate ? "Crie um agrupador para organizar segmentos relacionados." : "Atualize o nome do agrupador de segmentos."}</p>
           </div>
           <button type="button" className="icon-button" onClick={onClose} title="Fechar">
             <X size={18} />
@@ -59,12 +52,7 @@ export default function SegmentGroupFormModal({
 
         <label>
           Nome do grupo
-          <input
-            autoFocus
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Ex: Administrativo"
-          />
+          <input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder="Ex: Administrativo" />
         </label>
         {duplicateName && <span className="form-error">Já existe um grupo com esse nome.</span>}
 
@@ -79,7 +67,9 @@ export default function SegmentGroupFormModal({
         </div>
 
         <div className="modal-actions">
-          <button type="button" className="ghost-action" onClick={onClose}>Cancelar</button>
+          <button type="button" className="ghost-action" onClick={onClose}>
+            Cancelar
+          </button>
           <button className="primary-action compact-action" disabled={saving || name.trim().length < 2 || duplicateName}>
             {saving ? "Salvando..." : isCreate ? "Criar grupo" : "Salvar"}
           </button>

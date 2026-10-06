@@ -107,7 +107,8 @@ function specificity(selector) {
   return ids * 10000 + classes * 100 + elements;
 }
 
-const stateful = /:(hover|focus|focus-visible|focus-within|active|visited|target|checked|indeterminate|placeholder-shown|first-letter|first-line)|::/;
+const stateful =
+  /:(hover|focus|focus-visible|focus-within|active|visited|target|checked|indeterminate|placeholder-shown|first-letter|first-line)|::/;
 
 function walkCss(directory, files = []) {
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
@@ -344,7 +345,10 @@ function isHidden(element, styles) {
 function describe(element) {
   const parts = [];
   for (let node = element; node && node.nodeType === 1 && parts.length < 3; node = node.parentElement) {
-    const classes = [...node.classList].slice(0, 2).map((c) => `.${c}`).join("");
+    const classes = [...node.classList]
+      .slice(0, 2)
+      .map((c) => `.${c}`)
+      .join("");
     parts.unshift(`${node.localName}${classes}`);
   }
   return parts.join(" > ");
@@ -404,5 +408,7 @@ export function resetContrastAuditCache() {
 }
 
 export function formatContrastFailures(failures) {
-  return failures.map((f) => `${f.ratio} < ${f.required}${f.gradient ? " (gradiente)" : ""} ${f.fg} sobre ${f.bg} :: ${f.element} :: "${f.text}"`);
+  return failures.map(
+    (f) => `${f.ratio} < ${f.required}${f.gradient ? " (gradiente)" : ""} ${f.fg} sobre ${f.bg} :: ${f.element} :: "${f.text}"`
+  );
 }

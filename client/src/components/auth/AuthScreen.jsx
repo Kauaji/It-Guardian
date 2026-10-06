@@ -44,11 +44,21 @@ export default function AuthScreen({ onAuth, notify }) {
       ) : (
         <>
           <div className="segmented">
-            <button type="button" className={mode === "login" ? "active" : ""} aria-pressed={mode === "login"} onClick={() => setMode("login")}>
+            <button
+              type="button"
+              className={mode === "login" ? "active" : ""}
+              aria-pressed={mode === "login"}
+              onClick={() => setMode("login")}
+            >
               <ShieldCheck size={16} aria-hidden="true" />
               Login
             </button>
-            <button type="button" className={mode === "register" ? "active" : ""} aria-pressed={mode === "register"} onClick={() => setMode("register")}>
+            <button
+              type="button"
+              className={mode === "register" ? "active" : ""}
+              aria-pressed={mode === "register"}
+              onClick={() => setMode("register")}
+            >
               <UserPlus size={16} aria-hidden="true" />
               Cadastro
             </button>

@@ -22,24 +22,25 @@ function GroupSection({ group, groupIndex, groupCount, shared }) {
         canManage={cardProps.canManage}
         groupActions={shared.groupActions}
       />
-      {!group.collapsed && (
-        group.segments.length ? group.segments.map((segment, segmentIndex) => (
-          <BoardSegmentCard
-            key={segment.id}
-            segment={segment}
-            machinesBySegment={machinesBySegment}
-            cardProps={cardProps}
-            canMoveSegmentUp={segmentIndex > 0}
-            canMoveSegmentDown={segmentIndex < group.segments.length - 1}
-            selected={selectedSegmentIds.has(segment.id)}
-          />
-        )) : (
+      {!group.collapsed &&
+        (group.segments.length ? (
+          group.segments.map((segment, segmentIndex) => (
+            <BoardSegmentCard
+              key={segment.id}
+              segment={segment}
+              machinesBySegment={machinesBySegment}
+              cardProps={cardProps}
+              canMoveSegmentUp={segmentIndex > 0}
+              canMoveSegmentDown={segmentIndex < group.segments.length - 1}
+              selected={selectedSegmentIds.has(segment.id)}
+            />
+          ))
+        ) : (
           <div className="segment-group-empty">
             <strong>Grupo vazio</strong>
             <span>Use o seletor "Sem grupo" no cabeçalho de um segmento para mover ele para cá.</span>
           </div>
-        )
-      )}
+        ))}
     </SegmentGroupContainer>
   );
 }

@@ -75,7 +75,11 @@ beforeEach(() => vi.clearAllMocks());
 
 describe("handleCanvasPointerDown", () => {
   it("pan com botao do meio, direito ou espaco + clique captura o ponteiro", () => {
-    for (const [button, spacePressed] of [[1, false], [2, false], [0, true]]) {
+    for (const [button, spacePressed] of [
+      [1, false],
+      [2, false],
+      [0, true]
+    ]) {
       const ctx = setup({ viewport: { spacePressed } });
       const event = pointerEvent({ button });
       act(() => ctx.result.current.handleCanvasPointerDown(event));

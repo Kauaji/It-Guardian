@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { isTypingTarget, resolveShortcutCommands } from "./keyboardShortcuts.js";
 
-const key = (name, extra = {}) => ({ key: name, code: `Key${name.toUpperCase()}`, ctrlKey: false, metaKey: false, repeat: false, ...extra });
+const key = (name, extra = {}) => ({
+  key: name,
+  code: `Key${name.toUpperCase()}`,
+  ctrlKey: false,
+  metaKey: false,
+  repeat: false,
+  ...extra
+});
 const types = (commands) => commands.map((command) => command.type);
 const idle = { placement: null, paintDraft: null };
 
@@ -28,7 +35,9 @@ describe("resolveShortcutCommands", () => {
 
   it("Esc cancela primeiro o pincel, depois o posicionamento, depois limpa a selecao", () => {
     expect(types(resolveShortcutCommands({ key: "Escape" }, { placement: { kind: "wall" }, paintDraft: {} }))).toEqual(["cancel-paint"]);
-    expect(types(resolveShortcutCommands({ key: "Escape" }, { placement: { kind: "wall" }, paintDraft: null }))).toEqual(["cancel-placement"]);
+    expect(types(resolveShortcutCommands({ key: "Escape" }, { placement: { kind: "wall" }, paintDraft: null }))).toEqual([
+      "cancel-placement"
+    ]);
     expect(resolveShortcutCommands({ key: "Escape" }, idle)).toEqual([{ type: "clear-selection", preventDefault: false }]);
   });
 

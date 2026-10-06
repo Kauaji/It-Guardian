@@ -83,9 +83,7 @@ export function calculateServiceOrderTotals(serviceValue, items = []) {
  * @returns {number}
  */
 export function resolveCreateServiceValue(payload = {}, service = {}) {
-  return payload.serviceValue !== undefined
-    ? toMoneyValue(payload.serviceValue)
-    : toMoneyValue(service.defaultValue);
+  return payload.serviceValue !== undefined ? toMoneyValue(payload.serviceValue) : toMoneyValue(service.defaultValue);
 }
 
 /**
@@ -134,8 +132,20 @@ export function buildServiceOrderChanges({
     ["priority", "Prioridade alterada.", current.priority, payload.priority],
     ["category", "Categoria alterada.", current.category, payload.category],
     ["problem_type", "Tipo de problema alterado.", current.problemType, payload.problemType],
-    ["assigned", "Técnicos responsáveis alterados.", (current.assignedTechnicianNames || []).join(", "), Object.prototype.hasOwnProperty.call(payload, "assignedTechnicianNames") ? assignedTechnicianNames.join(", ") : payload.assignedTechnicianName],
-    ["asset", "Máquina vinculada à Ordem de Serviço.", current.assetId, Object.prototype.hasOwnProperty.call(payload, "assetId") ? nextAssetId : undefined],
+    [
+      "assigned",
+      "Técnicos responsáveis alterados.",
+      (current.assignedTechnicianNames || []).join(", "),
+      Object.prototype.hasOwnProperty.call(payload, "assignedTechnicianNames")
+        ? assignedTechnicianNames.join(", ")
+        : payload.assignedTechnicianName
+    ],
+    [
+      "asset",
+      "Máquina vinculada à Ordem de Serviço.",
+      current.assetId,
+      Object.prototype.hasOwnProperty.call(payload, "assetId") ? nextAssetId : undefined
+    ],
     ["backup", "Máquina Backup vinculada à OS.", current.backupAssetId, payload.backupAssetId],
     ["environment", "Ambiente alterado.", current.environmentName, payload.environmentName],
     ["location", "Localização alterada.", current.location, payload.location],
@@ -148,7 +158,12 @@ export function buildServiceOrderChanges({
     ["service_performed", "Serviço realizado atualizado.", current.servicePerformed, payload.servicePerformed],
     ["attendance_notes", "Observações do atendimento atualizadas.", current.attendanceNotes, payload.attendanceNotes],
     ["service_value", "Valor do serviço alterado.", current.serviceValue, payload.serviceValue !== undefined ? serviceValue : undefined],
-    ["sector", `Setor alterado de ${current.sectorName || generalSector.name} para ${sector.sectorName}.`, current.sectorName, sector.sectorName],
+    [
+      "sector",
+      `Setor alterado de ${current.sectorName || generalSector.name} para ${sector.sectorName}.`,
+      current.sectorName,
+      sector.sectorName
+    ],
     ["service", "Serviço da OS alterado.", current.serviceName || current.serviceCode, service.serviceName || service.serviceCode],
     ["parts", "Peças trocadas registradas.", current.partsUsed, itemsInPayload ? undefined : payload.partsUsed]
   ];

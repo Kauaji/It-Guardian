@@ -54,78 +54,74 @@ function MachineCardContent({
 
   return (
     <>
-    <article
-      ref={setNodeRef}
-      style={style}
-      className={buildMachineCardClassName({ isBackup, backupInUse, selected, expanded, moveMenuOpen, isDragging, isOverlay })}
-      onClick={handleCardClick}
-    >
-      {!isOverlay && (
-        <SelectionCheckbox checked={selected} onToggle={() => onToggleSelection(machine.id)} />
-      )}
-      {isOverlay && selectionCount > 1 && (
-        <span className="drag-selection-badge">+{selectionCount - 1} equipamentos</span>
-      )}
-      <MachineCardHeader
-        machine={machine}
-        alias={alias}
-        dragHandleProps={safeDragHandleProps}
-        onDragPointerDown={onDragPointerDown}
-        setActivePopoverId={setActivePopoverId}
-      />
-      <MachineBadgeRow
-        machine={machine}
-        typeLabel={assetTypeLabel(machine.assetType || machine.type)}
-        isManualAsset={isManualAsset}
-        isBackup={isBackup}
-        backupInUse={backupInUse}
-        canManage={canManage}
-        onRefreshPing={onRefreshPing}
-        setActivePopoverId={setActivePopoverId}
-      />
-      <span className="machine-ip">{machine.ip}</span>
-      {machine.inventorySearchTabName && (
-        <span className="machine-search-tab" title={`Aba: ${machine.inventorySearchTabName}`}>
-          Aba: {machine.inventorySearchTabName}
-        </span>
-      )}
+      <article
+        ref={setNodeRef}
+        style={style}
+        className={buildMachineCardClassName({ isBackup, backupInUse, selected, expanded, moveMenuOpen, isDragging, isOverlay })}
+        onClick={handleCardClick}
+      >
+        {!isOverlay && <SelectionCheckbox checked={selected} onToggle={() => onToggleSelection(machine.id)} />}
+        {isOverlay && selectionCount > 1 && <span className="drag-selection-badge">+{selectionCount - 1} equipamentos</span>}
+        <MachineCardHeader
+          machine={machine}
+          alias={alias}
+          dragHandleProps={safeDragHandleProps}
+          onDragPointerDown={onDragPointerDown}
+          setActivePopoverId={setActivePopoverId}
+        />
+        <MachineBadgeRow
+          machine={machine}
+          typeLabel={assetTypeLabel(machine.assetType || machine.type)}
+          isManualAsset={isManualAsset}
+          isBackup={isBackup}
+          backupInUse={backupInUse}
+          canManage={canManage}
+          onRefreshPing={onRefreshPing}
+          setActivePopoverId={setActivePopoverId}
+        />
+        <span className="machine-ip">{machine.ip}</span>
+        {machine.inventorySearchTabName && (
+          <span className="machine-search-tab" title={`Aba: ${machine.inventorySearchTabName}`}>
+            Aba: {machine.inventorySearchTabName}
+          </span>
+        )}
 
-      <MachineMetricsBlock
-        machine={machine}
-        metrics={machine.metrics || {}}
-        isManualAsset={isManualAsset}
-        onOpenMetricModal={setMetricModalTarget}
-      />
+        <MachineMetricsBlock
+          machine={machine}
+          metrics={machine.metrics || {}}
+          isManualAsset={isManualAsset}
+          onOpenMetricModal={setMetricModalTarget}
+        />
 
-      <MachineCardActions
-        machine={machine}
-        alias={alias}
-        metrics={machine.metrics || {}}
-        isManualAsset={isManualAsset}
-        flags={{ expanded, moveMenuOpen }}
-        ids={{ movePopoverId, detailsPopoverId }}
-        availableSegments={availableSegments}
-        context={{ canManage, segmentColor, token, user, notify }}
-        handlers={{
-          setActivePopoverId,
-          onOpenMetricModal: setMetricModalTarget,
-          onOpenDetails,
-          onMoveToSegment: (segmentId) => {
-            setActivePopoverId(null);
-            onMoveMachine(machine, segmentId);
-          },
-          onAddPeripheral,
-          onRemovePeripheral
-        }}
+        <MachineCardActions
+          machine={machine}
+          alias={alias}
+          metrics={machine.metrics || {}}
+          isManualAsset={isManualAsset}
+          flags={{ expanded, moveMenuOpen }}
+          ids={{ movePopoverId, detailsPopoverId }}
+          availableSegments={availableSegments}
+          context={{ canManage, segmentColor, token, user, notify }}
+          handlers={{
+            setActivePopoverId,
+            onOpenMetricModal: setMetricModalTarget,
+            onOpenDetails,
+            onMoveToSegment: (segmentId) => {
+              setActivePopoverId(null);
+              onMoveMachine(machine, segmentId);
+            },
+            onAddPeripheral,
+            onRemovePeripheral
+          }}
+        />
+      </article>
+      <MetricHistoryModal
+        metric={metricModalTarget}
+        deviceId={machine.id}
+        deviceName={alias || machine.name}
+        token={token}
+        onClose={() => setMetricModalTarget(null)}
       />
-    </article>
-    <MetricHistoryModal
-      metric={metricModalTarget}
-      deviceId={machine.id}
-      deviceName={alias || machine.name}
-      token={token}
-      onClose={() => setMetricModalTarget(null)}
-    />
     </>
   );
 }

@@ -110,7 +110,10 @@ test("configuracoes: numeracao personalizada, limite de status e bloqueio de rem
   await api(baseUrl, cookie, "PATCH", `/service-orders/${orderId}/status`, { status: "open" });
   const removed = await api(baseUrl, cookie, "PATCH", "/service-orders/settings", { statuses: keptStatuses });
   assert.equal(removed.status, 200, JSON.stringify(removed.body));
-  assert.deepEqual(removed.body.settings.statuses.map((status) => status.id), ["open", "in_progress", "waiting", "closed"]);
+  assert.deepEqual(
+    removed.body.settings.statuses.map((status) => status.id),
+    ["open", "in_progress", "waiting", "closed"]
+  );
   assert.equal(removed.body.settings.statuses.find((status) => status.id === "open").isInitial, true);
   assert.equal(removed.body.settings.statuses.find((status) => status.id === "closed").isFinal, true);
 
@@ -275,10 +278,7 @@ test("atualizacao registra historico por campo, itens, setor, tecnicos, vinculo 
       { productName: "Cabo", quantity: 3, unitPrice: 10 }
     ]
   });
-  assert.equal(
-    sameItems.body.serviceOrder.history.filter((event) => event.eventType === "service_order_items").length,
-    1
-  );
+  assert.equal(sameItems.body.serviceOrder.history.filter((event) => event.eventType === "service_order_items").length, 1);
 
   const sector = await api(baseUrl, cookie, "POST", "/sectors", { name: "Setor Atualizacao" });
   const moved = await api(baseUrl, cookie, "PATCH", `/service-orders/${id}`, { sectorId: sector.body.sector.id });

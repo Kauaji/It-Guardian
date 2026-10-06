@@ -1,9 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  automationDraftsEqual,
-  buildAutomationPlanDraft,
-  validateAutomationPlanDraft
-} from "../automationFormUtils.js";
+import { automationDraftsEqual, buildAutomationPlanDraft, validateAutomationPlanDraft } from "../automationFormUtils.js";
 import useUnsavedChanges from "../useUnsavedChanges.js";
 import useAutomationPlanHistory from "./useAutomationPlanHistory.js";
 

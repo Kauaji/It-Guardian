@@ -19,9 +19,7 @@ describe("describeIdentityError", () => {
   });
 
   it("senha fraca mostra a primeira regra devolvida pelo servidor", () => {
-    expect(describeIdentityError({ code: "WEAK_PASSWORD", details: ["Muito comum.", "Outra."], message: "m" })).toBe(
-      "Muito comum."
-    );
+    expect(describeIdentityError({ code: "WEAK_PASSWORD", details: ["Muito comum.", "Outra."], message: "m" })).toBe("Muito comum.");
   });
 
   it("sem codigo conhecido usa a mensagem do servidor, o fallback em 5xx e o padrao sem nada", () => {

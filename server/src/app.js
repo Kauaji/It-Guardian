@@ -34,10 +34,7 @@ import preventiveAutomationRoutes from "./routes/preventiveAutomationRoutes.js";
 import floorPlanRoutes from "./routes/floorPlanRoutes.js";
 import calendarRoutes from "./routes/calendarRoutes.js";
 import partInventoryRoutes from "./routes/partInventoryRoutes.js";
-import networkTopologyRoutes, {
-  networkTopologyLinkRoutes,
-  networkTopologyNodeRoutes
-} from "./routes/networkTopologyRoutes.js";
+import networkTopologyRoutes, { networkTopologyLinkRoutes, networkTopologyNodeRoutes } from "./routes/networkTopologyRoutes.js";
 import scriptLogRoutes from "./routes/scriptLogRoutes.js";
 import scriptValidationRoutes from "./routes/scriptValidationRoutes.js";
 import publicRoutes from "./routes/publicRoutes.js";
@@ -85,15 +82,17 @@ export function createApp({ initializeOnRequest = false } = {}) {
   app.disable("x-powered-by");
   app.set("trust proxy", 1);
   // A API so devolve JSON: CSP restritiva, sem enquadramento e sem referrer.
-  app.use(helmet({
-    contentSecurityPolicy: {
-      useDefaults: false,
-      directives: { defaultSrc: ["'none'"], frameAncestors: ["'none'"], baseUri: ["'none'"], formAction: ["'none'"] }
-    },
-    referrerPolicy: { policy: "no-referrer" },
-    crossOriginResourcePolicy: { policy: "same-site" },
-    strictTransportSecurity: { maxAge: 63072000, includeSubDomains: true, preload: false }
-  }));
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        useDefaults: false,
+        directives: { defaultSrc: ["'none'"], frameAncestors: ["'none'"], baseUri: ["'none'"], formAction: ["'none'"] }
+      },
+      referrerPolicy: { policy: "no-referrer" },
+      crossOriginResourcePolicy: { policy: "same-site" },
+      strictTransportSecurity: { maxAge: 63072000, includeSubDomains: true, preload: false }
+    })
+  );
   app.use(requestContext);
   app.use(cors(buildCorsOptions()));
   app.use(express.json({ limit: "1mb" }));

@@ -1,9 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { query } from "../database.js";
-import {
-  buildAssetScheduleDraft,
-  getAssetScheduleSyncActions
-} from "../domain/preventiveAutomationSchedule.js";
+import { buildAssetScheduleDraft, getAssetScheduleSyncActions } from "../domain/preventiveAutomationSchedule.js";
 import { updatePlanNextRun } from "../repositories/preventiveAutomationPlanRepository.js";
 import {
   deactivateScheduleById,
@@ -28,7 +25,10 @@ export async function refreshPlanNextRun(planId, db = query) {
 export async function syncAssetSchedulesForPlan(plan, assets, db = query) {
   const existingSchedules = await listSchedulesByPlan(plan.id, db);
   const existingByAsset = new Map(existingSchedules.map((schedule) => [String(schedule.assetId), schedule]));
-  const syncActions = getAssetScheduleSyncActions(existingSchedules, assets.map((asset) => asset.id));
+  const syncActions = getAssetScheduleSyncActions(
+    existingSchedules,
+    assets.map((asset) => asset.id)
+  );
   const scheduleAnchorAt = plan.scheduleAnchorAt || plan.createdAt || new Date().toISOString();
   const planWithAnchor = { ...plan, scheduleAnchorAt };
 

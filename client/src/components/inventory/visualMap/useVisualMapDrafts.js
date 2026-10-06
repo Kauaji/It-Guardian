@@ -18,10 +18,7 @@ export default function useVisualMapDrafts({ activeMap, mapDraft, setMapDraft, s
   const [objectDraft, setObjectDraft] = useState(null);
   const [connectionDraft, setConnectionDraft] = useState(null);
 
-  const mapDirty = useMemo(
-    () => Boolean(activeMap && !draftsMatch(mapDraft, mapToDraft(activeMap))),
-    [activeMap, mapDraft]
-  );
+  const mapDirty = useMemo(() => Boolean(activeMap && !draftsMatch(mapDraft, mapToDraft(activeMap))), [activeMap, mapDraft]);
   const objectDirty = useMemo(
     () => Boolean(selectedObject && objectDraft && !draftsMatch(objectDraft, objectToDraft(selectedObject))),
     [objectDraft, selectedObject]
@@ -51,8 +48,14 @@ export default function useVisualMapDrafts({ activeMap, mapDraft, setMapDraft, s
   }, [selectedConnection]);
 
   return {
-    objectDraft, setObjectDraft, connectionDraft, setConnectionDraft,
-    mapDirty, objectDirty, connectionDirty, hasUnsavedChanges,
+    objectDraft,
+    setObjectDraft,
+    connectionDraft,
+    setConnectionDraft,
+    mapDirty,
+    objectDirty,
+    connectionDirty,
+    hasUnsavedChanges,
     updateMapDraft: (key, value) => setMapDraft((current) => ({ ...current, [key]: value })),
     updateObjectDraft: (key, value) => setObjectDraft((current) => withObjectField(current, key, value)),
     updateObjectMetadata: (key, value) => setObjectDraft((current) => withObjectMetadata(current, key, value)),

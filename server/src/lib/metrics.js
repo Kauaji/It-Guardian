@@ -9,7 +9,10 @@ const LATENCY_BUCKETS = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10
 
 /** @param {Labels} labels */
 function labelKey(labels) {
-  return Object.keys(labels).sort().map((key) => `${key}="${String(labels[key]).replace(/[\\"\n]/g, "_")}"`).join(",");
+  return Object.keys(labels)
+    .sort()
+    .map((key) => `${key}="${String(labels[key]).replace(/[\\"\n]/g, "_")}"`)
+    .join(",");
 }
 
 class Counter {
@@ -128,7 +131,10 @@ export const httpRequests = counter("itguardian_http_requests_total", "Requisico
 export const httpDuration = histogram("itguardian_http_request_duration_seconds", "Duracao das requisicoes HTTP.");
 export const authEvents = counter("itguardian_auth_events_total", "Eventos de autenticacao (login, falha, bloqueio, MFA).");
 export const rateLimited = counter("itguardian_rate_limit_rejections_total", "Requisicoes recusadas por limite de taxa.");
-export const rateLimitStoreErrors = counter("itguardian_rate_limit_store_errors_total", "Falhas do armazenamento do limitador (liberou a requisicao).");
+export const rateLimitStoreErrors = counter(
+  "itguardian_rate_limit_store_errors_total",
+  "Falhas do armazenamento do limitador (liberou a requisicao)."
+);
 export const appErrors = counter("itguardian_errors_total", "Erros de aplicacao por classe de status.");
 
 const loopDelay = monitorEventLoopDelay({ resolution: 20 });

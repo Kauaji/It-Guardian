@@ -35,13 +35,9 @@ export async function listServiceOrders(user = null) {
   const rows = result.rows.map((row) => withDisplayPriority(row, settings));
 
   return rows
-    .map((row) => fromOrderRow(
-      row,
-      historyByOrder.get(row.id) || [],
-      itemsByOrder.get(row.id) || [],
-      settings,
-      feedbackByOrder.get(row.id) || null
-    ))
+    .map((row) =>
+      fromOrderRow(row, historyByOrder.get(row.id) || [], itemsByOrder.get(row.id) || [], settings, feedbackByOrder.get(row.id) || null)
+    )
     .filter((order) => !user || canViewServiceOrder(user, order));
 }
 
@@ -63,9 +59,7 @@ export async function listServiceOrdersByAssetId(assetId, { limit = 50 } = {}) {
   const feedbackByOrder = await listServiceOrderFeedbackByOrderIds(orderIds);
   const rows = result.rows.map((row) => withDisplayPriority(row, settings));
 
-  return rows.map((row) =>
-    fromOrderRow(row, [], itemsByOrder.get(row.id) || [], settings, feedbackByOrder.get(row.id) || null)
-  );
+  return rows.map((row) => fromOrderRow(row, [], itemsByOrder.get(row.id) || [], settings, feedbackByOrder.get(row.id) || null));
 }
 
 export async function findServiceOrderById(id, user = null) {

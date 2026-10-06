@@ -70,11 +70,11 @@ test("segundo revisor com permissao de aprovacao enfileira script de risco alto 
   });
   assert.equal(viaOrder.status, 201);
 
-  const jobs = await query(
-    "SELECT requested_by FROM agent_script_jobs WHERE asset_id = $1 ORDER BY created_at",
-    [machineId]
+  const jobs = await query("SELECT requested_by FROM agent_script_jobs WHERE asset_id = $1 ORDER BY created_at", [machineId]);
+  assert.deepEqual(
+    jobs.rows.map((row) => row.requested_by),
+    [approver.id, approver.id]
   );
-  assert.deepEqual(jobs.rows.map((row) => row.requested_by), [approver.id, approver.id]);
 });
 
 test("sem a permissao de aprovacao o script de risco alto nao e enfileirado", async (t) => {

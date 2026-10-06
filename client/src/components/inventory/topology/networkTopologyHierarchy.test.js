@@ -221,25 +221,28 @@ describe("buildHierarchyTree", () => {
   });
 
   it("exclui filas especiais dos totais e do status, mas mantém nomes comuns e grupos vazios", () => {
-    const groups = Object.freeze([
-      Object.freeze({ id: "g1", name: "Infraestrutura" }),
-      Object.freeze({ id: "g2", name: "Grupo real" })
-    ]);
-    const segments = Object.freeze([
-      { id: "s1", name: "Estações", groupId: "g1" },
-      { id: "s2", name: "Servidores de backup", groupId: "g1" },
-      { id: "m1", name: "Manutenção", groupId: "g1" },
-      { id: "b1", name: "Backup" },
-      { id: "m2", name: "Oficina", isMaintenanceSegment: true },
-      { id: "b2", name: "Reserva técnica", isBackupSegment: true, groupId: "g2" },
-      { id: "m3", name: "Reparos", systemSegment: "maintenance", groupId: "g1" },
-      { id: "b3", name: "Estoque", systemSegment: "backup" }
-    ].map(Object.freeze));
-    const devices = Object.freeze(segments.map((segment, index) => Object.freeze({
-      id: `d${index}`,
-      segmentId: segment.id,
-      status: index === 0 ? "online" : index === 1 ? "offline" : "problem"
-    })));
+    const groups = Object.freeze([Object.freeze({ id: "g1", name: "Infraestrutura" }), Object.freeze({ id: "g2", name: "Grupo real" })]);
+    const segments = Object.freeze(
+      [
+        { id: "s1", name: "Estações", groupId: "g1" },
+        { id: "s2", name: "Servidores de backup", groupId: "g1" },
+        { id: "m1", name: "Manutenção", groupId: "g1" },
+        { id: "b1", name: "Backup" },
+        { id: "m2", name: "Oficina", isMaintenanceSegment: true },
+        { id: "b2", name: "Reserva técnica", isBackupSegment: true, groupId: "g2" },
+        { id: "m3", name: "Reparos", systemSegment: "maintenance", groupId: "g1" },
+        { id: "b3", name: "Estoque", systemSegment: "backup" }
+      ].map(Object.freeze)
+    );
+    const devices = Object.freeze(
+      segments.map((segment, index) =>
+        Object.freeze({
+          id: `d${index}`,
+          segmentId: segment.id,
+          status: index === 0 ? "online" : index === 1 ? "offline" : "problem"
+        })
+      )
+    );
     const tree = buildHierarchyTree({ groups, segments, devices });
 
     expect(tree.groupCount).toBe(2);

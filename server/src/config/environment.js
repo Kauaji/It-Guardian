@@ -42,7 +42,9 @@ const SHA256_HEX_PATTERN = /^[0-9a-f]{64}$/i;
 export function getAgentAutoUpdateInfo(env = process.env) {
   const version = String(env.AGENT_LATEST_VERSION || "").trim();
   const downloadUrl = String(env.AGENT_LATEST_VERSION_URL || "").trim();
-  const sha256 = String(env.AGENT_LATEST_VERSION_SHA256 || "").trim().toLowerCase();
+  const sha256 = String(env.AGENT_LATEST_VERSION_SHA256 || "")
+    .trim()
+    .toLowerCase();
 
   if (!version || !downloadUrl || !sha256) {
     return { version: null, downloadUrl: null, sha256: null };
@@ -65,14 +67,10 @@ export function getAgentAutoUpdateInfo(env = process.env) {
 /**
  * @param {{ env?: Env, serverless?: boolean }} [options]
  */
-export function resolveDatabasePoolConfig({
-  env = process.env,
-  serverless = isVercel
-} = {}) {
+export function resolveDatabasePoolConfig({ env = process.env, serverless = isVercel } = {}) {
   const configuredMax = Number(env.DB_POOL_MAX);
   const defaultMax = serverless ? 1 : 10;
-  const requestedMax =
-    Number.isFinite(configuredMax) && configuredMax > 0 ? configuredMax : defaultMax;
+  const requestedMax = Number.isFinite(configuredMax) && configuredMax > 0 ? configuredMax : defaultMax;
 
   return {
     max: serverless ? 1 : Math.max(1, requestedMax),
@@ -124,7 +122,9 @@ export function isDemoSeedBlockedInProduction(env = process.env, productionLike 
  * @throws {Error} Para valores fora de auto/check/skip.
  */
 export function getMigrationsMode(env = process.env) {
-  const mode = String(env.MIGRATIONS_MODE || "auto").trim().toLowerCase();
+  const mode = String(env.MIGRATIONS_MODE || "auto")
+    .trim()
+    .toLowerCase();
   if (!["auto", "check", "skip"].includes(mode)) {
     throw new Error(`MIGRATIONS_MODE invalido ("${env.MIGRATIONS_MODE}"). Use auto, check ou skip.`);
   }
@@ -148,10 +148,7 @@ export function getRetentionConfig(env = process.env) {
 /** @param {Env} [env] */
 export function getAuthConfig(env = process.env) {
   const idleSeconds = boundedInteger(env.SESSION_IDLE_SECONDS ?? env.SESSION_MAX_AGE_SECONDS, 8 * 3600, 300, 7 * 24 * 3600);
-  const absoluteSeconds = Math.max(
-    idleSeconds,
-    boundedInteger(env.SESSION_ABSOLUTE_SECONDS, 12 * 3600, 600, 30 * 24 * 3600)
-  );
+  const absoluteSeconds = Math.max(idleSeconds, boundedInteger(env.SESSION_ABSOLUTE_SECONDS, 12 * 3600, 600, 30 * 24 * 3600));
   return {
     idleSeconds,
     absoluteSeconds,
@@ -179,14 +176,18 @@ export function getCorsOrigins() {
     .filter(Boolean);
 
   return Array.from(
-    new Set([
-      ...(isProductionLike ? [] : ["http://localhost:5173", "http://127.0.0.1:5173"]),
-      ...configuredOrigins,
-      process.env.CLIENT_ORIGIN,
-      process.env.FRONTEND_URL,
-      process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
-      process.env.VERCEL_BRANCH_URL ? `https://${process.env.VERCEL_BRANCH_URL}` : null
-    ].filter(/** @returns {origin is string} */ (origin) => Boolean(origin)).map((origin) => origin.replace(/\/$/, "")))
+    new Set(
+      [
+        ...(isProductionLike ? [] : ["http://localhost:5173", "http://127.0.0.1:5173"]),
+        ...configuredOrigins,
+        process.env.CLIENT_ORIGIN,
+        process.env.FRONTEND_URL,
+        process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
+        process.env.VERCEL_BRANCH_URL ? `https://${process.env.VERCEL_BRANCH_URL}` : null
+      ]
+        .filter(/** @returns {origin is string} */ (origin) => Boolean(origin))
+        .map((origin) => origin.replace(/\/$/, ""))
+    )
   );
 }
 
@@ -224,10 +225,7 @@ export function isAllowedVercelOrigin(origin, env = process.env) {
 export function getJwtSecret() {
   const secret = process.env.JWT_SECRET;
 
-  if (
-    isProductionLike &&
-    (!secret || secret.length < 32 || secret === "dev-secret" || secret === "change-me-in-production")
-  ) {
+  if (isProductionLike && (!secret || secret.length < 32 || secret === "dev-secret" || secret === "change-me-in-production")) {
     /** @type {Error & { statusCode?: number }} */
     const error = new Error("JWT_SECRET precisa ter pelo menos 32 caracteres aleatórios em produção.");
     error.statusCode = 500;
@@ -312,8 +310,12 @@ export function resolveDatabaseTls({ connectionString, env = process.env, produc
   const wantsTls = env.DB_SSL === "true" || productionLike || providerNeedsTls;
   if (!wantsTls) return { ssl: false, verification: "disabled" };
 
-  const ca = String(env.DB_SSL_CA || "").replace(/\\n/g, "\n").trim();
-  const mode = String(env.DB_SSL_MODE || "auto").trim().toLowerCase();
+  const ca = String(env.DB_SSL_CA || "")
+    .replace(/\\n/g, "\n")
+    .trim();
+  const mode = String(env.DB_SSL_MODE || "auto")
+    .trim()
+    .toLowerCase();
   const publicCa = PUBLIC_CA_HOSTS.test(connectionString || "") && !/pooler\.supabase/i.test(connectionString || "");
 
   const verify = mode === "verify" || (mode === "auto" && (Boolean(ca) || publicCa));
@@ -325,4 +327,3 @@ export function resolveDatabaseTls({ connectionString, env = process.env, produc
   }
   return { ssl: { rejectUnauthorized: false }, verification: "unverified" };
 }
-

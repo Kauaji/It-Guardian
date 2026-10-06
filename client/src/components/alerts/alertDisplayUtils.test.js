@@ -49,7 +49,10 @@ describe("formatadores seguros", () => {
   });
 
   it("normaliza a localização com os fallbacks sem acento esperados pela interface", () => {
-    expect(normalizeAlertLocation({ segmentName: "Recepção", groupName: "Matriz" })).toEqual({ segmentName: "Recepção", groupName: "Matriz" });
+    expect(normalizeAlertLocation({ segmentName: "Recepção", groupName: "Matriz" })).toEqual({
+      segmentName: "Recepção",
+      groupName: "Matriz"
+    });
     expect(normalizeAlertLocation({ segment: "S", group: "G" })).toEqual({ segmentName: "S", groupName: "G" });
     expect(normalizeAlertLocation()).toEqual({ segmentName: "Não organizadas", groupName: "Sem grupo" });
   });

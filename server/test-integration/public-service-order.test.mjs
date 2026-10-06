@@ -185,9 +185,7 @@ test("machineScope 'other' com assetId forjado nao vincula nem coloca o ativo em
   const createResponse = await fetch(`${baseUrl}/api/public/service-orders`, {
     method: "POST",
     headers: { "content-type": "application/json", origin: trustedOrigin },
-    body: JSON.stringify(
-      basePayload({ problemType: problemType.id, machineScope: "other", assetId: machineId })
-    )
+    body: JSON.stringify(basePayload({ problemType: problemType.id, machineScope: "other", assetId: machineId }))
   });
   const createBody = await createResponse.json();
   assert.equal(createResponse.status, 201, JSON.stringify(createBody));

@@ -24,7 +24,9 @@ function AssetSummary({ entity, linkedDevice }) {
   const statusTone = getDeviceStatusTone(linkedDevice?.status);
   return (
     <div className="floor-plan-asset-summary">
-      <span className="floor-plan-asset-icon"><AssetIcon size={27} /></span>
+      <span className="floor-plan-asset-icon">
+        <AssetIcon size={27} />
+      </span>
       <span>
         <strong className="floor-plan-asset-name">
           {linkedDevice ? deviceLabel(linkedDevice) : entity.label || "Ativo sem vínculo"}
@@ -53,14 +55,22 @@ function GroupSegmentFields({ entity, groups, segments, onChangeSelected }) {
           onChange={(event) => onChangeSelected(buildGroupChangePatch(entity, event.target.value || null, segments))}
         >
           <option value="">Sem grupo</option>
-          {groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
+          {groups.map((group) => (
+            <option key={group.id} value={group.id}>
+              {group.name}
+            </option>
+          ))}
         </select>
       </label>
       <label>
         Segmento
         <select value={entity.segmentId || ""} onChange={(event) => onChangeSelected({ segmentId: event.target.value || null })}>
           <option value="">Sem segmento</option>
-          {semanticSegments.map((segment) => <option key={segment.id} value={segment.id}>{segment.name}</option>)}
+          {semanticSegments.map((segment) => (
+            <option key={segment.id} value={segment.id}>
+              {segment.name}
+            </option>
+          ))}
         </select>
       </label>
     </div>
@@ -77,7 +87,13 @@ function LinkAction({ entity, linkedDevice, canLink, showLinkPicker, onTogglePic
     );
   }
   return (
-    <button className="floor-plan-correlate-action" type="button" disabled={!canLink} aria-expanded={showLinkPicker} onClick={onTogglePicker}>
+    <button
+      className="floor-plan-correlate-action"
+      type="button"
+      disabled={!canLink}
+      aria-expanded={showLinkPicker}
+      onClick={onTogglePicker}
+    >
       <Link2 size={16} />
       Correlacionar máquina
     </button>
@@ -110,7 +126,11 @@ export function InventoryAssetFields({ entity, linkedDevice, inventory, showLink
           value={entity.metadata?.criticality || "normal"}
           onChange={(event) => onChangeSelected(buildMetadataPatch(entity, { criticality: event.target.value }))}
         >
-          {CRITICALITY_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          {CRITICALITY_OPTIONS.map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
         </select>
       </label>
       {!linkedDevice ? (
@@ -120,7 +140,11 @@ export function InventoryAssetFields({ entity, linkedDevice, inventory, showLink
             value={entity.metadata?.manualStatus || "no_data"}
             onChange={(event) => onChangeSelected(buildMetadataPatch(entity, { manualStatus: event.target.value }))}
           >
-            {MANUAL_STATUS_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            {MANUAL_STATUS_OPTIONS.map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
           </select>
         </label>
       ) : null}
@@ -173,7 +197,13 @@ export function InventoryLinkedFields({ entity, linkedDevice, editor, onChangeSe
           onChange={(event) => onChangeSelected(buildMetadataPatch(entity, { powerPointId: event.target.value || null }))}
         >
           <option value="">Sem tomada associada</option>
-          {floorPoints.filter((point) => point.pointType === "power").map((point) => <option key={point.id} value={point.id}>{point.label || "Tomada"}</option>)}
+          {floorPoints
+            .filter((point) => point.pointType === "power")
+            .map((point) => (
+              <option key={point.id} value={point.id}>
+                {point.label || "Tomada"}
+              </option>
+            ))}
         </select>
       </label>
       <label>
@@ -183,14 +213,18 @@ export function InventoryLinkedFields({ entity, linkedDevice, editor, onChangeSe
           onChange={(event) => onChangeSelected(buildMetadataPatch(entity, { networkPointId: event.target.value || null }))}
         >
           <option value="">Sem ponto associado</option>
-          {floorPoints.filter((point) => point.pointType === "network").map((point) => <option key={point.id} value={point.id}>{point.label || "Ponto RJ45"}</option>)}
+          {floorPoints
+            .filter((point) => point.pointType === "network")
+            .map((point) => (
+              <option key={point.id} value={point.id}>
+                {point.label || "Ponto RJ45"}
+              </option>
+            ))}
         </select>
       </label>
       <div className="floor-plan-inspector-tags">
         <span>Tags</span>
-        <div>
-          {tags.length > 0 ? tags.map((tag) => <em key={tag}>{tag}</em>) : <small>Nenhuma tag cadastrada</small>}
-        </div>
+        <div>{tags.length > 0 ? tags.map((tag) => <em key={tag}>{tag}</em>) : <small>Nenhuma tag cadastrada</small>}</div>
       </div>
       <button
         className="secondary-action compact-action floor-plan-open-inventory"

@@ -32,11 +32,7 @@ function ModalFooter({ formState }) {
       <button type="button" className="secondary-action compact-action" onClick={onBack} disabled={saving}>
         {backLabel}
       </button>
-      <button
-        type="submit"
-        className="primary-action compact-action"
-        disabled={saving || identity.hasDuplicateAutomationIdentity}
-      >
+      <button type="submit" className="primary-action compact-action" disabled={saving || identity.hasDuplicateAutomationIdentity}>
         {submitLabel({ saving, wizardMode, reviewMode })}
       </button>
     </footer>
@@ -70,12 +66,7 @@ export default function PreventiveAutomationModal({ formState, plans, activeScri
         {wizardMode && wizardContext && <PreventiveAutomationContextSummary form={form} context={wizardContext} />}
 
         {reviewMode ? (
-          <PreventiveAutomationReview
-            form={form}
-            wizardContext={wizardContext}
-            scripts={activeScripts}
-            scopeSources={scopeSources}
-          />
+          <PreventiveAutomationReview form={form} wizardContext={wizardContext} scripts={activeScripts} scopeSources={scopeSources} />
         ) : (
           <>
             <PreventiveAutomationFormFields
@@ -85,11 +76,7 @@ export default function PreventiveAutomationModal({ formState, plans, activeScri
               scopeSources={scopeSources}
               onChange={updateForm}
             />
-            <PreventiveAutomationScriptPicker
-              scripts={activeScripts}
-              selectedIds={form.defaultScriptIds}
-              onToggle={toggleScript}
-            />
+            <PreventiveAutomationScriptPicker scripts={activeScripts} selectedIds={form.defaultScriptIds} onToggle={toggleScript} />
             <PreventiveAutomationOverrides formState={formState} scopeSources={scopeSources} />
           </>
         )}

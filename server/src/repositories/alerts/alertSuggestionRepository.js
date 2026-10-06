@@ -115,10 +115,7 @@ export async function findServiceOrderSuggestionById(id) {
 // relacionado" na ficha da OS, sem precisar de uma coluna alert_id direta
 // em service_orders (created_service_order_id ja e unico por alerta).
 export async function findServiceOrderSuggestionByServiceOrderId(serviceOrderId) {
-  const result = await query(
-    "SELECT * FROM service_order_suggestions WHERE created_service_order_id = $1 LIMIT 1",
-    [serviceOrderId]
-  );
+  const result = await query("SELECT * FROM service_order_suggestions WHERE created_service_order_id = $1 LIMIT 1", [serviceOrderId]);
   return result.rows[0] ? fromSuggestionRow(result.rows[0]) : null;
 }
 
@@ -164,10 +161,7 @@ export async function markSuggestionRejected({ id, userId, reason, silenceHours 
 }
 
 export async function findSuggestionRowByAlertId(alertId) {
-  const result = await query(
-    "SELECT * FROM service_order_suggestions WHERE alert_id = $1 LIMIT 1",
-    [alertId]
-  );
+  const result = await query("SELECT * FROM service_order_suggestions WHERE alert_id = $1 LIMIT 1", [alertId]);
   return result.rows[0] || null;
 }
 

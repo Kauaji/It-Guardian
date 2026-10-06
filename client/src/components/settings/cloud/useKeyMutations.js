@@ -1,21 +1,9 @@
 import { useState } from "react";
-import {
-  createProductKey,
-  deactivateProductKeyActivation,
-  fetchProductKeyActivations,
-  updateProductKeyStatus
-} from "../../../api.js";
+import { createProductKey, deactivateProductKeyActivation, fetchProductKeyActivations, updateProductKeyStatus } from "../../../api.js";
 import { emptyForm } from "./cloudAdminModel.js";
 
 /** Criar chave (com exibição única), copiar, ativar/desativar chave e desativar coletor. */
-export function useKeyMutations({
-  token,
-  showMessage,
-  setBusyAction,
-  loadProductKeys,
-  selectedKeyId,
-  setActivations
-}) {
+export function useKeyMutations({ token, showMessage, setBusyAction, loadProductKeys, selectedKeyId, setActivations }) {
   const [form, setForm] = useState(emptyForm);
   const [createdKey, setCreatedKey] = useState(null);
 
@@ -59,10 +47,7 @@ export function useKeyMutations({
   }
 
   async function changeProductKeyStatus(item) {
-    if (
-      item.active &&
-      !window.confirm("Desativar esta chave e todos os coletores vinculados?")
-    ) {
+    if (item.active && !window.confirm("Desativar esta chave e todos os coletores vinculados?")) {
       return;
     }
     setBusyAction(`key:${item.id}`);

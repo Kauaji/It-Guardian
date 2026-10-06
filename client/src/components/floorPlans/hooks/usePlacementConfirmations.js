@@ -26,13 +26,13 @@ export function usePlacementConfirmations({ doc, ui, notify }) {
       setJustPlacedObjectId(createdId);
       window.setTimeout(() => setJustPlacedObjectId((current) => (current === createdId ? null : current)), JUST_PLACED_HIGHLIGHT_MS);
     }
-    setPlacement((current) => current ? { ...current, start: null, end: null, lengthBuffer: "" } : current);
+    setPlacement((current) => (current ? { ...current, start: null, end: null, lengthBuffer: "" } : current));
   };
 
   const confirmWallPoint = (point, floor) => {
     if (!placement.start) {
       const start = getWallPlacementStart({ point, placement, objects: editor.objects, floorId: floor.id });
-      setPlacement((current) => current ? { ...current, start, end: start } : current);
+      setPlacement((current) => (current ? { ...current, start, end: start } : current));
       return;
     }
     let createdWallId = null;
@@ -41,13 +41,13 @@ export function usePlacementConfirmations({ doc, ui, notify }) {
       return draft;
     });
     if (createdWallId) setSelected({ type: "object", id: createdWallId });
-    setPlacement((current) => current ? { ...current, start: null, end: null } : current);
+    setPlacement((current) => (current ? { ...current, start: null, end: null } : current));
   };
 
   const confirmMeasurementPoint = (point, floor) => {
     if (!placement.start) {
       const start = snapMeasurementPlacementPoint({ point, objects: editor.objects, floorId: floor.id });
-      setPlacement((current) => current ? { ...current, start, end: start } : current);
+      setPlacement((current) => (current ? { ...current, start, end: start } : current));
       return;
     }
     let createdMeasurementId = null;

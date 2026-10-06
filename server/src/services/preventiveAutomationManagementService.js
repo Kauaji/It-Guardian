@@ -16,10 +16,7 @@ import {
 } from "../domain/preventiveAutomationViews.js";
 import { canAccessAutomationAsset, canAccessAutomationPlan } from "../repositories/automationAccessScope.js";
 import { listActivePlans } from "../repositories/preventiveAutomationPlanRepository.js";
-import {
-  findLatestOverrideForAsset,
-  listOverridesByPlanIds
-} from "../repositories/preventiveAutomationOverrideRepository.js";
+import { findLatestOverrideForAsset, listOverridesByPlanIds } from "../repositories/preventiveAutomationOverrideRepository.js";
 import {
   listAgendaPage,
   listAutomationHistoryForAsset,
@@ -28,15 +25,9 @@ import {
 } from "../repositories/preventiveAutomationQueryRepository.js";
 import { findLatestRunForAsset, listLatestRunsByPlanIds } from "../repositories/preventiveAutomationRunRepository.js";
 import { listGroupNamesById } from "../repositories/preventiveAutomationScopeRepository.js";
-import {
-  findActiveScheduleForAsset,
-  listSchedulesByPlanIds
-} from "../repositories/preventiveAutomationScheduleRepository.js";
+import { findActiveScheduleForAsset, listSchedulesByPlanIds } from "../repositories/preventiveAutomationScheduleRepository.js";
 import { listDevices } from "./monitoringService.js";
-import {
-  findPreventiveAutomationPlanById,
-  listPreventiveAutomationPlans
-} from "./preventiveAutomationPlanQueryService.js";
+import { findPreventiveAutomationPlanById, listPreventiveAutomationPlans } from "./preventiveAutomationPlanQueryService.js";
 
 /**
  * Visoes de leitura do gerenciamento de automacoes: planos e maquinas, agenda,
@@ -170,12 +161,7 @@ export async function findPreventiveAutomationAssetDetails(planId, assetId, user
     listDevices({})
   ]);
   const device = devices.find((item) => String(item.id) === String(assetId));
-  if (
-    !schedule ||
-    !device ||
-    !canAccessAutomationAsset(device, user) ||
-    !isScheduleLinkedToPlan(plan, schedule)
-  ) {
+  if (!schedule || !device || !canAccessAutomationAsset(device, user) || !isScheduleLinkedToPlan(plan, schedule)) {
     return null;
   }
 

@@ -1,11 +1,6 @@
-
 import { getRemoteAssistanceConfig } from "../../config/environment.js";
 import { withTransaction } from "../../database.js";
-import {
-  assertRemoteAssistanceEnabled,
-  isAgentFresh,
-  normalizeRequestedMode
-} from "../../domain/remoteAssistancePolicy.js";
+import { assertRemoteAssistanceEnabled, isAgentFresh, normalizeRequestedMode } from "../../domain/remoteAssistancePolicy.js";
 import { hasPermission } from "../../permissions.js";
 import { resolveIceServers } from "../meteredTurnService.js";
 import {
@@ -24,32 +19,15 @@ import {
   verifyRemoteAssistanceEventChain
 } from "../../repositories/remoteAssistanceRepository.js";
 import { consumeSecurityReauthentication } from "../../repositories/securityReauthenticationRepository.js";
-import {
-  findServiceOrderById
-} from "../../repositories/serviceOrderRepository.js";
-import {
-  clearRelay,
-  getRelay,
-  initializeRelay
-} from "../remoteAssistanceRelay.js";
-import {
-  hashSecurityToken,
-  remoteAssistanceReauthenticationAction
-} from "../securityReauthenticationService.js";
+import { findServiceOrderById } from "../../repositories/serviceOrderRepository.js";
+import { clearRelay, getRelay, initializeRelay } from "../remoteAssistanceRelay.js";
+import { hashSecurityToken, remoteAssistanceReauthenticationAction } from "../securityReauthenticationService.js";
 
 import { publicError } from "../../domain/remoteAssistance/remoteAssistanceErrors.js";
 
-import {
-  hashToken,
-  issueSessionToken,
-  normalizeReason
-} from "../../domain/remoteAssistance/remoteAssistancePayload.js";
+import { hashToken, issueSessionToken, normalizeReason } from "../../domain/remoteAssistance/remoteAssistancePayload.js";
 import { addAudit, closeAbandonedRemoteAssistanceSessions, revokeRustdeskPasswordBestEffort } from "./remoteAssistanceAudit.js";
-import {
-  assertManagedSession,
-  assertViewerToken,
-  safeSession
-} from "./remoteAssistanceGuards.js";
+import { assertManagedSession, assertViewerToken, safeSession } from "./remoteAssistanceGuards.js";
 
 export async function getRemoteAssistancePublicConfig() {
   const config = getRemoteAssistanceConfig();
@@ -95,7 +73,9 @@ export async function reportAgentRustdeskId({ bearerToken, rustdeskId }) {
   if (!enrollment) throw publicError("Token do agente invalido.", 401);
   const asset = await findAgentAssetByEnrollmentId(enrollment.id);
   if (!asset) throw publicError("Maquina do agente nao encontrada.", 404);
-  const normalized = String(rustdeskId || "").trim().slice(0, 32);
+  const normalized = String(rustdeskId || "")
+    .trim()
+    .slice(0, 32);
   if (!normalized) throw publicError("Id RustDesk invalido.");
   if (normalized !== asset.rustdeskId) {
     const updated = await setAgentAssetRustdeskId({ assetId: asset.id, rustdeskId: normalized });
@@ -111,14 +91,7 @@ export async function reportAgentRustdeskId({ bearerToken, rustdeskId }) {
   return { rustdeskId: asset.rustdeskId };
 }
 
-export async function startRemoteAssistanceSession({
-  user,
-  assetId,
-  serviceOrderId = null,
-  requestedMode,
-  reason,
-  reauthenticationToken
-}) {
+export async function startRemoteAssistanceSession({ user, assetId, serviceOrderId = null, requestedMode, reason, reauthenticationToken }) {
   const config = getRemoteAssistanceConfig();
   assertRemoteAssistanceEnabled(config);
   await closeAbandonedRemoteAssistanceSessions();
@@ -126,11 +99,7 @@ export async function startRemoteAssistanceSession({
   const normalizedAssetId = String(assetId || "").trim();
   const normalizedServiceOrderId = String(serviceOrderId || "").trim() || null;
   const normalizedReason = normalizeReason(reason);
-  const mode = normalizeRequestedMode(
-    requestedMode,
-    config,
-    hasPermission(user, "remote_assistance.control")
-  );
+  const mode = normalizeRequestedMode(requestedMode, config, hasPermission(user, "remote_assistance.control"));
   const asset = await findAgentAssetById(normalizedAssetId);
   if (!asset) throw publicError("Maquina monitorada nao encontrada.", 404);
   if (!isAgentFresh(asset)) {

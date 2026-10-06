@@ -146,7 +146,12 @@ describe("modal de detalhes", () => {
 
   it("representa a sugestão como aviso com valores de contingência", () => {
     const shape = buildSuggestionAlertShape(
-      pending("s1", "d1", { alertId: "al1", suggestedPriority: "critical", description: { summary: "Resumo" }, createdAt: "2026-05-10T00:00:00.000Z" }),
+      pending("s1", "d1", {
+        alertId: "al1",
+        suggestedPriority: "critical",
+        description: { summary: "Resumo" },
+        createdAt: "2026-05-10T00:00:00.000Z"
+      }),
       lookups
     );
 
@@ -183,6 +188,9 @@ describe("modal de detalhes", () => {
     });
     expect(model.device).toBe(devices[0]);
     expect(model.correlations).toHaveLength(1);
-    expect(buildSuggestionInfoModel(pending("s2", "d1", { comments: "x", checklist: null }), lookups)).toMatchObject({ comments: [], checklist: [] });
+    expect(buildSuggestionInfoModel(pending("s2", "d1", { comments: "x", checklist: null }), lookups)).toMatchObject({
+      comments: [],
+      checklist: []
+    });
   });
 });

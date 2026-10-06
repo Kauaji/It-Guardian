@@ -8,7 +8,10 @@ describe("sidebarSegmentModel", () => {
     { id: "m1", name: "Manutenção" },
     { id: "m2", name: "Manutencao" }
   ];
-  const groups = [{ id: "g1", name: "G" }, { id: "g2", name: "Vazio" }];
+  const groups = [
+    { id: "g1", name: "G" },
+    { id: "g2", name: "Vazio" }
+  ];
 
   it("conta dispositivos por segmento", () => {
     const counts = countDevicesBySegment([{ segmentId: "s1" }, { segmentId: "s1" }, { segmentId: "m1" }, {}]);
@@ -30,7 +33,15 @@ describe("sidebarSegmentModel", () => {
   });
 
   it("soma contagens ignorando segmentos sem dispositivos", () => {
-    expect(sumGroupCount(segments, new Map([["s1", 2], ["s2", 3]]))).toBe(5);
+    expect(
+      sumGroupCount(
+        segments,
+        new Map([
+          ["s1", 2],
+          ["s2", 3]
+        ])
+      )
+    ).toBe(5);
     expect(sumGroupCount([], new Map())).toBe(0);
   });
 });

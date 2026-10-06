@@ -99,9 +99,7 @@ describe("identityApi: requisicoes", () => {
 
 describe("identityApi: erros", () => {
   it("preserva status, code, details e requestId do servidor", async () => {
-    fetch.mockReturnValue(
-      respond(400, { message: "Senha fraca", code: "WEAK_PASSWORD", details: ["a", "b"], requestId: "r1" })
-    );
+    fetch.mockReturnValue(respond(400, { message: "Senha fraca", code: "WEAK_PASSWORD", details: ["a", "b"], requestId: "r1" }));
     const error = await identity.changePassword("tok", {}).catch((failure) => failure);
 
     expect(error).toBeInstanceOf(identity.IdentityApiError);

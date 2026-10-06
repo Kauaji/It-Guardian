@@ -172,9 +172,9 @@ export function useVisualMapConnectionActions({ token, notify, canManage, data, 
     if (!canManage || !selectedConnection || !connectionDraft) return;
     await runSaving(async () => {
       const response = await updateInventoryVisualMapConnection(token, selectedConnection.id, buildConnectionPayload(connectionDraft));
-      setConnections((current) => current.map((connection) => (
-        connection.id === response.connection.id ? response.connection : connection
-      )));
+      setConnections((current) =>
+        current.map((connection) => (connection.id === response.connection.id ? response.connection : connection))
+      );
       setSelectedConnectionId(response.connection.id);
       notify?.("Conexão salva.", "success");
     }, "Não foi possível salvar a conexão.");

@@ -6,7 +6,11 @@ export default function TopologyConnectionGuide({ active, creatingLink, sourceNo
   return (
     <div className="network-topology-connection-guide" role="status">
       <span>{buildConnectionGuideText({ creatingLink, sourceNodeId, labels })}</span>
-      {!creatingLink ? <button type="button" className="network-topology-toolbar-button" onClick={onCancel}>Cancelar conexão</button> : null}
+      {!creatingLink ? (
+        <button type="button" className="network-topology-toolbar-button" onClick={onCancel}>
+          Cancelar conexão
+        </button>
+      ) : null}
     </div>
   );
 }

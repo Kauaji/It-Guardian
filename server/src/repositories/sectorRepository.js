@@ -10,10 +10,7 @@ export async function listSectors() {
 }
 
 export async function findSectorById(id) {
-  const result = await query(
-    "SELECT id, name, description, active, permissions, created_at, updated_at FROM sectors WHERE id = $1",
-    [id]
-  );
+  const result = await query("SELECT id, name, description, active, permissions, created_at, updated_at FROM sectors WHERE id = $1", [id]);
   return result.rows[0] ? fromRow(result.rows[0]) : null;
 }
 
@@ -95,12 +92,7 @@ export async function deactivateSector(id) {
 
 export async function seedDefaultSectors() {
   const sectors = [
-    [
-      "sector-administracao",
-      "Administracao",
-      "Administradores e responsaveis pelo sistema.",
-      ["admin.full"]
-    ],
+    ["sector-administracao", "Administracao", "Administradores e responsaveis pelo sistema.", ["admin.full"]],
     [
       "sector-ti",
       "TI",
@@ -180,24 +172,9 @@ export async function seedDefaultSectors() {
         "service_orders.change_status"
       ]
     ],
-    [
-      "sector-financeiro",
-      "Financeiro",
-      "Usuarios do setor financeiro.",
-      ["service_orders.view", "service_orders.create"]
-    ],
-    [
-      "sector-diretoria",
-      "Diretoria",
-      "Gestores e diretoria.",
-      ["dashboard.view", "service_orders.view", "service_orders.create"]
-    ],
-    [
-      "sector-geral",
-      "Geral",
-      "Setor padrao para solicitacoes sem setor especifico.",
-      []
-    ]
+    ["sector-financeiro", "Financeiro", "Usuarios do setor financeiro.", ["service_orders.view", "service_orders.create"]],
+    ["sector-diretoria", "Diretoria", "Gestores e diretoria.", ["dashboard.view", "service_orders.view", "service_orders.create"]],
+    ["sector-geral", "Geral", "Setor padrao para solicitacoes sem setor especifico.", []]
   ];
 
   for (const [id, name, description, permissions] of sectors) {

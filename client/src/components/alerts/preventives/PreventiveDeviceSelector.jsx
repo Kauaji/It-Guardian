@@ -47,7 +47,9 @@ function DeviceGroup({ group, preventive, dueDays }) {
     <section className="preventive-device-group">
       <header>
         <div>
-          <strong>{group.groupName} • {group.segmentName}</strong>
+          <strong>
+            {group.groupName} • {group.segmentName}
+          </strong>
           <small>
             {group.devices.length} {group.devices.length === 1 ? "máquina" : "máquinas"} neste segmento
           </small>
@@ -94,9 +96,7 @@ export default function PreventiveDeviceSelector({ preventive, dueDays }) {
           <DeviceGroup key={group.key} group={group} preventive={preventive} dueDays={dueDays} />
         ))}
 
-        {!preventive.groups.length && (
-          <p className="empty">Nenhuma máquina encontrada para os filtros atuais.</p>
-        )}
+        {!preventive.groups.length && <p className="empty">Nenhuma máquina encontrada para os filtros atuais.</p>}
       </div>
     </section>
   );

@@ -11,10 +11,11 @@ import {
 import { buildRoomPlacementPreview } from "./placementPreview.js";
 import { ROOM_TEMPLATES } from "./roomTemplates.js";
 
-const baseEditor = () => buildEditor({
-  objects: [buildDesk()],
-  connectionPoints: [{ id: "p1", floorId: "floor-1", x: 150, y: 150, metadata: { parentRoomId: "room-1" } }]
-});
+const baseEditor = () =>
+  buildEditor({
+    objects: [buildDesk()],
+    connectionPoints: [{ id: "p1", floorId: "floor-1", x: 150, y: 150, metadata: { parentRoomId: "room-1" } }]
+  });
 
 describe("findRoomDuplicateGeometry", () => {
   it("encontra a primeira posicao livre ao lado do comodo", () => {

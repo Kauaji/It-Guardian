@@ -1,14 +1,19 @@
 export function automationPlanHasError(plan = {}) {
   const status = String(plan.status || plan.latestRun?.status || "").toLowerCase();
-  const scheduleHasError = Array.isArray(plan.assetSchedules) && plan.assetSchedules.some((schedule) => {
-    const scheduleStatus = String(schedule.status || "").toLowerCase();
-    const latestRun = schedule.latestRun || schedule.latest_run || {};
-    const runStatus = String(latestRun.status || "").toLowerCase();
+  const scheduleHasError =
+    Array.isArray(plan.assetSchedules) &&
+    plan.assetSchedules.some((schedule) => {
+      const scheduleStatus = String(schedule.status || "").toLowerCase();
+      const latestRun = schedule.latestRun || schedule.latest_run || {};
+      const runStatus = String(latestRun.status || "").toLowerCase();
 
-    return scheduleStatus === "error" || runStatus === "error" || runStatus === "failed" || Boolean(
-      latestRun.errorDetected || latestRun.error_detected
-    );
-  });
+      return (
+        scheduleStatus === "error" ||
+        runStatus === "error" ||
+        runStatus === "failed" ||
+        Boolean(latestRun.errorDetected || latestRun.error_detected)
+      );
+    });
 
   return (
     status === "error" ||
@@ -33,20 +38,23 @@ export function automationPlanWithoutSchedule(plan = {}) {
 export function getAutomationMachineStatusSummary(machine = {}) {
   const plans = Array.isArray(machine.plans) ? machine.plans : [];
 
-  return plans.reduce((summary, plan) => {
-    summary.totalCount += 1;
-    if (plan.active === false) summary.inactiveCount += 1;
-    else summary.activeCount += 1;
-    if (automationPlanHasError(plan)) summary.errorCount += 1;
-    if (plan.active !== false && !plan.nextRunAt) summary.withoutScheduleCount += 1;
-    return summary;
-  }, {
-    totalCount: 0,
-    activeCount: 0,
-    inactiveCount: 0,
-    errorCount: 0,
-    withoutScheduleCount: 0
-  });
+  return plans.reduce(
+    (summary, plan) => {
+      summary.totalCount += 1;
+      if (plan.active === false) summary.inactiveCount += 1;
+      else summary.activeCount += 1;
+      if (automationPlanHasError(plan)) summary.errorCount += 1;
+      if (plan.active !== false && !plan.nextRunAt) summary.withoutScheduleCount += 1;
+      return summary;
+    },
+    {
+      totalCount: 0,
+      activeCount: 0,
+      inactiveCount: 0,
+      errorCount: 0,
+      withoutScheduleCount: 0
+    }
+  );
 }
 
 export function machineMatchesAutomationStatus(machine, status = "all") {

@@ -25,7 +25,10 @@ function readClientWidgetTypes() {
 
 test("o catalogo de tipos de widget do cliente e do servidor batem exatamente", () => {
   const clientTypes = readClientWidgetTypes();
-  assert.ok(clientTypes.size > 0, "a extracao por regex nao encontrou nenhum tipo no arquivo do cliente -- provavelmente o formato do arquivo mudou");
+  assert.ok(
+    clientTypes.size > 0,
+    "a extracao por regex nao encontrou nenhum tipo no arquivo do cliente -- provavelmente o formato do arquivo mudou"
+  );
 
   const onlyOnServer = [...knownWidgetTypes].filter((type) => !clientTypes.has(type));
   const onlyOnClient = [...clientTypes].filter((type) => !knownWidgetTypes.has(type));

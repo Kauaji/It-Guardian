@@ -6,9 +6,7 @@ export default function ScriptCard({ script, canRunReal, canRunSimulation, queue
     <article className="service-order-script-card">
       <div>
         <strong>{script.name}</strong>
-        <span className={`service-order-script-risk risk-${script.riskLevel}`}>
-          {RISK_LABELS[script.riskLevel] || script.riskLevel}
-        </span>
+        <span className={`service-order-script-risk risk-${script.riskLevel}`}>{RISK_LABELS[script.riskLevel] || script.riskLevel}</span>
       </div>
       {script.recommendationReason && <p>{script.recommendationReason}</p>}
       {script.estimatedSummary && <p>{script.estimatedSummary}</p>}

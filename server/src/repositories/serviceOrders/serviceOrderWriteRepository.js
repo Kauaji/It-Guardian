@@ -5,10 +5,7 @@ import { query } from "../../database.js";
 // inicial, ou atendimento registrado). Chamado explicitamente pelos 3
 // pontos certos em serviceOrderService.js, nunca pelo PATCH generico.
 export async function setFirstResponseAtIfNeeded(id) {
-  await query(
-    "UPDATE service_orders SET first_response_at = NOW() WHERE id = $1 AND first_response_at IS NULL",
-    [id]
-  );
+  await query("UPDATE service_orders SET first_response_at = NOW() WHERE id = $1 AND first_response_at IS NULL", [id]);
 }
 
 export async function serviceOrderNumberExists(number) {
@@ -83,10 +80,10 @@ export async function insertServiceOrderRow(db, row) {
 }
 
 export async function setAssignedTechnicianNames(id, names, db = query) {
-  const result = await db(
-    "UPDATE service_orders SET assigned_technician_names = $2::jsonb WHERE id = $1 RETURNING *",
-    [id, JSON.stringify(names)]
-  );
+  const result = await db("UPDATE service_orders SET assigned_technician_names = $2::jsonb WHERE id = $1 RETURNING *", [
+    id,
+    JSON.stringify(names)
+  ]);
   return result.rows[0] || null;
 }
 

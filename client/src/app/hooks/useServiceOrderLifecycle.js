@@ -48,9 +48,7 @@ export function useServiceOrderLifecycle({ backupFlow, data, inventory, maintena
     setServiceOrderSaving(true);
     try {
       const response = await updateServiceOrderStatus(token, order.id, statusValue);
-      setServiceOrders((current) =>
-        current.map((item) => (item.id === order.id ? response.serviceOrder : item))
-      );
+      setServiceOrders((current) => current.map((item) => (item.id === order.id ? response.serviceOrder : item)));
       notify("Status da OS atualizado.", "ok");
 
       if (response.serviceOrder.closedAt && response.serviceOrder.backupAssetId) {

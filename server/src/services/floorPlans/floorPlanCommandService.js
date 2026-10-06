@@ -42,7 +42,7 @@ export async function createFloorPlan(payload = {}, user = {}) {
   const activeFloorId = resolveActiveFloorId(plan, editorData.floors);
 
   return withTransaction(async (db) => {
-    if (plan.inventoryTabId && await planExistsForInventoryTab(db, plan.inventoryTabId)) {
+    if (plan.inventoryTabId && (await planExistsForInventoryTab(db, plan.inventoryTabId))) {
       throw makeHttpError(409, "Esta aba ja possui uma planta cadastrada.");
     }
     await insertPlanRow(db, { id: planId, plan, activeFloorId, userId: getUserId(user) });

@@ -137,9 +137,7 @@ describe("transporte RustDesk", () => {
     await click(screen.getByRole("button", { name: /Revelar senha de conexão/ }));
     writeText.mockRejectedValue(new Error("negado"));
     await click(screen.getByTitle("Copiar senha"));
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "Não foi possível copiar senha automaticamente. Copie manualmente."
-    );
+    expect(screen.getByRole("alert")).toHaveTextContent("Não foi possível copiar senha automaticamente. Copie manualmente.");
     expect(screen.getByRole("alert")).not.toHaveTextContent(SECRET);
   });
 

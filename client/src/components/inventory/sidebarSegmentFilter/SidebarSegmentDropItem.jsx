@@ -28,7 +28,9 @@ export default function SidebarSegmentDropItem({ segment, selected, count, machi
       <span
         ref={setDragNodeRef}
         className={`sidebar-segment-drag-handle ${isDragging ? "dragging" : ""}`}
-        title={isMaintenance ? "Manutenção não pertence a grupos" : segment.isDefault ? "Segmento padrão não pode ser movido" : "Mover segmento"}
+        title={
+          isMaintenance ? "Manutenção não pertence a grupos" : segment.isDefault ? "Segmento padrão não pode ser movido" : "Mover segmento"
+        }
         {...attributes}
         {...listeners}
       >

@@ -8,14 +8,7 @@ export const TOPOLOGY_NODE_TYPES = new Set(["asset", "segment", "group"]);
 
 export const TOPOLOGY_LINK_TYPES = new Set(["ethernet", "wifi", "fiber", "logical", "unknown"]);
 
-export const TOPOLOGY_LINK_STATUS_OVERRIDES = new Set([
-  "online",
-  "warning",
-  "critical",
-  "offline",
-  "unknown",
-  "manual"
-]);
+export const TOPOLOGY_LINK_STATUS_OVERRIDES = new Set(["online", "warning", "critical", "offline", "unknown", "manual"]);
 
 /**
  * @param {unknown} value

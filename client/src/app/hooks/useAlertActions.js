@@ -84,9 +84,7 @@ export function useAlertActions() {
   async function handleUpdateAlertRule(ruleId, payload) {
     try {
       const response = await updateAlertRule(token, ruleId, payload);
-      setAlertRules((current) =>
-        current.map((rule) => (rule.id === ruleId ? response.rule : rule))
-      );
+      setAlertRules((current) => current.map((rule) => (rule.id === ruleId ? response.rule : rule)));
     } catch (error) {
       notify(error.message, "danger");
     }

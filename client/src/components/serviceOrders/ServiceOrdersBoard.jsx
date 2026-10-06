@@ -46,17 +46,20 @@ export default function ServiceOrdersBoard({
   const canViewAllSectors = permissions.viewAll ?? false;
   const canViewAllClients = permissions.viewAll ?? false;
   const canChangeSector = permissions.changeSector ?? permissions.edit ?? false;
-  const assetById = useMemo(
-    () => new Map(devices.map((device) => [device.id, device])),
-    [devices]
-  );
+  const assetById = useMemo(() => new Map(devices.map((device) => [device.id, device])), [devices]);
 
   const panels = useBoardPanels();
   const editor = useServiceOrderSettings({ token, notify, serviceOrders });
   const { availableSectors, clients, technicians } = useBoardLookups({ token, businessMode });
   const { configuredStatuses, finalStatusIds, serviceOrderSettings, priorityColors } = editor;
   const filtering = useServiceOrderFilters({
-    serviceOrders, assetById, finalStatusIds, businessMode, canViewAllSectors, canViewAllClients, user
+    serviceOrders,
+    assetById,
+    finalStatusIds,
+    businessMode,
+    canViewAllSectors,
+    canViewAllClients,
+    user
   });
   const picker = useMonthPicker({ serviceOrders, monthFilter: filtering.monthFilter });
   const settingsModal = useSettingsModal({

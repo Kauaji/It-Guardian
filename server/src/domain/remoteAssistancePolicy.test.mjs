@@ -224,10 +224,7 @@ test("modo de controle exige flag e permissao independentes", () => {
   assert.equal(normalizeRequestedMode("view", enabled, false), "view");
   assert.equal(normalizeRequestedMode("control", enabled, true), "control");
   assert.throws(() => normalizeRequestedMode("control", enabled, false), /nao autorizado/i);
-  assert.throws(
-    () => normalizeRequestedMode("control", { controlEnabled: false }, true),
-    /nao autorizado/i
-  );
+  assert.throws(() => normalizeRequestedMode("control", { controlEnabled: false }, true), /nao autorizado/i);
   assert.throws(() => normalizeRequestedMode("shell", enabled, true), /invalido/i);
 });
 
@@ -243,7 +240,10 @@ test("entrada remota so e retransmitida durante sessao integralmente autorizada"
   assert.equal(canRelayInput({ session, config: { controlEnabled: true }, canControl: true }), true);
   assert.equal(canRelayInput({ session, config: { controlEnabled: false }, canControl: true }), false);
   assert.equal(canRelayInput({ session: { ...session, status: "ended" }, config: { controlEnabled: true }, canControl: true }), false);
-  assert.equal(canRelayInput({ session: { ...session, controlConsentGranted: false }, config: { controlEnabled: true }, canControl: true }), false);
+  assert.equal(
+    canRelayInput({ session: { ...session, controlConsentGranted: false }, config: { controlEnabled: true }, canControl: true }),
+    false
+  );
 });
 
 test("agente e acao visual dependem de heartbeat, flags e permissoes", () => {
@@ -262,20 +262,26 @@ test("agente e acao visual dependem de heartbeat, flags e permissoes", () => {
   assert.equal(isRemoteAssistanceAssetFresh(freshAsset, now), true);
   assert.equal(isAgentFresh(staleAsset, now), false);
   assert.equal(isRemoteAssistanceAssetFresh(staleAsset, now), false);
-  assert.equal(canShowRemoteAssistanceAction({
-    frontendEnabled: true,
-    backendEnabled: true,
-    canView: true,
-    canStart: true,
-    eligible: true
-  }), true);
-  assert.equal(canShowRemoteAssistanceAction({
-    frontendEnabled: true,
-    backendEnabled: true,
-    canView: true,
-    canStart: false,
-    eligible: true
-  }), false);
+  assert.equal(
+    canShowRemoteAssistanceAction({
+      frontendEnabled: true,
+      backendEnabled: true,
+      canView: true,
+      canStart: true,
+      eligible: true
+    }),
+    true
+  );
+  assert.equal(
+    canShowRemoteAssistanceAction({
+      frontendEnabled: true,
+      backendEnabled: true,
+      canView: true,
+      canStart: false,
+      eligible: true
+    }),
+    false
+  );
 });
 
 test("deteccao do agente tambem considera asset.dataSources", () => {
@@ -412,10 +418,7 @@ test("labels e monitores mantem informacao operacional legivel", () => {
   assert.equal(remoteAssistanceStatusLabel("active"), "Atendimento em andamento");
   assert.equal(remoteAssistanceStatusLabel("reconnecting"), "Sem quadros recentes - reconectando");
   assert.equal(remoteAssistanceStatusLabel("agent_offline"), "Agente sem resposta");
-  assert.equal(
-    formatRemoteMonitor({ name: "Monitor 1", width: 1920, height: 1080, primary: true }),
-    "Monitor 1 - 1920x1080 - Principal"
-  );
+  assert.equal(formatRemoteMonitor({ name: "Monitor 1", width: 1920, height: 1080, primary: true }), "Monitor 1 - 1920x1080 - Principal");
 });
 
 test("rotulo de transporte distingue snapshot e webrtc", () => {

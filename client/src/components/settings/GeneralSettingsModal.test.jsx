@@ -38,11 +38,28 @@ const sectorsFixture = [
   { id: "s2", name: "Antigo", description: "Setor velho", active: false, permissions: [], createdAt: "2026-01-01T12:00:00Z" }
 ];
 const usersFixture = [
-  { id: "u1", name: "Admin Root", email: "root@x.com", role: "admin", isAdmin: true, active: true, sectorName: "Financeiro", jobTitle: "CTO", updatedAt: "2026-01-02T12:00:00Z" },
+  {
+    id: "u1",
+    name: "Admin Root",
+    email: "root@x.com",
+    role: "admin",
+    isAdmin: true,
+    active: true,
+    sectorName: "Financeiro",
+    jobTitle: "CTO",
+    updatedAt: "2026-01-02T12:00:00Z"
+  },
   { id: "u2", name: "Bruno", email: "bruno@x.com", role: "operator", active: false, sectorId: "s1", permissions: ["x"] }
 ];
 const permissionGroupsFixture = [
-  { id: "g1", label: "Grupo 1", permissions: [{ id: "p1", label: "Permissão 1" }, { id: "p2", label: "Permissão 2" }] }
+  {
+    id: "g1",
+    label: "Grupo 1",
+    permissions: [
+      { id: "p1", label: "Permissão 1" },
+      { id: "p2", label: "Permissão 2" }
+    ]
+  }
 ];
 
 let notify;
@@ -115,13 +132,17 @@ describe("GeneralSettingsModal - estrutura e secoes", () => {
 
   it("nao-admin nao ve a aba Admin; admin ve na ordem Usabilidade, Aparencia, Admin, Modo", () => {
     mount({ user: operator });
-    const tabs = within(document.querySelector(".general-settings-tabs")).getAllByRole("button").map((b) => b.textContent);
+    const tabs = within(document.querySelector(".general-settings-tabs"))
+      .getAllByRole("button")
+      .map((b) => b.textContent);
     expect(tabs).toEqual(["Usabilidade", "Aparência", "Modo do sistema"]);
   });
 
   it("admin ve as quatro abas", () => {
     mount();
-    const tabs = within(document.querySelector(".general-settings-tabs")).getAllByRole("button").map((b) => b.textContent);
+    const tabs = within(document.querySelector(".general-settings-tabs"))
+      .getAllByRole("button")
+      .map((b) => b.textContent);
     expect(tabs).toEqual(["Usabilidade", "Aparência", "Admin", "Modo do sistema"]);
   });
 

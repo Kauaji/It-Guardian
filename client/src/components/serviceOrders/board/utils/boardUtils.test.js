@@ -27,8 +27,12 @@ const settings = { ...defaultServiceOrderSettings, statuses };
 describe("drop rules", () => {
   const configuredStatuses = statuses;
   it("nega sem permissão de alterar status ou de finalizar", () => {
-    expect(getDropDenial({ targetStatus: "mid", configuredStatuses, canChangeStatus: false, canFinishOrders: true })).toContain("alterar status");
-    expect(getDropDenial({ targetStatus: "closed", configuredStatuses, canChangeStatus: true, canFinishOrders: false })).toContain("finalizar");
+    expect(getDropDenial({ targetStatus: "mid", configuredStatuses, canChangeStatus: false, canFinishOrders: true })).toContain(
+      "alterar status"
+    );
+    expect(getDropDenial({ targetStatus: "closed", configuredStatuses, canChangeStatus: true, canFinishOrders: false })).toContain(
+      "finalizar"
+    );
     expect(getDropDenial({ targetStatus: "closed", configuredStatuses, canChangeStatus: true, canFinishOrders: true })).toBe("");
     expect(getDropDenial({ targetStatus: "mid", configuredStatuses, canChangeStatus: true, canFinishOrders: false })).toBe("");
   });
@@ -36,8 +40,28 @@ describe("drop rules", () => {
 
 describe("order filters", () => {
   const orders = [
-    { id: "1", sectorId: "sector-ti", assignedTechnicianNames: ["Ana"], createdBy: "u9", priority: "high", status: "open", title: "Rede", sla: { status: "breached" }, environmentId: "c1", feedback: { rating: 3 } },
-    { id: "2", sectorId: "sector-geral", assignedTechnicianName: "Bia", priority: "low", status: "closed", title: "Impressora", assetId: "a1", preventivePlanId: "p" },
+    {
+      id: "1",
+      sectorId: "sector-ti",
+      assignedTechnicianNames: ["Ana"],
+      createdBy: "u9",
+      priority: "high",
+      status: "open",
+      title: "Rede",
+      sla: { status: "breached" },
+      environmentId: "c1",
+      feedback: { rating: 3 }
+    },
+    {
+      id: "2",
+      sectorId: "sector-geral",
+      assignedTechnicianName: "Bia",
+      priority: "low",
+      status: "closed",
+      title: "Impressora",
+      assetId: "a1",
+      preventivePlanId: "p"
+    },
     { id: "3", sectorId: "sector-rh", createdBy: "u1", priority: "high", status: "open", title: "Senha" }
   ];
 
@@ -54,13 +78,24 @@ describe("order filters", () => {
 
   it("filtra por setor", () => {
     expect(filterBySector(orders, { sectorFilter: "all", canViewAllSectors: true, user: null })).toBe(orders);
-    expect(filterBySector(orders, { sectorFilter: "sector-rh", canViewAllSectors: false, user: null }).map((order) => order.id)).toEqual(["3"]);
+    expect(filterBySector(orders, { sectorFilter: "sector-rh", canViewAllSectors: false, user: null }).map((order) => order.id)).toEqual([
+      "3"
+    ]);
     expect(filterBySector(orders, { sectorFilter: "", canViewAllSectors: false, user: null }).map((order) => order.id)).toEqual(["2"]);
     expect(filterBySector(orders, { sectorFilter: "all", canViewAllSectors: false, user: null }).map((order) => order.id)).toEqual([]);
   });
 
   it("combina filtros de catálogo", () => {
-    const all = { businessMode: false, clientFilter: "all", priorityFilter: "all", technicianFilter: "all", statusFilter: "all", slaFilter: "all", originFilter: "all", ratingFilter: "all" };
+    const all = {
+      businessMode: false,
+      clientFilter: "all",
+      priorityFilter: "all",
+      technicianFilter: "all",
+      statusFilter: "all",
+      slaFilter: "all",
+      originFilter: "all",
+      ratingFilter: "all"
+    };
     expect(filterByCatalog(orders, all)).toEqual(orders);
     expect(filterByCatalog(orders, { ...all, businessMode: true, clientFilter: "c1" }).map((order) => order.id)).toEqual(["1"]);
     expect(filterByCatalog(orders, { ...all, clientFilter: "c1" })).toHaveLength(3);
@@ -95,7 +130,10 @@ describe("edição das configurações", () => {
     const added = appendStatus(settings, "novo");
     expect(added.statuses.map((status) => status.id)).toEqual(["open", "mid", "closed", "novo"]);
     expect(added.statuses[3]).toMatchObject({ name: "Novo status 4", color: "#64748b" });
-    const full = { ...settings, statuses: Array.from({ length: 10 }, (_, index) => ({ id: `s${index}`, name: `S${index}`, order: index })) };
+    const full = {
+      ...settings,
+      statuses: Array.from({ length: 10 }, (_, index) => ({ id: `s${index}`, name: `S${index}`, order: index }))
+    };
     expect(appendStatus(full, "extra")).toBeNull();
     expect(removeStatus(settings, "mid").statuses.map((status) => status.id)).toEqual(["open", "closed"]);
   });

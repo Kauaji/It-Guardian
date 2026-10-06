@@ -59,10 +59,7 @@ export async function saveValidationRunResult(db, { validationId, status, summar
 }
 
 export async function findPreventivePlanIdForExecutionLog(db, executionLogId) {
-  const executionLog = await db(
-    "SELECT preventive_plan_id FROM script_execution_logs WHERE id = $1",
-    [executionLogId]
-  );
+  const executionLog = await db("SELECT preventive_plan_id FROM script_execution_logs WHERE id = $1", [executionLogId]);
   return executionLog.rows[0]?.preventive_plan_id || null;
 }
 

@@ -49,7 +49,12 @@ export default function StatusTooltip({ status, lastSeenAt, className = "", chil
   const relativeLabel = relativeSince(lastSeenAt);
 
   return (
-    <span className={`status-tooltip-trigger ${className}`.trim()} tabIndex={0} aria-describedby={open ? popoverId : undefined} {...triggerAttributes}>
+    <span
+      className={`status-tooltip-trigger ${className}`.trim()}
+      tabIndex={0}
+      aria-describedby={open ? popoverId : undefined}
+      {...triggerAttributes}
+    >
       {children}
       {open && (
         <div id={popoverId} className="status-tooltip-popover" role="dialog" aria-label={message} {...popoverProps}>

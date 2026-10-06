@@ -53,10 +53,7 @@ test("filtros de setor e cliente respeitam os identificadores", () => {
 });
 
 test("preview de numero da OS inclui prefixo e sequencia", () => {
-  assert.match(
-    buildServiceOrderNumberPreview({ numberFormat: { prefix: "os", nextNumber: 42 } }),
-    /^OS-0042$/
-  );
+  assert.match(buildServiceOrderNumberPreview({ numberFormat: { prefix: "os", nextNumber: 42 } }), /^OS-0042$/);
 });
 
 test("OS nao finalizada continua visivel nos meses seguintes", () => {
@@ -78,10 +75,12 @@ test("OS finalizada aparece ate o mes de encerramento", () => {
 });
 
 test("seletor mensal inclui meses intermediarios sem novas OS", () => {
-  assert.deepEqual(
-    buildServiceOrderMonthValues([{ createdAt: "2026-05-10T10:00:00.000Z" }], "2026-08"),
-    ["2026-05", "2026-06", "2026-07", "2026-08"]
-  );
+  assert.deepEqual(buildServiceOrderMonthValues([{ createdAt: "2026-05-10T10:00:00.000Z" }], "2026-08"), [
+    "2026-05",
+    "2026-06",
+    "2026-07",
+    "2026-08"
+  ]);
 });
 
 test("configuracao de SLA e checklist obrigatorio recebe defaults sem perder valores informados", () => {

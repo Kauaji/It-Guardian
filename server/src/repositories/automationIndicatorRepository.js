@@ -6,11 +6,7 @@ import {
   normalizeRecurrenceIntervalDays,
   normalizeRecurrenceType
 } from "../domain/preventiveSchedule.js";
-import {
-  normalizeAssetIds,
-  normalizeIndicatorColor,
-  parseJsonArray
-} from "../domain/preventiveAutomationNormalizers.js";
+import { normalizeAssetIds, normalizeIndicatorColor, parseJsonArray } from "../domain/preventiveAutomationNormalizers.js";
 
 /** Indicadores de automacao (bolinhas coloridas) por ativo, a partir das agendas ativas. */
 

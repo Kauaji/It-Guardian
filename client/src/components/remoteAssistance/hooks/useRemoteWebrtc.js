@@ -11,13 +11,7 @@ export function useRemoteWebrtc({ open, token, session, viewerToken, iceServers,
   const [trackActive, setTrackActive] = useState(false);
 
   useEffect(() => {
-    if (
-      !open ||
-      session?.status !== "active" ||
-      session?.transport !== "webrtc" ||
-      session?.paused ||
-      !viewerToken
-    ) {
+    if (!open || session?.status !== "active" || session?.transport !== "webrtc" || session?.paused || !viewerToken) {
       return undefined;
     }
     let cancelled = false;

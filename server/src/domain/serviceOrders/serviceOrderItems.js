@@ -83,7 +83,5 @@ export function itemsSignature(items = []) {
 export function formatItemsForHistory(items = []) {
   const normalized = normalizeServiceOrderItems(items);
   if (!normalized.length) return "";
-  return normalized
-    .map((item) => `${item.productName} x${item.quantity} - R$ ${item.subtotal.toFixed(2).replace(".", ",")}`)
-    .join("\n");
+  return normalized.map((item) => `${item.productName} x${item.quantity} - R$ ${item.subtotal.toFixed(2).replace(".", ",")}`).join("\n");
 }

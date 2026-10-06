@@ -2,8 +2,21 @@
 export const MOUSE_MOVE_MIN_INTERVAL_MS = 80;
 
 const forwardedNamedKeys = new Set([
-  "Enter", "Escape", "Backspace", "Tab", "Delete", "Insert", "Home", "End",
-  "PageUp", "PageDown", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"
+  "Enter",
+  "Escape",
+  "Backspace",
+  "Tab",
+  "Delete",
+  "Insert",
+  "Home",
+  "End",
+  "PageUp",
+  "PageDown",
+  "ArrowUp",
+  "ArrowDown",
+  "ArrowLeft",
+  "ArrowRight",
+  "Space"
 ]);
 
 function clampUnit(value) {

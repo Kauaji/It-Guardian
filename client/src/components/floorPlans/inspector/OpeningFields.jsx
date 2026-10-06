@@ -14,8 +14,15 @@ function DoorFields({ entity, onChangeSelected }) {
     <>
       <label>
         Tipo da porta
-        <select value={entity.metadata?.doorType || "single"} onChange={(event) => onChangeSelected(buildDoorTypePatch(entity, event.target.value))}>
-          {DOOR_TYPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+        <select
+          value={entity.metadata?.doorType || "single"}
+          onChange={(event) => onChangeSelected(buildDoorTypePatch(entity, event.target.value))}
+        >
+          {DOOR_TYPES.map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
         </select>
       </label>
       {isSlidingKind ? (
@@ -51,9 +58,16 @@ export default function OpeningFields({ entity, availableWalls, onChangeSelected
     <>
       <label>
         Parede vinculada
-        <select value={entity.metadata?.parentObjectId || ""} onChange={(event) => onChangeSelected(buildOpeningWallPatch(entity, event.target.value))}>
+        <select
+          value={entity.metadata?.parentObjectId || ""}
+          onChange={(event) => onChangeSelected(buildOpeningWallPatch(entity, event.target.value))}
+        >
           <option value="">Sem parede</option>
-          {availableWalls.map((wall) => <option key={wall.id} value={wall.id}>{wall.label || "Parede"}</option>)}
+          {availableWalls.map((wall) => (
+            <option key={wall.id} value={wall.id}>
+              {wall.label || "Parede"}
+            </option>
+          ))}
         </select>
       </label>
       {isAnchoredOpening(entity) ? (

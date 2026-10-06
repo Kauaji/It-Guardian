@@ -4,12 +4,7 @@
 // preserva o contrato publico (todos os nomes antigos de api.js) e nao deve
 // receber logica nova: adicione funcoes no modulo do dominio correspondente.
 // O teste `api/exports.test.js` garante que o conjunto de nomes exportados nao muda.
-export {
-  API_BASE_URL,
-  apiFetch,
-  isPrivateNetworkUrl,
-  resolveApiBaseUrl
-} from "./api/http.js";
+export { API_BASE_URL, apiFetch, isPrivateNetworkUrl, resolveApiBaseUrl } from "./api/http.js";
 export * from "./api/auth.js";
 export * from "./api/settings.js";
 export * from "./api/dashboard.js";

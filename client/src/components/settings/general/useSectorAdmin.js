@@ -1,11 +1,6 @@
 import { useState } from "react";
 import { createSector, deleteSector, updateSector } from "../../../api.js";
-import {
-  buildSectorPayload,
-  emptySectorForm,
-  sectorToForm,
-  upsertRecord
-} from "./adminForms.js";
+import { buildSectorPayload, emptySectorForm, sectorToForm, upsertRecord } from "./adminForms.js";
 
 /** Formulário e ações de setores da aba Admin (criar, editar, desativar). */
 export function useSectorAdmin({ token, notify, setSectors, setSaving }) {
@@ -30,9 +25,7 @@ export function useSectorAdmin({ token, notify, setSectors, setSaving }) {
     setSaving(true);
     try {
       const payload = buildSectorPayload(sectorForm);
-      const response = sectorForm.id
-        ? await updateSector(token, sectorForm.id, payload)
-        : await createSector(token, payload);
+      const response = sectorForm.id ? await updateSector(token, sectorForm.id, payload) : await createSector(token, payload);
 
       setSectors((current) => upsertRecord(current, response.sector, Boolean(sectorForm.id)));
       resetSectorForm();

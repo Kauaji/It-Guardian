@@ -31,8 +31,8 @@ export default function RecoveryCodesPanel({ codes, acknowledged, onAcknowledged
       <div className="auth-callout" role="note">
         <TriangleAlert size={18} aria-hidden="true" />
         <p>
-          <strong>Estes códigos aparecem só agora.</strong> Se você perder o aplicativo autenticador, cada código
-          permite um acesso. Guarde-os em local seguro; quem os tiver consegue entrar na sua conta.
+          <strong>Estes códigos aparecem só agora.</strong> Se você perder o aplicativo autenticador, cada código permite um acesso.
+          Guarde-os em local seguro; quem os tiver consegue entrar na sua conta.
         </p>
       </div>
       <ul className="auth-recovery-codes" aria-label="Códigos de recuperação">

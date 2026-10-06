@@ -62,7 +62,12 @@ export const scenarios = {
     REMOTE_ASSISTANCE_RECONNECT_GRACE_SECONDS: "9999",
     REMOTE_ASSISTANCE_MAX_QUEUED_COMMANDS: "9999"
   },
-  fps_e_captura_personalizados: { ...lab, REMOTE_ASSISTANCE_MAX_FPS: "4", REMOTE_ASSISTANCE_TARGET_FPS: "9", REMOTE_ASSISTANCE_AGENT_CAPTURE_MS: "300" },
+  fps_e_captura_personalizados: {
+    ...lab,
+    REMOTE_ASSISTANCE_MAX_FPS: "4",
+    REMOTE_ASSISTANCE_TARGET_FPS: "9",
+    REMOTE_ASSISTANCE_AGENT_CAPTURE_MS: "300"
+  },
   webrtc_solicitado_e_habilitado: {
     ...lab,
     REMOTE_ASSISTANCE_TRANSPORT: " WebRTC ",
@@ -96,9 +101,7 @@ export const scenarios = {
 };
 
 test("configuracao da assistencia remota permanece identica para a matriz de ambientes", () => {
-  const actual = Object.fromEntries(
-    Object.entries(scenarios).map(([name, env]) => [name, getRemoteAssistanceConfig(env)])
-  );
+  const actual = Object.fromEntries(Object.entries(scenarios).map(([name, env]) => [name, getRemoteAssistanceConfig(env)]));
   const normalized = JSON.parse(JSON.stringify(actual));
 
   if (process.env.UPDATE_GOLDEN === "1" || !existsSync(goldenPath)) {

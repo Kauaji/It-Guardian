@@ -11,8 +11,7 @@ export default function PreventiveCreatedSummary({ plan, savingId, onCreateServi
         <span>Plano registrado</span>
         <strong>{plan.name}</strong>
         <small>
-          {plan.assets?.length || 0} máquina(s) •{" "}
-          {plan.scripts?.length || 0} verificação(ões) •{" "}
+          {plan.assets?.length || 0} máquina(s) • {plan.scripts?.length || 0} verificação(ões) •{" "}
           {formatDate(plan.preparedAt || plan.createdAt)}
         </small>
       </div>

@@ -12,10 +12,7 @@ function setup({ path = "/", user = admin, session = createSession() } = {}) {
   const access = getViewAccess(user);
   return {
     session,
-    ...renderHook(
-      () => ({ nav: useWorkspaceNavigation(access), location: useLocation() }),
-      { wrapper: routerWrapper([path], session) }
-    )
+    ...renderHook(() => ({ nav: useWorkspaceNavigation(access), location: useLocation() }), { wrapper: routerWrapper([path], session) })
   };
 }
 

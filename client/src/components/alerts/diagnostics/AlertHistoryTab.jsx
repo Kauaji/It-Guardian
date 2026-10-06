@@ -22,16 +22,18 @@ export default function AlertHistoryTab({ resolvedAlerts, handledSuggestions }) 
           <article key={alert.id} className="alert-history-card">
             <span className="pill ok">Resolvido</span>
             <h3>{lookups.getResolvedAlertTitle(alert)}</h3>
-            <p>{lookups.getAlertMachineLabel(alert)} · {formatAlertValue(alert)}</p>
+            <p>
+              {lookups.getAlertMachineLabel(alert)} · {formatAlertValue(alert)}
+            </p>
             <small>{formatDate(alert.updatedAt || alert.resolvedAt || alert.startedAt)}</small>
           </article>
         ))}
         {handledSuggestions.map((suggestion, index) => (
           <article key={suggestion.id} className="alert-history-card">
-            <span className={`pill ${suggestion.status === "accepted" ? "ok" : "danger"}`}>
-              {getSafeStatusLabel(suggestion.status)}
-            </span>
-            <h3>{formatSuggestionCode(suggestion, index)} · {lookups.getResolvedSuggestionTitle(suggestion)}</h3>
+            <span className={`pill ${suggestion.status === "accepted" ? "ok" : "danger"}`}>{getSafeStatusLabel(suggestion.status)}</span>
+            <h3>
+              {formatSuggestionCode(suggestion, index)} · {lookups.getResolvedSuggestionTitle(suggestion)}
+            </h3>
             <p>{lookups.getResolvedSuggestionMachineLabel(suggestion)}</p>
             <small>
               {suggestion.createdServiceOrderId
@@ -40,9 +42,7 @@ export default function AlertHistoryTab({ resolvedAlerts, handledSuggestions }) 
             </small>
           </article>
         ))}
-        {!resolvedAlerts.length && !handledSuggestions.length && (
-          <p className="empty">Nenhum histórico encontrado ainda.</p>
-        )}
+        {!resolvedAlerts.length && !handledSuggestions.length && <p className="empty">Nenhum histórico encontrado ainda.</p>}
       </div>
     </section>
   );

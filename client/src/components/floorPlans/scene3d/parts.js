@@ -38,22 +38,25 @@ export function createPartFactory({ scene, textures, resources, offsets }) {
     return mesh;
   };
 
-  const addModelPart = (group, {
-    x = 0,
-    z = 0,
-    y = 0,
-    width = 12,
-    depth = 12,
-    height = 12,
-    color = "#1f7a61",
-    opacity = 1,
-    metalness = 0.04,
-    texturePreset = null,
-    textureKind = "object",
-    emissive = null,
-    emissiveIntensity = 0,
-    glass = false
-  }) => {
+  const addModelPart = (
+    group,
+    {
+      x = 0,
+      z = 0,
+      y = 0,
+      width = 12,
+      depth = 12,
+      height = 12,
+      color = "#1f7a61",
+      opacity = 1,
+      metalness = 0.04,
+      texturePreset = null,
+      textureKind = "object",
+      emissive = null,
+      emissiveIntensity = 0,
+      glass = false
+    }
+  ) => {
     const mesh = new THREE.Mesh(
       resources.getRoundedGeometry(width, height, depth),
       resources.createMaterial(color, opacity, metalness, texturePreset, textureKind, { emissive, emissiveIntensity, glass })

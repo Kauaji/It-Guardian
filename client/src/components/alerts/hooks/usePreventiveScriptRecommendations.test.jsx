@@ -67,7 +67,11 @@ describe("usePreventiveScriptRecommendations", () => {
   it("ignora a resposta de uma busca superada por uma seleção mais nova", async () => {
     let resolveFirst;
     api.fetchMaintenanceScriptRecommendations
-      .mockReturnValueOnce(new Promise((resolve) => { resolveFirst = resolve; }))
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveFirst = resolve;
+        })
+      )
       .mockResolvedValueOnce({ recommended: [{ id: "segunda" }], others: [] });
     const { result, rerender } = renderHook((props) => usePreventiveScriptRecommendations(props), {
       initialProps: { token: "t", assetIds: ["d1"], activeScripts }

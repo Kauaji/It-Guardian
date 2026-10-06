@@ -13,9 +13,7 @@ import { usePlacementConfirmations } from "./usePlacementConfirmations.js";
  */
 export function useItemPlacement({ doc, ui, notify, viewport, paint }) {
   const { editor, activeFloorId, commitEditor } = doc;
-  const {
-    placement, setPlacement, setMode, setSelectedTool, setSelected, setSelectedObjectIds
-  } = ui;
+  const { placement, setPlacement, setMode, setSelectedTool, setSelected, setSelectedObjectIds } = ui;
   const { getSvgPoint } = viewport;
   const confirmations = usePlacementConfirmations({ doc, ui, notify });
 
@@ -54,9 +52,7 @@ export function useItemPlacement({ doc, ui, notify, viewport, paint }) {
     beginPlacement({ kind: "measurement", start: null, end: null, constrainAngle: false, lengthBuffer: "" });
   };
 
-  const buildCatalogPreview = (item, point) => (
-    buildCatalogPlacementPreview({ editor, floor: getFloor(), item, point })
-  );
+  const buildCatalogPreview = (item, point) => buildCatalogPlacementPreview({ editor, floor: getFloor(), item, point });
 
   const commitCatalogPlacement = (item, point, preview = null) => {
     const floor = getFloor();
@@ -84,7 +80,12 @@ export function useItemPlacement({ doc, ui, notify, viewport, paint }) {
   /** Acompanha o ponteiro: atualiza a pre-visualizacao. Retorna true se tratou o evento. */
   const handlePointerMove = (event) => {
     const update = resolvePlacementPointerMove({
-      placement, event, editor, activeFloorId, getSvgPoint, buildCatalogPreview
+      placement,
+      event,
+      editor,
+      activeFloorId,
+      getSvgPoint,
+      buildCatalogPreview
     });
     if (!update) return false;
     setPlacement(update);

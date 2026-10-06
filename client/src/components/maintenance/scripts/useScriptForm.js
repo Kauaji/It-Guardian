@@ -1,11 +1,5 @@
 import { useRef, useState } from "react";
-import {
-  applyAnalysisToForm,
-  buildScriptPayload,
-  emptyForm,
-  savedScriptAnalysis,
-  scriptToForm
-} from "./scriptModel.js";
+import { applyAnalysisToForm, buildScriptPayload, emptyForm, savedScriptAnalysis, scriptToForm } from "./scriptModel.js";
 
 /** Estado do formulário de cadastro/edição de scripts: análise textual, envio e edição. */
 export function useScriptForm({ onAnalyze, onSave }) {

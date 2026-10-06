@@ -76,9 +76,7 @@ function isErrorRun(run) {
 
 /** @param {ViewRun[]} runs */
 function newestRun(runs) {
-  return runs
-    .slice()
-    .sort((left, right) => new Date(right.createdAt || 0).getTime() - new Date(left.createdAt || 0).getTime())[0] || null;
+  return runs.slice().sort((left, right) => new Date(right.createdAt || 0).getTime() - new Date(left.createdAt || 0).getTime())[0] || null;
 }
 
 /**
@@ -173,9 +171,7 @@ function buildMachinePlanEntry({ plan, schedule, device, latestRun }) {
     assetCount: plan.assetCount,
     scriptCount: plan.scriptCount,
     scripts: plan.scripts,
-    hasCustomOverride: plan.overrides.some(
-      (override) => override.active !== false && String(override.assetId || "") === String(device.id)
-    )
+    hasCustomOverride: plan.overrides.some((override) => override.active !== false && String(override.assetId || "") === String(device.id))
   };
 }
 

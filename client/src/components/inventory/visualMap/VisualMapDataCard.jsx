@@ -7,7 +7,9 @@ function LinkSelect({ label, value, options, disabled, onChange }) {
       <select value={value || ""} onChange={(event) => onChange(event.target.value)} disabled={disabled}>
         <option value="">Não vinculado</option>
         {options.map((option) => (
-          <option key={option.id} value={option.id}>{option.name}</option>
+          <option key={option.id} value={option.id}>
+            {option.name}
+          </option>
         ))}
       </select>
     </label>
@@ -23,9 +25,7 @@ function NumberField({ label, value, disabled, onChange, ...inputProps }) {
   );
 }
 
-export default function VisualMapDataCard({
-  draft, tabs, groups, segments, isEditing, saving, onChange, onToggleGrid, onSave, onDelete
-}) {
+export default function VisualMapDataCard({ draft, tabs, groups, segments, isEditing, saving, onChange, onToggleGrid, onSave, onDelete }) {
   return (
     <section className="inventory-visual-map-card">
       <div className="inventory-visual-section-title">
@@ -37,16 +37,61 @@ export default function VisualMapDataCard({
         <input value={draft.name} onChange={(event) => onChange("name", event.target.value)} disabled={!isEditing} />
       </label>
       <div className="inventory-visual-form-grid">
-        <LinkSelect label="Aba" value={draft.environmentId} options={tabs} disabled={!isEditing} onChange={(value) => onChange("environmentId", value)} />
-        <LinkSelect label="Grupo" value={draft.groupId} options={groups} disabled={!isEditing} onChange={(value) => onChange("groupId", value)} />
-        <LinkSelect label="Segmento" value={draft.segmentId} options={segments} disabled={!isEditing} onChange={(value) => onChange("segmentId", value)} />
+        <LinkSelect
+          label="Aba"
+          value={draft.environmentId}
+          options={tabs}
+          disabled={!isEditing}
+          onChange={(value) => onChange("environmentId", value)}
+        />
+        <LinkSelect
+          label="Grupo"
+          value={draft.groupId}
+          options={groups}
+          disabled={!isEditing}
+          onChange={(value) => onChange("groupId", value)}
+        />
+        <LinkSelect
+          label="Segmento"
+          value={draft.segmentId}
+          options={segments}
+          disabled={!isEditing}
+          onChange={(value) => onChange("segmentId", value)}
+        />
         <label>
           Andar
-          <input value={draft.floorLabel || ""} onChange={(event) => onChange("floorLabel", event.target.value)} disabled={!isEditing} placeholder="Ex: 2o andar" />
+          <input
+            value={draft.floorLabel || ""}
+            onChange={(event) => onChange("floorLabel", event.target.value)}
+            disabled={!isEditing}
+            placeholder="Ex: 2o andar"
+          />
         </label>
-        <NumberField label="Largura" min="5" max="200" value={draft.width} disabled={!isEditing} onChange={(value) => onChange("width", value)} />
-        <NumberField label="Profundidade" min="5" max="200" value={draft.depth} disabled={!isEditing} onChange={(value) => onChange("depth", value)} />
-        <NumberField label="Escala da grade" min="0.1" max="10" step="0.1" value={draft.scale} disabled={!isEditing} onChange={(value) => onChange("scale", value)} />
+        <NumberField
+          label="Largura"
+          min="5"
+          max="200"
+          value={draft.width}
+          disabled={!isEditing}
+          onChange={(value) => onChange("width", value)}
+        />
+        <NumberField
+          label="Profundidade"
+          min="5"
+          max="200"
+          value={draft.depth}
+          disabled={!isEditing}
+          onChange={(value) => onChange("depth", value)}
+        />
+        <NumberField
+          label="Escala da grade"
+          min="0.1"
+          max="10"
+          step="0.1"
+          value={draft.scale}
+          disabled={!isEditing}
+          onChange={(value) => onChange("scale", value)}
+        />
       </div>
       <label>
         Observacoes

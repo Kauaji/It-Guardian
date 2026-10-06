@@ -35,13 +35,27 @@ export const migration031InventoryFamiliesRemoveReports = {
         );
     `);
 
-    await db(`UPDATE products SET category = 'Placa de vídeo', updated_at = NOW() WHERE active = TRUE AND lower(COALESCE(category, '')) = 'vídeo';`);
-    await db(`UPDATE products SET category = 'Fonte', updated_at = NOW() WHERE active = TRUE AND (lower(COALESCE(category, '')) = 'energia' OR lower(COALESCE(name, '')) LIKE '%power supply%' OR lower(COALESCE(name, '')) LIKE '%fonte%');`);
-    await db(`UPDATE products SET category = 'Mouse', updated_at = NOW() WHERE active = TRUE AND lower(COALESCE(name, '')) LIKE '%mouse%';`);
-    await db(`UPDATE products SET category = 'Teclado', updated_at = NOW() WHERE active = TRUE AND (lower(COALESCE(name, '')) LIKE '%keyboard%' OR lower(COALESCE(name, '')) LIKE '%teclado%');`);
-    await db(`UPDATE products SET category = 'Monitor', updated_at = NOW() WHERE active = TRUE AND lower(COALESCE(name, '')) LIKE '%monitor%';`);
-    await db(`UPDATE products SET category = 'Diversos', updated_at = NOW() WHERE active = TRUE AND lower(COALESCE(category, '')) IN ('periféricos', 'outros');`);
-    await db(`UPDATE part_categories SET active = FALSE, updated_at = NOW() WHERE lower(name) IN ('vídeo', 'rede', 'energia', 'periféricos', 'outros');`);
+    await db(
+      `UPDATE products SET category = 'Placa de vídeo', updated_at = NOW() WHERE active = TRUE AND lower(COALESCE(category, '')) = 'vídeo';`
+    );
+    await db(
+      `UPDATE products SET category = 'Fonte', updated_at = NOW() WHERE active = TRUE AND (lower(COALESCE(category, '')) = 'energia' OR lower(COALESCE(name, '')) LIKE '%power supply%' OR lower(COALESCE(name, '')) LIKE '%fonte%');`
+    );
+    await db(
+      `UPDATE products SET category = 'Mouse', updated_at = NOW() WHERE active = TRUE AND lower(COALESCE(name, '')) LIKE '%mouse%';`
+    );
+    await db(
+      `UPDATE products SET category = 'Teclado', updated_at = NOW() WHERE active = TRUE AND (lower(COALESCE(name, '')) LIKE '%keyboard%' OR lower(COALESCE(name, '')) LIKE '%teclado%');`
+    );
+    await db(
+      `UPDATE products SET category = 'Monitor', updated_at = NOW() WHERE active = TRUE AND lower(COALESCE(name, '')) LIKE '%monitor%';`
+    );
+    await db(
+      `UPDATE products SET category = 'Diversos', updated_at = NOW() WHERE active = TRUE AND lower(COALESCE(category, '')) IN ('periféricos', 'outros');`
+    );
+    await db(
+      `UPDATE part_categories SET active = FALSE, updated_at = NOW() WHERE lower(name) IN ('vídeo', 'rede', 'energia', 'periféricos', 'outros');`
+    );
 
     await db("DROP TABLE IF EXISTS report_exports;");
   }

@@ -1,4 +1,12 @@
-export const CALENDAR_EVENT_TYPES = ["service_order", "preventive_maintenance", "technical_visit", "internal_task", "asset_check", "reminder", "other"];
+export const CALENDAR_EVENT_TYPES = [
+  "service_order",
+  "preventive_maintenance",
+  "technical_visit",
+  "internal_task",
+  "asset_check",
+  "reminder",
+  "other"
+];
 export const CALENDAR_EVENT_STATUSES = ["scheduled", "in_progress", "completed", "cancelled", "missed"];
 export const CALENDAR_EVENT_PRIORITIES = ["low", "normal", "high", "urgent"];
 
@@ -101,7 +109,13 @@ export function validateCalendarEvent(payload = {}, { partial = false } = {}) {
   /** @type {ValidatedCalendarEvent} */
   const result = {
     ...(title ? { title } : {}),
-    ...(Object.hasOwn(source, "description") ? { description: String(source.description || "").trim().slice(0, 5000) } : {}),
+    ...(Object.hasOwn(source, "description")
+      ? {
+          description: String(source.description || "")
+            .trim()
+            .slice(0, 5000)
+        }
+      : {}),
     ...(eventType !== undefined ? { eventType } : {}),
     ...(status !== undefined ? { status } : {}),
     ...(priority !== undefined ? { priority } : {}),
@@ -112,12 +126,21 @@ export function validateCalendarEvent(payload = {}, { partial = false } = {}) {
 
   /** @type {Array<["serviceOrderId" | "assetId" | "technicianId" | "segmentId" | "groupId" | "environmentName", string]>} */
   const optionalFields = [
-    ["serviceOrderId", "service_order_id"], ["assetId", "asset_id"], ["technicianId", "technician_id"],
-    ["segmentId", "segment_id"], ["groupId", "group_id"], ["environmentName", "environment_name"]
+    ["serviceOrderId", "service_order_id"],
+    ["assetId", "asset_id"],
+    ["technicianId", "technician_id"],
+    ["segmentId", "segment_id"],
+    ["groupId", "group_id"],
+    ["environmentName", "environment_name"]
   ];
   for (const [camel, snake] of optionalFields) {
-    if (!partial || Object.hasOwn(source, camel) || Object.hasOwn(source, snake)) result[camel] = optionalText(source[camel] ?? source[snake]);
+    if (!partial || Object.hasOwn(source, camel) || Object.hasOwn(source, snake))
+      result[camel] = optionalText(source[camel] ?? source[snake]);
   }
-  if (!partial || Object.hasOwn(source, "metadata")) result.metadata = source.metadata && typeof source.metadata === "object" && !Array.isArray(source.metadata) ? /** @type {Record<string, unknown>} */ (source.metadata) : {};
+  if (!partial || Object.hasOwn(source, "metadata"))
+    result.metadata =
+      source.metadata && typeof source.metadata === "object" && !Array.isArray(source.metadata)
+        ? /** @type {Record<string, unknown>} */ (source.metadata)
+        : {};
   return result;
 }

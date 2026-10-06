@@ -25,26 +25,37 @@ export default function FloorPlanEditorView({ workspace, devices, groups, segmen
 
       <div className={`floor-plan-editor-layout ${isEditing ? "editing" : "view-only"}`}>
         <main className="floor-plan-canvas-panel">
-          {isEditing && <PaintToolPanel
-            draft={ui.paintDraft}
+          {isEditing && (
+            <PaintToolPanel
+              draft={ui.paintDraft}
+              groups={groups}
+              segments={segments}
+              groupAreas={paint.savedGroupAreas}
+              onChange={paint.updatePaintDraft}
+              onConfirm={paint.confirmPaintArea}
+              onCancel={paint.cancelPaintArea}
+            />
+          )}
+
+          <EditorStage
+            workspace={workspace}
+            stageRef={stageRef}
+            devices={devices}
             groups={groups}
             segments={segments}
-            groupAreas={paint.savedGroupAreas}
-            onChange={paint.updatePaintDraft}
-            onConfirm={paint.confirmPaintArea}
-            onCancel={paint.cancelPaintArea}
-          />}
+            permissions={permissions}
+          />
 
-          <EditorStage workspace={workspace} stageRef={stageRef} devices={devices} groups={groups} segments={segments} permissions={permissions} />
-
-          {isEditing && <FloorPlanCatalog
-            activeSection={ui.activeCatalog}
-            onActiveSectionChange={ui.setActiveCatalog}
-            onAddItem={workspace.placementApi.addCatalogItem}
-            onSelectRoomTemplate={workspace.placementApi.beginRoomPlacement}
-            placement={ui.placement}
-            catalogRef={catalogRef}
-          />}
+          {isEditing && (
+            <FloorPlanCatalog
+              activeSection={ui.activeCatalog}
+              onActiveSectionChange={ui.setActiveCatalog}
+              onAddItem={workspace.placementApi.addCatalogItem}
+              onSelectRoomTemplate={workspace.placementApi.beginRoomPlacement}
+              placement={ui.placement}
+              catalogRef={catalogRef}
+            />
+          )}
         </main>
       </div>
     </section>

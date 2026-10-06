@@ -29,22 +29,25 @@ export function useFloorPlanEditor({ markDirty }) {
    * Aplica uma alteracao ao editor (funcao sobre um rascunho clonado ou o novo
    * valor). Com `track: false` a alteracao nao entra no historico (ex.: arrasto).
    */
-  const commitEditor = useCallback((updater, { track = true } = {}) => {
-    setEditor((current) => {
-      if (!current) return current;
-      const before = cloneEditor(current);
-      const next = typeof updater === "function" ? updater(cloneEditor(current)) : updater;
-      if (next) {
-        next.objects = syncAnchoredOpenings(ensureRoomWallObjects(next.objects || [], next.zones || []));
-      }
-      if (track) {
-        setPast((items) => [...items.slice(-(HISTORY_LIMIT - 1)), before]);
-        setFuture([]);
-      }
-      return next;
-    });
-    markDirty();
-  }, [markDirty]);
+  const commitEditor = useCallback(
+    (updater, { track = true } = {}) => {
+      setEditor((current) => {
+        if (!current) return current;
+        const before = cloneEditor(current);
+        const next = typeof updater === "function" ? updater(cloneEditor(current)) : updater;
+        if (next) {
+          next.objects = syncAnchoredOpenings(ensureRoomWallObjects(next.objects || [], next.zones || []));
+        }
+        if (track) {
+          setPast((items) => [...items.slice(-(HISTORY_LIMIT - 1)), before]);
+          setFuture([]);
+        }
+        return next;
+      });
+      markDirty();
+    },
+    [markDirty]
+  );
 
   const undo = useCallback(() => {
     setPast((items) => {

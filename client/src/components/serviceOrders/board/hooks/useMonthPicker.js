@@ -5,10 +5,7 @@ import { buildServiceOrderMonthValues } from "../../serviceOrderBoardUtils.js";
 export function useMonthPicker({ serviceOrders, monthFilter }) {
   const [mode, setMode] = useState("months");
   const [year, setYear] = useState(() => new Date().getFullYear());
-  const availableMonthValues = useMemo(
-    () => buildServiceOrderMonthValues(serviceOrders),
-    [serviceOrders]
-  );
+  const availableMonthValues = useMemo(() => buildServiceOrderMonthValues(serviceOrders), [serviceOrders]);
   const availableYears = useMemo(
     () => [...new Set(availableMonthValues.map((value) => Number(value.slice(0, 4))))].sort((left, right) => left - right),
     [availableMonthValues]

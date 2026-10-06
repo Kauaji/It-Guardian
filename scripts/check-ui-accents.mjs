@@ -129,10 +129,11 @@ export function findAccentIssues(source) {
       if (quote !== "`") return report(body, isPhrase);
       for (const part of templateTextParts(body)) {
         if (!part.code) report(part.text, isPhrase);
-        else for (const inner of part.text.matchAll(/"((?:[^"\\\n]|\\.)*)"|'((?:[^'\\\n]|\\.)*)'/g)) {
-          const text = inner[1] ?? inner[2] ?? "";
-          if (!looksTechnical(text)) report(text, text.trim().includes(" "));
-        }
+        else
+          for (const inner of part.text.matchAll(/"((?:[^"\\\n]|\\.)*)"|'((?:[^'\\\n]|\\.)*)'/g)) {
+            const text = inner[1] ?? inner[2] ?? "";
+            if (!looksTechnical(text)) report(text, text.trim().includes(" "));
+          }
       }
     };
     let matchedString = false;
@@ -184,7 +185,9 @@ function main() {
   if (failures.length > 0) {
     console.error(`check-ui-accents: ${failures.length} texto(s) de interface sem acento:`);
     for (const failure of failures) console.error(` - ${failure}`);
-    console.error("\nCorrija a ortografia (identificadores, rotas e valores de dados nao mudam). Casos legitimos: comentario `accents-ok` na linha.");
+    console.error(
+      "\nCorrija a ortografia (identificadores, rotas e valores de dados nao mudam). Casos legitimos: comentario `accents-ok` na linha."
+    );
     process.exit(1);
   }
   console.log(`check-ui-accents: OK. ${files.length} arquivos de client/src verificados, ${Object.keys(TERMS).length} termos na lista.`);

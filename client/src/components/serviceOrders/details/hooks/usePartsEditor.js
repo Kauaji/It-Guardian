@@ -22,10 +22,7 @@ export function usePartsEditor({ serviceOrder, products, setDraft }) {
 
   const suggestions = useMemo(() => filterProductSuggestions(products, search), [products, search]);
   const selectedProduct = useMemo(
-    () =>
-      products.find((product) => product.id === partDraft.productId) ||
-      findProductByName(products, search) ||
-      null,
+    () => products.find((product) => product.id === partDraft.productId) || findProductByName(products, search) || null,
     [products, partDraft.productId, search]
   );
 

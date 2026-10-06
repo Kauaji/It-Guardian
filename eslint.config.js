@@ -5,24 +5,19 @@ import reactRefresh from "eslint-plugin-react-refresh";
 
 const sharedRules = {
   "no-console": "off",
-  "no-unused-vars": ["error", {
-    argsIgnorePattern: "^_",
-    caughtErrorsIgnorePattern: "^_",
-    varsIgnorePattern: "^_"
-  }]
+  "no-unused-vars": [
+    "error",
+    {
+      argsIgnorePattern: "^_",
+      caughtErrorsIgnorePattern: "^_",
+      varsIgnorePattern: "^_"
+    }
+  ]
 };
 
 export default [
   {
-    ignores: [
-      "**/dist/**",
-      "**/coverage/**",
-      "**/node_modules/**",
-      "playwright-report/**",
-      "test-results/**",
-      ".vercel/**",
-      ".claude/**"
-    ]
+    ignores: ["**/dist/**", "**/coverage/**", "**/node_modules/**", "playwright-report/**", "test-results/**", ".vercel/**", ".claude/**"]
   },
   {
     files: ["client/src/**/*.{js,jsx}"],
@@ -51,13 +46,7 @@ export default [
     }
   },
   {
-    files: [
-      "server/**/*.js",
-      "server/**/*.mjs",
-      "scripts/**/*.mjs",
-      "tests/**/*.js",
-      "*.config.js"
-    ],
+    files: ["server/**/*.js", "server/**/*.mjs", "scripts/**/*.mjs", "tests/**/*.js", "*.config.js"],
     ...js.configs.recommended,
     languageOptions: {
       ecmaVersion: "latest",

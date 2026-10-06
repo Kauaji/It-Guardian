@@ -89,18 +89,33 @@ export function ExplanationsSection({ suggestion, model }) {
   return (
     <Section title="Explicações técnicas">
       <div className="suggestion-info-text-list">
-        <p><strong>Motivo da prioridade:</strong> {formatDisplayText(suggestion.priorityReason, "Prioridade definida pela regra atual do aviso.")}</p>
-        <p><strong>Impacto operacional:</strong> {formatDisplayText(suggestion.operationalImpact, getAlertImpact(alert))}</p>
-        <p><strong>Causa provável:</strong> {formatDisplayText(suggestion.probableCause, getAlertProbableCause(alert))}</p>
-        <p><strong>Ação recomendada:</strong> {formatDisplayText(suggestion.recommendedAction, getAlertRecommendedAction(alert))}</p>
+        <p>
+          <strong>Motivo da prioridade:</strong>{" "}
+          {formatDisplayText(suggestion.priorityReason, "Prioridade definida pela regra atual do aviso.")}
+        </p>
+        <p>
+          <strong>Impacto operacional:</strong> {formatDisplayText(suggestion.operationalImpact, getAlertImpact(alert))}
+        </p>
+        <p>
+          <strong>Causa provável:</strong> {formatDisplayText(suggestion.probableCause, getAlertProbableCause(alert))}
+        </p>
+        <p>
+          <strong>Ação recomendada:</strong> {formatDisplayText(suggestion.recommendedAction, getAlertRecommendedAction(alert))}
+        </p>
         {suggestion.recurrenceInsight?.summary && (
-          <p><strong>Reincidência:</strong> {getSafeSummary(suggestion.recurrenceInsight)}</p>
+          <p>
+            <strong>Reincidência:</strong> {getSafeSummary(suggestion.recurrenceInsight)}
+          </p>
         )}
         {suggestion.falsePositiveInsight?.summary && (
-          <p><strong>Possível falso positivo:</strong> {getSafeSummary(suggestion.falsePositiveInsight)}</p>
+          <p>
+            <strong>Possível falso positivo:</strong> {getSafeSummary(suggestion.falsePositiveInsight)}
+          </p>
         )}
         {suggestion.capacityForecast?.summary && (
-          <p><strong>Capacidade/previsão:</strong> {getSafeSummary(suggestion.capacityForecast)}</p>
+          <p>
+            <strong>Capacidade/previsão:</strong> {getSafeSummary(suggestion.capacityForecast)}
+          </p>
         )}
       </div>
     </Section>
@@ -150,7 +165,9 @@ export function CommentsSection({ alertId, comments, commentBox }) {
       <div className="alert-comments suggestion-info-comments">
         {comments.map((comment) => (
           <p key={comment.id}>
-            <span>{formatDisplayText(comment.userName, "Usuário")} - {formatDate(comment.createdAt)}</span>
+            <span>
+              {formatDisplayText(comment.userName, "Usuário")} - {formatDate(comment.createdAt)}
+            </span>
             {getSafeCommentMessage(comment)}
           </p>
         ))}

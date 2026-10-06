@@ -4,27 +4,20 @@ import { formatDateTime } from "./cloudAdminModel.js";
 function ProductKeyItem({ item, expanded, busy, onToggle, onChangeStatus }) {
   return (
     <article className={item.active ? "" : "inactive"}>
-      <button
-        type="button"
-        className="cloud-key-summary"
-        onClick={onToggle}
-        aria-expanded={expanded}
-      >
-        <span className={`cloud-key-state${item.active ? " active" : ""}`}>
-          {item.active ? <Check size={15} /> : <Ban size={15} />}
-        </span>
+      <button type="button" className="cloud-key-summary" onClick={onToggle} aria-expanded={expanded}>
+        <span className={`cloud-key-state${item.active ? " active" : ""}`}>{item.active ? <Check size={15} /> : <Ban size={15} />}</span>
         <span>
           <strong>{item.displayName}</strong>
-          <small>{item.organizationName} - {item.planName}</small>
+          <small>
+            {item.organizationName} - {item.planName}
+          </small>
         </span>
         <code>{item.keyHint}</code>
         <span className="cloud-key-usage">
           {item.activationCount} / {item.activationLimit}
           <small>ativacoes</small>
         </span>
-        <span className="cloud-key-expiry">
-          {item.expiresAt ? `Expira ${formatDateTime(item.expiresAt)}` : "Sem expiracao"}
-        </span>
+        <span className="cloud-key-expiry">{item.expiresAt ? `Expira ${formatDateTime(item.expiresAt)}` : "Sem expiracao"}</span>
       </button>
       <div className="cloud-key-actions">
         <button
@@ -41,15 +34,7 @@ function ProductKeyItem({ item, expanded, busy, onToggle, onChangeStatus }) {
   );
 }
 
-export default function ProductKeyList({
-  productKeys,
-  loading,
-  selectedKeyId,
-  busyAction,
-  onRefresh,
-  onSelect,
-  onChangeStatus
-}) {
+export default function ProductKeyList({ productKeys, loading, selectedKeyId, busyAction, onRefresh, onSelect, onChangeStatus }) {
   return (
     <section className="cloud-admin-section">
       <div className="cloud-admin-section-title">
@@ -70,9 +55,7 @@ export default function ProductKeyList({
       </div>
 
       {loading && <p className="empty">Carregando chaves...</p>}
-      {!loading && productKeys.length === 0 && (
-        <p className="empty">Nenhuma chave de produto cadastrada.</p>
-      )}
+      {!loading && productKeys.length === 0 && <p className="empty">Nenhuma chave de produto cadastrada.</p>}
       <div className="cloud-key-list">
         {productKeys.map((item) => (
           <ProductKeyItem
@@ -80,7 +63,7 @@ export default function ProductKeyList({
             item={item}
             expanded={selectedKeyId === item.id}
             busy={busyAction === `key:${item.id}`}
-            onToggle={() => onSelect((current) => current === item.id ? "" : item.id)}
+            onToggle={() => onSelect((current) => (current === item.id ? "" : item.id))}
             onChangeStatus={onChangeStatus}
           />
         ))}

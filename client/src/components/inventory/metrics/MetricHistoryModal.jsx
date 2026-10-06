@@ -62,7 +62,13 @@ export default function MetricHistoryModal({ metric, deviceId, deviceName, token
 
   return createPortal(
     <div className="modal-backdrop" role="presentation">
-      <section ref={dialogRef} className="modal-panel metric-history-modal" role="dialog" aria-modal="true" aria-label={`Histórico de ${label}`}>
+      <section
+        ref={dialogRef}
+        className="modal-panel metric-history-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Histórico de ${label}`}
+      >
         <header>
           <div>
             <h2>Histórico de {label}</h2>

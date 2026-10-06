@@ -25,7 +25,11 @@ vi.mock("../../components/inventory/SegmentDragOverlay.jsx", () => ({
   )
 }));
 vi.mock("../../components/inventory/BulkAssetLabelPrint.jsx", () => ({
-  default: (props) => <div data-testid="bulk-print">{props.assets.length}|{Object.keys(props.aliases).join(",")}</div>
+  default: (props) => (
+    <div data-testid="bulk-print">
+      {props.assets.length}|{Object.keys(props.aliases).join(",")}
+    </div>
+  )
 }));
 
 function renderLayer({ drag = {}, selectedIds = [] } = {}) {

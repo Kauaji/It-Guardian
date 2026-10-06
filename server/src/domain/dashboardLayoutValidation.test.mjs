@@ -61,10 +61,7 @@ test("rejeita refreshIntervalSeconds abaixo de 30s", () => {
 });
 
 test("aceita refreshIntervalSeconds igual a 30s (limite inclusivo)", () => {
-  assert.equal(
-    validateDashboardLayout({ widgets: [widget({ refreshIntervalSeconds: 30 })] }, { knownWidgetTypes }),
-    true
-  );
+  assert.equal(validateDashboardLayout({ widgets: [widget({ refreshIntervalSeconds: 30 })] }, { knownWidgetTypes }), true);
 });
 
 test("rejeita mais de 30 widgets", () => {
@@ -78,17 +75,11 @@ test("aceita exatamente 30 widgets", () => {
 });
 
 test("rejeita ids duplicados", () => {
-  assert.throws(
-    () => validateDashboardLayout({ widgets: [widget(), widget()] }, { knownWidgetTypes }),
-    /duplicado/
-  );
+  assert.throws(() => validateDashboardLayout({ widgets: [widget(), widget()] }, { knownWidgetTypes }), /duplicado/);
 });
 
 test("rejeita widget sem id", () => {
-  assert.throws(
-    () => validateDashboardLayout({ widgets: [widget({ id: "" })] }, { knownWidgetTypes }),
-    /sem identificador/
-  );
+  assert.throws(() => validateDashboardLayout({ widgets: [widget({ id: "" })] }, { knownWidgetTypes }), /sem identificador/);
 });
 
 test("rejeita config que nao seja um objeto simples", () => {
@@ -96,25 +87,13 @@ test("rejeita config que nao seja um objeto simples", () => {
     () => validateDashboardLayout({ widgets: [widget({ config: "nao-e-objeto" })] }, { knownWidgetTypes }),
     /configuracao invalida/
   );
-  assert.throws(
-    () => validateDashboardLayout({ widgets: [widget({ config: ["array"] })] }, { knownWidgetTypes }),
-    /configuracao invalida/
-  );
+  assert.throws(() => validateDashboardLayout({ widgets: [widget({ config: ["array"] })] }, { knownWidgetTypes }), /configuracao invalida/);
 });
 
 test("aceita um titulo customizado dentro do limite, rejeita alem dele ou de tipo errado", () => {
-  assert.equal(
-    validateDashboardLayout({ widgets: [widget({ title: "Meu widget" })] }, { knownWidgetTypes }),
-    true
-  );
-  assert.throws(
-    () => validateDashboardLayout({ widgets: [widget({ title: "x".repeat(61) })] }, { knownWidgetTypes }),
-    /titulo invalido/
-  );
-  assert.throws(
-    () => validateDashboardLayout({ widgets: [widget({ title: 123 })] }, { knownWidgetTypes }),
-    /titulo invalido/
-  );
+  assert.equal(validateDashboardLayout({ widgets: [widget({ title: "Meu widget" })] }, { knownWidgetTypes }), true);
+  assert.throws(() => validateDashboardLayout({ widgets: [widget({ title: "x".repeat(61) })] }, { knownWidgetTypes }), /titulo invalido/);
+  assert.throws(() => validateDashboardLayout({ widgets: [widget({ title: 123 })] }, { knownWidgetTypes }), /titulo invalido/);
 });
 
 test("acumula multiplos erros numa unica mensagem", () => {

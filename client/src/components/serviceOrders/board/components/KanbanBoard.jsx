@@ -15,19 +15,21 @@ function KanbanColumn({ status, orders, dnd, assetById, priorityColors, business
         <span>{orders.length}</span>
       </header>
       <div className="service-order-column-list">
-        {orders.length ? orders.map((order) => (
-          <ServiceOrderCard
-            key={order.id}
-            order={order}
-            asset={assetById.get(order.assetId)}
-            priorityColor={priorityColors[order.priority] || defaultPriorityColors[order.priority]}
-            businessMode={businessMode}
-            dragging={dnd.draggingOrderId === order.id}
-            onDragStart={dnd.handleDragStart}
-            onDragEnd={dnd.handleDragEnd}
-            onOpen={onOpen}
-          />
-        )) : (
+        {orders.length ? (
+          orders.map((order) => (
+            <ServiceOrderCard
+              key={order.id}
+              order={order}
+              asset={assetById.get(order.assetId)}
+              priorityColor={priorityColors[order.priority] || defaultPriorityColors[order.priority]}
+              businessMode={businessMode}
+              dragging={dnd.draggingOrderId === order.id}
+              onDragStart={dnd.handleDragStart}
+              onDragEnd={dnd.handleDragEnd}
+              onOpen={onOpen}
+            />
+          ))
+        ) : (
           <p className="empty">Nenhuma OS neste status.</p>
         )}
       </div>

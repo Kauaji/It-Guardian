@@ -9,8 +9,22 @@ import {
 } from "./catalogView.js";
 
 const catalog = [
-  { id: "furniture", label: "Móveis", items: [{ id: "desk", label: "Mesa" }, { id: "chair", label: "Cadeira" }] },
-  { id: "it", label: "TI", items: [{ id: "pc", label: "Computador", tags: ["desktop"] }, { id: "rack", label: "Rack" }] }
+  {
+    id: "furniture",
+    label: "Móveis",
+    items: [
+      { id: "desk", label: "Mesa" },
+      { id: "chair", label: "Cadeira" }
+    ]
+  },
+  {
+    id: "it",
+    label: "TI",
+    items: [
+      { id: "pc", label: "Computador", tags: ["desktop"] },
+      { id: "rack", label: "Rack" }
+    ]
+  }
 ];
 
 describe("getCatalogSections", () => {
@@ -33,7 +47,12 @@ describe("getVisibleCatalogItems", () => {
   });
 
   it("busca em todo o catalogo sem diferenca de acento ou caixa", () => {
-    const { items, normalizedQuery } = getVisibleCatalogItems({ catalog, activeSection: "furniture", query: "  COMPUTADOR ", favoriteIds: [] });
+    const { items, normalizedQuery } = getVisibleCatalogItems({
+      catalog,
+      activeSection: "furniture",
+      query: "  COMPUTADOR ",
+      favoriteIds: []
+    });
     expect(normalizedQuery).toBe("computador");
     expect(items.map((item) => item.id)).toEqual(["pc"]);
   });
@@ -60,7 +79,11 @@ describe("favoritos", () => {
     expect(readStoredFavorites(() => storage)).toEqual(["a", "b"]);
     expect(readStoredFavorites(() => ({ getItem: () => null }))).toEqual([]);
     expect(readStoredFavorites(() => ({ getItem: () => "{corrompido" }))).toEqual([]);
-    expect(readStoredFavorites(() => { throw new Error("bloqueado"); })).toEqual([]);
+    expect(
+      readStoredFavorites(() => {
+        throw new Error("bloqueado");
+      })
+    ).toEqual([]);
   });
 
   it("alterna um favorito", () => {

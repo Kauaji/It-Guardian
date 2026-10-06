@@ -7,11 +7,7 @@ export function normalizeNumber(value, fallback) {
 
 export function normalizePoint(point) {
   if (!point) return null;
-  return new THREE.Vector3(
-    normalizeNumber(point.x, 0),
-    normalizeNumber(point.y, 0.12),
-    normalizeNumber(point.z, 0)
-  );
+  return new THREE.Vector3(normalizeNumber(point.x, 0), normalizeNumber(point.y, 0.12), normalizeNumber(point.z, 0));
 }
 
 export function getConnectionLabel(connection) {

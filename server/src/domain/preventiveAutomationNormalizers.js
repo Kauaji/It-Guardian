@@ -51,13 +51,7 @@ export function normalizeScheduleSlot(value = new Date()) {
  * @returns {string[]} Ids unicos, aparados (120 caracteres) e nao vazios.
  */
 export function normalizeIdList(value = []) {
-  return [
-    ...new Set(
-      (Array.isArray(value) ? value : [])
-        .map((item) => trimString(item, 120))
-        .filter(Boolean)
-    )
-  ];
+  return [...new Set((Array.isArray(value) ? value : []).map((item) => trimString(item, 120)).filter(Boolean))];
 }
 
 export const normalizeScriptIds = normalizeIdList;
@@ -68,7 +62,9 @@ export const normalizeAssetIds = normalizeIdList;
  * @param {string} [fallback]
  */
 export function normalizeScopeType(value, fallback = "all") {
-  const normalized = String(value || "").trim().toLowerCase();
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase();
   return scopeTypes.has(normalized) ? normalized : fallback;
 }
 
@@ -77,7 +73,9 @@ export function normalizeScopeType(value, fallback = "all") {
  * @param {string} [fallback]
  */
 export function normalizeRunStatus(value, fallback = "scheduled") {
-  const normalized = String(value || "").trim().toLowerCase();
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase();
   return runStatuses.has(normalized) ? normalized : fallback;
 }
 

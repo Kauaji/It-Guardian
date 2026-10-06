@@ -1,16 +1,4 @@
-import {
-  Camera,
-  Computer,
-  HardDrive,
-  Laptop,
-  Network,
-  Printer,
-  RadioTower,
-  Router,
-  Server,
-  Wifi,
-  Box
-} from "lucide-react";
+import { Camera, Computer, HardDrive, Laptop, Network, Printer, RadioTower, Router, Server, Wifi, Box } from "lucide-react";
 
 const iconMap = {
   server: Server,

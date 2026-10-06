@@ -10,10 +10,7 @@ function LayoutField({ settings, updateSetting }) {
     <div className="service-order-number-settings service-order-general-settings">
       <label>
         Modo de exibição
-        <select
-          value={settings.boardLayout}
-          onChange={(event) => updateSetting("boardLayout", event.target.value)}
-        >
+        <select value={settings.boardLayout} onChange={(event) => updateSetting("boardLayout", event.target.value)}>
           <option value="horizontal">Lista horizontal</option>
           <option value="vertical">Lista vertical</option>
         </select>
@@ -32,7 +29,12 @@ export default function GeneralSettingsPanel({ editor, activeSection, onToggleSe
           <strong>Geral</strong>
           <span>Regras principais da Ordem de Serviço.</span>
         </div>
-        <button type="button" className="primary-action compact-action" onClick={editor.saveServiceOrderSettings} disabled={editor.settingsSaving}>
+        <button
+          type="button"
+          className="primary-action compact-action"
+          onClick={editor.saveServiceOrderSettings}
+          disabled={editor.settingsSaving}
+        >
           {editor.settingsSaving ? "Salvando..." : "Salvar"}
         </button>
       </header>
@@ -74,7 +76,11 @@ export default function GeneralSettingsPanel({ editor, activeSection, onToggleSe
           activeSection={activeSection}
           onToggle={onToggleSection}
         >
-          <SlaFields settings={settings} updateField={editor.updateServiceOrderSettingsField} updateSetting={editor.updateServiceOrderSetting} />
+          <SlaFields
+            settings={settings}
+            updateField={editor.updateServiceOrderSettingsField}
+            updateSetting={editor.updateServiceOrderSetting}
+          />
         </SettingsAccordionSection>
 
         <SettingsAccordionSection

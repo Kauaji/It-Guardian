@@ -67,7 +67,10 @@ test("usuario sem escopo delimitado so acessa planos que criou, mas ve ativos", 
   assert.equal(canAccessAutomationPlan({ createdBy: "outro" }, user), false);
   assert.equal(canAccessAutomationPlan(null, user), false);
   assert.equal(canAccessAutomationAsset({ segmentId: "qualquer" }, user), true);
-  assert.deepEqual(filterAutomationAssetsByScope([{ id: "a" }, { id: "b" }], user).map((asset) => asset.id), ["a", "b"]);
+  assert.deepEqual(
+    filterAutomationAssetsByScope([{ id: "a" }, { id: "b" }], user).map((asset) => asset.id),
+    ["a", "b"]
+  );
 });
 
 test("plano e acessivel quando o escopo do usuario cobre segmento, grupo, ambiente, cliente ou setor", () => {
@@ -118,6 +121,9 @@ test("ativo e acessivel somente dentro do escopo delimitado do usuario", () => {
     { id: "ok", segmentId: "seg-1" },
     { id: "fora", segmentId: "seg-2" }
   ];
-  assert.deepEqual(filterAutomationAssetsByScope(assets, user).map((asset) => asset.id), ["ok"]);
+  assert.deepEqual(
+    filterAutomationAssetsByScope(assets, user).map((asset) => asset.id),
+    ["ok"]
+  );
   assert.deepEqual(filterAutomationAssetsByScope(undefined, user), []);
 });

@@ -47,11 +47,7 @@ export default function AutoPriorityFields({ editor, showPriorityColorConfig, on
           />
         </label>
       ))}
-      <button
-        type="button"
-        className="secondary-action compact-action service-order-priority-color-toggle"
-        onClick={onToggleColors}
-      >
+      <button type="button" className="secondary-action compact-action service-order-priority-color-toggle" onClick={onToggleColors}>
         <Palette size={16} />
         Configurar cores das prioridades
       </button>

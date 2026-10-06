@@ -24,9 +24,7 @@ export default function BoardModals({
   handlers
 }) {
   const { selectedOrder, formOpen, setFormOpen, setSelectedOrder } = panels;
-  const selectedOrderCurrent = selectedOrder
-    ? serviceOrders.find((order) => order.id === selectedOrder.id) || selectedOrder
-    : null;
+  const selectedOrderCurrent = selectedOrder ? serviceOrders.find((order) => order.id === selectedOrder.id) || selectedOrder : null;
 
   return (
     <>

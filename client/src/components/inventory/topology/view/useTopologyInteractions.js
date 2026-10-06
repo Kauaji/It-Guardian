@@ -2,7 +2,14 @@ import { useCallback } from "react";
 
 // Interacoes do canvas: ativar no, abrir cluster, criar conexao e limpar selecao.
 export default function useTopologyInteractions({
-  nav, selection, linkCreation, visibleNodes, clusterSummaryByRefId, canEditMap, linkDraftActive, creatingLink
+  nav,
+  selection,
+  linkCreation,
+  visibleNodes,
+  clusterSummaryByRefId,
+  canEditMap,
+  linkDraftActive,
+  creatingLink
 }) {
   const { goToGroupLevel, goToSegmentLevel } = nav;
   const { setSelectedNodeId, setSelectedLinkId, setEditMode } = selection;

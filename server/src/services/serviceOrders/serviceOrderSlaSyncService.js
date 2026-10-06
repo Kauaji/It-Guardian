@@ -18,9 +18,7 @@ async function persistAutoPriority(row, settings) {
   // Se a OS ja tinha um prazo de SLA calculado, recalcula com a prioridade
   // nova (mesmo inicio - created_at) - sem isso, uma OS escalada de baixa
   // pra critica manteria um prazo de 72h calculado quando ainda era baixa.
-  const nextSlaDueAt = row.sla_due_at
-    ? computeServiceOrderSlaDueAt(nextPriority, settings, row.created_at)
-    : row.sla_due_at;
+  const nextSlaDueAt = row.sla_due_at ? computeServiceOrderSlaDueAt(nextPriority, settings, row.created_at) : row.sla_due_at;
 
   const updated = await updateAutoPriorityRow(row.id, nextPriority, nextSlaDueAt);
 

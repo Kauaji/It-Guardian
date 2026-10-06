@@ -6,7 +6,20 @@ describe("buildReportSlices", () => {
     const slices = buildReportSlices(null);
     expect(slices.overview).toBeNull();
     expect(slices.business).toBeNull();
-    for (const key of ["byStatus", "bySeverity", "soByStatus", "soByPriority", "soTrend", "alertsTrend", "mostProblematic", "notSeenRecently", "topRecurringAssets", "oldestOpen", "byTechnician", "byEnvironment"]) {
+    for (const key of [
+      "byStatus",
+      "bySeverity",
+      "soByStatus",
+      "soByPriority",
+      "soTrend",
+      "alertsTrend",
+      "mostProblematic",
+      "notSeenRecently",
+      "topRecurringAssets",
+      "oldestOpen",
+      "byTechnician",
+      "byEnvironment"
+    ]) {
       expect(slices[key]).toEqual([]);
     }
   });
@@ -22,9 +35,17 @@ describe("buildReportSlices", () => {
     const slices = buildReportSlices(report);
     expect(slices).toMatchObject({
       overview: { openServiceOrders: 1 },
-      byStatus: [1], mostProblematic: [2], notSeenRecently: [3],
-      bySeverity: [4], alertsTrend: [5], topRecurringAssets: [6],
-      soByStatus: [7], soByPriority: [8], soTrend: [9], oldestOpen: [10], byTechnician: [11],
+      byStatus: [1],
+      mostProblematic: [2],
+      notSeenRecently: [3],
+      bySeverity: [4],
+      alertsTrend: [5],
+      topRecurringAssets: [6],
+      soByStatus: [7],
+      soByPriority: [8],
+      soTrend: [9],
+      oldestOpen: [10],
+      byTechnician: [11],
       byEnvironment: [12]
     });
   });
@@ -40,7 +61,11 @@ describe("buildKpiItems", () => {
 
   it("com overview usa os valores e libera OS vencidas quando disponivel", () => {
     const items = buildKpiItems({
-      openServiceOrders: 4, overdueServiceOrdersAvailable: true, overdueServiceOrders: 1, inMaintenanceAssets: 2, resolvedAlertsToday: 9
+      openServiceOrders: 4,
+      overdueServiceOrdersAvailable: true,
+      overdueServiceOrders: 1,
+      inMaintenanceAssets: 2,
+      resolvedAlertsToday: 9
     });
     expect(items.map((i) => i.value)).toEqual([4, 1, 2, 9]);
     expect(items[1].tone).toBe("");

@@ -29,23 +29,23 @@ function GeneralDetailGrid({ machine, alias, hardware, manualAsset, agent, isAge
       <DetailItem label="IP" value={machine.ip} />
       <DetailItem label="Arquitetura" value={hardware.architecture} />
       <DetailItem label="Patrimônio" value={hardware.assetTag} />
-      <DetailItem label={isManualAsset ? "Localização" : "Usuário logado"} value={isManualAsset ? manualAsset?.location : hardware.loggedUser} />
-      <DetailItem label={isManualAsset ? "Última verificação" : "Último inventário"} value={formatDate(isManualAsset ? machine.lastPingAt : hardware.lastInventoryAt)} />
-      <DetailItem label={isManualAsset ? "MAC Address" : "Uptime"} value={isManualAsset ? hardware.macAddress : `${machine.uptimeHours} h`} />
+      <DetailItem
+        label={isManualAsset ? "Localização" : "Usuário logado"}
+        value={isManualAsset ? manualAsset?.location : hardware.loggedUser}
+      />
+      <DetailItem
+        label={isManualAsset ? "Última verificação" : "Último inventário"}
+        value={formatDate(isManualAsset ? machine.lastPingAt : hardware.lastInventoryAt)}
+      />
+      <DetailItem
+        label={isManualAsset ? "MAC Address" : "Uptime"}
+        value={isManualAsset ? hardware.macAddress : `${machine.uptimeHours} h`}
+      />
       {isAgentAsset && <AgentDetailItems agent={agent} />}
       {sourceCollections.map((collection) => (
-        <DetailItem
-          key={collection.source}
-          label={`Última coleta ${collection.label}`}
-          value={formatDate(collection.collectedAt)}
-        />
+        <DetailItem key={collection.source} label={`Última coleta ${collection.label}`} value={formatDate(collection.collectedAt)} />
       ))}
-      {Boolean(machine.sourceConflicts?.length) && (
-        <DetailItem
-          label="Correlação entre fontes"
-          value="Conflito pendente de revisão"
-        />
-      )}
+      {Boolean(machine.sourceConflicts?.length) && <DetailItem label="Correlação entre fontes" value="Conflito pendente de revisão" />}
     </div>
   );
 }
@@ -70,7 +70,9 @@ export default function MachineGeneralTab({ model, alias, onAliasSave, onChangeD
           Tipo do aparelho
           <select value={machine.assetType || "other"} onChange={(event) => onChangeDeviceType(event.target.value)}>
             {assetTypeOptions.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
             ))}
           </select>
         </label>
@@ -96,7 +98,9 @@ export default function MachineGeneralTab({ model, alias, onAliasSave, onChangeD
       {latestChange && (
         <div className="latest-change">
           <strong>Última alteração detectada</strong>
-          <span>{latestChange.change || latestChange.message} em {formatDate(latestChange.detectedAt || latestChange.createdAt)}</span>
+          <span>
+            {latestChange.change || latestChange.message} em {formatDate(latestChange.detectedAt || latestChange.createdAt)}
+          </span>
         </div>
       )}
 

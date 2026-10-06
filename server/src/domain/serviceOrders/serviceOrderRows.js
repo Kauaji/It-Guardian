@@ -99,16 +99,7 @@ export function resolveClosedAt({ nextStatus, finalStatus, current }) {
  * @param {ServiceOrderMoney} input.money
  * @param {string[]} input.assignedTechnicianNames
  */
-export function buildUpdatedServiceOrderRow({
-  payload,
-  current,
-  nextStatus,
-  closedAt,
-  sector,
-  service,
-  money,
-  assignedTechnicianNames
-}) {
+export function buildUpdatedServiceOrderRow({ payload, current, nextStatus, closedAt, sector, service, money, assignedTechnicianNames }) {
   return {
     title: payload.title ?? current.title,
     description: payload.description ?? current.description,

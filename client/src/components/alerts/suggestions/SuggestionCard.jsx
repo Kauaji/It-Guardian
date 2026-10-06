@@ -116,10 +116,7 @@ export default function SuggestionCard({ suggestion, index, priorityColor, scrip
       title={formatDisplayText(suggestion.priorityReason || suggestionTitle, suggestionTitle)}
     >
       {occurrenceCount > 1 && (
-        <span
-          className="suggestion-recurrence-indicator"
-          title={`Este aviso ocorreu ${occurrenceCount} vezes no período configurado.`}
-        >
+        <span className="suggestion-recurrence-indicator" title={`Este aviso ocorreu ${occurrenceCount} vezes no período configurado.`}>
           <RefreshCw size={12} />
           {occurrenceCount}x
         </span>
@@ -128,7 +125,9 @@ export default function SuggestionCard({ suggestion, index, priorityColor, scrip
       <span>{formatSuggestionCode(suggestion, index)}</span>
       <strong title={suggestionTitle}>{suggestionTitle}</strong>
       <small title={machineLabel}>{machineLabel}</small>
-      <small className="suggestion-card-location" title={locationLabel}>{locationLabel}</small>
+      <small className="suggestion-card-location" title={locationLabel}>
+        {locationLabel}
+      </small>
       <div className="suggestion-card-badges">
         <em title={priorityLabel}>{priorityLabel}</em>
         <em title="Preventiva">Preventiva</em>

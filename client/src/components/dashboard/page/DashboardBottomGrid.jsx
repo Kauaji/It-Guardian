@@ -33,7 +33,10 @@ function HistoryPanel({ history }) {
           <div key={alert.id}>
             <span className={`dot ${alert.severity}`} />
             <strong>{formatDisplayText(alert.hostName || alert.assetName, "Máquina não vinculada")}</strong>
-            <span>{formatDisplayText(alert.title, "Aviso")}{alert.acknowledgement ? " - resolvido" : ""}</span>
+            <span>
+              {formatDisplayText(alert.title, "Aviso")}
+              {alert.acknowledgement ? " - resolvido" : ""}
+            </span>
           </div>
         ))}
       </div>
@@ -44,11 +47,7 @@ function HistoryPanel({ history }) {
 export default function DashboardBottomGrid({ selectedDevice, history }) {
   return (
     <section className="bottom-grid">
-      <DeviceDetails
-        device={selectedDevice}
-        statusClass={statusClass}
-        metricClass={metricClass}
-      />
+      <DeviceDetails device={selectedDevice} statusClass={statusClass} metricClass={metricClass} />
       <HistoryPanel history={history} />
     </section>
   );

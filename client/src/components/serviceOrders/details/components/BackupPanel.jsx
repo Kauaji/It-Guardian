@@ -9,14 +9,11 @@ function BackupContent({ asset, backupAsset, availableBackupDevices, saving, ser
       <article className="service-order-linked-backup">
         <div>
           <strong>{backupAsset.name}</strong>
-          <span>{backupAsset.ip || "Sem IP"} - {assetTypeLabel(backupAsset.assetType)} - {backupAsset.statusLabel || "Sem status"}</span>
+          <span>
+            {backupAsset.ip || "Sem IP"} - {assetTypeLabel(backupAsset.assetType)} - {backupAsset.statusLabel || "Sem status"}
+          </span>
         </div>
-        <button
-          type="button"
-          className="ghost-action compact-action"
-          disabled={saving}
-          onClick={() => onReleaseBackup?.(serviceOrder)}
-        >
+        <button type="button" className="ghost-action compact-action" disabled={saving} onClick={() => onReleaseBackup?.(serviceOrder)}>
           <RotateCcw size={15} />
           Devolver Backup
         </button>
@@ -29,14 +26,11 @@ function BackupContent({ asset, backupAsset, availableBackupDevices, saving, ser
   return (
     <div className="service-order-backup-card-list">
       {availableBackupDevices.map((device) => (
-        <button
-          key={device.id}
-          type="button"
-          disabled={saving}
-          onClick={() => onSelectBackup?.(serviceOrder, device)}
-        >
+        <button key={device.id} type="button" disabled={saving} onClick={() => onSelectBackup?.(serviceOrder, device)}>
           <strong>{device.name}</strong>
-          <span>{device.ip || "Sem IP"} - {assetTypeLabel(device.assetType)} - {device.statusLabel || "Sem status"}</span>
+          <span>
+            {device.ip || "Sem IP"} - {assetTypeLabel(device.assetType)} - {device.statusLabel || "Sem status"}
+          </span>
         </button>
       ))}
     </div>

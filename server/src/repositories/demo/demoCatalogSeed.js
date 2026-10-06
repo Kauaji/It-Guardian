@@ -1,11 +1,5 @@
 import { query } from "../../database.js";
-import {
-  demoClients,
-  demoProblemTypes,
-  demoProducts,
-  demoServices,
-  demoTechnicians
-} from "./demoCatalogData.js";
+import { demoClients, demoProblemTypes, demoProducts, demoServices, demoTechnicians } from "./demoCatalogData.js";
 
 const technicianClientAccess = {
   "demo-tech-ana": ["demo-client-alfa", "demo-client-beta"],
@@ -42,10 +36,7 @@ export async function seedDemoCatalog() {
   }
 
   for (const [technicianId, clientIds] of Object.entries(technicianClientAccess)) {
-    await query(
-      "UPDATE technicians SET allowed_client_ids = $2::jsonb WHERE id = $1",
-      [technicianId, JSON.stringify(clientIds)]
-    );
+    await query("UPDATE technicians SET allowed_client_ids = $2::jsonb WHERE id = $1", [technicianId, JSON.stringify(clientIds)]);
   }
 
   for (const product of demoProducts) {

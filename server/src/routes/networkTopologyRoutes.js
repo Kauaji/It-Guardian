@@ -30,40 +30,16 @@ router.post("/", requirePermission("inventory.topology.manage"), createNetworkTo
 router.patch("/:id", requirePermission("inventory.topology.manage"), updateNetworkTopologyMapController);
 router.delete("/:id", requirePermission("inventory.topology.manage"), deleteNetworkTopologyMapController);
 router.post("/:id/nodes", requirePermission("inventory.topology.manage"), createNetworkTopologyNodeController);
-router.patch(
-  "/:id/nodes/positions",
-  requirePermission("inventory.topology.manage"),
-  saveNetworkTopologyNodePositionsController
-);
-router.post(
-  "/:id/auto-layout",
-  requirePermission("inventory.topology.manage"),
-  generateNetworkTopologyAutoLayoutController
-);
+router.patch("/:id/nodes/positions", requirePermission("inventory.topology.manage"), saveNetworkTopologyNodePositionsController);
+router.post("/:id/auto-layout", requirePermission("inventory.topology.manage"), generateNetworkTopologyAutoLayoutController);
 router.post("/:id/links", requirePermission("inventory.topology.link_assets"), createNetworkTopologyLinkController);
 
 networkTopologyNodeRoutes.use(requireAuth);
-networkTopologyNodeRoutes.patch(
-  "/:nodeId",
-  requirePermission("inventory.topology.manage"),
-  updateNetworkTopologyNodeController
-);
-networkTopologyNodeRoutes.delete(
-  "/:nodeId",
-  requirePermission("inventory.topology.manage"),
-  deleteNetworkTopologyNodeController
-);
+networkTopologyNodeRoutes.patch("/:nodeId", requirePermission("inventory.topology.manage"), updateNetworkTopologyNodeController);
+networkTopologyNodeRoutes.delete("/:nodeId", requirePermission("inventory.topology.manage"), deleteNetworkTopologyNodeController);
 
 networkTopologyLinkRoutes.use(requireAuth);
-networkTopologyLinkRoutes.patch(
-  "/:linkId",
-  requirePermission("inventory.topology.link_assets"),
-  updateNetworkTopologyLinkController
-);
-networkTopologyLinkRoutes.delete(
-  "/:linkId",
-  requirePermission("inventory.topology.link_assets"),
-  deleteNetworkTopologyLinkController
-);
+networkTopologyLinkRoutes.patch("/:linkId", requirePermission("inventory.topology.link_assets"), updateNetworkTopologyLinkController);
+networkTopologyLinkRoutes.delete("/:linkId", requirePermission("inventory.topology.link_assets"), deleteNetworkTopologyLinkController);
 
 export default router;

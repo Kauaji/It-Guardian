@@ -33,7 +33,7 @@ export function widgetGridStyle(widget) {
  * para decidir onde encaixar cada um.
  */
 export function sortWidgetsByPosition(widgets) {
-  return [...(widgets || [])].sort((a, b) => (a.y - b.y) || (a.x - b.x));
+  return [...(widgets || [])].sort((a, b) => a.y - b.y || a.x - b.x);
 }
 
 /**

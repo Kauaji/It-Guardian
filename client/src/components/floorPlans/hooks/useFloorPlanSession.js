@@ -1,12 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import {
-  createFloorPlan,
-  deleteFloorPlan,
-  duplicateFloorPlan,
-  fetchFloorPlan,
-  fetchFloorPlans,
-  updateFloorPlan
-} from "../../../api.js";
+import { createFloorPlan, deleteFloorPlan, duplicateFloorPlan, fetchFloorPlan, fetchFloorPlans, updateFloorPlan } from "../../../api.js";
 import { DEFAULT_PLAN_SIZE, normalizeResponsePlan } from "../utils/editorGeometry.js";
 import { PLANS_LIST_PATH, buildPlanPath, parsePlanRoute, resolvePlanToOpen } from "../utils/planRoutes.js";
 
@@ -81,23 +74,26 @@ export function useFloorPlanSession({ token, activeTab, permissions, notify, doc
 
   useFloorPlanUrlSync({ view, editor, isEditing });
 
-  const openPlan = useCallback(async (id, editing = false) => {
-    setPlansLoading(true);
-    setError("");
-    try {
-      const loaded = normalizeResponsePlan(await fetchFloorPlan(token, id));
-      loadEditor(loaded);
-      resetTracking();
-      setSelected(null);
-      setIsEditing(editing);
-      setView("editor");
-    } catch (requestError) {
-      setError(requestError.message);
-      notify?.(requestError.message, "danger");
-    } finally {
-      setPlansLoading(false);
-    }
-  }, [notify, token]);
+  const openPlan = useCallback(
+    async (id, editing = false) => {
+      setPlansLoading(true);
+      setError("");
+      try {
+        const loaded = normalizeResponsePlan(await fetchFloorPlan(token, id));
+        loadEditor(loaded);
+        resetTracking();
+        setSelected(null);
+        setIsEditing(editing);
+        setView("editor");
+      } catch (requestError) {
+        setError(requestError.message);
+        notify?.(requestError.message, "danger");
+      } finally {
+        setPlansLoading(false);
+      }
+    },
+    [notify, token]
+  );
 
   useEffect(() => {
     if (!plansLoading && view === "list" && plans.length > 0) {
@@ -133,35 +129,41 @@ export function useFloorPlanSession({ token, activeTab, permissions, notify, doc
     }
   }, [activeTab?.id, activeTab?.name, notify, permissions.create, token]);
 
-  const duplicatePlan = useCallback(async (id) => {
-    try {
-      const duplicated = normalizeResponsePlan(await duplicateFloorPlan(token, id));
-      setPlans((current) => [duplicated.plan, ...current]);
-      notify?.("Planta duplicada.", "ok");
-    } catch (requestError) {
-      notify?.(requestError.message, "danger");
-    }
-  }, [notify, token]);
-
-  const removePlan = useCallback(async (plan) => {
-    if (!window.confirm(`Excluir a planta "${plan.name}"? Esta ação não pode ser desfeita.`)) return;
-    try {
-      await deleteFloorPlan(token, plan.id);
-      setPlans((current) => current.filter((entry) => entry.id !== plan.id));
-      if (editor?.plan?.id === plan.id) {
-        setEditor(null);
-        setSelected(null);
-        setSelectedObjectIds([]);
-        setPlacement(null);
-        setPaintDraft(null);
-        setZoomMode(false);
-        setView("list");
+  const duplicatePlan = useCallback(
+    async (id) => {
+      try {
+        const duplicated = normalizeResponsePlan(await duplicateFloorPlan(token, id));
+        setPlans((current) => [duplicated.plan, ...current]);
+        notify?.("Planta duplicada.", "ok");
+      } catch (requestError) {
+        notify?.(requestError.message, "danger");
       }
-      notify?.("Planta removida.", "ok");
-    } catch (requestError) {
-      notify?.(requestError.message, "danger");
-    }
-  }, [editor?.plan?.id, notify, token]);
+    },
+    [notify, token]
+  );
+
+  const removePlan = useCallback(
+    async (plan) => {
+      if (!window.confirm(`Excluir a planta "${plan.name}"? Esta ação não pode ser desfeita.`)) return;
+      try {
+        await deleteFloorPlan(token, plan.id);
+        setPlans((current) => current.filter((entry) => entry.id !== plan.id));
+        if (editor?.plan?.id === plan.id) {
+          setEditor(null);
+          setSelected(null);
+          setSelectedObjectIds([]);
+          setPlacement(null);
+          setPaintDraft(null);
+          setZoomMode(false);
+          setView("list");
+        }
+        notify?.("Planta removida.", "ok");
+      } catch (requestError) {
+        notify?.(requestError.message, "danger");
+      }
+    },
+    [editor?.plan?.id, notify, token]
+  );
 
   /** Reflete na lista os dados atualizados de uma planta recem-salva. */
   const applySavedPlan = useCallback((updated) => {

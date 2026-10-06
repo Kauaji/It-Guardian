@@ -21,20 +21,24 @@ function createScheduledSync({ source, service, sync, intervalMs, logger }) {
     running = true;
     try {
       const result = await sync();
-      logger.info(JSON.stringify({
-        level: "info",
-        event: "integration_sync",
-        source,
-        importedAssets: result.state?.importedAssets || 0,
-        importedAlerts: result.state?.importedAlerts || 0
-      }));
+      logger.info(
+        JSON.stringify({
+          level: "info",
+          event: "integration_sync",
+          source,
+          importedAssets: result.state?.importedAssets || 0,
+          importedAlerts: result.state?.importedAlerts || 0
+        })
+      );
     } catch (error) {
-      logger.error(JSON.stringify({
-        level: "error",
-        event: "integration_sync_failed",
-        source,
-        message: error.message
-      }));
+      logger.error(
+        JSON.stringify({
+          level: "error",
+          event: "integration_sync_failed",
+          source,
+          message: error.message
+        })
+      );
     } finally {
       running = false;
     }
@@ -48,11 +52,13 @@ function createScheduledSync({ source, service, sync, intervalMs, logger }) {
 
 export function startIntegrationSyncScheduler({ logger = console } = {}) {
   if (isVercel) {
-    logger.info(JSON.stringify({
-      level: "info",
-      event: "integration_scheduler_skipped",
-      reason: "vercel_cannot_reach_lan_integrations"
-    }));
+    logger.info(
+      JSON.stringify({
+        level: "info",
+        event: "integration_scheduler_skipped",
+        reason: "vercel_cannot_reach_lan_integrations"
+      })
+    );
     return () => {};
   }
 

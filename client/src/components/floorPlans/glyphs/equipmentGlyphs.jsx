@@ -22,7 +22,9 @@ export function laptopGlyph({ width, height, cx, inset }) {
   return (
     <>
       <Rect x={inset} y={inset} width={width - inset * 2} height={height * 0.54} rx={3} />
-      <path d={`M ${inset - 3} ${height * 0.72} L ${width - inset + 3} ${height * 0.72} L ${width - inset - 2} ${height - inset} L ${inset + 2} ${height - inset} Z`} />
+      <path
+        d={`M ${inset - 3} ${height * 0.72} L ${width - inset + 3} ${height * 0.72} L ${width - inset - 2} ${height - inset} L ${inset + 2} ${height - inset} Z`}
+      />
       <line x1={cx - 5} y1={height * 0.82} x2={cx + 5} y2={height * 0.82} />
     </>
   );
@@ -48,7 +50,9 @@ export function cabinetGlyph({ type, width, height, inset, metadata }) {
   return (
     <>
       <Rect x={inset} y={inset} width={width - inset * 2} height={height - inset * 2} rx={3} />
-      {[0.3, 0.48, 0.66].map((ratio) => <line key={ratio} x1={inset + 5} y1={height * ratio} x2={width - inset - 5} y2={height * ratio} />)}
+      {[0.3, 0.48, 0.66].map((ratio) => (
+        <line key={ratio} x1={inset + 5} y1={height * ratio} x2={width - inset - 5} y2={height * ratio} />
+      ))}
       <circle cx={width - inset - 7} cy={height * 0.22} r="2" />
       {rackWithSwitch ? (
         <g className="floor-plan-rack-switch">
@@ -67,14 +71,27 @@ export function networkBoxGlyph({ type, width, height, cy, inset }) {
   return (
     <>
       <Rect x={inset} y={height * 0.28} width={width - inset * 2} height={height * 0.44} rx={4} />
-      {[0.26, 0.38, 0.5, 0.62].map((ratio) => <circle key={ratio} cx={width * ratio} cy={cy} r="1.8" />)}
-      {type === "router" ? <><line x1={inset + 4} y1={height * 0.28} x2={inset} y2={inset} /><line x1={width - inset - 4} y1={height * 0.28} x2={width - inset} y2={inset} /></> : null}
+      {[0.26, 0.38, 0.5, 0.62].map((ratio) => (
+        <circle key={ratio} cx={width * ratio} cy={cy} r="1.8" />
+      ))}
+      {type === "router" ? (
+        <>
+          <line x1={inset + 4} y1={height * 0.28} x2={inset} y2={inset} />
+          <line x1={width - inset - 4} y1={height * 0.28} x2={width - inset} y2={inset} />
+        </>
+      ) : null}
     </>
   );
 }
 
 export function accessPointGlyph({ width, height, cx, cy }) {
-  return <><circle cx={cx} cy={cy} r={Math.min(width, height) * 0.3} /><circle cx={cx} cy={cy} r="3" /><path d={`M ${cx - 12} ${cy - 1} Q ${cx} ${cy - 14} ${cx + 12} ${cy - 1}`} /></>;
+  return (
+    <>
+      <circle cx={cx} cy={cy} r={Math.min(width, height) * 0.3} />
+      <circle cx={cx} cy={cy} r="3" />
+      <path d={`M ${cx - 12} ${cy - 1} Q ${cx} ${cy - 14} ${cx + 12} ${cy - 1}`} />
+    </>
+  );
 }
 
 export function tvGlyph({ width, height, cx }) {
@@ -83,14 +100,7 @@ export function tvGlyph({ width, height, cx }) {
   const screenY = Math.max(3, (height - screenDepth) / 2 - 2);
   return (
     <>
-      <Rect
-        x={screenInsetX}
-        y={screenY}
-        width={width - screenInsetX * 2}
-        height={screenDepth}
-        rx={2}
-        className="floor-plan-tv-bezel"
-      />
+      <Rect x={screenInsetX} y={screenY} width={width - screenInsetX * 2} height={screenDepth} rx={2} className="floor-plan-tv-bezel" />
       <Rect
         x={screenInsetX + 3}
         y={screenY + 3}
@@ -113,19 +123,39 @@ export function audioGlyph({ type, width, height, cx, cy, inset }) {
     <>
       <Rect x={inset} y={inset} width={width - inset * 2} height={height - inset * 2} rx={3} />
       {type === "speaker" ? (
-        <><circle cx={cx} cy={cy - 6} r={Math.min(width, height) * 0.12} /><circle cx={cx} cy={cy + 7} r={Math.min(width, height) * 0.2} /></>
+        <>
+          <circle cx={cx} cy={cy - 6} r={Math.min(width, height) * 0.12} />
+          <circle cx={cx} cy={cy + 7} r={Math.min(width, height) * 0.2} />
+        </>
       ) : (
-        <><line x1={inset + 6} y1={cy - 4} x2={width - inset - 6} y2={cy - 4} /><circle cx={width - inset - 10} cy={cy + 7} r="4" /><line x1={inset + 6} y1={cy + 7} x2={cx} y2={cy + 7} /></>
+        <>
+          <line x1={inset + 6} y1={cy - 4} x2={width - inset - 6} y2={cy - 4} />
+          <circle cx={width - inset - 10} cy={cy + 7} r="4" />
+          <line x1={inset + 6} y1={cy + 7} x2={cx} y2={cy + 7} />
+        </>
       )}
     </>
   );
 }
 
 export function cameraGlyph({ width, cy, inset }) {
-  return <><path d={`M ${inset} ${cy - 8} H ${width * 0.7} L ${width - inset} ${cy} L ${width * 0.7} ${cy + 8} H ${inset} Z`} /><circle cx={width * 0.68} cy={cy} r="4" /></>;
+  return (
+    <>
+      <path d={`M ${inset} ${cy - 8} H ${width * 0.7} L ${width - inset} ${cy} L ${width * 0.7} ${cy + 8} H ${inset} Z`} />
+      <circle cx={width * 0.68} cy={cy} r="4" />
+    </>
+  );
 }
 
 /** Estabilizadores, reguas de tomadas e extensoes. */
 export function powerGlyph({ width, height, cy, inset }) {
-  return <><Rect x={inset} y={height * 0.28} width={width - inset * 2} height={height * 0.44} rx={5} />{[0.3, 0.5, 0.7].map((ratio) => <circle key={ratio} cx={width * ratio} cy={cy} r="3" />)}<path d={`M ${width - inset} ${cy} Q ${width + 7} ${cy} ${width - 2} ${height - 3}`} /></>;
+  return (
+    <>
+      <Rect x={inset} y={height * 0.28} width={width - inset * 2} height={height * 0.44} rx={5} />
+      {[0.3, 0.5, 0.7].map((ratio) => (
+        <circle key={ratio} cx={width * ratio} cy={cy} r="3" />
+      ))}
+      <path d={`M ${width - inset} ${cy} Q ${width + 7} ${cy} ${width - 2} ${height - 3}`} />
+    </>
+  );
 }

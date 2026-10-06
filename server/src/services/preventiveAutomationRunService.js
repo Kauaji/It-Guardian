@@ -16,10 +16,7 @@ import {
   markSchedulePrepared
 } from "../repositories/preventiveAutomationScheduleRepository.js";
 import { syncAutoPriorities, syncSlaBreaches } from "./serviceOrders/serviceOrderSlaSyncService.js";
-import {
-  findPreventiveAutomationPlanById,
-  listDuePreventiveAutomationPlans
-} from "./preventiveAutomationPlanQueryService.js";
+import { findPreventiveAutomationPlanById, listDuePreventiveAutomationPlans } from "./preventiveAutomationPlanQueryService.js";
 import { refreshPlanNextRun } from "./preventiveAutomationScheduleService.js";
 import { validatePlanForPreparation } from "./preventiveAutomationScopeService.js";
 import { backfillPreventiveAutomationAssetSchedules } from "./preventiveAutomationBackfillService.js";
@@ -82,14 +79,16 @@ async function queueScriptJobs({ plan, asset, run, scripts, user, db }) {
       attentionRequired: false,
       db
     });
-    jobs.push(await queueAgentScriptJob({
-      script,
-      assetId: asset.id,
-      executionLogId: executionLog.id,
-      automationRunId: run.id,
-      userId: user?.id || null,
-      db
-    }));
+    jobs.push(
+      await queueAgentScriptJob({
+        script,
+        assetId: asset.id,
+        executionLogId: executionLog.id,
+        automationRunId: run.id,
+        userId: user?.id || null,
+        db
+      })
+    );
   }
   return jobs;
 }
@@ -97,9 +96,7 @@ async function queueScriptJobs({ plan, asset, run, scripts, user, db }) {
 /** Agendas vencidas do plano (ou as agendas explicitamente informadas em `scheduleIds`). */
 export async function listDueAssetSchedulesForPlan(planId, options = {}, db = query) {
   const now = toValidDate(options.now || new Date()).toISOString();
-  const scheduleIds = Array.isArray(options.scheduleIds)
-    ? options.scheduleIds.map((item) => trimString(item, 120)).filter(Boolean)
-    : [];
+  const scheduleIds = Array.isArray(options.scheduleIds) ? options.scheduleIds.map((item) => trimString(item, 120)).filter(Boolean) : [];
 
   if (scheduleIds.length) {
     return listActiveSchedulesByIds(planId, scheduleIds, db);
@@ -113,9 +110,7 @@ function resolvePreparationTargets({ assets, triggerType, dueSchedules }) {
   }
 
   const assetById = new Map(assets.map((asset) => [String(asset.id), asset]));
-  return dueSchedules
-    .map((schedule) => ({ schedule, asset: assetById.get(String(schedule.assetId)) }))
-    .filter((item) => item.asset);
+  return dueSchedules.map((schedule) => ({ schedule, asset: assetById.get(String(schedule.assetId)) })).filter((item) => item.asset);
 }
 
 async function prepareTargets(db, { plan, targets, scripts, user, triggerType, manualScheduledFor }) {
@@ -123,12 +118,8 @@ async function prepareTargets(db, { plan, targets, scripts, user, triggerType, m
   let createdRuns = 0;
 
   for (const target of targets) {
-    const recurrence = target.schedule
-      ? recurrenceFromSchedule(target.schedule)
-      : resolveEffectiveRecurrence(plan, target.asset);
-    const scheduledFor = triggerType === "scheduled"
-      ? normalizeScheduleSlot(target.schedule.nextRunAt)
-      : manualScheduledFor;
+    const recurrence = target.schedule ? recurrenceFromSchedule(target.schedule) : resolveEffectiveRecurrence(plan, target.asset);
+    const scheduledFor = triggerType === "scheduled" ? normalizeScheduleSlot(target.schedule.nextRunAt) : manualScheduledFor;
     const { run, created } = await insertPreparedRun({
       plan,
       asset: target.asset,
@@ -184,9 +175,7 @@ export async function preparePreventiveAutomationPlan(id, user = null, options =
   const { scripts, assets } = await validatePlanForPreparation(plan);
   const triggerType = options.triggerType || (options.scheduleIds ? "scheduled" : "manual");
   const manualScheduledFor = normalizeScheduleSlot(options.scheduledFor || new Date());
-  const dueSchedules = triggerType === "scheduled"
-    ? await listDueAssetSchedulesForPlan(plan.id, options)
-    : [];
+  const dueSchedules = triggerType === "scheduled" ? await listDueAssetSchedulesForPlan(plan.id, options) : [];
   const targets = resolvePreparationTargets({ assets, triggerType, dueSchedules });
 
   if (triggerType === "scheduled" && !targets.length) {

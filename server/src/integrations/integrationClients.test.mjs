@@ -88,9 +88,7 @@ test("cliente Zabbix usa token somente no cabecalho e consulta apenas leitura", 
       assert.equal(options.headers.authorization, `Bearer ${token}`);
       return jsonResponse({
         jsonrpc: "2.0",
-        result: payload.method === "host.get"
-          ? [{ hostid: "10084", host: "WS-FIN-07", interfaces: [] }]
-          : [],
+        result: payload.method === "host.get" ? [{ hostid: "10084", host: "WS-FIN-07", interfaces: [] }] : [],
         id: payload.id
       });
     }

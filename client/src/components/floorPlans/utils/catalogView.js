@@ -19,9 +19,7 @@ export function getVisibleCatalogItems({ catalog, activeSection, query, favorite
   const searchableItems = normalizedQuery
     ? searchCatalogItems(catalog, query)
     : (section.items || []).map((item) => ({ ...item, sectionLabel: section.label }));
-  const items = searchableItems.sort(
-    (left, right) => Number(favoriteIds.includes(right.id)) - Number(favoriteIds.includes(left.id))
-  );
+  const items = searchableItems.sort((left, right) => Number(favoriteIds.includes(right.id)) - Number(favoriteIds.includes(left.id)));
   return { items, normalizedQuery };
 }
 

@@ -56,48 +56,54 @@ function buildPlanPayload({ floorExtras = {}, objects, size = { width: 1280, hei
     plan: {
       plan: { id: "plan-1", name: "Planta Teste", ...size, gridSize: 25, snapSize: 25, activeFloorId: "floor-1" },
       floors: [{ id: "floor-1", name: "Térreo", ...size, ...floorExtras }],
-      zones: [{
-        id: "room-1",
-        floorId: "floor-1",
-        zoneType: "room",
-        name: "Sala principal",
-        color: "#dbeafe",
-        geometry: { x: 100, y: 100, width: 600, height: 400 }
-      }],
-      objects: objects || [{
-        id: "desk-1",
-        floorId: "floor-1",
-        objectType: "desk",
-        category: "furniture",
-        label: "Mesa tecnica",
-        x: 200,
-        y: 200,
-        width: 160,
-        height: 80,
-        metadata: { parentRoomId: "room-1" }
-      }, {
-        id: "chair-1",
-        floorId: "floor-1",
-        objectType: "chair",
-        category: "furniture",
-        label: "Cadeira base",
-        x: 480,
-        y: 340,
-        width: 40,
-        height: 40,
-        metadata: { parentRoomId: "room-1" }
-      }, {
-        id: "chair-2",
-        floorId: "floor-1",
-        objectType: "chair",
-        category: "furniture",
-        label: "Cadeira dois",
-        x: 560,
-        y: 340,
-        width: 40,
-        height: 40,
-        metadata: { parentRoomId: "room-1" }
-      }],
+      zones: [
+        {
+          id: "room-1",
+          floorId: "floor-1",
+          zoneType: "room",
+          name: "Sala principal",
+          color: "#dbeafe",
+          geometry: { x: 100, y: 100, width: 600, height: 400 }
+        }
+      ],
+      objects: objects || [
+        {
+          id: "desk-1",
+          floorId: "floor-1",
+          objectType: "desk",
+          category: "furniture",
+          label: "Mesa tecnica",
+          x: 200,
+          y: 200,
+          width: 160,
+          height: 80,
+          metadata: { parentRoomId: "room-1" }
+        },
+        {
+          id: "chair-1",
+          floorId: "floor-1",
+          objectType: "chair",
+          category: "furniture",
+          label: "Cadeira base",
+          x: 480,
+          y: 340,
+          width: 40,
+          height: 40,
+          metadata: { parentRoomId: "room-1" }
+        },
+        {
+          id: "chair-2",
+          floorId: "floor-1",
+          objectType: "chair",
+          category: "furniture",
+          label: "Cadeira dois",
+          x: 560,
+          y: 340,
+          width: 40,
+          height: 40,
+          metadata: { parentRoomId: "room-1" }
+        }
+      ],
       connectionPoints: [],
       cableRoutes: []
     }
@@ -186,7 +192,8 @@ async function openEditor({ editing = true, ...props } = {}) {
 }
 
 const objectNodes = (container) => [...container.querySelectorAll("g.floor-plan-object")];
-const objectByLabel = (container, label) => screen.getByText(label, { selector: "text.floor-plan-object-label" }).closest("g.floor-plan-object");
+const objectByLabel = (container, label) =>
+  screen.getByText(label, { selector: "text.floor-plan-object-label" }).closest("g.floor-plan-object");
 const translateOf = (node) => node.getAttribute("transform");
 const click = (name, options) => fireEvent.click(screen.getByRole("button", { name, ...options }));
 const pointerDown = (target, x, y, extra = {}) => fireEvent.pointerDown(target, { clientX: x, clientY: y, button: 0, ...extra });
@@ -240,13 +247,16 @@ describe("lista e navegacao de plantas", () => {
     expect(await screen.findByText("Nenhuma planta cadastrada.")).toBeInTheDocument();
     click("Nova planta");
     await screen.findByRole("img", { name: "Editor 2D da planta" });
-    expect(api.createFloorPlan).toHaveBeenCalledWith("tok", expect.objectContaining({
-      name: "Planta Matriz",
-      inventoryTabId: "tab-1",
-      status: "draft",
-      width: 1280,
-      height: 820
-    }));
+    expect(api.createFloorPlan).toHaveBeenCalledWith(
+      "tok",
+      expect.objectContaining({
+        name: "Planta Matriz",
+        inventoryTabId: "tab-1",
+        status: "draft",
+        width: 1280,
+        height: 820
+      })
+    );
     expect(notify).toHaveBeenCalledWith("Planta criada.", "ok");
     expect(window.location.pathname).toBe("/plantas/plan-1/editor");
   });
@@ -581,7 +591,10 @@ describe("selecao e edicao de objetos", () => {
     pointerDown(chair, 500, 360);
     pointerUp(svg, 500, 360);
     fireEvent.click(chair);
-    const desk = container.querySelectorAll("g.floor-plan-object")[objectNodes(container).findIndex((node) => translateOf(node) === "translate(200 200)")];
+    const desk =
+      container.querySelectorAll("g.floor-plan-object")[
+        objectNodes(container).findIndex((node) => translateOf(node) === "translate(200 200)")
+      ];
     fireEvent.click(desk, { shiftKey: true });
     expect(screen.getByRole("toolbar", { name: "Ações da seleção" })).toHaveTextContent("2 itens");
     expect(screen.getByRole("button", { name: "Duplicar seleção" })).toBeDisabled();
@@ -949,8 +962,14 @@ describe("zoom, camadas e visualizacao", () => {
 
 describe("mapa de infraestrutura", () => {
   it("calor de OS, calor de ativos e resumo consultam a API com os filtros", async () => {
-    api.fetchFloorPlanServiceOrderHeatmap.mockResolvedValue({ heatmap: { components: [{ componentId: "chair-1", severity: "high", totalServiceOrders: 3, openServiceOrders: 2, overdueServiceOrders: 1 }] } });
-    api.fetchFloorPlanAssetHeatmap.mockResolvedValue({ heatmap: { components: [{ componentId: "chair-1", severity: "low", status: "online", score: 90 }] } });
+    api.fetchFloorPlanServiceOrderHeatmap.mockResolvedValue({
+      heatmap: {
+        components: [{ componentId: "chair-1", severity: "high", totalServiceOrders: 3, openServiceOrders: 2, overdueServiceOrders: 1 }]
+      }
+    });
+    api.fetchFloorPlanAssetHeatmap.mockResolvedValue({
+      heatmap: { components: [{ componentId: "chair-1", severity: "low", status: "online", score: 90 }] }
+    });
     api.fetchFloorPlanSummary.mockResolvedValue({ summary: { totalComponents: 7, onlineAssets: 3 } });
     const { container } = await openEditor({ editing: false });
 
@@ -972,9 +991,13 @@ describe("mapa de infraestrutura", () => {
     await waitFor(() => expect(api.fetchFloorPlanServiceOrderHeatmap).toHaveBeenCalledTimes(4));
 
     click(/Calor de ativos/);
-    await waitFor(() => expect(api.fetchFloorPlanAssetHeatmap).toHaveBeenCalledWith("tok", "plan-1", "availability", { groupId: "g1", segmentId: "s1" }));
+    await waitFor(() =>
+      expect(api.fetchFloorPlanAssetHeatmap).toHaveBeenCalledWith("tok", "plan-1", "availability", { groupId: "g1", segmentId: "s1" })
+    );
     fireEvent.change(screen.getByLabelText("Métrica do mapa de ativos"), { target: { value: "cpu" } });
-    await waitFor(() => expect(api.fetchFloorPlanAssetHeatmap).toHaveBeenLastCalledWith("tok", "plan-1", "cpu", { groupId: "g1", segmentId: "s1" }));
+    await waitFor(() =>
+      expect(api.fetchFloorPlanAssetHeatmap).toHaveBeenLastCalledWith("tok", "plan-1", "cpu", { groupId: "g1", segmentId: "s1" })
+    );
     expect(await screen.findByText("online · pontuação 90")).toBeInTheDocument();
 
     click(/Resumo/);
@@ -1089,7 +1112,12 @@ describe("salvamento", () => {
   it("edicoes durante um salvamento em andamento geram um novo salvamento", async () => {
     let resolveFirst;
     api.saveFloorPlanEditorData
-      .mockImplementationOnce((_token, _id, payload) => new Promise((resolve) => { resolveFirst = () => resolve({ plan: payload }); }))
+      .mockImplementationOnce(
+        (_token, _id, payload) =>
+          new Promise((resolve) => {
+            resolveFirst = () => resolve({ plan: payload });
+          })
+      )
       .mockImplementation(async (_token, _id, payload) => ({ plan: payload }));
     const { container } = await openEditor();
     click("Excluir itens ao clicar");

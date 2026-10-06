@@ -36,10 +36,7 @@ export default function useAlertCenterController({
     alertPrioritySettings = defaultPrioritySettings,
     alertCorrelations = emptyList
   } = center;
-  const inventory = useMemo(
-    () => ({ devices, segments, segmentGroups, inventoryTabs }),
-    [devices, segments, segmentGroups, inventoryTabs]
-  );
+  const inventory = useMemo(() => ({ devices, segments, segmentGroups, inventoryTabs }), [devices, segments, segmentGroups, inventoryTabs]);
   // Prefere o valor real do servidor (buscado no carregamento inicial,
   // sem exigir rebuild) sobre o flag de build-time - so cai no flag de
   // build antes do primeiro carregamento ou se a prop nao for passada.
@@ -54,10 +51,7 @@ export default function useAlertCenterController({
     Number(preventiveAutomationManagement?.metadata?.planCount || 0),
     Array.isArray(preventiveAutomationPlans) ? preventiveAutomationPlans.length : 0
   );
-  const canShowAutomationManagement = shouldShowAutomationManagement(
-    perms.canViewPreventiveAutomation,
-    automationManagementPlanCount
-  );
+  const canShowAutomationManagement = shouldShowAutomationManagement(perms.canViewPreventiveAutomation, automationManagementPlanCount);
   const [alertActiveTab, setAlertActiveTab] = useAlertActiveTab({
     canShowAutomationManagement,
     canUsePreventiveArea: perms.canUsePreventiveArea,
@@ -73,10 +67,7 @@ export default function useAlertCenterController({
     onAddAlertComment: center.onAddAlertComment
   });
   const activeScripts = useMemo(() => scripts.filter((script) => script.active !== false), [scripts]);
-  const priorityColorById = useMemo(
-    () => ({ ...defaultPriorityColors, ...(alertPriorityColors || {}) }),
-    [alertPriorityColors]
-  );
+  const priorityColorById = useMemo(() => ({ ...defaultPriorityColors, ...(alertPriorityColors || {}) }), [alertPriorityColors]);
   const dueDays = Number(settings.priorityDraft.preventiveDueDays || alertPrioritySettings.preventiveDueDays || 180);
   const { visibleAlerts, summary } = useAlertOverview({ center, devices, lookups });
   const suggestionsCtl = useSuggestionsController({

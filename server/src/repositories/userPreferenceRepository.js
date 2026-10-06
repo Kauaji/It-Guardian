@@ -1,18 +1,12 @@
 import { query } from "../database.js";
 
 export async function findUserPreference(userId, key) {
-  const result = await query(
-    "SELECT value, updated_at FROM user_preferences WHERE user_id = $1 AND preference_key = $2",
-    [userId, key]
-  );
+  const result = await query("SELECT value, updated_at FROM user_preferences WHERE user_id = $1 AND preference_key = $2", [userId, key]);
   return result.rows[0] || null;
 }
 
 export async function deleteUserPreference(userId, key) {
-  await query(
-    "DELETE FROM user_preferences WHERE user_id = $1 AND preference_key = $2",
-    [userId, key]
-  );
+  await query("DELETE FROM user_preferences WHERE user_id = $1 AND preference_key = $2", [userId, key]);
 }
 
 export async function upsertUserPreference(userId, key, value) {

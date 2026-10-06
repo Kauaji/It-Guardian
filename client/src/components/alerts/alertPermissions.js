@@ -20,8 +20,7 @@ export function buildAlertCenterPermissions(can, remoteScriptExecutionEnabled) {
     canViewScriptLogs: can("script_logs.view"),
     canResolveScriptLogs: can("script_logs.resolve"),
     canCreatePreventivePlans: can("preventive_plans.create") && can("preventive_plans.prepare"),
-    canCreatePreventiveServiceOrder:
-      can("preventive_plans.create_service_order") && can("service_orders.create"),
+    canCreatePreventiveServiceOrder: can("preventive_plans.create_service_order") && can("service_orders.create"),
     canCreatePreventiveAutomation: can("preventive_automation.create"),
     canUpdatePreventiveAutomation: can("preventive_automation.update"),
     canDisablePreventiveAutomation: can("preventive_automation.disable"),

@@ -30,7 +30,12 @@ describe("useScriptLogDialog - abertura", () => {
 
     act(() => result.current.openFromValidation(validation("1", "2026-05-01")));
 
-    expect(result.current.selectedScriptLog).toMatchObject({ id: "log-1", scriptName: "Script 1", validationStatus: "observed_persistent", validationId: "1" });
+    expect(result.current.selectedScriptLog).toMatchObject({
+      id: "log-1",
+      scriptName: "Script 1",
+      validationStatus: "observed_persistent",
+      validationId: "1"
+    });
   });
 
   it("abre o log mais recente entre as sugestões, usando as datas de contingência", () => {
@@ -95,7 +100,9 @@ describe("useScriptLogDialog - ações", () => {
 
     await act(async () => hook.result.current.registerSuggestedSolution());
 
-    expect(hook.props.onApplyScriptLogSuggestedSolution).toHaveBeenCalledWith("log-x", { notes: "Solução sugerida registrada para acompanhamento." });
+    expect(hook.props.onApplyScriptLogSuggestedSolution).toHaveBeenCalledWith("log-x", {
+      notes: "Solução sugerida registrada para acompanhamento."
+    });
   });
 
   it("registra solução própria com as notas ou com o texto padrão e limpa tudo", async () => {
@@ -108,7 +115,9 @@ describe("useScriptLogDialog - ações", () => {
 
     await openLog(hook);
     await act(async () => hook.result.current.registerCustomSolution());
-    expect(hook.props.onApplyScriptLogSuggestedSolution).toHaveBeenLastCalledWith("log-1", { notes: "Solução própria registrada pelo técnico." });
+    expect(hook.props.onApplyScriptLogSuggestedSolution).toHaveBeenLastCalledWith("log-1", {
+      notes: "Solução própria registrada pelo técnico."
+    });
   });
 
   it("marca como analisado", async () => {

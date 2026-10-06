@@ -238,22 +238,10 @@ async function removeMissingRows(db, tableName, source, externalIds) {
   }
 
   const placeholders = externalIds.map((_, index) => `$${index + 2}`).join(", ");
-  await db(
-    `DELETE FROM ${tableName} WHERE source = $1 AND external_id NOT IN (${placeholders})`,
-    [source, ...externalIds]
-  );
+  await db(`DELETE FROM ${tableName} WHERE source = $1 AND external_id NOT IN (${placeholders})`, [source, ...externalIds]);
 }
 
-export async function saveIntegrationSync({
-  source,
-  enabled,
-  mode,
-  baseUrl,
-  assets = [],
-  alerts = [],
-  conflicts = [],
-  metadata = {}
-}) {
+export async function saveIntegrationSync({ source, enabled, mode, baseUrl, assets = [], alerts = [], conflicts = [], metadata = {} }) {
   return withTransaction(async (db) => {
     await removeMissingRows(
       db,
@@ -294,9 +282,7 @@ export async function saveIntegrationSync({
 
 export async function purgeLegacyMockIntegrationSnapshots() {
   return withTransaction(async (db) => {
-    const states = await db(
-      "SELECT source FROM integration_sync_state WHERE mode = 'mock'"
-    );
+    const states = await db("SELECT source FROM integration_sync_state WHERE mode = 'mock'");
     const sources = states.rows.map((row) => row.source);
 
     for (const source of sources) {
@@ -336,28 +322,19 @@ export async function recordIntegrationFailure({ source, enabled, mode, baseUrl,
 }
 
 export async function getIntegrationState(source) {
-  const result = await query(
-    "SELECT * FROM integration_sync_state WHERE source = $1 LIMIT 1",
-    [source]
-  );
+  const result = await query("SELECT * FROM integration_sync_state WHERE source = $1 LIMIT 1", [source]);
   return stateFromRow(result.rows[0]);
 }
 
 export async function listIntegrationAssets({ source = null } = {}) {
   const result = source
-    ? await query(
-        "SELECT * FROM integration_assets WHERE source = $1 ORDER BY display_name",
-        [source]
-      )
+    ? await query("SELECT * FROM integration_assets WHERE source = $1 ORDER BY display_name", [source])
     : await query("SELECT * FROM integration_assets ORDER BY source, display_name");
   return result.rows.map(assetFromRow);
 }
 
 export async function findIntegrationAsset(source, externalId) {
-  const result = await query(
-    "SELECT * FROM integration_assets WHERE source = $1 AND external_id = $2 LIMIT 1",
-    [source, externalId]
-  );
+  const result = await query("SELECT * FROM integration_assets WHERE source = $1 AND external_id = $2 LIMIT 1", [source, externalId]);
   return result.rows[0] ? assetFromRow(result.rows[0]) : null;
 }
 
@@ -373,10 +350,7 @@ export async function listIntegrationAlerts({ source = null, status = null } = {
     clauses.push(`status = $${values.length}`);
   }
   const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
-  const result = await query(
-    `SELECT * FROM integration_alerts ${where} ORDER BY occurred_at DESC`,
-    values
-  );
+  const result = await query(`SELECT * FROM integration_alerts ${where} ORDER BY occurred_at DESC`, values);
   return result.rows.map(alertFromRow);
 }
 

@@ -1,12 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
-  fetchAssetAvailability,
-  fetchCriticalAssets,
-  fetchStatusOverview,
-  fetchTopAssetsCpu,
-  fetchTopAssetsRam
-} from "./assetWidgets.js";
+import { fetchAssetAvailability, fetchCriticalAssets, fetchStatusOverview, fetchTopAssetsCpu, fetchTopAssetsRam } from "./assetWidgets.js";
 
 function device(overrides = {}) {
   return { id: "asset-1", name: "Ativo 1", status: "online", metrics: { cpu: 10, ram: 10, disk: 10 }, ...overrides };
@@ -17,7 +11,12 @@ function fakeCtx({
   activeAlerts = [],
   allAlerts = [],
   serviceOrders = [],
-  serviceOrderSettings = { statuses: [{ id: "open", isFinal: false }, { id: "closed", isFinal: true }] }
+  serviceOrderSettings = {
+    statuses: [
+      { id: "open", isFinal: false },
+      { id: "closed", isFinal: true }
+    ]
+  }
 } = {}) {
   return {
     getDevices: async () => devices,
@@ -53,7 +52,10 @@ test("fetchTopAssetsCpu ordena por valor atual e ignora ativos sem metrica", asy
   const result = await fetchTopAssetsCpu({}, ctx);
   assert.equal(result.metric, "cpu");
   assert.equal(result.basis, "current");
-  assert.deepEqual(result.rows.map((row) => row.id), ["2", "4", "1"]);
+  assert.deepEqual(
+    result.rows.map((row) => row.id),
+    ["2", "4", "1"]
+  );
 });
 
 test("fetchTopAssetsRam respeita o limite configurado, entre 1 e 15", async () => {

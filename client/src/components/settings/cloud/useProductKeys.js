@@ -6,18 +6,13 @@ export function useProductKeys(token) {
   const [productKeys, setProductKeys] = useState([]);
   const [selectedKeyId, setSelectedKeyId] = useState("");
 
-  const selectedKey = useMemo(
-    () => productKeys.find((item) => item.id === selectedKeyId) || null,
-    [productKeys, selectedKeyId]
-  );
+  const selectedKey = useMemo(() => productKeys.find((item) => item.id === selectedKeyId) || null, [productKeys, selectedKeyId]);
 
   const loadProductKeys = useCallback(async () => {
     const response = await fetchProductKeys(token);
     const items = response.productKeys || [];
     setProductKeys(items);
-    setSelectedKeyId((current) => (
-      current && items.some((item) => item.id === current) ? current : ""
-    ));
+    setSelectedKeyId((current) => (current && items.some((item) => item.id === current) ? current : ""));
   }, [token]);
 
   return { productKeys, selectedKeyId, setSelectedKeyId, selectedKey, loadProductKeys };
@@ -43,9 +38,7 @@ export function useKeyActivations({ token, selectedKeyId, showMessage, setBusyAc
       })
       .finally(() => {
         if (active) {
-          setBusyAction((current) => (
-            current === `activations:${selectedKeyId}` ? "" : current
-          ));
+          setBusyAction((current) => (current === `activations:${selectedKeyId}` ? "" : current));
         }
       });
     return () => {

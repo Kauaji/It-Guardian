@@ -1,10 +1,4 @@
-import {
-  generalSector,
-  originFilterOptions,
-  priorityLabels,
-  ratingFilterOptions,
-  slaFilterOptions
-} from "../../serviceOrderBoardUtils.js";
+import { generalSector, originFilterOptions, priorityLabels, ratingFilterOptions, slaFilterOptions } from "../../serviceOrderBoardUtils.js";
 
 function FilterSelect({ label, value, onChange, children }) {
   return (
@@ -19,7 +13,9 @@ function FilterSelect({ label, value, onChange, children }) {
 
 function OptionList({ options }) {
   return options.map((option) => (
-    <option key={option.value} value={option.value}>{option.label}</option>
+    <option key={option.value} value={option.value}>
+      {option.label}
+    </option>
   ));
 }
 
@@ -54,25 +50,33 @@ export default function BoardFilters({
         {availableSectors
           .filter((sector) => sector.id !== generalSector.id)
           .map((sector) => (
-            <option key={sector.id} value={sector.id}>{sector.name}</option>
+            <option key={sector.id} value={sector.id}>
+              {sector.name}
+            </option>
           ))}
       </FilterSelect>
       <FilterSelect label="Prioridade" value={filters.priorityFilter} onChange={setters.setPriorityFilter}>
         <option value="all">Todas</option>
         {Object.entries(priorityLabels).map(([value, label]) => (
-          <option key={value} value={value}>{label}</option>
+          <option key={value} value={value}>
+            {label}
+          </option>
         ))}
       </FilterSelect>
       <FilterSelect label="Técnico" value={filters.technicianFilter} onChange={setters.setTechnicianFilter}>
         <option value="all">Todos</option>
         {technicians.map((technician) => (
-          <option key={technician.id} value={technician.name}>{technician.name}</option>
+          <option key={technician.id} value={technician.name}>
+            {technician.name}
+          </option>
         ))}
       </FilterSelect>
       <FilterSelect label="Status" value={filters.statusFilter} onChange={setters.setStatusFilter}>
         <option value="all">Todos</option>
         {configuredStatuses.map((status) => (
-          <option key={status.id} value={status.id}>{status.name}</option>
+          <option key={status.id} value={status.id}>
+            {status.name}
+          </option>
         ))}
       </FilterSelect>
       <FilterSelect label="Prazo (SLA)" value={filters.slaFilter} onChange={setters.setSlaFilter}>

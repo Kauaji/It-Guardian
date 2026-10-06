@@ -82,7 +82,11 @@ export default function FloorPlansList({ plans, loading, query, onQueryChange, o
       <div className="floor-plans-toolbar">
         <label className="compact-search floor-plan-search">
           <Search size={18} />
-          <input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="Buscar planta, empresa, andar ou status" />
+          <input
+            value={query}
+            onChange={(event) => onQueryChange(event.target.value)}
+            placeholder="Buscar planta, empresa, andar ou status"
+          />
         </label>
       </div>
 
@@ -102,7 +106,14 @@ export default function FloorPlansList({ plans, loading, query, onQueryChange, o
 
       <div className="floor-plan-list-grid">
         {filteredPlans.map((plan) => (
-          <FloorPlanCard key={plan.id} plan={plan} permissions={permissions} onOpen={onOpen} onDuplicate={onDuplicate} onDelete={onDelete} />
+          <FloorPlanCard
+            key={plan.id}
+            plan={plan}
+            permissions={permissions}
+            onOpen={onOpen}
+            onDuplicate={onDuplicate}
+            onDelete={onDelete}
+          />
         ))}
       </div>
     </section>

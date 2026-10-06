@@ -75,7 +75,11 @@ async function purgeAll(db, config, now) {
     await purge("agentHeartbeats", { table: "agent_heartbeats", where: "received_at < $1", params: [daysAgo(config.heartbeatDays, now)] });
   }
   if (config.metricHistoryDays > 0) {
-    await purge("assetMetricHistory", { table: "asset_metric_history", where: "collected_at < $1", params: [daysAgo(config.metricHistoryDays, now)] });
+    await purge("assetMetricHistory", {
+      table: "asset_metric_history",
+      where: "collected_at < $1",
+      params: [daysAgo(config.metricHistoryDays, now)]
+    });
   }
   await purge("authSessions", {
     table: "auth_sessions",
@@ -85,11 +89,16 @@ async function purgeAll(db, config, now) {
   // So tokens de reautenticacao nunca usados: os usados ficam referenciados pela auditoria da assistencia remota.
   await purge("reauthTokens", {
     table: "security_reauthentications",
-    where: "used_at IS NULL AND expires_at < $1 AND id NOT IN (SELECT reauth_id FROM remote_assistance_sessions WHERE reauth_id IS NOT NULL)",
+    where:
+      "used_at IS NULL AND expires_at < $1 AND id NOT IN (SELECT reauth_id FROM remote_assistance_sessions WHERE reauth_id IS NOT NULL)",
     params: [daysAgo(config.reauthDays, now)]
   });
   if (config.reauthAttemptDays > 0) {
-    await purge("reauthAttempts", { table: "security_reauthentication_attempts", where: "created_at < $1", params: [daysAgo(config.reauthAttemptDays, now)] });
+    await purge("reauthAttempts", {
+      table: "security_reauthentication_attempts",
+      where: "created_at < $1",
+      params: [daysAgo(config.reauthAttemptDays, now)]
+    });
   }
   if (config.auditLogDays > 0) {
     await purge("auditLogs", { table: "audit_logs", where: "created_at < $1", params: [daysAgo(config.auditLogDays, now)] });

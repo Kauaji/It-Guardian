@@ -18,7 +18,7 @@ function buildDoubleDoor(ctx, metrics) {
     leaf.position.x = side * (objectWidth / 2 - 5);
     leaf.rotation.y = THREE.MathUtils.degToRad(openAngle * -side);
     parts.addModelPart(leaf, {
-      x: -side * leafWidth / 2,
+      x: (-side * leafWidth) / 2,
       width: leafWidth,
       depth: panelDepth,
       height: doorHeight,
@@ -110,9 +110,23 @@ export function buildDoor(ctx) {
     panelDepth: Math.max(4, objectDepth * 0.28)
   };
   [-objectWidth / 2 + 3, objectWidth / 2 - 3].forEach((x) => {
-    parts.addModelPart(group, { x, width: 6, depth: metrics.frameDepth, height: metrics.doorHeight + 6, color: FRAME_WOOD, texturePreset: "wood" });
+    parts.addModelPart(group, {
+      x,
+      width: 6,
+      depth: metrics.frameDepth,
+      height: metrics.doorHeight + 6,
+      color: FRAME_WOOD,
+      texturePreset: "wood"
+    });
   });
-  parts.addModelPart(group, { y: metrics.doorHeight, width: objectWidth, depth: metrics.frameDepth, height: 6, color: FRAME_WOOD, texturePreset: "wood" });
+  parts.addModelPart(group, {
+    y: metrics.doorHeight,
+    width: objectWidth,
+    depth: metrics.frameDepth,
+    height: 6,
+    color: FRAME_WOOD,
+    texturePreset: "wood"
+  });
 
   if (doorType === "double") buildDoubleDoor(ctx, metrics);
   else if (doorType === "sliding" || doorType === "pocket") buildSlidingDoor(ctx, metrics, doorType);

@@ -1,23 +1,16 @@
 import { useEffect, useMemo } from "react";
 import { defaultInventoryTab } from "../../components/inventory/inventoryLocalState.js";
 import { getOccupiedInventorySegmentIds } from "../../components/inventory/inventoryBoardSections.js";
-import {
-  decorateDevices,
-  decorateSegmentGroups,
-  decorateSegments,
-  selectActiveSegments
-} from "../inventory/inventoryModel.js";
+import { decorateDevices, decorateSegmentGroups, decorateSegments, selectActiveSegments } from "../inventory/inventoryModel.js";
 
 // Modelo de inventario derivado: abas, grupos/segmentos/ativos "decorados"
 // com a aba local de cada um e as listas da aba ativa.
 export function useInventoryModel({ data, persistence }) {
-  const { activeInventoryTabId, inventoryTabMeta, inventoryTabs, machineAliases, setActiveInventoryTabId } =
-    persistence;
+  const { activeInventoryTabId, inventoryTabMeta, inventoryTabs, machineAliases, setActiveInventoryTabId } = persistence;
   const { allDevices, devices, segmentGroups, segments } = data;
 
   const fallbackInventoryTabId = inventoryTabs[0]?.id || defaultInventoryTab.id;
-  const activeInventoryTab =
-    inventoryTabs.find((tab) => tab.id === activeInventoryTabId) || inventoryTabs[0] || defaultInventoryTab;
+  const activeInventoryTab = inventoryTabs.find((tab) => tab.id === activeInventoryTabId) || inventoryTabs[0] || defaultInventoryTab;
 
   const decoratedSegmentGroups = useMemo(
     () => decorateSegmentGroups(segmentGroups, inventoryTabMeta, fallbackInventoryTabId),
@@ -43,15 +36,10 @@ export function useInventoryModel({ data, persistence }) {
   );
   const activeAllDevices = useMemo(
     () =>
-      decoratedAllDevices.filter(
-        (device) => device.isGlobalBackup || device.isGlobalUnorganized || device.tabId === activeInventoryTab.id
-      ),
+      decoratedAllDevices.filter((device) => device.isGlobalBackup || device.isGlobalUnorganized || device.tabId === activeInventoryTab.id),
     [activeInventoryTab.id, decoratedAllDevices]
   );
-  const occupiedActiveSegmentIds = useMemo(
-    () => getOccupiedInventorySegmentIds({ devices: activeAllDevices }),
-    [activeAllDevices]
-  );
+  const occupiedActiveSegmentIds = useMemo(() => getOccupiedInventorySegmentIds({ devices: activeAllDevices }), [activeAllDevices]);
   const activeSegmentGroups = useMemo(
     () => decoratedSegmentGroups.filter((group) => group.tabId === activeInventoryTab.id),
     [activeInventoryTab.id, decoratedSegmentGroups]

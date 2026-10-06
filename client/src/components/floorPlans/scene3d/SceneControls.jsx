@@ -63,10 +63,21 @@ export function SceneHelp({ editable }) {
   return (
     <div className="floor-plan-scene-help" aria-hidden="true">
       <Orbit size={16} />
-      <span><strong>Arraste</strong> para orbitar</span>
+      <span>
+        <strong>Arraste</strong> para orbitar
+      </span>
       <i />
-      <span><strong>Roda ou pinça</strong> para aproximar</span>
-      {editable ? <><i /><span><strong>Arraste um item</strong> para mover</span></> : null}
+      <span>
+        <strong>Roda ou pinça</strong> para aproximar
+      </span>
+      {editable ? (
+        <>
+          <i />
+          <span>
+            <strong>Arraste um item</strong> para mover
+          </span>
+        </>
+      ) : null}
     </div>
   );
 }

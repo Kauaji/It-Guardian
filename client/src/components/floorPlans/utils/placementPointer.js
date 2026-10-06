@@ -16,18 +16,24 @@ export function getEndpointSnapDistance(editor) {
 export function resolvePlacementPointerMove({ placement, event, editor, activeFloorId, getSvgPoint, buildCatalogPreview }) {
   if (placement?.kind === "catalog") {
     const preview = buildCatalogPreview(placement.item, getSvgPoint(event));
-    return (current) => current?.kind === "catalog" ? { ...current, preview } : current;
+    return (current) => (current?.kind === "catalog" ? { ...current, preview } : current);
   }
   if (placement?.kind === "wall" && placement.start) {
     const snapSize = editor?.plan?.snapSize || DEFAULT_PLAN_SIZE.snapSize;
     const point = getSvgPoint(event);
     const gridPoint = { x: snapToGrid(point.x, snapSize), y: snapToGrid(point.y, snapSize) };
     const endpoint = snapPointToWallEndpoints(gridPoint, editor?.objects || [], activeFloorId, null, getEndpointSnapDistance(editor));
-    return (current) => current ? { ...current, end: endpoint } : current;
+    return (current) => (current ? { ...current, end: endpoint } : current);
   }
   if (placement?.kind === "measurement" && placement.start) {
-    const endpoint = snapPointToWallEndpoints(getSvgPoint(event), editor?.objects || [], activeFloorId, null, getEndpointSnapDistance(editor));
-    return (current) => current ? { ...current, end: endpoint, constrainAngle: event.shiftKey } : current;
+    const endpoint = snapPointToWallEndpoints(
+      getSvgPoint(event),
+      editor?.objects || [],
+      activeFloorId,
+      null,
+      getEndpointSnapDistance(editor)
+    );
+    return (current) => (current ? { ...current, end: endpoint, constrainAngle: event.shiftKey } : current);
   }
   return null;
 }

@@ -47,7 +47,9 @@ export const maxLengths = {
 
 /** @param {unknown} value */
 export function normalizeScriptType(value) {
-  const type = String(value || "other").trim().toLowerCase();
+  const type = String(value || "other")
+    .trim()
+    .toLowerCase();
   return scriptTypes.has(type) ? type : "other";
 }
 
@@ -56,7 +58,9 @@ export function normalizeScriptType(value) {
  * @param {string} [fallback]
  */
 export function normalizeRiskLevel(value, fallback = "medium") {
-  const risk = String(value || fallback).trim().toLowerCase();
+  const risk = String(value || fallback)
+    .trim()
+    .toLowerCase();
   return riskLevels.has(risk) ? risk : fallback;
 }
 

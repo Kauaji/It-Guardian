@@ -13,7 +13,7 @@ function SettingsHero({ businessMode }) {
         <p>
           {businessMode
             ? "Modo Business ativo: clientes, técnicos, produtos e regras ajudam a deixar a OS mais completa."
-          : "Modo Local ativo: setores e serviços organizam atendimentos internos sem exigir cliente."}
+            : "Modo Local ativo: setores e serviços organizam atendimentos internos sem exigir cliente."}
         </p>
       </div>
     </header>
@@ -26,12 +26,7 @@ function SettingsTabs({ sectionId, onSelect }) {
       {sections.map((section) => {
         const Icon = section.icon;
         return (
-          <button
-            key={section.id}
-            type="button"
-            className={sectionId === section.id ? "active" : ""}
-            onClick={() => onSelect(section.id)}
-          >
+          <button key={section.id} type="button" className={sectionId === section.id ? "active" : ""} onClick={() => onSelect(section.id)}>
             <Icon size={17} />
             {section.label}
           </button>
@@ -41,14 +36,7 @@ function SettingsTabs({ sectionId, onSelect }) {
   );
 }
 
-export default function SettingsView({
-  token,
-  notify,
-  systemMode = "local",
-  forcedSection = "",
-  hideHero = false,
-  hideTabs = false
-}) {
+export default function SettingsView({ token, notify, systemMode = "local", forcedSection = "", hideHero = false, hideTabs = false }) {
   const state = useSettingsRecords({ token, notify, systemMode, forcedSection });
 
   return (

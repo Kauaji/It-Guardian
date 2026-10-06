@@ -36,7 +36,8 @@ function headers(cookie = adminCookie) {
 
 async function login(email) {
   const response = await fetch(`${baseUrl}/api/auth/login`, {
-    method: "POST", headers: { "content-type": "application/json" },
+    method: "POST",
+    headers: { "content-type": "application/json" },
     body: JSON.stringify({ email, password: "123456" })
   });
   assert.equal(response.status, 200);
@@ -45,7 +46,9 @@ async function login(email) {
 
 function preview(type, filters, config = {}, cookie = adminCookie) {
   return fetch(`${baseUrl}/api/dashboard/widgets/preview`, {
-    method: "POST", headers: headers(cookie), body: JSON.stringify({ type, config, filters })
+    method: "POST",
+    headers: headers(cookie),
+    body: JSON.stringify({ type, config, filters })
   });
 }
 
@@ -63,17 +66,36 @@ test.before(async () => {
   baseUrl = `http://127.0.0.1:${server.address().port}`;
   adminCookie = await login("admin@itguardian.local");
   const enrollment = await createAgentEnrollment({ name: "Cross filter test" });
-  for (const [machineId, cpuUsagePercent] of [[assetA, 96], [assetB, 22]]) {
+  for (const [machineId, cpuUsagePercent] of [
+    [assetA, 96],
+    [assetB, 22]
+  ]) {
     const response = await fetch(`${baseUrl}/api/agents/heartbeat`, {
-      method: "POST", headers: { authorization: `Bearer ${enrollment.token}`, "content-type": "application/json" },
+      method: "POST",
+      headers: { authorization: `Bearer ${enrollment.token}`, "content-type": "application/json" },
       body: JSON.stringify({
-        machineId, cpuUsagePercent, hostname: "SAME-NAME", machineAlias: "Mesmo nome",
-        operatingSystem: "Windows 11 Pro", osArchitecture: "64-bit", windowsVersion: "23H2",
-        localIp: "192.168.70.10", macAddress: "00-11-22-33-44-55", cpuModel: "Intel Core i7",
-        memoryTotalBytes: 17179869184, memoryUsedBytes: 4294967296,
-        diskTotalBytes: 512000000000, diskFreeBytes: 256000000000, uptimeSeconds: 7200,
-        agentVersion: "1.0.0", collectedAt: new Date().toISOString(), intervalSeconds: 60,
-        environment: "Filtros", group: "Teste", segment: "Windows", inventoryDetails: { software: [] }
+        machineId,
+        cpuUsagePercent,
+        hostname: "SAME-NAME",
+        machineAlias: "Mesmo nome",
+        operatingSystem: "Windows 11 Pro",
+        osArchitecture: "64-bit",
+        windowsVersion: "23H2",
+        localIp: "192.168.70.10",
+        macAddress: "00-11-22-33-44-55",
+        cpuModel: "Intel Core i7",
+        memoryTotalBytes: 17179869184,
+        memoryUsedBytes: 4294967296,
+        diskTotalBytes: 512000000000,
+        diskFreeBytes: 256000000000,
+        uptimeSeconds: 7200,
+        agentVersion: "1.0.0",
+        collectedAt: new Date().toISOString(),
+        intervalSeconds: 60,
+        environment: "Filtros",
+        group: "Teste",
+        segment: "Windows",
+        inventoryDetails: { software: [] }
       })
     });
     assert.equal(response.status, 202);
@@ -81,7 +103,8 @@ test.before(async () => {
   const hiddenSector = await createSector({ name: "Setor restrito para filtros", permissions: [] });
   const createOrder = async (assetId, sector = {}) => {
     const response = await fetch(`${baseUrl}/api/service-orders`, {
-      method: "POST", headers: headers(),
+      method: "POST",
+      headers: headers(),
       body: JSON.stringify({ title: `OS de filtros ${assetId}`, assetId, ...sector })
     });
     assert.equal(response.status, 201);
@@ -94,8 +117,11 @@ test.before(async () => {
   await query("UPDATE service_orders SET sla_due_at = $2 WHERE id = $1", [orderA.id, new Date(Date.now() - 86400000).toISOString()]);
   await query("UPDATE service_orders SET status = $2 WHERE id = $1", [orderB.id, "in_progress"]);
   await createUser({
-    name: "Leitor com escopo", email: "dashboard-scope@itguardian.local", password: "123456",
-    role: "viewer", permissions: ["dashboard.view", "inventory.view", "service_orders.view"]
+    name: "Leitor com escopo",
+    email: "dashboard-scope@itguardian.local",
+    password: "123456",
+    role: "viewer",
+    permissions: ["dashboard.view", "inventory.view", "service_orders.view"]
   });
   restrictedCookie = await login("dashboard-scope@itguardian.local");
 });
@@ -114,7 +140,10 @@ test("preview aceita filtros transitorios e retorna apenas dados relacionados ao
   const alerts = await dataFor("alerts_by_severity", filters);
   assert.deepEqual(alerts, { total: 1, rows: [{ severity: "critical", label: "Critica", count: 1 }] });
   const ranking = await dataFor("top_assets_cpu", filters, { chartType: "bar" });
-  assert.deepEqual(ranking.rows.map((row) => row.id), [assetA]);
+  assert.deepEqual(
+    ranking.rows.map((row) => row.id),
+    [assetA]
+  );
 });
 
 test("preview combina status de ativo, severidade, status de OS e atraso com AND", async () => {
@@ -146,9 +175,14 @@ test("severidade e status de OS filtram rankings por ID e nao retornam a visao g
 
 test("preview rejeita filtros malformados e IDs de status nao configurados com 400", async () => {
   for (const invalid of [
-    [], { unknownDimension: "x" }, { assetStatus: "erro" }, { alertSeverity: "urgent" },
-    { serviceOrderStatus: "Aberta" }, { serviceOrderStatus: "not-configured" },
-    { assetId: "x".repeat(201) }, { overdue: "true" }
+    [],
+    { unknownDimension: "x" },
+    { assetStatus: "erro" },
+    { alertSeverity: "urgent" },
+    { serviceOrderStatus: "Aberta" },
+    { serviceOrderStatus: "not-configured" },
+    { assetId: "x".repeat(201) },
+    { overdue: "true" }
   ]) {
     const response = await preview("asset_availability", invalid);
     assert.equal(response.status, 400);
@@ -202,10 +236,21 @@ test("eventos e scripts identificam explicitamente o escopo e nao correlacionam 
 });
 
 test("filtrar e limpar nao persiste selecoes nem altera a configuracao salva do widget", async () => {
-  const layout = { widgets: [{
-    id: "configured-gauge", type: "metric_gauge_cpu", title: "CPU configurada", x: 0, y: 0,
-    w: "s", h: "s", refreshIntervalSeconds: 60, config: { assetId: assetB, chartType: "gauge" }
-  }] };
+  const layout = {
+    widgets: [
+      {
+        id: "configured-gauge",
+        type: "metric_gauge_cpu",
+        title: "CPU configurada",
+        x: 0,
+        y: 0,
+        w: "s",
+        h: "s",
+        refreshIntervalSeconds: 60,
+        config: { assetId: assetB, chartType: "gauge" }
+      }
+    ]
+  };
   const save = await fetch(`${baseUrl}/api/dashboard/layout`, { method: "PUT", headers: headers(), body: JSON.stringify(layout) });
   assert.equal(save.status, 200);
   await dataFor("metric_gauge_cpu", { assetId: assetA }, layout.widgets[0].config);
@@ -217,8 +262,11 @@ test("filtrar e limpar nao persiste selecoes nem altera a configuracao salva do 
 
 test("preview permite 240 requisicoes por minuto para filtros multigrafico e ainda limita abuso", async (t) => {
   await createUser({
-    name: "Limite dashboards", email: "dashboard-limit@itguardian.local", password: "123456",
-    role: "viewer", permissions: ["dashboard.view"]
+    name: "Limite dashboards",
+    email: "dashboard-limit@itguardian.local",
+    password: "123456",
+    role: "viewer",
+    permissions: ["dashboard.view"]
   });
   const cookie = await login("dashboard-limit@itguardian.local");
   // Invalid widget types exercise the limiter without performing 240 inventory reads.

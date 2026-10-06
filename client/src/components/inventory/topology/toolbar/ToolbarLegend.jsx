@@ -7,10 +7,7 @@ export default function ToolbarLegend() {
     <div className="network-topology-legend">
       {LEGEND_STATUSES.map((status) => (
         <span key={status} className="network-topology-legend-item">
-          <span
-            className="network-topology-legend-dot"
-            style={{ background: getStatusColorToken(status) }}
-          />
+          <span className="network-topology-legend-dot" style={{ background: getStatusColorToken(status) }} />
           {getStatusLabel(status)}
         </span>
       ))}

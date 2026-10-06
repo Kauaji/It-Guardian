@@ -30,9 +30,7 @@ export function decorateSegments(segments, meta, fallbackTabId) {
     .map((segment, index) => ({
       ...segment,
       tabId:
-        segment.isDefault || isMaintenanceSegmentName(segment.name)
-          ? "shared"
-          : readItemTabId(meta, "segments", segment.id, fallbackTabId),
+        segment.isDefault || isMaintenanceSegmentName(segment.name) ? "shared" : readItemTabId(meta, "segments", segment.id, fallbackTabId),
       order: readItemOrder(meta, "segments", segment.id, index)
     }))
     .sort((left, right) => left.order - right.order);
@@ -45,12 +43,7 @@ export function decorateDevices(devices, { defaultSegmentIds, fallbackTabId, mac
     const rawSegmentName = device.segmentName;
     const isGlobalUnorganized = !isAvailableBackup && defaultSegmentIds.has(rawSegmentId);
     const displayName =
-      machineAliases[device.id]?.trim() ||
-      device.machineAlias ||
-      device.agent?.machineAlias ||
-      device.name ||
-      device.hostname ||
-      device.id;
+      machineAliases[device.id]?.trim() || device.machineAlias || device.agent?.machineAlias || device.name || device.hostname || device.id;
     const technicalName = device.name || device.hostname || device.agent?.hostname || device.id;
 
     return {
@@ -77,24 +70,21 @@ export function decorateDevices(devices, { defaultSegmentIds, fallbackTabId, mac
 // Segmento virtual "Backup": so existe quando ha ao menos um ativo reserva.
 export function buildBackupSegment(devices) {
   return devices.some((device) => device.isBackup)
-    ? [{
-        id: backupSegmentId,
-        name: backupSegmentName,
-        color: "#f59e0b",
-        isDefault: true,
-        isBackupSegment: true,
-        tabId: "shared",
-        order: -1
-      }]
+    ? [
+        {
+          id: backupSegmentId,
+          name: backupSegmentName,
+          color: "#f59e0b",
+          isDefault: true,
+          isBackupSegment: true,
+          tabId: "shared",
+          order: -1
+        }
+      ]
     : [];
 }
 
-export function selectActiveSegments({
-  activeTabId,
-  decoratedAllDevices,
-  decoratedSegments,
-  occupiedSegmentIds
-}) {
+export function selectActiveSegments({ activeTabId, decoratedAllDevices, decoratedSegments, occupiedSegmentIds }) {
   const activeNonDefaultSegments = decoratedSegments.filter(
     (segment) =>
       !segment.isDefault &&
@@ -152,23 +142,13 @@ function deviceSearchValues(device, { aliasOf, group, segment, tab }) {
 
 // Aplica a busca textual do inventario. Sem termo, devolve uma copia da lista
 // original; com termo, acrescenta `inventorySearchTabName` a cada achado.
-export function filterInventoryDevices({
-  devices,
-  groupById,
-  groups,
-  machineAliases,
-  searchTerm,
-  segmentById,
-  tabById
-}) {
+export function filterInventoryDevices({ devices, groupById, groups, machineAliases, searchTerm, segmentById, tabById }) {
   const term = searchTerm.trim().toLowerCase();
   if (!term) return [...devices];
 
   return devices.flatMap((device) => {
     const segment = segmentById.get(device.segmentId);
-    const groupId =
-      segment?.groupId ||
-      groups.find((item) => (item.segmentIds || []).includes(device.segmentId))?.id;
+    const groupId = segment?.groupId || groups.find((item) => (item.segmentIds || []).includes(device.segmentId))?.id;
     const group = groupId ? groupById.get(groupId) : null;
     const tab = tabById.get(device.tabId);
 
@@ -182,10 +162,12 @@ export function filterInventoryDevices({
       .some((value) => String(value).toLowerCase().includes(term));
 
     return matches
-      ? [{
-          ...device,
-          inventorySearchTabName: tab?.name || (device.isGlobalBackup ? "Backup" : "Não organizadas")
-        }]
+      ? [
+          {
+            ...device,
+            inventorySearchTabName: tab?.name || (device.isGlobalBackup ? "Backup" : "Não organizadas")
+          }
+        ]
       : [];
   });
 }

@@ -18,7 +18,11 @@ let scripts;
 let server;
 
 test.before(async () => {
-  const holder = { after: (callback) => { server = callback; } };
+  const holder = {
+    after: (callback) => {
+      server = callback;
+    }
+  };
   baseUrl = await fx.startServer(holder);
   api = fx.createClient(baseUrl, await fx.login(baseUrl));
   scripts = {
@@ -77,9 +81,7 @@ test("cria plano asset_list com recorrencia propria por maquina e registra rastr
     recurrenceType: "weekly",
     indicatorColor: "#AA3300",
     description: "  Descricao com espacos  ",
-    overrides: [
-      { assetId: "agent-a2", recurrenceType: "custom_days", recurrenceIntervalDays: 5, preferredTime: "10:30" }
-    ]
+    overrides: [{ assetId: "agent-a2", recurrenceType: "custom_days", recurrenceIntervalDays: 5, preferredTime: "10:30" }]
   });
 
   assert.equal(plan.name, "Plano de lista explicita");
@@ -116,12 +118,12 @@ test("cria plano asset_list com recorrencia propria por maquina e registra rastr
     "SELECT asset_id FROM asset_history WHERE event_type = 'preventive_automation_created' AND new_value = $1 ORDER BY asset_id",
     [plan.id]
   );
-  assert.deepEqual(history.map((row) => row.asset_id), ["agent-a1", "agent-a2"]);
-
-  const logs = await fx.rows(
-    "SELECT type, message FROM audit_logs WHERE meta->>'preventiveAutomationPlanId' = $1",
-    [plan.id]
+  assert.deepEqual(
+    history.map((row) => row.asset_id),
+    ["agent-a1", "agent-a2"]
   );
+
+  const logs = await fx.rows("SELECT type, message FROM audit_logs WHERE meta->>'preventiveAutomationPlanId' = $1", [plan.id]);
   assert.equal(logs.length, 1);
   assert.equal(logs[0].type, "preventive_automation_created");
 
@@ -464,7 +466,10 @@ test("pausa e reativacao dedicadas sincronizam agendas, historico e auditoria", 
     "SELECT asset_id FROM asset_history WHERE event_type = 'preventive_automation_paused' AND message LIKE $1 ORDER BY asset_id",
     ["%Plano para pausar%"]
   );
-  assert.deepEqual(pausedHistory.map((row) => row.asset_id), ["agent-a1", "agent-a3"]);
+  assert.deepEqual(
+    pausedHistory.map((row) => row.asset_id),
+    ["agent-a1", "agent-a3"]
+  );
 
   const management = await api.get(`${base}/management`);
   const listed = management.body.plans.find((item) => item.id === plan.id);
@@ -478,10 +483,9 @@ test("pausa e reativacao dedicadas sincronizam agendas, historico e auditoria", 
   assert.ok(reactivatedPlan.assetSchedules.every((schedule) => schedule.active === true && schedule.nextRunAt));
   assert.ok(reactivatedPlan.nextRunAt);
 
-  const events = await fx.rows(
-    "SELECT type FROM audit_logs WHERE meta->>'preventiveAutomationPlanId' = $1 ORDER BY created_at ASC",
-    [plan.id]
-  );
+  const events = await fx.rows("SELECT type FROM audit_logs WHERE meta->>'preventiveAutomationPlanId' = $1 ORDER BY created_at ASC", [
+    plan.id
+  ]);
   const types = events.map((row) => row.type);
   assert.ok(types.includes("preventive_automation_paused"));
   assert.ok(types.includes("preventive_automation_reactivated"));
@@ -521,17 +525,13 @@ test("exclusao e logica: preserva auditoria, desativa agendas e bloqueia novas a
   assert.equal(stored.length, 1, "a linha continua no banco");
   assert.equal(stored[0].active, false);
   assert.ok(stored[0].deleted_at);
-  const schedules = await fx.rows(
-    "SELECT active FROM preventive_automation_asset_schedules WHERE plan_id = $1",
-    [plan.id]
-  );
+  const schedules = await fx.rows("SELECT active FROM preventive_automation_asset_schedules WHERE plan_id = $1", [plan.id]);
   assert.equal(schedules.length, 2);
   assert.ok(schedules.every((row) => row.active === false));
 
-  const audit = await fx.rows(
-    "SELECT meta FROM audit_logs WHERE type = 'preventive_automation_deleted' AND meta->>'planId' = $1",
-    [plan.id]
-  );
+  const audit = await fx.rows("SELECT meta FROM audit_logs WHERE type = 'preventive_automation_deleted' AND meta->>'planId' = $1", [
+    plan.id
+  ]);
   assert.equal(audit.length, 1);
   assert.equal(audit[0].meta.affectedAssetCount, 2);
 
@@ -587,11 +587,7 @@ test("historico do plano lista eventos de auditoria mais recentes primeiro e res
   assert.equal(history.status, 200);
   assert.equal(history.body.limit, 50);
   const types = history.body.items.map((item) => item.type);
-  assert.deepEqual(types.slice(0, 3), [
-    "preventive_automation_paused",
-    "preventive_automation_updated",
-    "preventive_automation_created"
-  ]);
+  assert.deepEqual(types.slice(0, 3), ["preventive_automation_paused", "preventive_automation_updated", "preventive_automation_created"]);
   assert.equal(history.body.items[0].userName, "Admin Sistema");
 
   const limited = await api.get(`${base}/${plan.id}/history?limit=1`);

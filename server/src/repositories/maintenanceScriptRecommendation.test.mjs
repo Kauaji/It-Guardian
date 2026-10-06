@@ -88,10 +88,7 @@ test("pontua cada criterio e explica o motivo da recomendacao", () => {
 
 test("avisos de compatibilidade e penalidade para risco elevado", () => {
   const context = { alertType: "disk_usage", title: "disco" };
-  const plain = scoreMaintenanceScriptForContext(
-    { ...baseScript, relatedAlertTypes: ["disk_usage"] },
-    context
-  );
+  const plain = scoreMaintenanceScriptForContext({ ...baseScript, relatedAlertTypes: ["disk_usage"] }, context);
   const risky = scoreMaintenanceScriptForContext(
     { ...baseScript, relatedAlertTypes: ["disk_usage"], riskLevel: "critical", requiresAdmin: true, requiresLoggedUser: true },
     context
@@ -123,8 +120,14 @@ test("ordena por pontuacao e desempata pelo nome", () => {
   ];
 
   const result = recommendMaintenanceScripts({ title: "disco ssd cheio", tags: ["ssd"] }, scripts);
-  assert.deepEqual(result.recommended.map((item) => item.id), ["c", "a", "b"]);
-  assert.deepEqual(result.others.map((item) => item.id), ["z"]);
+  assert.deepEqual(
+    result.recommended.map((item) => item.id),
+    ["c", "a", "b"]
+  );
+  assert.deepEqual(
+    result.others.map((item) => item.id),
+    ["z"]
+  );
   assert.deepEqual(recommendMaintenanceScripts().recommended, []);
   assert.deepEqual(recommendMaintenanceScripts({}, []).others, []);
 });
@@ -152,22 +155,25 @@ test("infere a categoria tecnica a partir do texto do aviso", () => {
 });
 
 test("resposta resumida de recomendacao aplica valores padrao", () => {
-  assert.deepEqual(toRecommendedScriptResponse({ id: "x", name: "Script X", category: "Rede", riskLevel: "low", estimatedSummary: "Resumo" }), {
-    id: "x",
-    name: "Script X",
-    category: "Rede",
-    riskLevel: "low",
-    estimatedSummary: "Resumo",
-    recommendationScore: 0,
-    recommendationReason: "",
-    compatibilityWarnings: [],
-    requiresLoggedUser: false,
-    requiresAdmin: false,
-    supportedVariables: [],
-    isRecommended: false,
-    matchedAssetIds: [],
-    matchedAlertIds: []
-  });
+  assert.deepEqual(
+    toRecommendedScriptResponse({ id: "x", name: "Script X", category: "Rede", riskLevel: "low", estimatedSummary: "Resumo" }),
+    {
+      id: "x",
+      name: "Script X",
+      category: "Rede",
+      riskLevel: "low",
+      estimatedSummary: "Resumo",
+      recommendationScore: 0,
+      recommendationReason: "",
+      compatibilityWarnings: [],
+      requiresLoggedUser: false,
+      requiresAdmin: false,
+      supportedVariables: [],
+      isRecommended: false,
+      matchedAssetIds: [],
+      matchedAlertIds: []
+    }
+  );
 
   const full = toRecommendedScriptResponse({
     id: "y",

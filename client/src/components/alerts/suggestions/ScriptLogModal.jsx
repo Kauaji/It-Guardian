@@ -81,7 +81,12 @@ export default function ScriptLogModal({ scriptLog }) {
           </section>
           <section>
             <h3>Solução sugerida</h3>
-            <p>{formatDisplayText(log.suggestedSolution, "Revise o script, o acesso ao ativo e as permissões antes de qualquer execução futura.")}</p>
+            <p>
+              {formatDisplayText(
+                log.suggestedSolution,
+                "Revise o script, o acesso ao ativo e as permissões antes de qualquer execução futura."
+              )}
+            </p>
           </section>
           <section>
             <details className="script-log-details">

@@ -27,7 +27,10 @@ describe("settingsConfigs", () => {
 });
 
 describe("useSettingsRecords helpers", () => {
-  const records = [{ id: 1, name: "Alfa", note: null }, { id: 2, name: "Beta", note: "Zeta" }];
+  const records = [
+    { id: 1, name: "Alfa", note: null },
+    { id: 2, name: "Beta", note: "Zeta" }
+  ];
 
   it("filterRecords ignora caixa, espacos e valores vazios", () => {
     expect(filterRecords(records, "  ")).toBe(records);

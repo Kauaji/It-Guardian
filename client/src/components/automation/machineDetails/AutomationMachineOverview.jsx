@@ -20,15 +20,42 @@ function PlanHeading({ plan, effectiveOrigin }) {
 function OverviewGrid({ plan, schedule, effectiveOrigin }) {
   return (
     <section className="automation-machine-overview">
-      <div><span>Recorrência geral</span><strong>{formatRecurrence(plan)}</strong></div>
-      <div><span>Recorrência efetiva</span><strong>{formatRecurrence(schedule)}</strong></div>
-      <div><span>Origem</span><strong>{recurrenceOriginLabel(effectiveOrigin)}</strong></div>
-      <div><span>Próxima preparação</span><strong>{formatAutomationDate(schedule.nextRunAt)}</strong></div>
-      <div><span>Última preparação</span><strong>{formatAutomationDate(schedule.lastPreparedAt, "Ainda não preparada")}</strong></div>
-      <div><span>Último resultado</span><strong>{schedule.latestRun?.status || "Sem execução registrada"}</strong></div>
-      <div><span>Horário</span><strong>{schedule.preferredTime}</strong></div>
-      <div><span>Fuso</span><strong>{schedule.timezone}</strong></div>
-      <div><span>Scripts</span><strong>{plan.scriptCount || 0}</strong></div>
+      <div>
+        <span>Recorrência geral</span>
+        <strong>{formatRecurrence(plan)}</strong>
+      </div>
+      <div>
+        <span>Recorrência efetiva</span>
+        <strong>{formatRecurrence(schedule)}</strong>
+      </div>
+      <div>
+        <span>Origem</span>
+        <strong>{recurrenceOriginLabel(effectiveOrigin)}</strong>
+      </div>
+      <div>
+        <span>Próxima preparação</span>
+        <strong>{formatAutomationDate(schedule.nextRunAt)}</strong>
+      </div>
+      <div>
+        <span>Última preparação</span>
+        <strong>{formatAutomationDate(schedule.lastPreparedAt, "Ainda não preparada")}</strong>
+      </div>
+      <div>
+        <span>Último resultado</span>
+        <strong>{schedule.latestRun?.status || "Sem execução registrada"}</strong>
+      </div>
+      <div>
+        <span>Horário</span>
+        <strong>{schedule.preferredTime}</strong>
+      </div>
+      <div>
+        <span>Fuso</span>
+        <strong>{schedule.timezone}</strong>
+      </div>
+      <div>
+        <span>Scripts</span>
+        <strong>{plan.scriptCount || 0}</strong>
+      </div>
     </section>
   );
 }
@@ -56,14 +83,18 @@ export default function AutomationMachineOverview({
           {detail.history.map((item) => (
             <article key={item.id}>
               <strong>{item.message}</strong>
-              <small>{formatAutomationDate(item.createdAt)} • {item.userName || "Sistema"}</small>
+              <small>
+                {formatAutomationDate(item.createdAt)} • {item.userName || "Sistema"}
+              </small>
             </article>
           ))}
         </section>
       )}
       <section className="automation-machine-script-list">
         <h3>Scripts vinculados</h3>
-        {(plan.scripts || []).map((script) => <span key={script.id}>{script.name}</span>)}
+        {(plan.scripts || []).map((script) => (
+          <span key={script.id}>{script.name}</span>
+        ))}
         {!plan.scripts?.length && <p>Nenhum script identificado.</p>}
       </section>
       <footer>
@@ -80,7 +111,9 @@ export default function AutomationMachineOverview({
             Remover plano da máquina
           </button>
         )}
-        <button type="button" className="primary-action compact-action" onClick={onClose}>Fechar</button>
+        <button type="button" className="primary-action compact-action" onClick={onClose}>
+          Fechar
+        </button>
       </footer>
     </>
   );

@@ -4,23 +4,49 @@ import * as api from "../../../../api.js";
 import InventoryNetworkTopologyView from "../InventoryNetworkTopologyView.jsx";
 
 vi.mock("../../../../api.js", () => ({
-  createNetworkTopologyLink: vi.fn(), createNetworkTopologyMap: vi.fn(), createNetworkTopologyNode: vi.fn(), deleteNetworkTopologyLink: vi.fn(), deleteNetworkTopologyNode: vi.fn(),
-  fetchNetworkTopologyMap: vi.fn(), fetchNetworkTopologyMapByScope: vi.fn(), fetchNetworkTopologyMaps: vi.fn(), generateNetworkTopologyAutoLayout: vi.fn(),
-  saveNetworkTopologyNodePositions: vi.fn(), updateNetworkTopologyLink: vi.fn(), updateNetworkTopologyNode: vi.fn()
+  createNetworkTopologyLink: vi.fn(),
+  createNetworkTopologyMap: vi.fn(),
+  createNetworkTopologyNode: vi.fn(),
+  deleteNetworkTopologyLink: vi.fn(),
+  deleteNetworkTopologyNode: vi.fn(),
+  fetchNetworkTopologyMap: vi.fn(),
+  fetchNetworkTopologyMapByScope: vi.fn(),
+  fetchNetworkTopologyMaps: vi.fn(),
+  generateNetworkTopologyAutoLayout: vi.fn(),
+  saveNetworkTopologyNodePositions: vi.fn(),
+  updateNetworkTopologyLink: vi.fn(),
+  updateNetworkTopologyNode: vi.fn()
 }));
 const permissions = vi.hoisted(() => ({ view: true, manage: true, link: true }));
 vi.mock("../../../../context/AppSessionContext.jsx", () => ({
-  useAppSession: () => ({ can: (p) => p === "inventory.topology.view" ? permissions.view : p === "inventory.topology.link_assets" ? permissions.link : permissions.manage })
+  useAppSession: () => ({
+    can: (p) =>
+      p === "inventory.topology.view" ? permissions.view : p === "inventory.topology.link_assets" ? permissions.link : permissions.manage
+  })
 }));
 
 Object.assign(SVGElement.prototype, {
-  createSVGPoint: () => ({ x: 0, y: 0, matrixTransform(m) { return { x: this.x * m.a + m.e, y: this.y * m.d + m.f }; } }),
+  createSVGPoint: () => ({
+    x: 0,
+    y: 0,
+    matrixTransform(m) {
+      return { x: this.x * m.a + m.e, y: this.y * m.d + m.f };
+    }
+  }),
   getScreenCTM: () => ({ inverse: () => ({ a: 1, d: 1, e: 0, f: 0 }) })
 });
 
-const tabs = [{ id: "t1", name: "Ambiente A" }, { id: "t2", name: "Ambiente B" }];
+const tabs = [
+  { id: "t1", name: "Ambiente A" },
+  { id: "t2", name: "Ambiente B" }
+];
 const makeProps = () => ({
-  token: "tok", notify: vi.fn(), tabs, activeTab: tabs[0], onSelectTab: vi.fn(), onOpenDetails: vi.fn(),
+  token: "tok",
+  notify: vi.fn(),
+  tabs,
+  activeTab: tabs[0],
+  onSelectTab: vi.fn(),
+  onOpenDetails: vi.fn(),
   groups: [{ id: "g1", name: "Grupo A", tabId: "t1" }],
   segments: [{ id: "s1", name: "Estações", groupId: "g1", tabId: "t1" }],
   devices: [
@@ -29,10 +55,16 @@ const makeProps = () => ({
     { id: "d3", name: "Servidor", segmentId: "s1", tabId: "t1", status: "online", assetType: "server", ip: "10.0.0.3" }
   ]
 });
-const settle = () => act(async () => { await new Promise((resolve) => setTimeout(resolve, 5)); });
+const settle = () =>
+  act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  });
 const legacyBundle = {
   map: { id: "legacy-1" },
-  nodes: [{ id: "ln1", assetId: "d1", nodeType: "asset", x: 100, y: 100 }, { id: "ln2", assetId: "d2", nodeType: "asset", x: 300, y: 200 }],
+  nodes: [
+    { id: "ln1", assetId: "d1", nodeType: "asset", x: 100, y: 100 },
+    { id: "ln2", assetId: "d2", nodeType: "asset", x: 300, y: 200 }
+  ],
   links: [{ id: "ll1", sourceAssetId: "d1", targetAssetId: "d2", type: "ethernet" }]
 };
 
@@ -57,10 +89,13 @@ beforeEach(() => {
   api.fetchNetworkTopologyMaps.mockResolvedValue({ maps: [{ id: "legacy-1", scopeType: "global" }] });
   api.fetchNetworkTopologyMap.mockResolvedValue(legacyBundle);
   api.fetchNetworkTopologyMapByScope.mockImplementation(async (_t, scopeType, scopeId) => ({
-    map: { id: `map-${scopeType}-${scopeId}`, scopeType, scopeId }, nodes: [],
+    map: { id: `map-${scopeType}-${scopeId}`, scopeType, scopeId },
+    nodes: [],
     links: scopeType === "segment" ? [{ id: "l1", sourceAssetId: "d1", targetAssetId: "d2", label: "Rede física", type: "ethernet" }] : []
   }));
-  api.createNetworkTopologyNode.mockImplementation(async (_t, _m, payload) => ({ node: { id: "new-node", nodeType: "asset", ...payload } }));
+  api.createNetworkTopologyNode.mockImplementation(async (_t, _m, payload) => ({
+    node: { id: "new-node", nodeType: "asset", ...payload }
+  }));
   api.updateNetworkTopologyLink.mockImplementation(async (_t, id, payload) => ({ link: { id, ...payload } }));
   api.deleteNetworkTopologyLink.mockResolvedValue({});
   api.deleteNetworkTopologyNode.mockResolvedValue({});
@@ -159,12 +194,21 @@ describe("InventoryNetworkTopologyView — visão global legada", () => {
 
 describe("InventoryNetworkTopologyView — conexões e navegação", () => {
   it("salva e exclui a conexão selecionada, informando falhas", async () => {
-    const { props } = await (async () => { const props = makeProps(); render(<InventoryNetworkTopologyView {...props} />); await openSegment(); return { props }; })();
+    const { props } = await (async () => {
+      const props = makeProps();
+      render(<InventoryNetworkTopologyView {...props} />);
+      await openSegment();
+      return { props };
+    })();
     fireEvent.click(screen.getByRole("button", { name: "Conexão entre Desktop A e Desktop B: Rede física" }));
     const inspector = screen.getByRole("complementary", { name: "Detalhes da conexão" });
     fireEvent.click(within(inspector).getByRole("button", { name: "Salvar conexão" }));
     await settle();
-    expect(api.updateNetworkTopologyLink).toHaveBeenCalledWith("tok", "l1", expect.objectContaining({ sourceAssetId: "d1", targetAssetId: "d2", sourceType: "asset", targetType: "asset" }));
+    expect(api.updateNetworkTopologyLink).toHaveBeenCalledWith(
+      "tok",
+      "l1",
+      expect.objectContaining({ sourceAssetId: "d1", targetAssetId: "d2", sourceType: "asset", targetType: "asset" })
+    );
     expect(props.notify).toHaveBeenCalledWith("success", "Conexão atualizada.");
 
     api.updateNetworkTopologyLink.mockRejectedValueOnce(new Error("não salvou"));
@@ -179,7 +223,9 @@ describe("InventoryNetworkTopologyView — conexões e navegação", () => {
     fireEvent.click(within(inspector).getByRole("button", { name: "Excluir conexão" }));
     await settle();
     expect(props.notify).toHaveBeenCalledWith("error", "não excluiu");
-    fireEvent.click(within(screen.getByRole("complementary", { name: "Detalhes da conexão" })).getByRole("button", { name: "Excluir conexão" }));
+    fireEvent.click(
+      within(screen.getByRole("complementary", { name: "Detalhes da conexão" })).getByRole("button", { name: "Excluir conexão" })
+    );
     await settle();
     expect(api.deleteNetworkTopologyLink).toHaveBeenLastCalledWith("tok", "l1");
     expect(screen.queryByRole("complementary", { name: "Detalhes da conexão" })).toBeNull();

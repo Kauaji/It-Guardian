@@ -1,9 +1,5 @@
 import { useState } from "react";
-import {
-  automationDraftsEqual,
-  buildAutomationOverrideDraft,
-  validateAutomationOverrideDraft
-} from "../automationFormUtils.js";
+import { automationDraftsEqual, buildAutomationOverrideDraft, validateAutomationOverrideDraft } from "../automationFormUtils.js";
 import useUnsavedChanges from "../useUnsavedChanges.js";
 import { deriveMachineDetailView } from "./machineDetailsUtils.js";
 import { useMachinePlanDetail } from "./useMachinePlanDetail.js";
@@ -11,15 +7,7 @@ import { useOverrideDraftState } from "./useOverrideDraftState.js";
 
 // Estado, carregamento do detalhe da agenda e acoes de recorrencia
 // personalizada do modal de detalhes da maquina.
-export default function useAutomationMachineDetails({
-  machine,
-  open,
-  saving,
-  onClose,
-  onSaveOverride,
-  onRemoveOverride,
-  onLoadDetails
-}) {
+export default function useAutomationMachineDetails({ machine, open, saving, onClose, onSaveOverride, onRemoveOverride, onLoadDetails }) {
   const draftState = useOverrideDraftState();
   const {
     editingOverride,

@@ -14,7 +14,14 @@ vi.mock("../../auth/clipboard.js");
 const chrome = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0 Safari/537.36";
 const sessions = [
   { id: "s1", current: true, ip: "10.0.0.1", userAgent: chrome, lastSeenAt: "2026-10-02T12:00:00Z", createdAt: "2026-10-02T10:00:00Z" },
-  { id: "s2", current: false, ip: "10.0.0.2", userAgent: "Mozilla/5.0 (Linux; Android 14) Chrome/120 Mobile", lastSeenAt: "2026-10-01T12:00:00Z", createdAt: "2026-10-01T10:00:00Z" }
+  {
+    id: "s2",
+    current: false,
+    ip: "10.0.0.2",
+    userAgent: "Mozilla/5.0 (Linux; Android 14) Chrome/120 Mobile",
+    lastSeenAt: "2026-10-01T12:00:00Z",
+    createdAt: "2026-10-01T10:00:00Z"
+  }
 ];
 
 beforeEach(() => {
@@ -27,7 +34,10 @@ beforeEach(() => {
 });
 
 async function mount(options = {}) {
-  const { session, tree } = renderWithSession(<AccountSecurityPage />, { user: { ...baseUser, isAdmin: false, role: "viewer" }, ...options });
+  const { session, tree } = renderWithSession(<AccountSecurityPage />, {
+    user: { ...baseUser, isAdmin: false, role: "viewer" },
+    ...options
+  });
   render(tree);
   await screen.findByRole("list", { name: "Sessões ativas" });
   return { session, user: userEvent.setup() };
@@ -130,7 +140,9 @@ describe("MFA na pagina", () => {
     await user.click(screen.getByRole("checkbox"));
     await user.click(screen.getByRole("button", { name: "Concluir" }));
 
-    await waitFor(() => expect(session.handleAuth).toHaveBeenCalledWith({ token: "tok-2", user: expect.objectContaining({ mfaEnabled: true }) }));
+    await waitFor(() =>
+      expect(session.handleAuth).toHaveBeenCalledWith({ token: "tok-2", user: expect.objectContaining({ mfaEnabled: true }) })
+    );
     expect(session.notify).toHaveBeenCalledWith("Verificação em duas etapas ativada.", "ok");
     expect(await screen.findByText(/Códigos de recuperação restantes: 1/)).toBeInTheDocument();
     expect(screen.queryByText("AAAAA-11111")).not.toBeInTheDocument();

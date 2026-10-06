@@ -19,7 +19,7 @@ export default function useTopologyMapData({ token, canView, canEditMap, activeT
       const response = await fetchNetworkTopologyMaps(token);
       setMaps(response.maps);
       const legacyMaps = response.maps.filter((map) => !map.scopeType || map.scopeType === "global");
-      setLegacyActiveMapId((current) => legacyMaps.some((map) => map.id === current) ? current : legacyMaps[0]?.id || null);
+      setLegacyActiveMapId((current) => (legacyMaps.some((map) => map.id === current) ? current : legacyMaps[0]?.id || null));
     } catch (fetchError) {
       setError(fetchError.message);
     }
@@ -35,13 +35,11 @@ export default function useTopologyMapData({ token, canView, canEditMap, activeT
   // unsaved edits. Only the legacy view selects a map directly by id.
   const legacyMapId = viewLevel === "global-legado" ? legacyActiveMapId : null;
   const scopeKey = JSON.stringify([activeTab?.id, viewLevel, selectedGroupId, selectedSegmentId, legacyMapId]);
-  const scopeAvailable = viewLevel === "group" ? Boolean(selectedGroup)
-    : viewLevel === "segment" ? Boolean(selectedSegmentSummary) : true;
+  const scopeAvailable = viewLevel === "group" ? Boolean(selectedGroup) : viewLevel === "segment" ? Boolean(selectedSegmentSummary) : true;
   useEffect(() => {
     if (!canView) return undefined;
     const scopeType = viewLevel === "tab" ? "inventory_tab" : viewLevel;
-    const scopeId = viewLevel === "tab" ? activeTab?.id
-      : viewLevel === "segment" ? selectedSegmentId : selectedGroupId;
+    const scopeId = viewLevel === "tab" ? activeTab?.id : viewLevel === "segment" ? selectedSegmentId : selectedGroupId;
     setBundle(null);
     if (!scopeAvailable || (viewLevel === "global-legado" ? !legacyMapId : !scopeId)) {
       setLoadingBundle(false);
@@ -55,9 +53,10 @@ export default function useTopologyMapData({ token, canView, canEditMap, activeT
     setSelectedLinkId(null);
     const openForEditing = canEditMap && editIntentRef.current?.scopeType === scopeType && editIntentRef.current?.scopeId === scopeId;
     editIntentRef.current = null;
-    const request = viewLevel === "global-legado"
-      ? fetchNetworkTopologyMap(token, legacyMapId)
-      : fetchNetworkTopologyMapByScope(token, scopeType, scopeId, viewLevel === "tab" ? activeTab?.name : undefined);
+    const request =
+      viewLevel === "global-legado"
+        ? fetchNetworkTopologyMap(token, legacyMapId)
+        : fetchNetworkTopologyMapByScope(token, scopeType, scopeId, viewLevel === "tab" ? activeTab?.name : undefined);
     request
       .then((response) => {
         if (cancelled) return;
@@ -71,11 +70,33 @@ export default function useTopologyMapData({ token, canView, canEditMap, activeT
       .finally(() => {
         if (!cancelled) setLoadingBundle(false);
       });
-    return () => { cancelled = true; };
-  }, [viewLevel, selectedSegmentId, selectedGroupId, activeTab?.id, activeTab?.name, legacyMapId, token, canView, canEditMap, scopeAvailable]);
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    viewLevel,
+    selectedSegmentId,
+    selectedGroupId,
+    activeTab?.id,
+    activeTab?.name,
+    legacyMapId,
+    token,
+    canView,
+    canEditMap,
+    scopeAvailable
+  ]);
 
   return {
-    maps, setMaps, activeMapId, setActiveMapId, legacyActiveMapId, setLegacyActiveMapId,
-    bundle, setBundle, loadingBundle, error, scopeKey
+    maps,
+    setMaps,
+    activeMapId,
+    setActiveMapId,
+    legacyActiveMapId,
+    setLegacyActiveMapId,
+    bundle,
+    setBundle,
+    loadingBundle,
+    error,
+    scopeKey
   };
 }

@@ -1,11 +1,7 @@
 import { updateDeviceBackup } from "../../api.js";
 import { useAppSession } from "../../context/AppSessionContext.jsx";
 import { findSegmentById } from "../inventory/inventoryModel.js";
-import {
-  getDefaultInventorySegment,
-  getRealBackupLocation,
-  getServiceOrderAssetOrigin
-} from "../inventory/segmentLookups.js";
+import { getDefaultInventorySegment, getRealBackupLocation, getServiceOrderAssetOrigin } from "../inventory/segmentLookups.js";
 import { buildBackupHistoryEvent } from "./backupHistory.js";
 
 // Aloca uma maquina Backup no lugar da maquina principal de uma OS.
@@ -58,8 +54,7 @@ export function useBackupAllocation({ data, deviceState, inventory, maintenanceE
 
     const backupOrigin = getRealBackupLocation(backupMachine, segmentLists);
     const targetSegment =
-      findSegmentById(targetOrigin.segmentId, decoratedSegments, activeSegments, segments) ||
-      getDefaultInventorySegment(segmentLists);
+      findSegmentById(targetOrigin.segmentId, decoratedSegments, activeSegments, segments) || getDefaultInventorySegment(segmentLists);
 
     if (!targetSegment) {
       notify("Não foi possível localizar o segmento de destino do Backup.", "danger");
@@ -91,22 +86,28 @@ export function useBackupAllocation({ data, deviceState, inventory, maintenanceE
         oldValue: "",
         newValue: backupMachine.name
       });
-      deviceState.appendDeviceHistoryEvent(mainMachine.id, buildBackupHistoryEvent({
-        machineId: mainMachine.id,
-        key: "backup-replacement",
-        userName: user.name,
-        message: `Substituída temporariamente por máquina Backup na OS #${order.number}.`,
-        oldValue: mainMachine.name,
-        newValue: backupMachine.name
-      }));
-      deviceState.appendDeviceHistoryEvent(backupMachine.id, buildBackupHistoryEvent({
-        machineId: backupMachine.id,
-        key: "backup-in-use",
-        userName: user.name,
-        message: `Usada como substituta na OS #${order.number}.`,
-        oldValue: backupOrigin.segmentName,
-        newValue: targetSegment.name
-      }));
+      deviceState.appendDeviceHistoryEvent(
+        mainMachine.id,
+        buildBackupHistoryEvent({
+          machineId: mainMachine.id,
+          key: "backup-replacement",
+          userName: user.name,
+          message: `Substituída temporariamente por máquina Backup na OS #${order.number}.`,
+          oldValue: mainMachine.name,
+          newValue: backupMachine.name
+        })
+      );
+      deviceState.appendDeviceHistoryEvent(
+        backupMachine.id,
+        buildBackupHistoryEvent({
+          machineId: backupMachine.id,
+          key: "backup-in-use",
+          userName: user.name,
+          message: `Usada como substituta na OS #${order.number}.`,
+          oldValue: backupOrigin.segmentName,
+          newValue: targetSegment.name
+        })
+      );
       await loadData(true);
       notify(`${backupMachine.name} alocada como Backup da OS ${updatedOrder?.number || order.number}.`, "ok");
       return true;

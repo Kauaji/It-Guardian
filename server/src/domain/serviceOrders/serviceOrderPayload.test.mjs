@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { formatItemsForHistory, itemsSignature, normalizeServiceOrderItems, sumServiceOrderItems, toMoneyValue, toQuantityValue } from "./serviceOrderItems.js";
+import {
+  formatItemsForHistory,
+  itemsSignature,
+  normalizeServiceOrderItems,
+  sumServiceOrderItems,
+  toMoneyValue,
+  toQuantityValue
+} from "./serviceOrderItems.js";
 import {
   buildServiceOrderChanges,
   calculateServiceOrderTotals,
@@ -88,10 +95,27 @@ test("totais e valor do servico na criacao e na atualizacao", () => {
 
 test("alteracoes: so campos enviados e diferentes viram eventos", () => {
   const current = {
-    title: "A", description: "d", status: "open", priority: "low", assetId: "m1", assignedTechnicianNames: ["Ana"],
-    sectorName: "Geral", serviceName: null, serviceCode: null, serviceValue: 10, partsUsed: ""
+    title: "A",
+    description: "d",
+    status: "open",
+    priority: "low",
+    assetId: "m1",
+    assignedTechnicianNames: ["Ana"],
+    sectorName: "Geral",
+    serviceName: null,
+    serviceCode: null,
+    serviceValue: 10,
+    partsUsed: ""
   };
-  const base = { current, assignedTechnicianNames: ["Ana"], nextAssetId: "m1", serviceValue: 10, sector: { sectorName: "Geral" }, service: {}, itemsInPayload: false };
+  const base = {
+    current,
+    assignedTechnicianNames: ["Ana"],
+    nextAssetId: "m1",
+    serviceValue: 10,
+    sector: { sectorName: "Geral" },
+    service: {},
+    itemsInPayload: false
+  };
 
   assert.deepEqual(buildServiceOrderChanges({ ...base, payload: { title: "A", description: "d" } }), []);
 
@@ -142,7 +166,17 @@ test("linhas persistidas: nova OS, atualizacao parcial e fechamento", () => {
   assert.equal(created.createdBy, "u1");
   assert.equal(created.totalValue, 15);
 
-  const current = { title: "Antigo", description: "d", status: "open", priority: "low", assetId: "m1", backupAssetId: "b1", environmentName: "X", autoPriorityEnabled: false, closedAt: null };
+  const current = {
+    title: "Antigo",
+    description: "d",
+    status: "open",
+    priority: "low",
+    assetId: "m1",
+    backupAssetId: "b1",
+    environmentName: "X",
+    autoPriorityEnabled: false,
+    closedAt: null
+  };
   const updated = buildUpdatedServiceOrderRow({
     payload: { title: "Novo", assetId: "" },
     current,

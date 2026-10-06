@@ -31,8 +31,14 @@ export default function DashboardPage({
   onNavigateServiceOrders,
   onOpenSettings
 }) {
-  const { report, loading: reportLoading, error: reportError, period, setPeriod, reload } =
-    useDashboardSummary({ token, canView: true, notify });
+  const {
+    report,
+    loading: reportLoading,
+    error: reportError,
+    period,
+    setPeriod,
+    reload
+  } = useDashboardSummary({ token, canView: true, notify });
   const slices = buildReportSlices(report);
   const reportPending = reportLoading && !report;
 
@@ -50,7 +56,9 @@ export default function DashboardPage({
       {reportError && (
         <p className="form-error dashboard-report-error" role="alert">
           {reportError}
-          <button type="button" className="secondary-action" onClick={reload}>Tentar novamente</button>
+          <button type="button" className="secondary-action" onClick={reload}>
+            Tentar novamente
+          </button>
         </p>
       )}
 
@@ -62,13 +70,7 @@ export default function DashboardPage({
       </section>
 
       <DashboardDeviceToolbar search={search} setSearch={setSearch} status={status} setStatus={setStatus} />
-      <DashboardDevicesSection
-        loading={loading}
-        devices={devices}
-        selectedId={selectedId}
-        selectDevice={selectDevice}
-        alerts={alerts}
-      />
+      <DashboardDevicesSection loading={loading} devices={devices} selectedId={selectedId} selectDevice={selectDevice} alerts={alerts} />
       <DashboardBottomGrid selectedDevice={selectedDevice} history={history} />
 
       <DashboardChartsSection slices={slices} period={period} pending={reportPending} />
@@ -80,11 +82,7 @@ export default function DashboardPage({
         onNavigateAlerts={onNavigateAlerts}
         onNavigateServiceOrders={onNavigateServiceOrders}
       />
-      <DashboardBusinessSection
-        business={slices.business}
-        byEnvironment={slices.byEnvironment}
-        pending={reportPending}
-      />
+      <DashboardBusinessSection business={slices.business} byEnvironment={slices.byEnvironment} pending={reportPending} />
     </>
   );
 }

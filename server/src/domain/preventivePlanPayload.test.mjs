@@ -44,11 +44,14 @@ test("payload invalido gera erros 400 especificos", () => {
     [undefined, /pelo menos 3 caracteres/]
   ];
   for (const [payload, pattern] of failures) {
-    assert.throws(() => normalizePreventivePlanPayload(payload), (error) => {
-      assert.equal(error.statusCode, 400);
-      assert.match(error.message, pattern);
-      return true;
-    });
+    assert.throws(
+      () => normalizePreventivePlanPayload(payload),
+      (error) => {
+        assert.equal(error.statusCode, 400);
+        assert.match(error.message, pattern);
+        return true;
+      }
+    );
   }
 });
 
@@ -81,7 +84,10 @@ test("resumo da automacao vinculada tem padroes seguros", () => {
 });
 
 test("textos e payload derivados do plano", () => {
-  assert.match(buildAssetRegistrationLog({ assetId: "a1", scriptNames: "um, dois", automationEnabled: true }), /Execução será iniciada pela agenda/);
+  assert.match(
+    buildAssetRegistrationLog({ assetId: "a1", scriptNames: "um, dois", automationEnabled: true }),
+    /Execução será iniciada pela agenda/
+  );
   assert.match(buildAssetRegistrationLog({ assetId: "a1", scriptNames: "um", automationEnabled: false }), /Scripts enfileirados/);
 
   const linked = buildLinkedAutomationPayload({
@@ -116,7 +122,10 @@ test("OS preventiva descreve maquinas e verificacoes sem executar comandos", () 
   assert.match(single.payload.description, /Verificações selecionadas: Limpeza, Disco\./);
   assert.match(single.payload.notes, /Nenhum comando foi executado automaticamente\./);
 
-  const multiple = buildServiceOrderDraft({ plan: { id: "pp2", name: "Outro", assets: [{ assetId: "a1" }, { assetId: "a2" }], scripts: [] }, user: null });
+  const multiple = buildServiceOrderDraft({
+    plan: { id: "pp2", name: "Outro", assets: [{ assetId: "a1" }, { assetId: "a2" }], scripts: [] },
+    user: null
+  });
   assert.equal(multiple.payload.title, "Manutenção preventiva — 2 máquina(s)");
   assert.equal(multiple.payload.assetId, null);
   assert.equal(multiple.payload.requesterName, "Técnico");

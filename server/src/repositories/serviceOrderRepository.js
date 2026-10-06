@@ -27,23 +27,12 @@ export {
 } from "../domain/serviceOrders/serviceOrderSettings.js";
 export { serviceOrderPriorities } from "../domain/serviceOrders/serviceOrderPriority.js";
 export { canViewAllServiceOrders, canViewServiceOrder } from "../domain/serviceOrders/serviceOrderAccess.js";
-export {
-  SLA_STATUSES,
-  calculateServiceOrderSla,
-  computeServiceOrderSlaDueAt
-} from "../domain/serviceOrders/serviceOrderSla.js";
+export { SLA_STATUSES, calculateServiceOrderSla, computeServiceOrderSlaDueAt } from "../domain/serviceOrders/serviceOrderSla.js";
 export { serviceOrderAttachmentCategories } from "../domain/serviceOrders/serviceOrderAttachments.js";
 export { getServiceOrderSettings, updateServiceOrderSettings } from "./serviceOrders/serviceOrderSettingsRepository.js";
-export {
-  findServiceOrderById,
-  listServiceOrders,
-  listServiceOrdersByAssetId
-} from "./serviceOrders/serviceOrderReadRepository.js";
+export { findServiceOrderById, listServiceOrders, listServiceOrdersByAssetId } from "./serviceOrders/serviceOrderReadRepository.js";
 export { listServiceOrderItemsByOrderIds } from "./serviceOrders/serviceOrderItemRepository.js";
 export { addServiceOrderHistory, listServiceOrderHistory } from "./serviceOrders/serviceOrderHistoryRepository.js";
-export {
-  findServiceOrderFeedback,
-  listServiceOrderFeedbackByOrderIds
-} from "./serviceOrders/serviceOrderFeedbackRepository.js";
+export { findServiceOrderFeedback, listServiceOrderFeedbackByOrderIds } from "./serviceOrders/serviceOrderFeedbackRepository.js";
 export { listServiceOrderAttachments } from "./serviceOrders/serviceOrderAttachmentRepository.js";
 export { setFirstResponseAtIfNeeded } from "./serviceOrders/serviceOrderWriteRepository.js";

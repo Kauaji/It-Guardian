@@ -1,10 +1,7 @@
 import { useState } from "react";
 import { createSegment, renameSegment } from "../../api.js";
 import { useAppSession } from "../../context/AppSessionContext.jsx";
-import {
-  isReservedSegmentName,
-  pickSegmentColor
-} from "../../components/inventory/inventoryLocalState.js";
+import { isReservedSegmentName, pickSegmentColor } from "../../components/inventory/inventoryLocalState.js";
 import {
   assignSegmentToGroup,
   getSegmentGroupId,
@@ -44,15 +41,11 @@ export function useSegmentForm({ data, inventory, meta }) {
     meta.updateInventoryMeta("segments", segmentForm.segment.id, { tabId: activeInventoryTab.id });
     setSegments((current) =>
       current.map((item) =>
-        item.id === segmentForm.segment.id
-          ? { ...item, name: response.segment.name, groupId: response.segment.groupId || "" }
-          : item
+        item.id === segmentForm.segment.id ? { ...item, name: response.segment.name, groupId: response.segment.groupId || "" } : item
       )
     );
     setAllDevices((current) =>
-      current.map((device) =>
-        device.segmentId === segmentForm.segment.id ? { ...device, segmentName: response.segment.name } : device
-      )
+      current.map((device) => (device.segmentId === segmentForm.segment.id ? { ...device, segmentName: response.segment.name } : device))
     );
     notify("Segmento renomeado.", "ok");
   }
@@ -64,9 +57,7 @@ export function useSegmentForm({ data, inventory, meta }) {
       groupId: targetGroupId || null
     });
     const nextSegment = { ...response.segment, groupId: response.segment.groupId || targetGroupId };
-    const targetSiblings = activeSegments.filter(
-      (segment) => getSegmentGroupId(segment, activeSegmentGroups) === targetGroupId
-    );
+    const targetSiblings = activeSegments.filter((segment) => getSegmentGroupId(segment, activeSegmentGroups) === targetGroupId);
     setSegments((current) => upsertSegmentList(current, nextSegment));
     meta.updateInventoryMeta("segments", response.segment.id, {
       tabId: activeInventoryTab.id,

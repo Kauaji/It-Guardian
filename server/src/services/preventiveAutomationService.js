@@ -7,10 +7,7 @@ import {
   reactivatePreventiveAutomationPlan,
   updatePreventiveAutomationPlan
 } from "./preventiveAutomationPlanService.js";
-import {
-  findPreventiveAutomationPlanById,
-  listPreventiveAutomationPlans
-} from "./preventiveAutomationPlanQueryService.js";
+import { findPreventiveAutomationPlanById, listPreventiveAutomationPlans } from "./preventiveAutomationPlanQueryService.js";
 import {
   findPreventiveAutomationAssetDetails,
   listPreventiveAutomationAgenda,
@@ -172,8 +169,11 @@ export async function runScheduledMaintenanceCron(receivedSecret) {
       ...(result.preventiveAutomation?.plans || [])
         .filter((plan) => plan.status === "failed")
         .map((plan) => ({ scope: "preventiveAutomation", planId: plan.planId, message: plan.message })),
-      ...(result.scriptValidations?.failedValidations || [])
-        .map((validation) => ({ scope: "scriptValidations", validationId: validation.validationId, message: validation.message }))
+      ...(result.scriptValidations?.failedValidations || []).map((validation) => ({
+        scope: "scriptValidations",
+        validationId: validation.validationId,
+        message: validation.message
+      }))
     ],
     durationMs: finishedAt.getTime() - startedAt.getTime()
   };

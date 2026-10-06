@@ -41,9 +41,17 @@ export function useServiceOrderActions({
       return;
     }
 
-    popup.document.write(buildPrintDocument({
-      serviceOrder, draft, asset, statusLabelMap, environmentLabel, businessMode, ...finance
-    }));
+    popup.document.write(
+      buildPrintDocument({
+        serviceOrder,
+        draft,
+        asset,
+        statusLabelMap,
+        environmentLabel,
+        businessMode,
+        ...finance
+      })
+    );
     popup.document.close();
     popup.focus();
     setTimeout(() => popup.print(), PRINT_DELAY_MS);

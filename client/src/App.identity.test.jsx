@@ -18,7 +18,15 @@ const { stub } = vi.hoisted(() => ({
 vi.mock("./components/dashboard/widgets/DashboardWorkspace.jsx", stub("view-dashboard"));
 vi.mock("./components/alerts/AlertCenterV2.jsx", stub("view-alerts"));
 
-const admin = { id: "u1", name: "Ana", email: "ana@empresa.com", role: "admin", isAdmin: true, mfaEnabled: true, mustChangePassword: false };
+const admin = {
+  id: "u1",
+  name: "Ana",
+  email: "ana@empresa.com",
+  role: "admin",
+  isAdmin: true,
+  mfaEnabled: true,
+  mustChangePassword: false
+};
 let path;
 
 function Probe() {

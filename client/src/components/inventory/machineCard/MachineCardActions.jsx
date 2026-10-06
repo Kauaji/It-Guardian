@@ -4,7 +4,17 @@ import PeripheralList from "../PeripheralList.jsx";
 import MetricBadge from "../metrics/MetricBadge.jsx";
 import DiskIndicator from "./DiskIndicator.jsx";
 
-function DetailsMenu({ machine, expanded, detailsPopoverId, isManualAsset, canManage, segmentColor, setActivePopoverId, onAddPeripheral, onRemovePeripheral }) {
+function DetailsMenu({
+  machine,
+  expanded,
+  detailsPopoverId,
+  isManualAsset,
+  canManage,
+  segmentColor,
+  setActivePopoverId,
+  onAddPeripheral,
+  onRemovePeripheral
+}) {
   return (
     <div className="details-menu">
       <button
@@ -20,10 +30,7 @@ function DetailsMenu({ machine, expanded, detailsPopoverId, isManualAsset, canMa
       >
         <ChevronDown size={15} />
       </button>
-      <div
-        className={`machine-details ${expanded ? "expanded" : ""}`}
-        onClick={(event) => event.stopPropagation()}
-      >
+      <div className={`machine-details ${expanded ? "expanded" : ""}`} onClick={(event) => event.stopPropagation()}>
         {isManualAsset ? (
           <div className="manual-asset-mini">
             <span>{machine.manualAsset?.location || "Sem localização"}</span>
@@ -90,14 +97,7 @@ export default function MachineCardActions({ machine, alias, metrics, isManualAs
           <DiskIndicator value={metrics.disk} />
         </MetricBadge>
       )}
-      <RemoteAssistanceAction
-        asset={machine}
-        alias={alias}
-        token={token}
-        user={user}
-        notify={notify}
-        compact
-      />
+      <RemoteAssistanceAction asset={machine} alias={alias} token={token} user={user} notify={notify} compact />
       <DetailsMenu
         machine={machine}
         expanded={flags.expanded}

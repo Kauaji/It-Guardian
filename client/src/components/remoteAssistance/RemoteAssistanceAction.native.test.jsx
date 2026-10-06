@@ -1,15 +1,7 @@
 import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as api from "../../api.js";
-import {
-  MONITORS,
-  advance,
-  makeAsset,
-  openDialog,
-  renderAction,
-  startNativeSession,
-  wireApi
-} from "./test/fixtures.jsx";
+import { MONITORS, advance, makeAsset, openDialog, renderAction, startNativeSession, wireApi } from "./test/fixtures.jsx";
 
 // Caracterizacao do fluxo do transporte nativo (snapshots HTTP): reautenticacao,
 // pedido, consentimento, sessao ativa, pausa/retomada e encerramento.
@@ -59,35 +51,23 @@ describe("visibilidade do gatilho", () => {
 
   it("explica a indisponibilidade por permissao e pelo backend", async () => {
     await renderAction(Action, { compact: true, user: { id: "x", role: "viewer", effectivePermissions: [] } });
-    expect(screen.getByRole("button", { name: "Atendimento remoto" })).toHaveAttribute(
-      "title",
-      "Sem permissão para atendimento remoto"
-    );
+    expect(screen.getByRole("button", { name: "Atendimento remoto" })).toHaveAttribute("title", "Sem permissão para atendimento remoto");
     cleanup();
 
     api.fetchRemoteAssistanceConfig.mockResolvedValue({ enabled: false });
     await renderAction(Action, { compact: true });
-    expect(screen.getByRole("button", { name: "Atendimento remoto" })).toHaveAttribute(
-      "title",
-      "Atendimento remoto indisponível"
-    );
+    expect(screen.getByRole("button", { name: "Atendimento remoto" })).toHaveAttribute("title", "Atendimento remoto indisponível");
     cleanup();
 
     api.fetchRemoteAssistanceConfig.mockReturnValue(new Promise(() => {}));
     await renderAction(Action, { compact: true });
-    expect(screen.getByRole("button", { name: "Atendimento remoto" })).toHaveAttribute(
-      "title",
-      "Verificando atendimento remoto"
-    );
+    expect(screen.getByRole("button", { name: "Atendimento remoto" })).toHaveAttribute("title", "Verificando atendimento remoto");
   });
 
   it("explica a indisponibilidade quando o front esta desligado (modo compacto)", async () => {
     vi.stubEnv("VITE_ENABLE_REMOTE_ASSISTANCE", "false");
     await renderAction(Action, { compact: true });
-    expect(screen.getByRole("button", { name: "Atendimento remoto" })).toHaveAttribute(
-      "title",
-      "Atendimento remoto não habilitado"
-    );
+    expect(screen.getByRole("button", { name: "Atendimento remoto" })).toHaveAttribute("title", "Atendimento remoto não habilitado");
     expect(api.fetchRemoteAssistanceConfig).not.toHaveBeenCalled();
   });
 
@@ -271,10 +251,7 @@ describe("fluxo feliz do transporte nativo", () => {
     // Quadros ja em formato data URL ficam como estao.
     server.frame = "data:image/png;base64,BBBB";
     await advance(1100);
-    expect(within(dialog).getByAltText("Tela remota de lab-01")).toHaveAttribute(
-      "src",
-      "data:image/png;base64,BBBB"
-    );
+    expect(within(dialog).getByAltText("Tela remota de lab-01")).toHaveAttribute("src", "data:image/png;base64,BBBB");
 
     // Pausar.
     await act(async () => {
@@ -334,10 +311,11 @@ describe("fluxo feliz do transporte nativo", () => {
 
     const select = screen.getByRole("combobox");
     expect(select).toHaveValue("m1");
-    expect(within(select).getAllByRole("option").map((option) => option.textContent)).toEqual([
-      "Tela 1 - 1920x1080 - Principal",
-      "Tela 2 - 1280x720"
-    ]);
+    expect(
+      within(select)
+        .getAllByRole("option")
+        .map((option) => option.textContent)
+    ).toEqual(["Tela 1 - 1920x1080 - Principal", "Tela 2 - 1280x720"]);
     await act(async () => {
       fireEvent.change(select, { target: { value: "m2" } });
     });

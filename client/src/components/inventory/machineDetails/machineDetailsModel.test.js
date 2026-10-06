@@ -32,14 +32,24 @@ describe("machineDetailsModel", () => {
     expect(buildMetricAlert({ metric: "cpu", label: "CPU", value: null })).toBeNull();
     expect(buildMetricAlert({ metric: "cpu", label: "CPU", value: 69 })).toBeNull();
     expect(buildMetricAlert({ metric: "cpu", label: "CPU", value: 75 })).toMatchObject({ severity: "Atenção", limit: "70%" });
-    expect(buildMetricAlert({ metric: "ram", label: "RAM", value: 90 })).toMatchObject({ severity: "Crítico", limit: "85%", id: "metric-ram" });
+    expect(buildMetricAlert({ metric: "ram", label: "RAM", value: 90 })).toMatchObject({
+      severity: "Crítico",
+      limit: "85%",
+      id: "metric-ram"
+    });
   });
 
   it("monta alertas ativos de métricas, ping, monitoramento e status de problema", () => {
     expect(buildActiveAlerts(null)).toEqual([]);
     const alerts = buildActiveAlerts({
-      status: "offline", lastPingAt: "2026-01-01T00:00:00Z", metrics: { cpu: 90, ram: 10, disk: 80 },
-      alerts: [{ id: "a", status: "active", severity: "critical", title: "T" }, { id: "b", status: "active", severity: "warning" }, { id: "c", status: "closed" }]
+      status: "offline",
+      lastPingAt: "2026-01-01T00:00:00Z",
+      metrics: { cpu: 90, ram: 10, disk: 80 },
+      alerts: [
+        { id: "a", status: "active", severity: "critical", title: "T" },
+        { id: "b", status: "active", severity: "warning" },
+        { id: "c", status: "closed" }
+      ]
     });
     expect(alerts.map((alert) => alert.id)).toEqual(["metric-cpu", "metric-disk", "ping-offline", "a", "b"]);
     expect(alerts[3]).toMatchObject({ severity: "Crítico", description: "T", metric: "Monitoramento" });
@@ -51,18 +61,34 @@ describe("machineDetailsModel", () => {
 
   it("deriva alertas resolvidos do histórico", () => {
     const resolved = buildResolvedAlerts(
-      { assetHistory: [{ id: "x", change: "Voltou ao normal", detectedAt: "d", field: "cpu", newValue: "10", oldValue: "90" }, { message: "outra coisa" }] },
+      {
+        assetHistory: [
+          { id: "x", change: "Voltou ao normal", detectedAt: "d", field: "cpu", newValue: "10", oldValue: "90" },
+          { message: "outra coisa" }
+        ]
+      },
       { changeHistory: [{ createdAt: "c", message: "Restaurado" }] }
     );
     expect(resolved).toHaveLength(2);
     expect(resolved[0]).toMatchObject({ id: "x", metric: "cpu", value: "10", limit: "90", status: "Resolvido" });
-    expect(resolved[1]).toMatchObject({ id: "c-Restaurado", metric: "Ativo", value: "Normal", limit: "Anterior", description: "Restaurado" });
+    expect(resolved[1]).toMatchObject({
+      id: "c-Restaurado",
+      metric: "Ativo",
+      value: "Normal",
+      limit: "Anterior",
+      description: "Restaurado"
+    });
     expect(buildResolvedAlerts(null, undefined)).toEqual([]);
   });
 
   it("normaliza softwares", () => {
     expect(normalizeSoftware("Chrome")).toEqual({ name: "Chrome", version: null, manufacturer: null, installedAt: null });
-    expect(normalizeSoftware({ title: "Z", publisher: "P", installDate: "d", version: "1" })).toEqual({ name: "Z", version: "1", manufacturer: "P", installedAt: "d" });
+    expect(normalizeSoftware({ title: "Z", publisher: "P", installDate: "d", version: "1" })).toEqual({
+      name: "Z",
+      version: "1",
+      manufacturer: "P",
+      installedAt: "d"
+    });
     expect(normalizeSoftware(null).name).toBe("Software sem nome");
   });
 

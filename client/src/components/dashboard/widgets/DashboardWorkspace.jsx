@@ -27,52 +27,52 @@ export default function DashboardWorkspace({ token, canCustomize, notify }) {
   }
 
   if (error && !layout) {
-    return <p className="form-error" role="alert">{error}</p>;
+    return (
+      <p className="form-error" role="alert">
+        {error}
+      </p>
+    );
   }
 
   return (
     <DashboardFilterProvider key={token} enabled={!editing}>
-    <div className="dashboard-workspace">
-      <WorkspaceToolbar
-        workspace={workspace}
-        canCustomize={canCustomize}
-        onRefresh={() => setRefreshNonce((value) => value + 1)}
-      />
+      <div className="dashboard-workspace">
+        <WorkspaceToolbar workspace={workspace} canCustomize={canCustomize} onRefresh={() => setRefreshNonce((value) => value + 1)} />
 
-      <DashboardFilterBar />
-      {editing && arranging ? (
-        <p className="dashboard-arrange-hint" role="status">
-          Arraste cada gráfico pela alça pontilhada. A nova ordem só é aplicada ao salvar o layout.
-        </p>
-      ) : null}
-      <WidgetGrid
-        key={refreshNonce}
-        token={token}
-        widgets={workspace.activeWidgets}
-        editing={editing}
-        arranging={arranging}
-        onReorder={workspace.setDraftWidgets}
-        onRemove={workspace.removeWidget}
-        onResize={workspace.resizeWidget}
-        onConfigure={workspace.setConfiguringWidget}
-      />
-
-      <WidgetCatalogPanel
-        token={token}
-        open={workspace.catalogOpen}
-        onClose={() => workspace.setCatalogOpen(false)}
-        onAddWidget={workspace.addWidgetFromCatalog}
-        remainingSlots={Math.max(0, MAX_WIDGETS - draftWidgets.length)}
-      />
-      {configuringWidget && (
-        <DashboardWidgetConfigModal
+        <DashboardFilterBar />
+        {editing && arranging ? (
+          <p className="dashboard-arrange-hint" role="status">
+            Arraste cada gráfico pela alça pontilhada. A nova ordem só é aplicada ao salvar o layout.
+          </p>
+        ) : null}
+        <WidgetGrid
+          key={refreshNonce}
           token={token}
-          widget={configuringWidget}
-          onSave={workspace.saveWidgetConfig}
-          onClose={() => workspace.setConfiguringWidget(null)}
+          widgets={workspace.activeWidgets}
+          editing={editing}
+          arranging={arranging}
+          onReorder={workspace.setDraftWidgets}
+          onRemove={workspace.removeWidget}
+          onResize={workspace.resizeWidget}
+          onConfigure={workspace.setConfiguringWidget}
         />
-      )}
-    </div>
+
+        <WidgetCatalogPanel
+          token={token}
+          open={workspace.catalogOpen}
+          onClose={() => workspace.setCatalogOpen(false)}
+          onAddWidget={workspace.addWidgetFromCatalog}
+          remainingSlots={Math.max(0, MAX_WIDGETS - draftWidgets.length)}
+        />
+        {configuringWidget && (
+          <DashboardWidgetConfigModal
+            token={token}
+            widget={configuringWidget}
+            onSave={workspace.saveWidgetConfig}
+            onClose={() => workspace.setConfiguringWidget(null)}
+          />
+        )}
+      </div>
     </DashboardFilterProvider>
   );
 }

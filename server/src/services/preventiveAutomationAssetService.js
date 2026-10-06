@@ -5,10 +5,7 @@ import { normalizeOverridePayload } from "../domain/preventiveAutomationPayload.
 import { addAssetHistory } from "../repositories/assetHistoryRepository.js";
 import { addLog } from "../repositories/logRepository.js";
 import { updatePlanAssetScope } from "../repositories/preventiveAutomationPlanRepository.js";
-import {
-  deleteOverrideByTarget,
-  insertOverride
-} from "../repositories/preventiveAutomationOverrideRepository.js";
+import { deleteOverrideByTarget, insertOverride } from "../repositories/preventiveAutomationOverrideRepository.js";
 import { deactivateAssetSchedule } from "../repositories/preventiveAutomationScheduleRepository.js";
 import { findPreventiveAutomationPlanById } from "./preventiveAutomationPlanQueryService.js";
 import { findPreventiveAutomationAssetDetails } from "./preventiveAutomationManagementService.js";
@@ -37,10 +34,7 @@ export async function upsertPreventiveAutomationAssetOverride(planId, assetId, p
     await deleteOverrideByTarget(db, planId, assetTargetKey(assetId));
     await insertOverride(db, planId, { ...normalized, targetKey: assetTargetKey(assetId) });
     const assets = await validateScopeSelection(current, { user });
-    const overrides = [
-      ...current.overrides.filter((item) => String(item.assetId || "") !== String(assetId)),
-      normalized
-    ];
+    const overrides = [...current.overrides.filter((item) => String(item.assetId || "") !== String(assetId)), normalized];
     await syncAssetSchedulesForPlan({ ...current, overrides }, assets, db);
     await addAssetHistory({
       assetId,
@@ -100,18 +94,12 @@ export async function removePreventiveAutomationAssetOverride(planId, assetId, u
 export async function removeAssetFromPreventiveAutomationPlan(planId, assetId, user = null) {
   const current = await findPreventiveAutomationPlanById(planId, user);
   if (!current) return null;
-  const schedule = current.assetSchedules.find(
-    (item) => String(item.assetId) === String(assetId) && item.active !== false
-  );
+  const schedule = current.assetSchedules.find((item) => String(item.assetId) === String(assetId) && item.active !== false);
   if (!schedule) throw notFoundError(assetNotInPlanMessage);
 
   const isAssetList = current.scopeType === "asset_list";
-  const nextAssetIds = isAssetList
-    ? current.assetIds.filter((id) => String(id) !== String(assetId))
-    : current.assetIds;
-  const nextExcludedAssetIds = isAssetList
-    ? current.excludedAssetIds
-    : [...new Set([...current.excludedAssetIds, String(assetId)])];
+  const nextAssetIds = isAssetList ? current.assetIds.filter((id) => String(id) !== String(assetId)) : current.assetIds;
+  const nextExcludedAssetIds = isAssetList ? current.excludedAssetIds : [...new Set([...current.excludedAssetIds, String(assetId)])];
   const remainingAssetCount = current.assetSchedules.filter(
     (item) => item.active !== false && String(item.assetId) !== String(assetId)
   ).length;

@@ -102,17 +102,18 @@ test("prioridade automatica por tempo aparece na leitura sem gravar, e so persis
 
   const afterSyncRow = await query("SELECT priority FROM service_orders WHERE id = $1", [created.id]);
   assert.equal(afterSyncRow.rows[0].priority, "medium", "o job agendado deve persistir a prioridade calculada");
-  const historyAfterSync = await query(
-    "SELECT * FROM service_order_history WHERE service_order_id = $1 AND event_type = 'auto_priority'",
-    [created.id]
-  );
+  const historyAfterSync = await query("SELECT * FROM service_order_history WHERE service_order_id = $1 AND event_type = 'auto_priority'", [
+    created.id
+  ]);
   assert.equal(historyAfterSync.rowCount, 1);
 
   const secondSyncResult = await syncAutoPriorities();
-  const unchangedForThisOrder = secondSyncResult.updated === 0 ||
-    (await query(
-      "SELECT COUNT(*)::int AS total FROM service_order_history WHERE service_order_id = $1 AND event_type = 'auto_priority'",
-      [created.id]
-    )).rows[0].total === 1;
+  const unchangedForThisOrder =
+    secondSyncResult.updated === 0 ||
+    (
+      await query("SELECT COUNT(*)::int AS total FROM service_order_history WHERE service_order_id = $1 AND event_type = 'auto_priority'", [
+        created.id
+      ])
+    ).rows[0].total === 1;
   assert.ok(unchangedForThisOrder, "rodar o job de novo sem mudanca de horario nao deve duplicar o evento desta OS");
 });

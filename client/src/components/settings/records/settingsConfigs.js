@@ -240,27 +240,17 @@ export const configs = {
 
 export function emptyRecord(config) {
   return config.fields.reduce((record, field) => {
-    record[field.name] = field.type === "status"
-      ? true
-      : field.type === "number"
-        ? 0
-        : field.type === "clientMulti"
-          ? []
-          : "";
+    record[field.name] = field.type === "status" ? true : field.type === "number" ? 0 : field.type === "clientMulti" ? [] : "";
     return record;
   }, {});
 }
 
 export function buildProblemCategories(records = []) {
-  const categories = records
-    .map((record) => record.category)
-    .filter(Boolean);
+  const categories = records.map((record) => record.category).filter(Boolean);
   return [...new Set([...defaultProblemCategories, ...categories])];
 }
 
 /** Campos/colunas visíveis conforme o modo: businessOnly só no Business, internalOnly só no Local. */
 export function visibleByMode(items, businessMode) {
-  return items.filter((item) =>
-    (!item.businessOnly || businessMode) && (!item.internalOnly || !businessMode)
-  );
+  return items.filter((item) => (!item.businessOnly || businessMode) && (!item.internalOnly || !businessMode));
 }

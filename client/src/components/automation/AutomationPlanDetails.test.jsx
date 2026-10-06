@@ -28,7 +28,14 @@ const plan = {
   createdAt: "2026-05-01T12:00:00.000Z",
   preventivePlanName: "Plano base",
   assetSchedules: [
-    { assetId: "d1", assetName: "PC-01", recurrenceType: "monthly", nextRunAt: "2026-07-01T12:00:00.000Z", active: true, recurrenceSource: "plan" },
+    {
+      assetId: "d1",
+      assetName: "PC-01",
+      recurrenceType: "monthly",
+      nextRunAt: "2026-07-01T12:00:00.000Z",
+      active: true,
+      recurrenceSource: "plan"
+    },
     { assetId: "d2", assetName: "PC-02", recurrenceType: "weekly", nextRunAt: null, active: false, recurrenceSource: "override" }
   ]
 };
@@ -40,7 +47,9 @@ function setup(props = {}) {
     onPausePlan: vi.fn().mockResolvedValue(undefined),
     onReactivatePlan: vi.fn().mockResolvedValue(undefined),
     onDelete: vi.fn(),
-    onLoadHistory: vi.fn().mockResolvedValue({ items: [{ id: "h1", message: "Plano criado", userName: "Ana", createdAt: "2026-05-01T12:00:00.000Z" }] })
+    onLoadHistory: vi
+      .fn()
+      .mockResolvedValue({ items: [{ id: "h1", message: "Plano criado", userName: "Ana", createdAt: "2026-05-01T12:00:00.000Z" }] })
   };
   const merged = { plan, scripts, open: true, canEdit: true, canDisable: true, canDelete: true, saving: false, ...handlers, ...props };
   const view = render(<AutomationPlanDetails {...merged} />);
@@ -130,7 +139,11 @@ describe("AutomationPlanDetails - abas", () => {
 
   it("mostra o carregamento e a mensagem de histórico vazio", async () => {
     let resolveHistory;
-    const onLoadHistory = vi.fn().mockReturnValue(new Promise((resolve) => { resolveHistory = resolve; }));
+    const onLoadHistory = vi.fn().mockReturnValue(
+      new Promise((resolve) => {
+        resolveHistory = resolve;
+      })
+    );
     const { user } = setup({ onLoadHistory });
 
     await user.click(screen.getByRole("tab", { name: "Histórico" }));

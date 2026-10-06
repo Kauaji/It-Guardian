@@ -40,10 +40,19 @@ export default function SettingsFormModal({ sectionId, record, records = [], bus
 
   return (
     <div className="modal-backdrop settings-modal-backdrop" role="presentation">
-      <form ref={dialogRef} className="modal-panel settings-form-modal" role="dialog" aria-modal="true" aria-labelledby="settings-form-title" onSubmit={submit}>
+      <form
+        ref={dialogRef}
+        className="modal-panel settings-form-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="settings-form-title"
+        onSubmit={submit}
+      >
         <header>
           <div>
-            <h2 id="settings-form-title">{record ? "Editar" : "Novo"} {config.singular}</h2>
+            <h2 id="settings-form-title">
+              {record ? "Editar" : "Novo"} {config.singular}
+            </h2>
             <p>Cadastro usado nas Ordens de Serviço.</p>
           </div>
           <button type="button" className="icon-button" onClick={onClose} title="Fechar">
@@ -64,7 +73,9 @@ export default function SettingsFormModal({ sectionId, record, records = [], bus
         ))}
 
         <div className="modal-actions settings-wide-field">
-          <button type="button" className="ghost-action" onClick={onClose}>Cancelar</button>
+          <button type="button" className="ghost-action" onClick={onClose}>
+            Cancelar
+          </button>
           <button className="primary-action compact-action" disabled={saving}>
             {saving ? "Salvando..." : "Salvar"}
           </button>

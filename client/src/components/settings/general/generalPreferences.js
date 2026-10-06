@@ -102,9 +102,8 @@ export function applyGeneralPreferences(preferences) {
   document.documentElement.style.setProperty("--app-font-scale", String(getFontScaleValue(preferences.fontScale)));
 
   const preset = appearancePresets.find((item) => item.id === preferences.appearancePreset) || appearancePresets[0];
-  const variables = preferences.appearancePreset === "custom"
-    ? customThemeToVariables(preferences.customTheme || defaultCustomTheme)
-    : preset.values;
+  const variables =
+    preferences.appearancePreset === "custom" ? customThemeToVariables(preferences.customTheme || defaultCustomTheme) : preset.values;
 
   if (!variables) {
     appearanceVariableNames.forEach((name) => document.documentElement.style.removeProperty(name));

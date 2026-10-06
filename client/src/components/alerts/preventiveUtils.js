@@ -5,18 +5,13 @@ const DAY_MS = 86400000;
 
 // Junta os indicadores de automacao do dispositivo com os planos da gestao de automacoes.
 export function mergeAutomationIndicators(devices, managementMachines = []) {
-  const automationMachinesById = new Map(
-    managementMachines.map((machine) => [String(machine.assetId), machine])
-  );
+  const automationMachinesById = new Map(managementMachines.map((machine) => [String(machine.assetId), machine]));
 
   return devices.map((device) => {
     const managementMachine = automationMachinesById.get(String(device.id));
     const indicatorsByPlanId = new Map();
 
-    for (const indicator of [
-      ...(device.automationIndicators || []),
-      ...(managementMachine?.plans || [])
-    ]) {
+    for (const indicator of [...(device.automationIndicators || []), ...(managementMachine?.plans || [])]) {
       const planId = indicator.automationPlanId || indicator.id;
       if (planId) indicatorsByPlanId.set(String(planId), indicator);
     }
@@ -31,9 +26,7 @@ export function mergeAutomationIndicators(devices, managementMachines = []) {
 // Preventiva mais recente registrada para a maquina (data do ativo, do plano ou de criacao).
 export function getLastPreventiveForAsset(preventivePlans, assetId) {
   const matches = preventivePlans
-    .filter((plan) =>
-      Array.isArray(plan.assets) && plan.assets.some((asset) => String(asset.assetId) === String(assetId))
-    )
+    .filter((plan) => Array.isArray(plan.assets) && plan.assets.some((asset) => String(asset.assetId) === String(assetId)))
     .map((plan) => {
       const asset = plan.assets.find((item) => String(item.assetId) === String(assetId));
       const date = asset?.preparedAt || plan.preparedAt || plan.createdAt;
@@ -110,12 +103,8 @@ export function buildDevicePreventiveInfo(device, { lookups, alerts, preventiveP
     isMaintenanceSegmentName(device.segmentName);
   const isBackup = Boolean(device.isBackup);
   const lastTimestamp = lastPreventive?.timestamp || null;
-  const daysSinceLastPreventive = lastTimestamp
-    ? Math.max(0, Math.floor((now - lastTimestamp) / DAY_MS))
-    : null;
-  const nextPreventiveDueAt = lastTimestamp
-    ? new Date(lastTimestamp + dueDays * DAY_MS).toISOString()
-    : null;
+  const daysSinceLastPreventive = lastTimestamp ? Math.max(0, Math.floor((now - lastTimestamp) / DAY_MS)) : null;
+  const nextPreventiveDueAt = lastTimestamp ? new Date(lastTimestamp + dueDays * DAY_MS).toISOString() : null;
   const isOverdue = Number.isFinite(daysSinceLastPreventive) && daysSinceLastPreventive > dueDays;
   const status = resolvePreventiveStatus({ lastPreventive, isOverdue, relatedAlerts, criticalAlerts, isInMaintenance, isBackup });
 
@@ -198,13 +187,15 @@ export function filterPreventiveOverview(overview, { search, filter }) {
 // Agrupa por ambiente/grupo/segmento, preservando a ordem recebida.
 export function groupPreventiveOverview(items) {
   return Array.from(
-    items.reduce((groups, item) => {
-      const key = `${item.location.tabName}::${item.location.groupName}::${item.location.segmentName}`;
-      const current = groups.get(key) || { key, ...item.location, devices: [] };
-      current.devices.push(item);
-      groups.set(key, current);
-      return groups;
-    }, new Map()).values()
+    items
+      .reduce((groups, item) => {
+        const key = `${item.location.tabName}::${item.location.groupName}::${item.location.segmentName}`;
+        const current = groups.get(key) || { key, ...item.location, devices: [] };
+        current.devices.push(item);
+        groups.set(key, current);
+        return groups;
+      }, new Map())
+      .values()
   );
 }
 
@@ -238,10 +229,7 @@ export function orderPreventiveScripts(recommendations, activeScripts) {
   const recommended = recommendations.recommended || [];
   const baseList = recommendations.others?.length ? recommendations.others : activeScripts;
 
-  return [
-    ...recommended,
-    ...baseList.filter((script) => !recommended.some((item) => item.id === script.id))
-  ];
+  return [...recommended, ...baseList.filter((script) => !recommended.some((item) => item.id === script.id))];
 }
 
 export function buildManualPreventivePlanPayload({ name, assetIds, scriptIds, riskAcknowledged }) {
@@ -260,11 +248,7 @@ export function buildManualPreventivePlanPayload({ name, assetIds, scriptIds, ri
 export function buildAutomationCreateRequest({ devices, scripts, riskScripts, planName, id = Date.now() }) {
   const deviceNames = devices.map((device) => device.name || device.hostname || device.id).filter(Boolean);
   const scriptNames = scripts.map((script) => script.name || script.id).filter(Boolean);
-  const selectionKey = [
-    ...devices.map((device) => device.id).sort(),
-    "|",
-    ...scripts.map((script) => script.id).sort()
-  ].join(":");
+  const selectionKey = [...devices.map((device) => device.id).sort(), "|", ...scripts.map((script) => script.id).sort()].join(":");
   const assetIds = devices.map((device) => device.id).filter(Boolean);
 
   return {

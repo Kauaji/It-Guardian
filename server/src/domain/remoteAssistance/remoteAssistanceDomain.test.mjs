@@ -15,7 +15,11 @@ import {
 test("entrada remota: so comandos conhecidos, valores limitados e teclas permitidas", () => {
   assert.deepEqual(sanitizeInputCommand({ type: "mouse_move", x: 2, y: -1 }), { type: "mouse_move", x: 1, y: 0 });
   assert.equal(sanitizeInputCommand({ type: "mouse_move", x: "a", y: 0 }), null);
-  assert.deepEqual(sanitizeInputCommand({ type: "mouse_button", button: "LEFT", action: "Click" }), { type: "mouse_button", button: "left", action: "click" });
+  assert.deepEqual(sanitizeInputCommand({ type: "mouse_button", button: "LEFT", action: "Click" }), {
+    type: "mouse_button",
+    button: "left",
+    action: "click"
+  });
   assert.equal(sanitizeInputCommand({ type: "mouse_button", button: "x", action: "click" }), null);
   assert.equal(sanitizeInputCommand({ type: "mouse_button", button: "left", action: "drag" }), null);
   assert.deepEqual(sanitizeInputCommand({ type: "mouse_wheel", delta: 99999.9 }), { type: "mouse_wheel", delta: 1200 });
@@ -33,7 +37,10 @@ test("entrada remota: so comandos conhecidos, valores limitados e teclas permiti
 test("motivo e mensagem de chat sao normalizados e validados", () => {
   assert.equal(normalizeReason("  preciso   ajudar \n o usuario "), "preciso ajudar o usuario");
   assert.equal(normalizeReason("x".repeat(900)).length, 500);
-  assert.throws(() => normalizeReason("abc"), (error) => error.statusCode === 400 && error.expose === true);
+  assert.throws(
+    () => normalizeReason("abc"),
+    (error) => error.statusCode === 400 && error.expose === true
+  );
   assert.equal(normalizeChatMessageText("  oi  "), "oi");
   assert.equal(normalizeChatMessageText("a".repeat(5000)).length, 2000);
   assert.throws(() => normalizeChatMessageText("   "), /Mensagem vazia/);
@@ -45,7 +52,10 @@ test("monitores: limite de 8, normalizacao e comparacao", () => {
   assert.deepEqual(monitors[0], { id: "1", name: "Principal", primary: true, width: 16384, height: 1 });
   assert.deepEqual(monitors[1], { id: "1", name: "Monitor 2", primary: false, width: 1, height: 1 });
   assert.equal(normalizeMonitors(Array.from({ length: 12 }, () => ({}))).length, 8);
-  assert.equal(monitorListsEqual(monitors, normalizeMonitors([{ id: "1", name: "Principal", primary: true, width: 16384, height: 1 }, {}])), true);
+  assert.equal(
+    monitorListsEqual(monitors, normalizeMonitors([{ id: "1", name: "Principal", primary: true, width: 16384, height: 1 }, {}])),
+    true
+  );
   assert.equal(monitorListsEqual(monitors, monitors.slice(0, 1)), false);
   assert.equal(monitorListsEqual(monitors, [monitors[0], { ...monitors[1], width: 2 }]), false);
 });
@@ -55,9 +65,18 @@ test("quadro de tela: so JPEG base64 valido dentro do limite", () => {
   const decoded = decodeFrame(`data:image/jpeg;base64,${body}`, 1000);
   assert.equal(decoded.bytes, 15);
   assert.match(decoded.hash, /^[0-9a-f]{40}$/);
-  assert.throws(() => decodeFrame("data:image/png;base64,AAAA", 1000), (error) => error.statusCode === 400);
-  assert.throws(() => decodeFrame(`data:image/jpeg;base64,${body}`, 5), (error) => error.statusCode === 413);
-  assert.throws(() => decodeFrame(null, 5), (error) => error.statusCode === 400);
+  assert.throws(
+    () => decodeFrame("data:image/png;base64,AAAA", 1000),
+    (error) => error.statusCode === 400
+  );
+  assert.throws(
+    () => decodeFrame(`data:image/jpeg;base64,${body}`, 5),
+    (error) => error.statusCode === 413
+  );
+  assert.throws(
+    () => decodeFrame(null, 5),
+    (error) => error.statusCode === 400
+  );
 });
 
 test("tokens e permissao de gerenciar a sessao", () => {

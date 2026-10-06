@@ -5,12 +5,7 @@ import ViewLoadingState from "../../components/ui/ViewLoadingState.jsx";
 import { useInventory, useInventoryActions, useLayout } from "../context/workspaceContexts.js";
 import { useViewAccess } from "../hooks/useViewAccess.js";
 import { floorPlanPermissions } from "../viewAccess.js";
-import {
-  buildAssetProps,
-  buildBoardDataProps,
-  buildSelectionProps,
-  buildStructureProps
-} from "./inventoryBoardProps.js";
+import { buildAssetProps, buildBoardDataProps, buildSelectionProps, buildStructureProps } from "./inventoryBoardProps.js";
 
 const InventoryBoard = lazy(() => import("../../components/inventory/InventoryBoard.jsx"));
 const FloorPlansModule = lazy(() => import("../../components/floorPlans/FloorPlansModule.jsx"));

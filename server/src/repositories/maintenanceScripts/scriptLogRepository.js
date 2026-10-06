@@ -147,10 +147,12 @@ export async function findScriptLogById(id) {
     [id]
   );
 
-  return result.rows[0] ? {
-    ...fromLogRow(result.rows[0]),
-    scriptName: result.rows[0].script_name || ""
-  } : null;
+  return result.rows[0]
+    ? {
+        ...fromLogRow(result.rows[0]),
+        scriptName: result.rows[0].script_name || ""
+      }
+    : null;
 }
 
 /** Marca o log como reconhecido; devolve null quando o log nao existe. */

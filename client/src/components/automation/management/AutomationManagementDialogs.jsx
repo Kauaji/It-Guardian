@@ -19,10 +19,12 @@ export default function AutomationManagementDialogs({ selection, scripts, permis
         onSave={(planId, payload) => run(() => actions.onSavePlan(planId, payload))}
         onPausePlan={actions.onPausePlan ? (planId) => run(() => actions.onPausePlan(planId)) : undefined}
         onReactivatePlan={actions.onReactivatePlan ? (planId) => run(() => actions.onReactivatePlan(planId)) : undefined}
-        onDelete={(plan) => run(async () => {
-          await actions.onDeletePlan(plan.id);
-          setSelectedPlan(null);
-        })}
+        onDelete={(plan) =>
+          run(async () => {
+            await actions.onDeletePlan(plan.id);
+            setSelectedPlan(null);
+          })
+        }
         onLoadHistory={actions.onFetchPlanHistory}
       />
       <AutomationMachineDetails
@@ -36,14 +38,18 @@ export default function AutomationManagementDialogs({ selection, scripts, permis
         onOpenPlan={openPlan}
         onSaveOverride={(planId, assetId, payload) => run(() => actions.onSaveOverride(planId, assetId, payload))}
         onRemoveOverride={(planId, assetId) => run(() => actions.onRemoveOverride(planId, assetId))}
-        onRemoveAsset={(planId, assetId) => run(async () => {
-          await actions.onRemoveAsset(planId, assetId);
-          setSelectedMachine(null);
-        })}
-        onDeletePlan={(plan) => run(async () => {
-          await actions.onDeletePlan(plan.id);
-          setSelectedMachine(null);
-        })}
+        onRemoveAsset={(planId, assetId) =>
+          run(async () => {
+            await actions.onRemoveAsset(planId, assetId);
+            setSelectedMachine(null);
+          })
+        }
+        onDeletePlan={(plan) =>
+          run(async () => {
+            await actions.onDeletePlan(plan.id);
+            setSelectedMachine(null);
+          })
+        }
         onLoadDetails={actions.onFetchAssetDetails}
       />
     </>

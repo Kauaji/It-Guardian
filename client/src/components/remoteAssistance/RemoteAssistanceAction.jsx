@@ -9,19 +9,10 @@ import { useRemoteAvailability } from "./hooks/useRemoteAvailability.js";
 // Fluxo de assistencia remota: reautenticacao do tecnico, pedido, consentimento
 // do usuário local, visor (snapshots/WebRTC) ou painel RustDesk, chat, controle
 // e encerramento. A logica vive em ./hooks, a interface em ./components.
-export default function RemoteAssistanceAction({
-  asset,
-  alias,
-  serviceOrder = null,
-  token,
-  user,
-  notify,
-  compact = false
-}) {
+export default function RemoteAssistanceAction({ asset, alias, serviceOrder = null, token, user, notify, compact = false }) {
   const availability = useRemoteAvailability({ asset, user, token, compact });
   const dialogState = useRemoteAssistanceDialog({ asset, alias, serviceOrder, token, notify, availability });
-  const { visible, renderCompactSlot, unavailableTitle, config, frontendControlEnabled, canControl, canChat } =
-    availability;
+  const { visible, renderCompactSlot, unavailableTitle, config, frontendControlEnabled, canControl, canChat } = availability;
   const { open, view, remote, form } = dialogState;
 
   if (!visible && !renderCompactSlot) return null;

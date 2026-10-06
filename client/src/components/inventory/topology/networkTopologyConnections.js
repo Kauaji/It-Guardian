@@ -32,11 +32,7 @@ export function hasTopologyConnectionPartner(nodes = [], node) {
   if (!node) return false;
   const type = node.nodeType || "asset";
   const key = topologyNodeKey(node);
-  return nodes.some((candidate) =>
-    candidate &&
-    (candidate.nodeType || "asset") === type &&
-    topologyNodeKey(candidate) !== key
-  );
+  return nodes.some((candidate) => candidate && (candidate.nodeType || "asset") === type && topologyNodeKey(candidate) !== key);
 }
 
 export function buildTopologyLinkPayload(first, second) {
@@ -52,11 +48,11 @@ export function buildTopologyLinkPayload(first, second) {
 }
 
 export function clusterDevices(clusterInfo, nodeType) {
-  const devices = nodeType === "group"
-    ? (clusterInfo?.segments || []).flatMap((segment) => segment.devices || [])
-    : clusterInfo?.devices || [];
-  return [...new Map(devices.map((device) => [device.id, device])).values()]
-    .sort((a, b) => (a.name || "").localeCompare(b.name || "", "pt-BR"));
+  const devices =
+    nodeType === "group" ? (clusterInfo?.segments || []).flatMap((segment) => segment.devices || []) : clusterInfo?.devices || [];
+  return [...new Map(devices.map((device) => [device.id, device])).values()].sort((a, b) =>
+    (a.name || "").localeCompare(b.name || "", "pt-BR")
+  );
 }
 
 export function inspectorConnections({ node, links = [], internalLinks = [], devicesById, clustersById, clusterName }) {
@@ -66,8 +62,12 @@ export function inspectorConnections({ node, links = [], internalLinks = [], dev
     return resolveEntityLabel(type, type === "asset" ? devicesById.get(id) : clustersById.get(id));
   };
   const describe = (link, scopeLabel) => ({
-    id: link.id, label: link.label, type: link.type, scopeLabel,
-    sourceName: entityName(link, "source"), targetName: entityName(link, "target")
+    id: link.id,
+    label: link.label,
+    type: link.type,
+    scopeLabel,
+    sourceName: entityName(link, "source"),
+    targetName: entityName(link, "target")
   });
   const key = topologyNodeKey(node);
   const result = links

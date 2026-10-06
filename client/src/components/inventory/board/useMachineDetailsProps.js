@@ -3,9 +3,23 @@ import { peripheralKey } from "./peripheralKey.js";
 // Props do modal de detalhes: as acoes atualizam/fecham a maquina selecionada.
 export default function useMachineDetailsProps(props, state) {
   const {
-    token, user, notify, segments, aliases, observations, userName, canManage,
-    onAliasSave, onAddObservation, onChangeDeviceType, onRefreshPing, onPutMaintenance,
-    onToggleBackup, onRemoveMachine, onAddPeripheral, onRemovePeripheral
+    token,
+    user,
+    notify,
+    segments,
+    aliases,
+    observations,
+    userName,
+    canManage,
+    onAliasSave,
+    onAddObservation,
+    onChangeDeviceType,
+    onRefreshPing,
+    onPutMaintenance,
+    onToggleBackup,
+    onRemoveMachine,
+    onAddPeripheral,
+    onRemovePeripheral
   } = props;
   const { selectedMachine, setSelectedMachine, setInventoryViewMode } = state;
 

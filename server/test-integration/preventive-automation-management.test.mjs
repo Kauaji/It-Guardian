@@ -39,7 +39,11 @@ async function create(payload) {
 }
 
 test.before(async () => {
-  const holder = { after: (callback) => { closeServer = callback; } };
+  const holder = {
+    after: (callback) => {
+      closeServer = callback;
+    }
+  };
   const baseUrl = await fx.startServer(holder);
   api = fx.createClient(baseUrl, await fx.login(baseUrl));
   scripts = {
@@ -124,10 +128,7 @@ test("gerenciamento agrupa varios planos por maquina e entrega metadados em lote
   const listPlan = listed.find((plan) => plan.id === plans.list.id);
   assert.equal(listPlan.assetCount, 2);
   assert.equal(listPlan.scriptCount, 2);
-  assert.deepEqual(listPlan.scripts.map((script) => script.name).sort(), [
-    "Script de gerenciamento dois",
-    "Script de gerenciamento um"
-  ]);
+  assert.deepEqual(listPlan.scripts.map((script) => script.name).sort(), ["Script de gerenciamento dois", "Script de gerenciamento um"]);
   assert.equal(listPlan.scripts.find((script) => script.name.endsWith("dois")).category, "Disco");
   assert.equal(listPlan.activeScheduleCount, 2);
   assert.equal(listPlan.overrideCount, 0);
@@ -183,10 +184,10 @@ test("gerenciamento destaca erro da ultima execucao e agendas sem proxima data",
   const machinePlan = machine.plans.find((plan) => plan.id === plans.segment.id);
   assert.equal(machinePlan.latestRun.status, "error");
 
-  await fx.rows(
-    "UPDATE preventive_automation_asset_schedules SET next_run_at = NULL WHERE plan_id = $1 AND asset_id = $2",
-    [plans.list.id, "gm-a1"]
-  );
+  await fx.rows("UPDATE preventive_automation_asset_schedules SET next_run_at = NULL WHERE plan_id = $1 AND asset_id = $2", [
+    plans.list.id,
+    "gm-a1"
+  ]);
   const without = await api.get(`${base}/management?status=without_schedule`);
   assert.deepEqual(machineIds(without.body), ["gm-a1"]);
   assert.equal(without.body.metadata.withoutScheduleCount, 1);
@@ -249,7 +250,10 @@ test("agenda lista compromissos com situacao, filtros e paginacao", async () => 
   assert.deepEqual(byAsset.body.items.map((item) => item.planId).sort(), [plans.segment.id, plans.paused.id].sort());
 
   const overdue = await api.get(`${base}/agenda?status=overdue`);
-  assert.deepEqual(overdue.body.items.map((item) => item.assetId), ["gm-a2"]);
+  assert.deepEqual(
+    overdue.body.items.map((item) => item.assetId),
+    ["gm-a2"]
+  );
   assert.equal(overdue.body.pagination.total, 1);
 
   const active = await api.get(`${base}/agenda?status=active`);
@@ -257,15 +261,24 @@ test("agenda lista compromissos com situacao, filtros e paginacao", async () => 
   assert.ok(!active.body.items.some((item) => item.planId === plans.paused.id));
 
   const withoutSchedule = await api.get(`${base}/agenda?status=without_schedule`);
-  assert.deepEqual(withoutSchedule.body.items.map((item) => item.assetId), ["gm-a1"]);
+  assert.deepEqual(
+    withoutSchedule.body.items.map((item) => item.assetId),
+    ["gm-a1"]
+  );
 
   const errors = await api.get(`${base}/agenda?status=error`);
-  assert.deepEqual(errors.body.items.map((item) => item.assetId), ["gm-a3"]);
+  assert.deepEqual(
+    errors.body.items.map((item) => item.assetId),
+    ["gm-a3"]
+  );
   assert.equal(errors.body.pagination.total, 1);
   assert.equal(errors.body.pagination.hasMore, false);
 
   const bySegment = await api.get(`${base}/agenda?segmentId=demo-segment-servers`);
-  assert.deepEqual(bySegment.body.items.map((item) => item.assetId), ["gm-a1"]);
+  assert.deepEqual(
+    bySegment.body.items.map((item) => item.assetId),
+    ["gm-a1"]
+  );
   assert.equal(bySegment.body.pagination.total, 1);
 
   const invalidStatus = await api.get(`${base}/agenda?status=qualquer-coisa`);
@@ -361,10 +374,7 @@ test("override individual cria, substitui e remove a recorrencia da maquina", as
   assert.equal(removed.body.automationAsset.schedule.recurrenceType, "weekly");
   assert.ok(removed.body.automationAsset.history.some((item) => item.eventType === "preventive_automation_asset_override_removed"));
 
-  const audit = await fx.rows(
-    "SELECT type FROM audit_logs WHERE meta->>'planId' = $1 ORDER BY created_at ASC",
-    [plans.list.id]
-  );
+  const audit = await fx.rows("SELECT type FROM audit_logs WHERE meta->>'planId' = $1 ORDER BY created_at ASC", [plans.list.id]);
   const types = audit.map((row) => row.type);
   assert.ok(types.includes("preventive_automation_asset_override_updated"));
   assert.ok(types.includes("preventive_automation_asset_override_removed"));
@@ -434,7 +444,11 @@ test("remover maquina de escopo amplo adiciona a lista de exclusoes", async () =
 
   const management = await api.get(`${base}/management`);
   const machineOfPlan = management.body.machines.filter((machine) => machine.plans.some((item) => item.id === plan.id));
-  assert.deepEqual(machineOfPlan.map((machine) => machine.assetId), ["gm-a3"], "exclusao individual some do gerenciamento");
+  assert.deepEqual(
+    machineOfPlan.map((machine) => machine.assetId),
+    ["gm-a3"],
+    "exclusao individual some do gerenciamento"
+  );
 
   await api.del(`${base}/${plan.id}`);
 });

@@ -15,10 +15,7 @@ export function selectMachinesToMove(devices, machineIds, segmentId) {
 
 /** Segmento anterior de cada máquina (para reverter a atualização otimista). */
 export function snapshotPreviousSegments(machines) {
-  return new Map(machines.map((machine) => [
-    machine.id,
-    { id: machine.segmentId, name: machine.segmentName }
-  ]));
+  return new Map(machines.map((machine) => [machine.id, { id: machine.segmentId, name: machine.segmentName }]));
 }
 
 export function moveRequestOptions(options) {

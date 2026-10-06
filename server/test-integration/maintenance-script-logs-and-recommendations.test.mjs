@@ -11,19 +11,10 @@ process.env.NODE_ENV = "test";
 const { createApp } = await import("../src/app.js");
 const { initializeRuntime } = await import("../src/bootstrap.js");
 const { closeDatabase, query } = await import("../src/database.js");
-const {
-  createScriptSimulationLog,
-  findMaintenanceScriptById,
-  listRecentScriptExecutionLogs
-} = await import("../src/services/maintenanceScripts/maintenanceScriptsFacade.js");
-const {
-  browserHeaders,
-  createScriptViaApi,
-  createSuggestionForMachine,
-  enrollAndHeartbeat,
-  listen,
-  login
-} = await import("../test-support/scriptFixtures.mjs");
+const { createScriptSimulationLog, findMaintenanceScriptById, listRecentScriptExecutionLogs } =
+  await import("../src/services/maintenanceScripts/maintenanceScriptsFacade.js");
+const { browserHeaders, createScriptViaApi, createSuggestionForMachine, enrollAndHeartbeat, listen, login } =
+  await import("../test-support/scriptFixtures.mjs");
 
 test.after(closeDatabase);
 
@@ -41,7 +32,15 @@ const logRules = [
   ["File not found: C:\\x.txt", "file_not_found", "FILE_NOT_FOUND", "arquivo", "medium", false, false],
   ["invalid path specified", "invalid_path", "INVALID_PATH", "caminho", "medium", false, false],
   ["This operation requires elevation", "insufficient_permission", "INSUFFICIENT_PERMISSION", "permissao", "high", true, false],
-  ["'foo' is not recognized as an internal command", "command_not_recognized", "COMMAND_NOT_RECOGNIZED", "ambiente", "medium", false, false],
+  [
+    "'foo' is not recognized as an internal command",
+    "command_not_recognized",
+    "COMMAND_NOT_RECOGNIZED",
+    "ambiente",
+    "medium",
+    false,
+    false
+  ],
   ["A operacao atingiu o timeout", "timeout", "TIMEOUT", "tempo_limite", "medium", false, false],
   ["Host unreachable", "network_failure", "NETWORK_FAILURE", "rede", "high", false, false],
   ["agent offline", "agent_unavailable", "AGENT_UNAVAILABLE", "agente", "medium", false, false],
@@ -164,10 +163,7 @@ test("logs pendentes: listar, consultar, reconhecer e registrar solucao sugerida
   assert.equal(ackBody.log.attentionRequired, false);
   assert.ok(ackBody.log.acknowledgedAt);
   assert.ok(ackBody.log.acknowledgedBy);
-  assert.equal(
-    (await fetch(`${baseUrl}/api/script-logs/inexistente/acknowledge`, { method: "POST", headers })).status,
-    404
-  );
+  assert.equal((await fetch(`${baseUrl}/api/script-logs/inexistente/acknowledge`, { method: "POST", headers })).status, 404);
 
   const solution = await fetch(`${baseUrl}/api/script-logs/${withAsset.id}/apply-suggested-solution`, {
     method: "POST",

@@ -67,9 +67,12 @@ export function useInventoryDragController({ activeView, data, inventory, moves,
       }, 1150);
     }
 
-    window.setTimeout(() => {
-      window.scrollTo({ top: dragStartScrollY.current, behavior: "smooth" });
-    }, target ? 920 : 260);
+    window.setTimeout(
+      () => {
+        window.scrollTo({ top: dragStartScrollY.current, behavior: "smooth" });
+      },
+      target ? 920 : 260
+    );
   }
 
   // Soltar um segmento sobre um grupo (area principal ou sidebar) o move.
@@ -77,11 +80,7 @@ export function useInventoryDragController({ activeView, data, inventory, moves,
     const segmentId = event.active?.data?.current?.segmentId;
     const groupId = event.over?.data?.current?.groupId;
 
-    if (
-      !segmentId ||
-      (overType !== "segment-group-drop" && overType !== "sidebar-segment-group-drop") ||
-      groupId === undefined
-    ) {
+    if (!segmentId || (overType !== "segment-group-drop" && overType !== "sidebar-segment-group-drop") || groupId === undefined) {
       return null;
     }
 
@@ -113,9 +112,7 @@ export function useInventoryDragController({ activeView, data, inventory, moves,
     animateScrollForDrop(result);
   }
 
-  const activeDragSegmentGroupId = activeDragSegment
-    ? getSegmentGroupId(activeDragSegment, activeSegmentGroups)
-    : "";
+  const activeDragSegmentGroupId = activeDragSegment ? getSegmentGroupId(activeDragSegment, activeSegmentGroups) : "";
   const activeDragSegmentGroupName = activeDragSegmentGroupId
     ? activeSegmentGroups.find((group) => group.id === activeDragSegmentGroupId)?.name || ""
     : "Sem grupo";

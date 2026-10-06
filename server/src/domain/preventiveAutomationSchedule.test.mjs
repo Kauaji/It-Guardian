@@ -79,21 +79,34 @@ test("base de recalculo prioriza ultima agenda, ancora do plano e criacao", () =
     chooseScheduleRecalculationBase({ existing: { createdAt: "2026-03-01T00:00:00.000Z" }, plan: { active: true } }),
     "2026-03-01T00:00:00.000Z"
   );
-  assert.equal(chooseScheduleRecalculationBase({ existing: undefined, plan: { createdAt: "2025-05-05T00:00:00.000Z" } }), "2025-05-05T00:00:00.000Z");
+  assert.equal(
+    chooseScheduleRecalculationBase({ existing: undefined, plan: { createdAt: "2025-05-05T00:00:00.000Z" } }),
+    "2025-05-05T00:00:00.000Z"
+  );
   assert.ok(Number.isFinite(Date.parse(chooseScheduleRecalculationBase({ existing: undefined, plan: {} }))));
 
   const before = Date.now();
   const reactivated = chooseScheduleRecalculationBase({ existing: { active: false, lastScheduledAt: "2020-01-01T00:00:00.000Z" }, plan });
   assert.ok(Date.parse(reactivated) >= before - 1000, "agenda reativada recalcula a partir de agora");
   assert.equal(
-    chooseScheduleRecalculationBase({ existing: { active: false, lastScheduledAt: "2020-01-01T00:00:00.000Z" }, plan: { ...plan, active: false } }),
+    chooseScheduleRecalculationBase({
+      existing: { active: false, lastScheduledAt: "2020-01-01T00:00:00.000Z" },
+      plan: { ...plan, active: false }
+    }),
     "2020-01-01T00:00:00.000Z"
   );
 });
 
 test("proxima execucao so e recalculada quando a recorrencia mudou ou nao existe", () => {
   const recurrence = { recurrenceType: "daily", recurrenceIntervalDays: 1 };
-  const nextSchedule = { recurrenceSource: "plan", recurrenceType: "daily", recurrenceIntervalDays: 1, preferredTime: "08:00", timezone: "America/Sao_Paulo", active: true };
+  const nextSchedule = {
+    recurrenceSource: "plan",
+    recurrenceType: "daily",
+    recurrenceIntervalDays: 1,
+    preferredTime: "08:00",
+    timezone: "America/Sao_Paulo",
+    active: true
+  };
   const existing = { ...nextSchedule, nextRunAt: "2031-01-01T11:00:00.000Z" };
   const plan = { scheduleAnchorAt: "2026-06-14T10:00:00.000Z", active: true };
 

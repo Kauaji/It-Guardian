@@ -1,9 +1,5 @@
 import { useRef } from "react";
-import {
-  findObjectsInSelectionRect,
-  getActiveFloor,
-  normalizeSelectionRect
-} from "../utils/editorGeometry.js";
+import { findObjectsInSelectionRect, getActiveFloor, normalizeSelectionRect } from "../utils/editorGeometry.js";
 import { createMarqueeDrag } from "../utils/dragState.js";
 import { applyDragToDraft, computeDragDeltas, computeObjectDragAlignment, getDragSnapSize } from "../utils/dragOperations.js";
 import { getPrimarySelection, mergeMarqueeSelection } from "../utils/selectionActions.js";
@@ -21,10 +17,7 @@ function isPanGesture(event, spacePressed) {
  */
 export function useCanvasInteractions({ doc, ui, viewport, paint, placementApi, entities, isEditing }) {
   const { editor, activeFloorId, commitEditor } = doc;
-  const {
-    selectedTool, placement, paintDraft, zoomMode,
-    setSelected, setSelectedObjectIds, setSelectionBox, setAlignmentGuides
-  } = ui;
+  const { selectedTool, placement, paintDraft, zoomMode, setSelected, setSelectedObjectIds, setSelectionBox, setAlignmentGuides } = ui;
   const { getSvgPoint, spacePressed } = viewport;
   const dragRef = useRef(null);
   const { beginDrag, beginRoomResize, beginObjectResize } = useDragStarts({ doc, ui, viewport, entities, dragRef });
@@ -86,15 +79,19 @@ export function useCanvasInteractions({ doc, ui, viewport, paint, placementApi, 
     const deltas = computeDragDeltas(drag, point, snapSize);
     const alignment = computeObjectDragAlignment({ drag, deltas, editor, floor, snapSize, altKey: event.altKey });
     setAlignmentGuides(alignment.guides);
-    commitEditor((draft) => applyDragToDraft(draft, drag, {
-      ...deltas,
-      ...alignment,
-      point,
-      floor,
-      snapSize,
-      activeFloorId,
-      shiftKey: event.shiftKey
-    }), { track: false });
+    commitEditor(
+      (draft) =>
+        applyDragToDraft(draft, drag, {
+          ...deltas,
+          ...alignment,
+          point,
+          floor,
+          snapSize,
+          activeFloorId,
+          shiftKey: event.shiftKey
+        }),
+      { track: false }
+    );
   };
 
   const finishMarquee = (drag, event) => {

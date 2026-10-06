@@ -14,7 +14,11 @@ const FAMILY_DEFINITIONS = [
 export const PART_FAMILIES = Object.fromEntries(FAMILY_DEFINITIONS.map((item) => [item.id, item]));
 
 function normalize(value = "") {
-  return String(value).normalize("NFD").replace(/\p{Diacritic}/gu, "").trim().toLowerCase();
+  return String(value)
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .trim()
+    .toLowerCase();
 }
 
 export function resolvePartFamily(part = {}) {
@@ -23,7 +27,8 @@ export function resolvePartFamily(part = {}) {
 
   if (category.includes("placa-mae") || /motherboard|mainboard/.test(identity)) return PART_FAMILIES.motherboard;
   if (category.includes("processador") || /processor|\bcpu\b|ryzen|core i[3579]/.test(identity)) return PART_FAMILIES.processor;
-  if (category.includes("placa de video") || category === "video" || /geforce|radeon|graphics/.test(identity)) return PART_FAMILIES.graphics;
+  if (category.includes("placa de video") || category === "video" || /geforce|radeon|graphics/.test(identity))
+    return PART_FAMILIES.graphics;
   if (category.includes("memoria") || /\bram\b|ddr[345]/.test(identity)) return PART_FAMILIES.memory;
   if (category.includes("armazenamento") || /\bssd\b|\bnvme\b|hard disk|disco|\bhdd\b/.test(identity)) return PART_FAMILIES.storage;
   if (category.includes("fonte") || /power supply|\bpsu\b|fonte/.test(identity)) return PART_FAMILIES.power;
@@ -97,7 +102,9 @@ export function buildKitHierarchy(kits = [], { tabs = [], groups = [], segments 
       segments: segments
         .filter((segment) => {
           const name = normalize(segment.name);
-          return !segment.isDefault && name !== "manutencao" && groupBySegmentId.get(segment.id) === group.id && segmentKits.has(segment.id);
+          return (
+            !segment.isDefault && name !== "manutencao" && groupBySegmentId.get(segment.id) === group.id && segmentKits.has(segment.id)
+          );
         })
         .map((segment) => ({ ...segment, kits: segmentKits.get(segment.id) }))
     }))

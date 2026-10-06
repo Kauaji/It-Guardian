@@ -18,8 +18,7 @@ export function getViewAccess(user) {
   // A visao de Avisos reune alertas, scripts, preventivas e automacoes: abre
   // se qualquer uma delas for permitida, mas o item da sidebar so aparece
   // para alertas/scripts (comportamento original preservado).
-  const canViewAlertsModule =
-    canViewAlerts || canViewScripts || canViewPreventivePlans || canViewPreventiveAutomation;
+  const canViewAlertsModule = canViewAlerts || canViewScripts || canViewPreventivePlans || canViewPreventiveAutomation;
 
   const permittedViewIds = [];
   if (canViewDashboard) permittedViewIds.push("dashboard");
@@ -32,15 +31,8 @@ export function getViewAccess(user) {
   return {
     canCustomizeDashboard: can("dashboard.customize"),
     canManageInventory:
-      can("inventory.create_asset") ||
-      can("inventory.edit_asset") ||
-      can("inventory.move_assets") ||
-      can("inventory.manage_segments"),
-    canOpenGeneralSettings:
-      can("settings.view") ||
-      can("settings.appearance") ||
-      can("settings.system_mode") ||
-      can("admin.full"),
+      can("inventory.create_asset") || can("inventory.edit_asset") || can("inventory.move_assets") || can("inventory.manage_segments"),
+    canOpenGeneralSettings: can("settings.view") || can("settings.appearance") || can("settings.system_mode") || can("admin.full"),
     canViewAlerts,
     canViewAlertsModule,
     canViewCalendar,
@@ -61,9 +53,7 @@ export function getViewAccess(user) {
 
 // Mapeia as permissoes granulares que cada visao repassa aos seus modulos.
 function pick(user, mapping) {
-  return Object.fromEntries(
-    Object.entries(mapping).map(([key, permissionId]) => [key, hasPermission(user, permissionId)])
-  );
+  return Object.fromEntries(Object.entries(mapping).map(([key, permissionId]) => [key, hasPermission(user, permissionId)]));
 }
 
 export function floorPlanPermissions(user) {

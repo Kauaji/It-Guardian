@@ -1,10 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
-  assertUniqueOverrides,
-  normalizeOverridePayload,
-  normalizePlanPayload
-} from "./preventiveAutomationPayload.js";
+import { assertUniqueOverrides, normalizeOverridePayload, normalizePlanPayload } from "./preventiveAutomationPayload.js";
 
 const validPayload = (overrides = {}) => ({ name: "Plano valido", scopeType: "all", ...overrides });
 
@@ -72,11 +68,14 @@ test("erros de validacao do plano tem status 400 e mensagens especificas", () =>
   ];
 
   for (const [payload, pattern] of failures) {
-    assert.throws(() => normalizePlanPayload(payload), (error) => {
-      assert.equal(error.statusCode, 400);
-      assert.match(error.message, pattern);
-      return true;
-    });
+    assert.throws(
+      () => normalizePlanPayload(payload),
+      (error) => {
+        assert.equal(error.statusCode, 400);
+        assert.match(error.message, pattern);
+        return true;
+      }
+    );
   }
 
   assert.deepEqual(normalizePlanPayload(validPayload({ assetIds: null })).assetIds, []);
@@ -113,11 +112,14 @@ test("overrides duplicados no mesmo alvo geram conflito 409 com codigo estavel",
   assert.doesNotThrow(() => assertUniqueOverrides([{ assetId: "a1" }, { assetId: "a2" }, { segmentId: "s1" }, {}]));
   assert.doesNotThrow(() => assertUniqueOverrides());
 
-  assert.throws(() => assertUniqueOverrides([{ assetId: "a1" }, { targetKey: "asset:a1" }]), (error) => {
-    assert.equal(error.statusCode, 409);
-    assert.equal(error.code, "DUPLICATE_PREVENTIVE_AUTOMATION_OVERRIDE");
-    assert.match(error.message, /Esta máquina/);
-    return true;
-  });
+  assert.throws(
+    () => assertUniqueOverrides([{ assetId: "a1" }, { targetKey: "asset:a1" }]),
+    (error) => {
+      assert.equal(error.statusCode, 409);
+      assert.equal(error.code, "DUPLICATE_PREVENTIVE_AUTOMATION_OVERRIDE");
+      assert.match(error.message, /Esta máquina/);
+      return true;
+    }
+  );
   assert.throws(() => assertUniqueOverrides([{ segmentId: "s1" }, { segmentId: "s1" }]), /Este segmento/);
 });

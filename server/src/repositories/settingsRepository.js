@@ -140,32 +140,40 @@ function normalizeStringArray(value) {
       // Plain CSV strings are still accepted below.
     }
 
-    return [...new Set(value.split(/[,\n;]/).map((item) => item.trim()).filter(Boolean))];
+    return [
+      ...new Set(
+        value
+          .split(/[,\n;]/)
+          .map((item) => item.trim())
+          .filter(Boolean)
+      )
+    ];
   }
 
   return [];
 }
 
 function normalizeServiceCode(value = "") {
-  return String(value || "").trim().toUpperCase().replace(/\s+/g, "-");
+  return String(value || "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "-");
 }
 
 async function getNextServiceCode() {
   const result = await query("SELECT code FROM service_catalog WHERE code IS NOT NULL");
-  const nextNumber = result.rows.reduce((highest, row) => {
-    const match = String(row.code || "").match(/^SRV-(\d+)$/i);
-    return match ? Math.max(highest, Number(match[1])) : highest;
-  }, 0) + 1;
+  const nextNumber =
+    result.rows.reduce((highest, row) => {
+      const match = String(row.code || "").match(/^SRV-(\d+)$/i);
+      return match ? Math.max(highest, Number(match[1])) : highest;
+    }, 0) + 1;
 
   return `SRV-${String(nextNumber).padStart(4, "0")}`;
 }
 
 async function assertUniqueServiceCode(code, currentId = "") {
   if (!code) return;
-  const result = await query(
-    "SELECT id FROM service_catalog WHERE lower(code) = lower($1) AND id <> $2 LIMIT 1",
-    [code, currentId || ""]
-  );
+  const result = await query("SELECT id FROM service_catalog WHERE lower(code) = lower($1) AND id <> $2 LIMIT 1", [code, currentId || ""]);
   if (result.rows.length) {
     throw conflict("Ja existe um servico com esse codigo.");
   }
@@ -307,10 +315,7 @@ export async function listSettingsRecords(resource, search = "") {
   }
 
   const conditions = config.searchColumns.map((column) => `${column} ILIKE $1`).join(" OR ");
-  const result = await query(
-    `SELECT * FROM ${config.table} WHERE ${conditions} ORDER BY created_at DESC`,
-    [`%${term}%`]
-  );
+  const result = await query(`SELECT * FROM ${config.table} WHERE ${conditions} ORDER BY created_at DESC`, [`%${term}%`]);
   return result.rows.map((row) => fromRow(row, resource));
 }
 
@@ -329,7 +334,7 @@ export async function createSettingsRecord(resource, payload) {
   }
 
   if (resource === "services") {
-    normalized.code = normalizeServiceCode(normalized.code) || await getNextServiceCode();
+    normalized.code = normalizeServiceCode(normalized.code) || (await getNextServiceCode());
     normalized.defaultPriority = normalized.defaultPriority || null;
     await assertUniqueServiceCode(normalized.code);
   }
@@ -412,10 +417,7 @@ export async function hasDuplicateSettingsRecord(resource, payload) {
     const value = key ? payload[key] : null;
     if (!value) continue;
 
-    const result = await query(
-      `SELECT id FROM ${config.table} WHERE lower(${column}) = lower($1) LIMIT 1`,
-      [String(value).trim()]
-    );
+    const result = await query(`SELECT id FROM ${config.table} WHERE lower(${column}) = lower($1) LIMIT 1`, [String(value).trim()]);
     if (result.rows.length) return true;
   }
 

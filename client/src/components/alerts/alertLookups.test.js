@@ -7,9 +7,16 @@ const devices = [
   { id: "d3", name: "Solta", segmentName: "Legado", tabName: "Aba antiga" },
   { id: "d4", name: "Ambiente", environment: "Homologação" }
 ];
-const segments = [{ id: "s1", name: "Recepção", groupId: "g1", tabId: "t1" }, { id: "s2", name: "Servidores" }];
+const segments = [
+  { id: "s1", name: "Recepção", groupId: "g1", tabId: "t1" },
+  { id: "s2", name: "Servidores" }
+];
 const segmentGroups = [{ id: "g1", name: "Matriz", tabId: "t2" }];
-const inventoryTabs = [{ id: "t1", name: "Ambiente 1" }, { id: "t2", name: "Ambiente 2" }, { id: "t9", name: "Ambiente 9" }];
+const inventoryTabs = [
+  { id: "t1", name: "Ambiente 1" },
+  { id: "t2", name: "Ambiente 2" },
+  { id: "t9", name: "Ambiente 9" }
+];
 
 const lookups = createAlertLookups({ devices, segments, segmentGroups, inventoryTabs });
 
@@ -68,7 +75,11 @@ describe("createAlertLookups - localização", () => {
       segmentName: "Servidores",
       segmentId: "s2"
     });
-    expect(lookups.getDevicePreventiveLocation(devices[2])).toMatchObject({ tabName: "Aba antiga", segmentName: "Legado", segmentId: "unorganized" });
+    expect(lookups.getDevicePreventiveLocation(devices[2])).toMatchObject({
+      tabName: "Aba antiga",
+      segmentName: "Legado",
+      segmentId: "unorganized"
+    });
     expect(lookups.getDevicePreventiveLocation(devices[3]).tabName).toBe("Homologação");
   });
 });
@@ -81,7 +92,9 @@ describe("createAlertLookups - rótulos", () => {
   });
 
   it("troca o nome original do host pelo nome resolvido no título", () => {
-    expect(lookups.getResolvedAlertTitle({ assetId: "d1", hostName: "PC-01", title: "CPU alta em PC-01" })).toBe("CPU alta em Computador da Ana");
+    expect(lookups.getResolvedAlertTitle({ assetId: "d1", hostName: "PC-01", title: "CPU alta em PC-01" })).toBe(
+      "CPU alta em Computador da Ana"
+    );
     expect(lookups.getResolvedAlertTitle({ assetId: "d2", hostName: "SRV-02", title: "Falha em SRV-02" })).toBe("Falha em SRV-02");
     expect(lookups.getResolvedAlertTitle({ hostName: "", title: "" })).toBe("Aviso");
   });

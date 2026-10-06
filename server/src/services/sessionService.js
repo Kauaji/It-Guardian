@@ -38,11 +38,10 @@ function verifyClaims(token) {
  * @returns {string}
  */
 function signSessionToken({ userId, sessionId, tokenVersion, expiresInSeconds }) {
-  return jwt.sign(
-    { sub: userId, sid: sessionId, ver: tokenVersion, typ: SESSION_TYPE },
-    getJwtSecret(),
-    { algorithm: "HS256", expiresIn: Math.max(1, Math.floor(expiresInSeconds)) }
-  );
+  return jwt.sign({ sub: userId, sid: sessionId, ver: tokenVersion, typ: SESSION_TYPE }, getJwtSecret(), {
+    algorithm: "HS256",
+    expiresIn: Math.max(1, Math.floor(expiresInSeconds))
+  });
 }
 
 /**

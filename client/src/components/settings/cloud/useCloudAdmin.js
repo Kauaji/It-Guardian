@@ -8,9 +8,12 @@ export function useCloudAdmin(token, notify) {
   const [loading, setLoading] = useState(true);
   const [busyAction, setBusyAction] = useState("");
 
-  const showMessage = useCallback((message, type = "ok") => {
-    notify?.(message, type);
-  }, [notify]);
+  const showMessage = useCallback(
+    (message, type = "ok") => {
+      notify?.(message, type);
+    },
+    [notify]
+  );
 
   const integrationState = useIntegrations({ token, showMessage, setBusyAction });
   const keys = useProductKeys(token);

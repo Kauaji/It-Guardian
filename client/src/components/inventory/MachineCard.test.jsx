@@ -3,31 +3,91 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import MachineCard from "./MachineCard.jsx";
-import { buildMachineCardClassName, formatLastPing, metricTone, pulseTone, statusLabel, statusTone } from "./machineCard/machineCardPresentation.js";
+import {
+  buildMachineCardClassName,
+  formatLastPing,
+  metricTone,
+  pulseTone,
+  statusLabel,
+  statusTone
+} from "./machineCard/machineCardPresentation.js";
 
 vi.mock("../../api.js", () => ({ fetchDeviceMetricHistory: vi.fn(async () => ({ points: [], samples: [] })) }));
 vi.mock("../remoteAssistance/RemoteAssistanceAction.jsx", () => ({
-  default: ({ asset, compact }) => <span data-testid="remote">{asset.id}|{String(compact)}</span>
+  default: ({ asset, compact }) => (
+    <span data-testid="remote">
+      {asset.id}|{String(compact)}
+    </span>
+  )
 }));
 
-globalThis.ResizeObserver = globalThis.ResizeObserver || class { observe() {} unobserve() {} disconnect() {} };
+globalThis.ResizeObserver =
+  globalThis.ResizeObserver ||
+  class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
 
 const segments = [
   { id: "s1", name: "Escritório" },
   { id: "s2", name: "Financeiro", color: "#ff0000" },
   { id: "bkp", name: "Backup", isBackupSegment: true }
 ];
-const pc = { id: "pc1", name: "PC-01", ip: "10.0.0.1", segmentId: "s1", status: "online", assetType: "desktop", metrics: { cpu: 90, ram: 75, disk: 40 }, hardware: { peripherals: [{ id: "p1", type: "Monitor", brand: "LG" }] }, inventorySearchTabName: "Aba X" };
-const manual = { id: "m1", name: "SW", ip: "10.0.0.2", segmentId: "s1", status: "offline", source: "manual", assetType: "switch", lastPingAt: "2026-01-02T13:45:00", manualAsset: { brand: "Cisco", model: "2960", assetTag: "NET-1", location: "Sala", hostname: "sw1" }, isBackup: true, backupStatus: "in_use" };
+const pc = {
+  id: "pc1",
+  name: "PC-01",
+  ip: "10.0.0.1",
+  segmentId: "s1",
+  status: "online",
+  assetType: "desktop",
+  metrics: { cpu: 90, ram: 75, disk: 40 },
+  hardware: { peripherals: [{ id: "p1", type: "Monitor", brand: "LG" }] },
+  inventorySearchTabName: "Aba X"
+};
+const manual = {
+  id: "m1",
+  name: "SW",
+  ip: "10.0.0.2",
+  segmentId: "s1",
+  status: "offline",
+  source: "manual",
+  assetType: "switch",
+  lastPingAt: "2026-01-02T13:45:00",
+  manualAsset: { brand: "Cisco", model: "2960", assetTag: "NET-1", location: "Sala", hostname: "sw1" },
+  isBackup: true,
+  backupStatus: "in_use"
+};
 
 function renderCard(machine = pc, overrides = {}) {
   const props = {
-    machine, segments, canManage: true, segmentColor: "#1f7a61", alias: undefined, selected: false,
-    onMoveMachine: vi.fn(), onOpenDetails: vi.fn(), onOpenMoveModal: vi.fn(), onRefreshPing: vi.fn(), onSelect: vi.fn(), onToggleSelection: vi.fn(),
-    onAddPeripheral: vi.fn(), onRemovePeripheral: vi.fn(), activePopoverId: null, setActivePopoverId: vi.fn(), token: "t", user: { id: "u" }, notify: vi.fn(), ...overrides
+    machine,
+    segments,
+    canManage: true,
+    segmentColor: "#1f7a61",
+    alias: undefined,
+    selected: false,
+    onMoveMachine: vi.fn(),
+    onOpenDetails: vi.fn(),
+    onOpenMoveModal: vi.fn(),
+    onRefreshPing: vi.fn(),
+    onSelect: vi.fn(),
+    onToggleSelection: vi.fn(),
+    onAddPeripheral: vi.fn(),
+    onRemovePeripheral: vi.fn(),
+    activePopoverId: null,
+    setActivePopoverId: vi.fn(),
+    token: "t",
+    user: { id: "u" },
+    notify: vi.fn(),
+    ...overrides
   };
   const user = userEvent.setup();
-  const utils = render(<DndContext><MachineCard {...props} /></DndContext>);
+  const utils = render(
+    <DndContext>
+      <MachineCard {...props} />
+    </DndContext>
+  );
   return { props, user, ...utils };
 }
 
@@ -54,8 +114,9 @@ describe("machineCardPresentation", () => {
   it("monta a classe do cartão na ordem original", () => {
     expect(buildMachineCardClassName({})).toBe(`machine-card${" ".repeat(7)}`);
     expect(buildMachineCardClassName({ isBackup: true, selected: true, isOverlay: true })).toContain("backup-card");
-    expect(buildMachineCardClassName({ expanded: true, moveMenuOpen: true, isDragging: true, backupInUse: true }))
-      .toBe("machine-card  backup-in-use  details-open move-menu-open dragging ");
+    expect(buildMachineCardClassName({ expanded: true, moveMenuOpen: true, isDragging: true, backupInUse: true })).toBe(
+      "machine-card  backup-in-use  details-open move-menu-open dragging "
+    );
   });
 });
 
@@ -103,7 +164,11 @@ describe("MachineCard", () => {
     const { props, user, rerender } = renderCard();
     await user.click(screen.getByRole("button", { name: "Periféricos" }));
     expect(props.setActivePopoverId).toHaveBeenCalledWith("peripherals-pc1");
-    rerender(<DndContext><MachineCard {...props} activePopoverId="peripherals-pc1" /></DndContext>);
+    rerender(
+      <DndContext>
+        <MachineCard {...props} activePopoverId="peripherals-pc1" />
+      </DndContext>
+    );
     expect(screen.getByRole("button", { name: "Periféricos", expanded: true })).toHaveAttribute("title", "Ocultar periféricos");
     expect(document.querySelector(".machine-details")).toHaveClass("expanded");
     expect(document.querySelector(".machine-card")).toHaveClass("details-open");
@@ -118,9 +183,17 @@ describe("MachineCard", () => {
     const { props, user, rerender } = renderCard();
     await user.click(screen.getByRole("button", { name: "Mover" }));
     expect(props.setActivePopoverId).toHaveBeenCalledWith("move-pc1");
-    rerender(<DndContext><MachineCard {...props} activePopoverId="move-pc1" /></DndContext>);
+    rerender(
+      <DndContext>
+        <MachineCard {...props} activePopoverId="move-pc1" />
+      </DndContext>
+    );
     const popover = document.querySelector(".move-menu-popover");
-    expect(within(popover).getAllByRole("button").map((button) => button.textContent)).toEqual(["Financeiro"]);
+    expect(
+      within(popover)
+        .getAllByRole("button")
+        .map((button) => button.textContent)
+    ).toEqual(["Financeiro"]);
     expect(document.querySelector(".machine-card")).toHaveClass("move-menu-open");
     await user.click(within(popover).getByRole("button", { name: "Financeiro" }));
     expect(props.onMoveMachine).toHaveBeenCalledWith(pc, "s2");
@@ -167,12 +240,16 @@ describe("MachineCard", () => {
     const { user } = renderCard();
     for (const label of ["CPU", "RAM"]) {
       await user.click(screen.getByText(label).closest("button"));
-      await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
       expect(document.querySelector('[role="dialog"]')).not.toBeNull();
       await user.keyboard("{Escape}");
     }
     await user.click(screen.getByTitle("Disco 40%").closest("button"));
-    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
     expect(document.querySelector('[role="dialog"]')).not.toBeNull();
   });
 });

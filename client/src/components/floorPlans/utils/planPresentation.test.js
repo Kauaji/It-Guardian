@@ -1,12 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  deviceLabel,
-  formatDate,
-  getDeviceStatusTone,
-  getDeviceTags,
-  getEntityKindLabel,
-  planStatusLabel
-} from "./planPresentation.js";
+import { deviceLabel, formatDate, getDeviceStatusTone, getDeviceTags, getEntityKindLabel, planStatusLabel } from "./planPresentation.js";
 import { createId } from "./ids.js";
 import { DEFAULT_FLOOR_PLAN_LAYERS, FLOOR_PLAN_LAYER_OPTIONS, resolveLayerState } from "./layers.js";
 import { getObjectResizeHandles } from "./selectionHandles.js";
@@ -75,7 +68,14 @@ describe("getObjectResizeHandles", () => {
   it("devolve quatro laterais e quatro cantos ao redor do objeto", () => {
     const handles = getObjectResizeHandles({ x: 100, y: 50, width: 80, height: 40 });
     expect(handles.map((handle) => handle.side)).toEqual([
-      "north", "east", "south", "west", "northwest", "northeast", "southeast", "southwest"
+      "north",
+      "east",
+      "south",
+      "west",
+      "northwest",
+      "northeast",
+      "southeast",
+      "southwest"
     ]);
     expect(handles[0]).toMatchObject({ x: 140, y: 32 });
     expect(handles[6]).toMatchObject({ x: 188, y: 98 });

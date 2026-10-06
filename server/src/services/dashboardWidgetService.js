@@ -14,9 +14,7 @@ export async function previewWidget({ type, config, filters, user }) {
 
   const entry = widgetRegistry[type];
   const selections = normalizeDashboardFilters(filters);
-  const previewConfig = entry.requiresAssetConfig && selections.assetId
-    ? { ...config, assetId: selections.assetId }
-    : config;
+  const previewConfig = entry.requiresAssetConfig && selections.assetId ? { ...config, assetId: selections.assetId } : config;
   if (entry.validateConfig) {
     const validationError = entry.validateConfig(previewConfig);
     if (validationError) throw badRequest(`Widget invalido: ${validationError}`);

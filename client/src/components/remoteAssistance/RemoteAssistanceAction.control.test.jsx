@@ -1,15 +1,7 @@
 import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as api from "../../api.js";
-import {
-  MONITORS,
-  advance,
-  openDialog,
-  renderAction,
-  startNativeSession,
-  viewOnlyUser,
-  wireApi
-} from "./test/fixtures.jsx";
+import { MONITORS, advance, openDialog, renderAction, startNativeSession, viewOnlyUser, wireApi } from "./test/fixtures.jsx";
 
 // Caracterizacao de controle remoto (mouse/teclado), maximizar e chat.
 
@@ -159,10 +151,7 @@ describe("controle remoto", () => {
     expect(lock).toHaveAttribute("title", "Travar teclado e mouse locais");
     await click(lock);
     expect(lastInput().command).toEqual({ type: "block_input", enabled: true });
-    expect(screen.getByRole("button", { name: /Destravar teclado/ })).toHaveAttribute(
-      "title",
-      "Destravar teclado e mouse locais"
-    );
+    expect(screen.getByRole("button", { name: /Destravar teclado/ })).toHaveAttribute("title", "Destravar teclado e mouse locais");
     await click(screen.getByRole("button", { name: /Destravar teclado/ }));
     expect(lastInput().command).toEqual({ type: "block_input", enabled: false });
 
@@ -274,9 +263,7 @@ describe("chat com o usuário local", () => {
   });
 
   it("nao duplica a mensagem se ela ja esta na lista e ignora rascunho vazio", async () => {
-    server.chatMessages = [
-      { id: "msg-oi", sender: "technician", text: "oi", createdAt: "2026-08-15T12:00:00.000Z" }
-    ];
+    server.chatMessages = [{ id: "msg-oi", sender: "technician", text: "oi", createdAt: "2026-08-15T12:00:00.000Z" }];
     await startChatSession();
     const input = screen.getByLabelText("Mensagem de chat");
     await act(async () => {
@@ -342,10 +329,7 @@ describe("chat com o usuário local", () => {
     expect(toggle).toHaveAttribute("title", "Fechar o chat com o usuário local");
     await click(toggle);
     expect(screen.queryByRole("region", { name: "Chat com o usuário local" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Abrir chat/ })).toHaveAttribute(
-      "title",
-      "Abrir o chat com o usuário local"
-    );
+    expect(screen.getByRole("button", { name: /Abrir chat/ })).toHaveAttribute("title", "Abrir o chat com o usuário local");
     await click(screen.getByRole("button", { name: /Abrir chat/ }));
     expect(screen.getByRole("region", { name: "Chat com o usuário local" })).toBeInTheDocument();
   });

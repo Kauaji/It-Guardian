@@ -18,21 +18,33 @@ function listMarkdown(dir) {
 }
 
 const slug = (heading) =>
-  heading.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9 _-]/g, "").trim().replace(/ +/g, "-");
+  heading
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9 _-]/g, "")
+    .trim()
+    .replace(/ +/g, "-");
 
 function anchorsOf(file) {
   const text = fs.readFileSync(file, "utf8").replace(/```[\s\S]*?```/g, "");
   return new Set([...text.matchAll(/^#{1,6}\s+(.+?)\s*$/gm)].map((m) => slug(m[1].replace(/[`*_]/g, ""))));
 }
 
-const files = [path.join(root, "README.md"), path.join(root, "SECURITY.md"), path.join(root, "CONTRIBUTING.md"), ...listMarkdown(docsDir)].filter((f) => fs.existsSync(f));
+const files = [
+  path.join(root, "README.md"),
+  path.join(root, "SECURITY.md"),
+  path.join(root, "CONTRIBUTING.md"),
+  ...listMarkdown(docsDir)
+].filter((f) => fs.existsSync(f));
 
 for (const file of files) {
   const text = fs.readFileSync(file, "utf8").replace(/```[\s\S]*?```/g, "");
   for (const match of text.matchAll(/\[[^\]]*\]\(([^)\s]+)\)/g)) {
     const target = match[1];
     if (/^(https?:|mailto:|#|data:)/.test(target)) {
-      if (target.startsWith("#") && !anchorsOf(file).has(target.slice(1))) errors.push(`${path.relative(root, file)}: ancora ${target} inexistente`);
+      if (target.startsWith("#") && !anchorsOf(file).has(target.slice(1)))
+        errors.push(`${path.relative(root, file)}: ancora ${target} inexistente`);
       continue;
     }
     const [relative, anchor] = target.split("#");

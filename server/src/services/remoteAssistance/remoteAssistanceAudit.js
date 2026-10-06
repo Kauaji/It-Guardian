@@ -9,14 +9,8 @@ import {
   failStaleRemoteAssistanceSessions
 } from "../../repositories/remoteAssistanceRepository.js";
 
-import {
-  addServiceOrderHistory
-} from "../../repositories/serviceOrderRepository.js";
-import {
-  clearRelay,
-  clearRelayRustdeskCredential,
-  enqueueRelayCommand
-} from "../remoteAssistanceRelay.js";
+import { addServiceOrderHistory } from "../../repositories/serviceOrderRepository.js";
+import { clearRelay, clearRelayRustdeskCredential, enqueueRelayCommand } from "../remoteAssistanceRelay.js";
 
 /**
  * Melhor esforco: pede ao agente para trocar a senha do RustDesk por uma
@@ -30,11 +24,7 @@ import {
  */
 export async function revokeRustdeskPasswordBestEffort(session, config) {
   if (config.transport !== "rustdesk") return;
-  await enqueueRelayCommand(
-    session.id,
-    { id: randomUUID(), type: "rustdesk_clear_password" },
-    config.maxQueuedCommands
-  );
+  await enqueueRelayCommand(session.id, { id: randomUUID(), type: "rustdesk_clear_password" }, config.maxQueuedCommands);
   await clearRelayRustdeskCredential(session.id);
 }
 
@@ -57,38 +47,21 @@ export async function closeAbandonedRemoteAssistanceSessions() {
   const config = getRemoteAssistanceConfig();
   const [expired, stale] = await Promise.all([
     expireRemoteAssistanceSessions(),
-    failStaleRemoteAssistanceSessions(
-      new Date(Date.now() - config.agentTimeoutSeconds * 1000)
-    )
+    failStaleRemoteAssistanceSessions(new Date(Date.now() - config.agentTimeoutSeconds * 1000))
   ]);
   await auditAutomaticallyClosedSessions(expired, "Sessao remota expirada automaticamente.");
-  await auditAutomaticallyClosedSessions(
-    stale,
-    "Sessao remota encerrada por perda de comunicacao com o agente."
-  );
+  await auditAutomaticallyClosedSessions(stale, "Sessao remota encerrada por perda de comunicacao com o agente.");
   return { expired: expired.length, stale: stale.length };
 }
 
 export async function endRemoteAssistanceSessionsOnLogout(user) {
   if (!user?.id) return 0;
   const sessions = await endRemoteAssistanceSessionsForTechnician(user.id);
-  await auditAutomaticallyClosedSessions(
-    sessions,
-    `Assistencia remota encerrada no logout de ${user.name || "tecnico"}.`,
-    "session_ended"
-  );
+  await auditAutomaticallyClosedSessions(sessions, `Assistencia remota encerrada no logout de ${user.name || "tecnico"}.`, "session_ended");
   return sessions.length;
 }
 
-export async function addAudit({
-  session,
-  eventType,
-  message,
-  actorType,
-  user = null,
-  metadata = {},
-  db
-}) {
+export async function addAudit({ session, eventType, message, actorType, user = null, metadata = {}, db }) {
   await addRemoteAssistanceEvent({
     sessionId: session.id,
     assetId: session.assetId,

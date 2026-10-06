@@ -11,11 +11,7 @@ export default function PreventiveDeviceRow({ item, dueDays, selected, disabled,
   return (
     <button
       type="button"
-      className={[
-        "preventive-device-row",
-        selected ? "selected" : "",
-        hasPreventiveError ? "has-error" : ""
-      ].filter(Boolean).join(" ")}
+      className={["preventive-device-row", selected ? "selected" : "", hasPreventiveError ? "has-error" : ""].filter(Boolean).join(" ")}
       disabled={disabled}
       onClick={() => onToggle(device.id)}
     >
@@ -30,22 +26,21 @@ export default function PreventiveDeviceRow({ item, dueDays, selected, disabled,
         </small>
       </span>
       <em>
-        {lastPreventive ? `Última preventiva: ${formatDate(lastPreventive.preparedAt || lastPreventive.createdAt)}` : "Sem preventiva registrada"}
+        {lastPreventive
+          ? `Última preventiva: ${formatDate(lastPreventive.preparedAt || lastPreventive.createdAt)}`
+          : "Sem preventiva registrada"}
       </em>
       {lastPreventive?.name && <small className="preventive-plan-used">Plano: {lastPreventive.name}</small>}
       <small className="preventive-next-date">
         {daysSinceLastPreventive !== null ? `${daysSinceLastPreventive} dia(s) desde a última • ` : ""}
         {nextPreventiveLabel}
       </small>
-      <AutomationIndicatorDots
-        indicators={device.automationIndicators}
-        compact
-        maxVisible={4}
-        interactive={false}
-      />
+      <AutomationIndicatorDots indicators={device.automationIndicators} compact maxVisible={4} interactive={false} />
       <span className="preventive-device-badges">
         {badges.map((badge) => (
-          <span key={`${device.id}-${badge.label}`} className={`pill ${badge.tone}`}>{badge.label}</span>
+          <span key={`${device.id}-${badge.label}`} className={`pill ${badge.tone}`}>
+            {badge.label}
+          </span>
         ))}
       </span>
     </button>

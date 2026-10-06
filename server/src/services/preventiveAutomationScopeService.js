@@ -1,11 +1,7 @@
 import { badRequest, conflict, forbidden } from "../lib/errors.js";
 import { filterAutomationAssetsByScope } from "../repositories/automationAccessScope.js";
 import { findMaintenanceScriptById } from "./maintenanceScripts/maintenanceScriptsFacade.js";
-import {
-  groupExists,
-  listSegmentIdsByGroup,
-  segmentExists
-} from "../repositories/preventiveAutomationScopeRepository.js";
+import { groupExists, listSegmentIdsByGroup, segmentExists } from "../repositories/preventiveAutomationScopeRepository.js";
 import { normalizeAssetIds, normalizeScriptIds } from "../domain/preventiveAutomationNormalizers.js";
 import { resolveAssetListDevices } from "../domain/preventiveAutomationSchedule.js";
 import { listDevices } from "./monitoringService.js";

@@ -22,8 +22,7 @@ const databaseErrorCodes = new Set(["ECONNREFUSED", "ENOTFOUND", "ETIMEDOUT", "2
 function isDatabaseError(error) {
   return (
     error.code !== "EXTERNAL_INTEGRATION_UNAVAILABLE" &&
-    (databaseErrorCodes.has(error.code) ||
-      /database|banco de dados|connection|connect|pool/i.test(error.message || ""))
+    (databaseErrorCodes.has(error.code) || /database|banco de dados|connection|connect|pool/i.test(error.message || ""))
   );
 }
 

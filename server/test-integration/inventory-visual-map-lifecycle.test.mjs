@@ -36,7 +36,12 @@ test("mapa visual: mapas, objetos (com ativo), conexoes e regras de validacao", 
   const cookie = await login(baseUrl);
 
   const manual = await api(baseUrl, cookie, "POST", "/devices/manual", {
-    name: "PC do mapa visual", type: "desktop", brand: "X", model: "Y", assetTag: "VM-CHAR-1", ip: "203.0.113.55"
+    name: "PC do mapa visual",
+    type: "desktop",
+    brand: "X",
+    model: "Y",
+    assetTag: "VM-CHAR-1",
+    ip: "203.0.113.55"
   });
   assert.equal(manual.status, 201, JSON.stringify(manual.body));
   const assetId = manual.body.device.id;
@@ -44,7 +49,12 @@ test("mapa visual: mapas, objetos (com ativo), conexoes e regras de validacao", 
   // mapas
   assert.equal((await api(baseUrl, cookie, "POST", "/inventory-visual-maps", { name: "x" })).status, 400);
   const created = await api(baseUrl, cookie, "POST", "/inventory-visual-maps", {
-    name: "  Sala 1  ", width: 1, depth: 999, scale: "2", floorLabel: "Andar 2", notes: ""
+    name: "  Sala 1  ",
+    width: 1,
+    depth: 999,
+    scale: "2",
+    floorLabel: "Andar 2",
+    notes: ""
   });
   assert.equal(created.status, 201, JSON.stringify(created.body));
   const map = created.body.map;
@@ -66,12 +76,22 @@ test("mapa visual: mapas, objetos (com ativo), conexoes e regras de validacao", 
   // objetos
   const badPreset = await api(baseUrl, cookie, "POST", `/inventory-visual-maps/${map.id}/objects`, { presetType: "ovni" });
   assert.equal(badPreset.status, 400);
-  const withMissingAsset = await api(baseUrl, cookie, "POST", `/inventory-visual-maps/${map.id}/objects`, { presetType: "desktop", linkedAssetId: "ativo-inexistente" });
+  const withMissingAsset = await api(baseUrl, cookie, "POST", `/inventory-visual-maps/${map.id}/objects`, {
+    presetType: "desktop",
+    linkedAssetId: "ativo-inexistente"
+  });
   assert.equal(withMissingAsset.status, 400);
   assert.match(withMissingAsset.body.message, /Ativo informado nao foi encontrado/);
 
   const object = await api(baseUrl, cookie, "POST", `/inventory-visual-maps/${map.id}/objects`, {
-    presetType: "desktop", label: "PC 1", linkedAssetId: assetId, x: 1000, y: 1, z: -3, color: "azul", metadata: { a: 1 }
+    presetType: "desktop",
+    label: "PC 1",
+    linkedAssetId: assetId,
+    x: 1000,
+    y: 1,
+    z: -3,
+    color: "azul",
+    metadata: { a: 1 }
   });
   assert.equal(object.status, 201, JSON.stringify(object.body));
   const first = object.body.object;
@@ -82,7 +102,10 @@ test("mapa visual: mapas, objetos (com ativo), conexoes e regras de validacao", 
   assert.match(first.color, /^#[0-9a-f]{6}$/i, "cor invalida volta para a padrao do preset");
   assert.deepEqual(first.metadata, { a: 1 });
 
-  const duplicateAsset = await api(baseUrl, cookie, "POST", `/inventory-visual-maps/${map.id}/objects`, { presetType: "desktop", linkedAssetId: assetId });
+  const duplicateAsset = await api(baseUrl, cookie, "POST", `/inventory-visual-maps/${map.id}/objects`, {
+    presetType: "desktop",
+    linkedAssetId: assetId
+  });
   assert.equal(duplicateAsset.status, 409);
   assert.match(duplicateAsset.body.message, /ja esta posicionado/);
 
@@ -107,13 +130,28 @@ test("mapa visual: mapas, objetos (com ativo), conexoes e regras de validacao", 
   assert.equal((await api(baseUrl, cookie, "PATCH", "/inventory-visual-map-objects/nao-existe", { label: "x" })).status, 404);
 
   // conexoes
-  const noPoints = await api(baseUrl, cookie, "POST", `/inventory-visual-maps/${map.id}/connections`, { layer: "infrastructure", points: [[0, 0, 0]] });
+  const noPoints = await api(baseUrl, cookie, "POST", `/inventory-visual-maps/${map.id}/connections`, {
+    layer: "infrastructure",
+    points: [[0, 0, 0]]
+  });
   assert.equal(noPoints.status, 400);
-  const badType = await api(baseUrl, cookie, "POST", `/inventory-visual-maps/${map.id}/connections`, { layer: "electrical", connectionType: "uplink", points: [[0, 0, 0], [1, 0, 1]] });
+  const badType = await api(baseUrl, cookie, "POST", `/inventory-visual-maps/${map.id}/connections`, {
+    layer: "electrical",
+    connectionType: "uplink",
+    points: [
+      [0, 0, 0],
+      [1, 0, 1]
+    ]
+  });
   assert.equal(badType.status, 400);
   const otherMap = await api(baseUrl, cookie, "POST", "/inventory-visual-maps", { name: "Outro mapa" });
   const foreign = await api(baseUrl, cookie, "POST", `/inventory-visual-maps/${otherMap.body.map.id}/connections`, {
-    layer: "infrastructure", sourceObjectId: first.id, points: [[0, 0, 0], [1, 0, 1]]
+    layer: "infrastructure",
+    sourceObjectId: first.id,
+    points: [
+      [0, 0, 0],
+      [1, 0, 1]
+    ]
   });
   assert.equal(foreign.status, 400);
   assert.match(foreign.body.message, /pertence a outro mapa/);
@@ -138,7 +176,10 @@ test("mapa visual: mapas, objetos (com ativo), conexoes e regras de validacao", 
   assert.equal(link.points[1].y, 0);
   assert.match(link.color, /^#[0-9a-f]{6}$/i);
 
-  const updatedLink = await api(baseUrl, cookie, "PATCH", `/inventory-visual-map-connections/${link.id}`, { label: "Backbone", dashed: false });
+  const updatedLink = await api(baseUrl, cookie, "PATCH", `/inventory-visual-map-connections/${link.id}`, {
+    label: "Backbone",
+    dashed: false
+  });
   assert.equal(updatedLink.status, 200);
   assert.equal(updatedLink.body.connection.label, "Backbone");
   assert.equal(updatedLink.body.connection.dashed, false);
@@ -147,7 +188,10 @@ test("mapa visual: mapas, objetos (com ativo), conexoes e regras de validacao", 
   const contents = await api(baseUrl, cookie, "GET", `/inventory-visual-maps/${map.id}`);
   assert.equal(contents.body.objects.length, 3);
   assert.equal(contents.body.connections.length, 1);
-  assert.deepEqual(contents.body.objects.map((item) => item.layer), [...contents.body.objects.map((item) => item.layer)].sort());
+  assert.deepEqual(
+    contents.body.objects.map((item) => item.layer),
+    [...contents.body.objects.map((item) => item.layer)].sort()
+  );
   assert.equal((await api(baseUrl, cookie, "GET", `/inventory-visual-maps/${map.id}/objects`)).body.objects.length, 3);
   assert.equal((await api(baseUrl, cookie, "GET", `/inventory-visual-maps/${map.id}/connections`)).body.connections.length, 1);
 
@@ -176,11 +220,17 @@ test("mapa visual: mapas, objetos (com ativo), conexoes e regras de validacao", 
     assert.ok(logTypes.includes(expected), `log ${expected} ausente`);
   }
   const history = await listAssetHistory(assetId);
-  const messages = history.filter((event) => event.eventType === "inventory_visual_map").map((event) => event.message).sort();
-  assert.deepEqual(messages, [
-    "Ativo posicionado no mapa visual Sala 1B.",
-    "Ativo removido do mapa visual Sala 1B.",
-    "Posicao do ativo atualizada no mapa visual Sala 1B.",
-    "Posicao do ativo atualizada no mapa visual Sala 1B."
-  ].sort());
+  const messages = history
+    .filter((event) => event.eventType === "inventory_visual_map")
+    .map((event) => event.message)
+    .sort();
+  assert.deepEqual(
+    messages,
+    [
+      "Ativo posicionado no mapa visual Sala 1B.",
+      "Ativo removido do mapa visual Sala 1B.",
+      "Posicao do ativo atualizada no mapa visual Sala 1B.",
+      "Posicao do ativo atualizada no mapa visual Sala 1B."
+    ].sort()
+  );
 });

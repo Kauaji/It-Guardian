@@ -13,12 +13,7 @@ export default function PreventiveScriptOption({ script, selected, expanded, dis
 
   return (
     <article className={`preventive-script-option ${selected ? "selected" : ""} ${expanded ? "expanded" : ""}`}>
-      <button
-        type="button"
-        className="preventive-script-select"
-        disabled={disabled}
-        onClick={() => onToggle(script.id)}
-      >
+      <button type="button" className="preventive-script-select" disabled={disabled} onClick={() => onToggle(script.id)}>
         <span className="preventive-device-check" aria-hidden="true">
           {selected ? "✓" : ""}
         </span>

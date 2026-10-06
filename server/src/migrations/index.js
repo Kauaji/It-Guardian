@@ -122,17 +122,11 @@ export async function runMigrations() {
     await ensureMigrationsTable(db);
 
     for (const migration of migrations) {
-      const applied = await db(
-        "SELECT id FROM schema_migrations WHERE id = $1",
-        [migration.id]
-      );
+      const applied = await db("SELECT id FROM schema_migrations WHERE id = $1", [migration.id]);
       if (applied.rowCount) continue;
 
       await migration.up(db);
-      await db(
-        "INSERT INTO schema_migrations (id) VALUES ($1)",
-        [migration.id]
-      );
+      await db("INSERT INTO schema_migrations (id) VALUES ($1)", [migration.id]);
     }
   });
 }

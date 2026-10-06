@@ -25,7 +25,13 @@ test("todo alerta tem severidade, resumo e runbook que aponta para uma secao exi
   assert.equal([...rules.matchAll(/severity: (critical|warning)/g)].length, alerts.length);
   const headings = new Set(
     [...runbook.matchAll(/^#{2,3} (.+)$/gm)].map((match) =>
-      match[1].toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9 ]/g, "").trim().replace(/ +/g, "-")
+      match[1]
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .replace(/[^a-z0-9 ]/g, "")
+        .trim()
+        .replace(/ +/g, "-")
     )
   );
   for (const anchor of runbooks) assert.ok(headings.has(anchor), `secao ${anchor} ausente em docs/OBSERVABILIDADE.md`);

@@ -51,12 +51,8 @@ const gzipKb = (file) => zlib.gzipSync(fs.readFileSync(file)).length / KB;
 const chunkName = (fileName) => fileName.replace(/-[A-Za-z0-9_-]{8}\.(js|css)$/, "");
 
 const html = fs.readFileSync(path.join(distDir, "index.html"), "utf8");
-const initialFiles = new Set(
-  [...html.matchAll(/<(?:script|link)[^>]+(?:src|href)="\/assets\/([^"]+\.js)"/g)].map((match) => match[1])
-);
-const entryFiles = new Set(
-  [...html.matchAll(/<script[^>]+src="\/assets\/([^"]+\.js)"/g)].map((match) => match[1])
-);
+const initialFiles = new Set([...html.matchAll(/<(?:script|link)[^>]+(?:src|href)="\/assets\/([^"]+\.js)"/g)].map((match) => match[1]));
+const entryFiles = new Set([...html.matchAll(/<script[^>]+src="\/assets\/([^"]+\.js)"/g)].map((match) => match[1]));
 
 const files = fs.readdirSync(assetsDir);
 const jsFiles = files.filter((name) => name.endsWith(".js"));

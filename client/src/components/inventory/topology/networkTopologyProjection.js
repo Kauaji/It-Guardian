@@ -7,10 +7,7 @@ import { isTopologySegmentEligible } from "./networkTopologyHierarchy.js";
  * No API calls, synthetic devices or inferred network links belong here.
  */
 export function getTopologySegments(tree) {
-  return [
-    ...tree.groups.flatMap((group) => group.segments),
-    ...tree.ungroupedSegments
-  ].filter(isTopologySegmentEligible);
+  return [...tree.groups.flatMap((group) => group.segments), ...tree.ungroupedSegments].filter(isTopologySegmentEligible);
 }
 
 export function buildInventoryTopologyNodes({ tree, viewLevel, selectedGroupId, selectedSegmentId }) {
@@ -18,16 +15,17 @@ export function buildInventoryTopologyNodes({ tree, viewLevel, selectedGroupId, 
   if (viewLevel === "tab") {
     entries = [
       ...tree.groups.map((group) => ({ nodeType: "group", entity: group })),
-      ...tree.ungroupedSegments.filter(isTopologySegmentEligible)
-        .map((segment) => ({ nodeType: "segment", entity: segment }))
+      ...tree.ungroupedSegments.filter(isTopologySegmentEligible).map((segment) => ({ nodeType: "segment", entity: segment }))
     ];
   } else if (viewLevel === "group") {
     entries = (tree.groups.find((group) => group.id === selectedGroupId)?.segments || [])
       .filter(isTopologySegmentEligible)
       .map((segment) => ({ nodeType: "segment", entity: segment }));
   } else if (viewLevel === "segment") {
-    entries = (getTopologySegments(tree).find((segment) => segment.id === selectedSegmentId)?.devices || [])
-      .map((device) => ({ nodeType: "asset", entity: device }));
+    entries = (getTopologySegments(tree).find((segment) => segment.id === selectedSegmentId)?.devices || []).map((device) => ({
+      nodeType: "asset",
+      entity: device
+    }));
   }
 
   const columns = Math.max(1, Math.min(5, Math.ceil(Math.sqrt(entries.length))));

@@ -40,7 +40,11 @@ async function clientFor(baseUrl, email) {
 }
 
 test.before(async () => {
-  const holder = { after: (callback) => { closeServer = callback; } };
+  const holder = {
+    after: (callback) => {
+      closeServer = callback;
+    }
+  };
   const baseUrl = await fx.startServer(holder);
   admin = fx.createClient(baseUrl, await fx.login(baseUrl));
   scripts = { first: await fx.createScript("Script de escopo") };
@@ -56,10 +60,12 @@ test.before(async () => {
     name: "Tecnico Limitado"
   });
   boundedUserId = boundedUser.id;
-  await fx.rows(
-    "INSERT INTO technicians (id, name, email, active, allowed_client_ids) VALUES ($1, $2, $3, TRUE, $4::jsonb)",
-    [randomUUID(), "Tecnico Limitado", "tecnico-limitado@itguardian.local", JSON.stringify(["cliente-restrito"])]
-  );
+  await fx.rows("INSERT INTO technicians (id, name, email, active, allowed_client_ids) VALUES ($1, $2, $3, TRUE, $4::jsonb)", [
+    randomUUID(),
+    "Tecnico Limitado",
+    "tecnico-limitado@itguardian.local",
+    JSON.stringify(["cliente-restrito"])
+  ]);
 
   ownerOne = await clientFor(baseUrl, "dono-um@itguardian.local");
   ownerTwo = await clientFor(baseUrl, "dono-dois@itguardian.local");
@@ -93,7 +99,10 @@ test.after(async () => {
 
 test("usuario comum enxerga apenas os planos que criou; administrador enxerga todos", async () => {
   const mine = await ownerOne.get(base);
-  assert.deepEqual(mine.body.preventiveAutomationPlans.map((plan) => plan.id), [ownerPlan.id]);
+  assert.deepEqual(
+    mine.body.preventiveAutomationPlans.map((plan) => plan.id),
+    [ownerPlan.id]
+  );
 
   const others = await ownerTwo.get(base);
   assert.deepEqual(others.body.preventiveAutomationPlans, []);
@@ -112,7 +121,10 @@ test("usuario comum enxerga apenas os planos que criou; administrador enxerga to
 
 test("gerenciamento e agenda aplicam o escopo antes de contar e paginar", async () => {
   const management = await ownerOne.get(`${base}/management`);
-  assert.deepEqual(management.body.plans.map((plan) => plan.id), [ownerPlan.id]);
+  assert.deepEqual(
+    management.body.plans.map((plan) => plan.id),
+    [ownerPlan.id]
+  );
   assert.equal(management.body.pagination.total, 1);
   assert.deepEqual(management.body.machines.map((machine) => machine.assetId).sort(), ["sc-a1", "sc-a2"]);
 
@@ -207,7 +219,10 @@ test("usuario com escopo delimitado nao enxerga nem automatiza maquinas fora do 
   );
 
   const list = await bounded.get(base);
-  assert.deepEqual(list.body.preventiveAutomationPlans.map((plan) => plan.id), [ownId]);
+  assert.deepEqual(
+    list.body.preventiveAutomationPlans.map((plan) => plan.id),
+    [ownId]
+  );
   assert.equal((await bounded.get(`${base}/${ownId}`)).status, 200);
   assert.equal((await bounded.get(`${base}/${ownId}/assets/sc-a2`)).status, 404, "ativo fora do escopo do usuario");
 

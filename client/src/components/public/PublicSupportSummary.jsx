@@ -1,11 +1,12 @@
 import { Send } from "lucide-react";
 
 export default function PublicSupportSummary({ form, machine, loading, error, onBack, onConfirm }) {
-  const machineLabel = form.machineScope === "mine" && machine?.id
-    ? machine.name || machine.hostname
-    : form.machineScope === "other"
-      ? "outra máquina/equipamento (não vinculada automaticamente)"
-      : "não vinculada";
+  const machineLabel =
+    form.machineScope === "mine" && machine?.id
+      ? machine.name || machine.hostname
+      : form.machineScope === "other"
+        ? "outra máquina/equipamento (não vinculada automaticamente)"
+        : "não vinculada";
 
   return (
     <section className="public-support-summary public-support-wide">

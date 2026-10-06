@@ -15,11 +15,13 @@ function friendlyMessage(source) {
 }
 
 function shouldRetry(error) {
-  return error?.name === "AbortError" ||
+  return (
+    error?.name === "AbortError" ||
     error?.code === "ECONNRESET" ||
     error?.code === "ECONNREFUSED" ||
     error?.code === "ETIMEDOUT" ||
-    Number(error?.upstreamStatus) >= 500;
+    Number(error?.upstreamStatus) >= 500
+  );
 }
 
 export async function requestJson({
@@ -58,16 +60,14 @@ export async function requestJson({
       try {
         return await response.json();
       } catch (cause) {
-        throw new ExternalIntegrationError(
-          source,
-          `A integracao ${source} respondeu em um formato invalido.`,
-          { cause, upstreamStatus: response.status }
-        );
+        throw new ExternalIntegrationError(source, `A integracao ${source} respondeu em um formato invalido.`, {
+          cause,
+          upstreamStatus: response.status
+        });
       }
     } catch (cause) {
-      lastError = cause instanceof ExternalIntegrationError
-        ? cause
-        : new ExternalIntegrationError(source, friendlyMessage(source), { cause });
+      lastError =
+        cause instanceof ExternalIntegrationError ? cause : new ExternalIntegrationError(source, friendlyMessage(source), { cause });
       if (attempt >= retries || !shouldRetry(lastError)) throw lastError;
     } finally {
       clearTimeout(timer);
@@ -78,7 +78,9 @@ export async function requestJson({
 }
 
 export function joinIntegrationUrl(baseUrl, path = "") {
-  const base = String(baseUrl || "").trim().replace(/\/+$/, "");
+  const base = String(baseUrl || "")
+    .trim()
+    .replace(/\/+$/, "");
   const suffix = String(path || "").trim();
   if (!base) return "";
   return suffix ? `${base}/${suffix.replace(/^\/+/, "")}` : base;

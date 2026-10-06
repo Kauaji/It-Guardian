@@ -26,31 +26,13 @@ export async function addServiceOrderHistory({ serviceOrderId, eventType, messag
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *
     `,
-    [
-      randomUUID(),
-      serviceOrderId,
-      eventType,
-      message,
-      oldValue ?? null,
-      newValue ?? null,
-      user?.id || null,
-      user?.name || null
-    ]
+    [randomUUID(), serviceOrderId, eventType, message, oldValue ?? null, newValue ?? null, user?.id || null, user?.name || null]
   );
 
   return fromHistoryRow(result.rows[0]);
 }
 
-export async function addServiceOrderAssetHistory({
-  assetId,
-  serviceOrder,
-  eventType,
-  message,
-  oldValue,
-  newValue,
-  user,
-  db = query
-}) {
+export async function addServiceOrderAssetHistory({ assetId, serviceOrder, eventType, message, oldValue, newValue, user, db = query }) {
   if (!assetId) return null;
   return addAssetHistory({
     assetId,

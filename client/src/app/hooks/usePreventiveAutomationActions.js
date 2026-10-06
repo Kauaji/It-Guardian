@@ -14,8 +14,7 @@ import { useWorkspaceData } from "../context/workspaceContexts.js";
 
 // Mensagem de sucesso ao salvar um plano: pausar/reativar tem texto proprio.
 export function automationSaveMessage({ isUpdate, payload, previousPlan }) {
-  const statusChanged =
-    previousPlan && typeof payload?.active === "boolean" && previousPlan.active !== payload.active;
+  const statusChanged = previousPlan && typeof payload?.active === "boolean" && previousPlan.active !== payload.active;
   if (statusChanged && payload.active === false) {
     return "Automação pausada. As agendas futuras foram desativadas.";
   }
@@ -31,9 +30,7 @@ export function usePreventiveAutomationActions() {
   const { loadData, preventiveAutomationPlans, setPreventiveAutomationPlans } = useWorkspaceData();
 
   function replacePlan(plan) {
-    setPreventiveAutomationPlans((current) =>
-      current.map((item) => (item.id === plan.id ? plan : item))
-    );
+    setPreventiveAutomationPlans((current) => current.map((item) => (item.id === plan.id ? plan : item)));
   }
 
   // Executa uma acao sobre o plano/maquina, avisa e recarrega; devolve o que
@@ -52,9 +49,7 @@ export function usePreventiveAutomationActions() {
 
   async function handleSavePreventiveAutomationPlan(planId, payload) {
     try {
-      const previousPlan = planId
-        ? preventiveAutomationPlans.find((plan) => String(plan.id) === String(planId))
-        : null;
+      const previousPlan = planId ? preventiveAutomationPlans.find((plan) => String(plan.id) === String(planId)) : null;
       const response = planId
         ? await updatePreventiveAutomationPlan(token, planId, payload)
         : await createPreventiveAutomationPlan(token, payload);

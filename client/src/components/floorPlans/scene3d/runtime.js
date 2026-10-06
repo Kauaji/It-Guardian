@@ -21,7 +21,9 @@ function selectActiveEntities(data, activeFloorId) {
   const onFloor = (entry) => !activeFloorId || entry.floorId === activeFloorId;
   return {
     zones: (data.zones || []).filter(onFloor),
-    objects: syncAnchoredOpenings(data.objects || []).filter(onFloor).filter((object) => !isMeasurementObject(object)),
+    objects: syncAnchoredOpenings(data.objects || [])
+      .filter(onFloor)
+      .filter((object) => !isMeasurementObject(object)),
     routes: (data.cableRoutes || []).filter(onFloor)
   };
 }
@@ -86,17 +88,19 @@ export function createSceneRuntime(options) {
   });
 
   addZones(active.zones, parts.addBox);
-  active.objects.forEach((object) => createSceneObject({
-    object,
-    scene,
-    objectGroups,
-    activeObjects: active.objects,
-    activeZones: active.zones,
-    offsets,
-    parts,
-    models,
-    modelQuality
-  }));
+  active.objects.forEach((object) =>
+    createSceneObject({
+      object,
+      scene,
+      objectGroups,
+      activeObjects: active.objects,
+      activeZones: active.zones,
+      offsets,
+      parts,
+      models,
+      modelQuality
+    })
+  );
   addRoutes({ routes: active.routes, scene, offsets, createMaterial: resources.createMaterial });
   const grid = addGrid({ scene, metrics, visible: showGrid });
 

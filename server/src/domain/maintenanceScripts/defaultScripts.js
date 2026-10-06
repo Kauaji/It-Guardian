@@ -6,12 +6,7 @@ export const defaultMaintenanceScripts = [
     name: "Diagnóstico básico de rede",
     description: "Roteiro seguro para registrar uma verificação de rede em atendimento.",
     type: "powershell",
-    content: [
-      "# Simulação de diagnóstico de rede",
-      "hostname",
-      "ipconfig /all",
-      "Test-NetConnection"
-    ].join("\n"),
+    content: ["# Simulação de diagnóstico de rede", "hostname", "ipconfig /all", "Test-NetConnection"].join("\n"),
     category: "Rede",
     riskLevel: "low",
     alertType: "ping_failure",
@@ -26,12 +21,7 @@ export const defaultMaintenanceScripts = [
     name: "Coleta básica do sistema",
     description: "Coleta textual de informações para triagem técnica.",
     type: "powershell",
-    content: [
-      "# Simulação de coleta de informações",
-      "hostname",
-      "whoami",
-      "systeminfo"
-    ].join("\n"),
+    content: ["# Simulação de coleta de informações", "hostname", "whoami", "systeminfo"].join("\n"),
     category: "Sistema",
     riskLevel: "low",
     alertType: "resource_threshold",
@@ -46,11 +36,7 @@ export const defaultMaintenanceScripts = [
     name: "Verificação de impressora",
     description: "Roteiro seguro para registrar checagem de impressora e fila.",
     type: "powershell",
-    content: [
-      "# Simulação de verificação de impressora",
-      "Get-Printer",
-      "Get-Service Spooler"
-    ].join("\n"),
+    content: ["# Simulação de verificação de impressora", "Get-Printer", "Get-Service Spooler"].join("\n"),
     category: "Impressora",
     riskLevel: "low",
     alertType: "recurring_failure",
@@ -61,11 +47,7 @@ export const defaultMaintenanceScripts = [
     name: "Verificação de disco",
     description: "Roteiro seguro para registrar avaliação inicial de disco.",
     type: "powershell",
-    content: [
-      "# Simulação de verificação de disco",
-      "Get-Volume",
-      "Get-PhysicalDisk"
-    ].join("\n"),
+    content: ["# Simulação de verificação de disco", "Get-Volume", "Get-PhysicalDisk"].join("\n"),
     category: "Hardware",
     riskLevel: "medium",
     alertType: "disk_usage",

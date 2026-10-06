@@ -74,8 +74,9 @@ function findRoomAtPoint(zones, activeFloorId, point) {
   return zones.find((zone) => {
     if (zone.floorId !== activeFloorId || !isRoomZone(zone)) return false;
     const geometry = getRoomGeometry(zone);
-    return point.x >= geometry.x && point.x <= geometry.x + geometry.width
-      && point.y >= geometry.y && point.y <= geometry.y + geometry.height;
+    return (
+      point.x >= geometry.x && point.x <= geometry.x + geometry.width && point.y >= geometry.y && point.y <= geometry.y + geometry.height
+    );
   });
 }
 
@@ -84,9 +85,7 @@ function findRoomAtPoint(zones, activeFloorId, point) {
  * `{ draft, warning }`; `warning` e preenchido quando o balde nao encontra comodo.
  */
 export function applyPaintAtPoint(current, point, { savedGroupAreas, zones, activeFloorId }) {
-  const parentArea = current.areaType === "segment"
-    ? savedGroupAreas.find((area) => area.id === current.parentAreaId)
-    : null;
+  const parentArea = current.areaType === "segment" ? savedGroupAreas.find((area) => area.id === current.parentAreaId) : null;
   const allowedCells = parentArea ? getPaintCells(parentArea) : null;
   if (current.mode === "bucket") {
     const room = findRoomAtPoint(zones || [], activeFloorId, point);
@@ -105,9 +104,7 @@ export function applyPaintAtPoint(current, point, { savedGroupAreas, zones, acti
   return {
     draft: {
       ...current,
-      cells: current.mode === "eraser"
-        ? eraseCells(current.cells, brushCells)
-        : paintCells(current.cells, brushCells, allowedCells)
+      cells: current.mode === "eraser" ? eraseCells(current.cells, brushCells) : paintCells(current.cells, brushCells, allowedCells)
     },
     warning: null
   };
@@ -124,9 +121,7 @@ export function resolvePaintConfirmation(paintDraft, { groups, segments, savedGr
   if (paintDraft.areaType === "group" && !group) {
     return { error: "Selecione o grupo da área demarcada." };
   }
-  const parentArea = paintDraft.areaType === "segment"
-    ? savedGroupAreas.find((area) => area.id === paintDraft.parentAreaId)
-    : null;
+  const parentArea = paintDraft.areaType === "segment" ? savedGroupAreas.find((area) => area.id === paintDraft.parentAreaId) : null;
   if (paintDraft.areaType === "segment" && (!parentArea || !segment)) {
     return { error: "Selecione a área de grupo e o segmento antes de confirmar." };
   }

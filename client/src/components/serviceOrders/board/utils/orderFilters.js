@@ -14,9 +14,7 @@ export function getTechnicianNames(order) {
 }
 
 export function filterByMonth(orders, monthFilter, finalStatusIds) {
-  return monthFilter
-    ? orders.filter((order) => isServiceOrderVisibleInMonth(order, monthFilter, finalStatusIds))
-    : orders;
+  return monthFilter ? orders.filter((order) => isServiceOrderVisibleInMonth(order, monthFilter, finalStatusIds)) : orders;
 }
 
 /** "Meu setor": do setor do usuario, do Geral, atribuida ao usuario ou criada por ele. */
@@ -66,9 +64,7 @@ export function filterByCatalog(orders, filters) {
 
   if (ratingFilter !== "all") {
     result = result.filter((order) =>
-      ratingFilter === "none"
-        ? !order.feedback?.rating
-        : order.feedback?.rating === Number(ratingFilter)
+      ratingFilter === "none" ? !order.feedback?.rating : order.feedback?.rating === Number(ratingFilter)
     );
   }
 

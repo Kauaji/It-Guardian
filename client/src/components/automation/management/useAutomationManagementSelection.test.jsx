@@ -3,7 +3,10 @@ import { describe, expect, it } from "vitest";
 import useAutomationManagementSelection from "./useAutomationManagementSelection.js";
 
 const management = {
-  plans: [{ id: 1, name: "A" }, { id: "2", name: "B" }],
+  plans: [
+    { id: 1, name: "A" },
+    { id: "2", name: "B" }
+  ],
   machines: [{ assetId: "d1", assetName: "PC-01" }]
 };
 
@@ -60,18 +63,36 @@ describe("useAutomationManagementSelection", () => {
     let finish;
     let first;
 
-    act(() => { first = result.current.run(() => new Promise((resolve) => { finish = resolve; })); });
+    act(() => {
+      first = result.current.run(
+        () =>
+          new Promise((resolve) => {
+            finish = resolve;
+          })
+      );
+    });
     expect(result.current.saving).toBe(true);
 
     let secondRan = false;
-    await act(async () => result.current.run(async () => { secondRan = true; }));
+    await act(async () =>
+      result.current.run(async () => {
+        secondRan = true;
+      })
+    );
     expect(secondRan).toBe(false);
 
-    await act(async () => { finish(); await first; });
+    await act(async () => {
+      finish();
+      await first;
+    });
     expect(result.current.saving).toBe(false);
 
     await act(async () => {
-      await result.current.run(async () => { throw new Error("falhou"); }).catch(() => {});
+      await result.current
+        .run(async () => {
+          throw new Error("falhou");
+        })
+        .catch(() => {});
     });
     expect(result.current.saving).toBe(false);
   });

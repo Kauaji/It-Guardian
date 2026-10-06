@@ -16,10 +16,7 @@ export async function getNetworkTopologyMap(id) {
 }
 
 export async function findMapRowByScope(db, scopeType, scopeId) {
-  const existing = await db(
-    "SELECT * FROM network_topology_maps WHERE scope_type = $1 AND scope_id = $2 LIMIT 1",
-    [scopeType, scopeId]
-  );
+  const existing = await db("SELECT * FROM network_topology_maps WHERE scope_type = $1 AND scope_id = $2 LIMIT 1", [scopeType, scopeId]);
   return existing.rows[0] ? mapFromRow(existing.rows[0]) : null;
 }
 

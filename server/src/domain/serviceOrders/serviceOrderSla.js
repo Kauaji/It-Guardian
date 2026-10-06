@@ -89,8 +89,7 @@ export function calculateServiceOrderSla(order, settings, now = new Date()) {
   const nearDueMinHours = settings?.sla?.nearDueMinHours ?? defaultSlaSettings.nearDueMinHours;
 
   const percentRule = totalMinutes !== null && remainingMinutes <= totalMinutes * (nearDuePercent / 100);
-  const hoursRule =
-    (order.priority === "high" || order.priority === "critical") && remainingMinutes <= nearDueMinHours * 60;
+  const hoursRule = (order.priority === "high" || order.priority === "critical") && remainingMinutes <= nearDueMinHours * 60;
   const nearDue = percentRule || hoursRule;
 
   return { dueAt, status: nearDue ? SLA_STATUSES.NEAR_DUE : SLA_STATUSES.ON_TRACK, remainingMinutes, breached: false, nearDue };

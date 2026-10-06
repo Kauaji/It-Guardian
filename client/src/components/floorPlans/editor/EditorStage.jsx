@@ -25,7 +25,9 @@ function ExpandButton({ axis, label, letter, onExpand }) {
 function DimensionsBadge({ floor, isEditing, onExpand }) {
   return (
     <span className="floor-plan-dimensions-badge">
-      <span>{Math.round(floor?.width || DEFAULT_PLAN_SIZE.width)} x {Math.round(floor?.height || DEFAULT_PLAN_SIZE.height)}</span>
+      <span>
+        {Math.round(floor?.width || DEFAULT_PLAN_SIZE.width)} x {Math.round(floor?.height || DEFAULT_PLAN_SIZE.height)}
+      </span>
       {isEditing ? (
         <span className="floor-plan-canvas-expand-actions">
           <ExpandButton axis="width" label="Aumentar largura da área" letter="L" onExpand={onExpand} />

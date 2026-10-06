@@ -20,11 +20,7 @@ export function normalizeProductKey(value) {
   const normalized = compact(value);
   const expectedLength = PRODUCT_KEY_PREFIX.length + PRODUCT_KEY_GROUPS * PRODUCT_KEY_GROUP_SIZE;
 
-  if (
-    normalized.length !== expectedLength ||
-    !normalized.startsWith(PRODUCT_KEY_PREFIX) ||
-    !/^[A-Z0-9]+$/.test(normalized)
-  ) {
+  if (normalized.length !== expectedLength || !normalized.startsWith(PRODUCT_KEY_PREFIX) || !/^[A-Z0-9]+$/.test(normalized)) {
     return "";
   }
 
@@ -73,7 +69,9 @@ export function generateProductKey() {
  * @returns {string}
  */
 export function hashMachineFingerprint(value) {
-  const normalized = String(value || "").trim().toLowerCase();
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase();
   if (!normalized) return "";
   return createHash("sha256").update(normalized, "utf8").digest("hex");
 }

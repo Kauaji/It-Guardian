@@ -11,8 +11,7 @@ export function useCountUp(target, duration = 500) {
   const rafRef = useRef(null);
 
   useEffect(() => {
-    const prefersReduced =
-      typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const prefersReduced = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
     if (prefersReduced || currentRef.current === target) {
       currentRef.current = target;

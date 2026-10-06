@@ -56,10 +56,16 @@ describe("useSuggestionScriptMenu - menu", () => {
 
   it("indica o carregamento enquanto a busca está em andamento", async () => {
     let finish;
-    api.fetchSuggestionRecommendedScripts.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+    api.fetchSuggestionRecommendedScripts.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      })
+    );
     const { result } = setup();
 
-    act(() => { result.current.toggleMenu("sug1"); });
+    act(() => {
+      result.current.toggleMenu("sug1");
+    });
     await waitFor(() => expect(result.current.loadingId).toBe("sug1"));
     await act(async () => finish({}));
 
@@ -159,16 +165,25 @@ describe("useSuggestionScriptMenu - execução", () => {
   it("ignora um segundo clique enquanto o mesmo script está em execução", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     let finish;
-    const onUseSuggestionScript = vi.fn().mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+    const onUseSuggestionScript = vi.fn().mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      })
+    );
     const { result } = setup({ onUseSuggestionScript });
 
     let first;
-    act(() => { first = result.current.useScript(suggestion, { id: "s1" }); });
+    act(() => {
+      first = result.current.useScript(suggestion, { id: "s1" });
+    });
     await waitFor(() => expect(result.current.usingKey).toBe("sug1:s1"));
     await act(async () => result.current.useScript(suggestion, { id: "s1" }));
     expect(onUseSuggestionScript).toHaveBeenCalledTimes(1);
 
-    await act(async () => { finish(); await first; });
+    await act(async () => {
+      finish();
+      await first;
+    });
     expect(result.current.usingKey).toBe("");
   });
 

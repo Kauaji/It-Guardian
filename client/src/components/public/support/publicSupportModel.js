@@ -25,14 +25,11 @@ export const fallbackProblemTypes = [
 ];
 
 export function findProblemType(problemTypes, value) {
-  return problemTypes.find(
-    (problemType) => problemType.name === value || problemType.id === value
-  );
+  return problemTypes.find((problemType) => problemType.name === value || problemType.id === value);
 }
 
 export function getFirstProblemTypeForCategory(problemTypes, category) {
-  return problemTypes.find((problemType) => !problemType.category || problemType.category === category) ||
-    problemTypes[0];
+  return problemTypes.find((problemType) => !problemType.category || problemType.category === category) || problemTypes[0];
 }
 
 /** Contexto da máquina vindo do link do instalador (query string) ou do que o navegador guardou. */
@@ -57,7 +54,9 @@ export function buildRelatedAssetText(form) {
     form.machineName ? `Nome da máquina: ${form.machineName}` : "",
     form.assetTag ? `Patrimônio: ${form.assetTag}` : "",
     form.location ? `Localização: ${form.location}` : ""
-  ].filter(Boolean).join(" | ");
+  ]
+    .filter(Boolean)
+    .join(" | ");
 }
 
 export function buildInitialForm(machineContext) {
@@ -98,11 +97,9 @@ export function reconcileFormWithOptions(form, categories, problemTypes) {
   return {
     ...form,
     category,
-    problemType: findProblemType(problemTypes, form.problemType)?.name ||
-      getFirstProblemTypeForCategory(
-        problemTypes,
-        categories.includes(form.category) ? form.category : categories[0]
-      )?.name ||
+    problemType:
+      findProblemType(problemTypes, form.problemType)?.name ||
+      getFirstProblemTypeForCategory(problemTypes, categories.includes(form.category) ? form.category : categories[0])?.name ||
       ""
   };
 }

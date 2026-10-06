@@ -59,8 +59,19 @@ export default function ServiceOrderDetailsModal({
   const statusLabelMap = useMemo(() => buildStatusLabelMap(statusOptions), [statusOptions]);
   const availableSectors = useMemo(() => buildAvailableSectors(sectors), [sectors]);
   const actions = useServiceOrderActions({
-    serviceOrder, draft, asset, businessMode, environmentLabel, statusLabelMap, availableSectors,
-    finance, notify, onUpdate, onReopen, onDelete, onClose
+    serviceOrder,
+    draft,
+    asset,
+    businessMode,
+    environmentLabel,
+    statusLabelMap,
+    availableSectors,
+    finance,
+    notify,
+    onUpdate,
+    onReopen,
+    onDelete,
+    onClose
   });
   const dialogRef = useModalLifecycle(Boolean(serviceOrder), onClose);
 
@@ -68,7 +79,13 @@ export default function ServiceOrderDetailsModal({
 
   return (
     <div className="modal-backdrop asset-modal-backdrop" role="presentation">
-      <section ref={dialogRef} className="asset-modal service-order-detail-modal" role="dialog" aria-modal="true" aria-label="Detalhes da OS">
+      <section
+        ref={dialogRef}
+        className="asset-modal service-order-detail-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Detalhes da OS"
+      >
         <DetailsHeader
           serviceOrder={serviceOrder}
           asset={asset}
@@ -151,9 +168,7 @@ export default function ServiceOrderDetailsModal({
           />
         </div>
 
-        {Boolean(businessMode || serviceValueNumber || partsTotal || serviceItems.length) && (
-          <PrintFinancialSection {...finance} />
-        )}
+        {Boolean(businessMode || serviceValueNumber || partsTotal || serviceItems.length) && <PrintFinancialSection {...finance} />}
       </section>
     </div>
   );

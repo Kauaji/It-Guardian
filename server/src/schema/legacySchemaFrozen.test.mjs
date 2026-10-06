@@ -17,9 +17,14 @@ const FROZEN_SHA256 = "827ef26052b949c02f9477caffca047bf0e5d729af4e87b40e5fa55e6
 
 test("o esquema legado esta congelado: novas mudancas vao em src/migrations/", () => {
   const hash = createHash("sha256");
-  for (const name of readdirSync(directory).filter((file) => file.endsWith(".js")).sort()) {
+  for (const name of readdirSync(directory)
+    .filter((file) => file.endsWith(".js"))
+    .sort()) {
     // normaliza fim de linha: checkouts Windows (autocrlf) nao podem mudar o hash
-    hash.update(name).update("\0").update(readFileSync(new URL(name, directory), "utf8").replace(/\r\n/g, "\n"));
+    hash
+      .update(name)
+      .update("\0")
+      .update(readFileSync(new URL(name, directory), "utf8").replace(/\r\n/g, "\n"));
   }
   assert.equal(
     hash.digest("hex"),

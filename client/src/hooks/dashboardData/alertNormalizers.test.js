@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  normalizeAlertLocation,
-  normalizeAlertRecord,
-  normalizeAlertSeverity,
-  normalizeSuggestionRecord
-} from "./alertNormalizers.js";
+import { normalizeAlertLocation, normalizeAlertRecord, normalizeAlertSeverity, normalizeSuggestionRecord } from "./alertNormalizers.js";
 
 describe("normalizeAlertSeverity", () => {
   it("reconhece variacoes com acento, caixa e idioma", () => {
@@ -50,7 +45,10 @@ describe("normalizeAlertRecord", () => {
       message: "Mensagem",
       machineAlias: "PC-1",
       checklist: ["a", null],
-      comments: [{ author: "Ana", body: "ok" }, { id: "c2", userName: "Bia", text: "x" }]
+      comments: [
+        { author: "Ana", body: "ok" },
+        { id: "c2", userName: "Bia", text: "x" }
+      ]
     });
     expect(record.description).toBe("Mensagem");
     expect(record.hostName).toBe("PC-1");
@@ -67,6 +65,9 @@ describe("normalizeSuggestionRecord", () => {
     expect(normalizeSuggestionRecord()).toMatchObject({ title: "Aviso preventivo", hostName: "Máquina não vinculada" });
     expect(normalizeSuggestionRecord({ problemLabels: ["x", ""] }).problemLabels).toEqual(["x", "Aviso"]);
     expect(normalizeSuggestionRecord({ problemLabels: "texto" }).problemLabels).toBe("texto");
-    expect(normalizeSuggestionRecord({ assetName: "Srv", summary: "Resumo", title: "T" })).toMatchObject({ hostName: "Srv", description: "Resumo" });
+    expect(normalizeSuggestionRecord({ assetName: "Srv", summary: "Resumo", title: "T" })).toMatchObject({
+      hostName: "Srv",
+      description: "Resumo"
+    });
   });
 });

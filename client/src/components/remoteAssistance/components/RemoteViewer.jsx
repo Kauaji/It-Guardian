@@ -50,7 +50,11 @@ export default function RemoteViewer({
       <RemoteEvents events={events} />
 
       {chat.open && <RemoteChat chat={chat} canChat={canChat} session={session} />}
-      {error && <p className="form-error" role="alert">{error}</p>}
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

@@ -26,8 +26,12 @@ describe("topologyViewConstants", () => {
   it("monta o texto do guia de conexão nos três estados", () => {
     const labels = CONNECTION_ITEM_LABELS_BY_TYPE.segment;
     expect(buildConnectionGuideText({ creatingLink: true, sourceNodeId: "n", labels })).toBe("Salvando conexão entre segmentos…");
-    expect(buildConnectionGuideText({ creatingLink: false, sourceNodeId: "n", labels })).toBe("Segmento de origem selecionado. Clique no segmento de destino para salvar a conexão.");
-    expect(buildConnectionGuideText({ creatingLink: false, sourceNodeId: null, labels })).toBe("Clique no primeiro segmento para escolher a origem da conexão.");
+    expect(buildConnectionGuideText({ creatingLink: false, sourceNodeId: "n", labels })).toBe(
+      "Segmento de origem selecionado. Clique no segmento de destino para salvar a conexão."
+    );
+    expect(buildConnectionGuideText({ creatingLink: false, sourceNodeId: null, labels })).toBe(
+      "Clique no primeiro segmento para escolher a origem da conexão."
+    );
   });
 
   it("define a variante do estado vazio por nível", () => {

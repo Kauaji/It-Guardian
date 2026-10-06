@@ -12,9 +12,7 @@ function DevicesSummary({ devices }) {
         {devices.slice(0, 6).map((device) => (
           <li key={device.id}>{getDeviceDisplayName(device)}</li>
         ))}
-        {devices.length > 6 && (
-          <li>+ {devices.length - 6} máquina(s)</li>
-        )}
+        {devices.length > 6 && <li>+ {devices.length - 6} máquina(s)</li>}
       </ul>
     </section>
   );
@@ -41,7 +39,9 @@ function ScriptsSummary({ scripts, riskScripts }) {
         {riskScripts.length ? (
           <ul>
             {riskScripts.map((script) => (
-              <li key={script.id}>{getSafeScriptLabel(script)} — {formatDisplayText(script.riskLevel, "medio")}</li>
+              <li key={script.id}>
+                {getSafeScriptLabel(script)} — {formatDisplayText(script.riskLevel, "medio")}
+              </li>
             ))}
           </ul>
         ) : (
@@ -70,10 +70,7 @@ export default function PreventiveReviewModal({ preventive }) {
           <div>
             <span>Revisão da preventiva</span>
             <h2 id="preventive-review-title">Registrar plano preventivo</h2>
-            <p>
-              Confira o escopo antes de registrar. Esta tela não executa scripts nem envia comandos para
-              máquinas.
-            </p>
+            <p>Confira o escopo antes de registrar. Esta tela não executa scripts nem envia comandos para máquinas.</p>
           </div>
           <button type="button" className="icon-button" onClick={closeReview} aria-label="Fechar revisão">
             <XCircle size={18} />

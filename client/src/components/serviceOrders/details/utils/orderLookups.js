@@ -10,9 +10,7 @@ export const fallbackStatusLabels = {
 export const GENERAL_SECTOR_ID = "sector-geral";
 
 export function buildStatusOptions(statuses) {
-  return statuses.length
-    ? statuses
-    : Object.entries(fallbackStatusLabels).map(([id, name]) => ({ id, name }));
+  return statuses.length ? statuses : Object.entries(fallbackStatusLabels).map(([id, name]) => ({ id, name }));
 }
 
 export function buildStatusLabelMap(statusOptions) {
@@ -32,8 +30,7 @@ export function buildAvailableSectors(sectors) {
 
 /** Setor escolhido (ou o Geral quando o id nao existe) no formato enviado a OS. */
 export function resolveSectorUpdate(availableSectors, sectorId) {
-  const sector = availableSectors.find((item) => item.id === sectorId)
-    || availableSectors.find((item) => item.id === GENERAL_SECTOR_ID);
+  const sector = availableSectors.find((item) => item.id === sectorId) || availableSectors.find((item) => item.id === GENERAL_SECTOR_ID);
   return {
     sectorId: sector?.id || GENERAL_SECTOR_ID,
     sectorName: sector?.name || "Geral"
@@ -42,8 +39,6 @@ export function resolveSectorUpdate(availableSectors, sectorId) {
 
 export function buildDeleteMessage(serviceOrder) {
   const baseMessage = "Tem certeza que deseja excluir esta Ordem de Serviço? Essa ação não poderá ser desfeita.";
-  const inProgressMessage = serviceOrder.closedAt
-    ? ""
-    : "\n\nEsta OS ainda não foi finalizada. Deseja excluir mesmo assim?";
+  const inProgressMessage = serviceOrder.closedAt ? "" : "\n\nEsta OS ainda não foi finalizada. Deseja excluir mesmo assim?";
   return `${baseMessage}${inProgressMessage}`;
 }

@@ -1,10 +1,6 @@
 import { useMemo } from "react";
 import { isTopologySegmentEligible } from "../networkTopologyHierarchy.js";
-import {
-  hasTopologyConnectionPair,
-  topologyLinkKey,
-  topologyNodeKey
-} from "../networkTopologyConnections.js";
+import { hasTopologyConnectionPair, topologyLinkKey, topologyNodeKey } from "../networkTopologyConnections.js";
 import { buildInventoryTopologyNodes, getTopologySegments, resolveTopologyDisplayNodes } from "../networkTopologyProjection.js";
 import { resolveConnectionItemLabels } from "./topologyViewConstants.js";
 
@@ -20,9 +16,12 @@ export function useTopologyDisplayNodes({ bundle, viewLevel, tree, selectedGroup
     [segments]
   );
   const displayNodes = useMemo(
-    () => !bundle ? [] : viewLevel === "global-legado"
-      ? bundle.nodes.filter((node) => node.nodeType !== "segment" || !excludedSegmentIds.has(node.refId))
-      : resolveTopologyDisplayNodes(bundle.nodes, inventoryNodes),
+    () =>
+      !bundle
+        ? []
+        : viewLevel === "global-legado"
+          ? bundle.nodes.filter((node) => node.nodeType !== "segment" || !excludedSegmentIds.has(node.refId))
+          : resolveTopologyDisplayNodes(bundle.nodes, inventoryNodes),
     [bundle, viewLevel, inventoryNodes, excludedSegmentIds]
   );
   return { devicesById, displayNodes };
@@ -30,7 +29,15 @@ export function useTopologyDisplayNodes({ bundle, viewLevel, tree, selectedGroup
 
 // Nos e conexoes visiveis (com filtros e posicoes pendentes) e dados derivados do mapa.
 export function useTopologyVisibility({
-  bundle, viewLevel, tree, devices, devicesById, displayNodes, filterPredicate, hasActiveFilter, dirtyPositions
+  bundle,
+  viewLevel,
+  tree,
+  devices,
+  devicesById,
+  displayNodes,
+  filterPredicate,
+  hasActiveFilter,
+  dirtyPositions
 }) {
   const visibleNodes = useMemo(() => {
     if (!bundle) return [];
@@ -47,10 +54,7 @@ export function useTopologyVisibility({
       });
   }, [bundle, displayNodes, devicesById, filterPredicate, hasActiveFilter, dirtyPositions]);
 
-  const connectionItemLabels = useMemo(
-    () => resolveConnectionItemLabels(visibleNodes, viewLevel),
-    [visibleNodes, viewLevel]
-  );
+  const connectionItemLabels = useMemo(() => resolveConnectionItemLabels(visibleNodes, viewLevel), [visibleNodes, viewLevel]);
   const canStartLink = useMemo(() => hasTopologyConnectionPair(visibleNodes), [visibleNodes]);
   const visibleNodeIds = useMemo(() => new Set(visibleNodes.map((node) => node.id)), [visibleNodes]);
 
@@ -79,6 +83,11 @@ export function useTopologyVisibility({
   );
 
   return {
-    visibleNodes, visibleLinks, connectionItemLabels, canStartLink, availableDevicesToAdd, clusterSummaryByRefId
+    visibleNodes,
+    visibleLinks,
+    connectionItemLabels,
+    canStartLink,
+    availableDevicesToAdd,
+    clusterSummaryByRefId
   };
 }

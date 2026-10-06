@@ -5,8 +5,21 @@ const allowedMouseActions = new Set(["down", "up", "click"]);
 const allowedKeyActions = new Set(["down", "up", "press"]);
 
 const namedKeys = new Set([
-  "Enter", "Escape", "Backspace", "Tab", "Delete", "Insert", "Home", "End",
-  "PageUp", "PageDown", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"
+  "Enter",
+  "Escape",
+  "Backspace",
+  "Tab",
+  "Delete",
+  "Insert",
+  "Home",
+  "End",
+  "PageUp",
+  "PageDown",
+  "ArrowUp",
+  "ArrowDown",
+  "ArrowLeft",
+  "ArrowRight",
+  "Space"
 ]);
 
 /**

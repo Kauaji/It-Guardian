@@ -10,7 +10,9 @@ const machine = { id: "device-1", name: "Computador em reparo", segmentId: maint
 
 function DndProbe({ onContext }) {
   const context = useDndContext();
-  useEffect(() => { onContext?.(context); }, [context, onContext]);
+  useEffect(() => {
+    onContext?.(context);
+  }, [context, onContext]);
   return null;
 }
 

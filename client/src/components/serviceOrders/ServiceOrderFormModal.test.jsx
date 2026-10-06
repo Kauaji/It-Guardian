@@ -6,7 +6,10 @@ import { clients, makeDevice, technicians } from "./test/fixtures.jsx";
 
 vi.mock("../../api.js", async () => (await import("./test/fixtures.jsx")).createApiMock());
 
-const tabs = [{ id: "t1", name: "Matriz" }, { id: "t2", name: "" }];
+const tabs = [
+  { id: "t1", name: "Matriz" },
+  { id: "t2", name: "" }
+];
 const devices = [
   makeDevice({ id: "d1", name: "PC-01", ip: "10.0.0.1", groupName: "Andar 1", segmentName: "Financeiro" }),
   makeDevice({ id: "d2", name: "PC-02", ip: "10.0.0.2", assetType: "notebook", segment: { name: "Recepção" }, group: { name: "Térreo" } }),
@@ -16,7 +19,17 @@ const devices = [
 function renderForm(props = {}) {
   const handlers = { onClose: vi.fn(), onSubmit: vi.fn(), notify: vi.fn() };
   const view = render(
-    <ServiceOrderFormModal open token="tok" activeTab={tabs[0]} tabs={tabs} devices={devices} serviceOrderSettings={{}} sectors={[]} {...handlers} {...props} />
+    <ServiceOrderFormModal
+      open
+      token="tok"
+      activeTab={tabs[0]}
+      tabs={tabs}
+      devices={devices}
+      serviceOrderSettings={{}}
+      sectors={[]}
+      {...handlers}
+      {...props}
+    />
   );
   return { ...view, ...handlers };
 }
@@ -44,7 +57,18 @@ describe("ServiceOrderFormModal", () => {
 
   it("envia um ou mais técnicos e apresenta a aba com explicação", async () => {
     const onSubmit = vi.fn();
-    render(<ServiceOrderFormModal open token="token" activeTab={{ id: "t1", name: "Matriz" }} tabs={[{ id: "t1", name: "Matriz" }]} serviceOrderSettings={{}} sectors={[]} onClose={vi.fn()} onSubmit={onSubmit} />);
+    render(
+      <ServiceOrderFormModal
+        open
+        token="token"
+        activeTab={{ id: "t1", name: "Matriz" }}
+        tabs={[{ id: "t1", name: "Matriz" }]}
+        serviceOrderSettings={{}}
+        sectors={[]}
+        onClose={vi.fn()}
+        onSubmit={onSubmit}
+      />
+    );
     expect(screen.getByText(/Define em qual aba do inventário/)).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole("checkbox", { name: /Ana Técnica/ })).toBeInTheDocument());
     fireEvent.change(screen.getByLabelText("Título/resumo"), { target: { value: "Troca de memória" } });
@@ -54,7 +78,9 @@ describe("ServiceOrderFormModal", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: "Bruno Silva" }));
     fireEvent.change(screen.getByLabelText("Solicitante"), { target: { value: "Ana Técnica" } });
     fireEvent.click(screen.getByRole("button", { name: "Criar OS" }));
-    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ assignedTechnicianNames: ["Ana Técnica", "Bruno Silva"], assignedTechnicianName: "Ana Técnica" }));
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ assignedTechnicianNames: ["Ana Técnica", "Bruno Silva"], assignedTechnicianName: "Ana Técnica" })
+    );
   });
 
   it("não renderiza fechado e não busca dados", async () => {
@@ -72,7 +98,11 @@ describe("ServiceOrderFormModal", () => {
     expect(screen.getByRole("button", { name: "Criar OS" })).toBeDisabled();
     expect(screen.getByLabelText("Setor")).toHaveValue("sector-geral");
     expect(screen.getByLabelText(/Aba do inventário/)).toHaveValue("t1");
-    expect([...screen.getByLabelText(/Aba do inventário/).options].map((option) => option.textContent)).toEqual(["Usar a aba atual", "Matriz", "Novo ambiente"]);
+    expect([...screen.getByLabelText(/Aba do inventário/).options].map((option) => option.textContent)).toEqual([
+      "Usar a aba atual",
+      "Matriz",
+      "Novo ambiente"
+    ]);
     expect(screen.getByText("Selecione um ou mais técnicos para atender esta ordem.")).toBeInTheDocument();
     expect(screen.queryByRole("checkbox", { name: "Inativo" })).toBeNull();
   });
@@ -100,7 +130,13 @@ describe("ServiceOrderFormModal", () => {
   });
 
   it("monta o payload completo no modo Local com setor, aba e solicitante de terceiros", async () => {
-    const { onSubmit } = await renderReady({ sectors: [{ id: "s-ti", name: "TI" }, { id: "sector-geral", name: "Geral" }], serviceOrderSettings: { autoPriority: { enabled: true } } });
+    const { onSubmit } = await renderReady({
+      sectors: [
+        { id: "s-ti", name: "TI" },
+        { id: "sector-geral", name: "Geral" }
+      ],
+      serviceOrderSettings: { autoPriority: { enabled: true } }
+    });
     change("Título/resumo", " Rede lenta ");
     change("Descrição do problema", " Muito lenta ");
     change("Prioridade", "critical");
@@ -115,9 +151,20 @@ describe("ServiceOrderFormModal", () => {
     change("Solicitante", " Fulano ");
     submit();
     expect(onSubmit).toHaveBeenCalledWith({
-      title: "Rede lenta", description: "Muito lenta", priority: "critical", assetId: "d2", environmentId: "t2",
-      requesterName: "Fulano", assignedTechnicianName: "", assignedTechnicianNames: [], sectorId: "s-ti", sectorName: "TI",
-      autoPriorityEnabled: true, category: "Notebook", notes: "", environmentName: ""
+      title: "Rede lenta",
+      description: "Muito lenta",
+      priority: "critical",
+      assetId: "d2",
+      environmentId: "t2",
+      requesterName: "Fulano",
+      assignedTechnicianName: "",
+      assignedTechnicianNames: [],
+      sectorId: "s-ti",
+      sectorName: "TI",
+      autoPriorityEnabled: true,
+      category: "Notebook",
+      notes: "",
+      environmentName: ""
     });
   });
 
@@ -130,7 +177,9 @@ describe("ServiceOrderFormModal", () => {
     change("Categoria", "Outro");
     change("Solicitante", "Ana Técnica");
     submit();
-    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ environmentId: "t1", environmentName: "Matriz", sectorName: "Geral", requesterName: "Ana Técnica" }));
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ environmentId: "t1", environmentName: "Matriz", sectorName: "Geral", requesterName: "Ana Técnica" })
+    );
   });
 
   it("alterna técnicos responsáveis e mantém o primeiro como principal", async () => {
@@ -147,7 +196,9 @@ describe("ServiceOrderFormModal", () => {
     change("Categoria", "Outro");
     change("Solicitante", "Ana Técnica");
     submit();
-    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ assignedTechnicianName: "Ana Técnica", assignedTechnicianNames: ["Ana Técnica", "Bruno Silva"] }));
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ assignedTechnicianName: "Ana Técnica", assignedTechnicianNames: ["Ana Técnica", "Bruno Silva"] })
+    );
   });
 
   it("sem técnicos cadastrados mostra avisos", async () => {
@@ -174,7 +225,9 @@ describe("ServiceOrderFormModal", () => {
     const { rerender, onClose, onSubmit } = await renderReady();
     change("Título/resumo", "Rascunho");
     rerender(<ServiceOrderFormModal open={false} token="tok" tabs={tabs} devices={devices} onClose={onClose} onSubmit={onSubmit} />);
-    rerender(<ServiceOrderFormModal open token="tok" tabs={tabs} activeTab={tabs[1]} devices={devices} onClose={onClose} onSubmit={onSubmit} />);
+    rerender(
+      <ServiceOrderFormModal open token="tok" tabs={tabs} activeTab={tabs[1]} devices={devices} onClose={onClose} onSubmit={onSubmit} />
+    );
     await act(async () => {});
     expect(screen.getByLabelText("Título/resumo")).toHaveValue("");
     expect(screen.getByLabelText(/Aba do inventário/)).toHaveValue("t2");
@@ -185,7 +238,9 @@ describe("ServiceOrderFormModal", () => {
 
     it("exige cliente, ativo, solicitante, categoria e descrição, nessa ordem", async () => {
       const { onSubmit } = await renderReady(business);
-      expect(screen.getByText("No modo Business, informe cliente/ambiente, ativo, solicitante, categoria e descrição.")).toBeInTheDocument();
+      expect(
+        screen.getByText("No modo Business, informe cliente/ambiente, ativo, solicitante, categoria e descrição.")
+      ).toBeInTheDocument();
       change("Título/resumo", "Título");
       submit();
       expect(error()).toBe("No modo Business, selecione um cliente para abrir a Ordem de Serviço.");
@@ -204,13 +259,20 @@ describe("ServiceOrderFormModal", () => {
       expect(error()).toBe("No modo Business, descreva a solicitação.");
       change("Descrição do problema", "Descrição");
       submit();
-      expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ environmentId: "c1", environmentName: "Acme", assetId: "d1", category: "Servidor" }));
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ environmentId: "c1", environmentName: "Acme", assetId: "d1", category: "Servidor" })
+      );
     });
 
     it("lista só clientes ativos e usa razão social como nome", async () => {
       const { onSubmit } = await renderReady(business);
       await waitFor(() => expect(screen.getByRole("option", { name: "Acme" })).toBeInTheDocument());
-      expect([...screen.getByLabelText("Cliente").options].map((option) => option.textContent)).toEqual(["Selecione um cliente", "Acme", "Beta Ltda", ""]);
+      expect([...screen.getByLabelText("Cliente").options].map((option) => option.textContent)).toEqual([
+        "Selecione um cliente",
+        "Acme",
+        "Beta Ltda",
+        ""
+      ]);
       change("Título/resumo", "Título");
       change("Cliente", "c2");
       change(/Máquina\/ativo$/, "d1");

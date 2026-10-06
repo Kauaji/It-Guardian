@@ -10,16 +10,8 @@ import { createServiceOrder } from "./serviceOrders/serviceOrderCreationService.
 import { listSettingsRecords } from "../repositories/settingsRepository.js";
 import { getSystemSettings } from "../repositories/systemSettingsRepository.js";
 import { verifyPublicMachineToken } from "./publicMachineToken.js";
-import {
-  createPublicServiceOrderTrackingToken,
-  verifyPublicServiceOrderTrackingToken
-} from "./publicServiceOrderTrackingToken.js";
-import {
-  chooseHigherPriority,
-  normalize,
-  sanitizePriority,
-  uniqueCategories
-} from "../domain/problemTypes.js";
+import { createPublicServiceOrderTrackingToken, verifyPublicServiceOrderTrackingToken } from "./publicServiceOrderTrackingToken.js";
+import { chooseHigherPriority, normalize, sanitizePriority, uniqueCategories } from "../domain/problemTypes.js";
 import { getActiveProblemTypes, resolveProblemTypeKey } from "./problemTypeService.js";
 import { applyChecklistTemplateOnCreate } from "./serviceOrderChecklistService.js";
 import { trimString } from "../lib/textUtils.js";
@@ -168,9 +160,7 @@ export async function submitPublicServiceOrder(body) {
   }
 
   const machineScope = trim(body.machineScope, 20) || "mine";
-  const installedMachine = machineScope === "mine"
-    ? await resolveMachineFromToken(body.deviceToken)
-    : null;
+  const installedMachine = machineScope === "mine" ? await resolveMachineFromToken(body.deviceToken) : null;
   if (machineScope === "mine" && trim(body.deviceToken, 2000) && !installedMachine) {
     throw badRequest("Nao foi possivel identificar esta maquina pelo instalador.");
   }
@@ -183,7 +173,9 @@ export async function submitPublicServiceOrder(body) {
     machineName ? `Nome da máquina: ${machineName}` : "",
     assetTag ? `Patrimônio: ${assetTag}` : "",
     location ? `Localização: ${location}` : ""
-  ].filter(Boolean).join(" | ");
+  ]
+    .filter(Boolean)
+    .join(" | ");
   const relatedAssetInfo = relatedAssetText || accessInfo;
   const priority = await calculatePriority({ category, problemType, environmentName });
   const department = trim(body.department, maxLengths.department);
@@ -195,7 +187,9 @@ export async function submitPublicServiceOrder(body) {
     extension ? `Ramal: ${extension}` : "",
     relatedAssetInfo ? `Acessos informados: ${relatedAssetInfo}` : "",
     machineNotes ? `Observação do equipamento: ${machineNotes}` : ""
-  ].filter(Boolean).join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   // assetId so pode vir de um ativo resolvido por token assinado
   // (installedMachine) - nunca de um id bruto enviado pelo cliente, em

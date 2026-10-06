@@ -13,8 +13,8 @@ function InspectorFrame({ kind, title, onClose, children }) {
       className="network-topology-inspector is-node-inspector"
       aria-label={"Detalhes do " + kind}
       onKeyDown={(event) => {
-        if (event.key !== "Escape" || event.defaultPrevented ||
-            event.target.closest('[role="dialog"], [role="alertdialog"], dialog[open]')) return;
+        if (event.key !== "Escape" || event.defaultPrevented || event.target.closest('[role="dialog"], [role="alertdialog"], dialog[open]'))
+          return;
         event.preventDefault();
         event.stopPropagation();
         onClose?.();
@@ -39,7 +39,10 @@ function InspectorFrame({ kind, title, onClose, children }) {
 function InspectorMachines({ devices, onOpenDetails, isGroup }) {
   return (
     <section className="network-topology-inspector-section" aria-label="Máquinas do item">
-      <h4><Monitor size={15} aria-hidden="true" />Máquinas <span>{devices.length}</span></h4>
+      <h4>
+        <Monitor size={15} aria-hidden="true" />
+        Máquinas <span>{devices.length}</span>
+      </h4>
       {!devices.length ? (
         <p className="network-topology-inspector-empty">
           {isGroup ? "Nenhuma máquina nos segmentos deste grupo." : "Nenhuma máquina neste segmento."}
@@ -83,16 +86,29 @@ function InspectorMachines({ devices, onOpenDetails, isGroup }) {
 function InspectorConnections({ connections, loading, error }) {
   return (
     <section className="network-topology-inspector-section" aria-label="Conexões do item" aria-busy={loading}>
-      <h4><Cable size={15} aria-hidden="true" />Conexões <span>{connections.length}</span></h4>
-      {loading ? <p role="status" className="network-topology-inspector-empty">Carregando conexões...</p> : null}
-      {error ? <p role="alert" className="network-topology-inspector-error">{error}</p> : null}
+      <h4>
+        <Cable size={15} aria-hidden="true" />
+        Conexões <span>{connections.length}</span>
+      </h4>
+      {loading ? (
+        <p role="status" className="network-topology-inspector-empty">
+          Carregando conexões...
+        </p>
+      ) : null}
+      {error ? (
+        <p role="alert" className="network-topology-inspector-error">
+          {error}
+        </p>
+      ) : null}
       {connections.length ? (
         <ul className="network-topology-inspector-connection-list">
           {connections.map((connection) => (
             <li key={connection.id}>
               {connection.label ? <strong className="network-topology-inspector-connection-label">{connection.label}</strong> : null}
               <p className="network-topology-inspector-endpoints">
-                <span>{connection.sourceName}</span><span aria-hidden="true">↔</span><span>{connection.targetName}</span>
+                <span>{connection.sourceName}</span>
+                <span aria-hidden="true">↔</span>
+                <span>{connection.targetName}</span>
               </p>
               <p className="network-topology-inspector-connection-meta">
                 <span>{linkTypeLabel(connection.type)}</span>
@@ -109,8 +125,18 @@ function InspectorConnections({ connections, loading, error }) {
 }
 
 function InspectorActions({
-  node, device, missing, editMode, canEditCluster, onOpenDetails, onOpenCluster, onTogglePinned,
-  onRemoveNode, onConnectNode, connecting, preservesConnectionsOnRemove
+  node,
+  device,
+  missing,
+  editMode,
+  canEditCluster,
+  onOpenDetails,
+  onOpenCluster,
+  onTogglePinned,
+  onRemoveNode,
+  onConnectNode,
+  connecting,
+  preservesConnectionsOnRemove
 }) {
   return (
     <div className="network-topology-inspector-actions">
@@ -153,10 +179,23 @@ function InspectorActions({
 }
 
 export function NetworkTopologyNodeInspector({
-  node, device, clusterInfo, clusterDevices = [], connections = [], connectionsLoading = false,
-  connectionsError = "", canEditCluster = false, editMode, onOpenDetails, onOpenCluster,
-  onTogglePinned, onRemoveNode, onConnectNode, connecting = false,
-  preservesConnectionsOnRemove = false, onClose
+  node,
+  device,
+  clusterInfo,
+  clusterDevices = [],
+  connections = [],
+  connectionsLoading = false,
+  connectionsError = "",
+  canEditCluster = false,
+  editMode,
+  onOpenDetails,
+  onOpenCluster,
+  onTogglePinned,
+  onRemoveNode,
+  onConnectNode,
+  connecting = false,
+  preservesConnectionsOnRemove = false,
+  onClose
 }) {
   const cluster = isClusterNode(node);
   const isGroup = node.nodeType === "group";
@@ -175,21 +214,53 @@ export function NetworkTopologyNodeInspector({
         </p>
       ) : cluster ? (
         <dl className="network-topology-inspector-fields">
-          <div><dt>Nome</dt><dd>{clusterInfo.name}</dd></div>
-          <div><dt>Status</dt><dd>{getAggregateStatusLabel(clusterInfo.status)}</dd></div>
-          {isGroup ? <div><dt>Segmentos</dt><dd>{clusterInfo.segmentCount}</dd></div> : null}
-          <div><dt>Ativos</dt><dd>{clusterInfo.deviceCount}</dd></div>
+          <div>
+            <dt>Nome</dt>
+            <dd>{clusterInfo.name}</dd>
+          </div>
+          <div>
+            <dt>Status</dt>
+            <dd>{getAggregateStatusLabel(clusterInfo.status)}</dd>
+          </div>
+          {isGroup ? (
+            <div>
+              <dt>Segmentos</dt>
+              <dd>{clusterInfo.segmentCount}</dd>
+            </div>
+          ) : null}
+          <div>
+            <dt>Ativos</dt>
+            <dd>{clusterInfo.deviceCount}</dd>
+          </div>
         </dl>
       ) : (
         <dl className="network-topology-inspector-fields">
-          <div><dt>Nome</dt><dd>{device.name}</dd></div>
+          <div>
+            <dt>Nome</dt>
+            <dd>{device.name}</dd>
+          </div>
           {device.technicalName && device.technicalName !== device.name ? (
-            <div><dt>Nome técnico</dt><dd>{device.technicalName}</dd></div>
+            <div>
+              <dt>Nome técnico</dt>
+              <dd>{device.technicalName}</dd>
+            </div>
           ) : null}
-          <div><dt>Tipo</dt><dd>{assetTypeLabel(resolveAssetType(device))}</dd></div>
-          <div><dt>IP</dt><dd className="network-topology-inspector-ip">{device.ip || "—"}</dd></div>
-          <div><dt>Status</dt><dd>{getStatusLabel(device.status === "problem" ? "critical" : device.status)}</dd></div>
-          <div><dt>Origem</dt><dd>{getMachineSourceLabel(device)}</dd></div>
+          <div>
+            <dt>Tipo</dt>
+            <dd>{assetTypeLabel(resolveAssetType(device))}</dd>
+          </div>
+          <div>
+            <dt>IP</dt>
+            <dd className="network-topology-inspector-ip">{device.ip || "—"}</dd>
+          </div>
+          <div>
+            <dt>Status</dt>
+            <dd>{getStatusLabel(device.status === "problem" ? "critical" : device.status)}</dd>
+          </div>
+          <div>
+            <dt>Origem</dt>
+            <dd>{getMachineSourceLabel(device)}</dd>
+          </div>
         </dl>
       )}
       <InspectorActions
@@ -253,10 +324,7 @@ export function NetworkTopologyLinkInspector({ link, sourceEntity, targetEntity,
           </label>
           <label>
             Tipo
-            <select
-              value={draft.type}
-              onChange={(event) => setDraft((current) => ({ ...current, type: event.target.value }))}
-            >
+            <select value={draft.type} onChange={(event) => setDraft((current) => ({ ...current, type: event.target.value }))}>
               {LINK_TYPE_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}

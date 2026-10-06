@@ -27,21 +27,21 @@ export function useScriptConfirmation({ serviceOrder, token, notify, loadActivit
   }
 
   function confirmRun(script, riskAcknowledged) {
-    return send(
-      () => executeServiceOrderScript(token, serviceOrderId, script.id, { confirmed: true, riskAcknowledged }),
-      { text: "Script enfileirado. Aguardando execução pelo agente da máquina." }
-    );
+    return send(() => executeServiceOrderScript(token, serviceOrderId, script.id, { confirmed: true, riskAcknowledged }), {
+      text: "Script enfileirado. Aguardando execução pelo agente da máquina."
+    });
   }
 
   function confirmSimulation(script, riskAcknowledged) {
     return send(
-      () => registerMaintenanceScriptSimulation(token, script.id, {
-        confirmed: true,
-        riskAcknowledged,
-        assetId: serviceOrder?.assetId,
-        serviceOrderId,
-        notes: buildSimulationNotes(serviceOrder, serviceOrderId)
-      }),
+      () =>
+        registerMaintenanceScriptSimulation(token, script.id, {
+          confirmed: true,
+          riskAcknowledged,
+          assetId: serviceOrder?.assetId,
+          serviceOrderId,
+          notes: buildSimulationNotes(serviceOrder, serviceOrderId)
+        }),
       { text: "Simulação registrada. Nenhum comando foi executado." }
     );
   }

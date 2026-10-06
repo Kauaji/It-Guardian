@@ -127,7 +127,8 @@ export async function fetchFloorPlanBackgroundBlob(token, planId, floorId) {
     credentials: "include",
     headers: token ? { Authorization: `Bearer ${token}` } : {}
   });
-  if (!response.ok) throw new Error(response.status === 404 ? "Imagem de fundo não cadastrada." : "Não foi possível carregar a imagem da planta.");
+  if (!response.ok)
+    throw new Error(response.status === 404 ? "Imagem de fundo não cadastrada." : "Não foi possível carregar a imagem da planta.");
   return response.blob();
 }
 

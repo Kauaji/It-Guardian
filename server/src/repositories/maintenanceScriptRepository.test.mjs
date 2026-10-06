@@ -61,8 +61,14 @@ test("separa recomendados e outros sem incluir scripts inativos", () => {
     ]
   );
 
-  assert.deepEqual(result.recommended.map((script) => script.id), ["network"]);
-  assert.deepEqual(result.others.map((script) => script.id), ["inventory"]);
+  assert.deepEqual(
+    result.recommended.map((script) => script.id),
+    ["network"]
+  );
+  assert.deepEqual(
+    result.others.map((script) => script.id),
+    ["inventory"]
+  );
 });
 
 const dangerousContentSamples = [

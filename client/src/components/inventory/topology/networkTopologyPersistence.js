@@ -1,8 +1,4 @@
-import {
-  createNetworkTopologyNode,
-  fetchNetworkTopologyMap,
-  saveNetworkTopologyNodePositions
-} from "../../../api.js";
+import { createNetworkTopologyNode, fetchNetworkTopologyMap, saveNetworkTopologyNodePositions } from "../../../api.js";
 
 const NODE_TYPES = new Set(["asset", "segment", "group"]);
 
@@ -110,9 +106,7 @@ export async function ensureTopologyNode({ token, mapId, node, isCurrent = () =>
  * positions after IDs are resolved. Confirmed INSERTs are intentionally not
  * deleted if a later request fails: they may already be shared by another user.
  */
-export async function saveTopologyPositions({
-  token, mapId, changes, isCurrent = () => true, onMaterialized
-}) {
+export async function saveTopologyPositions({ token, mapId, changes, isCurrent = () => true, onMaterialized }) {
   if (!isCurrent()) return null;
   assertMapId(mapId);
   if (!Array.isArray(changes)) throw new Error("Informe as posições do layout a salvar.");
@@ -124,8 +118,7 @@ export async function saveTopologyPositions({
     assertPosition(change);
     const identity = assertNode(change?.node, mapId);
     const previous = uniqueChanges.get(identity.key);
-    const node = previous && previous.node.automatic !== true && change.node.automatic === true
-      ? previous.node : change.node;
+    const node = previous && previous.node.automatic !== true && change.node.automatic === true ? previous.node : change.node;
     uniqueChanges.set(identity.key, { node, x: change.x, y: change.y });
   }
   if (!isCurrent()) return null;

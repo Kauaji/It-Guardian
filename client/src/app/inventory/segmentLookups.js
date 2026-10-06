@@ -18,33 +18,18 @@ export function getDefaultInventorySegment({ activeSegments, decoratedSegments, 
 export function getBackupOrigin(machine) {
   const isInBackupArea = machine.segmentId === backupSegmentId;
   return {
-    originalSegmentId:
-      machine.backupRealSegmentId ||
-      machine.backupOriginalSegmentId ||
-      (isInBackupArea ? "" : machine.segmentId),
-    originalSegmentName:
-      machine.backupRealSegmentName ||
-      machine.backupOriginalSegmentName ||
-      (isInBackupArea ? "" : machine.segmentName)
+    originalSegmentId: machine.backupRealSegmentId || machine.backupOriginalSegmentId || (isInBackupArea ? "" : machine.segmentId),
+    originalSegmentName: machine.backupRealSegmentName || machine.backupOriginalSegmentName || (isInBackupArea ? "" : machine.segmentName)
   };
 }
 
 export function getRealBackupLocation(machine, lists) {
   const fallback = getDefaultInventorySegment(lists);
   const hasOwnSegment = machine?.segmentId && machine.segmentId !== backupSegmentId;
-  const segmentId =
-    machine?.backupRealSegmentId ||
-    machine?.backupOriginalSegmentId ||
-    (hasOwnSegment ? machine.segmentId : "");
-  const segmentName =
-    machine?.backupRealSegmentName ||
-    machine?.backupOriginalSegmentName ||
-    (hasOwnSegment ? machine.segmentName : "");
+  const segmentId = machine?.backupRealSegmentId || machine?.backupOriginalSegmentId || (hasOwnSegment ? machine.segmentId : "");
+  const segmentName = machine?.backupRealSegmentName || machine?.backupOriginalSegmentName || (hasOwnSegment ? machine.segmentName : "");
 
-  const segment =
-    (segmentId &&
-      findSegmentById(segmentId, lists.decoratedSegments, lists.activeSegments, lists.segments)) ||
-    fallback;
+  const segment = (segmentId && findSegmentById(segmentId, lists.decoratedSegments, lists.activeSegments, lists.segments)) || fallback;
 
   return {
     segmentId: segment?.id || segmentId || fallback?.id,
@@ -55,29 +40,14 @@ export function getRealBackupLocation(machine, lists) {
 
 // Descobre o segmento de origem da maquina principal de uma OS: primeiro o
 // registro de manutencao, depois o segmento atual e, por fim, o padrao.
-export function getServiceOrderAssetOrigin({
-  activeTabId,
-  decoratedSegmentGroups,
-  lists,
-  machine,
-  maintenanceRecords,
-  order
-}) {
+export function getServiceOrderAssetOrigin({ activeTabId, decoratedSegmentGroups, lists, machine, maintenanceRecords, order }) {
   const record = maintenanceRecords[machine.id];
   const origin = record?.origin || machine.maintenanceOrigin;
-  if (
-    origin?.segmentId &&
-    origin.segmentId !== backupSegmentId &&
-    !isMaintenanceSegmentName(origin.segmentName)
-  ) {
+  if (origin?.segmentId && origin.segmentId !== backupSegmentId && !isMaintenanceSegmentName(origin.segmentName)) {
     return origin;
   }
 
-  if (
-    machine.segmentId &&
-    machine.segmentId !== backupSegmentId &&
-    !isMaintenanceSegmentName(machine.segmentName)
-  ) {
+  if (machine.segmentId && machine.segmentId !== backupSegmentId && !isMaintenanceSegmentName(machine.segmentName)) {
     return {
       tabId:
         machine.tabId && machine.tabId !== "global-unorganized" && machine.tabId !== "global-backup"

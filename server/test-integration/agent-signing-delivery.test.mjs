@@ -19,7 +19,8 @@ const { initializeRuntime } = await import("../src/bootstrap.js");
 const { closeDatabase } = await import("../src/database.js");
 const { createAgentEnrollment } = await import("../src/repositories/agentRepository.js");
 const { queueAgentScriptJob } = await import("../src/services/agentScriptJobService.js");
-const { createMaintenanceScript, createScriptSimulationLog } = await import("../src/services/maintenanceScripts/maintenanceScriptsFacade.js");
+const { createMaintenanceScript, createScriptSimulationLog } =
+  await import("../src/services/maintenanceScripts/maintenanceScriptsFacade.js");
 const { listen, sendHeartbeat } = await import("../test-support/scriptFixtures.mjs");
 
 test.after(closeDatabase);
@@ -37,8 +38,20 @@ async function setup(t) {
 
 test("job entregue no heartbeat vem assinado e a assinatura amarra job, ativo e conteudo", async (t) => {
   const { baseUrl, token, machineId } = await setup(t);
-  const script = await createMaintenanceScript({ name: "Script assinado", type: "powershell", content: "Write-Output 'ok'", riskLevel: "low" });
-  const log = await createScriptSimulationLog({ scriptId: script.id, assetId: machineId, mode: "agent", status: "queued", rawLog: "x", parsedSummary: "y" });
+  const script = await createMaintenanceScript({
+    name: "Script assinado",
+    type: "powershell",
+    content: "Write-Output 'ok'",
+    riskLevel: "low"
+  });
+  const log = await createScriptSimulationLog({
+    scriptId: script.id,
+    assetId: machineId,
+    mode: "agent",
+    status: "queued",
+    rawLog: "x",
+    parsedSummary: "y"
+  });
   await queueAgentScriptJob({ script, assetId: machineId, executionLogId: log.id });
 
   const { job } = (await sendHeartbeat(baseUrl, token, machineId)).body;
@@ -70,7 +83,13 @@ test("atualizacao so e oferecida com assinatura valida", async (t) => {
     AGENT_LATEST_VERSION_SHA256: manifest.sha256
   });
   t.after(() => {
-    for (const key of ["AGENT_LATEST_VERSION", "AGENT_LATEST_VERSION_URL", "AGENT_LATEST_VERSION_SHA256", "AGENT_LATEST_VERSION_SIGNATURE", "AGENT_RELEASE_PUBLIC_KEY"]) {
+    for (const key of [
+      "AGENT_LATEST_VERSION",
+      "AGENT_LATEST_VERSION_URL",
+      "AGENT_LATEST_VERSION_SHA256",
+      "AGENT_LATEST_VERSION_SIGNATURE",
+      "AGENT_RELEASE_PUBLIC_KEY"
+    ]) {
       delete process.env[key];
     }
   });
@@ -82,10 +101,21 @@ test("atualizacao so e oferecida com assinatura valida", async (t) => {
   process.env.AGENT_LATEST_VERSION_SIGNATURE = signUpdateManifest(releaseKeys.privateKeyPem, manifest);
   const offered = await heartbeat();
   assert.equal(offered.latestVersion, "99.0.0");
-  assert.equal(verifyMessage(releaseKeys.publicKeyBase64, buildUpdateMessage({ version: offered.latestVersion, sha256: offered.latestVersionSha256, url: offered.latestVersionDownloadUrl }), offered.latestVersionSignature), true);
+  assert.equal(
+    verifyMessage(
+      releaseKeys.publicKeyBase64,
+      buildUpdateMessage({ version: offered.latestVersion, sha256: offered.latestVersionSha256, url: offered.latestVersionDownloadUrl }),
+      offered.latestVersionSignature
+    ),
+    true
+  );
 
   process.env.AGENT_RELEASE_PUBLIC_KEY = generateSigningKeyPair().publicKeyBase64;
-  assert.equal((await heartbeat()).latestVersion, null, "com chave publica de release configurada, assinatura de outra chave e barrada no servidor");
+  assert.equal(
+    (await heartbeat()).latestVersion,
+    null,
+    "com chave publica de release configurada, assinatura de outra chave e barrada no servidor"
+  );
   process.env.AGENT_RELEASE_PUBLIC_KEY = releaseKeys.publicKeyBase64;
   assert.equal((await heartbeat()).latestVersion, "99.0.0");
 });

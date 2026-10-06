@@ -9,9 +9,9 @@ import { WALL_TEXTURE_COLORS } from "./constants.js";
 
 export function buildWall(ctx) {
   const { group, object, type, width: objectWidth, depth: objectDepth, parts, activeObjects } = ctx;
-  const openings = activeObjects.filter((candidate) => (
-    candidate.metadata?.parentObjectId === object.id && ["door", "window"].includes(candidate.objectType)
-  ));
+  const openings = activeObjects.filter(
+    (candidate) => candidate.metadata?.parentObjectId === object.id && ["door", "window"].includes(candidate.objectType)
+  );
   const segments = getWallSolidSegments(objectWidth, getWallOpeningCuts(objectWidth, openings));
   segments.forEach((segment) => {
     const segmentWidth = Math.max(0, segment.end - segment.start);
@@ -66,10 +66,42 @@ export function buildChair(ctx) {
 
 export function buildCabinet(ctx) {
   const { group, object, width: objectWidth, depth: objectDepth, parts } = ctx;
-  parts.addModelPart(group, { width: objectWidth * 0.9, depth: objectDepth * 0.84, height: Number(object.height3d || 96), color: "#b08968", texturePreset: "wood" });
-  parts.addModelPart(group, { x: -1, z: -objectDepth * 0.43, y: 6, width: 2, depth: 2, height: Number(object.height3d || 96) - 12, color: "#6b4f35" });
-  parts.addModelPart(group, { x: -objectWidth * 0.08, z: -objectDepth * 0.45, y: 48, width: 3, depth: 3, height: 8, color: "#e2e8f0", metalness: 0.45 });
-  parts.addModelPart(group, { x: objectWidth * 0.08, z: -objectDepth * 0.45, y: 48, width: 3, depth: 3, height: 8, color: "#e2e8f0", metalness: 0.45 });
+  parts.addModelPart(group, {
+    width: objectWidth * 0.9,
+    depth: objectDepth * 0.84,
+    height: Number(object.height3d || 96),
+    color: "#b08968",
+    texturePreset: "wood"
+  });
+  parts.addModelPart(group, {
+    x: -1,
+    z: -objectDepth * 0.43,
+    y: 6,
+    width: 2,
+    depth: 2,
+    height: Number(object.height3d || 96) - 12,
+    color: "#6b4f35"
+  });
+  parts.addModelPart(group, {
+    x: -objectWidth * 0.08,
+    z: -objectDepth * 0.45,
+    y: 48,
+    width: 3,
+    depth: 3,
+    height: 8,
+    color: "#e2e8f0",
+    metalness: 0.45
+  });
+  parts.addModelPart(group, {
+    x: objectWidth * 0.08,
+    z: -objectDepth * 0.45,
+    y: 48,
+    width: 3,
+    depth: 3,
+    height: 8,
+    color: "#e2e8f0",
+    metalness: 0.45
+  });
 }
 
 export function buildShelf(ctx) {
@@ -78,9 +110,18 @@ export function buildShelf(ctx) {
   [-objectWidth * 0.43, objectWidth * 0.43].forEach((x) => {
     parts.addModelPart(group, { x, width: 6, depth: objectDepth * 0.82, height: shelfHeight, color: "#8b5e3c" });
   });
-  [4, 32, 60, 88].filter((y) => y < shelfHeight).forEach((y) => {
-    parts.addModelPart(group, { width: objectWidth * 0.88, depth: objectDepth * 0.82, height: 5, y, color: "#b08968", texturePreset: "wood" });
-  });
+  [4, 32, 60, 88]
+    .filter((y) => y < shelfHeight)
+    .forEach((y) => {
+      parts.addModelPart(group, {
+        width: objectWidth * 0.88,
+        depth: objectDepth * 0.82,
+        height: 5,
+        y,
+        color: "#b08968",
+        texturePreset: "wood"
+      });
+    });
 }
 
 export function buildWindow(ctx) {
@@ -91,5 +132,12 @@ export function buildWindow(ctx) {
 
 export function buildGenericBox(ctx) {
   const { group, object, width: objectWidth, depth: objectDepth, color, parts } = ctx;
-  parts.addModelPart(group, { width: objectWidth, depth: objectDepth, height: Number(object.height3d || 42), y: 0, color, metalness: object.category === "asset" ? 0.18 : 0.04 });
+  parts.addModelPart(group, {
+    width: objectWidth,
+    depth: objectDepth,
+    height: Number(object.height3d || 42),
+    y: 0,
+    color,
+    metalness: object.category === "asset" ? 0.18 : 0.04
+  });
 }

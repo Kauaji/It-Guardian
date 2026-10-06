@@ -10,10 +10,7 @@ import {
 } from "../../domain/remoteAssistancePolicy.js";
 
 import { resolveIceServers } from "../meteredTurnService.js";
-import {
-  authenticateAgentToken,
-  findAgentAssetByEnrollmentId
-} from "../../repositories/agentRepository.js";
+import { authenticateAgentToken, findAgentAssetByEnrollmentId } from "../../repositories/agentRepository.js";
 
 import {
   endRemoteAssistanceSession,
@@ -46,10 +43,7 @@ import {
   normalizeMonitors
 } from "../../domain/remoteAssistance/remoteAssistancePayload.js";
 import { addAudit, closeAbandonedRemoteAssistanceSessions, revokeRustdeskPasswordBestEffort } from "./remoteAssistanceAudit.js";
-import {
-  authenticateAgentForSession,
-  safeSession
-} from "./remoteAssistanceGuards.js";
+import { authenticateAgentForSession, safeSession } from "./remoteAssistanceGuards.js";
 
 export async function getPendingRemoteAssistanceForAgent({ bearerToken }) {
   const config = getRemoteAssistanceConfig();
@@ -95,14 +89,12 @@ export async function respondToRemoteAssistanceConsent({
   const { session } = await authenticateAgentForSession({ bearerToken, sessionId, sessionToken });
   const normalizedMonitors = normalizeMonitors(monitors);
   const requestedMonitor = String(selectedMonitorId || "");
-  const selected = normalizedMonitors.find((monitor) => monitor.id === requestedMonitor) ||
-    normalizedMonitors.find((monitor) => monitor.primary) || normalizedMonitors[0] || null;
-  const allowControl = Boolean(
-    granted &&
-      controlAllowed &&
-      session.requestedMode === "control" &&
-      config.controlEnabled
-  );
+  const selected =
+    normalizedMonitors.find((monitor) => monitor.id === requestedMonitor) ||
+    normalizedMonitors.find((monitor) => monitor.primary) ||
+    normalizedMonitors[0] ||
+    null;
+  const allowControl = Boolean(granted && controlAllowed && session.requestedMode === "control" && config.controlEnabled);
   await setRelayAgentState(session.id, {
     monitors: normalizedMonitors,
     selectedMonitorId: selected?.id || null
@@ -118,9 +110,7 @@ export async function respondToRemoteAssistanceConsent({
   await addAudit({
     session: updated,
     eventType: granted ? "consent_granted" : "consent_denied",
-    message: granted
-      ? "Usuario local autorizou a assistencia remota."
-      : "Usuario local recusou a assistencia remota.",
+    message: granted ? "Usuario local autorizou a assistencia remota." : "Usuario local recusou a assistencia remota.",
     actorType: "agent",
     metadata: {
       granted: Boolean(granted),
@@ -206,11 +196,9 @@ export async function receiveRemoteAssistanceFrame({
     // caso comum e "nada mudou desde o ultimo frame", comparar contra o que
     // ja esta carregado evita uma ida-e-volta ao Redis por frame quando a
     // lista de monitores e o monitor selecionado continuam os mesmos.
-    const resolvedSelectedMonitorId =
-      selectedMonitorId || relay.selectedMonitorId || normalizedMonitors[0]?.id || null;
+    const resolvedSelectedMonitorId = selectedMonitorId || relay.selectedMonitorId || normalizedMonitors[0]?.id || null;
     const monitorStateChanged =
-      resolvedSelectedMonitorId !== relay.selectedMonitorId ||
-      !monitorListsEqual(normalizedMonitors, relay.monitors || []);
+      resolvedSelectedMonitorId !== relay.selectedMonitorId || !monitorListsEqual(normalizedMonitors, relay.monitors || []);
     if (monitorStateChanged) {
       await setRelayAgentState(session.id, { monitors: normalizedMonitors, selectedMonitorId });
     }
@@ -236,11 +224,7 @@ export async function receiveRemoteAssistanceFrame({
   return { accepted: true };
 }
 
-export async function getRemoteAssistanceCommandsForAgent({
-  bearerToken,
-  sessionId,
-  sessionToken
-}) {
+export async function getRemoteAssistanceCommandsForAgent({ bearerToken, sessionId, sessionToken }) {
   const config = getRemoteAssistanceConfig();
   const { session } = await authenticateAgentForSession({ bearerToken, sessionId, sessionToken });
   if (session.status !== "active") return { commands: [], ended: true };

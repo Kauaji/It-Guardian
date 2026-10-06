@@ -54,8 +54,7 @@ export function isScriptDiagnosisSatisfied(scriptDiagnosis, userHasHighRiskAppro
   if (!scriptDiagnosis) return true;
   return Boolean(
     scriptDiagnosis.scriptActive &&
-      scriptDiagnosis.scriptTypeAllowed &&
-      (!scriptDiagnosis.riskRequiresSecondReviewer ||
-        (scriptDiagnosis.secondReviewerSatisfied && userHasHighRiskApproval))
+    scriptDiagnosis.scriptTypeAllowed &&
+    (!scriptDiagnosis.riskRequiresSecondReviewer || (scriptDiagnosis.secondReviewerSatisfied && userHasHighRiskApproval))
   );
 }

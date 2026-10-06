@@ -90,7 +90,9 @@ export function generateSigningKeyPair() {
  * @returns {string}
  */
 export function normalizePrivateKeyPem(value) {
-  return String(value || "").replace(/\\n/g, "\n").trim();
+  return String(value || "")
+    .replace(/\\n/g, "\n")
+    .trim();
 }
 
 /** @param {string} privateKeyPem */
@@ -112,7 +114,11 @@ export function signMessage(privateKeyPem, message) {
 /** @param {unknown} publicKeyBase64 SubjectPublicKeyInfo DER em base64. */
 export function isP256PublicKey(publicKeyBase64) {
   const der = Buffer.from(String(publicKeyBase64 || ""), "base64");
-  return der.length === P256_SPKI_PREFIX.length + 65 && der.subarray(0, P256_SPKI_PREFIX.length).equals(P256_SPKI_PREFIX) && der[P256_SPKI_PREFIX.length] === 0x04;
+  return (
+    der.length === P256_SPKI_PREFIX.length + 65 &&
+    der.subarray(0, P256_SPKI_PREFIX.length).equals(P256_SPKI_PREFIX) &&
+    der[P256_SPKI_PREFIX.length] === 0x04
+  );
 }
 
 /**

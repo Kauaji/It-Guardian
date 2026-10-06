@@ -1,10 +1,6 @@
 import { useCallback, useState } from "react";
 import { MODEL_QUALITY_DETAILED } from "./assets/inventoryMapAssetRegistry.js";
-import {
-  CAMERA_VIEW_FRONT,
-  CAMERA_VIEW_ISOMETRIC,
-  CAMERA_VIEW_TOP
-} from "./scene3d/constants.js";
+import { CAMERA_VIEW_FRONT, CAMERA_VIEW_ISOMETRIC, CAMERA_VIEW_TOP } from "./scene3d/constants.js";
 import { SceneHelp, SceneStatus, SceneToolbar } from "./scene3d/SceneControls.jsx";
 import { useFloorPlanScene } from "./scene3d/useFloorPlanScene.js";
 import "./floorPlanStudio.css";
@@ -61,19 +57,22 @@ export default function FloorPlanScene3D({
     onGridChange?.(!showGrid);
   }, [onGridChange, showGrid]);
 
-  const handleSceneKeyDown = useCallback((event) => {
-    const key = event.key.toLowerCase();
-    if (SCENE_KEY_VIEWS[key]) {
-      event.preventDefault();
-      changeCameraView(SCENE_KEY_VIEWS[key]);
-    } else if (key === "f") {
-      event.preventDefault();
-      fitScene();
-    } else if (key === "g") {
-      event.preventDefault();
-      toggleGrid();
-    }
-  }, [changeCameraView, fitScene, toggleGrid]);
+  const handleSceneKeyDown = useCallback(
+    (event) => {
+      const key = event.key.toLowerCase();
+      if (SCENE_KEY_VIEWS[key]) {
+        event.preventDefault();
+        changeCameraView(SCENE_KEY_VIEWS[key]);
+      } else if (key === "f") {
+        event.preventDefault();
+        fitScene();
+      } else if (key === "g") {
+        event.preventDefault();
+        toggleGrid();
+      }
+    },
+    [changeCameraView, fitScene, toggleGrid]
+  );
 
   const activeFloor = data?.floors?.find((entry) => entry.id === activeFloorId) || data?.floors?.[0];
 

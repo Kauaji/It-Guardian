@@ -9,35 +9,54 @@ import { isTypingTarget, resolveShortcutCommands } from "../utils/keyboardShortc
  */
 export function useEditorShortcuts({ view, doc, ui, viewport, paint, placementApi, entities, transforms }) {
   const { undo, redo } = doc;
-  const {
-    placement, paintDraft, setPlacement, setShowGrid, setPaintDraft, clearSelection, setSelectionBox, setSelectedTool
-  } = ui;
+  const { placement, paintDraft, setPlacement, setShowGrid, setPaintDraft, clearSelection, setSelectionBox, setSelectedTool } = ui;
   const latestRef = useRef(null);
 
   const runCommand = (command) => {
     switch (command.type) {
-      case "pan-ready": viewport.setSpacePressed(true); break;
-      case "toggle-grid": setShowGrid((current) => !current); break;
+      case "pan-ready":
+        viewport.setSpacePressed(true);
+        break;
+      case "toggle-grid":
+        setShowGrid((current) => !current);
+        break;
       case "cancel-paint":
         paint.paintPointerRef.current = false;
         setPaintDraft(null);
         setSelectedTool("select");
         break;
-      case "cancel-placement": setPlacement(null); break;
+      case "cancel-placement":
+        setPlacement(null);
+        break;
       case "clear-selection":
         clearSelection();
         setSelectionBox(null);
         break;
-      case "undo": undo(); break;
-      case "redo": redo(); break;
-      case "rotate": transforms.rotateSelected(); break;
-      case "delete": entities.deleteSelectedEntity(); break;
-      case "duplicate": transforms.duplicateSelected(); break;
-      case "measurement-commit": placementApi.commitMeasurementFromKeyboard(); break;
-      case "measurement-digit":
-        setPlacement((current) => current ? { ...current, lengthBuffer: appendDigitToBuffer(current.lengthBuffer || "", command.key) } : current);
+      case "undo":
+        undo();
         break;
-      default: break;
+      case "redo":
+        redo();
+        break;
+      case "rotate":
+        transforms.rotateSelected();
+        break;
+      case "delete":
+        entities.deleteSelectedEntity();
+        break;
+      case "duplicate":
+        transforms.duplicateSelected();
+        break;
+      case "measurement-commit":
+        placementApi.commitMeasurementFromKeyboard();
+        break;
+      case "measurement-digit":
+        setPlacement((current) =>
+          current ? { ...current, lengthBuffer: appendDigitToBuffer(current.lengthBuffer || "", command.key) } : current
+        );
+        break;
+      default:
+        break;
     }
   };
 

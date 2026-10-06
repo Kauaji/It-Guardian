@@ -29,13 +29,14 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
+      - run: npm run format:check
       - run: npm run typecheck
       - run: npm run check:architecture
       - run: npm run check:docs
       - run: npm run check:contrast
       - run: npm run check:accents
       # Catraca de funcoes grandes: nenhuma funcao nova acima do limite.
-      - run: node scripts/function-lengths.mjs --over 150 --fail-over 200 server/src client/src
+      - run: node scripts/function-lengths.mjs --over 150 --fail-over 150 --fail-file 700 server/src client/src
       - run: node --test scripts/*.test.mjs
 
   server:

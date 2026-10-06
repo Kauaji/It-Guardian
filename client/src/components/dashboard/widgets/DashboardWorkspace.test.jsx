@@ -199,34 +199,61 @@ describe("DashboardWorkspace", () => {
     expect(saveDashboardLayout).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Adicionar Disponibilidade de Ativos" }));
     fireEvent.click(screen.getByRole("button", { name: "Salvar layout" }));
-    await waitFor(() => expect(saveDashboardLayout).toHaveBeenCalledWith("tok", {
-      widgets: [expect.objectContaining({ type: "asset_availability", config: { chartType: "pie" } })]
-    }));
+    await waitFor(() =>
+      expect(saveDashboardLayout).toHaveBeenCalledWith("tok", {
+        widgets: [expect.objectContaining({ type: "asset_availability", config: { chartType: "pie" } })]
+      })
+    );
   });
 
   it("cruza status entre os widgets, combina ativo e remove filtros sem persistir o layout", async () => {
-    const widgets = [widget({ config: { chartType: "bars" } }), widget({ id: "w2", type: "top_assets_cpu", config: { chartType: "bars" } })];
+    const widgets = [
+      widget({ config: { chartType: "bars" } }),
+      widget({ id: "w2", type: "top_assets_cpu", config: { chartType: "bars" } })
+    ];
     fetchDashboardLayout.mockResolvedValue({ widgets });
     previewDashboardWidget.mockImplementation(async (_token, { type, filters }) => ({
       type,
-      data: type === "asset_availability"
-        ? { total: filters?.assetStatus ? 1 : 3, byStatus: { online: filters?.assetStatus ? 0 : 2, offline: 1 } }
-        : { metric: "cpu", rows: [{ id: "asset-1", name: "Servidor A", value: 62 }] }
+      data:
+        type === "asset_availability"
+          ? { total: filters?.assetStatus ? 1 : 3, byStatus: { online: filters?.assetStatus ? 0 : 2, offline: 1 } }
+          : { metric: "cpu", rows: [{ id: "asset-1", name: "Servidor A", value: 62 }] }
     }));
     render(<DashboardWorkspace token="tok" canCustomize />);
     fireEvent.click(await screen.findByRole("button", { name: "Filtrar por Offline: 1" }));
     expect(screen.getByRole("button", { name: "Remover filtro Status: Offline" })).toBeTruthy();
-    await waitFor(() => expect(previewDashboardWidget).toHaveBeenCalledWith("tok", expect.objectContaining({
-      type: "top_assets_cpu", filters: { assetStatus: "offline" }
-    }), expect.anything()));
+    await waitFor(() =>
+      expect(previewDashboardWidget).toHaveBeenCalledWith(
+        "tok",
+        expect.objectContaining({
+          type: "top_assets_cpu",
+          filters: { assetStatus: "offline" }
+        }),
+        expect.anything()
+      )
+    );
     fireEvent.click(await screen.findByRole("button", { name: "Filtrar por Servidor A: 62%" }));
-    await waitFor(() => expect(previewDashboardWidget).toHaveBeenCalledWith("tok", expect.objectContaining({
-      type: "asset_availability", filters: { assetStatus: "offline", assetId: "asset-1" }
-    }), expect.anything()));
+    await waitFor(() =>
+      expect(previewDashboardWidget).toHaveBeenCalledWith(
+        "tok",
+        expect.objectContaining({
+          type: "asset_availability",
+          filters: { assetStatus: "offline", assetId: "asset-1" }
+        }),
+        expect.anything()
+      )
+    );
     fireEvent.click(screen.getByRole("button", { name: "Remover filtro Status: Offline" }));
-    await waitFor(() => expect(previewDashboardWidget).toHaveBeenCalledWith("tok", expect.objectContaining({
-      type: "asset_availability", filters: { assetId: "asset-1" }
-    }), expect.anything()));
+    await waitFor(() =>
+      expect(previewDashboardWidget).toHaveBeenCalledWith(
+        "tok",
+        expect.objectContaining({
+          type: "asset_availability",
+          filters: { assetId: "asset-1" }
+        }),
+        expect.anything()
+      )
+    );
     fireEvent.click(screen.getByRole("button", { name: "Limpar filtros" }));
     await waitFor(() => expect(screen.queryByRole("button", { name: /Remover filtro/ })).toBeNull());
     expect(saveDashboardLayout).not.toHaveBeenCalled();
@@ -261,9 +288,13 @@ describe("DashboardWorkspace", () => {
     render(<DashboardWorkspace token="tok" canCustomize notify={notify} />);
     await screen.findByText("Disponibilidade de Ativos");
     fireEvent.click(screen.getByText("Editar dashboard"));
-    await act(async () => { fireEvent.click(screen.getByText("Salvar layout")); });
+    await act(async () => {
+      fireEvent.click(screen.getByText("Salvar layout"));
+    });
     expect(notify).toHaveBeenCalledWith("Sem permissao", "danger");
-    await act(async () => { fireEvent.click(screen.getByText("Salvar layout")); });
+    await act(async () => {
+      fireEvent.click(screen.getByText("Salvar layout"));
+    });
     expect(notify).toHaveBeenCalledWith("Não foi possível salvar o layout.", "danger");
     expect(screen.getByText("Salvar layout")).toBeTruthy();
   });
@@ -276,7 +307,9 @@ describe("DashboardWorkspace", () => {
     render(<DashboardWorkspace token="tok" canCustomize notify={notify} />);
     await screen.findByText("Disponibilidade de Ativos");
     fireEvent.click(screen.getByText("Editar dashboard"));
-    await act(async () => { fireEvent.click(screen.getByText("Salvar layout")); });
+    await act(async () => {
+      fireEvent.click(screen.getByText("Salvar layout"));
+    });
     expect(notify).toHaveBeenCalledWith("Layout do dashboard salvo.", "ok");
     expect(document.querySelector(".dashboard-workspace-status").textContent).toMatch(/1 widget\(s\) - atualizado /);
   });
@@ -289,9 +322,13 @@ describe("DashboardWorkspace", () => {
     render(<DashboardWorkspace token="tok" canCustomize notify={notify} />);
     await screen.findByText("Disponibilidade de Ativos");
     fireEvent.click(screen.getByText("Editar dashboard"));
-    await act(async () => { fireEvent.click(screen.getByText("Restaurar padrao")); });
+    await act(async () => {
+      fireEvent.click(screen.getByText("Restaurar padrao"));
+    });
     expect(notify).toHaveBeenCalledWith("Layout restaurado para o padrão.", "ok");
-    await act(async () => { fireEvent.click(screen.getByText("Restaurar padrao")); });
+    await act(async () => {
+      fireEvent.click(screen.getByText("Restaurar padrao"));
+    });
     expect(notify).toHaveBeenCalledWith("Não foi possível restaurar o layout padrão.", "danger");
   });
 
@@ -317,7 +354,9 @@ describe("DashboardWorkspace", () => {
   it("widget do catalogo que exige ativo abre a configuracao e Salvar aplica ao draft", async () => {
     fetchDashboardLayout.mockResolvedValue({ widgets: [] });
     fetchDashboardWidgetCatalog.mockResolvedValue({
-      widgets: [{ type: "top_assets_cpu", label: "Top CPU por ativo", category: "metrics", requiresAssetConfig: true, defaultSize: { w: "l" } }]
+      widgets: [
+        { type: "top_assets_cpu", label: "Top CPU por ativo", category: "metrics", requiresAssetConfig: true, defaultSize: { w: "l" } }
+      ]
     });
     previewDashboardWidget.mockResolvedValue({ type: "t", data: { rows: [] } });
     render(<DashboardWorkspace token="tok" canCustomize />);
@@ -332,4 +371,3 @@ describe("DashboardWorkspace", () => {
     expect(screen.getByText("1 widget(s)", { exact: false })).toBeTruthy();
   });
 });
-

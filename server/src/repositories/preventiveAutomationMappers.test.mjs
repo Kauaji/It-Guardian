@@ -57,7 +57,13 @@ test("linha do override deriva a chave do alvo quando ela nao foi gravada", () =
   assert.equal(byAsset.preferredTime, null);
   assert.equal(byAsset.active, true);
 
-  const bySegment = fromOverrideRow({ plan_id: "p1", segment_id: "s1", recurrence_type: "desconhecida", target_key: "segment:s1", active: false });
+  const bySegment = fromOverrideRow({
+    plan_id: "p1",
+    segment_id: "s1",
+    recurrence_type: "desconhecida",
+    target_key: "segment:s1",
+    active: false
+  });
   assert.equal(bySegment.recurrenceType, "monthly");
   assert.equal(bySegment.targetKey, "segment:s1");
   assert.equal(bySegment.active, false);
@@ -86,7 +92,14 @@ test("linha da execucao aplica padroes e serializa datas", () => {
 
 test("linha da agenda por maquina usa padroes de horario e fuso", () => {
   assert.equal(fromAssetScheduleRow(undefined), null);
-  const schedule = fromAssetScheduleRow({ id: "s1", plan_id: "p1", asset_id: "a1", recurrence_type: "daily", recurrence_interval: 5, active: false });
+  const schedule = fromAssetScheduleRow({
+    id: "s1",
+    plan_id: "p1",
+    asset_id: "a1",
+    recurrence_type: "daily",
+    recurrence_interval: 5,
+    active: false
+  });
   assert.equal(schedule.recurrenceIntervalDays, 1);
   assert.equal(schedule.preferredTime, "08:00");
   assert.equal(schedule.timezone, "America/Sao_Paulo");
@@ -97,21 +110,36 @@ test("linha da agenda por maquina usa padroes de horario e fuso", () => {
 
 test("linhas de apoio mantem datas brutas na agenda e padroes nos demais", () => {
   const date = new Date("2026-06-14T11:00:00.000Z");
-  const agenda = fromAgendaRow({ plan_id: "p1", plan_name: "Plano", asset_id: "a1", indicator_color: "#111111", next_run_at: date, recurrence_type: "weekly", recurrence_interval: 7, recurrence_source: "machine", plan_active: false, active: true, last_prepared_at: date });
+  const agenda = fromAgendaRow({
+    plan_id: "p1",
+    plan_name: "Plano",
+    asset_id: "a1",
+    indicator_color: "#111111",
+    next_run_at: date,
+    recurrence_type: "weekly",
+    recurrence_interval: 7,
+    recurrence_source: "machine",
+    plan_active: false,
+    active: true,
+    last_prepared_at: date
+  });
   assert.equal(agenda.nextRunAt, date);
   assert.equal(agenda.planActive, false);
   assert.equal(agenda.scheduleActive, true);
   assert.equal(agenda.lastPreparedAt, date);
 
-  assert.deepEqual(fromAssetHistoryRow({ id: "h1", event_type: "t", message: "m", old_value: "o", new_value: "n", user_name: "u", created_at: date }), {
-    id: "h1",
-    eventType: "t",
-    message: "m",
-    oldValue: "o",
-    newValue: "n",
-    userName: "u",
-    createdAt: date
-  });
+  assert.deepEqual(
+    fromAssetHistoryRow({ id: "h1", event_type: "t", message: "m", old_value: "o", new_value: "n", user_name: "u", created_at: date }),
+    {
+      id: "h1",
+      eventType: "t",
+      message: "m",
+      oldValue: "o",
+      newValue: "n",
+      userName: "u",
+      createdAt: date
+    }
+  );
   assert.equal(fromAuditLogRow({ id: "l1", type: "t", message: "m", created_at: date }).userName, "Sistema");
   assert.deepEqual(fromAuditLogRow({ id: "l1", type: "t", message: "m", created_at: date }).meta, {});
   assert.deepEqual(fromScriptSummaryRow({ id: "s1", name: "Script" }), { id: "s1", name: "Script", category: "", riskLevel: "medium" });

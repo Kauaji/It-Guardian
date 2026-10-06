@@ -4,18 +4,9 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-const repositoryRoot = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "../../.."
-);
-const agentSource = await readFile(
-  path.join(repositoryRoot, "agent/windows/it-guardian-agent.ps1"),
-  "utf8"
-);
-const heartbeatTestSource = await readFile(
-  path.join(repositoryRoot, "agent/windows/test-heartbeat.ps1"),
-  "utf8"
-);
+const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
+const agentSource = await readFile(path.join(repositoryRoot, "agent/windows/it-guardian-agent.ps1"), "utf8");
+const heartbeatTestSource = await readFile(path.join(repositoryRoot, "agent/windows/test-heartbeat.ps1"), "utf8");
 
 test("agente Windows nao contem primitivas de execucao remota ou coleta invasiva", () => {
   const forbiddenPatterns = [

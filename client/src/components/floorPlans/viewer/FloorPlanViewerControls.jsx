@@ -10,11 +10,7 @@ function LayerMenu({ visibleLayers, onToggleLayer }) {
       <div>
         {FLOOR_PLAN_LAYER_OPTIONS.map((option) => (
           <label key={option.id}>
-            <input
-              type="checkbox"
-              checked={Boolean(visibleLayers[option.id])}
-              onChange={() => onToggleLayer(option.id)}
-            />
+            <input type="checkbox" checked={Boolean(visibleLayers[option.id])} onChange={() => onToggleLayer(option.id)} />
             <span>{option.label}</span>
           </label>
         ))}
@@ -23,16 +19,7 @@ function LayerMenu({ visibleLayers, onToggleLayer }) {
   );
 }
 
-export default function FloorPlanViewerControls({
-  mode,
-  visibleLayers,
-  zoomPercent,
-  onToggleLayer,
-  onFit,
-  onReset,
-  onZoomIn,
-  onZoomOut
-}) {
+export default function FloorPlanViewerControls({ mode, visibleLayers, zoomPercent, onToggleLayer, onFit, onReset, onZoomIn, onZoomOut }) {
   if (mode !== "2d") return null;
 
   return (
@@ -40,7 +27,13 @@ export default function FloorPlanViewerControls({
       <button type="button" onClick={onZoomOut} title="Diminuir zoom" aria-label="Diminuir zoom">
         <Minus size={16} aria-hidden="true" />
       </button>
-      <button className="floor-plan-zoom-value" type="button" onClick={onReset} title="Restaurar zoom" aria-label={`Restaurar zoom. Zoom atual ${zoomPercent}%`}>
+      <button
+        className="floor-plan-zoom-value"
+        type="button"
+        onClick={onReset}
+        title="Restaurar zoom"
+        aria-label={`Restaurar zoom. Zoom atual ${zoomPercent}%`}
+      >
         {zoomPercent}%
       </button>
       <button type="button" onClick={onZoomIn} title="Aumentar zoom" aria-label="Aumentar zoom">

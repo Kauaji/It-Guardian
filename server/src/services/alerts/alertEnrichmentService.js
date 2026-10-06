@@ -1,9 +1,5 @@
 import { buildEnrichedAlert, buildEnrichedSuggestion } from "../../domain/alerts/alertInsights.js";
-import {
-  findAlertById,
-  listAlertComments,
-  listServiceOrderSuggestions as listSuggestions
-} from "../../repositories/alertRepository.js";
+import { findAlertById, listAlertComments, listServiceOrderSuggestions as listSuggestions } from "../../repositories/alertRepository.js";
 import { listSegmentGroups } from "../../repositories/segmentGroupRepository.js";
 import { listDeviceSegmentMap } from "../../repositories/segmentRepository.js";
 import { listServiceOrders } from "../../repositories/serviceOrderRepository.js";
@@ -25,12 +21,14 @@ export async function buildAlertEnrichmentContext() {
 }
 
 export async function enrichAlerts(alerts = [], context = null) {
-  const nextContext = context || await buildAlertEnrichmentContext();
+  const nextContext = context || (await buildAlertEnrichmentContext());
   const commentsByAlert = new Map();
 
-  await Promise.all(alerts.map(async (alert) => {
-    commentsByAlert.set(alert.id, await listAlertComments(alert.id));
-  }));
+  await Promise.all(
+    alerts.map(async (alert) => {
+      commentsByAlert.set(alert.id, await listAlertComments(alert.id));
+    })
+  );
 
   return alerts.map((alert) => buildEnrichedAlert(alert, nextContext, commentsByAlert.get(alert.id) || []));
 }

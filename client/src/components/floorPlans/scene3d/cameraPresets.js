@@ -56,15 +56,7 @@ export function getFloorPlanContentFrame(data, activeFloorId, floorWidth, floorH
 }
 
 /** Posicao e alvo da camera para uma vista (superior, frontal ou isometrica) que enquadra o conteudo. */
-export function getFloorPlanCameraPreset(
-  view,
-  floorWidth,
-  floorHeight,
-  aspect = 1,
-  fieldOfView = 42,
-  targetX = 0,
-  targetZ = 0
-) {
+export function getFloorPlanCameraPreset(view, floorWidth, floorHeight, aspect = 1, fieldOfView = 42, targetX = 0, targetZ = 0) {
   const safeWidth = Math.max(1, Number(floorWidth || 0));
   const safeHeight = Math.max(1, Number(floorHeight || 0));
   const safeAspect = Math.max(0.2, Number(aspect || 1));
@@ -98,7 +90,5 @@ export function getFloorPlanCameraPreset(
 
 /** Suavizacao (ease in-out cubica) da animacao de camera; progresso de 0 a 1. */
 export function easeCamera(progress) {
-  return progress < 0.5
-    ? 4 * progress * progress * progress
-    : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+  return progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
 }

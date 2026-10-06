@@ -17,8 +17,8 @@ function PublicSupportHeader() {
       <div>
         <h1>Abrir chamado de suporte</h1>
         <p>
-          Descreva o problema encontrado. A equipe técnica receberá sua solicitação e acompanhará o
-          atendimento pelo IT Guardian. Esta tela não dá acesso ao painel administrativo.
+          Descreva o problema encontrado. A equipe técnica receberá sua solicitação e acompanhará o atendimento pelo IT Guardian. Esta tela
+          não dá acesso ao painel administrativo.
         </p>
       </div>
     </header>

@@ -1,10 +1,4 @@
-import {
-  createTab,
-  listAllInventoryTabs,
-  removeTab,
-  reorderTabs,
-  updateTab
-} from "../services/inventoryTabService.js";
+import { createTab, listAllInventoryTabs, removeTab, reorderTabs, updateTab } from "../services/inventoryTabService.js";
 
 export async function list(_req, res, next) {
   try {

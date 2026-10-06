@@ -36,9 +36,7 @@ export default function ServiceOrderScriptsTab({
     <section className="service-order-scripts-panel">
       <ScriptsBanners remoteScriptExecutionEnabled={remoteScriptExecutionEnabled} reason={reason} />
 
-      {hasAsset && (
-        <ScriptExecutionDiagnosticPanel token={token} assetId={serviceOrder.assetId} context="service_order" />
-      )}
+      {hasAsset && <ScriptExecutionDiagnosticPanel token={token} assetId={serviceOrder.assetId} context="service_order" />}
 
       <div className="service-order-scripts-list">
         <h4>Scripts recomendados</h4>

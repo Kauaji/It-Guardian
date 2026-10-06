@@ -8,11 +8,7 @@ import { useAdminSettings } from "./general/useAdminSettings.js";
 import { useGeneralPreferences } from "./general/useGeneralPreferences.js";
 import { useGeneralSections } from "./general/useGeneralSections.js";
 
-export {
-  applyGeneralPreferences,
-  applyStoredGeneralPreferences,
-  clearRuntimeAppearancePreferences
-} from "./general/generalPreferences.js";
+export { applyGeneralPreferences, applyStoredGeneralPreferences, clearRuntimeAppearancePreferences } from "./general/generalPreferences.js";
 
 export default function GeneralSettingsModal({
   open,
@@ -52,12 +48,7 @@ export default function GeneralSettingsModal({
             {sections.map((item) => {
               const Icon = item.icon;
               return (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={section === item.id ? "active" : ""}
-                  onClick={() => setSection(item.id)}
-                >
+                <button key={item.id} type="button" className={section === item.id ? "active" : ""} onClick={() => setSection(item.id)}>
                   <Icon size={17} />
                   <span>{item.label}</span>
                 </button>
@@ -66,9 +57,7 @@ export default function GeneralSettingsModal({
           </aside>
 
           <section className="general-settings-content">
-            {section === "usability" && (
-              <UsabilitySection preferences={prefs.preferences} onChangeFontScale={prefs.changeFontScale} />
-            )}
+            {section === "usability" && <UsabilitySection preferences={prefs.preferences} onChangeFontScale={prefs.changeFontScale} />}
             {section === "appearance" && (
               <AppearanceSection
                 preferences={prefs.preferences}
@@ -79,12 +68,8 @@ export default function GeneralSettingsModal({
                 onChangeCustomTheme={prefs.changeCustomTheme}
               />
             )}
-            {section === "admin" && isAdmin && (
-              <AdminSection admin={admin} token={token} user={user} notify={notify} />
-            )}
-            {section === "mode" && (
-              <SystemModeSection systemMode={systemMode} onSystemModeChange={onSystemModeChange} />
-            )}
+            {section === "admin" && isAdmin && <AdminSection admin={admin} token={token} user={user} notify={notify} />}
+            {section === "mode" && <SystemModeSection systemMode={systemMode} onSystemModeChange={onSystemModeChange} />}
           </section>
         </div>
       </section>

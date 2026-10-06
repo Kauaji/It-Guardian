@@ -28,10 +28,7 @@ import {
 import { registerMaintenanceScriptSimulation } from "./maintenanceScripts/scriptSimulationService.js";
 import { useScriptForServiceOrder } from "./maintenanceScripts/serviceOrderScriptUsageService.js";
 import { useScriptFromSuggestion } from "./maintenanceScripts/suggestionScriptUsageService.js";
-import {
-  cancelScriptValidation,
-  listScriptValidationsForSuggestion
-} from "./maintenanceScripts/scriptValidationService.js";
+import { cancelScriptValidation, listScriptValidationsForSuggestion } from "./maintenanceScripts/scriptValidationService.js";
 import { listRecommendedScriptsForSuggestion } from "./maintenanceScripts/suggestionRecommendationService.js";
 import { listRecommendedScriptsForContext } from "./maintenanceScriptRecommendationService.js";
 
@@ -133,19 +130,14 @@ export async function getScriptExecutionDiagnosis({ assetId, scriptId = null, co
   if (!String(assetId || "").trim()) {
     throw badRequest("Informe o ativo para calcular o diagnostico de execucao.");
   }
-  const basePermission =
-    executionDiagnosisContextPermissions[context] || executionDiagnosisContextPermissions.service_order;
+  const basePermission = executionDiagnosisContextPermissions[context] || executionDiagnosisContextPermissions.service_order;
   const serverEnabled = isRemoteScriptExecutionEnabled();
   const userHasPermission = hasPermission(user, basePermission);
   const userHasHighRiskApproval = hasPermission(user, "scripts.approve_high_risk");
 
-  const [agentAsset, activeEnrollment] = await Promise.all([
-    findAgentAssetById(assetId),
-    findActiveAgentEnrollmentForAsset(assetId)
-  ]);
+  const [agentAsset, activeEnrollment] = await Promise.all([findAgentAssetById(assetId), findActiveAgentEnrollmentForAsset(assetId)]);
   const agentRegistered = Boolean(activeEnrollment);
-  const agentActive =
-    agentRegistered && Boolean(agentAsset) && isAgentAssetFresh(agentAsset.lastSeenAt, agentAsset.intervalSeconds);
+  const agentActive = agentRegistered && Boolean(agentAsset) && isAgentAssetFresh(agentAsset.lastSeenAt, agentAsset.intervalSeconds);
 
   const script = scriptId ? await findMaintenanceScriptById(scriptId) : null;
   const scriptDiagnosis = script ? describeScriptForDiagnosis(script, user) : null;

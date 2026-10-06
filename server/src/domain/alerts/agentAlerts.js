@@ -84,10 +84,7 @@ export function buildAgentAlerts(asset, now = new Date(), { offlineAfterSecondsS
       metric: "memoria RAM",
       value: percentage(asset.memoryUsedBytes, asset.memoryTotalBytes)
     });
-    const diskUsage = percentage(
-      Number(asset.diskTotalBytes) - Number(asset.diskFreeBytes),
-      asset.diskTotalBytes
-    );
+    const diskUsage = percentage(Number(asset.diskTotalBytes) - Number(asset.diskFreeBytes), asset.diskTotalBytes);
     addMetricAlert({
       type: diskUsage !== null && diskUsage >= 95 ? "disk_full" : "disk_high",
       metric: "disco",

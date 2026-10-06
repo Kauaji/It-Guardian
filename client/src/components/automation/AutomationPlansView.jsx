@@ -37,7 +37,10 @@ export default function AutomationPlansView({ plans = [], search, status, onSear
         {visible.map((plan) => (
           <article key={plan.id} className="automation-plan-card" style={{ "--plan-color": plan.indicatorColor }}>
             <header>
-              <div><i /><strong>{plan.name}</strong></div>
+              <div>
+                <i />
+                <strong>{plan.name}</strong>
+              </div>
               <span className={plan.active === false ? "pill inactive" : "pill ok"}>
                 {plan.active === false ? <Pause size={13} /> : <Play size={13} />}
                 {plan.active === false ? "Pausado" : "Ativo"}
@@ -45,13 +48,27 @@ export default function AutomationPlansView({ plans = [], search, status, onSear
             </header>
             <p>{plan.description || "Plano preventivo automatizado"}</p>
             <dl>
-              <div><dt>Recorrência</dt><dd>{formatRecurrence(plan)}</dd></div>
-              <div><dt>Máquinas</dt><dd>{plan.assetCount || 0}</dd></div>
-              <div><dt>Scripts</dt><dd>{plan.scriptCount || 0}</dd></div>
-              <div><dt>Próxima agenda</dt><dd>{formatAutomationDate(plan.nextRunAt, "Sem agenda")}</dd></div>
+              <div>
+                <dt>Recorrência</dt>
+                <dd>{formatRecurrence(plan)}</dd>
+              </div>
+              <div>
+                <dt>Máquinas</dt>
+                <dd>{plan.assetCount || 0}</dd>
+              </div>
+              <div>
+                <dt>Scripts</dt>
+                <dd>{plan.scriptCount || 0}</dd>
+              </div>
+              <div>
+                <dt>Próxima agenda</dt>
+                <dd>{formatAutomationDate(plan.nextRunAt, "Sem agenda")}</dd>
+              </div>
             </dl>
             <footer>
-              <span><CalendarClock size={15} /> {plan.withoutScheduleCount || 0} sem agenda</span>
+              <span>
+                <CalendarClock size={15} /> {plan.withoutScheduleCount || 0} sem agenda
+              </span>
               <button type="button" className="secondary-action compact-action" onClick={() => onOpenPlan(plan)}>
                 <Settings2 size={15} /> Gerenciar
               </button>

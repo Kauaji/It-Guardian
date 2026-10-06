@@ -12,12 +12,6 @@ const reauthenticationRateLimiter = createRateLimiter({
   name: "security-reauthenticate"
 });
 
-router.post(
-  "/reauthenticate",
-  requireAuth,
-  requirePermission("security.reauthenticate"),
-  reauthenticationRateLimiter,
-  reauthenticate
-);
+router.post("/reauthenticate", requireAuth, requirePermission("security.reauthenticate"), reauthenticationRateLimiter, reauthenticate);
 
 export default router;

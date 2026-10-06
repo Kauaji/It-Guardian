@@ -10,7 +10,13 @@ export default function SettingsModal({ modal, editor, token, notify, systemMode
   const { settingsTab } = modal;
   return (
     <div className="modal-backdrop service-order-settings-backdrop" role="presentation">
-      <section ref={modal.dialogRef} className="service-order-settings-modal" role="dialog" aria-modal="true" aria-label="Configurações da OS">
+      <section
+        ref={modal.dialogRef}
+        className="service-order-settings-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Configurações da OS"
+      >
         <header className="service-order-settings-modal-header">
           <div>
             <span className="section-eyebrow">Ordens de Serviço</span>
@@ -46,19 +52,10 @@ export default function SettingsModal({ modal, editor, token, notify, systemMode
           )}
 
           {SETTINGS_VIEW_TABS.includes(settingsTab) && (
-            <SettingsView
-              token={token}
-              notify={notify}
-              systemMode={systemMode}
-              forcedSection={settingsTab}
-              hideHero
-              hideTabs
-            />
+            <SettingsView token={token} notify={notify} systemMode={systemMode} forcedSection={settingsTab} hideHero hideTabs />
           )}
 
-          {settingsTab === "checklists" && (
-            <ServiceOrderChecklistTemplatesSettings token={token} notify={notify} />
-          )}
+          {settingsTab === "checklists" && <ServiceOrderChecklistTemplatesSettings token={token} notify={notify} />}
         </div>
       </section>
     </div>

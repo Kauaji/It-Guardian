@@ -74,7 +74,9 @@ export function normalizeSerial(value) {
  * @returns {string | null} `AA:BB:CC:DD:EE:FF` quando ha 12 digitos hex; senao o texto original.
  */
 export function normalizeMacAddress(value) {
-  const compact = text(value)?.toUpperCase().replace(/[^0-9A-F]/g, "");
+  const compact = text(value)
+    ?.toUpperCase()
+    .replace(/[^0-9A-F]/g, "");
   if (!compact || compact.length !== 12) return text(value);
   return (compact.match(/.{2}/g) ?? []).join(":");
 }
@@ -270,12 +272,12 @@ function normalizeSeverity(value) {
   const normalized = text(value, "warning").toLowerCase();
   /** @type {Record<string, string>} */
   const zabbixSeverityMap = {
-    "0": "info",
-    "1": "info",
-    "2": "warning",
-    "3": "warning",
-    "4": "high",
-    "5": "critical",
+    0: "info",
+    1: "info",
+    2: "warning",
+    3: "warning",
+    4: "high",
+    5: "critical",
     disaster: "critical",
     average: "warning"
   };
@@ -314,11 +316,7 @@ export function normalizeZabbixProblem(rawProblem, options = {}) {
     name: text(firstValue(raw.name, raw.title, raw.description), `Problema ${externalId}`),
     severity: normalizeSeverity(firstValue(raw.severity, raw.priority)),
     status: normalizeAlertStatus(firstValue(raw.status, raw.value), resolvedAt),
-    occurredAt: timestamp(firstValue(
-      raw.occurredAt,
-      raw.startedAt,
-      raw.clock ? Number(raw.clock) * 1000 : null
-    )),
+    occurredAt: timestamp(firstValue(raw.occurredAt, raw.startedAt, raw.clock ? Number(raw.clock) * 1000 : null)),
     resolvedAt: resolvedAt ? timestamp(resolvedAt) : null,
     metadata: {
       ...cleanRecord(raw.metadata),
@@ -371,8 +369,7 @@ export function correlateNormalizedAsset(candidate, existingAssets = []) {
       name: "source_external_id",
       value: text(normalizedCandidate.externalId),
       matches: (asset) =>
-        normalizeSource(asset.source) === normalizedCandidate.source &&
-        text(asset.externalId) === text(normalizedCandidate.externalId)
+        normalizeSource(asset.source) === normalizedCandidate.source && text(asset.externalId) === text(normalizedCandidate.externalId)
     },
     {
       name: "hostname",

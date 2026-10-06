@@ -30,7 +30,10 @@ function seriousOrWorse(violations) {
 }
 
 function summarize(violations) {
-  return violations.map((violation) => `${violation.impact} ${violation.id}: ${violation.help} (${violation.nodes.length} nó(s)) ${violation.nodes[0]?.target?.join(" ")}`);
+  return violations.map(
+    (violation) =>
+      `${violation.impact} ${violation.id}: ${violation.help} (${violation.nodes.length} nó(s)) ${violation.nodes[0]?.target?.join(" ")}`
+  );
 }
 
 test("tela de login não tem violações sérias de acessibilidade", async ({ page }) => {
@@ -47,7 +50,10 @@ for (const view of views) {
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(600);
     const { violations } = await new AxeBuilder({ page }).withTags(tags).analyze();
-    await testInfo.attach("axe-todas-as-violacoes", { body: JSON.stringify(summarize(violations), null, 2), contentType: "application/json" });
+    await testInfo.attach("axe-todas-as-violacoes", {
+      body: JSON.stringify(summarize(violations), null, 2),
+      contentType: "application/json"
+    });
     expect(summarize(violations.filter((v) => ["serious", "critical"].includes(v.impact)))).toEqual([]);
   });
 }
@@ -71,7 +77,10 @@ test("detalhe da OS aberto não tem violações sérias de acessibilidade", asyn
 
 test("modal de configurações gerais não tem violações sérias de acessibilidade", async ({ page }) => {
   await login(page);
-  await page.getByRole("button", { name: /Configurações/ }).first().click();
+  await page
+    .getByRole("button", { name: /Configurações/ })
+    .first()
+    .click();
   await expect(page.getByRole("dialog")).toBeVisible();
   const { violations } = await new AxeBuilder({ page }).withTags(tags).analyze();
   expect(summarize(seriousOrWorse(violations))).toEqual([]);

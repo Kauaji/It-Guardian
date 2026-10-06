@@ -1,11 +1,4 @@
-import {
-  Activity,
-  AlertTriangle,
-  CalendarDays,
-  ClipboardList,
-  Database,
-  PackageSearch
-} from "lucide-react";
+import { Activity, AlertTriangle, CalendarDays, ClipboardList, Database, PackageSearch } from "lucide-react";
 import { useNavigation, useLayout } from "../context/workspaceContexts.js";
 import { useViewAccess } from "../hooks/useViewAccess.js";
 import { labelForView } from "../routes.js";

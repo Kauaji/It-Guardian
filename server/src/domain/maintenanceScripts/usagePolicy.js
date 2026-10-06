@@ -7,22 +7,15 @@ import { resolveScriptRiskLevel } from "./scriptVocabulary.js";
  * janela de observacao e desfecho da observacao. Modulo puro.
  */
 
-export const SUGGESTION_STATUSES_ACCEPTING_SCRIPTS = [
-  "pending",
-  "observed_persistent",
-  "insufficient_data",
-  "validation_cancelled"
-];
+export const SUGGESTION_STATUSES_ACCEPTING_SCRIPTS = ["pending", "observed_persistent", "insufficient_data", "validation_cancelled"];
 
 const MIN_VALIDATION_WINDOW_MINUTES = 5;
 const MAX_VALIDATION_WINDOW_MINUTES = 10080;
 const DEFAULT_VALIDATION_WINDOW_MINUTES = 30;
 
-export const HIGH_RISK_USAGE_MESSAGE =
-  "Scripts de alto risco exigem confirmação extra antes de registrar o uso.";
+export const HIGH_RISK_USAGE_MESSAGE = "Scripts de alto risco exigem confirmação extra antes de registrar o uso.";
 
-export const QUEUED_LOG_PARSED_SUMMARY =
-  "Script enfileirado. O agente da máquina enviará o resultado após a execução.";
+export const QUEUED_LOG_PARSED_SUMMARY = "Script enfileirado. O agente da máquina enviará o resultado após a execução.";
 
 /** @type {Record<string, string>} */
 const QUEUED_LOG_ORIGINS = {
@@ -89,7 +82,9 @@ export function clampValidationWindowMinutes(requested, configured) {
   const configuredMinutes = Number(configured || DEFAULT_VALIDATION_WINDOW_MINUTES);
   const candidate = Number(requested || configured || DEFAULT_VALIDATION_WINDOW_MINUTES);
   const minutes = Number.isNaN(candidate)
-    ? (Number.isNaN(configuredMinutes) ? DEFAULT_VALIDATION_WINDOW_MINUTES : configuredMinutes)
+    ? Number.isNaN(configuredMinutes)
+      ? DEFAULT_VALIDATION_WINDOW_MINUTES
+      : configuredMinutes
     : candidate;
   return Math.min(MAX_VALIDATION_WINDOW_MINUTES, Math.max(MIN_VALIDATION_WINDOW_MINUTES, Math.round(minutes)));
 }

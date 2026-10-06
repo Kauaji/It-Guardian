@@ -1,7 +1,4 @@
-import {
-  formatPanelDate,
-  getScopeLabel
-} from "./preventiveAutomationPanelUtils.js";
+import { formatPanelDate, getScopeLabel } from "./preventiveAutomationPanelUtils.js";
 
 function PreventiveAutomationPlanCard({ plan, scopeSources, permissions, toggling, onToggle, onEdit }) {
   const { canUpdate, canDisable } = permissions;
@@ -11,16 +8,16 @@ function PreventiveAutomationPlanCard({ plan, scopeSources, permissions, togglin
       <header>
         <div className="preventive-automation-title-row">
           <strong>{plan.name}</strong>
-          <span className={`pill ${plan.active === false ? "danger" : "ok"}`}>
-            {plan.active === false ? "Inativo" : "Ativo"}
-          </span>
+          <span className={`pill ${plan.active === false ? "danger" : "ok"}`}>{plan.active === false ? "Inativo" : "Ativo"}</span>
         </div>
         <small>{plan.description || "Sem descrição informada"}</small>
       </header>
       <dl>
         <div>
           <dt>Horário</dt>
-          <dd>{plan.preferredTime || "08:00"} - {plan.timezone || "America/Sao_Paulo"}</dd>
+          <dd>
+            {plan.preferredTime || "08:00"} - {plan.timezone || "America/Sao_Paulo"}
+          </dd>
         </div>
         <div>
           <dt>Escopo</dt>
@@ -58,15 +55,7 @@ function PreventiveAutomationPlanCard({ plan, scopeSources, permissions, togglin
 }
 
 // Cabecalho e grade de planos da variante isolada (nao embutida) do painel.
-export default function PreventiveAutomationPlanList({
-  plans,
-  scopeSources,
-  permissions,
-  togglingId,
-  onCreate,
-  onEdit,
-  onToggle
-}) {
+export default function PreventiveAutomationPlanList({ plans, scopeSources, permissions, togglingId, onCreate, onEdit, onToggle }) {
   return (
     <>
       <div className="panel-heading">

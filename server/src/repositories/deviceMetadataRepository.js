@@ -28,9 +28,7 @@ export async function listDeviceMetadataMap() {
     FROM device_metadata
   `);
 
-  return new Map(
-    result.rows.map((row) => [row.device_id, fromRow(row)])
-  );
+  return new Map(result.rows.map((row) => [row.device_id, fromRow(row)]));
 }
 
 export async function findDeviceMetadata(deviceId) {

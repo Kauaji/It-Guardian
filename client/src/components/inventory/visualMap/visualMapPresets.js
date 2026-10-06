@@ -1,8 +1,4 @@
-import {
-  ELECTRICAL_PRESETS,
-  INFRASTRUCTURE_PRESETS,
-  VISUAL_MAP_LAYER_OPTIONS
-} from "../inventoryVisualMapConnectionUtils.js";
+import { ELECTRICAL_PRESETS, INFRASTRUCTURE_PRESETS, VISUAL_MAP_LAYER_OPTIONS } from "../inventoryVisualMapConnectionUtils.js";
 
 export const STRUCTURE_PRESETS = [
   { type: "wall", label: "Parede" },
@@ -31,12 +27,7 @@ export const LAYER_LABELS = VISUAL_MAP_LAYER_OPTIONS.reduce((labels, option) => 
   return labels;
 }, {});
 
-export const ALL_OBJECT_PRESETS = [
-  ...STRUCTURE_PRESETS,
-  ...ASSET_PRESETS,
-  ...INFRASTRUCTURE_PRESETS,
-  ...ELECTRICAL_PRESETS
-];
+export const ALL_OBJECT_PRESETS = [...STRUCTURE_PRESETS, ...ASSET_PRESETS, ...INFRASTRUCTURE_PRESETS, ...ELECTRICAL_PRESETS];
 
 // Grupos de botoes do painel "Adicionar", na ordem exibida.
 export const ADD_PRESET_GROUPS = [

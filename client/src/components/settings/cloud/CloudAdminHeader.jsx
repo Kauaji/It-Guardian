@@ -8,11 +8,7 @@ export default function CloudAdminHeader({ installerUrl }) {
         <span>Licenciamento, computadores ativados e fontes opcionais de inventário.</span>
       </div>
       {installerUrl ? (
-        <a
-          className="secondary-action compact-action cloud-installer-action"
-          href={installerUrl}
-          download
-        >
+        <a className="secondary-action compact-action cloud-installer-action" href={installerUrl} download>
           <Download size={16} />
           Baixar instalador
         </a>

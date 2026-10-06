@@ -1,9 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  createPublicServiceOrder,
-  fetchPublicMachineContext,
-  fetchPublicSupportOptions
-} from "../../../api.js";
+import { createPublicServiceOrder, fetchPublicMachineContext, fetchPublicSupportOptions } from "../../../api.js";
 import { validatePublicSupportForm } from "../publicSupportValidation.js";
 import {
   buildInitialForm,
@@ -114,9 +110,8 @@ export function usePublicSupportRequest() {
     setForm((current) => ({
       ...current,
       problemType: nextProblemType?.name || value,
-      category: nextProblemType?.category && options.categories.includes(nextProblemType.category)
-        ? nextProblemType.category
-        : current.category
+      category:
+        nextProblemType?.category && options.categories.includes(nextProblemType.category) ? nextProblemType.category : current.category
     }));
     setError("");
   }

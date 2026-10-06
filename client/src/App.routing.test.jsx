@@ -121,7 +121,11 @@ describe("roteamento: usuario deslogado", () => {
 
   it("mostra o carregamento enquanto a sessao e verificada, sem redirecionar antes", async () => {
     let rejectSession;
-    api.fetchAuthSession.mockReturnValue(new Promise((_resolve, reject) => { rejectSession = reject; }));
+    api.fetchAuthSession.mockReturnValue(
+      new Promise((_resolve, reject) => {
+        rejectSession = reject;
+      })
+    );
     renderApp("/pecas");
     expect(screen.getByRole("status")).toHaveTextContent("Carregando...");
     expect(router.location.pathname).toBe("/pecas");

@@ -2,11 +2,7 @@ import { useState } from "react";
 import useVisualMapData from "./visualMap/useVisualMapData.js";
 import useVisualMapDrafts from "./visualMap/useVisualMapDrafts.js";
 import useVisualMapNavigation from "./visualMap/useVisualMapNavigation.js";
-import {
-  useVisualMapConnectionActions,
-  useVisualMapMapActions,
-  useVisualMapObjectActions
-} from "./visualMap/useVisualMapActions.js";
+import { useVisualMapConnectionActions, useVisualMapMapActions, useVisualMapObjectActions } from "./visualMap/useVisualMapActions.js";
 import VisualMapCameraActions from "./visualMap/VisualMapCameraActions.jsx";
 import VisualMapEmptyState from "./visualMap/VisualMapEmptyState.jsx";
 import VisualMapHeader from "./visualMap/VisualMapHeader.jsx";
@@ -28,9 +24,25 @@ export default function InventoryVisualMapView({
   const data = useVisualMapData({ token, devices });
   const drafts = useVisualMapDrafts(data);
   const nav = useVisualMapNavigation({ canManage, data, drafts });
-  const mapActions = useVisualMapMapActions({ token, notify, canManage, tabs, activeTab, data, confirmDiscardChanges: nav.confirmDiscardChanges });
+  const mapActions = useVisualMapMapActions({
+    token,
+    notify,
+    canManage,
+    tabs,
+    activeTab,
+    data,
+    confirmDiscardChanges: nav.confirmDiscardChanges
+  });
   const objectActions = useVisualMapObjectActions({
-    token, notify, canManage, devices, isEditing: nav.isEditing, data, drafts, assetToAdd, setAssetToAdd
+    token,
+    notify,
+    canManage,
+    devices,
+    isEditing: nav.isEditing,
+    data,
+    drafts,
+    assetToAdd,
+    setAssetToAdd
   });
   const connectionActions = useVisualMapConnectionActions({ token, notify, canManage, data, drafts });
   const { maps, activeMap, activeMapOption, selectedObject, selectedConnection, loading, saving, error } = data;
@@ -56,9 +68,7 @@ export default function InventoryVisualMapView({
 
       {loading && !activeMap && <div className="inventory-visual-map-loading">Carregando mapa visual...</div>}
 
-      {!loading && !maps.length && (
-        <VisualMapEmptyState canManage={canManage} saving={saving} onCreateMap={mapActions.handleCreateMap} />
-      )}
+      {!loading && !maps.length && <VisualMapEmptyState canManage={canManage} saving={saving} onCreateMap={mapActions.handleCreateMap} />}
 
       {!!maps.length && (
         <div className="inventory-visual-map-shell">

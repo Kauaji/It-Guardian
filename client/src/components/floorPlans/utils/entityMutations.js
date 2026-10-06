@@ -40,9 +40,10 @@ export function removeEntityFromDraft(draft, target) {
     return draft;
   }
   const key = getCollectionKey(target.type);
-  draft[key] = target.type === "object"
-    ? removeObjectCascade(draft[key] || [], target.id)
-    : (draft[key] || []).filter((entry) => entry.id !== target.id);
+  draft[key] =
+    target.type === "object"
+      ? removeObjectCascade(draft[key] || [], target.id)
+      : (draft[key] || []).filter((entry) => entry.id !== target.id);
   return draft;
 }
 
@@ -83,9 +84,9 @@ export function patchEntityInDraft(draft, selected, patch, activeFloorId) {
 
 /** Trava ou destrava os objetos indicados. */
 export function setObjectsLockedInDraft(draft, targetIds, locked) {
-  draft.objects = (draft.objects || []).map((object) => (targetIds.includes(object.id)
-    ? { ...object, metadata: { ...(object.metadata || {}), locked } }
-    : object));
+  draft.objects = (draft.objects || []).map((object) =>
+    targetIds.includes(object.id) ? { ...object, metadata: { ...(object.metadata || {}), locked } } : object
+  );
   return draft;
 }
 
@@ -110,10 +111,14 @@ function rotateOneObject(object, draft, draftFloor, rotatedTables) {
   if (isAnchoredOpening(object)) {
     return isDoor ? { ...object, metadata: { ...(object.metadata || {}), ...doorMetadata } } : object;
   }
-  const rotatedObject = constrainObjectToBounds({
-    ...rotateEditorObject(object),
-    metadata: { ...(object.metadata || {}), ...doorMetadata }
-  }, draft, draftFloor);
+  const rotatedObject = constrainObjectToBounds(
+    {
+      ...rotateEditorObject(object),
+      metadata: { ...(object.metadata || {}), ...doorMetadata }
+    },
+    draft,
+    draftFloor
+  );
   if (isTableObject(rotatedObject)) rotatedTables.push(rotatedObject);
   return rotatedObject;
 }
@@ -122,9 +127,9 @@ function rotateOneObject(object, draft, draftFloor, rotatedTables) {
 export function rotateObjectsInDraft(draft, objectIds, activeFloorId) {
   const draftFloor = getActiveFloor(draft, activeFloorId);
   const rotatedTables = [];
-  draft.objects = (draft.objects || []).map((object) => (
+  draft.objects = (draft.objects || []).map((object) =>
     objectIds.includes(object.id) ? rotateOneObject(object, draft, draftFloor, rotatedTables) : object
-  ));
+  );
   for (const rotatedTable of rotatedTables) {
     draft.objects = centerLinkedAssetsOnTable(draft.objects, rotatedTable);
   }
@@ -173,15 +178,15 @@ export function expandFloorInDraft(draft, activeFloorId, axis) {
   if (!activeFloor) return draft;
   const widthIncrement = axis === "width" ? CANVAS_EXPAND_STEP.width : 0;
   const heightIncrement = axis === "height" ? CANVAS_EXPAND_STEP.height : 0;
-  draft.floors = (draft.floors || []).map((floorEntry) => (
+  draft.floors = (draft.floors || []).map((floorEntry) =>
     floorEntry.id === activeFloor.id
       ? {
-        ...floorEntry,
-        width: Number(floorEntry.width || draft.plan?.width || DEFAULT_PLAN_SIZE.width) + widthIncrement,
-        height: Number(floorEntry.height || draft.plan?.height || DEFAULT_PLAN_SIZE.height) + heightIncrement
-      }
+          ...floorEntry,
+          width: Number(floorEntry.width || draft.plan?.width || DEFAULT_PLAN_SIZE.width) + widthIncrement,
+          height: Number(floorEntry.height || draft.plan?.height || DEFAULT_PLAN_SIZE.height) + heightIncrement
+        }
       : floorEntry
-  ));
+  );
   draft.plan = {
     ...draft.plan,
     width: Math.max(...draft.floors.map((floorEntry) => Number(floorEntry.width || DEFAULT_PLAN_SIZE.width))),
@@ -192,9 +197,9 @@ export function expandFloorInDraft(draft, activeFloorId, axis) {
 
 /** Grava as configuracoes da imagem de fundo no pavimento ativo. */
 export function setBackgroundSettingsInDraft(draft, activeFloorId, settings) {
-  draft.floors = (draft.floors || []).map((entry) => (entry.id === activeFloorId
-    ? { ...entry, metadata: { ...(entry.metadata || {}), backgroundSettings: settings } }
-    : entry));
+  draft.floors = (draft.floors || []).map((entry) =>
+    entry.id === activeFloorId ? { ...entry, metadata: { ...(entry.metadata || {}), backgroundSettings: settings } } : entry
+  );
   return draft;
 }
 

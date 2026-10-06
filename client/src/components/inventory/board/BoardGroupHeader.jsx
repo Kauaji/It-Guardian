@@ -2,7 +2,16 @@ import { MoreHorizontal } from "lucide-react";
 import GroupActionStrip from "./GroupActionStrip.jsx";
 import { pluralizeSegments } from "./boardProps.js";
 
-export default function BoardGroupHeader({ group, groupIndex, groupCount, activeTab, activePopoverId, setActivePopoverId, canManage, groupActions }) {
+export default function BoardGroupHeader({
+  group,
+  groupIndex,
+  groupCount,
+  activeTab,
+  activePopoverId,
+  setActivePopoverId,
+  canManage,
+  groupActions
+}) {
   const popoverId = `group-actions-${group.id}`;
   return (
     <header>

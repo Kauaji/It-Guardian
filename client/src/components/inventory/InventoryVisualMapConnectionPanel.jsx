@@ -1,8 +1,5 @@
 import { Cable, PlugZap } from "lucide-react";
-import {
-  VISUAL_MAP_LAYER_OPTIONS,
-  getConnectionTypeLabel
-} from "./inventoryVisualMapConnectionUtils.js";
+import { VISUAL_MAP_LAYER_OPTIONS, getConnectionTypeLabel } from "./inventoryVisualMapConnectionUtils.js";
 
 function getLayerLabel(layer) {
   return VISUAL_MAP_LAYER_OPTIONS.find((option) => option.key === layer)?.label || "Conexão";

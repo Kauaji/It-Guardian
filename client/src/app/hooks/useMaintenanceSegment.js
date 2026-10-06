@@ -10,9 +10,7 @@ export function useMaintenanceSegment({ data, decoratedSegments, meta }) {
   const { setSegments } = data;
 
   async function getOrCreateMaintenanceSegment() {
-    const existingActive = decoratedSegments.find(
-      (segment) => !segment.isDefault && isMaintenanceSegmentName(segment.name)
-    );
+    const existingActive = decoratedSegments.find((segment) => !segment.isDefault && isMaintenanceSegmentName(segment.name));
     if (existingActive) return existingActive;
 
     const response = await createSegment(token, {

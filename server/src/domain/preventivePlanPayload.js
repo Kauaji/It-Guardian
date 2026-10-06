@@ -15,7 +15,9 @@ const highRiskLevels = new Set(["high", "critical"]);
  * @param {string} [fallback]
  */
 export function normalizePreventivePlanStatus(value, fallback = "prepared") {
-  const status = String(value || "").trim().toLowerCase();
+  const status = String(value || "")
+    .trim()
+    .toLowerCase();
   return allowedStatuses.has(status) ? status : fallback;
 }
 
@@ -24,9 +26,7 @@ export function normalizePreventivePlanStatus(value, fallback = "prepared") {
  * @returns {string[]}
  */
 function normalizeIdList(value) {
-  return Array.isArray(value)
-    ? [...new Set(value.map((id) => trimString(id, 120)).filter(Boolean))]
-    : [];
+  return Array.isArray(value) ? [...new Set(value.map((id) => trimString(id, 120)).filter(Boolean))] : [];
 }
 
 /**
@@ -115,9 +115,7 @@ export function summarizeAutomation(automation) {
 export function buildAssetRegistrationLog({ assetId, scriptNames, automationEnabled }) {
   return (
     `Preventiva registrada para ${assetId} com as verificações: ${scriptNames}. ` +
-    (automationEnabled
-      ? "Execução será iniciada pela agenda de automação."
-      : "Scripts enfileirados para execução pelo agente autenticado.")
+    (automationEnabled ? "Execução será iniciada pela agenda de automação." : "Scripts enfileirados para execução pelo agente autenticado.")
   );
 }
 

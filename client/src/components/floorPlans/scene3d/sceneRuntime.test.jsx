@@ -29,17 +29,25 @@ vi.mock("three", async (importOriginal) => {
       globalThis.__sceneTrace.renderers.push(this);
     }
     setClearColor() {}
-    setPixelRatio(value) { this.pixelRatio = value; }
-    setSize(width, height) { this.sizes.push([width, height]); }
+    setPixelRatio(value) {
+      this.pixelRatio = value;
+    }
+    setSize(width, height) {
+      this.sizes.push([width, height]);
+    }
     render(scene, camera) {
       scene.updateMatrixWorld();
       camera.updateMatrixWorld();
       this.last = { scene, camera };
     }
-    dispose() { this.disposed = true; }
+    dispose() {
+      this.disposed = true;
+    }
   }
   class FakePMREM {
-    fromScene() { return { texture: new actual.Texture() }; }
+    fromScene() {
+      return { texture: new actual.Texture() };
+    }
     dispose() {}
   }
   return { ...actual, WebGLRenderer: FakeRenderer, PMREMGenerator: FakePMREM };
@@ -71,7 +79,9 @@ beforeAll(() => {
   };
   window.PointerEvent = globalThis.PointerEvent;
   globalThis.ResizeObserver = class {
-    constructor(callback) { resizeCallbacks.push(callback); }
+    constructor(callback) {
+      resizeCallbacks.push(callback);
+    }
     observe() {}
     disconnect() {}
   };
@@ -81,8 +91,18 @@ beforeAll(() => {
   HTMLCanvasElement.prototype.hasPointerCapture = () => false;
   HTMLCanvasElement.prototype.getContext = () => new Proxy({}, { get: () => noop, set: () => true });
   HTMLCanvasElement.prototype.getBoundingClientRect = () => ({ left: 0, top: 0, width: 800, height: 600, right: 800, bottom: 600 });
-  Object.defineProperty(HTMLElement.prototype, "clientWidth", { configurable: true, get() { return 800; } });
-  Object.defineProperty(HTMLElement.prototype, "clientHeight", { configurable: true, get() { return 600; } });
+  Object.defineProperty(HTMLElement.prototype, "clientWidth", {
+    configurable: true,
+    get() {
+      return 800;
+    }
+  });
+  Object.defineProperty(HTMLElement.prototype, "clientHeight", {
+    configurable: true,
+    get() {
+      return 600;
+    }
+  });
 });
 
 beforeEach(() => {
@@ -98,25 +118,104 @@ afterAll(() => vi.restoreAllMocks());
 
 const round = (value) => Math.round(value * 1000) / 1000;
 const vec = (v) => [round(v.x), round(v.y), round(v.z)];
-const wall = (id, x, y, width, height, extra = {}) => ({ id, floorId: "floor-1", objectType: "wall", category: "structure", label: id, x, y, width, height, rotation: 0, height3d: 110, color: "#64748b", metadata: { texturePreset: "brick" }, ...extra });
-const item = (id, objectType, category, x, y, width, height, extra = {}) => ({ id, floorId: "floor-1", objectType, category, label: id, x, y, width, height, rotation: 0, color: "#2563eb", metadata: {}, ...extra });
+const wall = (id, x, y, width, height, extra = {}) => ({
+  id,
+  floorId: "floor-1",
+  objectType: "wall",
+  category: "structure",
+  label: id,
+  x,
+  y,
+  width,
+  height,
+  rotation: 0,
+  height3d: 110,
+  color: "#64748b",
+  metadata: { texturePreset: "brick" },
+  ...extra
+});
+const item = (id, objectType, category, x, y, width, height, extra = {}) => ({
+  id,
+  floorId: "floor-1",
+  objectType,
+  category,
+  label: id,
+  x,
+  y,
+  width,
+  height,
+  rotation: 0,
+  color: "#2563eb",
+  metadata: {},
+  ...extra
+});
 
 const fixture = () => ({
   plan: { id: "plan-1", width: 1280, height: 820 },
   floors: [{ id: "floor-1", name: "Térreo", width: 1280, height: 820 }],
   zones: [
-    { id: "room-1", floorId: "floor-1", zoneType: "room", name: "Sala", color: "#dbeafe", geometry: { x: 100, y: 100, width: 600, height: 400 }, metadata: { floorTexture: "wood", room: { wallThickness: 10 } } },
-    { id: "room-2", floorId: "floor-1", zoneType: "room", name: "Outra", color: "#fde68a", geometry: { x: 750, y: 100, width: 300, height: 300 }, metadata: { floorTexture: "carpet" } },
-    { id: "room-3", floorId: "floor-1", zoneType: "room", name: "Cerâmica", color: "#bbf7d0", geometry: { x: 750, y: 450, width: 300, height: 200 }, metadata: { floorTexture: "ceramic" } },
-    { id: "area-1", floorId: "floor-1", zoneType: "group", name: "Grupo", color: "#ef4444", geometry: { kind: "paint-mask", cellSize: 20, cells: ["10:10", "11:10", "12:10", "10:11"] } },
-    { id: "area-2", floorId: "floor-1", zoneType: "segment", name: "Seg", color: "#22c55e", geometry: { kind: "paint-mask", cellSize: 20, cells: ["20:20"] } },
-    { id: "zone-x", floorId: "floor-1", zoneType: "custom", name: "Generica", color: "#a78bfa", geometry: { x: 900, y: 700, width: 100, height: 80 } },
+    {
+      id: "room-1",
+      floorId: "floor-1",
+      zoneType: "room",
+      name: "Sala",
+      color: "#dbeafe",
+      geometry: { x: 100, y: 100, width: 600, height: 400 },
+      metadata: { floorTexture: "wood", room: { wallThickness: 10 } }
+    },
+    {
+      id: "room-2",
+      floorId: "floor-1",
+      zoneType: "room",
+      name: "Outra",
+      color: "#fde68a",
+      geometry: { x: 750, y: 100, width: 300, height: 300 },
+      metadata: { floorTexture: "carpet" }
+    },
+    {
+      id: "room-3",
+      floorId: "floor-1",
+      zoneType: "room",
+      name: "Cerâmica",
+      color: "#bbf7d0",
+      geometry: { x: 750, y: 450, width: 300, height: 200 },
+      metadata: { floorTexture: "ceramic" }
+    },
+    {
+      id: "area-1",
+      floorId: "floor-1",
+      zoneType: "group",
+      name: "Grupo",
+      color: "#ef4444",
+      geometry: { kind: "paint-mask", cellSize: 20, cells: ["10:10", "11:10", "12:10", "10:11"] }
+    },
+    {
+      id: "area-2",
+      floorId: "floor-1",
+      zoneType: "segment",
+      name: "Seg",
+      color: "#22c55e",
+      geometry: { kind: "paint-mask", cellSize: 20, cells: ["20:20"] }
+    },
+    {
+      id: "zone-x",
+      floorId: "floor-1",
+      zoneType: "custom",
+      name: "Generica",
+      color: "#a78bfa",
+      geometry: { x: 900, y: 700, width: 100, height: 80 }
+    },
     { id: "other-floor", floorId: "floor-2", zoneType: "room", name: "Outro andar", geometry: { x: 0, y: 0, width: 100, height: 100 } }
   ],
   objects: [
     wall("wall-1", 100, 100, 600, 10),
-    item("door-1", "door", "structure", 300, 100, 74, 24, { metadata: { parentObjectId: "wall-1", anchorType: "wall", anchorOffset: 0.4, doorType: "single", swing: "outward" }, height3d: 96 }),
-    item("window-1", "window", "structure", 500, 100, 92, 16, { metadata: { parentObjectId: "wall-1", anchorType: "wall", anchorOffset: 0.8 } }),
+    item("door-1", "door", "structure", 300, 100, 74, 24, {
+      metadata: { parentObjectId: "wall-1", anchorType: "wall", anchorOffset: 0.4, doorType: "single", swing: "outward" },
+      height3d: 96
+    }),
+    item("window-1", "window", "structure", 500, 100, 92, 16, {
+      metadata: { parentObjectId: "wall-1", anchorType: "wall", anchorOffset: 0.8 }
+    }),
     item("divider-1", "divider", "structure", 400, 300, 140, 8, { rotation: 90, metadata: {}, height3d: 82 }),
     item("door-double", "door", "structure", 200, 450, 108, 24, { metadata: { doorType: "double", swing: "inward" } }),
     item("door-sliding", "door", "structure", 320, 450, 110, 20, { metadata: { doorType: "sliding", slideDirection: "left" } }),
@@ -128,7 +227,10 @@ const fixture = () => ({
     item("chair-1", "chair", "furniture", 250, 300, 42, 42, { color: "#64748b" }),
     item("cabinet-1", "cabinet", "furniture", 120, 380, 82, 52, { color: "#8b5e34", height3d: 96 }),
     item("shelf-1", "shelf", "furniture", 520, 150, 96, 40, { height3d: 92 }),
-    item("rack-1", "rack", "asset", 640, 150, 70, 92, { color: "#1f2937", metadata: { switchInstalled: true, switchTotalPorts: 24, switchWorkingPorts: 18 } }),
+    item("rack-1", "rack", "asset", 640, 150, 70, 92, {
+      color: "#1f2937",
+      metadata: { switchInstalled: true, switchTotalPorts: 24, switchWorkingPorts: 18 }
+    }),
     item("rack-2", "rack", "asset", 640, 260, 70, 92, { metadata: {} }),
     item("server-1", "server", "asset", 760, 120, 78, 88),
     item("switch-1", "switch", "asset", 860, 120, 96, 36, { color: "#0f766e" }),
@@ -147,19 +249,51 @@ const fixture = () => ({
   ],
   connectionPoints: [],
   cableRoutes: [
-    { id: "r-free", floorId: "floor-1", routeType: "network", color: "#2563eb", path: [{ x: 100, y: 600 }, { x: 300, y: 600 }, { x: 300, y: 700 }], metadata: { routeStyle: "free" } },
-    { id: "r-conduit", floorId: "floor-1", routeType: "power", color: "#f59e0b", path: [{ x: 400, y: 600 }, { x: 600, y: 650 }], metadata: { routeStyle: "conduit" } },
-    { id: "r-channel", floorId: "floor-1", routeType: "network", color: "#475569", path: [{ x: 700, y: 650 }, { x: 900, y: 650 }, { x: 950, y: 700 }], metadata: { routeStyle: "channel" } },
+    {
+      id: "r-free",
+      floorId: "floor-1",
+      routeType: "network",
+      color: "#2563eb",
+      path: [
+        { x: 100, y: 600 },
+        { x: 300, y: 600 },
+        { x: 300, y: 700 }
+      ],
+      metadata: { routeStyle: "free" }
+    },
+    {
+      id: "r-conduit",
+      floorId: "floor-1",
+      routeType: "power",
+      color: "#f59e0b",
+      path: [
+        { x: 400, y: 600 },
+        { x: 600, y: 650 }
+      ],
+      metadata: { routeStyle: "conduit" }
+    },
+    {
+      id: "r-channel",
+      floorId: "floor-1",
+      routeType: "network",
+      color: "#475569",
+      path: [
+        { x: 700, y: 650 },
+        { x: 900, y: 650 },
+        { x: 950, y: 700 }
+      ],
+      metadata: { routeStyle: "channel" }
+    },
     { id: "r-short", floorId: "floor-1", routeType: "network", path: [{ x: 1, y: 1 }] }
   ]
 });
 
-
-const flush = () => act(async () => {
-  await Promise.resolve();
-  await Promise.resolve();
-  await new Promise((resolve) => setTimeout(resolve, 0));
-});
+const flush = () =>
+  act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
 
 const lastRender = () => trace.renderers.at(-1).last;
 
@@ -314,7 +448,10 @@ describe("cena 3D", () => {
 
   it("objeto travado e selecionado mas nao se move", async () => {
     const { props, calls, data } = setup();
-    const locked = { ...data, objects: data.objects.map((object) => (object.id === "chair-1" ? { ...object, metadata: { locked: true } } : object)) };
+    const locked = {
+      ...data,
+      objects: data.objects.map((object) => (object.id === "chair-1" ? { ...object, metadata: { locked: true } } : object))
+    };
     render(<FloorPlanScene3D {...props} data={locked} />);
     await flush();
     const { scene, camera } = lastRender();
@@ -348,11 +485,15 @@ describe("cena 3D", () => {
     try {
       const { props, calls } = setup();
       const view = render(<FloorPlanScene3D {...props} />);
-      await act(async () => { await Promise.resolve(); });
+      await act(async () => {
+        await Promise.resolve();
+      });
       const positions = {};
       for (const name of ["Superior", "Frontal", "Perspectiva"]) {
         fireEvent.click(screen.getByRole("button", { name }));
-        await act(async () => { await vi.advanceTimersByTimeAsync(800); });
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(800);
+        });
         positions[name] = vec(lastRender().camera.position);
         expect(screen.getByRole("button", { name })).toHaveAttribute("aria-pressed", "true");
       }
@@ -360,14 +501,20 @@ describe("cena 3D", () => {
       expect(positions.Frontal[2]).toBeGreaterThan(positions.Superior[2]);
       const region = view.container.querySelector(".floor-plan-scene-3d");
       fireEvent.keyDown(region, { key: "2" });
-      await act(async () => { await vi.advanceTimersByTimeAsync(800); });
-      expect(vec(lastRender().camera.position)).toEqual(positions.Superior.map((value, index) => (index === 2 ? expect.closeTo(value, 1) : expect.closeTo(value, 1))));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(800);
+      });
+      expect(vec(lastRender().camera.position)).toEqual(
+        positions.Superior.map((value, index) => (index === 2 ? expect.closeTo(value, 1) : expect.closeTo(value, 1)))
+      );
       fireEvent.keyDown(region, { key: "f" });
       fireEvent.keyDown(region, { key: "g" });
       fireEvent.click(screen.getByRole("button", { name: /Grade/ }));
       expect(calls.grid).toEqual([false, false]);
       view.rerender(<FloorPlanScene3D {...props} showGrid={false} />);
-      await act(async () => { await Promise.resolve(); });
+      await act(async () => {
+        await Promise.resolve();
+      });
       expect(lastRender().scene.children.find((child) => child.type === "GridHelper").visible).toBe(false);
     } finally {
       vi.useRealTimers();
@@ -401,8 +548,12 @@ describe("cena 3D", () => {
       expect(trace.listeners[`-${type}`]).toBeGreaterThanOrEqual(2);
     }
     // todos os ouvintes de ponteiro registrados foram removidos (picking + controles)
-    const added = Object.entries(trace.listeners).filter(([key]) => key.startsWith("+")).reduce((sum, [, value]) => sum + value, 0);
-    const removed = Object.entries(trace.listeners).filter(([key]) => key.startsWith("-")).reduce((sum, [, value]) => sum + value, 0);
+    const added = Object.entries(trace.listeners)
+      .filter(([key]) => key.startsWith("+"))
+      .reduce((sum, [, value]) => sum + value, 0);
+    const removed = Object.entries(trace.listeners)
+      .filter(([key]) => key.startsWith("-"))
+      .reduce((sum, [, value]) => sum + value, 0);
     expect(removed).toBeGreaterThanOrEqual(added);
     cleanup();
   });

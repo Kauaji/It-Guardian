@@ -4,7 +4,13 @@ import { buildRunDraft, recurrenceFromSchedule } from "./preventiveAutomationRun
 
 const plan = { id: "plan-1", preferredTime: "08:00", timezone: "America/Sao_Paulo" };
 const asset = { id: "asset-1", name: "SRV-01" };
-const recurrence = { recurrenceType: "daily", recurrenceIntervalDays: 1, preferredTime: "09:00", timezone: "America/Sao_Paulo", source: "machine" };
+const recurrence = {
+  recurrenceType: "daily",
+  recurrenceIntervalDays: 1,
+  preferredTime: "09:00",
+  timezone: "America/Sao_Paulo",
+  source: "machine"
+};
 
 test("execucao com scripts aguarda o agente e agenda a proxima ocorrencia", () => {
   const draft = buildRunDraft({

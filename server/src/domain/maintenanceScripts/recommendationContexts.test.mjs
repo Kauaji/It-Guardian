@@ -7,15 +7,30 @@ const devices = [
   { id: "pc-1", type: "desktop", operatingSystem: "Windows 11", segmentName: "Financeiro", groupName: "Matriz" },
   { id: "pc-2", type: "notebook", operatingSystem: "Windows 10", segmentName: "RH", groupName: "Filial" }
 ];
-const diskAlert = { id: "al-1", assetId: "pc-1", type: "disk_usage", metric: "disk", severity: "high", title: "Disco cheio", description: "90%" };
-const orphanAlert = { id: "al-2", assetId: null, type: "ping_failure", metric: "ping", severity: "medium", title: "Sem resposta", description: "" };
+const diskAlert = {
+  id: "al-1",
+  assetId: "pc-1",
+  type: "disk_usage",
+  metric: "disk",
+  severity: "high",
+  title: "Disco cheio",
+  description: "90%"
+};
+const orphanAlert = {
+  id: "al-2",
+  assetId: null,
+  type: "ping_failure",
+  metric: "ping",
+  severity: "medium",
+  title: "Sem resposta",
+  description: ""
+};
 
 test("sem ativos nem avisos devolve um unico contexto padrao com as tags do contexto livre", () => {
   assert.deepEqual(buildRecommendationContexts({}, devices, [], []), [{ tags: [] }]);
-  assert.deepEqual(
-    buildRecommendationContexts({ context: { title: "Livre", tags: ["x"] } }, devices, [], []),
-    [{ title: "Livre", tags: ["x"] }]
-  );
+  assert.deepEqual(buildRecommendationContexts({ context: { title: "Livre", tags: ["x"] } }, devices, [], []), [
+    { title: "Livre", tags: ["x"] }
+  ]);
 });
 
 test("cada ativo selecionado gera um contexto por aviso ativo ou um contexto sem aviso", () => {
@@ -38,7 +53,10 @@ test("cada ativo selecionado gera um contexto por aviso ativo ou um contexto sem
 test("avisos selecionados fora dos ativos entram como contextos proprios", () => {
   const contexts = buildRecommendationContexts({ assetIds: ["pc-1"], alertIds: ["al-2"] }, devices, [diskAlert], [orphanAlert]);
 
-  assert.deepEqual(contexts.map((context) => context.alertId), ["al-1", "al-2"]);
+  assert.deepEqual(
+    contexts.map((context) => context.alertId),
+    ["al-1", "al-2"]
+  );
   const orphan = contexts[1];
   assert.equal(orphan.assetId, null);
   assert.equal(orphan.technicalCategory, "Rede");
@@ -77,7 +95,13 @@ test("ranqueia scripts pelo melhor contexto e lista ativos e avisos casados", ()
   const contexts = buildRecommendationContexts({ assetIds: ["pc-1"], alertIds: ["al-2"] }, devices, [diskAlert], [orphanAlert]);
   const ranked = rankScriptsForContexts(scripts, contexts);
 
-  assert.deepEqual(ranked.map((item) => item.id).slice(0, 2).sort(), ["disk", "net"]);
+  assert.deepEqual(
+    ranked
+      .map((item) => item.id)
+      .slice(0, 2)
+      .sort(),
+    ["disk", "net"]
+  );
   assert.equal(ranked.at(-1).id, "idle", "sem correspondencia fica por ultimo");
   assert.ok(ranked[0].recommendationScore >= ranked[1].recommendationScore);
   assert.ok(!ranked.some((item) => item.id === "off"));

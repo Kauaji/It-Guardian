@@ -13,7 +13,18 @@ function canonicalize(value) {
   return value;
 }
 
-function computeEventHash({ previousHash, sessionId, assetId, serviceOrderId, actorType, actorUserId, actorName, eventType, message, metadata }) {
+function computeEventHash({
+  previousHash,
+  sessionId,
+  assetId,
+  serviceOrderId,
+  actorType,
+  actorUserId,
+  actorName,
+  eventType,
+  message,
+  metadata
+}) {
   const payload = JSON.stringify(
     canonicalize({
       previousHash: previousHash || "",
@@ -73,10 +84,11 @@ export const migration017RemoteAssistanceEventHashChain = {
           message: row.message,
           metadata: row.metadata
         });
-        await db(
-          `UPDATE remote_assistance_events SET event_hash = $2, previous_event_hash = $3 WHERE id = $1`,
-          [row.id, eventHash, previousHash]
-        );
+        await db(`UPDATE remote_assistance_events SET event_hash = $2, previous_event_hash = $3 WHERE id = $1`, [
+          row.id,
+          eventHash,
+          previousHash
+        ]);
         previousHash = eventHash;
       }
     }

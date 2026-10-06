@@ -1,11 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
-  normalize,
-  sanitizePriority,
-  uniqueCategories,
-  chooseHigherPriority
-} from "./publicServiceOrderService.js";
+import { normalize, sanitizePriority, uniqueCategories, chooseHigherPriority } from "./publicServiceOrderService.js";
 
 function problemType(overrides = {}) {
   return {
@@ -57,22 +52,28 @@ test("chooseHigherPriority mantem o atual quando o candidato nao e uma prioridad
 });
 
 test("uniqueCategories combina categorias configuradas com as padrao sem duplicar", () => {
-  const result = uniqueCategories([
-    problemType({ category: "Tablet" }),
-    problemType({ category: "Computador" })
-  ]);
+  const result = uniqueCategories([problemType({ category: "Tablet" }), problemType({ category: "Computador" })]);
 
-  const expected = new Set(["Tablet", "Computador", "Notebook", "Servidor", "Impressora", "Teclado", "Mouse", "Monitor", "Rede", "Sistema", "Outro"]);
+  const expected = new Set([
+    "Tablet",
+    "Computador",
+    "Notebook",
+    "Servidor",
+    "Impressora",
+    "Teclado",
+    "Mouse",
+    "Monitor",
+    "Rede",
+    "Sistema",
+    "Outro"
+  ]);
 
   assert.equal(result.length, expected.size);
   assert.deepEqual(new Set(result), expected);
 });
 
 test("uniqueCategories ignora categorias em branco ou apenas com espacos", () => {
-  const result = uniqueCategories([
-    problemType({ category: "" }),
-    problemType({ category: "   " })
-  ]);
+  const result = uniqueCategories([problemType({ category: "" }), problemType({ category: "   " })]);
 
   assert.deepEqual(
     [...result].sort(),

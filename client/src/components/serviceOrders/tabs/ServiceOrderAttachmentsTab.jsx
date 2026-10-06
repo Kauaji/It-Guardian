@@ -71,8 +71,7 @@ export default function ServiceOrderAttachmentsTab({ serviceOrderId, token, noti
   return (
     <section className="service-order-attachments-panel">
       <p className="service-order-attachments-limitation">
-        Anexos guardam metadados e uma referência (link/descrição) da evidência - não há upload real de arquivo
-        nesta versão.
+        Anexos guardam metadados e uma referência (link/descrição) da evidência - não há upload real de arquivo nesta versão.
       </p>
 
       {canAdd && (
@@ -90,7 +89,9 @@ export default function ServiceOrderAttachmentsTab({ serviceOrderId, token, noti
             onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))}
           >
             {CATEGORY_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
             ))}
           </select>
           <input

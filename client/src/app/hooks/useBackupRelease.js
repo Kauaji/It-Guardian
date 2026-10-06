@@ -28,14 +28,15 @@ export function useBackupRelease({ data, deviceState, inventory, moves, serviceO
       return false;
     }
 
-    const moved = backupMachine.segmentId === targetSegment.id
-      ? true
-      : await moves.handleMoveMachine(backupMachine, targetSegment.id, {
-          reason: "backup_return",
-          targetTabId: backupMachine.tabId || activeInventoryTab.id,
-          forceSingle: true,
-          allowBackupMove: true
-        });
+    const moved =
+      backupMachine.segmentId === targetSegment.id
+        ? true
+        : await moves.handleMoveMachine(backupMachine, targetSegment.id, {
+            reason: "backup_return",
+            targetTabId: backupMachine.tabId || activeInventoryTab.id,
+            forceSingle: true,
+            allowBackupMove: true
+          });
     if (!moved) return false;
 
     try {
@@ -56,14 +57,17 @@ export function useBackupRelease({ data, deviceState, inventory, moves, serviceO
         oldValue: backupMachine.name,
         newValue: backupSegmentName
       });
-      deviceState.appendDeviceHistoryEvent(backupMachine.id, buildBackupHistoryEvent({
-        machineId: backupMachine.id,
-        key: "backup-return",
-        userName: user.name,
-        message: `Devolvida para a área Backup pela OS #${order.number}.`,
-        oldValue: backupMachine.segmentName,
-        newValue: backupSegmentName
-      }));
+      deviceState.appendDeviceHistoryEvent(
+        backupMachine.id,
+        buildBackupHistoryEvent({
+          machineId: backupMachine.id,
+          key: "backup-return",
+          userName: user.name,
+          message: `Devolvida para a área Backup pela OS #${order.number}.`,
+          oldValue: backupMachine.segmentName,
+          newValue: backupSegmentName
+        })
+      );
       await loadData(true);
       notify(`${backupMachine.name} devolvida para Backup.`, "ok");
       return true;

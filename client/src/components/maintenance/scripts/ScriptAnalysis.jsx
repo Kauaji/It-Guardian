@@ -7,9 +7,7 @@ export default function ScriptAnalysis({ analysis }) {
     <div className="script-analysis-box">
       <strong>Resumo estimado</strong>
       <p>{analysis.estimatedSummary}</p>
-      <span className={`script-risk-pill ${analysis.suggestedRiskLevel}`}>
-        Risco sugerido: {formatRisk(analysis.suggestedRiskLevel)}
-      </span>
+      <span className={`script-risk-pill ${analysis.suggestedRiskLevel}`}>Risco sugerido: {formatRisk(analysis.suggestedRiskLevel)}</span>
       {!!analysis.allowedVariables?.length && (
         <div className="script-variable-list">
           <strong>Variáveis permitidas</strong>

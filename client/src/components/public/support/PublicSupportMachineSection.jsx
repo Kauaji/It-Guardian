@@ -31,11 +31,7 @@ function MachineFields({ form, updateField }) {
       </label>
       <label>
         Localização
-        <input
-          value={form.location}
-          onChange={(event) => updateField("location", event.target.value)}
-          placeholder="Setor, sala ou andar"
-        />
+        <input value={form.location} onChange={(event) => updateField("location", event.target.value)} placeholder="Setor, sala ou andar" />
       </label>
     </div>
   );
@@ -69,9 +65,7 @@ export default function PublicSupportMachineSection({
       <div className="public-support-choices">
         <ScopeChoice scope="mine" checked={form.machineScope === "mine"} onSelect={selectScope}>
           O problema é na minha máquina
-          {form.machineScope === "mine" && form.assetId ? (
-            <small>Identificada: {form.machineName}</small>
-          ) : null}
+          {form.machineScope === "mine" && form.assetId ? <small>Identificada: {form.machineName}</small> : null}
         </ScopeChoice>
         <ScopeChoice scope="other" checked={form.machineScope === "other"} onSelect={selectScope}>
           O problema é em outra máquina/equipamento

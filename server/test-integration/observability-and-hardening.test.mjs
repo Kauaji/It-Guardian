@@ -71,8 +71,8 @@ test("/metrics exige o token e expoe contadores e histogramas HTTP", async () =>
 test("x-request-id do cliente so e aceito com formato seguro", async () => {
   const good = await fetch(`${baseUrl}/health/live`, { headers: { "x-request-id": "req-abc-123456" } });
   assert.equal(good.headers.get("x-request-id"), "req-abc-123456");
-  const bad = await fetch(`${baseUrl}/health/live`, { headers: { "x-request-id": "x\"}{\"injetado\":1" } });
-  assert.notEqual(bad.headers.get("x-request-id"), "x\"}{\"injetado\":1");
+  const bad = await fetch(`${baseUrl}/health/live`, { headers: { "x-request-id": 'x"}{"injetado":1' } });
+  assert.notEqual(bad.headers.get("x-request-id"), 'x"}{"injetado":1');
   assert.match(bad.headers.get("x-request-id"), /^[0-9a-f-]{36}$/);
 });
 

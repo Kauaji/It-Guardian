@@ -25,9 +25,7 @@ export { ACCOUNT_SECURITY_PATH, ACCOUNT_VIEW_ID };
 
 export function viewIdFromPath(pathname) {
   if (matchPath({ path: ACCOUNT_SECURITY_PATH, end: true }, pathname)) return ACCOUNT_VIEW_ID;
-  const route = viewRoutes.find((item) =>
-    item.paths.some((path) => matchPath({ path, end: true }, pathname))
-  );
+  const route = viewRoutes.find((item) => item.paths.some((path) => matchPath({ path, end: true }, pathname)));
   return route ? route.id : null;
 }
 

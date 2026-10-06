@@ -7,7 +7,10 @@ import { fromOverrideRow } from "./preventiveAutomationMappers.js";
 /** SQL da tabela preventive_automation_overrides (recorrencia personalizada). */
 
 function isDuplicateOverrideError(error) {
-  return error?.code === "23505" || /idx_preventive_automation_overrides_target|preventive_automation_overrides.*unique/i.test(error?.message || "");
+  return (
+    error?.code === "23505" ||
+    /idx_preventive_automation_overrides_target|preventive_automation_overrides.*unique/i.test(error?.message || "")
+  );
 }
 
 export async function listOverridesByPlan(planId, db = query) {
@@ -46,10 +49,7 @@ export async function deleteOverridesOfPlan(db, planId) {
 }
 
 export async function deleteOverrideByTarget(db, planId, targetKey) {
-  await db(
-    `DELETE FROM preventive_automation_overrides WHERE plan_id = $1 AND target_key = $2`,
-    [planId, targetKey]
-  );
+  await db(`DELETE FROM preventive_automation_overrides WHERE plan_id = $1 AND target_key = $2`, [planId, targetKey]);
 }
 
 /** Insere o override; violacao da chave unica (plano + alvo) vira 409. */

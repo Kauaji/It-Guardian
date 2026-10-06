@@ -1,10 +1,6 @@
 import { useState } from "react";
 import { useAppSession } from "../../context/AppSessionContext.jsx";
-import {
-  defaultInventoryTab,
-  getNextInventoryTabName,
-  pickUnusedPaletteColor
-} from "../../components/inventory/inventoryLocalState.js";
+import { defaultInventoryTab, getNextInventoryTabName, pickUnusedPaletteColor } from "../../components/inventory/inventoryLocalState.js";
 import { reassignTabMeta } from "../inventory/inventoryMeta.js";
 
 // Abas (ambientes) do inventario: criar, renomear, excluir e trocar a cor.
@@ -49,17 +45,13 @@ export function useInventoryTabActions({ inventory }) {
     const cleanName = name.trim();
     const tabId = inventoryTabForm?.id;
     if (!cleanName || !tabId) return;
-    const duplicate = inventoryTabs.some(
-      (item) => item.id !== tabId && item.name.trim().toLowerCase() === cleanName.toLowerCase()
-    );
+    const duplicate = inventoryTabs.some((item) => item.id !== tabId && item.name.trim().toLowerCase() === cleanName.toLowerCase());
     if (duplicate) {
       notify("Já existe uma aba com esse nome.", "danger");
       return;
     }
 
-    saveInventoryTabs((current) =>
-      current.map((item) => (item.id === tabId ? { ...item, name: cleanName } : item))
-    );
+    saveInventoryTabs((current) => current.map((item) => (item.id === tabId ? { ...item, name: cleanName } : item)));
     setInventoryTabForm(null);
     notify("Ambiente renomeado.", "ok");
   }
@@ -74,9 +66,7 @@ export function useInventoryTabActions({ inventory }) {
     if (!tab) return;
     const remainingTabs = inventoryTabs.filter((item) => item.id !== tabId);
     const fallbackTab = remainingTabs[0] || defaultInventoryTab;
-    const confirmed = window.confirm(
-      `Excluir a aba "${tab.name}"? Os dados locais dela serão movidos para "${fallbackTab.name}".`
-    );
+    const confirmed = window.confirm(`Excluir a aba "${tab.name}"? Os dados locais dela serão movidos para "${fallbackTab.name}".`);
     if (!confirmed) return;
 
     saveInventoryTabs(remainingTabs.map((item, index) => ({ ...item, order: index })));
@@ -86,9 +76,7 @@ export function useInventoryTabActions({ inventory }) {
   }
 
   function changeInventoryTabColor(tabId, color) {
-    saveInventoryTabs((current) =>
-      current.map((tab) => (tab.id === tabId ? { ...tab, color } : tab))
-    );
+    saveInventoryTabs((current) => current.map((tab) => (tab.id === tabId ? { ...tab, color } : tab)));
   }
 
   return {

@@ -3,7 +3,14 @@ import { buildSearchSections, filterHierarchy, toggleInSet } from "./hierarchySi
 
 const tree = {
   groups: [
-    { id: "g1", name: "Matriz", segments: [{ id: "s1", name: "Estações" }, { id: "s2", name: "Servidores" }] },
+    {
+      id: "g1",
+      name: "Matriz",
+      segments: [
+        { id: "s1", name: "Estações" },
+        { id: "s2", name: "Servidores" }
+      ]
+    },
     { id: "g2", name: "Filial", segments: [] }
   ],
   ungroupedSegments: [{ id: "s3", name: "Laboratório" }]
@@ -14,7 +21,9 @@ describe("hierarchySidebarModel", () => {
     const [groups, segments] = buildSearchSections(tree);
     expect(groups.items.map((item) => item.id)).toEqual(["g1", "g2"]);
     expect(segments.items.map((item) => [item.id, item.tags])).toEqual([
-      ["s1", ["segmento", "Matriz"]], ["s2", ["segmento", "Matriz"]], ["s3", ["segmento"]]
+      ["s1", ["segmento", "Matriz"]],
+      ["s2", ["segmento", "Matriz"]],
+      ["s3", ["segmento"]]
     ]);
   });
 

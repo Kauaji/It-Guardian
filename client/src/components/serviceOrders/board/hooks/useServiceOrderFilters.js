@@ -42,9 +42,17 @@ export function useServiceOrderFilters({
     [canViewAllSectors, monthFilteredServiceOrders, sectorFilter, user?.id, user?.name, user?.sectorId]
   );
   const catalogFilteredServiceOrders = useMemo(
-    () => filterByCatalog(sectorFilteredServiceOrders, {
-      businessMode, clientFilter, priorityFilter, technicianFilter, statusFilter, slaFilter, originFilter, ratingFilter
-    }),
+    () =>
+      filterByCatalog(sectorFilteredServiceOrders, {
+        businessMode,
+        clientFilter,
+        priorityFilter,
+        technicianFilter,
+        statusFilter,
+        slaFilter,
+        originFilter,
+        ratingFilter
+      }),
     [
       businessMode,
       clientFilter,

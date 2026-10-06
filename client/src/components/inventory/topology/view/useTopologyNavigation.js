@@ -60,17 +60,17 @@ export default function useTopologyNavigation({ activeTab, tree }) {
     }
   }, [viewLevel, selectedGroup, selectedSegmentSummary, goToGroupLevel, goToTabLevel]);
 
-  const onNavigateBack = viewLevel === "segment" && selectedGroup
-    ? () => goToGroupLevel(selectedGroup.id)
-    : viewLevel === "segment" || viewLevel === "group" ? goToTabLevel : undefined;
+  const onNavigateBack =
+    viewLevel === "segment" && selectedGroup
+      ? () => goToGroupLevel(selectedGroup.id)
+      : viewLevel === "segment" || viewLevel === "group"
+        ? goToTabLevel
+        : undefined;
   const backLabel = `Voltar para ${viewLevel === "segment" && selectedGroup ? selectedGroup.name : activeTab?.name || "os grupos"}`;
 
   const crumbs = useMemo(() => {
     if (viewLevel === "global-legado") {
-      return [
-        { label: activeTab?.name || "Aba", onClick: goToTabLevel },
-        { label: "Visão Global (legado)" }
-      ];
+      return [{ label: activeTab?.name || "Aba", onClick: goToTabLevel }, { label: "Visão Global (legado)" }];
     }
     const list = [{ label: activeTab?.name || "Aba", onClick: viewLevel !== "tab" ? goToTabLevel : null }];
     if (selectedGroup) {
@@ -83,7 +83,18 @@ export default function useTopologyNavigation({ activeTab, tree }) {
   }, [viewLevel, activeTab, selectedGroup, selectedSegmentSummary, goToTabLevel, goToGroupLevel]);
 
   return {
-    viewLevel, selectedGroupId, selectedSegmentId, selectedGroup, selectedSegmentSummary, editIntentRef,
-    goToTabLevel, goToGroupLevel, goToSegmentLevel, goToGlobalLegacy, onNavigateBack, backLabel, crumbs
+    viewLevel,
+    selectedGroupId,
+    selectedSegmentId,
+    selectedGroup,
+    selectedSegmentSummary,
+    editIntentRef,
+    goToTabLevel,
+    goToGroupLevel,
+    goToSegmentLevel,
+    goToGlobalLegacy,
+    onNavigateBack,
+    backLabel,
+    crumbs
   };
 }

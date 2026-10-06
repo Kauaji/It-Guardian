@@ -35,9 +35,19 @@ const securityHeaders = Object.fromEntries(
 );
 
 const mime = {
-  ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
-  ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".ico": "image/x-icon",
-  ".woff": "font/woff", ".woff2": "font/woff2", ".glb": "model/gltf-binary", ".webmanifest": "application/manifest+json", ".txt": "text/plain"
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".json": "application/json",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".ico": "image/x-icon",
+  ".woff": "font/woff",
+  ".woff2": "font/woff2",
+  ".glb": "model/gltf-binary",
+  ".webmanifest": "application/manifest+json",
+  ".txt": "text/plain"
 };
 
 function sendFile(res, file) {
@@ -48,7 +58,13 @@ function sendFile(res, file) {
 const server = http.createServer((req, res) => {
   if (req.url.startsWith("/api/") || req.url === "/api" || req.url.startsWith("/health")) {
     const upstream = http.request(
-      { host: api.hostname, port: api.port, path: req.url, method: req.method, headers: { ...req.headers, host: api.host, origin: `http://127.0.0.1:${port}` } },
+      {
+        host: api.hostname,
+        port: api.port,
+        path: req.url,
+        method: req.method,
+        headers: { ...req.headers, host: api.host, origin: `http://127.0.0.1:${port}` }
+      },
       (response) => {
         res.writeHead(response.statusCode, response.headers);
         response.pipe(res);
@@ -66,7 +82,11 @@ const server = http.createServer((req, res) => {
 
 server.on("upgrade", (req, socket, head) => {
   const upstream = net.connect(Number(api.port), api.hostname, () => {
-    upstream.write(`${req.method} ${req.url} HTTP/1.1\r\n${Object.entries({ ...req.headers, host: api.host }).map(([k, v]) => `${k}: ${v}`).join("\r\n")}\r\n\r\n`);
+    upstream.write(
+      `${req.method} ${req.url} HTTP/1.1\r\n${Object.entries({ ...req.headers, host: api.host })
+        .map(([k, v]) => `${k}: ${v}`)
+        .join("\r\n")}\r\n\r\n`
+    );
     upstream.write(head);
     socket.pipe(upstream).pipe(socket);
   });

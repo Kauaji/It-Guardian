@@ -3,19 +3,28 @@ import { describe, expect, it } from "vitest";
 import { createAlertLookups } from "../alertLookups.js";
 import useAlertSuggestions from "./useAlertSuggestions.js";
 
-const devices = [{ id: "d1", name: "PC-01" }, { id: "d2", name: "PC-02" }];
+const devices = [
+  { id: "d1", name: "PC-01" },
+  { id: "d2", name: "PC-02" }
+];
 const lookups = createAlertLookups({ devices });
 const suggestions = [
   { id: "a", status: "pending", suggestedPriority: "low", assetId: "d1", alertType: "cpu_high", createdAt: "2026-05-01T00:00:00.000Z" },
-  { id: "b", status: "pending", suggestedPriority: "critical", assetId: "d2", alertType: "ram_high", createdAt: "2026-05-02T00:00:00.000Z" },
+  {
+    id: "b",
+    status: "pending",
+    suggestedPriority: "critical",
+    assetId: "d2",
+    alertType: "ram_high",
+    createdAt: "2026-05-02T00:00:00.000Z"
+  },
   { id: "c", status: "accepted", assetId: "d1", createdAt: "2026-05-03T00:00:00.000Z" }
 ];
 
 function setup(overrides = {}) {
-  return renderHook(
-    (props) => useAlertSuggestions(props),
-    { initialProps: { suggestions, devices, statusFilter: "all", lookups, alertCorrelations: [], ...overrides } }
-  );
+  return renderHook((props) => useAlertSuggestions(props), {
+    initialProps: { suggestions, devices, statusFilter: "all", lookups, alertCorrelations: [], ...overrides }
+  });
 }
 
 describe("useAlertSuggestions", () => {

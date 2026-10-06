@@ -44,21 +44,38 @@ describe("publicSupportModel", () => {
 
   it("buildInitialForm usa o contexto e o ambiente padrao", () => {
     const form = buildInitialForm({ deviceToken: "t", machineName: "M", assetTag: "A", environmentName: "" });
-    expect(form).toMatchObject({ category: fallbackCategories[0], problemType: fallbackProblemTypes[0].name, environmentName: "Não identificado", deviceToken: "t", website: "" });
+    expect(form).toMatchObject({
+      category: fallbackCategories[0],
+      problemType: fallbackProblemTypes[0].name,
+      environmentName: "Não identificado",
+      deviceToken: "t",
+      website: ""
+    });
     expect(buildInitialForm({ environmentName: "Env" }).environmentName).toBe("Env");
   });
 
   it("resolveSupportOptions usa o padrao para listas vazias e normaliza o modo", () => {
     expect(resolveSupportOptions({})).toEqual({ categories: fallbackCategories, problemTypes: fallbackProblemTypes, systemMode: "local" });
     expect(resolveSupportOptions({ categories: ["X"], problemTypes: [{ name: "P" }], systemMode: "business" })).toEqual({
-      categories: ["X"], problemTypes: [{ name: "P" }], systemMode: "business"
+      categories: ["X"],
+      problemTypes: [{ name: "P" }],
+      systemMode: "business"
     });
   });
 
   it("reconcileFormWithOptions corrige categoria e problema invalidos", () => {
-    const problems = [{ name: "P1", category: "A" }, { name: "P2", category: "B" }];
-    expect(reconcileFormWithOptions({ category: "Z", problemType: "?" }, ["A", "B"], problems)).toMatchObject({ category: "A", problemType: "P1" });
-    expect(reconcileFormWithOptions({ category: "B", problemType: "P2" }, ["A", "B"], problems)).toMatchObject({ category: "B", problemType: "P2" });
+    const problems = [
+      { name: "P1", category: "A" },
+      { name: "P2", category: "B" }
+    ];
+    expect(reconcileFormWithOptions({ category: "Z", problemType: "?" }, ["A", "B"], problems)).toMatchObject({
+      category: "A",
+      problemType: "P1"
+    });
+    expect(reconcileFormWithOptions({ category: "B", problemType: "P2" }, ["A", "B"], problems)).toMatchObject({
+      category: "B",
+      problemType: "P2"
+    });
     expect(reconcileFormWithOptions({ category: "B", problemType: "?" }, ["A", "B"], problems).problemType).toBe("P2");
     expect(reconcileFormWithOptions({ category: "B", problemType: "?" }, [], [])).toMatchObject({ category: "", problemType: "" });
   });

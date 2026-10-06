@@ -19,10 +19,7 @@ import {
 import { fromOrderRow } from "../../repositories/serviceOrders/serviceOrderMappers.js";
 import { findServiceOrderById } from "../../repositories/serviceOrders/serviceOrderReadRepository.js";
 import { getServiceOrderSettings } from "../../repositories/serviceOrders/serviceOrderSettingsRepository.js";
-import {
-  setAssignedTechnicianNames,
-  updateServiceOrderRow
-} from "../../repositories/serviceOrders/serviceOrderWriteRepository.js";
+import { setAssignedTechnicianNames, updateServiceOrderRow } from "../../repositories/serviceOrders/serviceOrderWriteRepository.js";
 import { resolveServiceOrderSector, resolveServiceOrderService } from "./serviceOrderResolutionService.js";
 
 // Registra no historico da OS (e da maquina vinculada) cada campo alterado.

@@ -86,7 +86,12 @@ export function inferScriptName(analysis, content = "") {
 
   const firstLine = String(content)
     .split(/\r?\n/)
-    .map((line) => line.replace(/^rem\s+/i, "").replace(/^::\s*/, "").trim())
+    .map((line) =>
+      line
+        .replace(/^rem\s+/i, "")
+        .replace(/^::\s*/, "")
+        .trim()
+    )
     .find(Boolean);
 
   return firstLine ? firstLine.slice(0, 80) : "Script de manutenção";

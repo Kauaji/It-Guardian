@@ -5,10 +5,22 @@ import { formatDateTime } from "../utils/format.js";
 function MachineSummary({ asset }) {
   return (
     <section className="remote-assistance-machine-summary" aria-label="Dados da máquina">
-      <div><span>Sistema</span><strong>{asset.os || asset.operatingSystem || "Não informado"}</strong></div>
-      <div><span>Último contato</span><strong>{formatDateTime(getRemoteAssetLastSeenAt(asset))}</strong></div>
-      <div><span>Agente</span><strong>{asset.agentVersion || asset.agent?.version || "Ativo"}</strong></div>
-      <div><span>Usuário local</span><strong>{asset.localUser || asset.agent?.localUser || "Não coletado"}</strong></div>
+      <div>
+        <span>Sistema</span>
+        <strong>{asset.os || asset.operatingSystem || "Não informado"}</strong>
+      </div>
+      <div>
+        <span>Último contato</span>
+        <strong>{formatDateTime(getRemoteAssetLastSeenAt(asset))}</strong>
+      </div>
+      <div>
+        <span>Agente</span>
+        <strong>{asset.agentVersion || asset.agent?.version || "Ativo"}</strong>
+      </div>
+      <div>
+        <span>Usuário local</span>
+        <strong>{asset.localUser || asset.agent?.localUser || "Não coletado"}</strong>
+      </div>
     </section>
   );
 }
@@ -23,7 +35,13 @@ function ModeFieldset({ requestedMode, onModeChange, controlOptionVisible }) {
       </label>
       {controlOptionVisible && (
         <label>
-          <input type="radio" name="remote-mode" value="control" checked={requestedMode === "control"} onChange={() => onModeChange("control")} />
+          <input
+            type="radio"
+            name="remote-mode"
+            value="control"
+            checked={requestedMode === "control"}
+            onChange={() => onModeChange("control")}
+          />
           <MousePointer2 size={16} /> Solicitar mouse e teclado
         </label>
       )}
@@ -32,22 +50,12 @@ function ModeFieldset({ requestedMode, onModeChange, controlOptionVisible }) {
 }
 
 // Formulario inicial: motivo, modo e reautenticacao (senha) do tecnico.
-export default function RemoteReauthPanel({
-  asset,
-  serviceOrder,
-  form,
-  controlOptionVisible,
-  error,
-  submitting,
-  onSubmit
-}) {
+export default function RemoteReauthPanel({ asset, serviceOrder, form, controlOptionVisible, error, submitting, onSubmit }) {
   return (
     <form className="remote-assistance-request" onSubmit={onSubmit}>
       <MachineSummary asset={asset} />
 
-      {serviceOrder && (
-        <p className="remote-assistance-os-link">Vinculado a OS {serviceOrder.number || serviceOrder.id}</p>
-      )}
+      {serviceOrder && <p className="remote-assistance-os-link">Vinculado a OS {serviceOrder.number || serviceOrder.id}</p>}
 
       <label>
         Motivo do atendimento
@@ -61,11 +69,7 @@ export default function RemoteReauthPanel({
         />
       </label>
 
-      <ModeFieldset
-        requestedMode={form.requestedMode}
-        onModeChange={form.setRequestedMode}
-        controlOptionVisible={controlOptionVisible}
-      />
+      <ModeFieldset requestedMode={form.requestedMode} onModeChange={form.setRequestedMode} controlOptionVisible={controlOptionVisible} />
 
       <label>
         Confirme sua senha
@@ -87,7 +91,11 @@ export default function RemoteReauthPanel({
         <p>O usuário precisa autorizar localmente. A solicitação, o consentimento e o encerramento ficam registrados.</p>
       </div>
       <p className="remote-assistance-disabled-feature">Modo privacidade e ações administrativas permanecem indisponíveis nesta fase.</p>
-      {error && <p className="form-error" role="alert">{error}</p>}
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
       <button type="submit" className="primary-action remote-assistance-submit" disabled={submitting}>
         {submitting ? <RefreshCw size={17} className="spin" /> : <MonitorUp size={17} />}
         Solicitar atendimento

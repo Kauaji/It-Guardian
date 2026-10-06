@@ -1,11 +1,5 @@
 import { useState } from "react";
-import {
-  createManualAsset,
-  deleteDevice,
-  refreshAssetPing,
-  updateDeviceAlias,
-  updateDeviceType
-} from "../../api.js";
+import { createManualAsset, deleteDevice, refreshAssetPing, updateDeviceAlias, updateDeviceType } from "../../api.js";
 import { useAppSession } from "../../context/AppSessionContext.jsx";
 
 // Acoes sobre ativos individuais: cadastro manual, ping, tipo, remocao, nome

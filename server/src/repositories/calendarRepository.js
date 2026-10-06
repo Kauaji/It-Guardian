@@ -82,7 +82,16 @@ export async function listCalendarEvents(filters, user, canViewAll) {
   `);
   const where = ["ce.start_at < $2", "COALESCE(ce.end_at, ce.start_at) >= $1"];
   const params = [filters.startDate, filters.endDate];
-  const fields = { technicianId: "ce.technician_id", eventType: "ce.event_type", status: "ce.status", priority: "ce.priority", serviceOrderId: "ce.service_order_id", assetId: "ce.asset_id", segmentId: "ce.segment_id", groupId: "ce.group_id" };
+  const fields = {
+    technicianId: "ce.technician_id",
+    eventType: "ce.event_type",
+    status: "ce.status",
+    priority: "ce.priority",
+    serviceOrderId: "ce.service_order_id",
+    assetId: "ce.asset_id",
+    segmentId: "ce.segment_id",
+    groupId: "ce.group_id"
+  };
   for (const [key, column] of Object.entries(fields)) {
     if (!filters[key]) continue;
     params.push(filters[key]);
@@ -90,7 +99,9 @@ export async function listCalendarEvents(filters, user, canViewAll) {
   }
   if (!canViewAll) {
     params.push(user.id, user.email || "", user.name || "");
-    where.push(`(ce.created_by = $${params.length - 2} OR ce.technician_id IN (SELECT id FROM technicians WHERE LOWER(email) = LOWER($${params.length - 1}) OR LOWER(name) = LOWER($${params.length})))`);
+    where.push(
+      `(ce.created_by = $${params.length - 2} OR ce.technician_id IN (SELECT id FROM technicians WHERE LOWER(email) = LOWER($${params.length - 1}) OR LOWER(name) = LOWER($${params.length})))`
+    );
   }
   const result = await query(`${selectEvent} WHERE ${where.join(" AND ")} ORDER BY ce.start_at ASC, ce.title ASC`, params);
   return result.rows.map(mapEvent);
@@ -104,31 +115,82 @@ export async function getCalendarEvent(id) {
 
 export async function createCalendarEvent(payload, user) {
   const id = randomUUID();
-  await query(`
+  await query(
+    `
     INSERT INTO calendar_events (
       id, title, description, event_type, status, priority, start_at, end_at, all_day,
       service_order_id, asset_id, technician_id, segment_id, group_id, environment_name,
       created_by, updated_by, metadata_json
     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$16,$17)
-  `, [id, payload.title, payload.description || "", payload.eventType, payload.status, payload.priority, payload.startAt, payload.endAt, payload.allDay, payload.serviceOrderId, payload.assetId, payload.technicianId, payload.segmentId, payload.groupId, payload.environmentName, user.id, JSON.stringify(payload.metadata || {})]);
+  `,
+    [
+      id,
+      payload.title,
+      payload.description || "",
+      payload.eventType,
+      payload.status,
+      payload.priority,
+      payload.startAt,
+      payload.endAt,
+      payload.allDay,
+      payload.serviceOrderId,
+      payload.assetId,
+      payload.technicianId,
+      payload.segmentId,
+      payload.groupId,
+      payload.environmentName,
+      user.id,
+      JSON.stringify(payload.metadata || {})
+    ]
+  );
   return getCalendarEvent(id);
 }
 
 export async function updateCalendarEvent(id, payload, user) {
   const current = await getCalendarEvent(id);
   const next = { ...current, ...payload };
-  await query(`
+  await query(
+    `
     UPDATE calendar_events SET title=$2, description=$3, event_type=$4, status=$5, priority=$6,
       start_at=$7, end_at=$8, all_day=$9, service_order_id=$10, asset_id=$11,
       technician_id=$12, segment_id=$13, group_id=$14, environment_name=$15,
       updated_by=$16, metadata_json=$17, updated_at=NOW()
     WHERE id=$1
-  `, [id, next.title, next.description || "", next.eventType, next.status, next.priority, next.startAt, next.endAt, next.allDay, next.serviceOrderId, next.assetId, next.technicianId, next.segmentId, next.groupId, next.environmentName, user.id, JSON.stringify(next.metadata || {})]);
+  `,
+    [
+      id,
+      next.title,
+      next.description || "",
+      next.eventType,
+      next.status,
+      next.priority,
+      next.startAt,
+      next.endAt,
+      next.allDay,
+      next.serviceOrderId,
+      next.assetId,
+      next.technicianId,
+      next.segmentId,
+      next.groupId,
+      next.environmentName,
+      user.id,
+      JSON.stringify(next.metadata || {})
+    ]
+  );
   return getCalendarEvent(id);
 }
 
 export async function cancelCalendarEvent(id, reason, user) {
-  const result = await query(`UPDATE calendar_events SET status='cancelled', cancelled_at=NOW(), cancel_reason=$2, updated_by=$3, updated_at=NOW() WHERE id=$1 RETURNING id`, [id, String(reason || "").trim().slice(0, 1000) || null, user.id]);
+  const result = await query(
+    `UPDATE calendar_events SET status='cancelled', cancelled_at=NOW(), cancel_reason=$2, updated_by=$3, updated_at=NOW() WHERE id=$1 RETURNING id`,
+    [
+      id,
+      String(reason || "")
+        .trim()
+        .slice(0, 1000) || null,
+      user.id
+    ]
+  );
   if (!result.rowCount) throw notFound();
   return getCalendarEvent(id);
 }

@@ -27,20 +27,24 @@ export function createAlertLookups({ devices = [], segments = [], segmentGroups 
     }
 
     const hostLabel = normalizeText(alert.hostName || "");
-    return devices.find((device) => {
-      const names = [
-        device.id,
-        device.displayName,
-        device.machineAlias,
-        device.agent?.machineAlias,
-        device.name,
-        device.hostname,
-        device.agent?.hostname,
-        device.manualAsset?.hostname,
-        device.hardware?.hostname
-      ].filter(Boolean).map(normalizeText);
-      return names.includes(hostLabel);
-    }) || null;
+    return (
+      devices.find((device) => {
+        const names = [
+          device.id,
+          device.displayName,
+          device.machineAlias,
+          device.agent?.machineAlias,
+          device.name,
+          device.hostname,
+          device.agent?.hostname,
+          device.manualAsset?.hostname,
+          device.hardware?.hostname
+        ]
+          .filter(Boolean)
+          .map(normalizeText);
+        return names.includes(hostLabel);
+      }) || null
+    );
   }
 
   function findSuggestionDevice(suggestion) {
@@ -83,9 +87,7 @@ export function createAlertLookups({ devices = [], segments = [], segmentGroups 
 
   function getAlertMachineLabel(alert) {
     const device = findAlertDevice(alert);
-    return device
-      ? getDeviceDisplayName(device)
-      : formatDisplayText(alert.hostName || alert.assetId, "Máquina não vinculada");
+    return device ? getDeviceDisplayName(device) : formatDisplayText(alert.hostName || alert.assetId, "Máquina não vinculada");
   }
 
   function getResolvedAlertTitle(alert) {

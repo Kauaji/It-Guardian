@@ -16,7 +16,11 @@ describe("buildMetadataPatch", () => {
 });
 
 describe("buildGroupChangePatch", () => {
-  const segments = [{ id: "s1", groupId: "g1" }, { id: "s2", groupId: "g2" }, { id: "s3", groupId: null }];
+  const segments = [
+    { id: "s1", groupId: "g1" },
+    { id: "s2", groupId: "g2" },
+    { id: "s3", groupId: null }
+  ];
 
   it("mantem o segmento compativel com o novo grupo", () => {
     expect(buildGroupChangePatch({ segmentId: "s1" }, "g1", segments)).toEqual({ groupId: "g1", segmentId: "s1" });
@@ -38,34 +42,51 @@ describe("buildGroupChangePatch", () => {
 describe("buildDoorTypePatch", () => {
   it("portas de giro ganham o sentido de abertura", () => {
     expect(buildDoorTypePatch({ metadata: {} }, "single").metadata).toEqual({ doorType: "single", swing: "inward" });
-    expect(buildDoorTypePatch({ metadata: { swing: "outward" } }, "double").metadata).toEqual({ doorType: "double", swing: "outward", });
+    expect(buildDoorTypePatch({ metadata: { swing: "outward" } }, "double").metadata).toEqual({ doorType: "double", swing: "outward" });
   });
 
   it("portas de correr ganham a direcao", () => {
     expect(buildDoorTypePatch({ metadata: {} }, "sliding").metadata).toEqual({ doorType: "sliding", slideDirection: "right" });
-    expect(buildDoorTypePatch({ metadata: { slideDirection: "left" } }, "pocket").metadata).toEqual({ doorType: "pocket", slideDirection: "left" });
+    expect(buildDoorTypePatch({ metadata: { slideDirection: "left" } }, "pocket").metadata).toEqual({
+      doorType: "pocket",
+      slideDirection: "left"
+    });
   });
 });
 
 describe("buildOpeningWallPatch", () => {
   it("vincula a abertura a parede mantendo a posicao", () => {
-    expect(buildOpeningWallPatch({ metadata: { anchorOffset: 0.2 } }, "wall-1").metadata)
-      .toEqual({ anchorType: "wall", parentObjectId: "wall-1", anchorOffset: 0.2 });
+    expect(buildOpeningWallPatch({ metadata: { anchorOffset: 0.2 } }, "wall-1").metadata).toEqual({
+      anchorType: "wall",
+      parentObjectId: "wall-1",
+      anchorOffset: 0.2
+    });
     expect(buildOpeningWallPatch({}, "wall-1").metadata.anchorOffset).toBe(0.5);
   });
 
   it("desvincula quando nao ha parede", () => {
-    expect(buildOpeningWallPatch({ metadata: { anchorOffset: 0 } }, "").metadata)
-      .toEqual({ anchorType: null, parentObjectId: null, anchorOffset: 0 });
+    expect(buildOpeningWallPatch({ metadata: { anchorOffset: 0 } }, "").metadata).toEqual({
+      anchorType: null,
+      parentObjectId: null,
+      anchorOffset: 0
+    });
   });
 });
 
 describe("buildRackSwitchPatch", () => {
   it("instala e remove o switch do rack", () => {
-    expect(buildRackSwitchPatch({ metadata: { x: 1 } }, true).metadata)
-      .toEqual({ x: 1, switchInstalled: true, switchTotalPorts: 24, switchWorkingPorts: 24 });
-    expect(buildRackSwitchPatch({ metadata: { x: 1 } }, false).metadata)
-      .toEqual({ x: 1, switchInstalled: false, switchTotalPorts: null, switchWorkingPorts: null });
+    expect(buildRackSwitchPatch({ metadata: { x: 1 } }, true).metadata).toEqual({
+      x: 1,
+      switchInstalled: true,
+      switchTotalPorts: 24,
+      switchWorkingPorts: 24
+    });
+    expect(buildRackSwitchPatch({ metadata: { x: 1 } }, false).metadata).toEqual({
+      x: 1,
+      switchInstalled: false,
+      switchTotalPorts: null,
+      switchWorkingPorts: null
+    });
   });
 });
 

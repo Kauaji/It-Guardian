@@ -36,10 +36,7 @@ export default function AppLayout({ children }) {
             {children}
           </main>
         </div>
-        <AppModals
-          generalSettingsOpen={generalSettingsOpen}
-          onCloseGeneralSettings={() => setGeneralSettingsOpen(false)}
-        />
+        <AppModals generalSettingsOpen={generalSettingsOpen} onCloseGeneralSettings={() => setGeneralSettingsOpen(false)} />
       </div>
       <InventoryDragLayer />
     </DndContext>

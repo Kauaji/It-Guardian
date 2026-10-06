@@ -24,15 +24,17 @@ function setup() {
     onAcknowledgeScriptLog: vi.fn(),
     onCancelScriptValidation: vi.fn()
   };
-  const hook = renderHook(() => useSuggestionsController({
-    center,
-    token: "tok",
-    devices,
-    lookups: createAlertLookups({ devices }),
-    alertCorrelations: [],
-    activeScripts: [],
-    validationWindowMinutes: 30
-  }));
+  const hook = renderHook(() =>
+    useSuggestionsController({
+      center,
+      token: "tok",
+      devices,
+      lookups: createAlertLookups({ devices }),
+      alertCorrelations: [],
+      activeScripts: [],
+      validationWindowMinutes: 30
+    })
+  );
   return { ...hook, center };
 }
 

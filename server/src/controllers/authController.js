@@ -7,18 +7,8 @@ import {
   registerFirstAdmin
 } from "../services/authService.js";
 import { endSessionOnLogout } from "../services/logoutService.js";
-import {
-  beginMfaSetup,
-  confirmMfaSetup,
-  disableMfa,
-  getMfaStatus,
-  regenerateRecoveryCodes
-} from "../services/mfaService.js";
-import {
-  listUserSessions,
-  revokeSession,
-  rotateSessionTokenIfNeeded
-} from "../services/sessionService.js";
+import { beginMfaSetup, confirmMfaSetup, disableMfa, getMfaStatus, regenerateRecoveryCodes } from "../services/mfaService.js";
+import { listUserSessions, revokeSession, rotateSessionTokenIfNeeded } from "../services/sessionService.js";
 
 function contextOf(req) {
   return { ip: req.ip, userAgent: req.get("user-agent") || null };
@@ -36,10 +26,7 @@ function sendSession(res, status, { user, token, session, maxAgeSeconds }) {
 export async function register(req, res, next) {
   try {
     const body = req.body || {};
-    const result = await registerFirstAdmin(
-      { ...body, setupToken: body.setupToken || req.get("x-setup-token") },
-      contextOf(req)
-    );
+    const result = await registerFirstAdmin({ ...body, setupToken: body.setupToken || req.get("x-setup-token") }, contextOf(req));
     sendSession(res, 201, result);
   } catch (error) {
     next(error);

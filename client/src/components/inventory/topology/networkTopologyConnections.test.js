@@ -21,7 +21,12 @@ describe("identidade das conexões", () => {
   it("usa IDs reais e separa tipos com o mesmo ID", () => {
     expect(topologyNodeKey(first)).toBe("asset:a");
     expect(topologyNodeKey(group)).toBe("group:a");
-    expect(buildTopologyLinkPayload(second, first)).toEqual({ sourceType: "asset", sourceAssetId: "a", targetType: "asset", targetAssetId: "b" });
+    expect(buildTopologyLinkPayload(second, first)).toEqual({
+      sourceType: "asset",
+      sourceAssetId: "a",
+      targetType: "asset",
+      targetAssetId: "b"
+    });
     expect(linkConnectsNodes(savedLink, second, first)).toBe(true);
     expect(linkConnectsNodes(savedLink, group, second)).toBe(false);
   });
@@ -46,7 +51,16 @@ describe("criação manual de conexões", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     api.createNetworkTopologyLink.mockResolvedValue({ link: savedLink });
-    options = { token: "test-token", mapId: "map-1", scopeKey: "scope-1", enabled: true, nodes: [first, second, group], links: [], onCreated: vi.fn(), notify: vi.fn() };
+    options = {
+      token: "test-token",
+      mapId: "map-1",
+      scopeKey: "scope-1",
+      enabled: true,
+      nodes: [first, second, group],
+      links: [],
+      onCreated: vi.fn(),
+      notify: vi.fn()
+    };
   });
   function connect(result, a = first, b = second) {
     act(() => result.current.start());
@@ -80,23 +94,35 @@ describe("criação manual de conexões", () => {
   });
   it("bloqueia um segundo POST enquanto o primeiro está pendente", async () => {
     let finish;
-    api.createNetworkTopologyLink.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+    api.createNetworkTopologyLink.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      })
+    );
     const { result } = renderHook(() => useTopologyLinkCreation(options));
     connect(result);
     act(() => result.current.activate(second));
     act(() => result.current.toggle());
     expect(api.createNetworkTopologyLink).toHaveBeenCalledTimes(1);
     expect(result.current.busy).toBe(true);
-    await act(async () => { finish({ link: savedLink }); });
+    await act(async () => {
+      finish({ link: savedLink });
+    });
     expect(options.onCreated).toHaveBeenCalledTimes(1);
   });
   it("não entrega o retorno pendente ao mudar de mapa", async () => {
     let finish;
-    api.createNetworkTopologyLink.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+    api.createNetworkTopologyLink.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      })
+    );
     const { result, rerender } = renderHook((props) => useTopologyLinkCreation(props), { initialProps: options });
     connect(result);
     rerender({ ...options, mapId: "map-2", scopeKey: "scope-2" });
-    await act(async () => { finish({ link: savedLink }); });
+    await act(async () => {
+      finish({ link: savedLink });
+    });
     expect(options.onCreated).not.toHaveBeenCalled();
     expect(options.notify).not.toHaveBeenCalled();
     expect(result.current.busy).toBe(false);

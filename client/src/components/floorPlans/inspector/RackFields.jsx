@@ -27,7 +27,11 @@ function SwitchPortsFields({ entity, onChangeSelected }) {
           />
         </label>
       </div>
-      <button type="button" className="secondary-action compact-action" onClick={() => onChangeSelected(buildRackSwitchPatch(entity, false))}>
+      <button
+        type="button"
+        className="secondary-action compact-action"
+        onClick={() => onChangeSelected(buildRackSwitchPatch(entity, false))}
+      >
         Remover switch
       </button>
     </>
@@ -42,14 +46,21 @@ export default function RackFields({ entity, onChangeSelected }) {
       <header>
         <strong>Switch no rack</strong>
         {!installed ? (
-          <button type="button" className="icon-button" title="Adicionar switch" onClick={() => onChangeSelected(buildRackSwitchPatch(entity, true))}>
+          <button
+            type="button"
+            className="icon-button"
+            title="Adicionar switch"
+            onClick={() => onChangeSelected(buildRackSwitchPatch(entity, true))}
+          >
             <Plus size={17} />
           </button>
         ) : null}
       </header>
-      {installed
-        ? <SwitchPortsFields entity={entity} onChangeSelected={onChangeSelected} />
-        : <small>Adicione um switch para controlar as portas do rack.</small>}
+      {installed ? (
+        <SwitchPortsFields entity={entity} onChangeSelected={onChangeSelected} />
+      ) : (
+        <small>Adicione um switch para controlar as portas do rack.</small>
+      )}
     </section>
   );
 }

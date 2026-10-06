@@ -31,8 +31,16 @@ test("prefixos numericos nao se repetem (exceto o legado conhecido) e a ordem e 
 test("toda migracao tem arquivo correspondente e todo arquivo esta registrado", () => {
   const registered = new Set(migrations.map((migration) => migration.id));
   const onDisk = new Set(files.map((name) => name.replace(/\.js$/, "")));
-  assert.deepEqual([...onDisk].filter((id) => !registered.has(id)), [], "arquivo de migracao nao registrado em index.js");
-  assert.deepEqual([...registered].filter((id) => !onDisk.has(id)), [], "migracao registrada sem arquivo");
+  assert.deepEqual(
+    [...onDisk].filter((id) => !registered.has(id)),
+    [],
+    "arquivo de migracao nao registrado em index.js"
+  );
+  assert.deepEqual(
+    [...registered].filter((id) => !onDisk.has(id)),
+    [],
+    "migracao registrada sem arquivo"
+  );
 });
 
 test("toda migracao expoe up(db)", () => {

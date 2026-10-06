@@ -20,7 +20,11 @@ export default function AutomationMachinesToolbar({ search, status, onSearch, on
         />
       </label>
       <select value={status} onChange={(event) => onStatus(event.target.value)} aria-label="Filtrar automatizações por status">
-        {machineStatusOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+        {machineStatusOptions.map(([value, label]) => (
+          <option key={value} value={value}>
+            {label}
+          </option>
+        ))}
       </select>
     </div>
   );

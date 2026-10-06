@@ -8,7 +8,15 @@ export default function useTopologySelectionState() {
   const [justAddedNodeId, setJustAddedNodeId] = useState(null);
   const [justCreatedLinkId, setJustCreatedLinkId] = useState(null);
   return {
-    editMode, setEditMode, selectedNodeId, setSelectedNodeId, selectedLinkId, setSelectedLinkId,
-    justAddedNodeId, setJustAddedNodeId, justCreatedLinkId, setJustCreatedLinkId
+    editMode,
+    setEditMode,
+    selectedNodeId,
+    setSelectedNodeId,
+    selectedLinkId,
+    setSelectedLinkId,
+    justAddedNodeId,
+    setJustAddedNodeId,
+    justCreatedLinkId,
+    setJustCreatedLinkId
   };
 }

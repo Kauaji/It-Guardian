@@ -18,7 +18,13 @@ export default function MachineHardwareTab({ model }) {
       <MemorySection hardware={hardware} agent={agent} isAgentAsset={isAgentAsset} memoryModules={model.memoryModules} />
       <VideoSection graphicsAdapters={model.graphicsAdapters} />
       <MotherboardSection hardware={hardware} />
-      <StorageSection agent={agent} isAgentAsset={isAgentAsset} isManualAsset={isManualAsset} diskHealth={model.diskHealth} disks={model.disks} />
+      <StorageSection
+        agent={agent}
+        isAgentAsset={isAgentAsset}
+        isManualAsset={isManualAsset}
+        diskHealth={model.diskHealth}
+        disks={model.disks}
+      />
       <PowerSection hardware={hardware} />
       <LicenseSection hardware={hardware} />
     </section>

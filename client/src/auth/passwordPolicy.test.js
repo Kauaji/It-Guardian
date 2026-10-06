@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  PASSWORD_MAX_BYTES,
-  byteLength,
-  passwordChecklist,
-  passwordStrength,
-  validatePasswordLocally
-} from "./passwordPolicy.js";
+import { PASSWORD_MAX_BYTES, byteLength, passwordChecklist, passwordStrength, validatePasswordLocally } from "./passwordPolicy.js";
 
 describe("validatePasswordLocally", () => {
   it("aceita uma frase longa", () => {
@@ -23,9 +17,7 @@ describe("validatePasswordLocally", () => {
     const tooLong = "ç".repeat(40); // 40 caracteres, 80 bytes
     const result = validatePasswordLocally(tooLong);
     expect(result.errors).toContain(`A senha pode ter no máximo ${PASSWORD_MAX_BYTES} bytes.`);
-    expect(validatePasswordLocally("a1b2c3d4e5f6".repeat(7)).errors).toContain(
-      `A senha pode ter no máximo ${PASSWORD_MAX_BYTES} bytes.`
-    );
+    expect(validatePasswordLocally("a1b2c3d4e5f6".repeat(7)).errors).toContain(`A senha pode ter no máximo ${PASSWORD_MAX_BYTES} bytes.`);
   });
 
   it("recusa senha so de espacos", () => {
@@ -33,18 +25,14 @@ describe("validatePasswordLocally", () => {
   });
 
   it("recusa repeticoes e poucos caracteres distintos", () => {
-    expect(validatePasswordLocally("aaaaaaaaaaaaaa").errors).toContain(
-      "A senha é previsível demais (repetições ou sequências)."
-    );
+    expect(validatePasswordLocally("aaaaaaaaaaaaaa").errors).toContain("A senha é previsível demais (repetições ou sequências).");
     expect(validatePasswordLocally("abababababababab").valid).toBe(false);
     expect(validatePasswordLocally("abcabcabcabcabc").valid).toBe(false);
   });
 
   it("recusa senha que contem nome ou parte do e-mail", () => {
     const context = { email: "maria.souza@empresa.com", name: "Maria Souza" };
-    expect(validatePasswordLocally("Souza-trabalho-2026!", context).errors).toContain(
-      "A senha não pode conter seu nome ou e-mail."
-    );
+    expect(validatePasswordLocally("Souza-trabalho-2026!", context).errors).toContain("A senha não pode conter seu nome ou e-mail.");
     expect(validatePasswordLocally("mariasouza-vai-ao-mar", context).valid).toBe(false);
     expect(validatePasswordLocally("cavalo azul come batata doce", context).valid).toBe(true);
   });

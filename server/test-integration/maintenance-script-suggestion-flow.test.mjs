@@ -13,16 +13,8 @@ const { createApp } = await import("../src/app.js");
 const { initializeRuntime } = await import("../src/bootstrap.js");
 const { closeDatabase, query } = await import("../src/database.js");
 const { refreshDueScriptValidations } = await import("../src/services/maintenanceScripts/maintenanceScriptsFacade.js");
-const {
-  bearerHeaders,
-  bearerUser,
-  browserHeaders,
-  createScriptViaApi,
-  createSuggestionForMachine,
-  enrollAndHeartbeat,
-  listen,
-  login
-} = await import("../test-support/scriptFixtures.mjs");
+const { bearerHeaders, bearerUser, browserHeaders, createScriptViaApi, createSuggestionForMachine, enrollAndHeartbeat, listen, login } =
+  await import("../test-support/scriptFixtures.mjs");
 
 test.after(closeDatabase);
 
@@ -224,10 +216,9 @@ test("uso de script em sugestao enfileira com janela limitada, e reenvio e idemp
 
   const jobs = await query("SELECT COUNT(*)::INTEGER AS total FROM agent_script_jobs WHERE asset_id = $1", [machineId]);
   assert.equal(jobs.rows[0].total, 1);
-  const history = await query(
-    "SELECT new_value FROM asset_history WHERE asset_id = $1 AND event_type = 'script_execution_queued'",
-    [machineId]
-  );
+  const history = await query("SELECT new_value FROM asset_history WHERE asset_id = $1 AND event_type = 'script_execution_queued'", [
+    machineId
+  ]);
   assert.equal(history.rowCount, 1);
   assert.equal(JSON.parse(history.rows[0].new_value).jobId, firstBody.job.id);
   const audit = await query("SELECT meta FROM audit_logs WHERE type = 'agent_script_execution_queued'");
@@ -253,35 +244,40 @@ test("uso de script em sugestao enfileira com janela limitada, e reenvio e idemp
 // O pg-mem nao serializa transacoes concorrentes (sem bloqueio de linha nem
 // visibilidade de indice unico entre conexoes); a garantia vem do indice
 // unico de active_key + ON CONFLICT DO NOTHING e so e observavel no PostgreSQL real.
-test("envios simultaneos do mesmo script para a mesma sugestao criam um unico trabalho", {
-  skip: !isRealPostgres && "requer PostgreSQL real (TEST_PG_ADMIN_URL)"
-}, async (t) => {
-  const { baseUrl, cookie } = await startServer(t);
-  const machineId = "suggestion-race-machine";
-  await enrollAndHeartbeat(baseUrl, machineId);
-  const suggestion = await createSuggestionForMachine(baseUrl, cookie, machineId, "suggestion-race-alert");
-  const script = await createScriptViaApi(baseUrl, cookie, {
-    name: "Script concorrente",
-    type: "powershell",
-    content: "Get-Process",
-    riskLevel: "low"
-  });
+test(
+  "envios simultaneos do mesmo script para a mesma sugestao criam um unico trabalho",
+  {
+    skip: !isRealPostgres && "requer PostgreSQL real (TEST_PG_ADMIN_URL)"
+  },
+  async (t) => {
+    const { baseUrl, cookie } = await startServer(t);
+    const machineId = "suggestion-race-machine";
+    await enrollAndHeartbeat(baseUrl, machineId);
+    const suggestion = await createSuggestionForMachine(baseUrl, cookie, machineId, "suggestion-race-alert");
+    const script = await createScriptViaApi(baseUrl, cookie, {
+      name: "Script concorrente",
+      type: "powershell",
+      content: "Get-Process",
+      riskLevel: "low"
+    });
 
-  const responses = await Promise.all(
-    [1, 2, 3].map(() => useScript(baseUrl, browserHeaders(cookie), suggestion.id, script.id, { confirmed: true }))
-  );
-  const bodies = await Promise.all(responses.map((response) => response.json()));
-  assert.ok(responses.every((response) => response.status === 201), JSON.stringify(bodies));
-  assert.equal(bodies.filter((body) => !body.reused).length, 1, "exatamente uma chamada enfileira");
-  assert.equal(new Set(bodies.map((body) => body.validation.id)).size, 1);
+    const responses = await Promise.all(
+      [1, 2, 3].map(() => useScript(baseUrl, browserHeaders(cookie), suggestion.id, script.id, { confirmed: true }))
+    );
+    const bodies = await Promise.all(responses.map((response) => response.json()));
+    assert.ok(
+      responses.every((response) => response.status === 201),
+      JSON.stringify(bodies)
+    );
+    assert.equal(bodies.filter((body) => !body.reused).length, 1, "exatamente uma chamada enfileira");
+    assert.equal(new Set(bodies.map((body) => body.validation.id)).size, 1);
 
-  const jobs = await query("SELECT COUNT(*)::INTEGER AS total FROM agent_script_jobs WHERE asset_id = $1", [machineId]);
-  assert.equal(jobs.rows[0].total, 1);
-  const comments = await query("SELECT COUNT(*)::INTEGER AS total FROM alert_comments WHERE alert_id = $1", [
-    "suggestion-race-alert"
-  ]);
-  assert.equal(comments.rows[0].total, 1, "somente o envio que enfileirou comenta no aviso");
-});
+    const jobs = await query("SELECT COUNT(*)::INTEGER AS total FROM agent_script_jobs WHERE asset_id = $1", [machineId]);
+    assert.equal(jobs.rows[0].total, 1);
+    const comments = await query("SELECT COUNT(*)::INTEGER AS total FROM alert_comments WHERE alert_id = $1", ["suggestion-race-alert"]);
+    assert.equal(comments.rows[0].total, 1, "somente o envio que enfileirou comenta no aviso");
+  }
+);
 
 test("cancelar a observacao libera nova tentativa e atualiza a sugestao", async (t) => {
   const { baseUrl, cookie } = await startServer(t);
@@ -307,10 +303,9 @@ test("cancelar a observacao libera nova tentativa e atualiza a sugestao", async 
   assert.equal(cancelBody.validation.activeKey, null);
   assert.equal(cancelBody.validation.resultSummary, "Observação cancelada manualmente.");
 
-  const suggestionRow = await query(
-    "SELECT status, observation_status, last_validation_id FROM service_order_suggestions WHERE id = $1",
-    [suggestion.id]
-  );
+  const suggestionRow = await query("SELECT status, observation_status, last_validation_id FROM service_order_suggestions WHERE id = $1", [
+    suggestion.id
+  ]);
   assert.equal(suggestionRow.rows[0].observation_status, "validation_cancelled");
   assert.equal(suggestionRow.rows[0].last_validation_id, queued.validation.id);
   const history = await query(
@@ -377,23 +372,20 @@ test("observacoes vencidas sao encerradas conforme o estado do aviso", async (t)
   assert.equal(summary.validations.length, 3);
 
   for (const item of validations) {
-    const row = await query(
-      "SELECT status, active_key, finished_at, result_summary FROM script_validation_runs WHERE id = $1",
-      [item.validationId]
-    );
+    const row = await query("SELECT status, active_key, finished_at, result_summary FROM script_validation_runs WHERE id = $1", [
+      item.validationId
+    ]);
     assert.equal(row.rows[0].status, item.expected);
     assert.equal(row.rows[0].active_key, null);
     assert.ok(row.rows[0].finished_at);
-    const suggestionRow = await query(
-      "SELECT observation_status, last_validation_id FROM service_order_suggestions WHERE id = $1",
-      [item.suggestionId]
-    );
+    const suggestionRow = await query("SELECT observation_status, last_validation_id FROM service_order_suggestions WHERE id = $1", [
+      item.suggestionId
+    ]);
     assert.equal(suggestionRow.rows[0].observation_status, item.expected);
     assert.equal(suggestionRow.rows[0].last_validation_id, item.validationId);
-    const history = await query(
-      "SELECT new_value FROM asset_history WHERE asset_id = $1 AND event_type = 'script_observation_finished'",
-      [item.machineId]
-    );
+    const history = await query("SELECT new_value FROM asset_history WHERE asset_id = $1 AND event_type = 'script_observation_finished'", [
+      item.machineId
+    ]);
     assert.equal(history.rowCount, 1);
     assert.equal(history.rows[0].new_value, item.expected);
   }

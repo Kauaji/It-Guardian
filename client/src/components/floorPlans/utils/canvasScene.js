@@ -31,9 +31,7 @@ export function getCanvasScene({ editor, activeFloorId, visibleLayers }) {
   const floor = getActiveFloor(editor, activeFloorId);
   const layerState = resolveLayerState(visibleLayers);
   const zones = (editor?.zones || []).filter((zone) => zone.floorId === floor?.id);
-  const objects = layerState.objects
-    ? syncAnchoredOpenings(editor?.objects || []).filter((object) => object.floorId === floor?.id)
-    : [];
+  const objects = layerState.objects ? syncAnchoredOpenings(editor?.objects || []).filter((object) => object.floorId === floor?.id) : [];
   const { width, height } = getFloorSize(floor, editor?.plan);
   return {
     floor,
@@ -45,9 +43,7 @@ export function getCanvasScene({ editor, activeFloorId, visibleLayers }) {
     points: (editor?.connectionPoints || [])
       .filter((point) => point.floorId === floor?.id)
       .filter((point) => isPointVisible(point, layerState)),
-    routes: (editor?.cableRoutes || [])
-      .filter((route) => route.floorId === floor?.id)
-      .filter((route) => isRouteVisible(route, layerState)),
+    routes: (editor?.cableRoutes || []).filter((route) => route.floorId === floor?.id).filter((route) => isRouteVisible(route, layerState)),
     powerLinks: getPowerLinks(objects),
     width,
     height

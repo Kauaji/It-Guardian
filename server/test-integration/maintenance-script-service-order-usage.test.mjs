@@ -13,16 +13,8 @@ const { createApp } = await import("../src/app.js");
 const { initializeRuntime } = await import("../src/bootstrap.js");
 const { closeDatabase, query } = await import("../src/database.js");
 const { revokeAgentEnrollment } = await import("../src/repositories/agentRepository.js");
-const {
-  bearerHeaders,
-  bearerUser,
-  browserHeaders,
-  createScriptViaApi,
-  createServiceOrderViaApi,
-  enrollAndHeartbeat,
-  listen,
-  login
-} = await import("../test-support/scriptFixtures.mjs");
+const { bearerHeaders, bearerUser, browserHeaders, createScriptViaApi, createServiceOrderViaApi, enrollAndHeartbeat, listen, login } =
+  await import("../test-support/scriptFixtures.mjs");
 
 test.after(closeDatabase);
 
@@ -122,9 +114,11 @@ test("OS enfileira script com timeout limitado, grava historicos e lista a ativi
     riskLevel: "low"
   });
 
-  const emptyActivity = await (await fetch(`${baseUrl}/api/service-orders/${order.id}/script-activity`, {
-    headers: { cookie }
-  })).json();
+  const emptyActivity = await (
+    await fetch(`${baseUrl}/api/service-orders/${order.id}/script-activity`, {
+      headers: { cookie }
+    })
+  ).json();
   assert.deepEqual(emptyActivity.activity, []);
 
   await fetch(`${baseUrl}/api/maintenance-scripts/${script.id}/register-simulation`, {
@@ -170,14 +164,16 @@ test("OS enfileira script com timeout limitado, grava historicos e lista a ativi
     [order.id]
   );
   assert.equal(orderHistory.rowCount, 3);
-  const audit = await query(
-    "SELECT meta FROM audit_logs WHERE type = 'agent_script_execution_queued' ORDER BY created_at DESC LIMIT 1"
-  );
+  const audit = await query("SELECT meta FROM audit_logs WHERE type = 'agent_script_execution_queued' ORDER BY created_at DESC LIMIT 1");
   assert.equal(audit.rows[0].meta.serviceOrderId, order.id);
 
-  const activity = (await (await fetch(`${baseUrl}/api/service-orders/${order.id}/script-activity`, {
-    headers: { cookie }
-  })).json()).activity;
+  const activity = (
+    await (
+      await fetch(`${baseUrl}/api/service-orders/${order.id}/script-activity`, {
+        headers: { cookie }
+      })
+    ).json()
+  ).activity;
   assert.equal(activity.length, 4, "uma simulacao e tres envios reais");
   assert.equal(activity.filter((item) => item.job === null).length, 1, "a simulacao nao tem trabalho do agente");
   const queuedActivity = activity.find((item) => item.job?.id === body.job.id);

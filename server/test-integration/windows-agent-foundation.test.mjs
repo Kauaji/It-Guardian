@@ -11,12 +11,8 @@ process.env.NODE_ENV = "test";
 const { createApp } = await import("../src/app.js");
 const { initializeRuntime } = await import("../src/bootstrap.js");
 const { closeDatabase, query } = await import("../src/database.js");
-const {
-  createAgentEnrollment,
-  listAgentAssets,
-  revokeAgentEnrollment,
-  updateAgentAssetAlias
-} = await import("../src/repositories/agentRepository.js");
+const { createAgentEnrollment, listAgentAssets, revokeAgentEnrollment, updateAgentAssetAlias } =
+  await import("../src/repositories/agentRepository.js");
 const { queueAgentScriptJob } = await import("../src/services/agentScriptJobService.js");
 const { createScriptSimulationLog } = await import("../src/services/maintenanceScripts/maintenanceScriptsFacade.js");
 const { listDevices } = await import("../src/services/monitoringService.js");
@@ -55,14 +51,16 @@ function payload(overrides = {}) {
         officeKey: "Ativada - final VWXYZ"
       },
       office: { name: "Microsoft 365 Apps", version: "16.0.12345" },
-      disks: [{
-        label: "SSD Teste",
-        sizeGb: 476.9,
-        type: "SSD",
-        smartStatus: "OK",
-        healthPercent: 96,
-        healthEstimate: "96% (estimativa SMART)"
-      }],
+      disks: [
+        {
+          label: "SSD Teste",
+          sizeGb: 476.9,
+          type: "SSD",
+          smartStatus: "OK",
+          healthPercent: 96,
+          healthEstimate: "96% (estimativa SMART)"
+        }
+      ],
       software: [{ name: "Aplicativo Teste", version: "1.2.3" }]
     },
     ...overrides
@@ -170,15 +168,17 @@ test("agente autentica, valida, atualiza inventario e respeita revogacao", async
       authorization: `Bearer ${enrollment.token}`,
       "content-type": "application/json"
     },
-    body: JSON.stringify(payload({
-      hostname: "LAB-PC\u0000-01",
-      machineAlias: "Computador\u0000 temporario",
-      inventoryDetails: {
-        ...payload().inventoryDetails,
-        software: [{ name: "Aplicativo\u0000 Teste", version: "1.2.3" }],
-        "nul\u0000key": "valor\u0000"
-      }
-    }))
+    body: JSON.stringify(
+      payload({
+        hostname: "LAB-PC\u0000-01",
+        machineAlias: "Computador\u0000 temporario",
+        inventoryDetails: {
+          ...payload().inventoryDetails,
+          software: [{ name: "Aplicativo\u0000 Teste", version: "1.2.3" }],
+          "nul\u0000key": "valor\u0000"
+        }
+      })
+    )
   });
   assert.equal(acceptedWithNulCharacters.status, 202);
   const [sanitizedAsset] = await listAgentAssets();
@@ -239,16 +239,10 @@ test("agente autentica, valida, atualiza inventario e respeita revogacao", async
   assert.equal(heartbeatWithoutAlias.status, 202);
   assert.equal((await listAgentAssets())[0].machineAlias, "Computador da bancada");
 
-  const enrollmentRows = await query(
-    "SELECT token_hash, token_prefix FROM agent_enrollments WHERE id = $1",
-    [enrollment.enrollment.id]
-  );
+  const enrollmentRows = await query("SELECT token_hash, token_prefix FROM agent_enrollments WHERE id = $1", [enrollment.enrollment.id]);
   assert.notEqual(enrollmentRows.rows[0].token_hash, enrollment.token);
   assert.notEqual(enrollmentRows.rows[0].token_prefix, enrollment.token);
-  const heartbeatRows = await query(
-    "SELECT payload FROM agent_heartbeats WHERE asset_id = $1",
-    ["machine-guid-agent-test"]
-  );
+  const heartbeatRows = await query("SELECT payload FROM agent_heartbeats WHERE asset_id = $1", ["machine-guid-agent-test"]);
   assert.equal(JSON.stringify(heartbeatRows.rows).includes(enrollment.token), false);
 
   const devices = await listDevices({});
@@ -319,10 +313,7 @@ test("agente autentica, valida, atualiza inventario e respeita revogacao", async
   assert.equal(resultResponse.status, 200);
   assert.equal((await resultResponse.json()).status, "succeeded");
 
-  const completedJob = await query(
-    "SELECT status, exit_code, stdout FROM agent_script_jobs WHERE id = $1",
-    [queuedJob.id]
-  );
+  const completedJob = await query("SELECT status, exit_code, stdout FROM agent_script_jobs WHERE id = $1", [queuedJob.id]);
   assert.deepEqual(
     {
       status: completedJob.rows[0].status,
@@ -331,10 +322,7 @@ test("agente autentica, valida, atualiza inventario e respeita revogacao", async
     },
     { status: "succeeded", exitCode: 0, stdout: "roundtrip" }
   );
-  const completedLog = await query(
-    "SELECT mode, status, error_detected FROM script_execution_logs WHERE id = $1",
-    [executionLog.id]
-  );
+  const completedLog = await query("SELECT mode, status, error_detected FROM script_execution_logs WHERE id = $1", [executionLog.id]);
   assert.deepEqual(
     {
       mode: completedLog.rows[0].mode,
@@ -353,15 +341,12 @@ test("agente autentica, valida, atualiza inventario e respeita revogacao", async
   );
   assert.equal(history.rowCount, 1);
 
-  await query(
-    "UPDATE agent_assets SET last_seen_at = $2 WHERE asset_id = $1",
-    ["machine-guid-agent-test", new Date(Date.now() - 10 * 60 * 1000).toISOString()]
-  );
+  await query("UPDATE agent_assets SET last_seen_at = $2 WHERE asset_id = $1", [
+    "machine-guid-agent-test",
+    new Date(Date.now() - 10 * 60 * 1000).toISOString()
+  ]);
   const staleDevices = await listDevices({});
-  assert.equal(
-    staleDevices.find((item) => item.id === "machine-guid-agent-test").status,
-    "offline"
-  );
+  assert.equal(staleDevices.find((item) => item.id === "machine-guid-agent-test").status, "offline");
 
   await revokeAgentEnrollment(enrollment.enrollment.id);
   const revoked = await fetch(`${baseUrl}/api/agents/heartbeat`, {

@@ -12,9 +12,7 @@ export function countDevicesBySegment(devices) {
 
 // Segmentos de manutencao que ainda possuem maquinas.
 export function getOccupiedMaintenanceSegments(segments, countBySegment) {
-  return segments.filter((segment) => (
-    isMaintenanceSegmentName(segment.name || "") && (countBySegment.get(segment.id) || 0) > 0
-  ));
+  return segments.filter((segment) => isMaintenanceSegmentName(segment.name || "") && (countBySegment.get(segment.id) || 0) > 0);
 }
 
 // Segmentos (exceto manutencao) agrupados por grupo; a chave "" reune os sem grupo.

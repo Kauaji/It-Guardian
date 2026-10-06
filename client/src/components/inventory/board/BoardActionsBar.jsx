@@ -2,8 +2,17 @@ import { ChevronDown, ListFilter, Plus, Search } from "lucide-react";
 import BoardFilterPanel from "./BoardFilterPanel.jsx";
 
 export default function BoardActionsBar({
-  search, setSearch, searchFocused, setSearchFocused, filtersOpen, setFiltersOpen,
-  canManage, onCreateManualAsset, onCreateSegment, onCreateGroup, ...filterProps
+  search,
+  setSearch,
+  searchFocused,
+  setSearchFocused,
+  filtersOpen,
+  setFiltersOpen,
+  canManage,
+  onCreateManualAsset,
+  onCreateSegment,
+  onCreateGroup,
+  ...filterProps
 }) {
   return (
     <section className="inventory-tab-panel">

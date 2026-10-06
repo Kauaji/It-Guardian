@@ -52,14 +52,7 @@ export default function QRCodePrint({ machine, alias }) {
         <Printer size={15} />
         Imprimir QR Code
       </button>
-      {printingAssetId === machine.id && (
-        <AssetLabelPrint
-          qrSrc={qrSrc}
-          name={alias || machine.name}
-          assetTag={assetTag}
-          ip={machine.ip}
-        />
-      )}
+      {printingAssetId === machine.id && <AssetLabelPrint qrSrc={qrSrc} name={alias || machine.name} assetTag={assetTag} ip={machine.ip} />}
     </section>
   );
 }

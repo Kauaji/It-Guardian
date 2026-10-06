@@ -14,7 +14,10 @@ const manutencao = { id: "m1", name: "Manutenção" };
 function setup({ activeAllDevices = [] } = {}) {
   const session = createSession();
   const segments = createStore([defaultSegment, redes, redes2, manutencao]);
-  const groups = createStore([{ id: "g1", segmentIds: ["s1", "s2"], collapsed: true }, { id: "g2", segmentIds: [] }]);
+  const groups = createStore([
+    { id: "g1", segmentIds: ["s1", "s2"], collapsed: true },
+    { id: "g2", segmentIds: [] }
+  ]);
   const tabMeta = createStore({});
   const records = createStore({ d1: { active: true }, d2: { active: true } });
   const deps = {
@@ -93,7 +96,11 @@ describe("useSegmentMutations.handleDeleteSegment", () => {
   it("ao excluir Manutencao devolve as maquinas ao padrao e limpa os registros", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     deleteSegment.mockResolvedValue({});
-    const inMaintenance = [{ id: "d1", segmentId: "m1" }, { id: "d2", segmentId: "m1" }, { id: "d3", segmentId: "s1" }];
+    const inMaintenance = [
+      { id: "d1", segmentId: "m1" },
+      { id: "d2", segmentId: "m1" },
+      { id: "d3", segmentId: "s1" }
+    ];
     const { result, records, deviceState } = setup({ activeAllDevices: inMaintenance });
     await act(async () => {
       await result.current.handleDeleteSegment(manutencao);

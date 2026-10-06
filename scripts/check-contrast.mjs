@@ -69,7 +69,11 @@ add("texto soft sobre cartao tingido de aviso (14%)", tok("--text-warn"), "rgba(
 add("texto ok sobre metrica ok (11%)", tok("--text-ok"), "rgba(22, 163, 74, 0.11)", NORMAL, tok("--surface-soft"));
 add("texto erro sobre metrica erro (12%)", tok("--text-danger"), "rgba(220, 38, 38, 0.12)", NORMAL, tok("--surface-soft"));
 add("texto aviso sobre metrica aviso (13%)", tok("--text-warn"), "rgba(217, 119, 6, 0.13)", NORMAL, tok("--surface-soft"));
-add("texto muted sobre dia fora do mes/passado (agenda)", tok("--text-muted"), "color-mix(in srgb, var(--text-strong) 12%, var(--surface-soft))");
+add(
+  "texto muted sobre dia fora do mes/passado (agenda)",
+  tok("--text-muted"),
+  "color-mix(in srgb, var(--text-strong) 12%, var(--surface-soft))"
+);
 add("texto soft sobre cartao com gradiente suave", tok("--text-soft"), "color-mix(in srgb, var(--accent) 8%, var(--surface))");
 
 // Botoes de acao primaria (texto sobre o acento) e sidebar.
@@ -84,7 +88,8 @@ add("skip-link (branco sobre slate-950)", "#ffffff", tok("--slate-950"));
 
 // Componentes de interface e foco (>= 3:1, WCAG 1.4.11 e 2.4.11).
 for (const surface of SURFACES) add(`anel de foco sobre ${surface.slice(2)}`, tok("--focus-outline"), tok(surface), LARGE_OR_UI);
-for (const bg of ["--sidebar-bg", "--sidebar-bg-2"]) add(`anel de foco na sidebar (${bg.slice(2)})`, tok("--focus-outline-on-dark"), tok(bg), LARGE_OR_UI);
+for (const bg of ["--sidebar-bg", "--sidebar-bg-2"])
+  add(`anel de foco na sidebar (${bg.slice(2)})`, tok("--focus-outline-on-dark"), tok(bg), LARGE_OR_UI);
 add("anel de foco do skip-link", tok("--focus-outline-on-dark"), tok("--slate-950"), LARGE_OR_UI);
 add("borda de campo de formulario sobre card", tok("--control-border"), tok("--surface"), LARGE_OR_UI);
 add("borda de campo de formulario sobre pagina", tok("--control-border"), tok("--app-bg"), LARGE_OR_UI);
@@ -122,7 +127,10 @@ for (const [themeName, vars] of Object.entries(themes)) {
     checked += 1;
     const ok = ratio >= pair.min;
     if (!ok) failures.push(`[${themeName}] ${pair.label}: ${ratio.toFixed(2)}:1 < ${pair.min}:1 (${fgHex} sobre ${bgHex})`);
-    if (verbose || !ok) console.log(`${ok ? "ok  " : "FALHA"} [${themeName}] ${ratio.toFixed(2).padStart(5)} (min ${pair.min}) ${pair.label}  ${fgHex} / ${bgHex}`);
+    if (verbose || !ok)
+      console.log(
+        `${ok ? "ok  " : "FALHA"} [${themeName}] ${ratio.toFixed(2).padStart(5)} (min ${pair.min}) ${pair.label}  ${fgHex} / ${bgHex}`
+      );
   }
 }
 
@@ -131,4 +139,6 @@ if (failures.length > 0) {
   for (const message of failures) console.error(` - ${message}`);
   process.exit(1);
 }
-console.log(`check-contrast: OK. ${checked} verificacoes (${pairs.length} pares x ${Object.keys(themes).length} temas) em ${path.relative(root, tokensFile)}.`);
+console.log(
+  `check-contrast: OK. ${checked} verificacoes (${pairs.length} pares x ${Object.keys(themes).length} temas) em ${path.relative(root, tokensFile)}.`
+);

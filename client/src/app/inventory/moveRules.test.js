@@ -10,7 +10,11 @@ describe("moveRules", () => {
   });
 
   it("selectMachinesToMove ignora ids ausentes e maquinas que ja estao no destino", () => {
-    const devices = [{ id: "a", segmentId: "s1" }, { id: "b", segmentId: "s2" }, { id: "c", segmentId: "s1" }];
+    const devices = [
+      { id: "a", segmentId: "s1" },
+      { id: "b", segmentId: "s2" },
+      { id: "c", segmentId: "s1" }
+    ];
     expect(selectMachinesToMove(devices, ["a", "b", "z"], "s2").map((d) => d.id)).toEqual(["a"]);
   });
 

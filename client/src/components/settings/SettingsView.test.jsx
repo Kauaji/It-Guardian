@@ -4,11 +4,32 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../api.js", () => {
   const names = [
-    "createClient", "createPriorityRule", "createProblemType", "createProduct", "createService", "createTechnician",
-    "deleteClient", "deletePriorityRule", "deleteProblemType", "deleteProduct", "deleteService", "deleteTechnician",
-    "fetchClients", "fetchPriorityRules", "fetchProblemTypes", "fetchProducts", "fetchServices", "fetchTechnicians",
-    "importClients", "importProducts",
-    "updateClient", "updatePriorityRule", "updateProblemType", "updateProduct", "updateService", "updateTechnician"
+    "createClient",
+    "createPriorityRule",
+    "createProblemType",
+    "createProduct",
+    "createService",
+    "createTechnician",
+    "deleteClient",
+    "deletePriorityRule",
+    "deleteProblemType",
+    "deleteProduct",
+    "deleteService",
+    "deleteTechnician",
+    "fetchClients",
+    "fetchPriorityRules",
+    "fetchProblemTypes",
+    "fetchProducts",
+    "fetchServices",
+    "fetchTechnicians",
+    "importClients",
+    "importProducts",
+    "updateClient",
+    "updatePriorityRule",
+    "updateProblemType",
+    "updateProduct",
+    "updateService",
+    "updateTechnician"
   ];
   return Object.fromEntries(names.map((name) => [name, vi.fn()]));
 });
@@ -31,11 +52,21 @@ function mount(props = {}) {
 
 beforeEach(() => {
   api.fetchClients.mockResolvedValue({ clients: clientsFixture });
-  api.fetchProducts.mockResolvedValue({ products: [{ id: "p1", name: "SSD 240", category: "Armazenamento", internalCode: "SSD", assetTag: "PAT-1", quantity: 3, unitPrice: 199.9 }] });
-  api.fetchServices.mockResolvedValue({ services: [{ id: "s1", code: "FMT", name: "Formatação", category: "Software", defaultPriority: "high", defaultValue: 80, active: true }] });
-  api.fetchTechnicians.mockResolvedValue({ technicians: [{ id: "t1", name: "Carlos", email: "c@x.com", phone: "2222", specialty: "Redes", active: true }] });
+  api.fetchProducts.mockResolvedValue({
+    products: [
+      { id: "p1", name: "SSD 240", category: "Armazenamento", internalCode: "SSD", assetTag: "PAT-1", quantity: 3, unitPrice: 199.9 }
+    ]
+  });
+  api.fetchServices.mockResolvedValue({
+    services: [{ id: "s1", code: "FMT", name: "Formatação", category: "Software", defaultPriority: "high", defaultValue: 80, active: true }]
+  });
+  api.fetchTechnicians.mockResolvedValue({
+    technicians: [{ id: "t1", name: "Carlos", email: "c@x.com", phone: "2222", specialty: "Redes", active: true }]
+  });
   api.fetchProblemTypes.mockResolvedValue({ problemTypes: [{ id: "pt1", name: "Não liga", category: "Computador", defaultPriority: "" }] });
-  api.fetchPriorityRules.mockResolvedValue({ priorityRules: [{ id: "r1", name: "VIP", ruleType: "client", targetValue: "Acme", priority: "critical", active: true }] });
+  api.fetchPriorityRules.mockResolvedValue({
+    priorityRules: [{ id: "r1", name: "VIP", ruleType: "client", targetValue: "Acme", priority: "critical", active: true }]
+  });
 });
 
 afterEach(() => {
@@ -51,9 +82,11 @@ describe("SettingsView - listagem e navegacao", () => {
     await screen.findByText("Acme");
     expect(api.fetchClients).toHaveBeenCalledWith("tok", { search: "" });
     const head = document.querySelector(".settings-table-head");
-    expect(Array.from(head.querySelectorAll("span")).map((s) => s.textContent).filter(Boolean)).toEqual(
-      ["Cliente", "CNPJ", "Telefone", "Responsável", "Status"]
-    );
+    expect(
+      Array.from(head.querySelectorAll("span"))
+        .map((s) => s.textContent)
+        .filter(Boolean)
+    ).toEqual(["Cliente", "CNPJ", "Telefone", "Responsável", "Status"]);
     expect(head.style.gridTemplateColumns).toBe("repeat(5, minmax(120px, 1fr)) 120px");
     expect(screen.getByText("Ativo")).toHaveClass("settings-status", "active");
     expect(screen.getByText("Inativo")).toHaveClass("settings-status", "inactive");
@@ -167,7 +200,10 @@ describe("SettingsView - formulario de cadastro", () => {
     api.fetchClients.mockClear();
     await user.click(within(dialog).getByRole("button", { name: "Salvar" }));
     await waitFor(() => expect(api.createClient).toHaveBeenCalled());
-    expect(api.createClient).toHaveBeenCalledWith("tok", expect.objectContaining({ tradeName: "Gama", email: "g@g.com", notes: "nota", active: false }));
+    expect(api.createClient).toHaveBeenCalledWith(
+      "tok",
+      expect.objectContaining({ tradeName: "Gama", email: "g@g.com", notes: "nota", active: false })
+    );
     expect(notify).toHaveBeenCalledWith("Cadastro criado.", "ok");
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(api.fetchClients).toHaveBeenCalled();
@@ -213,9 +249,17 @@ describe("SettingsView - formulario de cadastro", () => {
     await user.selectOptions(within(dialog).getByLabelText("Prioridade padrão"), "medium");
     await user.type(within(dialog).getByLabelText("Valor do serviço"), "50");
     await user.click(within(dialog).getByRole("button", { name: "Salvar" }));
-    await waitFor(() => expect(api.createService).toHaveBeenCalledWith("tok", expect.objectContaining({
-      name: "Limpeza", defaultPriority: "medium", defaultValue: "50", active: true
-    })));
+    await waitFor(() =>
+      expect(api.createService).toHaveBeenCalledWith(
+        "tok",
+        expect.objectContaining({
+          name: "Limpeza",
+          defaultPriority: "medium",
+          defaultValue: "50",
+          active: true
+        })
+      )
+    );
   });
 
   it("modo local esconde campos business e mostra patrimonio em pecas", async () => {
@@ -236,7 +280,11 @@ describe("SettingsView - formulario de cadastro", () => {
     await user.click(screen.getByRole("button", { name: "Novo técnico" }));
     const select = screen.getByLabelText("Clientes permitidos");
     expect(select).toHaveAttribute("multiple");
-    expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual(["Acme"]);
+    expect(
+      within(select)
+        .getAllByRole("option")
+        .map((o) => o.textContent)
+    ).toEqual(["Acme"]);
     await user.type(screen.getByLabelText("Nome"), "Dani");
     await user.selectOptions(select, "c1");
     await user.click(screen.getByRole("button", { name: "Salvar" }));
@@ -277,7 +325,9 @@ describe("SettingsView - formulario de cadastro", () => {
 
     await user.type(screen.getByLabelText("Nome do problema"), "Sem sinal");
     await user.click(screen.getByRole("button", { name: "Salvar" }));
-    await waitFor(() => expect(api.createProblemType).toHaveBeenCalledWith("tok", expect.objectContaining({ name: "Sem sinal", category: "Telefonia" })));
+    await waitFor(() =>
+      expect(api.createProblemType).toHaveBeenCalledWith("tok", expect.objectContaining({ name: "Sem sinal", category: "Telefonia" }))
+    );
   });
 
   it("regra de prioridade: selecao de tipo e horas", async () => {
@@ -289,9 +339,16 @@ describe("SettingsView - formulario de cadastro", () => {
     await user.selectOptions(screen.getByLabelText("Tipo da regra"), "open_time");
     fireEvent.change(screen.getByLabelText("Horas limite"), { target: { value: "8" } });
     await user.click(screen.getByRole("button", { name: "Salvar" }));
-    await waitFor(() => expect(api.createPriorityRule).toHaveBeenCalledWith("tok", expect.objectContaining({
-      name: "Urgente", ruleType: "open_time", thresholdHours: "8"
-    })));
+    await waitFor(() =>
+      expect(api.createPriorityRule).toHaveBeenCalledWith(
+        "tok",
+        expect.objectContaining({
+          name: "Urgente",
+          ruleType: "open_time",
+          thresholdHours: "8"
+        })
+      )
+    );
   });
 });
 
@@ -345,9 +402,9 @@ describe("SettingsView - exclusao e importacao", () => {
     mount();
     await screen.findByText("Acme");
     pick(new File(["x"], "planilha.xlsx"));
-    await waitFor(() => expect(notify).toHaveBeenCalledWith(
-      "Por enquanto a importação aceita CSV. Excel ficará preparado para uma próxima etapa.", "danger"
-    ));
+    await waitFor(() =>
+      expect(notify).toHaveBeenCalledWith("Por enquanto a importação aceita CSV. Excel ficará preparado para uma próxima etapa.", "danger")
+    );
     expect(api.importClients).not.toHaveBeenCalled();
 
     pick(new File(["x"], "ok.csv", { type: "text/csv" }));

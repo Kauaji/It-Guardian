@@ -1,20 +1,12 @@
 import { Eye, EyeOff } from "lucide-react";
-import {
-  QUICK_LAYER_VIEWS,
-  VISUAL_MAP_LAYER_OPTIONS,
-  getQuickLayerState
-} from "./inventoryVisualMapConnectionUtils.js";
+import { QUICK_LAYER_VIEWS, VISUAL_MAP_LAYER_OPTIONS, getQuickLayerState } from "./inventoryVisualMapConnectionUtils.js";
 
 export default function InventoryVisualMapLayerPresetBar({ layers, onLayersChange, onToggleLayer }) {
   return (
     <div className="inventory-visual-layer-controls">
       <div className="inventory-visual-quick-views" role="group" aria-label="Visualizações rápidas do mapa">
         {QUICK_LAYER_VIEWS.map((view) => (
-          <button
-            key={view.key}
-            type="button"
-            onClick={() => onLayersChange(getQuickLayerState(view.key))}
-          >
+          <button key={view.key} type="button" onClick={() => onLayersChange(getQuickLayerState(view.key))}>
             {view.label}
           </button>
         ))}

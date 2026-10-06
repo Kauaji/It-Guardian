@@ -2,14 +2,12 @@ import { useEffect, useState } from "react";
 
 // Estado de interface do quadro: maquina aberta, popover, modo de visualizacao e
 // segmentos selecionados, com os efeitos que os mantem coerentes.
-export default function useInventoryBoardState({
-  devices, activeTabId, selectedGroupId, selectedSegmentId, floorPlansView, topologyView
-}) {
+export default function useInventoryBoardState({ devices, activeTabId, selectedGroupId, selectedSegmentId, floorPlansView, topologyView }) {
   const [selectedMachine, setSelectedMachine] = useState(null);
   const [activePopoverId, setActivePopoverId] = useState(null);
-  const [inventoryViewMode, setInventoryViewMode] = useState(() => (
+  const [inventoryViewMode, setInventoryViewMode] = useState(() =>
     window.location.pathname.startsWith("/plantas") ? "floor-plans" : "board"
-  ));
+  );
   const [selectedSegmentIds, setSelectedSegmentIds] = useState(new Set());
   const [searchFocused, setSearchFocused] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -90,8 +88,17 @@ export default function useInventoryBoardState({
   }
 
   return {
-    selectedMachine, setSelectedMachine, activePopoverId, setActivePopoverId,
-    inventoryViewMode, setInventoryViewMode, selectedSegmentIds, handleSelectSegment,
-    searchFocused, setSearchFocused, filtersOpen, setFiltersOpen
+    selectedMachine,
+    setSelectedMachine,
+    activePopoverId,
+    setActivePopoverId,
+    inventoryViewMode,
+    setInventoryViewMode,
+    selectedSegmentIds,
+    handleSelectSegment,
+    searchFocused,
+    setSearchFocused,
+    filtersOpen,
+    setFiltersOpen
   };
 }

@@ -30,10 +30,16 @@ test("rate limiter bloqueia tentativas acima do limite", async () => {
   const req = { ip: "127.0.0.1", body: {} };
   let nextCalls = 0;
 
-  await limiter(req, responseDouble(), () => { nextCalls += 1; });
-  await limiter(req, responseDouble(), () => { nextCalls += 1; });
+  await limiter(req, responseDouble(), () => {
+    nextCalls += 1;
+  });
+  await limiter(req, responseDouble(), () => {
+    nextCalls += 1;
+  });
   const blocked = responseDouble();
-  await limiter(req, blocked, () => { nextCalls += 1; });
+  await limiter(req, blocked, () => {
+    nextCalls += 1;
+  });
 
   assert.equal(nextCalls, 2);
   assert.equal(blocked.statusCode, 429);

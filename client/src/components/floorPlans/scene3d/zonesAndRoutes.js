@@ -69,11 +69,7 @@ export function addRoutes({ routes, scene, offsets, createMaterial }) {
     if (path.length < 2) return;
     const routeStyle = route.metadata?.routeStyle || "free";
     const routeHeight = routeStyle === "conduit" ? 14 : routeStyle === "channel" ? 10 : 8;
-    const points = path.map((point) => new THREE.Vector3(
-      Number(point.x || 0) - offsets.x,
-      routeHeight,
-      Number(point.y || 0) - offsets.y
-    ));
+    const points = path.map((point) => new THREE.Vector3(Number(point.x || 0) - offsets.x, routeHeight, Number(point.y || 0) - offsets.y));
     const routeColor = toColor(route.color, route.routeType === "power" ? "#f59e0b" : "#2563eb");
     if (routeStyle === "free") {
       const geometry = new THREE.BufferGeometry().setFromPoints(points);

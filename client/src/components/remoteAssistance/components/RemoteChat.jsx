@@ -5,7 +5,7 @@ function ChatBubble({ message }) {
   return (
     <p className={`chat-bubble chat-${message.sender}`}>
       <span className="chat-bubble-meta">
-        {message.sender === "technician" ? "Você" : (message.senderName || "Usuário local")}
+        {message.sender === "technician" ? "Você" : message.senderName || "Usuário local"}
         {" - "}
         {formatChatTime(message.createdAt)}
       </span>
@@ -26,12 +26,7 @@ function ChatForm({ chat, active }) {
         disabled={!active || chat.sending}
         aria-label="Mensagem de chat"
       />
-      <button
-        type="submit"
-        className="icon-button"
-        disabled={!active || chat.sending || !chat.draft.trim()}
-        title="Enviar mensagem"
-      >
+      <button type="submit" className="icon-button" disabled={!active || chat.sending || !chat.draft.trim()} title="Enviar mensagem">
         <SendHorizontal size={16} />
       </button>
     </form>
@@ -41,7 +36,9 @@ function ChatForm({ chat, active }) {
 export default function RemoteChat({ chat, canChat, session }) {
   return (
     <section className="remote-assistance-chat" aria-label="Chat com o usuário local">
-      <h3><MessageCircle size={16} /> Chat com o usuário local</h3>
+      <h3>
+        <MessageCircle size={16} /> Chat com o usuário local
+      </h3>
       <div className="remote-assistance-chat-log" ref={chat.logRef}>
         {chat.messages.map((message) => (
           <ChatBubble key={message.id} message={message} />

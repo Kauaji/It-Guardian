@@ -1,7 +1,4 @@
-import {
-  getAutomationMachineStatusSummary,
-  machineMatchesAutomationStatus
-} from "./automationStatusUtils.js";
+import { getAutomationMachineStatusSummary, machineMatchesAutomationStatus } from "./automationStatusUtils.js";
 
 export const recurrenceLabels = {
   daily: "Diária",
@@ -108,7 +105,10 @@ export function buildAutomationManagementGroups({
       location.groupName,
       location.segmentName,
       ...(machine.plans || []).map((plan) => plan.planName || plan.name)
-    ].filter(Boolean).join(" ").toLocaleLowerCase("pt-BR");
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLocaleLowerCase("pt-BR");
 
     if (!matchesStatus || (term && !searchable.includes(term))) continue;
     const key = `${location.tabId || location.tabName}:${location.groupId || location.groupName}:${location.segmentId || location.segmentName}`;
@@ -118,10 +118,7 @@ export function buildAutomationManagementGroups({
   }
 
   return [...grouped.values()].sort((left, right) =>
-    `${left.tabName}${left.groupName}${left.segmentName}`.localeCompare(
-      `${right.tabName}${right.groupName}${right.segmentName}`,
-      "pt-BR"
-    )
+    `${left.tabName}${left.groupName}${left.segmentName}`.localeCompare(`${right.tabName}${right.groupName}${right.segmentName}`, "pt-BR")
   );
 }
 

@@ -306,10 +306,12 @@ test("o escopo de clientes do tecnico vem do vinculo, nunca do nome de exibicao"
   const admin = (await login(adminEmail, adminPassword)).cookie;
   const { email, body } = await createManagedUser(admin, { name: "Nome Em Comum", mustChangePassword: false });
 
-  await query(
-    "INSERT INTO technicians (id, name, email, allowed_client_ids, active) VALUES ($1, $2, $3, $4::jsonb, TRUE)",
-    ["tech-homonimo", "Nome Em Comum", "outra.pessoa@empresa.test", JSON.stringify(["cliente-restrito"])]
-  );
+  await query("INSERT INTO technicians (id, name, email, allowed_client_ids, active) VALUES ($1, $2, $3, $4::jsonb, TRUE)", [
+    "tech-homonimo",
+    "Nome Em Comum",
+    "outra.pessoa@empresa.test",
+    JSON.stringify(["cliente-restrito"])
+  ]);
   const { cookie } = await login(email, "cavalo-bateria-grampo-correto");
   const withoutLink = await (await call("/api/auth/me", { cookie })).json();
   assert.deepEqual(withoutLink.user.allowedClientIds, [], "homonimo nao herda o escopo");

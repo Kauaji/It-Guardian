@@ -12,7 +12,9 @@ export function buildSearchSections(tree) {
       id: "segments",
       label: "Segmentos",
       items: [
-        ...tree.groups.flatMap((group) => group.segments.map((segment) => ({ id: segment.id, label: segment.name, tags: ["segmento", group.name] }))),
+        ...tree.groups.flatMap((group) =>
+          group.segments.map((segment) => ({ id: segment.id, label: segment.name, tags: ["segmento", group.name] }))
+        ),
         ...tree.ungroupedSegments.map((segment) => ({ id: segment.id, label: segment.name, tags: ["segmento"] }))
       ]
     }
@@ -22,8 +24,12 @@ export function buildSearchSections(tree) {
 // Aplica a busca a arvore: ids casados e as listas de grupos/segmentos visiveis.
 export function filterHierarchy(tree, sections, query) {
   const searchResults = query.trim() ? searchCatalogItems(sections, query) : null;
-  const matchedGroupIds = searchResults ? new Set(searchResults.filter((item) => item.sectionId === "groups").map((item) => item.id)) : null;
-  const matchedSegmentIds = searchResults ? new Set(searchResults.filter((item) => item.sectionId === "segments").map((item) => item.id)) : null;
+  const matchedGroupIds = searchResults
+    ? new Set(searchResults.filter((item) => item.sectionId === "groups").map((item) => item.id))
+    : null;
+  const matchedSegmentIds = searchResults
+    ? new Set(searchResults.filter((item) => item.sectionId === "segments").map((item) => item.id))
+    : null;
   const visibleGroups = matchedGroupIds
     ? tree.groups.filter((group) => matchedGroupIds.has(group.id) || group.segments.some((segment) => matchedSegmentIds.has(segment.id)))
     : tree.groups;

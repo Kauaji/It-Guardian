@@ -23,8 +23,7 @@ export function useInventoryMoves({ data, deviceState, inventory, meta }) {
   const { selectedAssetIds, clearAssetSelection } = selection;
   const { moveModal, setMoveModal, moveTarget, setMoveTarget, openMoveModal, closeMoveModal } = useMoveModal();
 
-  const lookupSegment = (segmentId) =>
-    findSegmentById(segmentId, activeSegments, decoratedSegments, segments);
+  const lookupSegment = (segmentId) => findSegmentById(segmentId, activeSegments, decoratedSegments, segments);
 
   async function handleMoveMachine(machine, segmentId, options = {}) {
     if (!machine || !segmentId || machine.segmentId === segmentId) {
@@ -60,12 +59,7 @@ export function useInventoryMoves({ data, deviceState, inventory, meta }) {
 
     try {
       const response = await updateDeviceSegment(token, machine.id, segmentId, moveRequestOptions(options));
-      deviceState.updateDeviceSegmentInState(
-        machine.id,
-        response.device.segmentId,
-        response.device.segmentName,
-        maintenanceExtra
-      );
+      deviceState.updateDeviceSegmentInState(machine.id, response.device.segmentId, response.device.segmentName, maintenanceExtra);
       notify(`${machine.name} movida para ${response.device.segmentName}.`, "ok");
       await loadData(true);
       clearAssetSelection();
@@ -106,18 +100,18 @@ export function useInventoryMoves({ data, deviceState, inventory, meta }) {
 
     const previous = snapshotPreviousSegments(machinesToMove);
 
-    meta.updateDeviceTabOwnership(machinesToMove.map((machine) => machine.id), target, options.targetTabId);
+    meta.updateDeviceTabOwnership(
+      machinesToMove.map((machine) => machine.id),
+      target,
+      options.targetTabId
+    );
     machinesToMove.forEach((machine) => {
       deviceState.updateDeviceSegmentInState(machine.id, segmentId, target?.name || "Segmento");
     });
     setMoveModal(null);
 
     try {
-      await Promise.all(
-        machinesToMove.map((machine) =>
-          updateDeviceSegment(token, machine.id, segmentId, moveRequestOptions(options))
-        )
-      );
+      await Promise.all(machinesToMove.map((machine) => updateDeviceSegment(token, machine.id, segmentId, moveRequestOptions(options))));
       notify(`${machinesToMove.length} equipamentos movidos para ${target?.name || "Segmento"}.`, "ok");
       await loadData(true);
       clearAssetSelection();

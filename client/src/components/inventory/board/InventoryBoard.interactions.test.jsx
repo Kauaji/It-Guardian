@@ -13,7 +13,13 @@ vi.mock("../../../api.js", () => ({
 vi.mock("qrcode", () => ({ default: { toDataURL: vi.fn(async () => "data:image/png;base64,AAA") } }));
 vi.mock("../../remoteAssistance/RemoteAssistanceAction.jsx", () => ({ default: () => null }));
 
-globalThis.ResizeObserver = globalThis.ResizeObserver || class { observe() {} unobserve() {} disconnect() {} };
+globalThis.ResizeObserver =
+  globalThis.ResizeObserver ||
+  class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
 
 const segments = [
   { id: "s1", name: "Escritório", groupId: "g1" },
@@ -23,24 +29,73 @@ const segments = [
   { id: "bkp", name: "Backup", isBackupSegment: true }
 ];
 const devices = [
-  { id: "d1", name: "PC-01", ip: "10.0.0.1", segmentId: "s1", status: "online", hardware: { peripherals: [{ id: "p1", type: "Monitor", brand: "LG", assetTag: "A" }] } },
+  {
+    id: "d1",
+    name: "PC-01",
+    ip: "10.0.0.1",
+    segmentId: "s1",
+    status: "online",
+    hardware: { peripherals: [{ id: "p1", type: "Monitor", brand: "LG", assetTag: "A" }] }
+  },
   { id: "d2", name: "PC-02", ip: "10.0.0.2", segmentId: "s3", status: "offline" },
   { id: "d3", name: "PC-03", ip: "10.0.0.3", segmentId: "man", status: "online" },
   { id: "d4", name: "PC-04", ip: "10.0.0.4", segmentId: "bkp", status: "online" }
 ];
 const machinesBySegment = new Map(devices.map((device) => [device.segmentId, [device]]));
-const groups = [{ id: "g1", name: "Matriz", segmentIds: ["s1", "s2"] }, { id: "g2", name: "Colapsado", collapsed: true }];
-const tabs = [{ id: "t1", name: "Aba 1", color: "#112233" }, { id: "t2", name: "Aba 2" }];
+const groups = [
+  { id: "g1", name: "Matriz", segmentIds: ["s1", "s2"] },
+  { id: "g2", name: "Colapsado", collapsed: true }
+];
+const tabs = [
+  { id: "t1", name: "Aba 1", color: "#112233" },
+  { id: "t2", name: "Aba 2" }
+];
 
-const handlerNames = ["notify", "setSearch", "setMoveTarget", "onCreateSegment", "onRenameSegment", "onDeleteSegment", "onChangeSegmentColor", "onAliasSave", "onAddObservation", "onMoveMachine",
-  "onBulkMoveTargetChange", "onBulkMove", "onBulkPrint", "onBulkMarkBackup", "onClearSelection", "onSelectAsset", "onToggleSelection", "onSelectGroup", "onSelectSegment", "onCreateGroup",
-  "onRenameGroup", "onDeleteGroup", "onChangeGroupColor", "onToggleGroup", "onMoveGroupOrder", "onMoveSegmentToGroup", "onMoveSegmentOrder", "onSelectTab", "onCreateTab", "onRenameTab",
-  "onDeleteTab", "onChangeTabColor", "onCreateManualAsset", "onCloseMoveModal", "onOpenMoveModal"];
+const handlerNames = [
+  "notify",
+  "setSearch",
+  "setMoveTarget",
+  "onCreateSegment",
+  "onRenameSegment",
+  "onDeleteSegment",
+  "onChangeSegmentColor",
+  "onAliasSave",
+  "onAddObservation",
+  "onMoveMachine",
+  "onBulkMoveTargetChange",
+  "onBulkMove",
+  "onBulkPrint",
+  "onBulkMarkBackup",
+  "onClearSelection",
+  "onSelectAsset",
+  "onToggleSelection",
+  "onSelectGroup",
+  "onSelectSegment",
+  "onCreateGroup",
+  "onRenameGroup",
+  "onDeleteGroup",
+  "onChangeGroupColor",
+  "onToggleGroup",
+  "onMoveGroupOrder",
+  "onMoveSegmentToGroup",
+  "onMoveSegmentOrder",
+  "onSelectTab",
+  "onCreateTab",
+  "onRenameTab",
+  "onDeleteTab",
+  "onChangeTabColor",
+  "onCreateManualAsset",
+  "onCloseMoveModal",
+  "onOpenMoveModal"
+];
 
 function renderBoard(overrides = {}) {
   const handlers = Object.fromEntries(handlerNames.map((name) => [name, vi.fn()]));
   Object.assign(handlers, {
-    onAddPeripheral: vi.fn((id, peripheral) => ({ peripheral: { ...peripheral, id: "np" }, event: { id: "ev1", change: "Periférico adicionado" } })),
+    onAddPeripheral: vi.fn((id, peripheral) => ({
+      peripheral: { ...peripheral, id: "np" },
+      event: { id: "ev1", change: "Periférico adicionado" }
+    })),
     onRemovePeripheral: vi.fn(() => ({ id: "ev2", change: "Periférico removido" })),
     onRefreshPing: vi.fn(async (machine) => ({ ...machine, status: "online", name: `${machine.name}*` })),
     onChangeDeviceType: vi.fn(async (id, type) => ({ ...devices[0], assetType: type, name: "PC-01 tipo" })),
@@ -49,26 +104,62 @@ function renderBoard(overrides = {}) {
     onRemoveMachine: vi.fn(async () => true)
   });
   const props = {
-    devices, segments, machinesBySegment, token: "t", search: "", selectedGroupId: "all", selectedSegmentId: "all", user: { id: "u" }, userName: "Ana", canManage: true,
-    groups, tabs, activeTab: tabs[0], activeTabId: "t1", aliases: { d1: "Apelido" }, selectedAssetIds: new Set(["d2"]), bulkMoveTarget: "s1", ...handlers, ...overrides
+    devices,
+    segments,
+    machinesBySegment,
+    token: "t",
+    search: "",
+    selectedGroupId: "all",
+    selectedSegmentId: "all",
+    user: { id: "u" },
+    userName: "Ana",
+    canManage: true,
+    groups,
+    tabs,
+    activeTab: tabs[0],
+    activeTabId: "t1",
+    aliases: { d1: "Apelido" },
+    selectedAssetIds: new Set(["d2"]),
+    bulkMoveTarget: "s1",
+    ...handlers,
+    ...overrides
   };
   const user = userEvent.setup();
-  const tree = (next) => <DndContext><InventoryBoard {...props} {...next} /></DndContext>;
+  const tree = (next) => (
+    <DndContext>
+      <InventoryBoard {...props} {...next} />
+    </DndContext>
+  );
   const utils = render(tree());
   return { props, user, ...utils, rerenderBoard: (next) => utils.rerender(tree(next)) };
 }
-const settle = () => act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+const settle = () =>
+  act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
 const group = (name) => screen.getByText(name, { selector: "strong" }).closest("section");
 
 // Fluxos longos com user-event ficam lentos sob cobertura.
 vi.setConfig({ testTimeout: 30000 });
 
-beforeEach(() => { vi.clearAllMocks(); window.history.pushState({}, "", "/"); });
+beforeEach(() => {
+  vi.clearAllMocks();
+  window.history.pushState({}, "", "/");
+});
 
 describe("boardProps", () => {
   it("aplica padrões somente quando undefined e pluraliza segmentos", () => {
     const resolved = resolveBoardProps({ selectedGroupId: undefined, groups: null, tabs: [1] });
-    expect(resolved).toMatchObject({ selectedGroupId: "all", selectedSegmentId: "all", groups: null, tabs: [1], floorPlansView: null, topologyView: null, aliases: {}, observations: {} });
+    expect(resolved).toMatchObject({
+      selectedGroupId: "all",
+      selectedSegmentId: "all",
+      groups: null,
+      tabs: [1],
+      floorPlansView: null,
+      topologyView: null,
+      aliases: {},
+      observations: {}
+    });
     expect(resolved.selectedAssetIds.size).toBe(0);
     expect(resolved.isBulkSelectionDragging).toBe(false);
     expect(resolveBoardProps({ selectedGroupId: "g" }).selectedGroupId).toBe("g");
@@ -169,7 +260,9 @@ describe("InventoryBoard — quadro", () => {
   });
 
   it("controla as ações do grupo (popover, ordem, cor, renomear, excluir)", async () => {
-    const { props, user, rerenderBoard } = renderBoard({ groups: [groups[0], { id: "g3", name: "Terceiro" }, { id: "g4", name: "Quarto" }] });
+    const { props, user, rerenderBoard } = renderBoard({
+      groups: [groups[0], { id: "g3", name: "Terceiro" }, { id: "g4", name: "Quarto" }]
+    });
     const triggers = () => screen.getAllByRole("button", { name: "Ações do grupo" });
     await user.click(triggers()[1]);
     expect(triggers()[1]).toHaveAttribute("aria-expanded", "true");
@@ -193,7 +286,10 @@ describe("InventoryBoard — quadro", () => {
     expect(props.onToggleGroup).toHaveBeenCalledWith("g3");
     await user.click(triggers()[1]);
     await user.click(within(document.querySelector(".group-inline-actions")).getByRole("button", { name: /cor/i }));
-    await user.click(document.querySelector(".color-picker-popover button, [role=listbox] button, .segment-color-popover button") || screen.getAllByRole("button", { name: /#/ })[0]);
+    await user.click(
+      document.querySelector(".color-picker-popover button, [role=listbox] button, .segment-color-popover button") ||
+        screen.getAllByRole("button", { name: /#/ })[0]
+    );
     expect(props.onChangeGroupColor).toHaveBeenCalled();
     await user.click(triggers()[0]);
     expect(within(document.querySelector(".group-inline-actions")).queryByRole("button", { name: "Subir grupo" })).toBeNull();
@@ -217,7 +313,9 @@ describe("InventoryBoard — quadro", () => {
     await user.click(trigger());
     await user.keyboard("a");
     expect(document.querySelector(".group-inline-actions")).not.toBeNull();
-    act(() => { window.dispatchEvent(new CustomEvent("it-guardian:close-popovers")); });
+    act(() => {
+      window.dispatchEvent(new CustomEvent("it-guardian:close-popovers"));
+    });
     expect(document.querySelector(".group-inline-actions")).toBeNull();
   });
 
@@ -244,7 +342,11 @@ describe("InventoryBoard — quadro", () => {
 
 describe("InventoryBoard — visões", () => {
   const Floor = () => <div data-testid="floor">plantas</div>;
-  const Topology = ({ onOpenDetails }) => <button type="button" onClick={() => onOpenDetails(devices[0])}>abrir-detalhes</button>;
+  const Topology = ({ onOpenDetails }) => (
+    <button type="button" onClick={() => onOpenDetails(devices[0])}>
+      abrir-detalhes
+    </button>
+  );
 
   it("alterna entre Quadro, Plantas e Mapa de Rede com aria-pressed", async () => {
     const { user } = renderBoard({ floorPlansView: <Floor />, topologyView: <Topology /> });
@@ -280,13 +382,19 @@ describe("InventoryBoard — visões", () => {
   it("o evento open-inventory-board volta ao quadro e abre o ativo", async () => {
     const { user } = renderBoard({ floorPlansView: <Floor /> });
     await user.click(screen.getByRole("button", { name: "Plantas" }));
-    act(() => { window.dispatchEvent(new CustomEvent("it-guardian:open-inventory-board", { detail: { assetId: "d2" } })); });
+    act(() => {
+      window.dispatchEvent(new CustomEvent("it-guardian:open-inventory-board", { detail: { assetId: "d2" } }));
+    });
     expect(screen.getByRole("dialog", { name: "Detalhes do ativo" })).toBeInTheDocument();
     expect(document.body).toHaveClass("machine-details-open");
     await user.keyboard("{Escape}");
     expect(document.body).not.toHaveClass("machine-details-open");
-    act(() => { window.dispatchEvent(new CustomEvent("it-guardian:open-inventory-board", { detail: { assetId: "x" } })); });
-    act(() => { window.dispatchEvent(new CustomEvent("it-guardian:open-inventory-board")); });
+    act(() => {
+      window.dispatchEvent(new CustomEvent("it-guardian:open-inventory-board", { detail: { assetId: "x" } }));
+    });
+    act(() => {
+      window.dispatchEvent(new CustomEvent("it-guardian:open-inventory-board"));
+    });
     expect(screen.queryByRole("dialog", { name: "Detalhes do ativo" })).toBeNull();
   });
 });
@@ -300,7 +408,9 @@ describe("InventoryBoard — modais", () => {
   }
 
   it("abre a ficha com apelido, observações e cor do segmento e executa as ações", async () => {
-    const { props, user } = renderBoard({ observations: { d1: [{ id: "o", text: "Nota antiga", author: "x", createdAt: "2026-01-01T00:00:00Z" }] } });
+    const { props, user } = renderBoard({
+      observations: { d1: [{ id: "o", text: "Nota antiga", author: "x", createdAt: "2026-01-01T00:00:00Z" }] }
+    });
     let dialog = await openDetails(user, "Apelido");
     expect(within(dialog).getByRole("heading", { level: 2, name: "Apelido" })).toBeInTheDocument();
     await user.click(within(dialog).getByRole("button", { name: "Observações" }));
@@ -332,7 +442,13 @@ describe("InventoryBoard — modais", () => {
   });
 
   it("mantém a ficha aberta quando as ações não concluem", async () => {
-    const { props, user } = renderBoard({ onPutMaintenance: undefined, onToggleBackup: vi.fn(async () => false), onRemoveMachine: vi.fn(async () => false), onChangeDeviceType: vi.fn(async () => null), onRefreshPing: vi.fn(async () => null) });
+    const { props, user } = renderBoard({
+      onPutMaintenance: undefined,
+      onToggleBackup: vi.fn(async () => false),
+      onRemoveMachine: vi.fn(async () => false),
+      onChangeDeviceType: vi.fn(async () => null),
+      onRefreshPing: vi.fn(async () => null)
+    });
     const dialog = await openDetails(user, "Apelido");
     await user.click(within(dialog).getByRole("button", { name: "Colocar em manutenção" }));
     await user.click(within(dialog).getByRole("button", { name: "Marcar Backup" }));
@@ -345,8 +461,19 @@ describe("InventoryBoard — modais", () => {
   });
 
   it("atualiza o ping de ativo manual pela ficha", async () => {
-    const manual = { id: "mn", name: "SW", ip: "10.1.1.1", segmentId: "s3", source: "manual", status: "offline", manualAsset: { assetTag: "N1" } };
-    const { props, user } = renderBoard({ devices: [...devices, manual], machinesBySegment: new Map([...machinesBySegment, ["s3", [devices[1], manual]]]) });
+    const manual = {
+      id: "mn",
+      name: "SW",
+      ip: "10.1.1.1",
+      segmentId: "s3",
+      source: "manual",
+      status: "offline",
+      manualAsset: { assetTag: "N1" }
+    };
+    const { props, user } = renderBoard({
+      devices: [...devices, manual],
+      machinesBySegment: new Map([...machinesBySegment, ["s3", [devices[1], manual]]])
+    });
     const dialog = await openDetails(user, "SW");
     await user.click(within(dialog).getByRole("button", { name: /Atualizar ping/ }));
     await settle();

@@ -196,7 +196,9 @@ export function toNumber(value, fallback = null) {
  * @param {unknown} [fallback]
  */
 export function normalizePriority(value, fallback = "medium") {
-  const priority = String(value || "").trim().toLowerCase();
+  const priority = String(value || "")
+    .trim()
+    .toLowerCase();
   return allowedPriorities.has(priority) ? priority : fallback;
 }
 
@@ -229,16 +231,10 @@ export function normalizeAlertSettings(value = {}) {
     1,
     toNumber(value.inactiveAlertAutoResolveHours, defaultAlertSettings.inactiveAlertAutoResolveHours)
   );
-  const preventiveDueDays = Math.max(
-    1,
-    toNumber(value.preventiveDueDays, defaultAlertSettings.preventiveDueDays)
-  );
+  const preventiveDueDays = Math.max(1, toNumber(value.preventiveDueDays, defaultAlertSettings.preventiveDueDays));
   const scriptValidationWindowMinutes = Math.min(
     10080,
-    Math.max(
-      5,
-      toNumber(value.scriptValidationWindowMinutes, defaultAlertSettings.scriptValidationWindowMinutes)
-    )
+    Math.max(5, toNumber(value.scriptValidationWindowMinutes, defaultAlertSettings.scriptValidationWindowMinutes))
   );
 
   return {
@@ -291,16 +287,11 @@ function hasOwn(payload, key) {
  */
 export function mergeAlertSettingsUpdate(current, payload = {}) {
   return normalizeAlertSettings({
-    rejectedAlertSilenceHours:
-      payload.rejectedAlertSilenceHours ?? current.rejectedAlertSilenceHours,
-    recurrenceCounterResetHours:
-      payload.recurrenceCounterResetHours ?? current.recurrenceCounterResetHours,
-    inactiveAlertAutoResolveHours:
-      payload.inactiveAlertAutoResolveHours ?? current.inactiveAlertAutoResolveHours,
-    preventiveDueDays:
-      payload.preventiveDueDays ?? current.preventiveDueDays,
-    scriptValidationWindowMinutes:
-      payload.scriptValidationWindowMinutes ?? current.scriptValidationWindowMinutes,
+    rejectedAlertSilenceHours: payload.rejectedAlertSilenceHours ?? current.rejectedAlertSilenceHours,
+    recurrenceCounterResetHours: payload.recurrenceCounterResetHours ?? current.recurrenceCounterResetHours,
+    inactiveAlertAutoResolveHours: payload.inactiveAlertAutoResolveHours ?? current.inactiveAlertAutoResolveHours,
+    preventiveDueDays: payload.preventiveDueDays ?? current.preventiveDueDays,
+    scriptValidationWindowMinutes: payload.scriptValidationWindowMinutes ?? current.scriptValidationWindowMinutes,
     autoPriority: {
       ...current.autoPriority,
       ...(payload.autoPriority || {})
@@ -322,9 +313,7 @@ export function mergeAlertSettingsUpdate(current, payload = {}) {
  */
 export function buildAlertRuleUpdate(current, payload = {}) {
   return {
-    threshold: hasOwn(payload, "threshold")
-      ? toNumber(payload.threshold, current.threshold)
-      : current.threshold,
+    threshold: hasOwn(payload, "threshold") ? toNumber(payload.threshold, current.threshold) : current.threshold,
     durationMinutes: hasOwn(payload, "durationMinutes")
       ? Math.max(0, Math.round(toNumber(payload.durationMinutes, current.duration_minutes)))
       : current.duration_minutes,

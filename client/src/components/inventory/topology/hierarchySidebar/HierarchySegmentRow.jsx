@@ -24,10 +24,7 @@ export default function HierarchySegmentRow({ segment, groupId, expanded, select
           onClick={() => onSelectSegment(segment.id, groupId)}
         >
           <Layers size={14} />
-          <span
-            className="network-topology-hierarchy-status-dot"
-            style={{ background: getAggregateStatusColorToken(segment.status) }}
-          />
+          <span className="network-topology-hierarchy-status-dot" style={{ background: getAggregateStatusColorToken(segment.status) }} />
           <span>{segment.name}</span>
           <span className="network-topology-hierarchy-count">{segment.deviceCount}</span>
         </button>

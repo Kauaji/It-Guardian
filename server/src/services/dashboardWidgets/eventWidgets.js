@@ -8,9 +8,7 @@ function clampLimit(value, fallback = 10, max = 50) {
 
 export async function fetchRecentEvents(config, ctx) {
   const logs = await ctx.getRecentEventLogs();
-  const scopedLogs = ctx.hasFilters
-    ? filterDashboardEvents(logs, await ctx.getScopedEventReferences())
-    : logs;
+  const scopedLogs = ctx.hasFilters ? filterDashboardEvents(logs, await ctx.getScopedEventReferences()) : logs;
   const limit = clampLimit(config?.limit);
   return {
     // The repository reads the latest 500 audit events. Filtering this bounded

@@ -1,10 +1,7 @@
 import { useState } from "react";
 import { useAppSession } from "../../context/AppSessionContext.jsx";
 import { useDashboardData } from "../../hooks/useDashboardData.js";
-import {
-  applyInventoryLocalState,
-  applySegmentGroups
-} from "../../components/inventory/inventoryLocalState.js";
+import { applyInventoryLocalState, applySegmentGroups } from "../../components/inventory/inventoryLocalState.js";
 import { remoteScriptExecutionEnabled as remoteScriptExecutionEnabledAtBuild } from "../../config/features.js";
 
 function readSystemMode() {
@@ -53,8 +50,7 @@ export function useWorkspaceDataLoader({ access, activeView, persistence }) {
   // novo build do cliente; o valor vindo do servidor reflete o estado real do
   // backend sem precisar rebuildar - usado assim que carrega, com o flag de
   // build como fallback ate la.
-  const remoteScriptExecutionEnabled =
-    data.remoteScriptExecutionEnabledOnServer ?? remoteScriptExecutionEnabledAtBuild;
+  const remoteScriptExecutionEnabled = data.remoteScriptExecutionEnabledOnServer ?? remoteScriptExecutionEnabledAtBuild;
 
   return { ...data, remoteScriptExecutionEnabled, setSelectedDevice };
 }

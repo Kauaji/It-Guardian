@@ -4,11 +4,7 @@ export default function PublicSupportMachineSummary({ deviceToken, machineContex
   if (!deviceToken) return null;
 
   if (machineContextLoading) {
-    return (
-      <p className="public-support-machine-status">
-        Identificando a máquina pelo link do instalador...
-      </p>
-    );
+    return <p className="public-support-machine-status">Identificando a máquina pelo link do instalador...</p>;
   }
 
   if (machineContextError || !machine?.id) {

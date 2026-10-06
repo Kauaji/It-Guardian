@@ -1,8 +1,5 @@
 import { Router } from "express";
-import {
-  getPreference,
-  savePreference
-} from "../controllers/userPreferenceController.js";
+import { getPreference, savePreference } from "../controllers/userPreferenceController.js";
 import { requireAuth } from "../middleware/authMiddleware.js";
 
 const router = Router();

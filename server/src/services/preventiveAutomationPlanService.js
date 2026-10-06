@@ -14,14 +14,8 @@ import {
   softDeletePlan,
   updatePlan
 } from "../repositories/preventiveAutomationPlanRepository.js";
-import {
-  deleteOverridesOfPlan,
-  insertOverride
-} from "../repositories/preventiveAutomationOverrideRepository.js";
-import {
-  deactivateSchedulesOfPlan,
-  reactivateAssetSchedule
-} from "../repositories/preventiveAutomationScheduleRepository.js";
+import { deleteOverridesOfPlan, insertOverride } from "../repositories/preventiveAutomationOverrideRepository.js";
+import { deactivateSchedulesOfPlan, reactivateAssetSchedule } from "../repositories/preventiveAutomationScheduleRepository.js";
 import { findPreventiveAutomationPlanById } from "./preventiveAutomationPlanQueryService.js";
 import { refreshPlanNextRun, syncAssetSchedulesForPlan } from "./preventiveAutomationScheduleService.js";
 import { validateScopeSelection, validateScripts } from "./preventiveAutomationScopeService.js";
@@ -45,7 +39,11 @@ async function assertUniquePlanIdentity({ name, indicatorColor }, excludeId = nu
   const found = await findPlanIdentityConflict({ name, indicatorColor }, excludeId, db);
   if (!found) return;
 
-  if (String(found.name || "").trim().toLowerCase() === name.trim().toLowerCase()) {
+  if (
+    String(found.name || "")
+      .trim()
+      .toLowerCase() === name.trim().toLowerCase()
+  ) {
     throw conflict("Já existe uma automatização com esse nome.");
   }
 

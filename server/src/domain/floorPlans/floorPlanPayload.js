@@ -277,14 +277,18 @@ export function normalizeEditorChildren(planId, data) {
   const validFloorIds = new Set(floors.map((floor) => floor.id));
   const fallbackFloorId = floors[0].id;
   // Entradas nulas/nao objeto da lista crua antes derrubavam a gravacao com TypeError (500).
-  const zones = (data.zones || []).filter(isPresent).map((item, index) => normalizeZonePayload(item, planId, validFloorIds, fallbackFloorId, index));
-  const objects = (data.objects || []).filter(isPresent).map((item) => normalizeObjectPayload(item, planId, validFloorIds, fallbackFloorId));
-  const connectionPoints = (data.connectionPoints || data.connection_points || []).filter(isPresent).map((item) => (
-    normalizePointPayload(item, planId, validFloorIds, fallbackFloorId)
-  ));
-  const cableRoutes = (data.cableRoutes || data.cable_routes || []).filter(isPresent).map((item) => (
-    normalizeRoutePayload(item, planId, validFloorIds, fallbackFloorId)
-  ));
+  const zones = (data.zones || [])
+    .filter(isPresent)
+    .map((item, index) => normalizeZonePayload(item, planId, validFloorIds, fallbackFloorId, index));
+  const objects = (data.objects || [])
+    .filter(isPresent)
+    .map((item) => normalizeObjectPayload(item, planId, validFloorIds, fallbackFloorId));
+  const connectionPoints = (data.connectionPoints || data.connection_points || [])
+    .filter(isPresent)
+    .map((item) => normalizePointPayload(item, planId, validFloorIds, fallbackFloorId));
+  const cableRoutes = (data.cableRoutes || data.cable_routes || [])
+    .filter(isPresent)
+    .map((item) => normalizeRoutePayload(item, planId, validFloorIds, fallbackFloorId));
   const normalized = { floors, zones, objects, connectionPoints, cableRoutes };
   validateFloorPlanEditorData(normalized);
   return { ...normalized, fallbackFloorId };
@@ -318,9 +322,7 @@ export function normalizeEditorData(payload = {}, plan) {
  * @returns {string}
  */
 export function resolveActiveFloorId(plan, floors) {
-  return plan.activeFloorId && floors.some((floor) => floor.id === plan.activeFloorId)
-    ? plan.activeFloorId
-    : floors[0].id;
+  return plan.activeFloorId && floors.some((floor) => floor.id === plan.activeFloorId) ? plan.activeFloorId : floors[0].id;
 }
 
 /**

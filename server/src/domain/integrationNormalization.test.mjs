@@ -83,17 +83,23 @@ test("correlaciona com seguranca por hostname e por IP", () => {
     }
   ];
 
-  const byHostname = correlateNormalizedAsset({
-    source: "zabbix",
-    externalId: "10084",
-    hostname: "SRV-APP-01."
-  }, existing);
-  const byIp = correlateNormalizedAsset({
-    source: "zabbix",
-    externalId: "10085",
-    hostname: "host-sem-correspondencia",
-    ip: "10.10.1.43"
-  }, existing);
+  const byHostname = correlateNormalizedAsset(
+    {
+      source: "zabbix",
+      externalId: "10084",
+      hostname: "SRV-APP-01."
+    },
+    existing
+  );
+  const byIp = correlateNormalizedAsset(
+    {
+      source: "zabbix",
+      externalId: "10085",
+      hostname: "host-sem-correspondencia",
+      ip: "10.10.1.43"
+    },
+    existing
+  );
 
   assert.equal(byHostname.match.id, "asset-hostname");
   assert.equal(byHostname.strategy, "hostname");
@@ -103,41 +109,38 @@ test("correlaciona com seguranca por hostname e por IP", () => {
 });
 
 test("identificadores conflitantes nunca causam mesclagem automatica", () => {
-  const result = correlateNormalizedAsset({
-    source: "zabbix",
-    externalId: "10084",
-    hostname: "srv-app-01",
-    ip: "10.10.1.99"
-  }, [
+  const result = correlateNormalizedAsset(
     {
-      id: "asset-hostname",
-      source: "ocs",
-      externalId: "42",
+      source: "zabbix",
+      externalId: "10084",
       hostname: "srv-app-01",
-      ip: "10.10.1.42"
-    },
-    {
-      id: "asset-ip",
-      source: "agent",
-      externalId: "agent-99",
-      hostname: "outro-host",
       ip: "10.10.1.99"
-    }
-  ]);
+    },
+    [
+      {
+        id: "asset-hostname",
+        source: "ocs",
+        externalId: "42",
+        hostname: "srv-app-01",
+        ip: "10.10.1.42"
+      },
+      {
+        id: "asset-ip",
+        source: "agent",
+        externalId: "agent-99",
+        hostname: "outro-host",
+        ip: "10.10.1.99"
+      }
+    ]
+  );
 
   assert.equal(result.conflict, true);
   assert.equal(result.match, null);
-  assert.deepEqual(
-    result.candidates.map((candidate) => candidate.id).sort(),
-    ["asset-hostname", "asset-ip"]
-  );
+  assert.deepEqual(result.candidates.map((candidate) => candidate.id).sort(), ["asset-hostname", "asset-ip"]);
 });
 
 test("inventario reconhece todas as origens suportadas", () => {
-  assert.deepEqual(
-    [...supportedAssetSources].sort(),
-    ["agent", "manual", "mock", "ocs", "zabbix"]
-  );
+  assert.deepEqual([...supportedAssetSources].sort(), ["agent", "manual", "mock", "ocs", "zabbix"]);
 });
 
 test("problema do Zabbix preserva os horários epoch (clock/r_clock) em vez de usar 'agora'", () => {

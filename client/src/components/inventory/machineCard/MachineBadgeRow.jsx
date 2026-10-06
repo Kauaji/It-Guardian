@@ -24,7 +24,16 @@ function StatusIndicator({ machine, isManualAsset, canManage, onRefreshPing, set
   );
 }
 
-export default function MachineBadgeRow({ machine, typeLabel, isManualAsset, isBackup, backupInUse, canManage, onRefreshPing, setActivePopoverId }) {
+export default function MachineBadgeRow({
+  machine,
+  typeLabel,
+  isManualAsset,
+  isBackup,
+  backupInUse,
+  canManage,
+  onRefreshPing,
+  setActivePopoverId
+}) {
   return (
     <div className="machine-badge-row">
       <StatusTooltip status={machine.status} lastSeenAt={machine.lastSeenAt}>

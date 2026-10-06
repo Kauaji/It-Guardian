@@ -12,14 +12,9 @@ import {
 } from "../../domain/remoteAssistancePolicy.js";
 import { hasPermission } from "../../permissions.js";
 
-import {
-  findAgentAssetById
-} from "../../repositories/agentRepository.js";
+import { findAgentAssetById } from "../../repositories/agentRepository.js";
 
-import {
-  setRemoteAssistanceControl,
-  setRemoteAssistanceMonitor
-} from "../../repositories/remoteAssistanceRepository.js";
+import { setRemoteAssistanceControl, setRemoteAssistanceMonitor } from "../../repositories/remoteAssistanceRepository.js";
 
 import {
   appendRelayChatMessage,
@@ -37,15 +32,9 @@ import {
 
 import { publicError } from "../../domain/remoteAssistance/remoteAssistanceErrors.js";
 import { sanitizeInputCommand } from "../../domain/remoteAssistance/remoteAssistanceInput.js";
-import {
-  normalizeChatMessageText
-} from "../../domain/remoteAssistance/remoteAssistancePayload.js";
+import { normalizeChatMessageText } from "../../domain/remoteAssistance/remoteAssistancePayload.js";
 import { addAudit } from "./remoteAssistanceAudit.js";
-import {
-  assertManagedSession,
-  assertViewerToken,
-  safeSession
-} from "./remoteAssistanceGuards.js";
+import { assertManagedSession, assertViewerToken, safeSession } from "./remoteAssistanceGuards.js";
 
 export async function getRemoteAssistanceFrame({ user, sessionId, viewerToken }) {
   const config = getRemoteAssistanceConfig();
@@ -89,11 +78,13 @@ export async function sendRemoteAssistanceInput({ user, sessionId, viewerToken, 
   assertRemoteAssistanceEnabled(config);
   const session = await assertManagedSession(user, sessionId);
   await assertViewerToken(session, viewerToken);
-  if (!canRelayInput({
-    session,
-    config,
-    canControl: hasPermission(user, "remote_assistance.control")
-  })) {
+  if (
+    !canRelayInput({
+      session,
+      config,
+      canControl: hasPermission(user, "remote_assistance.control")
+    })
+  ) {
     throw publicError("O controle remoto nao esta autorizado nesta sessao.", 403);
   }
   const sanitized = sanitizeInputCommand(command);

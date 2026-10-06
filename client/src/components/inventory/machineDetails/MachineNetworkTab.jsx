@@ -17,7 +17,10 @@ export default function MachineNetworkTab({ model }) {
         <DetailItem label="Hostname" value={agent?.hostname || manualAsset?.hostname || machine.name} />
         <DetailItem
           label="Adaptadores ativos"
-          value={hardware.networkAdapters?.map((adapter) => adapter.name).filter(Boolean).join(", ")}
+          value={hardware.networkAdapters
+            ?.map((adapter) => adapter.name)
+            .filter(Boolean)
+            .join(", ")}
         />
         {isManualAsset && <DetailItem label="Modo de identificação" value={manualAsset?.identificationMode} />}
         {!isManualAsset && !isAgentAsset && machine.metrics && (

@@ -3,16 +3,7 @@ import { formatDate, getServiceLabel, getServiceOrderOriginLabel, slaStatusLabel
 
 const SLA_CARD_BADGE_STATUSES = new Set(["breached", "near_due"]);
 
-export default function ServiceOrderCard({
-  order,
-  asset,
-  priorityColor,
-  businessMode,
-  dragging,
-  onDragStart,
-  onDragEnd,
-  onOpen
-}) {
+export default function ServiceOrderCard({ order, asset, priorityColor, businessMode, dragging, onDragStart, onDragEnd, onOpen }) {
   const priorityBackground = `color-mix(in srgb, ${priorityColor} 32%, var(--surface))`;
   const mainContext = businessMode ? order.environmentName || "Sem cliente" : order.sectorName || "Geral";
   const secondaryContext = businessMode ? order.sectorName || "Geral" : getServiceLabel(order);
@@ -39,11 +30,7 @@ export default function ServiceOrderCard({
       <span className="service-order-number">
         {order.number}
         {order.isDemo && <span className="demo-data-badge">Demo</span>}
-        {showSlaBadge && (
-          <span className={`service-order-sla-chip service-order-sla-chip-${slaStatus}`}>
-            {slaStatusLabels[slaStatus]}
-          </span>
-        )}
+        {showSlaBadge && <span className={`service-order-sla-chip service-order-sla-chip-${slaStatus}`}>{slaStatusLabels[slaStatus]}</span>}
         {originLabel !== "Manual" && <span className="service-order-origin-badge">{originLabel}</span>}
       </span>
       <strong>{order.title}</strong>
@@ -54,7 +41,10 @@ export default function ServiceOrderCard({
         {secondaryContext && <em>{secondaryContext}</em>}
       </div>
       <footer>
-        <span><UserRound size={14} />{technicianLabel}</span>
+        <span>
+          <UserRound size={14} />
+          {technicianLabel}
+        </span>
         <span>{formatDate(order.createdAt)}</span>
       </footer>
     </button>

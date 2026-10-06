@@ -9,7 +9,9 @@ import OneTimeCodeField from "./OneTimeCodeField.jsx";
 import RecoveryCodesPanel from "./RecoveryCodesPanel.jsx";
 
 function groupSecret(secret) {
-  return String(secret || "").replace(/(.{4})/g, "$1 ").trim();
+  return String(secret || "")
+    .replace(/(.{4})/g, "$1 ")
+    .trim();
 }
 
 function useSetupFocus(step) {
@@ -24,8 +26,8 @@ function IntroStep({ loading, error, onStart, onCancel }) {
   return (
     <>
       <p className="auth-step-text">
-        Além da senha, você vai digitar um código de 6 dígitos gerado por um aplicativo autenticador (Google
-        Authenticator, Microsoft Authenticator, 1Password, Aegis...). Você precisará do celular em mãos.
+        Além da senha, você vai digitar um código de 6 dígitos gerado por um aplicativo autenticador (Google Authenticator, Microsoft
+        Authenticator, 1Password, Aegis...). Você precisará do celular em mãos.
       </p>
       <FormMessage>{error}</FormMessage>
       <div className="auth-actions-row">
@@ -59,9 +61,7 @@ function ScanStep({ setup, qr, qrFailed, code, onCodeChange, error, loading, onC
         {qr ? (
           <img className="auth-qr" src={qr} alt="QR code para configurar o aplicativo autenticador" width={208} height={208} />
         ) : (
-          <p className="auth-step-text">
-            {qrFailed ? "Não foi possível gerar o QR code. Use a chave abaixo." : "Gerando QR code..."}
-          </p>
+          <p className="auth-step-text">{qrFailed ? "Não foi possível gerar o QR code. Use a chave abaixo." : "Gerando QR code..."}</p>
         )}
         <div>
           <p className="auth-step-text">Não consegue ler o QR code? Digite esta chave no aplicativo:</p>
@@ -119,7 +119,9 @@ export default function MfaSetupWizard({ token, onComplete, onCancel, headingLev
       setSetup(data);
       setCode("");
       setStep("scan");
-      generateQrDataUrl(data.otpauthUri).then(setQr).catch(() => setQrFailed(true));
+      generateQrDataUrl(data.otpauthUri)
+        .then(setQr)
+        .catch(() => setQrFailed(true));
     } catch (failure) {
       setError(describeIdentityError(failure));
     } finally {

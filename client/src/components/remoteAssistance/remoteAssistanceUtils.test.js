@@ -52,7 +52,10 @@ describe("notifyResult", () => {
     notifyResult(notify, "ok");
     notifyResult(notify, "erro", "error");
     notifyResult(undefined, "ignorado");
-    expect(notify.mock.calls).toEqual([["ok", "ok"], ["erro", "error"]]);
+    expect(notify.mock.calls).toEqual([
+      ["ok", "ok"],
+      ["erro", "error"]
+    ]);
   });
 });
 
@@ -68,7 +71,10 @@ describe("viewState", () => {
 
   it("seleciona monitor e proporcao da tela", () => {
     expect(getMonitorState(null)).toEqual({ monitors: [], selectedMonitor: null, screenAspectRatio: "16 / 9" });
-    const monitors = [{ id: "a", width: 800, height: 600 }, { id: "b", width: 1280, height: 720 }];
+    const monitors = [
+      { id: "a", width: 800, height: 600 },
+      { id: "b", width: 1280, height: 720 }
+    ];
     expect(getMonitorState({ monitors }).selectedMonitor.id).toBe("a");
     const second = getMonitorState({ monitors, selectedMonitorId: "b" });
     expect(second.selectedMonitor.id).toBe("b");
@@ -97,7 +103,9 @@ describe("viewState", () => {
       frameStale: true,
       canReconnect: false
     });
-    expect(getSessionFlags({ session: { ...active, paused: true }, metrics: { frameAgeMs: 9000 }, viewerPollMs: 1000 }).frameStale).toBe(false);
+    expect(getSessionFlags({ session: { ...active, paused: true }, metrics: { frameAgeMs: 9000 }, viewerPollMs: 1000 }).frameStale).toBe(
+      false
+    );
     expect(getSessionFlags({ session: active, metrics: null, viewerPollMs: 1000, error: "falha" }).canReconnect).toBe(true);
     expect(getSessionFlags({ session: { ...active, connectionState: "agent_offline" } }).canReconnect).toBe(true);
     expect(getSessionFlags({ session: { ...active, status: "ended" }, error: "x" })).toMatchObject({ terminal: true, canReconnect: false });

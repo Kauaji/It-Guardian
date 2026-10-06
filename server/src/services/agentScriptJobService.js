@@ -45,10 +45,9 @@ import { rollUpAutomationRun, rollUpPreventivePlan } from "./agentJobRollupServi
 
 function assertRemoteScriptExecutionEnabled() {
   if (isRemoteScriptExecutionEnabled()) return;
-  throw serviceUnavailable(
-    "A execucao remota esta desabilitada nesta instalacao. O registro pode ser mantido em modo de simulacao.",
-    { code: "REMOTE_SCRIPT_EXECUTION_DISABLED" }
-  );
+  throw serviceUnavailable("A execucao remota esta desabilitada nesta instalacao. O registro pode ser mantido em modo de simulacao.", {
+    code: "REMOTE_SCRIPT_EXECUTION_DISABLED"
+  });
 }
 
 export async function queueAgentScriptJob({

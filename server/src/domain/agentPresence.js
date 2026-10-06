@@ -10,9 +10,7 @@
  * @returns {number}
  */
 export function resolveOfflineThresholdSeconds(env = process.env) {
-  return env.AGENT_OFFLINE_AFTER_SECONDS
-    ? Number(env.AGENT_OFFLINE_AFTER_SECONDS)
-    : Number(env.AGENT_OFFLINE_AFTER_MINUTES || 10) * 60;
+  return env.AGENT_OFFLINE_AFTER_SECONDS ? Number(env.AGENT_OFFLINE_AFTER_SECONDS) : Number(env.AGENT_OFFLINE_AFTER_MINUTES || 10) * 60;
 }
 
 /**
@@ -35,10 +33,7 @@ export function resolveOfflineThresholdSeconds(env = process.env) {
  */
 export function wasAgentStale({ previous, payloadIntervalSeconds, configuredThresholdSeconds, now = Date.now() }) {
   if (!previous) return false;
-  const staleThresholdMs = Math.max(
-    configuredThresholdSeconds,
-    Number(previous.intervalSeconds || payloadIntervalSeconds) * 3
-  ) * 1000;
+  const staleThresholdMs = Math.max(configuredThresholdSeconds, Number(previous.intervalSeconds || payloadIntervalSeconds) * 3) * 1000;
   return now - new Date(previous.lastSeenAt).getTime() > staleThresholdMs;
 }
 

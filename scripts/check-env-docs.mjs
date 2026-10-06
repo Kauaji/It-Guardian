@@ -9,8 +9,18 @@ const examplePath = path.join(root, "server", ".env.example");
 
 // Fornecidas pela plataforma/ferramentas, nao configuradas pelo operador.
 const platformProvided = new Set([
-  "NODE_ENV", "VERCEL", "VERCEL_ENV", "VERCEL_URL", "VERCEL_REGION", "CI", "HOME", "PATH", "TZ", "USERPROFILE",
-  "npm_package_version", "npm_lifecycle_event"
+  "NODE_ENV",
+  "VERCEL",
+  "VERCEL_ENV",
+  "VERCEL_URL",
+  "VERCEL_REGION",
+  "CI",
+  "HOME",
+  "PATH",
+  "TZ",
+  "USERPROFILE",
+  "npm_package_version",
+  "npm_lifecycle_event"
 ]);
 
 function listFiles(dir) {

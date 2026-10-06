@@ -195,7 +195,10 @@ describe("filterInventoryDevices", () => {
 describe("findSegmentById", () => {
   it("procura nas listas na ordem informada", () => {
     const first = [{ id: "a", from: "first" }];
-    const second = [{ id: "a", from: "second" }, { id: "b", from: "second" }];
+    const second = [
+      { id: "a", from: "second" },
+      { id: "b", from: "second" }
+    ];
     expect(findSegmentById("a", first, second).from).toBe("first");
     expect(findSegmentById("b", first, second).from).toBe("second");
     expect(findSegmentById("c", first, second)).toBeUndefined();

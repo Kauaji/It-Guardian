@@ -43,9 +43,7 @@ export function useMaintenanceScriptActions() {
 
   async function handleSaveMaintenanceScript(payload, scriptId = null) {
     try {
-      const response = scriptId
-        ? await updateMaintenanceScript(token, scriptId, payload)
-        : await createMaintenanceScript(token, payload);
+      const response = scriptId ? await updateMaintenanceScript(token, scriptId, payload) : await createMaintenanceScript(token, payload);
       setMaintenanceScripts((current) => {
         const exists = current.some((script) => script.id === response.script.id);
         return exists
@@ -62,9 +60,7 @@ export function useMaintenanceScriptActions() {
   async function handleDeactivateMaintenanceScript(scriptId) {
     try {
       const response = await deleteMaintenanceScript(token, scriptId);
-      setMaintenanceScripts((current) =>
-        current.map((script) => (script.id === response.script.id ? response.script : script))
-      );
+      setMaintenanceScripts((current) => current.map((script) => (script.id === response.script.id ? response.script : script)));
       notify("Script de manutenção desativado.", "ok");
     } catch (error) {
       notify(error.message, "danger");

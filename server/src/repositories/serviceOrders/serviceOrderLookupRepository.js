@@ -2,18 +2,12 @@ import { query } from "../../database.js";
 import { listSettingsRecords } from "../settingsRepository.js";
 
 export async function findActiveSectorById(id) {
-  const result = await query(
-    "SELECT id, name FROM sectors WHERE id = $1 AND active = TRUE LIMIT 1",
-    [id]
-  );
+  const result = await query("SELECT id, name FROM sectors WHERE id = $1 AND active = TRUE LIMIT 1", [id]);
   return result.rows[0] || null;
 }
 
 export async function findActiveSectorByName(name) {
-  const result = await query(
-    "SELECT id, name FROM sectors WHERE LOWER(name) = LOWER($1) AND active = TRUE LIMIT 1",
-    [name]
-  );
+  const result = await query("SELECT id, name FROM sectors WHERE LOWER(name) = LOWER($1) AND active = TRUE LIMIT 1", [name]);
   return result.rows[0] || null;
 }
 

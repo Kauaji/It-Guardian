@@ -1,11 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  describeScriptForDiagnosis,
-  executionDiagnosisContextPermissions,
-  isScriptDiagnosisSatisfied
-} from "./executionDiagnosis.js";
+import { describeScriptForDiagnosis, executionDiagnosisContextPermissions, isScriptDiagnosisSatisfied } from "./executionDiagnosis.js";
 import {
   assertExecutionConfirmed,
   assertRiskAcknowledged,
@@ -33,14 +29,23 @@ test("sugestoes so aceitam script nos estados que permitem nova observacao", () 
 test("script precisa existir e estar ativo", () => {
   assert.doesNotThrow(() => assertScriptAvailable({ id: "s1" }));
   assert.doesNotThrow(() => assertScriptAvailable({ id: "s1", active: true }));
-  assert.throws(() => assertScriptAvailable(null), (error) => error.statusCode === 404);
-  assert.throws(() => assertScriptAvailable({ id: "s1", active: false }), (error) => error.statusCode === 404);
+  assert.throws(
+    () => assertScriptAvailable(null),
+    (error) => error.statusCode === 404
+  );
+  assert.throws(
+    () => assertScriptAvailable({ id: "s1", active: false }),
+    (error) => error.statusCode === 404
+  );
 });
 
 test("execucao exige confirmacao explicita e risco alto exige confirmacao extra", () => {
   assert.doesNotThrow(() => assertExecutionConfirmed({ confirmed: true }));
   for (const payload of [{}, { confirmed: "true" }, { confirmed: 1 }, { confirmed: false }]) {
-    assert.throws(() => assertExecutionConfirmed(payload), (error) => error.statusCode === 400);
+    assert.throws(
+      () => assertExecutionConfirmed(payload),
+      (error) => error.statusCode === 400
+    );
   }
 
   assert.equal(isHighRiskScript({ riskLevel: "high" }), true);

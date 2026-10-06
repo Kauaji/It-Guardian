@@ -58,8 +58,7 @@ export function assertRustdeskEnabled(config) {
   throw error;
 }
 
-const RUSTDESK_PASSWORD_ALPHABET =
-  "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+const RUSTDESK_PASSWORD_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
 
 /**
  * Senha de sessao do RustDesk: gerada por sessao (nunca fixa, nunca
@@ -110,7 +109,9 @@ export function sanitizeSdp(value) {
  * @throws {import("../lib/errors.js").HttpErrorLike} 400 modo invalido; 403 controle nao autorizado.
  */
 export function normalizeRequestedMode(value, config, canControl) {
-  const mode = String(value || "view").trim().toLowerCase();
+  const mode = String(value || "view")
+    .trim()
+    .toLowerCase();
   if (!new Set(["view", "control"]).has(mode)) {
     /** @type {import("../lib/errors.js").HttpErrorLike} */
     const error = new Error("Modo de assistencia remota invalido.");
@@ -144,13 +145,13 @@ export function normalizeRequestedMode(value, config, canControl) {
 export function canRelayInput({ session, config, canControl }) {
   return Boolean(
     session &&
-      session.status === "active" &&
-      session.requestedMode === "control" &&
-      session.remoteControlEnabled &&
-      session.controlConsentGranted &&
-      session.consentStatus === "granted" &&
-      config?.controlEnabled &&
-      canControl
+    session.status === "active" &&
+    session.requestedMode === "control" &&
+    session.remoteControlEnabled &&
+    session.controlConsentGranted &&
+    session.consentStatus === "granted" &&
+    config?.controlEnabled &&
+    canControl
   );
 }
 
@@ -171,13 +172,7 @@ export function isAgentFresh(asset, now = Date.now()) {
   return now - new Date(asset.lastSeenAt).getTime() <= freshnessWindow;
 }
 
-const derivedTerminalOrOwnStatuses = new Set([
-  "waiting_consent",
-  "consent_denied",
-  "ended",
-  "expired",
-  "failed"
-]);
+const derivedTerminalOrOwnStatuses = new Set(["waiting_consent", "consent_denied", "ended", "expired", "failed"]);
 
 /**
  * Estado de conexao exibivel no viewer, derivado sem persistir nada novo:

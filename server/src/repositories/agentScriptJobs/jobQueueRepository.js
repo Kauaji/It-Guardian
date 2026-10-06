@@ -7,7 +7,20 @@ import { query } from "../../database.js";
  */
 
 export async function insertAgentScriptJob(
-  { id, assetId, enrollmentId, scriptId, executionLogId, validationId, automationRunId, scriptType, scriptContent, contentHash, timeoutSeconds, requestedBy },
+  {
+    id,
+    assetId,
+    enrollmentId,
+    scriptId,
+    executionLogId,
+    validationId,
+    automationRunId,
+    scriptType,
+    scriptContent,
+    contentHash,
+    timeoutSeconds,
+    requestedBy
+  },
   db = query
 ) {
   const result = await db(

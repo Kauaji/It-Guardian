@@ -11,7 +11,13 @@ function CatalogItem({ item, isPending, isFavorite, showSection, onAddItem, onTo
   const usesPlanGlyph = Boolean(item.objectType);
   return (
     <div className={`floor-plan-catalog-item-shell${isPending ? " placement-active" : ""}`}>
-      <button className="floor-plan-catalog-item" type="button" onClick={() => onAddItem(item)} aria-pressed={isPending} title={`Posicionar ${item.label}`}>
+      <button
+        className="floor-plan-catalog-item"
+        type="button"
+        onClick={() => onAddItem(item)}
+        aria-pressed={isPending}
+        title={`Posicionar ${item.label}`}
+      >
         {usesPlanGlyph ? (
           <svg aria-hidden="true" className="floor-plan-catalog-object-preview" viewBox={`0 0 ${item.width} ${item.height}`}>
             <FloorPlanObjectGlyph object={item} width={item.width} height={item.height} />
@@ -22,7 +28,13 @@ function CatalogItem({ item, isPending, isFavorite, showSection, onAddItem, onTo
         <span>{item.label}</span>
         {showSection ? <small>{item.sectionLabel}</small> : null}
       </button>
-      <button className={`floor-plan-catalog-favorite${isFavorite ? " active" : ""}`} type="button" onClick={() => onToggleFavorite(item.id)} title={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"} aria-label={isFavorite ? `Remover ${item.label} dos favoritos` : `Adicionar ${item.label} aos favoritos`}>
+      <button
+        className={`floor-plan-catalog-favorite${isFavorite ? " active" : ""}`}
+        type="button"
+        onClick={() => onToggleFavorite(item.id)}
+        title={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+        aria-label={isFavorite ? `Remover ${item.label} dos favoritos` : `Adicionar ${item.label} aos favoritos`}
+      >
         <Star size={14} fill={isFavorite ? "currentColor" : "none"} />
       </button>
     </div>
@@ -34,7 +46,12 @@ function CatalogHeader({ activeSection, query, collapsed, onQueryChange, onSelec
     <header className="floor-plan-catalog-header">
       <nav aria-label="Catálogo da planta">
         {getCatalogSections(FLOOR_PLAN_CATALOG).map((entry) => (
-          <button className={activeSection === entry.id ? "active" : ""} key={entry.id} type="button" onClick={() => onSelectSection(entry.id)}>
+          <button
+            className={activeSection === entry.id ? "active" : ""}
+            key={entry.id}
+            type="button"
+            onClick={() => onSelectSection(entry.id)}
+          >
             {entry.label}
           </button>
         ))}
@@ -42,9 +59,20 @@ function CatalogHeader({ activeSection, query, collapsed, onQueryChange, onSelec
       <div className="floor-plan-catalog-controls">
         <label className="floor-plan-catalog-search">
           <Search size={16} aria-hidden="true" />
-          <input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="Buscar em todo o catálogo" aria-label="Buscar item em todo o catálogo" />
+          <input
+            value={query}
+            onChange={(event) => onQueryChange(event.target.value)}
+            placeholder="Buscar em todo o catálogo"
+            aria-label="Buscar item em todo o catálogo"
+          />
         </label>
-        <button className="icon-button" type="button" onClick={onToggleCollapsed} title={collapsed ? "Expandir catálogo" : "Recolher catálogo"} aria-label={collapsed ? "Expandir catálogo" : "Recolher catálogo"}>
+        <button
+          className="icon-button"
+          type="button"
+          onClick={onToggleCollapsed}
+          title={collapsed ? "Expandir catálogo" : "Recolher catálogo"}
+          aria-label={collapsed ? "Expandir catálogo" : "Recolher catálogo"}
+        >
           {collapsed ? <ChevronUp size={17} /> : <ChevronDown size={17} />}
         </button>
       </div>
@@ -64,7 +92,10 @@ export default function FloorPlanCatalog({ activeSection, onActiveSectionChange,
   };
 
   return (
-    <section ref={catalogRef} className={`floor-plan-catalog${activeSection === "rooms" ? " room-catalog-active" : ""}${collapsed ? " collapsed" : ""}`}>
+    <section
+      ref={catalogRef}
+      className={`floor-plan-catalog${activeSection === "rooms" ? " room-catalog-active" : ""}${collapsed ? " collapsed" : ""}`}
+    >
       <CatalogHeader
         activeSection={activeSection}
         query={query}
@@ -73,24 +104,25 @@ export default function FloorPlanCatalog({ activeSection, onActiveSectionChange,
         onSelectSection={selectSection}
         onToggleCollapsed={() => setCollapsed((value) => !value)}
       />
-      {!collapsed && (activeSection === "rooms" && !normalizedQuery ? (
-        <RoomCatalog onSelectTemplate={onSelectRoomTemplate} onAddItem={onAddItem} />
-      ) : (
-        <div className="floor-plan-catalog-items">
-          {items.map((item) => (
-            <CatalogItem
-              key={item.id}
-              item={item}
-              isPending={placement?.kind === "catalog" && placement.item?.id === item.id}
-              isFavorite={favoriteIds.includes(item.id)}
-              showSection={Boolean(normalizedQuery)}
-              onAddItem={onAddItem}
-              onToggleFavorite={toggleFavorite}
-            />
-          ))}
-          {!items.length ? <p className="floor-plan-catalog-empty">Nenhum item encontrado.</p> : null}
-        </div>
-      ))}
+      {!collapsed &&
+        (activeSection === "rooms" && !normalizedQuery ? (
+          <RoomCatalog onSelectTemplate={onSelectRoomTemplate} onAddItem={onAddItem} />
+        ) : (
+          <div className="floor-plan-catalog-items">
+            {items.map((item) => (
+              <CatalogItem
+                key={item.id}
+                item={item}
+                isPending={placement?.kind === "catalog" && placement.item?.id === item.id}
+                isFavorite={favoriteIds.includes(item.id)}
+                showSection={Boolean(normalizedQuery)}
+                onAddItem={onAddItem}
+                onToggleFavorite={toggleFavorite}
+              />
+            ))}
+            {!items.length ? <p className="floor-plan-catalog-empty">Nenhum item encontrado.</p> : null}
+          </div>
+        ))}
       {placement ? (
         <div className="floor-plan-catalog-hint" role="status" aria-live="polite">
           {getPlacementHint(placement)}

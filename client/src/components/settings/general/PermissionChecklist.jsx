@@ -5,9 +5,7 @@ export default function PermissionChecklist({ value, onChange, disabled = false,
 
   function toggle(permissionId) {
     if (disabled) return;
-    const next = selected.has(permissionId)
-      ? (value || []).filter((item) => item !== permissionId)
-      : [...(value || []), permissionId];
+    const next = selected.has(permissionId) ? (value || []).filter((item) => item !== permissionId) : [...(value || []), permissionId];
     onChange?.(next);
   }
 
@@ -19,12 +17,7 @@ export default function PermissionChecklist({ value, onChange, disabled = false,
           <div>
             {group.permissions.map((permission) => (
               <label key={permission.id} className="permission-check">
-                <input
-                  type="checkbox"
-                  checked={selected.has(permission.id)}
-                  disabled={disabled}
-                  onChange={() => toggle(permission.id)}
-                />
+                <input type="checkbox" checked={selected.has(permission.id)} disabled={disabled} onChange={() => toggle(permission.id)} />
                 <span>{permission.label}</span>
               </label>
             ))}

@@ -27,14 +27,17 @@ describe("famílias do inventário de peças", () => {
   });
 
   it("resume a memória e preserva a hierarquia viva do inventário", () => {
-    expect(summarizeKitFamily({ id: "memory", parts: [
-      { name: "8 GB", metadata: { collectedValue: { capacityGb: 8 } } },
-      { name: "8 GB", metadata: { collectedValue: { capacityGb: 8 } } }
-    ] })).toBe("16 GB (8 GB + 8 GB)");
+    expect(
+      summarizeKitFamily({
+        id: "memory",
+        parts: [
+          { name: "8 GB", metadata: { collectedValue: { capacityGb: 8 } } },
+          { name: "8 GB", metadata: { collectedValue: { capacityGb: 8 } } }
+        ]
+      })
+    ).toBe("16 GB (8 GB + 8 GB)");
 
-    const hierarchy = buildKitHierarchy([
-      { assetId: "a1", tabId: "t1", segmentId: "s1", parts: [] }
-    ], {
+    const hierarchy = buildKitHierarchy([{ assetId: "a1", tabId: "t1", segmentId: "s1", parts: [] }], {
       activeTabId: "t1",
       groups: [{ id: "g1", name: "Casa", tabId: "t1", segmentIds: ["s1"] }],
       segments: [{ id: "s1", name: "Quarto", groupId: "g1" }]

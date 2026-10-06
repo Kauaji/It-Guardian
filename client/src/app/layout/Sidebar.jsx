@@ -8,11 +8,7 @@ export default function Sidebar({ onOpenSettings }) {
   const { sidebar } = useLayout();
 
   return (
-    <aside
-      className="sidebar"
-      onMouseEnter={sidebar.handleMouseEnter}
-      onMouseLeave={sidebar.handleMouseLeave}
-    >
+    <aside className="sidebar" onMouseEnter={sidebar.handleMouseEnter} onMouseLeave={sidebar.handleMouseLeave}>
       <button
         type="button"
         className="brand-mark compact sidebar-brand-toggle"
@@ -26,12 +22,7 @@ export default function Sidebar({ onOpenSettings }) {
       <SidebarNav />
       {canOpenGeneralSettings && (
         <div className="sidebar-footer">
-          <button
-            type="button"
-            className="sidebar-general-settings-button"
-            onClick={onOpenSettings}
-            title="Configurações gerais"
-          >
+          <button type="button" className="sidebar-general-settings-button" onClick={onOpenSettings} title="Configurações gerais">
             <SettingsIcon size={18} />
             <span className="nav-label">Configurações</span>
           </button>

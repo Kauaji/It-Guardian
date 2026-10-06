@@ -1,13 +1,21 @@
 import { screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  api, armApi, mapNameInput, maps, notify, openEditing, renderView, sceneState, settle
-} from "./visualMap/visualMapTestUtils.jsx";
+import { api, armApi, mapNameInput, maps, notify, openEditing, renderView, sceneState, settle } from "./visualMap/visualMapTestUtils.jsx";
 
 vi.mock("../../api.js", () => {
-  const names = ["fetchInventoryVisualMaps", "fetchInventoryVisualMap", "createInventoryVisualMap", "updateInventoryVisualMap", "deleteInventoryVisualMap",
-    "createInventoryVisualMapObject", "updateInventoryVisualMapObject", "deleteInventoryVisualMapObject",
-    "createInventoryVisualMapConnection", "updateInventoryVisualMapConnection", "deleteInventoryVisualMapConnection"];
+  const names = [
+    "fetchInventoryVisualMaps",
+    "fetchInventoryVisualMap",
+    "createInventoryVisualMap",
+    "updateInventoryVisualMap",
+    "deleteInventoryVisualMap",
+    "createInventoryVisualMapObject",
+    "updateInventoryVisualMapObject",
+    "deleteInventoryVisualMapObject",
+    "createInventoryVisualMapConnection",
+    "updateInventoryVisualMapConnection",
+    "deleteInventoryVisualMapConnection"
+  ];
   return Object.fromEntries(names.map((name) => [name, vi.fn()]));
 });
 
@@ -15,12 +23,24 @@ vi.mock("../../api.js", () => {
 vi.mock("./InventoryVisualMapScene.jsx", () => ({
   default: ({ map, selectedObjectId, selectedConnectionId, layers, showGrid, cameraAction, onSelectObject, onSelectConnection }) => (
     <div data-testid="scene">
-      <output data-testid="scene-state">{JSON.stringify({ map: map?.id, selectedObjectId, selectedConnectionId, layers, showGrid, cameraAction })}</output>
-      <button type="button" onClick={() => onSelectObject("o1")}>sel-o1</button>
-      <button type="button" onClick={() => onSelectObject("o2")}>sel-o2</button>
-      <button type="button" onClick={() => onSelectObject(null)}>sel-none</button>
-      <button type="button" onClick={() => onSelectConnection("c1")}>sel-c1</button>
-      <button type="button" onClick={() => onSelectConnection("c2")}>sel-c2</button>
+      <output data-testid="scene-state">
+        {JSON.stringify({ map: map?.id, selectedObjectId, selectedConnectionId, layers, showGrid, cameraAction })}
+      </output>
+      <button type="button" onClick={() => onSelectObject("o1")}>
+        sel-o1
+      </button>
+      <button type="button" onClick={() => onSelectObject("o2")}>
+        sel-o2
+      </button>
+      <button type="button" onClick={() => onSelectObject(null)}>
+        sel-none
+      </button>
+      <button type="button" onClick={() => onSelectConnection("c1")}>
+        sel-c1
+      </button>
+      <button type="button" onClick={() => onSelectConnection("c2")}>
+        sel-c2
+      </button>
     </div>
   )
 }));
@@ -135,9 +155,21 @@ describe("InventoryVisualMapView — edição do mapa", () => {
     await user.type(within(card).getByLabelText("Observacoes"), "obs");
     await user.click(within(card).getByRole("button", { name: "Salvar" }));
     await settle();
-    expect(api.updateInventoryVisualMap).toHaveBeenCalledWith("tok", "m1", expect.objectContaining({
-      name: "Térreo B", environmentId: "t1", groupId: "g1", segmentId: "s1", floorLabel: "2", width: 40, depth: 25, scale: 1, notes: "obs"
-    }));
+    expect(api.updateInventoryVisualMap).toHaveBeenCalledWith(
+      "tok",
+      "m1",
+      expect.objectContaining({
+        name: "Térreo B",
+        environmentId: "t1",
+        groupId: "g1",
+        segmentId: "s1",
+        floorLabel: "2",
+        width: 40,
+        depth: 25,
+        scale: 1,
+        notes: "obs"
+      })
+    );
     expect(notify).toHaveBeenCalledWith("Mapa visual salvo.", "success");
     expect(screen.queryByText("Alterações não salvas")).toBeNull();
   });
@@ -206,4 +238,3 @@ describe("InventoryVisualMapView — edição do mapa", () => {
     expect(await screen.findByText("Não foi possível criar o mapa visual.")).toBeInTheDocument();
   });
 });
-

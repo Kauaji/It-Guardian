@@ -88,9 +88,7 @@ export function sanitizePriority(value, fallback = "medium") {
  * @returns {string[]} Categorias configuradas seguidas das padrao, sem repeticao.
  */
 export function uniqueCategories(problemTypes) {
-  const configuredCategories = problemTypes
-    .map((item) => trim(item.category))
-    .filter(Boolean);
+  const configuredCategories = problemTypes.map((item) => trim(item.category)).filter(Boolean);
 
   return Array.from(new Set([...configuredCategories, ...defaultCategories]));
 }

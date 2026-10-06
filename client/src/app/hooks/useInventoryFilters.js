@@ -4,14 +4,7 @@ import { buildSearchSegments, filterInventoryDevices } from "../inventory/invent
 // Busca, grupo e segmento selecionados no inventario, mais as listas que a
 // tela efetivamente mostra (todas as abas quando ha busca ativa).
 export function useInventoryFilters({ model, persistence }) {
-  const {
-    activeSegmentGroups,
-    activeSegments,
-    activeAllDevices,
-    decoratedAllDevices,
-    decoratedSegmentGroups,
-    decoratedSegments
-  } = model;
+  const { activeSegmentGroups, activeSegments, activeAllDevices, decoratedAllDevices, decoratedSegmentGroups, decoratedSegments } = model;
   const { inventoryTabs, machineAliases } = persistence;
   const [inventorySearch, setInventorySearch] = useState("");
   const [selectedInventoryGroup, setSelectedInventoryGroup] = useState("all");
@@ -29,14 +22,8 @@ export function useInventoryFilters({ model, persistence }) {
     () => new Map(inventoryViewSegments.map((segment) => [segment.id, segment])),
     [inventoryViewSegments]
   );
-  const inventoryGroupById = useMemo(
-    () => new Map(inventoryViewGroups.map((group) => [group.id, group])),
-    [inventoryViewGroups]
-  );
-  const inventoryTabById = useMemo(
-    () => new Map(inventoryTabs.map((tab) => [tab.id, tab])),
-    [inventoryTabs]
-  );
+  const inventoryGroupById = useMemo(() => new Map(inventoryViewGroups.map((group) => [group.id, group])), [inventoryViewGroups]);
+  const inventoryTabById = useMemo(() => new Map(inventoryTabs.map((tab) => [tab.id, tab])), [inventoryTabs]);
   const filteredInventoryDevices = useMemo(
     () =>
       filterInventoryDevices({

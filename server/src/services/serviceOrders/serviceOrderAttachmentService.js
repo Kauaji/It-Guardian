@@ -3,10 +3,7 @@ import {
   deleteServiceOrderAttachmentRow,
   insertServiceOrderAttachment
 } from "../../repositories/serviceOrders/serviceOrderAttachmentRepository.js";
-import {
-  addServiceOrderAssetHistory,
-  addServiceOrderHistory
-} from "../../repositories/serviceOrders/serviceOrderHistoryRepository.js";
+import { addServiceOrderAssetHistory, addServiceOrderHistory } from "../../repositories/serviceOrders/serviceOrderHistoryRepository.js";
 import { findServiceOrderById } from "../../repositories/serviceOrders/serviceOrderReadRepository.js";
 
 /**

@@ -85,9 +85,16 @@ export default function SegmentCard({
           setActivePopoverId={setActivePopoverId}
           onToggleCollapsed={() => setCollapsed((current) => !current)}
           stripProps={{
-            segment, color, canManage, canMoveSegmentUp, canMoveSegmentDown,
+            segment,
+            color,
+            canManage,
+            canMoveSegmentUp,
+            canMoveSegmentDown,
             closeActions: () => setActivePopoverId?.(null),
-            onMoveSegmentOrder, onColorChange, onRename, onDelete
+            onMoveSegmentOrder,
+            onColorChange,
+            onRename,
+            onDelete
           }}
         />
       </header>
@@ -99,9 +106,21 @@ export default function SegmentCard({
           selectedAssetIds={selectedAssetIds}
           aliases={aliases}
           cardProps={{
-            segments, canManage, onMoveMachine, onOpenDetails, onOpenMoveModal, onRefreshPing,
-            onSelect: onSelectAsset, onToggleSelection, onAddPeripheral, onRemovePeripheral,
-            activePopoverId, setActivePopoverId, token, user, notify
+            segments,
+            canManage,
+            onMoveMachine,
+            onOpenDetails,
+            onOpenMoveModal,
+            onRefreshPing,
+            onSelect: onSelectAsset,
+            onToggleSelection,
+            onAddPeripheral,
+            onRemovePeripheral,
+            activePopoverId,
+            setActivePopoverId,
+            token,
+            user,
+            notify
           }}
         />
       )}

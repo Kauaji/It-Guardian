@@ -70,7 +70,15 @@ export async function ensureNodeRefAvailable(mapId, nodeType, refValue, excludeN
   }
 }
 
-export async function ensureLinkNotDuplicate(mapId, sourceType, targetType, sourceAssetId, targetAssetId, excludeLinkId = null, db = query) {
+export async function ensureLinkNotDuplicate(
+  mapId,
+  sourceType,
+  targetType,
+  sourceAssetId,
+  targetAssetId,
+  excludeLinkId = null,
+  db = query
+) {
   const result = await db(
     `
       SELECT id

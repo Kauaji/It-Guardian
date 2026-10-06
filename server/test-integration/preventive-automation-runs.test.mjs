@@ -24,7 +24,11 @@ let manualDevice;
 const hoursFromNow = (hours) => new Date(Date.now() + hours * 3600 * 1000).toISOString();
 
 test.before(async () => {
-  const holder = { after: (callback) => { closeServer = callback; } };
+  const holder = {
+    after: (callback) => {
+      closeServer = callback;
+    }
+  };
   baseUrl = await fx.startServer(holder);
   api = fx.createClient(baseUrl, await fx.login(baseUrl));
   scripts = {
@@ -89,10 +93,7 @@ test("preparacao manual cria uma execucao por maquina e enfileira os scripts no 
     assert.match(run.idempotencyKey, new RegExp(`^${plan.id}:rn-a[12]:`));
     assert.ok(run.nextRunAt);
   }
-  assert.deepEqual(
-    response.body.runs.map((run) => run.assetId).sort(),
-    ["rn-a1", "rn-a2"]
-  );
+  assert.deepEqual(response.body.runs.map((run) => run.assetId).sort(), ["rn-a1", "rn-a2"]);
 
   const prepared = response.body.preventiveAutomationPlan;
   assert.ok(prepared.lastPreparedAt);
@@ -108,7 +109,10 @@ test("preparacao manual cria uma execucao por maquina e enfileira os scripts no 
     "SELECT asset_id FROM asset_history WHERE event_type = 'preventive_automation_queued' AND message LIKE $1 ORDER BY asset_id",
     ["%Preparacao manual completa%"]
   );
-  assert.deepEqual(history.map((row) => row.asset_id), ["rn-a1", "rn-a2"]);
+  assert.deepEqual(
+    history.map((row) => row.asset_id),
+    ["rn-a1", "rn-a2"]
+  );
 
   const audit = await fx.rows(
     "SELECT meta FROM audit_logs WHERE type = 'preventive_automation_manual_prepared' AND meta->>'preventiveAutomationPlanId' = $1",
@@ -217,7 +221,10 @@ test("processamento de vencidos prepara so as agendas vencidas e reagenda", asyn
   await fx.setScheduleNextRun(plan.id, "rn-a1", dueAt.toISOString());
 
   const due = await repository.listDuePreventiveAutomationPlans(new Date());
-  assert.deepEqual(due.map((item) => item.id), [plan.id]);
+  assert.deepEqual(
+    due.map((item) => item.id),
+    [plan.id]
+  );
   assert.equal((await repository.listDuePreventiveAutomationPlans(new Date("2000-01-01T00:00:00Z"))).length, 0);
 
   const response = await api.post(`${base}/process-due`);
@@ -331,11 +338,11 @@ test("rota de cron exige segredo configurado e valido e executa as rotinas agend
     assert.equal(body.preventivePlans.duePlanCount, 1);
     assert.equal(body.preventivePlans.preparedPlanCount, 1, "o scheduler tem visao global e prepara o plano vencido");
     assert.equal(body.preventivePlans.failedPlanCount, 0);
-    const scheduled = await fx.rows(
-      "SELECT trigger_type, status FROM preventive_automation_runs WHERE plan_id = $1",
-      [plan.id]
+    const scheduled = await fx.rows("SELECT trigger_type, status FROM preventive_automation_runs WHERE plan_id = $1", [plan.id]);
+    assert.deepEqual(
+      scheduled.map((row) => row.trigger_type),
+      ["scheduled"]
     );
-    assert.deepEqual(scheduled.map((row) => row.trigger_type), ["scheduled"]);
     const queuedBy = await fx.rows(
       "SELECT user_name FROM asset_history WHERE event_type = 'preventive_automation_queued' AND message LIKE $1",
       ["%Plano do cron%"]
@@ -397,11 +404,13 @@ test("backfill recria agendas ausentes, ignora as corretas e relata planos com f
   assert.equal(byPlan[brokenId].status, "failed");
   assert.match(byPlan[brokenId].message, /escopo selecionado não existe/);
 
-  const recreated = await fx.rows(
-    "SELECT asset_id, active, next_run_at FROM preventive_automation_asset_schedules WHERE plan_id = $1",
-    [plan.id]
+  const recreated = await fx.rows("SELECT asset_id, active, next_run_at FROM preventive_automation_asset_schedules WHERE plan_id = $1", [
+    plan.id
+  ]);
+  assert.deepEqual(
+    recreated.map((row) => row.asset_id),
+    ["rn-a2"]
   );
-  assert.deepEqual(recreated.map((row) => row.asset_id), ["rn-a2"]);
   assert.equal(recreated[0].active, true);
   assert.ok(recreated[0].next_run_at);
 
@@ -439,10 +448,9 @@ test("planos legados sem agenda calculada recebem ancora e proxima execucao ao s
   assert.equal(plan.lastScheduledAt, plan.nextRunAt);
   assert.equal(plan.recurrenceType, "daily");
 
-  const stored = await fx.rows(
-    "SELECT schedule_anchor_at, next_run_at, last_scheduled_at FROM preventive_automation_plans WHERE id = $1",
-    [legacyId]
-  );
+  const stored = await fx.rows("SELECT schedule_anchor_at, next_run_at, last_scheduled_at FROM preventive_automation_plans WHERE id = $1", [
+    legacyId
+  ]);
   assert.ok(stored[0].schedule_anchor_at && stored[0].next_run_at && stored[0].last_scheduled_at);
 
   const listed = await api.get(base);
@@ -450,21 +458,25 @@ test("planos legados sem agenda calculada recebem ancora e proxima execucao ao s
   await fx.rows("DELETE FROM preventive_automation_plans WHERE id = $1", [legacyId]);
 });
 
-test("transacao de criacao e atomica quando um override duplicado falha (PostgreSQL real)", {
-  skip: database.mode !== "postgres" && "pg-mem ignora ROLLBACK"
-}, async () => {
-  const response = await api.post(base, {
-    name: "Plano atomico",
-    scopeType: "asset",
-    scopeId: "rn-a1",
-    defaultScriptIds: [scripts.first.id],
-    indicatorColor: "#0a1b38",
-    overrides: [
-      { assetId: "rn-a1", recurrenceType: "weekly" },
-      { assetId: "rn-a1", recurrenceType: "daily" }
-    ]
-  });
-  assert.equal(response.status, 409);
-  const stored = await fx.rows("SELECT id FROM preventive_automation_plans WHERE name = 'Plano atomico'");
-  assert.equal(stored.length, 0);
-});
+test(
+  "transacao de criacao e atomica quando um override duplicado falha (PostgreSQL real)",
+  {
+    skip: database.mode !== "postgres" && "pg-mem ignora ROLLBACK"
+  },
+  async () => {
+    const response = await api.post(base, {
+      name: "Plano atomico",
+      scopeType: "asset",
+      scopeId: "rn-a1",
+      defaultScriptIds: [scripts.first.id],
+      indicatorColor: "#0a1b38",
+      overrides: [
+        { assetId: "rn-a1", recurrenceType: "weekly" },
+        { assetId: "rn-a1", recurrenceType: "daily" }
+      ]
+    });
+    assert.equal(response.status, 409);
+    const stored = await fx.rows("SELECT id FROM preventive_automation_plans WHERE name = 'Plano atomico'");
+    assert.equal(stored.length, 0);
+  }
+);

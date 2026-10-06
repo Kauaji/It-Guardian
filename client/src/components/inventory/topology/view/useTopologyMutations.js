@@ -9,25 +9,31 @@ import {
 import { jitteredCenter } from "./topologyViewConstants.js";
 
 // Gravacoes do mapa: criar mapa, adicionar/remover ativo, salvar/remover/criar conexao.
-export default function useTopologyMutations({
-  token, notify, canManageMap, mapData, selection
-}) {
+export default function useTopologyMutations({ token, notify, canManageMap, mapData, selection }) {
   const [addingAsset, setAddingAsset] = useState(false);
   const [creatingMap, setCreatingMap] = useState(false);
   const { bundle, setBundle, activeMapId, setMaps, setActiveMapId, setLegacyActiveMapId } = mapData;
   const { selectedLinkId, setSelectedNodeId, setSelectedLinkId, setJustAddedNodeId, setJustCreatedLinkId } = selection;
 
-  const handleLinkCreated = useCallback((mapId, link, isNew) => {
-    setBundle((current) => current?.map.id === mapId ? {
-      ...current, links: [...current.links.filter((entry) => entry.id !== link.id), link]
-    } : current);
-    setSelectedNodeId(null);
-    setSelectedLinkId(link.id);
-    if (isNew) {
-      setJustCreatedLinkId(link.id);
-      window.setTimeout(() => setJustCreatedLinkId((current) => current === link.id ? null : current), 800);
-    }
-  }, [setBundle, setSelectedNodeId, setSelectedLinkId, setJustCreatedLinkId]);
+  const handleLinkCreated = useCallback(
+    (mapId, link, isNew) => {
+      setBundle((current) =>
+        current?.map.id === mapId
+          ? {
+              ...current,
+              links: [...current.links.filter((entry) => entry.id !== link.id), link]
+            }
+          : current
+      );
+      setSelectedNodeId(null);
+      setSelectedLinkId(link.id);
+      if (isNew) {
+        setJustCreatedLinkId(link.id);
+        window.setTimeout(() => setJustCreatedLinkId((current) => (current === link.id ? null : current)), 800);
+      }
+    },
+    [setBundle, setSelectedNodeId, setSelectedLinkId, setJustCreatedLinkId]
+  );
 
   const handleCreateMap = useCallback(async () => {
     setCreatingMap(true);
@@ -50,7 +56,7 @@ export default function useTopologyMutations({
       try {
         const point = position || jitteredCenter();
         const response = await createNetworkTopologyNode(token, activeMapId, { assetId, ...point });
-        setBundle((current) => current?.map.id === activeMapId ? { ...current, nodes: [...current.nodes, response.node] } : current);
+        setBundle((current) => (current?.map.id === activeMapId ? { ...current, nodes: [...current.nodes, response.node] } : current));
         setJustAddedNodeId(response.node.id);
         setSelectedNodeId(response.node.id);
         window.setTimeout(() => setJustAddedNodeId((current) => (current === response.node.id ? null : current)), 1400);
@@ -93,10 +99,14 @@ export default function useTopologyMutations({
           targetType: link.targetType || "asset",
           ...payload
         });
-        setBundle((current) => current?.map.id === bundle.map.id ? ({
-          ...current,
-          links: current.links.map((entry) => (entry.id === selectedLinkId ? response.link : entry))
-        }) : current);
+        setBundle((current) =>
+          current?.map.id === bundle.map.id
+            ? {
+                ...current,
+                links: current.links.map((entry) => (entry.id === selectedLinkId ? response.link : entry))
+              }
+            : current
+        );
         notify?.("success", "Conexão atualizada.");
       } catch (updateError) {
         notify?.("error", updateError.message);
@@ -120,5 +130,14 @@ export default function useTopologyMutations({
     }
   }, [selectedLinkId, token, notify, setBundle, setSelectedLinkId]);
 
-  return { addingAsset, creatingMap, handleLinkCreated, handleCreateMap, handleAddAsset, handleRemoveNode, handleSaveLink, handleRemoveLink };
+  return {
+    addingAsset,
+    creatingMap,
+    handleLinkCreated,
+    handleCreateMap,
+    handleAddAsset,
+    handleRemoveNode,
+    handleSaveLink,
+    handleRemoveLink
+  };
 }

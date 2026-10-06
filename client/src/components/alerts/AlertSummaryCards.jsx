@@ -1,11 +1,4 @@
-import {
-  AlertTriangle,
-  Bell,
-  CheckCircle,
-  ClipboardList,
-  Monitor,
-  RefreshCw
-} from "lucide-react";
+import { AlertTriangle, Bell, CheckCircle, ClipboardList, Monitor, RefreshCw } from "lucide-react";
 import SummaryCard from "../ui/SummaryCard.jsx";
 
 // Indicadores do topo da aba Sugestoes de OS.

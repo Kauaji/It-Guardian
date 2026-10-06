@@ -81,9 +81,7 @@ function stackFrames(stack) {
     .slice(1, 30)
     .map((line) => {
       const match = /at (?:(.*?) \()?(.*?):(\d+):(\d+)\)?$/.exec(line.trim());
-      return match
-        ? { function: match[1] || "<anonymous>", filename: match[2], lineno: Number(match[3]), colno: Number(match[4]) }
-        : null;
+      return match ? { function: match[1] || "<anonymous>", filename: match[2], lineno: Number(match[3]), colno: Number(match[4]) } : null;
     })
     .filter((frame) => frame !== null)
     .reverse();

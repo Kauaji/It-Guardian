@@ -32,12 +32,7 @@ export function canViewServiceOrder(user = {}, order = {}) {
     : order.assignedTechnicianName
       ? [order.assignedTechnicianName]
       : [];
-  if (
-    assignedNames.some((name) => (
-      normalizeText(name) === normalizeText(user.name) ||
-      normalizeText(name) === normalizeText(user.email)
-    ))
-  ) {
+  if (assignedNames.some((name) => normalizeText(name) === normalizeText(user.name) || normalizeText(name) === normalizeText(user.email))) {
     return true;
   }
   return false;

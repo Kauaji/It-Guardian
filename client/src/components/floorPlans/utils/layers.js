@@ -7,10 +7,13 @@ export const FLOOR_PLAN_LAYER_OPTIONS = [
   { id: "labels", label: "Textos" }
 ];
 
-export const DEFAULT_FLOOR_PLAN_LAYERS = FLOOR_PLAN_LAYER_OPTIONS.reduce((layers, option) => ({
-  ...layers,
-  [option.id]: true
-}), {});
+export const DEFAULT_FLOOR_PLAN_LAYERS = FLOOR_PLAN_LAYER_OPTIONS.reduce(
+  (layers, option) => ({
+    ...layers,
+    [option.id]: true
+  }),
+  {}
+);
 
 /** Mescla as camadas escolhidas com o padrao (camadas ausentes ficam visiveis). */
 export function resolveLayerState(visibleLayers) {

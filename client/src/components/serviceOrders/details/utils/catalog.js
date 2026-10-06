@@ -8,10 +8,9 @@ export function filterProductSuggestions(products, search) {
   const term = normalizeSearchText(search);
   const source = term
     ? products.filter((product) =>
-        normalizeSearchText([product.name, product.category, product.brand, product.model, product.internalCode]
-          .filter(Boolean)
-          .join(" "))
-          .includes(term)
+        normalizeSearchText(
+          [product.name, product.category, product.brand, product.model, product.internalCode].filter(Boolean).join(" ")
+        ).includes(term)
       )
     : products;
 
@@ -21,12 +20,7 @@ export function filterProductSuggestions(products, search) {
 export function filterServiceSuggestions(services, search) {
   const term = normalizeSearchText(search);
   const source = term
-    ? services.filter((service) =>
-        normalizeSearchText([service.name, service.category]
-          .filter(Boolean)
-          .join(" "))
-          .includes(term)
-      )
+    ? services.filter((service) => normalizeSearchText([service.name, service.category].filter(Boolean).join(" ")).includes(term))
     : services;
 
   return source.slice(0, SUGGESTION_LIMIT);

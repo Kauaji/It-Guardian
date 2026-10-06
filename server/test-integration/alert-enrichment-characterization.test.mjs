@@ -59,12 +59,34 @@ test("avisos enriquecidos, correlacoes, insights e sugestoes de OS", async (t) =
 
   await upsertAlert(alertFixture("char-a1", { severity: "critical", value: 96, occurrencesCount: 4 }));
   await upsertAlert(alertFixture("char-a2", { type: "cpu_high" }));
-  await upsertAlert(alertFixture("char-a3", { type: "disk_full", metric: "disco", title: "Disco cheio", severity: "critical", value: 97, threshold: 95, occurrencesCount: 2 }));
-  await upsertAlert(alertFixture("char-a4", { type: "machine_offline", metric: "heartbeat", title: "Offline", severity: "warning", value: null, threshold: null }));
+  await upsertAlert(
+    alertFixture("char-a3", {
+      type: "disk_full",
+      metric: "disco",
+      title: "Disco cheio",
+      severity: "critical",
+      value: 97,
+      threshold: 95,
+      occurrencesCount: 2
+    })
+  );
+  await upsertAlert(
+    alertFixture("char-a4", {
+      type: "machine_offline",
+      metric: "heartbeat",
+      title: "Offline",
+      severity: "warning",
+      value: null,
+      threshold: null
+    })
+  );
 
   // OS fechada para o mesmo ativo (relatedAssetText = hostName do aviso) -> recorrencia pos-OS
   const order = await api(baseUrl, cookie, "POST", "/service-orders", {
-    title: "OS antiga de CPU", problemType: "cpu_high", category: "Computador", relatedAssetText: "HOST-char-a1"
+    title: "OS antiga de CPU",
+    problemType: "cpu_high",
+    category: "Computador",
+    relatedAssetText: "HOST-char-a1"
   });
   assert.equal(order.status, 201);
   await api(baseUrl, cookie, "PATCH", `/service-orders/${order.body.serviceOrder.id}/technician`, { assignedTechnicianName: "Tec" });
@@ -114,7 +136,8 @@ test("avisos enriquecidos, correlacoes, insights e sugestoes de OS", async (t) =
     ],
     confidenceLevel: "Alta",
     trend: "Em alta",
-    priorityReason: "Prioridade sugerida porque o aviso está classificado como crítico, houve 4 ocorrências no período configurado, há histórico recente de atendimento para o mesmo ativo.",
+    priorityReason:
+      "Prioridade sugerida porque o aviso está classificado como crítico, houve 4 ocorrências no período configurado, há histórico recente de atendimento para o mesmo ativo.",
     recurrenceScore: 100,
     capacityForecast: forecast("CPU", 96, 85),
     falsePositiveInsight: null,
@@ -140,7 +163,10 @@ test("avisos enriquecidos, correlacoes, insights e sugestoes de OS", async (t) =
   assert.equal(a3.category, "Armazenamento");
   assert.equal(a3.trend, "Recorrente");
   assert.equal(a3.recurrenceScore, 64);
-  assert.equal(a3.priorityReason, "Prioridade sugerida porque o aviso está classificado como crítico, o tipo \"Disco praticamente cheio\" tem impacto operacional alto.");
+  assert.equal(
+    a3.priorityReason,
+    'Prioridade sugerida porque o aviso está classificado como crítico, o tipo "Disco praticamente cheio" tem impacto operacional alto.'
+  );
   assert.deepEqual(a3.capacityForecast, forecast("disco", 97, 95));
   assert.deepEqual(a3.checklist, [
     "Confirmar o volume e o espaço livre.",
@@ -152,7 +178,7 @@ test("avisos enriquecidos, correlacoes, insights e sugestoes de OS", async (t) =
   const a4 = pick(byId["char-a4"]);
   assert.equal(a4.typeLabel, "Máquina offline");
   assert.equal(a4.category, "Disponibilidade");
-  assert.equal(a4.priorityReason, "Prioridade sugerida porque o tipo \"Máquina offline\" tem impacto operacional alto.");
+  assert.equal(a4.priorityReason, 'Prioridade sugerida porque o tipo "Máquina offline" tem impacto operacional alto.');
   assert.deepEqual(a4.capacityForecast, { available: false, summary: "Sem dados históricos suficientes para previsão de capacidade." });
   assert.deepEqual(a4.location, noGroup);
 
@@ -168,8 +194,13 @@ test("avisos enriquecidos, correlacoes, insights e sugestoes de OS", async (t) =
 
   // insights
   const insights = (await api(baseUrl, cookie, "GET", "/alerts/insights")).body.insights;
-  assert.deepEqual(insights.recurrences.filter((item) => item.alertId.startsWith("char-")).map((item) => [item.alertId, item.type]), [["char-a1", "post_service_order_recurrence"]]);
-  const capacity = Object.fromEntries(insights.capacity.filter((item) => item.alertId.startsWith("char-")).map((item) => [item.alertId, item.forecast.available]));
+  assert.deepEqual(
+    insights.recurrences.filter((item) => item.alertId.startsWith("char-")).map((item) => [item.alertId, item.type]),
+    [["char-a1", "post_service_order_recurrence"]]
+  );
+  const capacity = Object.fromEntries(
+    insights.capacity.filter((item) => item.alertId.startsWith("char-")).map((item) => [item.alertId, item.forecast.available])
+  );
   assert.deepEqual(capacity, { "char-a1": true, "char-a2": true, "char-a3": true, "char-a4": false });
 
   // sugestoes: criadas uma unica vez, com prioridade da regra e enriquecimento
@@ -177,16 +208,15 @@ test("avisos enriquecidos, correlacoes, insights e sugestoes de OS", async (t) =
   const first = await evaluate();
   assert.equal(first.status, 200);
   const createdMine = first.body.createdSuggestions.filter((item) => /HOST-char-/.test(item.title));
-  assert.deepEqual(
-    createdMine.map((item) => [item.title, item.suggestedPriority, item.occurrencesCount, item.status]).sort(),
-    [
-      ["CPU alta em HOST-char-a1", "high", 4, "pending"],
-      ["CPU alta em HOST-char-a2", "high", 1, "pending"],
-      ["Disco crítico em HOST-char-a3", "critical", 2, "pending"],
-      ["Máquina offline em HOST-char-a4", "critical", 1, "pending"]
-    ]
+  assert.deepEqual(createdMine.map((item) => [item.title, item.suggestedPriority, item.occurrencesCount, item.status]).sort(), [
+    ["CPU alta em HOST-char-a1", "high", 4, "pending"],
+    ["CPU alta em HOST-char-a2", "high", 1, "pending"],
+    ["Disco crítico em HOST-char-a3", "critical", 2, "pending"],
+    ["Máquina offline em HOST-char-a4", "critical", 1, "pending"]
+  ]);
+  const mine = Object.fromEntries(
+    first.body.suggestions.filter((item) => /HOST-char-/.test(item.title)).map((item) => [item.alertId, item])
   );
-  const mine = Object.fromEntries(first.body.suggestions.filter((item) => /HOST-char-/.test(item.title)).map((item) => [item.alertId, item]));
   assert.equal(mine["char-a1"].priorityLabel, "Alta");
   assert.equal(mine["char-a1"].priorityReason, byId["char-a1"].priorityReason);
   assert.equal(mine["char-a1"].recurrenceScore, 100);
@@ -195,14 +225,19 @@ test("avisos enriquecidos, correlacoes, insights e sugestoes de OS", async (t) =
   assert.equal(mine["char-a3"].typeLabel, "Disco praticamente cheio");
   assert.deepEqual(mine["char-a3"].location, noGroup);
   assert.equal(mine["char-a4"].alertSeverity, "warning");
-  assert.equal(mine["char-a1"].description, "O sistema identificou cpu acima do limite acima do limite configurado em 4 ocorrência(s) no período analisado. Recomenda-se análise preventiva do ativo antes de impacto operacional.");
+  assert.equal(
+    mine["char-a1"].description,
+    "O sistema identificou cpu acima do limite acima do limite configurado em 4 ocorrência(s) no período analisado. Recomenda-se análise preventiva do ativo antes de impacto operacional."
+  );
   assert.equal(mine["char-a1"].suggestedProblemTypeId, "cpu_high");
 
   const second = await evaluate();
   assert.equal(second.body.createdSuggestions.length, 0, "reavaliar nao duplica sugestoes");
 
   // recusar silencia o aviso: reavaliar nao recria nem reabre
-  const rejected = await api(baseUrl, cookie, "POST", `/service-order-suggestions/${mine["char-a2"].id}/reject`, { reason: "nao e problema" });
+  const rejected = await api(baseUrl, cookie, "POST", `/service-order-suggestions/${mine["char-a2"].id}/reject`, {
+    reason: "nao e problema"
+  });
   assert.equal(rejected.status, 200);
   assert.equal(rejected.body.suggestion.status, "rejected");
   assert.ok(rejected.body.suggestion.ignoredUntil);
@@ -216,18 +251,26 @@ test("avisos enriquecidos, correlacoes, insights e sugestoes de OS", async (t) =
 
   // regra: atualizacao parcial normaliza numeros e booleanos
   const rules = (await api(baseUrl, cookie, "GET", "/alerts/rules")).body.rules;
-  assert.deepEqual(rules.find((rule) => rule.type === "cpu_high"), {
-    ...rules.find((rule) => rule.type === "cpu_high"),
-    id: "rule-cpu-high",
-    threshold: 90,
-    durationMinutes: 5,
-    recurrenceCount: 3,
-    recurrenceWindow: "same_day",
-    suggestedPriority: "high",
-    createsSuggestion: true,
-    enabled: true
+  assert.deepEqual(
+    rules.find((rule) => rule.type === "cpu_high"),
+    {
+      ...rules.find((rule) => rule.type === "cpu_high"),
+      id: "rule-cpu-high",
+      threshold: 90,
+      durationMinutes: 5,
+      recurrenceCount: 3,
+      recurrenceWindow: "same_day",
+      suggestedPriority: "high",
+      createsSuggestion: true,
+      enabled: true
+    }
+  );
+  const partial = await api(baseUrl, cookie, "PATCH", "/alerts/rules/rule-cpu-high", {
+    threshold: "91",
+    durationMinutes: -5,
+    recurrenceCount: 0,
+    enabled: "false"
   });
-  const partial = await api(baseUrl, cookie, "PATCH", "/alerts/rules/rule-cpu-high", { threshold: "91", durationMinutes: -5, recurrenceCount: 0, enabled: "false" });
   assert.equal(partial.status, 200, JSON.stringify(partial.body));
   assert.equal(partial.body.rule.threshold, 91);
   assert.equal(partial.body.rule.durationMinutes, 0);

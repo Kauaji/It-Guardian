@@ -55,9 +55,7 @@ const userSelect = `
  */
 export async function listUsers() {
   /** @type {QueryResult<UserRow>} */
-  const result = await query(
-    `${userSelect} ORDER BY users.created_at DESC`
-  );
+  const result = await query(`${userSelect} ORDER BY users.created_at DESC`);
   return result.rows.map((row) => toPublicUser(fromRow(row)));
 }
 
@@ -67,10 +65,7 @@ export async function listUsers() {
  */
 export async function findUserByEmail(email) {
   /** @type {QueryResult<UserRow>} */
-  const result = await query(
-    `${userSelect} WHERE LOWER(users.email) = LOWER($1)`,
-    [email]
-  );
+  const result = await query(`${userSelect} WHERE LOWER(users.email) = LOWER($1)`, [email]);
   return result.rows[0] ? fromRow(result.rows[0]) : null;
 }
 
@@ -80,10 +75,7 @@ export async function findUserByEmail(email) {
  */
 export async function findUserById(id) {
   /** @type {QueryResult<UserRow>} */
-  const result = await query(
-    `${userSelect} WHERE users.id = $1`,
-    [id]
-  );
+  const result = await query(`${userSelect} WHERE users.id = $1`, [id]);
   return result.rows[0] ? fromRow(result.rows[0]) : null;
 }
 
@@ -192,15 +184,9 @@ export async function updateUserAccess(id, payload = {}) {
   const normalizedPermissions = Object.prototype.hasOwnProperty.call(payload, "permissions")
     ? normalizePermissions(payload.permissions)
     : current.permissions;
-  const nextName = Object.prototype.hasOwnProperty.call(payload, "name") && payload.name?.trim()
-    ? payload.name.trim()
-    : current.name;
-  const nextSectorId = Object.prototype.hasOwnProperty.call(payload, "sectorId")
-    ? payload.sectorId || null
-    : current.sectorId || null;
-  const nextJobTitle = Object.prototype.hasOwnProperty.call(payload, "jobTitle")
-    ? payload.jobTitle || null
-    : current.jobTitle || null;
+  const nextName = Object.prototype.hasOwnProperty.call(payload, "name") && payload.name?.trim() ? payload.name.trim() : current.name;
+  const nextSectorId = Object.prototype.hasOwnProperty.call(payload, "sectorId") ? payload.sectorId || null : current.sectorId || null;
+  const nextJobTitle = Object.prototype.hasOwnProperty.call(payload, "jobTitle") ? payload.jobTitle || null : current.jobTitle || null;
   /** @type {QueryResult<{ id: string }>} */
   const result = await query(
     `

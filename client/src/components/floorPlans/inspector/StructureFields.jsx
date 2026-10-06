@@ -31,7 +31,11 @@ function MetadataSelect({ label, entity, field, fallback, options, onChangeSelec
         value={entity.metadata?.[field] || fallback}
         onChange={(event) => onChangeSelected(buildMetadataPatch(entity, { [field]: event.target.value }))}
       >
-        {options.map(([value, text]) => <option key={value} value={value}>{text}</option>)}
+        {options.map(([value, text]) => (
+          <option key={value} value={value}>
+            {text}
+          </option>
+        ))}
       </select>
     </label>
   );
@@ -43,24 +47,53 @@ export function WallFields({ entity, onChangeSelected }) {
       <div className="floor-plan-inspector-grid">
         <label>
           Comprimento
-          <input type="number" min="40" step="5" value={Math.round(entity.width || 0)} onChange={(event) => onChangeSelected({ width: Number(event.target.value) })} />
+          <input
+            type="number"
+            min="40"
+            step="5"
+            value={Math.round(entity.width || 0)}
+            onChange={(event) => onChangeSelected({ width: Number(event.target.value) })}
+          />
         </label>
         <label>
           Espessura
-          <input type="number" min="4" step="1" value={Math.round(entity.height || 0)} onChange={(event) => onChangeSelected({ height: Number(event.target.value) })} />
+          <input
+            type="number"
+            min="4"
+            step="1"
+            value={Math.round(entity.height || 0)}
+            onChange={(event) => onChangeSelected({ height: Number(event.target.value) })}
+          />
         </label>
         <label>
           Angulo
           <select value={Number(entity.rotation || 0)} onChange={(event) => onChangeSelected({ rotation: Number(event.target.value) })}>
-            {WALL_ANGLES.map((angle) => <option key={angle} value={angle}>{angle} graus</option>)}
+            {WALL_ANGLES.map((angle) => (
+              <option key={angle} value={angle}>
+                {angle} graus
+              </option>
+            ))}
           </select>
         </label>
         <label>
           Altura 3D
-          <input type="number" min="24" step="2" value={Math.round(entity.height3d || 110)} onChange={(event) => onChangeSelected({ height3d: Number(event.target.value) })} />
+          <input
+            type="number"
+            min="24"
+            step="2"
+            value={Math.round(entity.height3d || 110)}
+            onChange={(event) => onChangeSelected({ height3d: Number(event.target.value) })}
+          />
         </label>
       </div>
-      <MetadataSelect label="Textura da parede" entity={entity} field="texturePreset" fallback="paint" options={WALL_TEXTURES} onChangeSelected={onChangeSelected} />
+      <MetadataSelect
+        label="Textura da parede"
+        entity={entity}
+        field="texturePreset"
+        fallback="paint"
+        options={WALL_TEXTURES}
+        onChangeSelected={onChangeSelected}
+      />
     </>
   );
 }
@@ -92,9 +125,27 @@ export function MeasurementFields({ entity, plan, onChangeSelected }) {
 }
 
 export function RoomFloorTextureField({ entity, onChangeSelected }) {
-  return <MetadataSelect label="Textura do piso" entity={entity} field="floorTexture" fallback="ceramic" options={FLOOR_TEXTURES} onChangeSelected={onChangeSelected} />;
+  return (
+    <MetadataSelect
+      label="Textura do piso"
+      entity={entity}
+      field="floorTexture"
+      fallback="ceramic"
+      options={FLOOR_TEXTURES}
+      onChangeSelected={onChangeSelected}
+    />
+  );
 }
 
 export function RouteStyleField({ entity, onChangeSelected }) {
-  return <MetadataSelect label="Tipo de passagem" entity={entity} field="routeStyle" fallback="free" options={ROUTE_STYLES} onChangeSelected={onChangeSelected} />;
+  return (
+    <MetadataSelect
+      label="Tipo de passagem"
+      entity={entity}
+      field="routeStyle"
+      fallback="free"
+      options={ROUTE_STYLES}
+      onChangeSelected={onChangeSelected}
+    />
+  );
 }

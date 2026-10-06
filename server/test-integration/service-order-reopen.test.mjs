@@ -95,10 +95,9 @@ test("reabrir uma OS finalizada exige motivo, reseta status e incrementa o conta
   assert.ok(reopened.reopenedAt);
   assert.equal(reopened.reopenReason, "Cliente reportou que o problema voltou.");
 
-  const historyRow = await query(
-    "SELECT * FROM service_order_history WHERE service_order_id = $1 AND event_type = 'reopened'",
-    [closed.id]
-  );
+  const historyRow = await query("SELECT * FROM service_order_history WHERE service_order_id = $1 AND event_type = 'reopened'", [
+    closed.id
+  ]);
   assert.equal(historyRow.rowCount, 1);
 });
 

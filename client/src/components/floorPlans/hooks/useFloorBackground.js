@@ -1,9 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  deleteFloorPlanBackground,
-  fetchFloorPlanBackgroundBlob,
-  uploadFloorPlanBackground
-} from "../../../api.js";
+import { deleteFloorPlanBackground, fetchFloorPlanBackgroundBlob, uploadFloorPlanBackground } from "../../../api.js";
 import { setBackgroundSettingsInDraft, withFloorBackgroundUrl } from "../utils/entityMutations.js";
 import { isValidBackgroundFile } from "../utils/infrastructure.js";
 
@@ -26,9 +22,18 @@ export function useFloorBackground({ token, notify, doc }) {
       return undefined;
     }
     fetchFloorPlanBackgroundBlob(token, editor.plan.id, activeFloorRecord.id)
-      .then((blob) => { if (!active) return; objectUrl = URL.createObjectURL(blob); setBackgroundSrc(objectUrl); })
-      .catch(() => { if (active) setBackgroundSrc(""); });
-    return () => { active = false; if (objectUrl) URL.revokeObjectURL(objectUrl); };
+      .then((blob) => {
+        if (!active) return;
+        objectUrl = URL.createObjectURL(blob);
+        setBackgroundSrc(objectUrl);
+      })
+      .catch(() => {
+        if (active) setBackgroundSrc("");
+      });
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
   }, [activeFloorRecord?.backgroundUrl, activeFloorRecord?.id, editor?.plan?.id, token]);
 
   const updateSettings = (nextSettings) => {
@@ -56,7 +61,12 @@ export function useFloorBackground({ token, notify, doc }) {
   };
 
   const remove = async () => {
-    if (!editor?.plan?.id || !activeFloorId || !window.confirm("Remover a imagem de fundo desta planta? Os componentes posicionados serão preservados.")) return;
+    if (
+      !editor?.plan?.id ||
+      !activeFloorId ||
+      !window.confirm("Remover a imagem de fundo desta planta? Os componentes posicionados serão preservados.")
+    )
+      return;
     setBackgroundBusy(true);
     try {
       await deleteFloorPlanBackground(token, editor.plan.id, activeFloorId);

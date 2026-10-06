@@ -18,7 +18,8 @@ export default function useAutomationPlanHistory({ open, activeTab, planId, onLo
   useEffect(() => {
     if (!open || activeTab !== "history" || history.length || !onLoadHistoryRef.current) return;
     setHistoryLoading(true);
-    onLoadHistoryRef.current(planId)
+    onLoadHistoryRef
+      .current(planId)
       .then((result) => setHistory(result?.items || []))
       .finally(() => setHistoryLoading(false));
   }, [activeTab, history.length, open, planId]);

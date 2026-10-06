@@ -24,8 +24,22 @@ beforeEach(() => {
   copyText.mockResolvedValue(true);
   identity.startMfaSetup.mockResolvedValue({ secret: "JBSWY3DPEHPK3PXP", otpauthUri: "otpauth://totp/x?secret=JBSWY3DPEHPK3PXP" });
   identity.fetchSessions.mockResolvedValue([
-    { id: "s1", current: true, ip: "10.0.0.1", userAgent: "Mozilla/5.0 (Windows NT 10.0) Chrome/120.0", lastSeenAt: "2026-10-02T12:00:00Z", createdAt: "2026-10-02T10:00:00Z" },
-    { id: "s2", current: false, ip: "10.0.0.2", userAgent: "Mozilla/5.0 (Linux; Android 14) Chrome/120 Mobile", lastSeenAt: "2026-10-01T12:00:00Z", createdAt: "2026-10-01T10:00:00Z" }
+    {
+      id: "s1",
+      current: true,
+      ip: "10.0.0.1",
+      userAgent: "Mozilla/5.0 (Windows NT 10.0) Chrome/120.0",
+      lastSeenAt: "2026-10-02T12:00:00Z",
+      createdAt: "2026-10-02T10:00:00Z"
+    },
+    {
+      id: "s2",
+      current: false,
+      ip: "10.0.0.2",
+      userAgent: "Mozilla/5.0 (Linux; Android 14) Chrome/120 Mobile",
+      lastSeenAt: "2026-10-01T12:00:00Z",
+      createdAt: "2026-10-01T10:00:00Z"
+    }
   ]);
   identity.fetchMfaStatus.mockResolvedValue({ enabled: false, requiredForAdmins: false, recoveryCodesLeft: 0 });
 });
@@ -83,7 +97,10 @@ describe("contraste das telas de identidade (claro e escuro)", () => {
   });
 
   it("/conta/seguranca", async () => {
-    const { tree } = renderWithSession(<AccountSecurityPage />, { user: { ...baseUser, isAdmin: false, role: "viewer" }, path: "/conta/seguranca" });
+    const { tree } = renderWithSession(<AccountSecurityPage />, {
+      user: { ...baseUser, isAdmin: false, role: "viewer" },
+      path: "/conta/seguranca"
+    });
     render(tree);
     await screen.findByRole("list", { name: "Sessões ativas" });
     await waitFor(() => screen.getByText(/Desativada\./));

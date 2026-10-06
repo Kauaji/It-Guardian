@@ -1,10 +1,6 @@
 import * as THREE from "three";
 import { resolveInventoryMapAssetMode } from "../assets/inventoryMapAssetRegistry.js";
-import {
-  getSceneBaseElevation,
-  getSceneFloorElevation,
-  resolveSceneObjectType
-} from "../utils/sceneObjectPlacement.js";
+import { getSceneBaseElevation, getSceneFloorElevation, resolveSceneObjectType } from "../utils/sceneObjectPlacement.js";
 import { buildProceduralObject } from "./proceduralObject.js";
 import { toColor } from "./resources.js";
 

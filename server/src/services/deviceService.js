@@ -10,18 +10,7 @@ import { broadcastSnapshot } from "./realtimeService.js";
 import { badRequest, notFoundError } from "../lib/errors.js";
 import { logger } from "../lib/logger.js";
 
-const assetTypes = new Set([
-  "server",
-  "desktop",
-  "notebook",
-  "printer",
-  "router",
-  "switch",
-  "access_point",
-  "camera_ip",
-  "nas",
-  "other"
-]);
+const assetTypes = new Set(["server", "desktop", "notebook", "printer", "router", "switch", "access_point", "camera_ip", "nas", "other"]);
 
 const backupStatuses = new Set(["available", "in_use"]);
 const deviceNotFoundMessage = "Device not found";

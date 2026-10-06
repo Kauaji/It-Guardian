@@ -55,8 +55,19 @@ describe("visualMapDrafts", () => {
 
   it("monta os payloads convertendo campos numéricos e vazios", () => {
     expect(buildMapPayload({ name: "n", width: "x", depth: "40", scale: "" })).toEqual({ name: "n", width: 30, depth: 40, scale: 0 });
-    expect(buildObjectPayload({ label: "o", linkedAssetId: "", positionX: "1", width: "z" })).toMatchObject({ linkedAssetId: null, positionX: 1, positionY: 0, width: 1, height: 1 });
-    expect(buildDuplicateObjectPayload({ label: "", positionX: 1, positionZ: "2", linkedAssetId: "a" }, "Base")).toMatchObject({ label: "Base (cópia)", linkedAssetId: null, positionX: 1.5, positionZ: 2.5 });
+    expect(buildObjectPayload({ label: "o", linkedAssetId: "", positionX: "1", width: "z" })).toMatchObject({
+      linkedAssetId: null,
+      positionX: 1,
+      positionY: 0,
+      width: 1,
+      height: 1
+    });
+    expect(buildDuplicateObjectPayload({ label: "", positionX: 1, positionZ: "2", linkedAssetId: "a" }, "Base")).toMatchObject({
+      label: "Base (cópia)",
+      linkedAssetId: null,
+      positionX: 1.5,
+      positionZ: 2.5
+    });
     const connection = buildConnectionPayload({ sourceObjectId: "", points: [{ x: "1", y: "q", z: 2 }], thickness: "" });
     expect(connection).toMatchObject({ sourceObjectId: null, points: [{ x: 1, y: 0.08, z: 2 }], thickness: 0 });
     expect(buildConnectionPayload({}).points).toEqual([]);
@@ -91,7 +102,12 @@ describe("visualMapDrafts", () => {
     expect(getDevicePreset({})).toBe("desktop");
     expect(getDeviceMeta(null).ip).toBe("Não informado");
     expect(getDeviceMeta({ address: "1", operatingSystem: "L", segment: "s", group: "g", environmentName: "e", status: "ok" })).toEqual({
-      status: "ok", ip: "1", os: "L", segment: "s", group: "g", environment: "e"
+      status: "ok",
+      ip: "1",
+      os: "L",
+      segment: "s",
+      group: "g",
+      environment: "e"
     });
   });
 });

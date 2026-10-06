@@ -14,7 +14,10 @@ function CorrelationsSection({ correlations }) {
       </header>
       <div className="alert-correlations-grid">
         {correlations.slice(0, 4).map((correlation) => (
-          <article key={correlation.correlationId || correlation.id} className={`alert-correlation-card ${correlation.impactLevel === "critical" ? "critical" : "warning"}`}>
+          <article
+            key={correlation.correlationId || correlation.id}
+            className={`alert-correlation-card ${correlation.impactLevel === "critical" ? "critical" : "warning"}`}
+          >
             <span>{formatDisplayText(correlation.confidenceLevel, "Média")} confiança</span>
             <strong>{formatDisplayText(correlation.correlationSummary, "Aviso correlacionado")}</strong>
             <small>{formatDisplayText(correlation.relatedHosts, "Sem máquinas relacionadas")}</small>
@@ -49,9 +52,7 @@ export default function AlertDiagnosticsTab({ visibleAlerts, alertCorrelations, 
         {activeAlerts.map((alert) => (
           <AlertDiagnosticCard key={alert.id} alert={alert} commentBox={commentBox} />
         ))}
-        {!activeAlerts.length && (
-          <p className="empty">Nenhum aviso ativo encontrado para os filtros atuais.</p>
-        )}
+        {!activeAlerts.length && <p className="empty">Nenhum aviso ativo encontrado para os filtros atuais.</p>}
       </div>
     </section>
   );

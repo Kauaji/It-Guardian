@@ -1,9 +1,12 @@
 export function buildAlertTrend(history) {
-  return (history || []).slice(0, 6).reverse().map((alert, index) => ({
-    label: `#${index + 1}`,
-    critical: alert.severity === "critical" ? 1 : 0,
-    warning: alert.severity === "warning" ? 1 : 0
-  }));
+  return (history || [])
+    .slice(0, 6)
+    .reverse()
+    .map((alert, index) => ({
+      label: `#${index + 1}`,
+      critical: alert.severity === "critical" ? 1 : 0,
+      warning: alert.severity === "warning" ? 1 : 0
+    }));
 }
 
 export function onlineSubtitle(overview) {

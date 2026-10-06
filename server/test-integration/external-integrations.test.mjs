@@ -9,13 +9,8 @@ process.env.NODE_ENV = "test";
 
 const { initializeRuntime } = await import("../src/bootstrap.js");
 const { closeDatabase } = await import("../src/database.js");
-const {
-  getIntegrationState,
-  listIntegrationAlerts,
-  listIntegrationAssets,
-  listOpenIntegrationConflicts,
-  saveIntegrationSync
-} = await import("../src/repositories/integrationRepository.js");
+const { getIntegrationState, listIntegrationAlerts, listIntegrationAssets, listOpenIntegrationConflicts, saveIntegrationSync } =
+  await import("../src/repositories/integrationRepository.js");
 
 function asset(overrides = {}) {
   return {
@@ -51,41 +46,47 @@ test("snapshots externos preservam ativos, alertas, correlacao e conflitos", asy
     mode: "real",
     baseUrl: "http://ocs.internal",
     assets: [asset()],
-    conflicts: [{
-      source: "ocs",
-      externalId: "ocs-42",
-      reason: "Revisao manual necessaria.",
-      candidateIds: ["agent-42", "zabbix-42"],
-      evidence: [{ strategy: "hostname", candidateIds: ["agent-42", "zabbix-42"] }]
-    }]
+    conflicts: [
+      {
+        source: "ocs",
+        externalId: "ocs-42",
+        reason: "Revisao manual necessaria.",
+        candidateIds: ["agent-42", "zabbix-42"],
+        evidence: [{ strategy: "hostname", candidateIds: ["agent-42", "zabbix-42"] }]
+      }
+    ]
   });
   await saveIntegrationSync({
     source: "zabbix",
     enabled: true,
     mode: "real",
     baseUrl: "http://zabbix.internal/api_jsonrpc.php",
-    assets: [asset({
-      source: "zabbix",
-      externalId: "zabbix-42",
-      correlation: {
-        conflict: false,
-        strategy: "hostname",
-        matchedIntegrationAssetId: result.assets[0].id
+    assets: [
+      asset({
+        source: "zabbix",
+        externalId: "zabbix-42",
+        correlation: {
+          conflict: false,
+          strategy: "hostname",
+          matchedIntegrationAssetId: result.assets[0].id
+        }
+      })
+    ],
+    alerts: [
+      {
+        source: "zabbix",
+        externalId: "problem-1",
+        assetExternalId: "zabbix-42",
+        assetHostname: "srv-app-01",
+        name: "Agente indisponivel",
+        severity: "high",
+        status: "active",
+        occurredAt: "2026-07-27T12:05:00.000Z",
+        resolvedAt: null,
+        metadata: {},
+        rawData: null
       }
-    })],
-    alerts: [{
-      source: "zabbix",
-      externalId: "problem-1",
-      assetExternalId: "zabbix-42",
-      assetHostname: "srv-app-01",
-      name: "Agente indisponivel",
-      severity: "high",
-      status: "active",
-      occurredAt: "2026-07-27T12:05:00.000Z",
-      resolvedAt: null,
-      metadata: {},
-      rawData: null
-    }]
+    ]
   });
 
   const assets = await listIntegrationAssets();
@@ -118,19 +119,21 @@ test("sincronizacao real remove maquinas e alertas que deixaram de existir na or
     enabled: true,
     mode: "real",
     baseUrl: "http://zabbix.internal/api_jsonrpc.php",
-    alerts: [{
-      source: "zabbix",
-      externalId: "stale-alert",
-      assetExternalId: "stale-asset",
-      assetHostname: "old-host",
-      name: "Alerta removido na origem",
-      severity: "high",
-      status: "active",
-      occurredAt: "2026-07-27T12:05:00.000Z",
-      resolvedAt: null,
-      metadata: {},
-      rawData: null
-    }]
+    alerts: [
+      {
+        source: "zabbix",
+        externalId: "stale-alert",
+        assetExternalId: "stale-asset",
+        assetHostname: "old-host",
+        name: "Alerta removido na origem",
+        severity: "high",
+        status: "active",
+        occurredAt: "2026-07-27T12:05:00.000Z",
+        resolvedAt: null,
+        metadata: {},
+        rawData: null
+      }
+    ]
   });
 
   await saveIntegrationSync({

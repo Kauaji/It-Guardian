@@ -8,16 +8,59 @@ const ACCENT = "#0f172a";
 
 function addComputer(ctx) {
   const { group, width: objectWidth, depth: objectDepth, parts } = ctx;
-  parts.addModelPart(group, { x: -objectWidth * 0.15, width: objectWidth * 0.5, depth: 7, height: 32, y: 8, color: "#2563eb", emissive: "#0f5fff", emissiveIntensity: 0.34 });
-  parts.addModelPart(group, { x: -objectWidth * 0.15, z: -2, width: objectWidth * 0.62, depth: 4, height: 40, y: 6, color: "#111827", opacity: 0.92 });
-  parts.addModelPart(group, { x: objectWidth * 0.28, width: 13, depth: objectDepth * 0.42, height: 42, y: 0, color: "#1f2937", metalness: 0.18 });
-  parts.addModelPart(group, { x: -objectWidth * 0.15, z: objectDepth * 0.18, width: objectWidth * 0.35, depth: 12, height: 5, y: 0, color: "#475569" });
+  parts.addModelPart(group, {
+    x: -objectWidth * 0.15,
+    width: objectWidth * 0.5,
+    depth: 7,
+    height: 32,
+    y: 8,
+    color: "#2563eb",
+    emissive: "#0f5fff",
+    emissiveIntensity: 0.34
+  });
+  parts.addModelPart(group, {
+    x: -objectWidth * 0.15,
+    z: -2,
+    width: objectWidth * 0.62,
+    depth: 4,
+    height: 40,
+    y: 6,
+    color: "#111827",
+    opacity: 0.92
+  });
+  parts.addModelPart(group, {
+    x: objectWidth * 0.28,
+    width: 13,
+    depth: objectDepth * 0.42,
+    height: 42,
+    y: 0,
+    color: "#1f2937",
+    metalness: 0.18
+  });
+  parts.addModelPart(group, {
+    x: -objectWidth * 0.15,
+    z: objectDepth * 0.18,
+    width: objectWidth * 0.35,
+    depth: 12,
+    height: 5,
+    y: 0,
+    color: "#475569"
+  });
 }
 
 function addLaptop(ctx) {
   const { group, width: objectWidth, depth: objectDepth, parts } = ctx;
   parts.addModelPart(group, { width: objectWidth * 0.72, depth: objectDepth * 0.52, height: 5, y: 0, color: "#334155" });
-  parts.addModelPart(group, { z: -objectDepth * 0.18, width: objectWidth * 0.7, depth: 5, height: 30, y: 3, color: "#1d4ed8", emissive: "#0f5fff", emissiveIntensity: 0.28 });
+  parts.addModelPart(group, {
+    z: -objectDepth * 0.18,
+    width: objectWidth * 0.7,
+    depth: 5,
+    height: 30,
+    y: 3,
+    color: "#1d4ed8",
+    emissive: "#0f5fff",
+    emissiveIntensity: 0.28
+  });
 }
 
 /** PC (torre, monitor e teclado) ou notebook. */
@@ -76,7 +119,16 @@ export function buildRack(ctx) {
 export function buildNetworkBox(ctx) {
   const { group, width: objectWidth, depth: objectDepth, color, parts } = ctx;
   parts.addModelPart(group, { width: objectWidth * 0.88, depth: objectDepth * 0.64, height: 14, y: 18, color: "#334155", metalness: 0.18 });
-  parts.addModelPart(group, { z: -objectDepth * 0.32, width: objectWidth * 0.7, depth: 3, height: 4, y: 28, color, emissive: color, emissiveIntensity: 0.38 });
+  parts.addModelPart(group, {
+    z: -objectDepth * 0.32,
+    width: objectWidth * 0.7,
+    depth: 3,
+    height: 4,
+    y: 28,
+    color,
+    emissive: color,
+    emissiveIntensity: 0.38
+  });
 }
 
 export function buildAccessPoint(ctx) {
@@ -88,7 +140,13 @@ export function buildAccessPoint(ctx) {
 export function buildCamera(ctx) {
   const { group, width: objectWidth, depth: objectDepth, parts } = ctx;
   parts.addModelPart(group, { width: objectWidth * 0.62, depth: objectDepth * 0.42, height: 18, y: 28, color: NEUTRAL, metalness: 0.12 });
-  const lens = parts.addCylinderPart(group, { z: -objectDepth * 0.25, radius: Math.min(objectWidth, objectDepth) * 0.12, height: 10, y: 31, color: ACCENT });
+  const lens = parts.addCylinderPart(group, {
+    z: -objectDepth * 0.25,
+    radius: Math.min(objectWidth, objectDepth) * 0.12,
+    height: 10,
+    y: 31,
+    color: ACCENT
+  });
   lens.rotation.x = Math.PI / 2;
   parts.addModelPart(group, { z: objectDepth * 0.22, width: 8, depth: 16, height: 28, y: 4, color: "#64748b", metalness: 0.18 });
 }
@@ -123,6 +181,12 @@ export function buildTv(ctx) {
 export function buildPowerAccessory(ctx) {
   const { group, type, width: objectWidth, depth: objectDepth, parts } = ctx;
   const isStrip = ["power_strip", "extension_cord", "power_cable"].includes(type);
-  parts.addModelPart(group, { width: isStrip ? objectWidth * 0.9 : objectWidth * 0.58, depth: isStrip ? 11 : objectDepth * 0.5, height: isStrip ? 8 : 22, y: 12, color: "#f59e0b" });
+  parts.addModelPart(group, {
+    width: isStrip ? objectWidth * 0.9 : objectWidth * 0.58,
+    depth: isStrip ? 11 : objectDepth * 0.5,
+    height: isStrip ? 8 : 22,
+    y: 12,
+    color: "#f59e0b"
+  });
   parts.addModelPart(group, { x: objectWidth * 0.18, width: 5, depth: 5, height: 5, y: 21, color: ACCENT });
 }

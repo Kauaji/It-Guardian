@@ -2,8 +2,17 @@ import { ArrowDown, ArrowUp, ChevronDown, Edit3, Trash2 } from "lucide-react";
 import ColorPickerSegment from "../ColorPickerSegment.jsx";
 
 export default function GroupActionStrip({
-  group, groupIndex, groupCount, activeTab, canManage, setActivePopoverId,
-  onToggleGroup, onMoveGroupOrder, onChangeGroupColor, onRenameGroup, onDeleteGroup
+  group,
+  groupIndex,
+  groupCount,
+  activeTab,
+  canManage,
+  setActivePopoverId,
+  onToggleGroup,
+  onMoveGroupOrder,
+  onChangeGroupColor,
+  onRenameGroup,
+  onDeleteGroup
 }) {
   return (
     <div className="inline-action-strip group-inline-actions" onClick={(event) => event.stopPropagation()}>

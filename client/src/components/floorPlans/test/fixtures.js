@@ -48,14 +48,16 @@ export function buildEditor({ objects = [buildDesk(), buildPc()], ...overrides }
   return normalizeEditorData({
     plan: { id: "plan-1", width: 1280, height: 820, gridSize: 25, snapSize: 25 },
     floors: [{ id: "floor-1", name: "Térreo", width: 1280, height: 820 }],
-    zones: [{
-      id: "room-1",
-      floorId: "floor-1",
-      zoneType: "room",
-      name: "Sala",
-      color: "#dbeafe",
-      geometry: { x: 100, y: 100, width: 500, height: 400 }
-    }],
+    zones: [
+      {
+        id: "room-1",
+        floorId: "floor-1",
+        zoneType: "room",
+        name: "Sala",
+        color: "#dbeafe",
+        geometry: { x: 100, y: 100, width: 500, height: 400 }
+      }
+    ],
     objects,
     connectionPoints: [],
     cableRoutes: [],

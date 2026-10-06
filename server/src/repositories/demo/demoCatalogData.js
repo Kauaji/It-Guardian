@@ -6,9 +6,36 @@ export const demoTechnicians = [
 ];
 
 export const demoClients = [
-  ["demo-client-alfa", "Alfa Comercio", "Alfa Comercio e Servicos Ltda", "00.000.000/0001-01", "(11) 3333-0101", "contato@alfa.local", "Unidade Centro", "Equipe Alfa"],
-  ["demo-client-beta", "Beta Logistica", "Beta Logistica Integrada Ltda", "00.000.000/0001-02", "(11) 3333-0202", "suporte@beta.local", "CD Norte", "Operacao Beta"],
-  ["demo-client-orion", "Orion Saude", "Orion Saude Corporativa Ltda", "00.000.000/0001-03", "(11) 3333-0303", "ti@orion.local", "Unidade Administrativa", "TI Orion"]
+  [
+    "demo-client-alfa",
+    "Alfa Comercio",
+    "Alfa Comercio e Servicos Ltda",
+    "00.000.000/0001-01",
+    "(11) 3333-0101",
+    "contato@alfa.local",
+    "Unidade Centro",
+    "Equipe Alfa"
+  ],
+  [
+    "demo-client-beta",
+    "Beta Logistica",
+    "Beta Logistica Integrada Ltda",
+    "00.000.000/0001-02",
+    "(11) 3333-0202",
+    "suporte@beta.local",
+    "CD Norte",
+    "Operacao Beta"
+  ],
+  [
+    "demo-client-orion",
+    "Orion Saude",
+    "Orion Saude Corporativa Ltda",
+    "00.000.000/0001-03",
+    "(11) 3333-0303",
+    "ti@orion.local",
+    "Unidade Administrativa",
+    "TI Orion"
+  ]
 ];
 
 export const demoProducts = [
@@ -21,11 +48,51 @@ export const demoProducts = [
 ];
 
 export const demoServices = [
-  ["demo-service-diagnostic", "SRV-0001", "Diagnóstico técnico", "Atendimento", "medium", 80, "Análise inicial do problema e registro do diagnóstico."],
-  ["demo-service-format", "SRV-0002", "Formatação e reinstalação", "Sistemas", "medium", 180, "Reinstalação de sistema operacional e aplicativos básicos."],
-  ["demo-service-hardware", "SRV-0003", "Troca de peça", "Hardware", "high", 120, "Substituição física de componente e teste de funcionamento."],
-  ["demo-service-network", "SRV-0004", "Correção de rede", "Rede", "high", 150, "Correção de conectividade, ponto de rede ou configuração."],
-  ["demo-service-printer", "SRV-0005", "Manutenção de impressora", "Impressoras", "medium", 130, "Limpeza, troca de suprimento ou ajuste de impressão."]
+  [
+    "demo-service-diagnostic",
+    "SRV-0001",
+    "Diagnóstico técnico",
+    "Atendimento",
+    "medium",
+    80,
+    "Análise inicial do problema e registro do diagnóstico."
+  ],
+  [
+    "demo-service-format",
+    "SRV-0002",
+    "Formatação e reinstalação",
+    "Sistemas",
+    "medium",
+    180,
+    "Reinstalação de sistema operacional e aplicativos básicos."
+  ],
+  [
+    "demo-service-hardware",
+    "SRV-0003",
+    "Troca de peça",
+    "Hardware",
+    "high",
+    120,
+    "Substituição física de componente e teste de funcionamento."
+  ],
+  [
+    "demo-service-network",
+    "SRV-0004",
+    "Correção de rede",
+    "Rede",
+    "high",
+    150,
+    "Correção de conectividade, ponto de rede ou configuração."
+  ],
+  [
+    "demo-service-printer",
+    "SRV-0005",
+    "Manutenção de impressora",
+    "Impressoras",
+    "medium",
+    130,
+    "Limpeza, troca de suprimento ou ajuste de impressão."
+  ]
 ];
 
 export const demoProblemTypes = [

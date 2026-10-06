@@ -91,7 +91,13 @@ describe("construção do formulário", () => {
   });
 
   it("carrega um plano existente com valores padrão para campos ausentes", () => {
-    const form = buildAutomationFormFromPlan({ id: "p1", name: "Plano", indicatorColor: "x", assetIds: "nao-lista", overrides: [{ id: "o" }] });
+    const form = buildAutomationFormFromPlan({
+      id: "p1",
+      name: "Plano",
+      indicatorColor: "x",
+      assetIds: "nao-lista",
+      overrides: [{ id: "o" }]
+    });
 
     expect(form).toMatchObject({
       id: "p1",
@@ -111,7 +117,11 @@ describe("construção do formulário", () => {
   });
 
   it("aplica padrões sobre um formulário vazio ignorando o id", () => {
-    const form = buildAutomationFormFromDefaults(buildEmptyAutomationForm(), { name: "Rotina", id: "x", assetIds: ["d1"], indicatorColor: "#ABCDEF" }, false);
+    const form = buildAutomationFormFromDefaults(
+      buildEmptyAutomationForm(),
+      { name: "Rotina", id: "x", assetIds: ["d1"], indicatorColor: "#ABCDEF" },
+      false
+    );
 
     expect(form).toMatchObject({ id: null, name: "Rotina", assetIds: ["d1"], indicatorColor: "#abcdef", defaultScriptIds: [] });
   });
@@ -119,7 +129,11 @@ describe("construção do formulário", () => {
   it("preserva o rascunho do assistente apenas quando permitido e ainda sem id", () => {
     const draft = { ...buildEmptyAutomationForm(), notes: "rascunho", defaultScriptIds: ["s1"] };
 
-    expect(buildAutomationFormFromDefaults(draft, { name: "N" }, true)).toMatchObject({ notes: "rascunho", defaultScriptIds: ["s1"], name: "N" });
+    expect(buildAutomationFormFromDefaults(draft, { name: "N" }, true)).toMatchObject({
+      notes: "rascunho",
+      defaultScriptIds: ["s1"],
+      name: "N"
+    });
     expect(buildAutomationFormFromDefaults(draft, { name: "N" }, false).notes).toBe("");
     expect(buildAutomationFormFromDefaults({ ...draft, id: "p9" }, { name: "N" }, true).notes).toBe("");
   });
@@ -129,7 +143,10 @@ describe("construção do formulário", () => {
 
     expect(applyAutomationFormField(current, "scopeType", "group")).toMatchObject({ scopeType: "group", scopeId: "", assetIds: [] });
     expect(applyAutomationFormField(current, "scopeType", "asset_list")).toMatchObject({ scopeId: "", assetIds: ["d1"] });
-    expect(applyAutomationFormField(current, "recurrenceType", "weekly")).toMatchObject({ recurrenceType: "weekly", recurrenceInterval: 7 });
+    expect(applyAutomationFormField(current, "recurrenceType", "weekly")).toMatchObject({
+      recurrenceType: "weekly",
+      recurrenceInterval: 7
+    });
     expect(applyAutomationFormField(current, "name", "X")).toMatchObject({ name: "X", scopeId: "s1" });
   });
 
@@ -150,7 +167,10 @@ describe("payloads", () => {
     const base = { ...buildEmptyAutomationForm(), name: "Plano", defaultScriptIds: ["s1"], scopeId: "s1" };
 
     expect(buildAutomationPayload({ ...base, scopeType: "all" })).toMatchObject({ scopeId: null, assetIds: [] });
-    expect(buildAutomationPayload({ ...base, scopeType: "asset_list", assetIds: ["d1"] })).toMatchObject({ scopeId: null, assetIds: ["d1"] });
+    expect(buildAutomationPayload({ ...base, scopeType: "asset_list", assetIds: ["d1"] })).toMatchObject({
+      scopeId: null,
+      assetIds: ["d1"]
+    });
     expect(buildAutomationPayload({ ...base, scopeType: "segment", assetIds: ["d1"] })).toMatchObject({ scopeId: "s1", assetIds: [] });
   });
 
@@ -164,8 +184,24 @@ describe("payloads", () => {
     });
 
     expect(payload.overrides).toEqual([
-      { assetId: "d1", segmentId: null, recurrenceType: "daily", recurrenceInterval: 30, recurrenceIntervalDays: 1, preferredTime: null, active: false },
-      { assetId: null, segmentId: "s1", recurrenceType: "custom_days", recurrenceInterval: 12, recurrenceIntervalDays: 12, preferredTime: "10:00", active: true }
+      {
+        assetId: "d1",
+        segmentId: null,
+        recurrenceType: "daily",
+        recurrenceInterval: 30,
+        recurrenceIntervalDays: 1,
+        preferredTime: null,
+        active: false
+      },
+      {
+        assetId: null,
+        segmentId: "s1",
+        recurrenceType: "custom_days",
+        recurrenceInterval: 12,
+        recurrenceIntervalDays: 12,
+        preferredTime: "10:00",
+        active: true
+      }
     ]);
   });
 
@@ -203,7 +239,10 @@ describe("exceções de recorrência", () => {
       preferredTime: "08:00",
       active: true
     });
-    expect(buildOverrideFromDraft({ ...draft, targetType: "asset", targetId: "d1" }, [], 1)).toMatchObject({ assetId: "d1", segmentId: null });
+    expect(buildOverrideFromDraft({ ...draft, targetType: "asset", targetId: "d1" }, [], 1)).toMatchObject({
+      assetId: "d1",
+      segmentId: null
+    });
   });
 
   it("recusa alvo vazio, duplicado e intervalo inválido", () => {
@@ -225,7 +264,9 @@ describe("identidade do plano", () => {
     expect(result.duplicateNamePlan).toBe(plans[0]);
     expect(result.hasDuplicateAutomationIdentity).toBe(true);
 
-    expect(findDuplicateAutomationIdentity(plans, { id: 1, name: "Limpeza", indicatorColor: "#000000" }).hasDuplicateAutomationIdentity).toBe(false);
+    expect(
+      findDuplicateAutomationIdentity(plans, { id: 1, name: "Limpeza", indicatorColor: "#000000" }).hasDuplicateAutomationIdentity
+    ).toBe(false);
   });
 
   it("detecta cor duplicada mesmo com nome livre", () => {
@@ -235,7 +276,11 @@ describe("identidade do plano", () => {
   });
 
   it("não bloqueia o envio quando o nome está vazio", () => {
-    const result = findDuplicateAutomationIdentity([{ id: 1, name: "", indicatorColor: "#111111" }], { id: null, name: "", indicatorColor: "#222222" });
+    const result = findDuplicateAutomationIdentity([{ id: 1, name: "", indicatorColor: "#111111" }], {
+      id: null,
+      name: "",
+      indicatorColor: "#222222"
+    });
     expect(result.hasDuplicateAutomationIdentity).toBe(false);
   });
 
@@ -279,7 +324,9 @@ describe("rótulos de escopo e recorrência", () => {
 
   it("descreve o alvo de uma exceção", () => {
     expect(getOverrideLabel({ segmentId: "s1", recurrenceType: "weekly" }, sources)).toBe("Segmento: Recepção • Semanal");
-    expect(getOverrideLabel({ assetId: "d1", recurrenceType: "custom_days", recurrenceInterval: 3 }, sources)).toBe("Máquina: PC-01 - 10.0.0.1 • A cada 3 dia(s)");
+    expect(getOverrideLabel({ assetId: "d1", recurrenceType: "custom_days", recurrenceInterval: 3 }, sources)).toBe(
+      "Máquina: PC-01 - 10.0.0.1 • A cada 3 dia(s)"
+    );
     expect(getOverrideLabel({ assetId: "zz", recurrenceType: "daily" }, sources)).toBe("Máquina: zz • Diária");
   });
 });

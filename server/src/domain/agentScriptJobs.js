@@ -25,7 +25,9 @@ export const ROLLUP_SUCCESS_SUMMARY = "Todas as verificações foram executadas 
  * @returns {string} SHA-256 hexadecimal do conteudo.
  */
 export function hashScriptContent(content) {
-  return createHash("sha256").update(String(content || ""), "utf8").digest("hex");
+  return createHash("sha256")
+    .update(String(content || ""), "utf8")
+    .digest("hex");
 }
 
 /** @param {unknown} type */
@@ -110,11 +112,9 @@ export function evaluateJobResult(result, scriptName) {
   const status = timedOut ? "timed_out" : exitCode === 0 && !errorMessage ? "succeeded" : "failed";
   const stdout = truncateOutput(result.stdout);
   const stderr = truncateOutput(result.stderr);
-  const rawLog = [
-    stdout ? `STDOUT:\n${stdout}` : "",
-    stderr ? `STDERR:\n${stderr}` : "",
-    errorMessage ? `ERRO:\n${errorMessage}` : ""
-  ].filter(Boolean).join("\n\n");
+  const rawLog = [stdout ? `STDOUT:\n${stdout}` : "", stderr ? `STDERR:\n${stderr}` : "", errorMessage ? `ERRO:\n${errorMessage}` : ""]
+    .filter(Boolean)
+    .join("\n\n");
 
   return {
     status,

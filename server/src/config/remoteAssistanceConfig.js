@@ -9,28 +9,17 @@ import { boundedInteger, isTruthyEnv, isTruthyEnvWithDefault, parseIceUrls } fro
  * @property {string} [credential]
  */
 
-const allowedEnvironments = new Set([
-  "lab",
-  "laboratory",
-  "laboratorio",
-  "homologation",
-  "homologacao",
-  "internal",
-  "interno",
-  "test"
-]);
+const allowedEnvironments = new Set(["lab", "laboratory", "laboratorio", "homologation", "homologacao", "internal", "interno", "test"]);
 
 // Ambiente e flags principais: a assistencia so liga com a flag explicita E em
 // um ambiente da lista permitida.
 /** @param {Env} env */
 function resolveActivation(env) {
   const environment = String(
-    env.REMOTE_ASSISTANCE_ENV ||
-      env.REMOTE_ASSISTANCE_ENVIRONMENT ||
-      env.IT_GUARDIAN_ENVIRONMENT ||
-      env.NODE_ENV ||
-      "disabled"
-  ).trim().toLowerCase();
+    env.REMOTE_ASSISTANCE_ENV || env.REMOTE_ASSISTANCE_ENVIRONMENT || env.IT_GUARDIAN_ENVIRONMENT || env.NODE_ENV || "disabled"
+  )
+    .trim()
+    .toLowerCase();
   const publicDeployment = env.VERCEL === "1" || env.VERCEL_ENV === "production";
   const environmentAllowed = allowedEnvironments.has(environment);
   // Pausa de seguranca temporaria (2026-08-14 a 2026-08-15): auditoria
@@ -44,9 +33,7 @@ function resolveActivation(env) {
   // atual; assistencia remota so e de fato segura na maquina especifica que
   // ja recebeu o agente corrigido.
   const enabled = isTruthyEnv(env.ENABLE_REMOTE_ASSISTANCE) && environmentAllowed;
-  const controlEnabled = enabled && isTruthyEnv(
-    env.ENABLE_REMOTE_CONTROL ?? env.ENABLE_REMOTE_ASSISTANCE_CONTROL
-  );
+  const controlEnabled = enabled && isTruthyEnv(env.ENABLE_REMOTE_CONTROL ?? env.ENABLE_REMOTE_ASSISTANCE_CONTROL);
 
   return { environment, publicDeployment, environmentAllowed, enabled, controlEnabled };
 }
@@ -62,19 +49,10 @@ function resolveCaptureLimits(env) {
   // WebRTC, continua snapshot JPEG por polling HTTP), so mais generoso do
   // que o valor conservador original.
   const maxFramesPerSecond = boundedInteger(env.REMOTE_ASSISTANCE_MAX_FPS, 8, 1, 10);
-  const targetFps = Math.min(
-    maxFramesPerSecond,
-    boundedInteger(env.REMOTE_ASSISTANCE_TARGET_FPS, maxFramesPerSecond, 1, 10)
-  );
+  const targetFps = Math.min(maxFramesPerSecond, boundedInteger(env.REMOTE_ASSISTANCE_TARGET_FPS, maxFramesPerSecond, 1, 10));
   const minJpegQuality = boundedInteger(env.REMOTE_ASSISTANCE_MIN_JPEG_QUALITY, 35, 10, 90);
-  const maxJpegQuality = Math.max(
-    minJpegQuality,
-    boundedInteger(env.REMOTE_ASSISTANCE_MAX_JPEG_QUALITY, 80, 20, 95)
-  );
-  const jpegQuality = Math.min(
-    maxJpegQuality,
-    Math.max(minJpegQuality, boundedInteger(env.REMOTE_ASSISTANCE_JPEG_QUALITY, 65, 10, 95))
-  );
+  const maxJpegQuality = Math.max(minJpegQuality, boundedInteger(env.REMOTE_ASSISTANCE_MAX_JPEG_QUALITY, 80, 20, 95));
+  const jpegQuality = Math.min(maxJpegQuality, Math.max(minJpegQuality, boundedInteger(env.REMOTE_ASSISTANCE_JPEG_QUALITY, 65, 10, 95)));
   const agentTimeoutSeconds = boundedInteger(env.REMOTE_ASSISTANCE_AGENT_TIMEOUT_SECONDS, 45, 15, 300);
   const idleTimeoutSeconds = Math.min(
     boundedInteger(env.REMOTE_ASSISTANCE_IDLE_TIMEOUT_SECONDS, 60, 20, 300),
@@ -83,20 +61,12 @@ function resolveCaptureLimits(env) {
   const serverMinFrameIntervalMs = Math.ceil(1000 / maxFramesPerSecond);
   const agentCaptureMs = Math.max(
     serverMinFrameIntervalMs,
-    boundedInteger(
-      env.REMOTE_ASSISTANCE_AGENT_CAPTURE_MS,
-      Math.ceil(1000 / targetFps),
-      150,
-      2000
-    )
+    boundedInteger(env.REMOTE_ASSISTANCE_AGENT_CAPTURE_MS, Math.ceil(1000 / targetFps), 150, 2000)
   );
   // Piso reduzido de 150 para 80ms: com o novo teto de FPS, agentCaptureMs
   // pode ficar em 100-125ms; um piso de 150 aqui viraria o novo gargalo,
   // fazendo o visualizador esperar mais do que o agente realmente captura.
-  const viewerPollMs = Math.max(
-    80,
-    boundedInteger(env.REMOTE_ASSISTANCE_VIEWER_POLL_MS, agentCaptureMs, 80, 2000)
-  );
+  const viewerPollMs = Math.max(80, boundedInteger(env.REMOTE_ASSISTANCE_VIEWER_POLL_MS, agentCaptureMs, 80, 2000));
 
   return {
     maxFramesPerSecond,
@@ -124,14 +94,19 @@ function resolveCaptureLimits(env) {
  */
 function buildIceServers(env) {
   /** @type {IceServer[]} */
-  const servers = parseIceUrls(env.REMOTE_ASSISTANCE_STUN_URLS, { schemes: ["stun:", "stuns:"] })
-    .map((urls) => ({ urls }));
+  const servers = parseIceUrls(env.REMOTE_ASSISTANCE_STUN_URLS, { schemes: ["stun:", "stuns:"] }).map((urls) => ({ urls }));
   const turnUrls = parseIceUrls(env.REMOTE_ASSISTANCE_TURN_URL, { maxEntries: 1, schemes: ["turn:", "turns:"] });
   if (turnUrls.length) {
     servers.push({
       urls: turnUrls[0],
-      username: String(env.REMOTE_ASSISTANCE_TURN_USERNAME || "").trim().slice(0, 200) || undefined,
-      credential: String(env.REMOTE_ASSISTANCE_TURN_CREDENTIAL || "").trim().slice(0, 200) || undefined
+      username:
+        String(env.REMOTE_ASSISTANCE_TURN_USERNAME || "")
+          .trim()
+          .slice(0, 200) || undefined,
+      credential:
+        String(env.REMOTE_ASSISTANCE_TURN_CREDENTIAL || "")
+          .trim()
+          .slice(0, 200) || undefined
     });
   }
   return servers;
@@ -164,8 +139,12 @@ function resolveRustdesk(env, enabled) {
   // (REMOTE_ASSISTANCE_RUSTDESK_ID_SERVER) -- nunca aponta para o relay
   // publico do RustDesk por padrao, para nao depender de infraestrutura de
   // terceiros para o trafego de tela dos clientes.
-  const idServer = String(env.REMOTE_ASSISTANCE_RUSTDESK_ID_SERVER || "").trim().slice(0, 200);
-  const relayServer = String(env.REMOTE_ASSISTANCE_RUSTDESK_RELAY_SERVER || "").trim().slice(0, 200);
+  const idServer = String(env.REMOTE_ASSISTANCE_RUSTDESK_ID_SERVER || "")
+    .trim()
+    .slice(0, 200);
+  const relayServer = String(env.REMOTE_ASSISTANCE_RUSTDESK_RELAY_SERVER || "")
+    .trim()
+    .slice(0, 200);
   return {
     enabled: enabled && isTruthyEnv(env.REMOTE_ASSISTANCE_RUSTDESK_ENABLED) && Boolean(idServer),
     idServer,
@@ -192,11 +171,7 @@ function resolveTransport(env, webrtc, rustdesk) {
     .toLowerCase();
   const requestedWebrtc = requestedTransport === "webrtc";
   const requestedRustdesk = requestedTransport === "rustdesk";
-  const transport = requestedRustdesk && rustdesk.enabled
-    ? "rustdesk"
-    : requestedWebrtc && webrtc.enabled
-      ? "webrtc"
-      : "snapshot_polling";
+  const transport = requestedRustdesk && rustdesk.enabled ? "rustdesk" : requestedWebrtc && webrtc.enabled ? "webrtc" : "snapshot_polling";
 
   return {
     transport,
@@ -216,22 +191,13 @@ export function getRemoteAssistanceConfig(env = process.env) {
     enabled,
     environment,
     publicDeployment,
-    disabledReason: enabled
-      ? null
-      : !environmentAllowed
-          ? "environment_not_allowed"
-          : "feature_disabled",
+    disabledReason: enabled ? null : !environmentAllowed ? "environment_not_allowed" : "feature_disabled",
     captureEnabled: enabled,
     controlEnabled,
     privacyModeEnabled: enabled && isTruthyEnv(env.ENABLE_REMOTE_PRIVACY_MODE),
     adminActionsEnabled: enabled && isTruthyEnv(env.ENABLE_REMOTE_ADMIN_ACTIONS),
     autoConsentEnabled:
-      enabled &&
-      !publicDeployment &&
-      isTruthyEnv(
-        env.REMOTE_ASSISTANCE_LAB_AUTO_CONSENT ??
-          env.ENABLE_REMOTE_ASSISTANCE_AUTO_CONSENT
-      ),
+      enabled && !publicDeployment && isTruthyEnv(env.REMOTE_ASSISTANCE_LAB_AUTO_CONSENT ?? env.ENABLE_REMOTE_ASSISTANCE_AUTO_CONSENT),
     sessionTtlMinutes: boundedInteger(env.REMOTE_ASSISTANCE_SESSION_TTL_MINUTES, 20, 5, 60),
     reauthTtlMinutes: 5,
     maxFrameBytes: boundedInteger(env.REMOTE_ASSISTANCE_MAX_FRAME_BYTES, 700000, 100000, 900000),

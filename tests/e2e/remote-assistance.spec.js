@@ -12,49 +12,52 @@ async function login(page) {
 }
 
 async function connectLabAgent(page) {
-  return page.evaluate(async ({ baseUrl }) => {
-    const enrollmentResponse = await fetch(`${baseUrl}/api/agents/enrollments`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Agente do E2E remoto" })
-    });
-    if (!enrollmentResponse.ok) throw new Error(await enrollmentResponse.text());
-    const enrollment = await enrollmentResponse.json();
+  return page.evaluate(
+    async ({ baseUrl }) => {
+      const enrollmentResponse = await fetch(`${baseUrl}/api/agents/enrollments`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "Agente do E2E remoto" })
+      });
+      if (!enrollmentResponse.ok) throw new Error(await enrollmentResponse.text());
+      const enrollment = await enrollmentResponse.json();
 
-    const heartbeatResponse = await fetch(`${baseUrl}/api/agents/heartbeat`, {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${enrollment.token}`,
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({
-        machineId: "remote-assistance-e2e-machine",
-        hostname: "LAB-REMOTE-E2E",
-        machineAlias: "Notebook remoto E2E",
-        operatingSystem: "Microsoft Windows 11 Pro",
-        osArchitecture: "64-bit",
-        windowsVersion: "23H2",
-        localIp: "192.168.50.80",
-        macAddress: "00-11-22-33-44-80",
-        cpuModel: "Intel Core i7",
-        memoryTotalBytes: 17179869184,
-        diskTotalBytes: 512000000000,
-        diskFreeBytes: 256000000000,
-        uptimeSeconds: 7200,
-        agentVersion: "1.0.0-e2e",
-        collectedAt: new Date().toISOString(),
-        intervalSeconds: 60,
-        environment: "Laboratorio E2E",
-        group: "Suporte",
-        segment: "Windows",
-        inventoryDetails: { cpuCores: 8, software: [] }
-      })
-    });
-    if (!heartbeatResponse.ok) throw new Error(await heartbeatResponse.text());
-    const heartbeat = await heartbeatResponse.json();
-    return { heartbeat, enrollmentToken: enrollment.token };
-  }, { baseUrl: apiUrl });
+      const heartbeatResponse = await fetch(`${baseUrl}/api/agents/heartbeat`, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${enrollment.token}`,
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          machineId: "remote-assistance-e2e-machine",
+          hostname: "LAB-REMOTE-E2E",
+          machineAlias: "Notebook remoto E2E",
+          operatingSystem: "Microsoft Windows 11 Pro",
+          osArchitecture: "64-bit",
+          windowsVersion: "23H2",
+          localIp: "192.168.50.80",
+          macAddress: "00-11-22-33-44-80",
+          cpuModel: "Intel Core i7",
+          memoryTotalBytes: 17179869184,
+          diskTotalBytes: 512000000000,
+          diskFreeBytes: 256000000000,
+          uptimeSeconds: 7200,
+          agentVersion: "1.0.0-e2e",
+          collectedAt: new Date().toISOString(),
+          intervalSeconds: 60,
+          environment: "Laboratorio E2E",
+          group: "Suporte",
+          segment: "Windows",
+          inventoryDetails: { cpuCores: 8, software: [] }
+        })
+      });
+      if (!heartbeatResponse.ok) throw new Error(await heartbeatResponse.text());
+      const heartbeat = await heartbeatResponse.json();
+      return { heartbeat, enrollmentToken: enrollment.token };
+    },
+    { baseUrl: apiUrl }
+  );
 }
 
 test("Inventário abre o fluxo visual seguro de assistencia remota", async ({ page }) => {
@@ -125,14 +128,13 @@ test("sessao ativa mostra métricas, pausa a visualização e reconecta pelo vie
 
   await expect(remoteDialog).toContainText("Aguardando");
 
-  const sessionId = await page.evaluate(async ({ baseUrl, agentToken }) => {
-    const pendingResponse = await fetch(`${baseUrl}/api/agents/remote-assistance/pending`, {
-      headers: { authorization: `Bearer ${agentToken}` }
-    });
-    const { session: pending } = await pendingResponse.json();
-    const consentResponse = await fetch(
-      `${baseUrl}/api/agents/remote-assistance/sessions/${pending.id}/consent`,
-      {
+  const sessionId = await page.evaluate(
+    async ({ baseUrl, agentToken }) => {
+      const pendingResponse = await fetch(`${baseUrl}/api/agents/remote-assistance/pending`, {
+        headers: { authorization: `Bearer ${agentToken}` }
+      });
+      const { session: pending } = await pendingResponse.json();
+      const consentResponse = await fetch(`${baseUrl}/api/agents/remote-assistance/sessions/${pending.id}/consent`, {
         method: "POST",
         headers: {
           authorization: `Bearer ${agentToken}`,
@@ -145,23 +147,25 @@ test("sessao ativa mostra métricas, pausa a visualização e reconecta pelo vie
           monitors: [{ id: "display-1", name: "Tela única", primary: true, width: 1920, height: 1080 }],
           selectedMonitorId: "display-1"
         })
-      }
-    );
-    await consentResponse.json();
-    const sendFrame = (frame) => fetch(`${baseUrl}/api/agents/remote-assistance/sessions/${pending.id}/frame`, {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${agentToken}`,
-        "x-remote-session-token": pending.sessionToken,
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({ frame })
-    });
-    await sendFrame("data:image/jpeg;base64,/9j/2Q==");
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    await sendFrame("data:image/jpeg;base64,/9j/2Qab==");
-    return pending.id;
-  }, { baseUrl: apiUrl, agentToken: enrollment.enrollmentToken });
+      });
+      await consentResponse.json();
+      const sendFrame = (frame) =>
+        fetch(`${baseUrl}/api/agents/remote-assistance/sessions/${pending.id}/frame`, {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${agentToken}`,
+            "x-remote-session-token": pending.sessionToken,
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({ frame })
+        });
+      await sendFrame("data:image/jpeg;base64,/9j/2Q==");
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      await sendFrame("data:image/jpeg;base64,/9j/2Qab==");
+      return pending.id;
+    },
+    { baseUrl: apiUrl, agentToken: enrollment.enrollmentToken }
+  );
 
   await expect(remoteDialog).toContainText("Atendimento em andamento", { timeout: 10_000 });
   await expect(remoteDialog).toContainText("único monitor");
@@ -177,7 +181,9 @@ test("sessao ativa mostra métricas, pausa a visualização e reconecta pelo vie
   await remoteDialog.getByRole("button", { name: "Retomar" }).click();
   await expect(remoteDialog.getByRole("button", { name: "Pausar" })).toBeVisible();
 
-  const endResponse = page.waitForResponse((response) => response.url().endsWith(`/api/remote-assistance/sessions/${sessionId}/end`) && response.request().method() === "POST");
+  const endResponse = page.waitForResponse(
+    (response) => response.url().endsWith(`/api/remote-assistance/sessions/${sessionId}/end`) && response.request().method() === "POST"
+  );
   await remoteDialog.getByRole("button", { name: "Encerrar" }).click();
   expect((await endResponse).ok()).toBeTruthy();
   await expect(remoteDialog.getByRole("button", { name: "Encerrar" })).toHaveCount(0);

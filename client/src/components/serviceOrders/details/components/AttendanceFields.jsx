@@ -12,20 +12,21 @@ export default function AttendanceFields({ draft, technicians, updateDraft }) {
         Prioridade
         <select value={draft.priority} onChange={(event) => updateDraft("priority", event.target.value)}>
           {Object.entries(priorityLabels).map(([value, label]) => (
-            <option key={value} value={value}>{label}</option>
+            <option key={value} value={value}>
+              {label}
+            </option>
           ))}
         </select>
       </label>
       <label className="service-order-technician-field">
         Técnico responsável
         {technicians.length ? (
-          <select
-            value={draft.assignedTechnicianName}
-            onChange={(event) => updateDraft("assignedTechnicianName", event.target.value)}
-          >
+          <select value={draft.assignedTechnicianName} onChange={(event) => updateDraft("assignedTechnicianName", event.target.value)}>
             <option value="">Selecione um técnico</option>
             {technicians.map((technician) => (
-              <option key={technician.id} value={technician.name}>{technician.name}</option>
+              <option key={technician.id} value={technician.name}>
+                {technician.name}
+              </option>
             ))}
           </select>
         ) : (

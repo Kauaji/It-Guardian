@@ -10,9 +10,7 @@ const priorityLabels = {
 
 export default function PublicSupportSuccess({ success, onReset }) {
   const [copied, setCopied] = useState(false);
-  const trackingUrl = success.trackingToken
-    ? `${window.location.origin}/chamado/${encodeURIComponent(success.trackingToken)}`
-    : "";
+  const trackingUrl = success.trackingToken ? `${window.location.origin}/chamado/${encodeURIComponent(success.trackingToken)}` : "";
 
   function copyTrackingLink() {
     if (!trackingUrl) return;
@@ -46,9 +44,7 @@ export default function PublicSupportSuccess({ success, onReset }) {
           <span>Prioridade inicial: {priorityLabels[success.priority] || "Média"}</span>
           <span>{new Date(success.createdAt).toLocaleString("pt-BR")}</span>
         </div>
-        <p className="public-support-tracking-hint">
-          Guarde este número para acompanhamento: {success.number}.
-        </p>
+        <p className="public-support-tracking-hint">Guarde este número para acompanhamento: {success.number}.</p>
         {trackingUrl && (
           <div className="public-support-tracking">
             <p>O link abaixo permite consultar somente este chamado — status, título e data de abertura.</p>

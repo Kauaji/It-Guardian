@@ -13,14 +13,7 @@ const viewerOf = (...permissions) => ({ id: "u2", role: "viewer", effectivePermi
 describe("getViewAccess", () => {
   it("libera todas as visoes para administradores, na ordem da sidebar", () => {
     const access = getViewAccess(admin);
-    expect(access.permittedViewIds).toEqual([
-      "dashboard",
-      "alerts",
-      "service-orders",
-      "calendar",
-      "parts-inventory",
-      "inventory"
-    ]);
+    expect(access.permittedViewIds).toEqual(["dashboard", "alerts", "service-orders", "calendar", "parts-inventory", "inventory"]);
     expect(access.canOpenGeneralSettings).toBe(true);
     expect(access.canManageInventory).toBe(true);
     expect(access.canCustomizeDashboard).toBe(true);

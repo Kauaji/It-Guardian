@@ -24,7 +24,9 @@ export default function useTopologyInspectorConnections({ token, node, scopeKey,
       }
     }
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [key, token, type, refId]);
 
   const current = snapshot?.key === key ? snapshot : null;

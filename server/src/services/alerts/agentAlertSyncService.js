@@ -1,10 +1,6 @@
 import { buildAgentAlerts } from "../../domain/alerts/agentAlerts.js";
 import { listAgentAssets } from "../../repositories/agentRepository.js";
-import {
-  getAlertSettings,
-  resolveInactiveAgentAlerts,
-  upsertAlert
-} from "../../repositories/alertRepository.js";
+import { getAlertSettings, resolveInactiveAgentAlerts, upsertAlert } from "../../repositories/alertRepository.js";
 
 /** Avisos do agente conforme o ambiente atual (limites de "offline" lidos no momento da chamada). */
 export function buildAgentAlertsFromEnvironment(asset, now = new Date()) {

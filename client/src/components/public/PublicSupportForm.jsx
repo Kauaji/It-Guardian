@@ -16,13 +16,9 @@ function IdentificationFields({ form, businessMode, updateField }) {
     <>
       <TextField {...shared} label="Solicitante" field="requesterName" required placeholder="Seu nome" />
 
-      {businessMode && (
-        <TextField {...shared} label="WhatsApp" field="contactInfo" required placeholder="Número do WhatsApp" />
-      )}
+      {businessMode && <TextField {...shared} label="WhatsApp" field="contactInfo" required placeholder="Número do WhatsApp" />}
 
-      {!businessMode && (
-        <TextField {...shared} label="Ramal" field="extension" placeholder="Ramal para contato" />
-      )}
+      {!businessMode && <TextField {...shared} label="Ramal" field="extension" placeholder="Ramal para contato" />}
 
       <TextField {...shared} label="Setor" field="department" placeholder="Financeiro, RH, recepção..." />
 
@@ -30,14 +26,14 @@ function IdentificationFields({ form, businessMode, updateField }) {
         Urgência percebida
         <select value={form.urgency} onChange={(event) => updateField("urgency", event.target.value)}>
           {urgencyOptions.map((option) => (
-            <option key={option.value} value={option.value}>{option.label}</option>
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
           ))}
         </select>
       </label>
 
-      {businessMode && (
-        <TextField {...shared} label="Cliente" field="environmentName" required placeholder="Cliente, filial ou ambiente" />
-      )}
+      {businessMode && <TextField {...shared} label="Cliente" field="environmentName" required placeholder="Cliente, filial ou ambiente" />}
     </>
   );
 }
@@ -60,7 +56,9 @@ function ProblemFields({ form, options, updateField, updateCategory, updateProbl
         Categoria
         <select required value={form.category} onChange={(event) => updateCategory(event.target.value)}>
           {options.categories.map((category) => (
-            <option key={category} value={category}>{category}</option>
+            <option key={category} value={category}>
+              {category}
+            </option>
           ))}
         </select>
       </label>

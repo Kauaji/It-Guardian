@@ -27,13 +27,15 @@ async function main() {
   });
   if (!productKey) throw new Error("Chave de produto nao encontrada.");
 
-  process.stdout.write([
-    `Monitoramento configurado para ${productKey.organizationName}.`,
-    `OCS: ${productKey.monitoring.ocsServerUrl}`,
-    `Zabbix passivo: ${productKey.monitoring.zabbixServer}`,
-    `Zabbix ativo: ${productKey.monitoring.zabbixServerActive}`,
-    ""
-  ].join("\n"));
+  process.stdout.write(
+    [
+      `Monitoramento configurado para ${productKey.organizationName}.`,
+      `OCS: ${productKey.monitoring.ocsServerUrl}`,
+      `Zabbix passivo: ${productKey.monitoring.zabbixServer}`,
+      `Zabbix ativo: ${productKey.monitoring.zabbixServerActive}`,
+      ""
+    ].join("\n")
+  );
 }
 
 main()

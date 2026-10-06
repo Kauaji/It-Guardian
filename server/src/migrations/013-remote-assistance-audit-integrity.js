@@ -12,13 +12,7 @@
  * vez de assumido pela convencao padrao (`<tabela>_<coluna>_fkey`), para nao
  * quebrar silenciosamente se o nome real divergir por qualquer motivo.
  */
-async function replaceForeignKeyDeleteAction(db, {
-  table,
-  column,
-  referencedTable,
-  referencedColumn,
-  newAction
-}) {
+async function replaceForeignKeyDeleteAction(db, { table, column, referencedTable, referencedColumn, newAction }) {
   const existing = await db(
     `
       SELECT tc.constraint_name

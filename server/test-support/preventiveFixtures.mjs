@@ -135,10 +135,11 @@ export async function createRestrictedUser({ email, permissions, role = "viewer"
 
 export async function setScheduleNextRun(planId, assetId, isoDate) {
   const { query } = await import("../src/database.js");
-  await query(
-    "UPDATE preventive_automation_asset_schedules SET next_run_at = $3 WHERE plan_id = $1 AND asset_id = $2",
-    [planId, assetId, isoDate]
-  );
+  await query("UPDATE preventive_automation_asset_schedules SET next_run_at = $3 WHERE plan_id = $1 AND asset_id = $2", [
+    planId,
+    assetId,
+    isoDate
+  ]);
 }
 
 export async function rows(sql, params = []) {

@@ -9,7 +9,16 @@ const { globalApiRateLimit } = await import("./securityMiddleware.js");
 
 async function hit({ method = "GET", path = "/devices", headers = {}, ip = "10.0.0.1" } = {}) {
   let status = 200;
-  const res = { setHeader() {}, status(code) { status = code; return this; }, json() { return this; } };
+  const res = {
+    setHeader() {},
+    status(code) {
+      status = code;
+      return this;
+    },
+    json() {
+      return this;
+    }
+  };
   await globalApiRateLimit({ method, path, headers, ip }, res, () => {});
   return status;
 }

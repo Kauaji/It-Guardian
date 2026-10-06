@@ -1,6 +1,15 @@
 export default function BoardFilterPanel({
-  tabs, groups, availableSegments, backupSegment, maintenanceSegment,
-  activeTabId, selectedGroupId, selectedSegmentId, onSelectTab, onSelectGroup, onSelectSegment
+  tabs,
+  groups,
+  availableSegments,
+  backupSegment,
+  maintenanceSegment,
+  activeTabId,
+  selectedGroupId,
+  selectedSegmentId,
+  onSelectTab,
+  onSelectGroup,
+  onSelectSegment
 }) {
   return (
     <div className="inventory-filter-panel open" aria-label="Filtros do inventário">
@@ -13,7 +22,9 @@ export default function BoardFilterPanel({
           aria-label="Filtrar por aba"
         >
           {tabs.map((tab) => (
-            <option key={tab.id} value={tab.id}>{tab.name}</option>
+            <option key={tab.id} value={tab.id}>
+              {tab.name}
+            </option>
           ))}
         </select>
       </div>
@@ -28,7 +39,9 @@ export default function BoardFilterPanel({
           <option value="all">Todos os grupos</option>
           <option value="ungrouped">Sem grupo</option>
           {groups.map((group) => (
-            <option key={group.id} value={group.id}>{group.name}</option>
+            <option key={group.id} value={group.id}>
+              {group.name}
+            </option>
           ))}
         </select>
       </div>
@@ -42,7 +55,9 @@ export default function BoardFilterPanel({
         >
           <option value="all">Todos os segmentos</option>
           {availableSegments.map((segment) => (
-            <option key={segment.id} value={segment.id}>{segment.name}</option>
+            <option key={segment.id} value={segment.id}>
+              {segment.name}
+            </option>
           ))}
         </select>
       </div>
@@ -50,7 +65,12 @@ export default function BoardFilterPanel({
         <SegmentChip segment={backupSegment} label="Backup" selectedSegmentId={selectedSegmentId} onSelectSegment={onSelectSegment} />
       )}
       {maintenanceSegment && (
-        <SegmentChip segment={maintenanceSegment} label="Manutenção" selectedSegmentId={selectedSegmentId} onSelectSegment={onSelectSegment} />
+        <SegmentChip
+          segment={maintenanceSegment}
+          label="Manutenção"
+          selectedSegmentId={selectedSegmentId}
+          onSelectSegment={onSelectSegment}
+        />
       )}
     </div>
   );

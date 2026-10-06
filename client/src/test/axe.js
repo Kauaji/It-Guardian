@@ -13,7 +13,11 @@ const JSDOM_UNSUPPORTED = ["color-contrast", "scrollable-region-focusable", "fra
 
 export async function runAxe(root = document.body, { disable = [] } = {}) {
   const rules = Object.fromEntries([...JSDOM_UNSUPPORTED, ...disable].map((id) => [id, { enabled: false }]));
-  const { violations } = await axe.run(root, { runOnly: { type: "tag", values: WCAG_TAGS }, rules, checks: { "non-empty-placeholder": { enabled: false } } });
+  const { violations } = await axe.run(root, {
+    runOnly: { type: "tag", values: WCAG_TAGS },
+    rules,
+    checks: { "non-empty-placeholder": { enabled: false } }
+  });
   return violations;
 }
 

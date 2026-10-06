@@ -96,18 +96,15 @@ async function startActiveSession(baseUrl, cookie, enrollmentToken, machineId) {
   const pendingSession = (await pending.json()).session;
   assert.equal(pendingSession.id, session.id);
 
-  const consent = await fetch(
-    `${baseUrl}/api/agents/remote-assistance/sessions/${session.id}/consent`,
-    {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${enrollmentToken}`,
-        "x-remote-session-token": pendingSession.sessionToken,
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({ granted: true, controlAllowed: false, monitors: [], selectedMonitorId: null })
-    }
-  );
+  const consent = await fetch(`${baseUrl}/api/agents/remote-assistance/sessions/${session.id}/consent`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${enrollmentToken}`,
+      "x-remote-session-token": pendingSession.sessionToken,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({ granted: true, controlAllowed: false, monitors: [], selectedMonitorId: null })
+  });
   assert.equal(consent.status, 200);
   return { sessionId: session.id, viewerToken, agentSessionToken: pendingSession.sessionToken };
 }
@@ -152,10 +149,9 @@ test("com a flag ligada, oferta e resposta SDP sao relayadas com autenticacao pr
   const cookie = await login(baseUrl);
   const { sessionId, viewerToken, agentSessionToken } = await startActiveSession(baseUrl, cookie, enrollment.token, machineId);
 
-  const missingOffer = await fetch(
-    `${baseUrl}/api/agents/remote-assistance/sessions/${sessionId}/webrtc/offer`,
-    { headers: { authorization: `Bearer ${enrollment.token}`, "x-remote-session-token": agentSessionToken } }
-  );
+  const missingOffer = await fetch(`${baseUrl}/api/agents/remote-assistance/sessions/${sessionId}/webrtc/offer`, {
+    headers: { authorization: `Bearer ${enrollment.token}`, "x-remote-session-token": agentSessionToken }
+  });
   assert.equal(missingOffer.status, 200);
   assert.equal((await missingOffer.json()).offer, null);
 
@@ -173,16 +169,14 @@ test("com a flag ligada, oferta e resposta SDP sao relayadas com autenticacao pr
   });
   assert.equal(offerResponse.status, 202);
 
-  const offerWithoutViewerToken = await fetch(
-    `${baseUrl}/api/remote-assistance/sessions/${sessionId}/webrtc/answer`,
-    { headers: { cookie } }
-  );
+  const offerWithoutViewerToken = await fetch(`${baseUrl}/api/remote-assistance/sessions/${sessionId}/webrtc/answer`, {
+    headers: { cookie }
+  });
   assert.equal(offerWithoutViewerToken.status, 401);
 
-  const agentReadsOffer = await fetch(
-    `${baseUrl}/api/agents/remote-assistance/sessions/${sessionId}/webrtc/offer`,
-    { headers: { authorization: `Bearer ${enrollment.token}`, "x-remote-session-token": agentSessionToken } }
-  );
+  const agentReadsOffer = await fetch(`${baseUrl}/api/agents/remote-assistance/sessions/${sessionId}/webrtc/offer`, {
+    headers: { authorization: `Bearer ${enrollment.token}`, "x-remote-session-token": agentSessionToken }
+  });
   assert.equal(agentReadsOffer.status, 200);
   // sanitizeSdp reconstitui o CRLF final (removido pelo trim() de
   // sanitizacao) porque SDP exige toda linha terminada em CRLF, inclusive a
@@ -191,30 +185,25 @@ test("com a flag ligada, oferta e resposta SDP sao relayadas com autenticacao pr
   // devolvido bate com o original, nao com a versao aparada.
   assert.equal((await agentReadsOffer.json()).offer, validOffer);
 
-  const agentAnswers = await fetch(
-    `${baseUrl}/api/agents/remote-assistance/sessions/${sessionId}/webrtc/answer`,
-    {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${enrollment.token}`,
-        "x-remote-session-token": agentSessionToken,
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({ sdp: validAnswer })
-    }
-  );
+  const agentAnswers = await fetch(`${baseUrl}/api/agents/remote-assistance/sessions/${sessionId}/webrtc/answer`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${enrollment.token}`,
+      "x-remote-session-token": agentSessionToken,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({ sdp: validAnswer })
+  });
   assert.equal(agentAnswers.status, 202);
 
-  const viewerReadsAnswer = await fetch(
-    `${baseUrl}/api/remote-assistance/sessions/${sessionId}/webrtc/answer`,
-    { headers: { cookie, "x-remote-viewer-token": viewerToken } }
-  );
+  const viewerReadsAnswer = await fetch(`${baseUrl}/api/remote-assistance/sessions/${sessionId}/webrtc/answer`, {
+    headers: { cookie, "x-remote-viewer-token": viewerToken }
+  });
   assert.equal(viewerReadsAnswer.status, 200);
   assert.equal((await viewerReadsAnswer.json()).answer, validAnswer);
 
-  const wrongAgentToken = await fetch(
-    `${baseUrl}/api/agents/remote-assistance/sessions/${sessionId}/webrtc/offer`,
-    { headers: { authorization: `Bearer ${enrollment.token}`, "x-remote-session-token": "wrong-token" } }
-  );
+  const wrongAgentToken = await fetch(`${baseUrl}/api/agents/remote-assistance/sessions/${sessionId}/webrtc/offer`, {
+    headers: { authorization: `Bearer ${enrollment.token}`, "x-remote-session-token": "wrong-token" }
+  });
   assert.equal(wrongAgentToken.status, 401);
 });

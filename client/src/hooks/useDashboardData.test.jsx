@@ -60,9 +60,9 @@ function makeProps(overrides = {}) {
 }
 
 function mockHappyApi() {
-  api.fetchDevices.mockImplementation(async (_token, filters) => (
+  api.fetchDevices.mockImplementation(async (_token, filters) =>
     filters ? { devices: [device("1")], summary: { totalDevices: 1 } } : { devices: [device("1"), device("2")] }
-  ));
+  );
   api.fetchSegments.mockResolvedValue({ segments: [{ id: "s1" }] });
   api.fetchSegmentGroups.mockResolvedValue({ groups: [{ id: "g1" }] });
   api.fetchAlerts.mockResolvedValue({ alerts: [{ id: "a1", title: "CPU alta", severity: "Crítico", hostname: "srv" }] });
@@ -73,7 +73,11 @@ function mockHappyApi() {
   api.fetchMaintenanceScripts.mockResolvedValue({ scripts: [{ id: "sc1" }] });
   api.fetchPreventivePlans.mockResolvedValue({ preventivePlans: [{ id: "pp1" }] });
   api.fetchPreventiveAutomationPlans.mockResolvedValue({ preventiveAutomationPlans: [{ id: "pa1" }] });
-  api.fetchPreventiveAutomationManagement.mockResolvedValue({ plans: [{ id: "m1" }], machines: [{ id: "mm1" }], metadata: { planCount: 1, machineCount: 1 } });
+  api.fetchPreventiveAutomationManagement.mockResolvedValue({
+    plans: [{ id: "m1" }],
+    machines: [{ id: "mm1" }],
+    metadata: { planCount: 1, machineCount: 1 }
+  });
   api.fetchServiceOrders.mockResolvedValue({ serviceOrders: [{ id: "o1" }] });
   api.fetchAlertSettings.mockResolvedValue({ settings: { priorityColors: { critical: "#111111" } } });
   api.fetchSystemSettings.mockResolvedValue({ settings: { systemMode: "business", remoteScriptExecutionEnabled: true } });
@@ -122,7 +126,11 @@ describe("useDashboardData - carga inicial", () => {
     expect(result.current.maintenanceScripts).toEqual([{ id: "sc1" }]);
     expect(result.current.preventivePlans).toEqual([{ id: "pp1" }]);
     expect(result.current.preventiveAutomationPlans).toEqual([{ id: "pa1" }]);
-    expect(result.current.preventiveAutomationManagement).toEqual({ plans: [{ id: "m1" }], machines: [{ id: "mm1" }], metadata: { planCount: 1, machineCount: 1 } });
+    expect(result.current.preventiveAutomationManagement).toEqual({
+      plans: [{ id: "m1" }],
+      machines: [{ id: "mm1" }],
+      metadata: { planCount: 1, machineCount: 1 }
+    });
     expect(result.current.preventiveAutomationManagementError).toBe("");
     expect(result.current.serviceOrders).toEqual([{ id: "o1" }]);
     expect(result.current.alertPriorityColors).toMatchObject({ critical: "#111111" });
@@ -141,9 +149,9 @@ describe("useDashboardData - carga inicial", () => {
   });
 
   it("no dashboard usa os dispositivos filtrados e mantem a selecao ainda visivel", async () => {
-    api.fetchDevices.mockImplementation(async (_t, filters) => (
+    api.fetchDevices.mockImplementation(async (_t, filters) =>
       filters ? { devices: [device("9")], summary: null } : { devices: [device("1")] }
-    ));
+    );
     const { result } = mount({ activeView: "dashboard", selectedId: "9" });
     await loaded(result);
     expect(props.setSelectedId).toHaveBeenCalledWith("9");
@@ -182,7 +190,17 @@ describe("useDashboardData - carga inicial", () => {
       canViewServiceOrders: false
     });
     await loaded(result);
-    for (const name of ["fetchDevices", "fetchSegments", "fetchAlerts", "fetchMaintenanceScripts", "fetchPreventivePlans", "fetchPreventiveAutomationPlans", "fetchPreventiveAutomationManagement", "fetchServiceOrders", "fetchAlertSettings"]) {
+    for (const name of [
+      "fetchDevices",
+      "fetchSegments",
+      "fetchAlerts",
+      "fetchMaintenanceScripts",
+      "fetchPreventivePlans",
+      "fetchPreventiveAutomationPlans",
+      "fetchPreventiveAutomationManagement",
+      "fetchServiceOrders",
+      "fetchAlertSettings"
+    ]) {
       expect(api[name]).not.toHaveBeenCalled();
     }
     expect(api.fetchSystemSettings).toHaveBeenCalledWith("tok");
@@ -223,9 +241,11 @@ describe("useDashboardData - carga inicial", () => {
   });
 
   it("remove registros de manutencao de maquinas que sairam do segmento Manutencao", async () => {
-    api.fetchDevices.mockImplementation(async (_t, filters) => (
-      filters ? { devices: [], summary: null } : { devices: [device("1", { segmentName: "Redes" }), device("2", { segmentName: "Manutenção" })] }
-    ));
+    api.fetchDevices.mockImplementation(async (_t, filters) =>
+      filters
+        ? { devices: [], summary: null }
+        : { devices: [device("1", { segmentName: "Redes" }), device("2", { segmentName: "Manutenção" })] }
+    );
     const records = { 1: { active: true }, 2: { active: true }, 3: { active: false } };
     const { result } = mount({ maintenanceRecords: records });
     await loaded(result);
@@ -352,9 +372,21 @@ describe("useDashboardData - setters expostos", () => {
     expect(result.current.systemMode).toBe("business");
     expect(result.current.serviceOrders).toEqual([{ id: "z" }]);
     for (const name of [
-      "setAlertCorrelations", "setAlertPriorityColors", "setAlertPrioritySettings", "setAlertRules", "setAllDevices", "setHistory",
-      "setMaintenanceScripts", "setPreventiveAutomationManagement", "setPreventiveAutomationManagementError",
-      "setPreventiveAutomationPlans", "setPreventivePlans", "setSegmentGroups", "setSegments", "setServiceOrderSuggestions", "setSummary"
+      "setAlertCorrelations",
+      "setAlertPriorityColors",
+      "setAlertPrioritySettings",
+      "setAlertRules",
+      "setAllDevices",
+      "setHistory",
+      "setMaintenanceScripts",
+      "setPreventiveAutomationManagement",
+      "setPreventiveAutomationManagementError",
+      "setPreventiveAutomationPlans",
+      "setPreventivePlans",
+      "setSegmentGroups",
+      "setSegments",
+      "setServiceOrderSuggestions",
+      "setSummary"
     ]) {
       expect(typeof result.current[name]).toBe("function");
     }

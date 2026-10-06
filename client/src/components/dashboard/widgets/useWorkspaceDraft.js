@@ -1,10 +1,5 @@
 import { useState } from "react";
-import {
-  buildWidgetFromCatalog,
-  patchWidgetIn,
-  removeWidgetFrom,
-  replaceWidgetIn
-} from "./workspaceModel.js";
+import { buildWidgetFromCatalog, patchWidgetIn, removeWidgetFrom, replaceWidgetIn } from "./workspaceModel.js";
 
 /**
  * Estado de edição do dashboard: o modo edição opera sobre uma cópia local

@@ -3,9 +3,8 @@ import test from "node:test";
 
 process.env.JWT_SECRET ||= "it-guardian-public-tracking-token-test-secret-32c";
 
-const { createPublicServiceOrderTrackingToken, verifyPublicServiceOrderTrackingToken } = await import(
-  "./publicServiceOrderTrackingToken.js"
-);
+const { createPublicServiceOrderTrackingToken, verifyPublicServiceOrderTrackingToken } =
+  await import("./publicServiceOrderTrackingToken.js");
 const { createPublicMachineToken, verifyPublicMachineToken } = await import("./publicMachineToken.js");
 
 test("token de acompanhamento identifica somente a OS assinada", () => {

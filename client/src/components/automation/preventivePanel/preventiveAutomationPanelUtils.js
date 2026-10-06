@@ -147,9 +147,7 @@ export function toggleListItem(list = [], item) {
 }
 
 export function resolveFormRecurrenceInterval(form) {
-  return form.recurrenceType === "custom_days"
-    ? Number(form.recurrenceInterval)
-    : getDefaultRecurrenceInterval(form.recurrenceType);
+  return form.recurrenceType === "custom_days" ? Number(form.recurrenceInterval) : getDefaultRecurrenceInterval(form.recurrenceType);
 }
 
 export function buildAutomationPayload(form) {
@@ -175,7 +173,9 @@ export function buildAutomationPayload(form) {
       segmentId: item.segmentId || null,
       recurrenceType: item.recurrenceType,
       recurrenceInterval: Number(item.recurrenceInterval || 30),
-      recurrenceIntervalDays: Number(item.recurrenceIntervalDays || item.recurrenceInterval || getDefaultRecurrenceInterval(item.recurrenceType)),
+      recurrenceIntervalDays: Number(
+        item.recurrenceIntervalDays || item.recurrenceInterval || getDefaultRecurrenceInterval(item.recurrenceType)
+      ),
       preferredTime: item.preferredTime || null,
       active: item.active !== false
     }))
@@ -237,11 +237,12 @@ export function findDuplicateAutomationIdentity(plans, form) {
   const normalizedColor = normalizeAutomationColor(form.indicatorColor).toLowerCase();
   const others = plans.filter((plan) => String(plan.id) !== String(form.id || ""));
   const duplicateNamePlan = others.find(
-    (plan) => String(plan.name || "").trim().toLocaleLowerCase("pt-BR") === normalizedName
+    (plan) =>
+      String(plan.name || "")
+        .trim()
+        .toLocaleLowerCase("pt-BR") === normalizedName
   );
-  const duplicateColorPlan = others.find(
-    (plan) => normalizeAutomationColor(plan.indicatorColor).toLowerCase() === normalizedColor
-  );
+  const duplicateColorPlan = others.find((plan) => normalizeAutomationColor(plan.indicatorColor).toLowerCase() === normalizedColor);
 
   return {
     duplicateNamePlan,
@@ -251,11 +252,7 @@ export function findDuplicateAutomationIdentity(plans, form) {
 }
 
 export function isColorUsedByOtherPlan(plans, formId, color) {
-  return plans.some(
-    (plan) =>
-      String(plan.id) !== String(formId || "") &&
-      normalizeAutomationColor(plan.indicatorColor) === color
-  );
+  return plans.some((plan) => String(plan.id) !== String(formId || "") && normalizeAutomationColor(plan.indicatorColor) === color);
 }
 
 // `sources` agrupa as listas de inventario: { devices, segments, segmentGroups, inventoryTabs }.

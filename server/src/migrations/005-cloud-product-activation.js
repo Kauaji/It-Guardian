@@ -41,7 +41,9 @@ export const migration005CloudProductActivation = {
     `);
 
     await db("ALTER TABLE agent_enrollments ADD COLUMN IF NOT EXISTS product_key_id TEXT REFERENCES product_keys(id) ON DELETE SET NULL;");
-    await db("ALTER TABLE agent_enrollments ADD COLUMN IF NOT EXISTS activation_id TEXT REFERENCES device_activations(id) ON DELETE SET NULL;");
+    await db(
+      "ALTER TABLE agent_enrollments ADD COLUMN IF NOT EXISTS activation_id TEXT REFERENCES device_activations(id) ON DELETE SET NULL;"
+    );
     await db("ALTER TABLE agent_assets ADD COLUMN IF NOT EXISTS cpu_usage_percent INTEGER;");
     await db("ALTER TABLE agent_assets ADD COLUMN IF NOT EXISTS memory_used_bytes BIGINT;");
     await db("ALTER TABLE agent_assets ADD COLUMN IF NOT EXISTS memory_free_bytes BIGINT;");
@@ -55,4 +57,3 @@ export const migration005CloudProductActivation = {
     await db("CREATE INDEX IF NOT EXISTS idx_agent_enrollments_activation ON agent_enrollments(activation_id);");
   }
 };
-

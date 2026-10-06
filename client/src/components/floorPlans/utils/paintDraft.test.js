@@ -11,7 +11,10 @@ import {
 } from "./paintDraft.js";
 import { createPaintAreaZone, getPaintCells } from "./paintAreaGeometry.js";
 
-const groups = [{ id: "g1", name: "Matriz", color: "#ef4444" }, { id: "g2", name: "Filial", color: "#0ea5e9" }];
+const groups = [
+  { id: "g1", name: "Matriz", color: "#ef4444" },
+  { id: "g2", name: "Filial", color: "#0ea5e9" }
+];
 const segments = [
   { id: "s1", name: "Servidores", groupId: "g1", color: "#10b981" },
   { id: "s2", name: "Caixa", groupId: "g2", color: "#f59e0b" },

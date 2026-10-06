@@ -17,10 +17,7 @@ export function useSettingsModal({ settingsOpen, setSettingsOpen, setFiltersOpen
 
   const dialogRef = useModalLifecycle(settingsOpen, () => setSettingsOpen(false));
 
-  const visibleSettingsTabs = useMemo(
-    () => settingsTabs.filter((tab) => businessMode || tab.id !== "clients"),
-    [businessMode]
-  );
+  const visibleSettingsTabs = useMemo(() => settingsTabs.filter((tab) => businessMode || tab.id !== "clients"), [businessMode]);
 
   useEffect(() => {
     if (!businessMode && settingsTab === "clients") {
