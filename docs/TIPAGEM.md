@@ -32,12 +32,15 @@ npm run typecheck   # tsc -p tsconfig.json --noEmit (tambem roda em `npm run che
 | Cliente | `client/src/api/**` (`http.js`, 22 modulos por dominio e `types.js`) | 24 |
 | Cliente | `client/src/permissions.js`, `client/src/authSession.js`, `client/src/utils/**`, `client/src/config/**` | 4 |
 | Compartilhado | `shared/**` (`permissions.js`, `infrastructureHealth.js`) | 2 |
-| Servidor | `server/src/domain/**` (regras puras) | 41 |
+| Servidor | `server/src/domain/**` (regras puras, incluindo as subpastas `alerts`, `floorPlans`, `inventoryVisualMap`, `networkTopology`, `remoteAssistance`, `serviceOrders`, cada uma com seu `types.js`) | 75 |
 | Servidor | `server/src/lib/**` | 7 |
-| Servidor | `server/src/config/**` | 1 |
+| Servidor | `server/src/config/**` | 3 |
 | Servidor | `server/src/security/**` | 4 |
-| Servidor | `server/src/middleware/**` | 6 |
-| Servidor | `server/src/types/express.d.ts` (campos extras de `Request`) | 1 |
+| Servidor | `server/src/middleware/**` (agora com `authMiddleware.js`) | 7 |
+| Servidor | `server/src/permissions.js` (reexporta `shared/permissions.js`, entra pelo fecho de imports) | 1 |
+| Servidor | `server/src/database.js` (`query`, `withTransaction`, `withConnection` tipados) | 1 |
+| Servidor | Nucleo de identidade/seguranca: `services/{authService,sessionService,mfaService,agentSigningService}.js`, `repositories/{userRepository,userSecurityRepository,authSessionRepository,logRepository}.js`, `jobs/dataRetention.js` | 8 |
+| Servidor | `server/src/types/**/*.d.ts` (`express.d.ts`, `identity.d.ts`, `pg.d.ts`) | 3 |
 
 Testes (`*.test.js`, `*.test.jsx`, `*.test.mjs`) ficam fora: eles usam mocks e dados parciais de
 proposito.
@@ -46,14 +49,13 @@ proposito.
 
 | Arquivo | Motivo |
 | --- | --- |
-| `server/src/middleware/authMiddleware.js` | importa `database.js`, `permissions.js` e `services/sessionService.js` |
-| `server/src/domain/problemTypes.js`, `server/src/domain/serviceOrderAggregates.js` | importam `repositories/serviceOrderRepository.js` e `settingsRepository.js` (domain dependendo de repositorio) |
-| `server/src/repositories/**`, `server/src/services/**`, `server/src/controllers/**`, `server/src/routes/**`, `server/src/database.js` | milhares de linhas de acesso a banco/Express; exigem tipar `query()` e o formato das linhas |
+| `server/src/services/logoutService.js` | importa `remoteAssistanceService.js`, que arrasta ~290 erros (`remoteAssistanceRelay.js`, `remoteAssistanceRepository.js`, `services/remoteAssistance/*`, os repositorios de OS e `assetHistoryRepository.js`). `endSessionOnLogout` saiu de `authService.js` para este arquivo justamente para o nucleo de identidade nao herdar esse fecho |
+| `server/src/repositories/**` (exceto os 4 acima), `server/src/services/**` (exceto os 4 acima), `server/src/controllers/**`, `server/src/routes/**`, `server/src/integrations/**`, `server/src/schema/**` | milhares de linhas de SQL/Express ainda sem `@typedef` de linha. O caminho e o mesmo do nucleo de identidade: `@typedef` da linha do banco, `/** @type {QueryResult<Linha>} */ const result = await query(...)` e o resultado mapeado como tipo |
 | `client/src/components/**`, `client/src/hooks/**`, `client/src/App.jsx` | JSX + props de React; precisam de `jsx` no tsconfig e de tipos de props |
 
-Ordem sugerida: `database.js` (tipar `query<T>`), `repositories/` pequenos, `services/`, depois
-`authMiddleware.js` e os dois arquivos de dominio acima; no cliente, `hooks/` e depois componentes
-folha.
+Ordem sugerida: repositorios pequenos que dependem so de `database.js` (agora tipado), os services deles, a
+assistencia remota (`remoteAssistanceRelay`/`Repository` e `services/remoteAssistance/*`, que libera
+`logoutService.js`), depois controllers/rotas; no cliente, `hooks/` e depois componentes folha.
 
 ## Como ampliar o escopo
 
@@ -83,6 +85,17 @@ folha.
 - Corpo de requisicao de escrita: `Payload` (`Record<string, unknown>`). Query string: `QueryParams`.
 - Em servidor, middlewares usam `@import { NextFunction, Request, Response } from "express"`; o
   campo `req.requestId` e declarado em `server/src/types/express.d.ts`.
+- Tipos de pasta do dominio (`server/src/domain/<pasta>/types.js`): corpo cru de requisicao como
+  `Record<string, unknown>` (ou typedef com so os campos lidos), entidade mapeada pelo repositorio
+  (`ServiceOrder`, `Alert`, `FloorPlan`...) e linha crua do banco quando o dominio le colunas
+  (`InfrastructureAssetRow`, `AlertRuleRow`; `NUMERIC`/`BIGINT` chegam como `string`).
+- Banco: `server/src/database.js` expoe `QueryFn` e `query<Row>()`; `server/src/types/pg.d.ts` declara
+  o minimo do driver `pg` (sem `@types/pg`). O formato da linha e do chamador:
+  `/** @type {QueryResult<UserRow>} */ const result = await query(sql, params);`. Os tipos de identidade
+  (`UserRow`, `User`, `AuthSession`, `RequestUser`...) ficam em `server/src/types/identity.d.ts` (aliases
+  `type`, nao `interface`, para valerem como `Row extends Record<string, unknown>`). `rowCount` e
+  `number | null`: use `(result.rowCount ?? 0) > 0`.
+- `req.user` e `req.auth` sao declarados em `server/src/types/express.d.ts` (`RequestUser`, `RequestAuth`).
 - Nao use `import { x } from "..."` dentro de comentarios que nao sejam `@import`: o
   `scripts/check-architecture.mjs` le essas linhas como imports reais.
 
@@ -97,6 +110,24 @@ todos corrigidos com teste de regressao:
 | `server/src/domain/integrationNormalization.js` | `timestamp()` chamava `Date.parse(<numero>)`, que devolve `NaN`: os epochs `clock`/`r_clock` do Zabbix (convertidos para ms) viravam "agora", perdendo o horario real e o de resolucao dos problemas | numeros sao tratados como epoch em ms |
 | `server/src/domain/partInventoryImport.js` | referencia numerica invalida em XML de NF-e (`&#x110000;`, `&#abc;`) lancava `RangeError` em `String.fromCodePoint` e virava erro 500 | codigo fora de 0..0x10FFFF vira texto vazio |
 | `server/src/domain/hardwarePartInventory.js` | um `null` dentro das listas de inventario enviadas pelo agente (`disks: [null]`) lancava `TypeError` e derrubava a sincronizacao de pecas do ativo | elementos nulos sao descartados |
+| `server/src/domain/serviceOrders/serviceOrderItems.js` | `normalizeServiceOrderItems([null, ...])` (corpo cru de criar/editar OS) lancava `TypeError` em `item.quantity` e virava 500 | entradas nulas sao descartadas (`serviceOrderPayload.test.mjs`) |
+| `server/src/domain/inventoryVisualMap/visualMapPayload.js` | `parsePoints` devolvia o resultado cru de `JSON.parse`; `points_json` com texto JSON que nao e lista (`{}`, `5`, `null`) estourava em `.map` (500) em vez do 400 "Informe ao menos dois pontos" | resultado que nao e lista vira `[]` (`visualMapPayload.test.mjs`) |
+| `server/src/domain/floorPlans/floorPlanPayload.js` | `normalizeEditorData`/`normalizeEditorChildren` lancavam `TypeError` (500) com `null` dentro de `floors`, `zones`, `objects`, `connectionPoints` ou `cableRoutes` do corpo cru; o validador, que ja tolerava `null`, nunca chegava a rodar | entradas nulas sao descartadas; sem andar valido cai no andar padrao (`floorPlanDomain.test.mjs`) |
+
+Narrowing sem teste (so mudam um caso impossivel na pratica, uma corrida entre escrita e leitura):
+`userRepository` devolve `null` em vez de `TypeError` se o usuario some entre o `UPDATE` e o `SELECT`
+(`loadPublicUser`); `registerFirstAdmin` e `changeOwnPassword` respondem 403/401 em vez de `TypeError`
+quando `findUserById` devolve `null` logo apos gravar.
+
+### Achados que NAO foram alterados (decisao de produto/seguranca)
+
+- `authMiddleware.requireAuth` monta `req.user` lendo `user.effectivePermissions`,
+  `user.allowedEnvironmentIds`, `user.allowedGroupIds` e `user.allowedSegmentIds`, mas `userRepository`
+  nunca preenche esses campos (nao ha colunas). Em runtime `effectivePermissions` fica `undefined`
+  (`hasPermission` cai no calculo por papel) e os tres escopos viram sempre `[]`, de modo que
+  `automationAccessScope.js` so enxerga `allowedClientIds` e o setor do usuario. Os campos estao
+  declarados como opcionais em `identity.d.ts` com esse aviso: preenche-los muda autorizacao, entao
+  fica para uma decisao de produto.
 
 Ajustes menores sem mudanca de comportamento: `getCorsOrigins` ganhou `filter` com type predicate;
 aritmetica com `Date` (`a - b`) virou `getTime()`; `productKey` e `integrationNormalization` trocaram
