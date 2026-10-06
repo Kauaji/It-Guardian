@@ -2,7 +2,7 @@ import { useDashboardFilters } from "./DashboardFilterContext.jsx";
 import WidgetChartFrame from "./WidgetChartFrame.jsx";
 import { buildCategoryChartModel } from "./categoryChartModel.js";
 import { CategoryBarsVariant, CategoryHeatmapVariant, CategoryStatsVariant } from "./WidgetCategoryListVariants.jsx";
-import { CategoryColumnsChart, CategoryLegend, CategoryPieChart, CategoryRadialChart } from "./WidgetCategoryGraphics.jsx";
+import { CategoryLegend, renderColumnsChart, renderPieChart, renderRadialChart } from "./WidgetCategoryGraphics.jsx";
 
 export default function WidgetCategoryChart({
   rows = [],
@@ -44,13 +44,7 @@ export default function WidgetCategoryChart({
           de acessibilidade propria do recharts (foco por teclado). */}
       <div className="dashboard-chart-visual" style={{ display: "contents" }} aria-hidden={isPie || isRadial ? "true" : undefined}>
         <WidgetChartFrame>
-          {isPie ? (
-            <CategoryPieChart model={model} variant={variant} />
-          ) : isRadial ? (
-            <CategoryRadialChart model={model} />
-          ) : (
-            <CategoryColumnsChart model={model} />
-          )}
+          {isPie ? renderPieChart(model, variant) : isRadial ? renderRadialChart(model) : renderColumnsChart(model)}
         </WidgetChartFrame>
       </div>
       <CategoryLegend model={model} />

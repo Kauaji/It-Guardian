@@ -1,6 +1,9 @@
 import { chartColors, formatPercentage } from "./widgetVisualizations.js";
 
 /**
+ * `selectionProps(row, describe)`: atributos do botao de selecao (disabled, aria e onClick), na ordem do DOM original.
+ * `chartClick`/`cursor`: clique e cursor das series do recharts.
+ *
  * Estado derivado puro do WidgetCategoryChart: cores, selecao do filtro cruzado,
  * formatacao de valores e percentuais. Compartilhado por todas as variantes.
  */
@@ -19,18 +22,27 @@ export function buildCategoryChartModel({ rows, filters, enabled, toggleFilter, 
   const percentage = (row) => formatPercentage(row.value, total);
   const percentageDescription = (row) => (showPercentages ? percentage(row) + " do total" : undefined);
 
+  const selectionProps = (row, describe = true) => ({
+    disabled: !selectable || row.id == null,
+    "aria-label": label(row),
+    ...(describe ? { "aria-description": percentageDescription(row) } : {}),
+    "aria-pressed": selected(row),
+    onClick: () => activate(row)
+  });
+  const chartClick = (row) => selectable && activate(row);
+  const cursor = selectable ? "pointer" : "default";
+
   return {
     entries,
     suffix,
     showPercentages,
-    selectable,
     selected,
-    activate,
     formatValue,
-    label,
     entriesTotal,
     total,
     percentage,
-    percentageDescription
+    selectionProps,
+    chartClick,
+    cursor
   };
 }

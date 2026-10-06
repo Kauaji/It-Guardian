@@ -13,21 +13,28 @@ import {
   XAxis,
   YAxis
 } from "recharts";
+import { CategoryValue } from "./WidgetCategoryListVariants.jsx";
 import { formatPercentage } from "./widgetVisualizations.js";
 
 /**
- * ATENCAO: o ResponsiveContainer (via WidgetChartFrame) clona o filho direto injetando width/height e, so quando o
- * nome do tipo termina em "Chart", tambem o style de 100%. Por isso estes wrappers terminam em "Chart" e repassam
- * todas as props recebidas ao grafico do recharts.
- *
  * Graficos recharts do WidgetCategoryChart (pizza/rosca, radial e colunas) e a legenda acessivel.
  * Pizza/radial sao decorativos (aria-hidden no wrapper, accessibilityLayer={false}); a legenda traz os dados.
+ *
+ * Os graficos sao funcoes que devolvem o elemento do recharts (nao componentes): o ResponsiveContainer
+ * (via WidgetChartFrame) injeta width/height/style no filho direto, que precisa ser o proprio *Chart.
  */
 
-export function CategoryPieChart({ model, variant, ...chartProps }) {
-  const { entries, selectable, selected, activate, formatValue, showPercentages, total } = model;
+/** Celulas coloridas com contorno quando selecionadas (funcao, nao componente: o recharts so detecta <Cell> filho direto). */
+function selectionCells({ entries, selected }) {
+  return entries.map((row) => (
+    <Cell key={row.id ?? row.label} fill={row.color} stroke={selected(row) ? "var(--text-strong)" : "none"} strokeWidth={2} />
+  ));
+}
+
+export function renderPieChart(model, variant) {
+  const { entries } = model;
   return (
-    <PieChart accessibilityLayer={false} {...chartProps}>
+    <PieChart accessibilityLayer={false}>
       <Pie
         data={entries}
         dataKey="value"
@@ -36,27 +43,29 @@ export function CategoryPieChart({ model, variant, ...chartProps }) {
         outerRadius="90%"
         paddingAngle={1}
         isAnimationActive={false}
-        onClick={(row) => selectable && activate(row)}
-        cursor={selectable ? "pointer" : "default"}
+        onClick={model.chartClick}
+        cursor={model.cursor}
       >
         {entries.map((row) => (
           <Cell
             key={row.id ?? row.label}
             fill={row.color}
-            stroke={selected(row) ? "var(--text-strong)" : "var(--surface)"}
-            strokeWidth={selected(row) ? 3 : 1}
+            stroke={model.selected(row) ? "var(--text-strong)" : "var(--surface)"}
+            strokeWidth={model.selected(row) ? 3 : 1}
           />
         ))}
       </Pie>
       <Tooltip
-        formatter={(value) => (showPercentages ? formatValue(value) + " · " + formatPercentage(value, total) : formatValue(value))}
+        formatter={(value) =>
+          model.showPercentages ? model.formatValue(value) + " · " + formatPercentage(value, model.total) : model.formatValue(value)
+        }
       />
     </PieChart>
   );
 }
 
-export function CategoryRadialChart({ model, ...chartProps }) {
-  const { entries, selectable, selected, activate, formatValue } = model;
+export function renderRadialChart(model) {
+  const { entries } = model;
   return (
     <RadialBarChart
       accessibilityLayer={false}
@@ -66,7 +75,6 @@ export function CategoryRadialChart({ model, ...chartProps }) {
       startAngle={90}
       endAngle={-270}
       barSize={12}
-      {...chartProps}
     >
       <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
       <RadialBar
@@ -74,22 +82,20 @@ export function CategoryRadialChart({ model, ...chartProps }) {
         background={{ fill: "var(--surface-muted)" }}
         cornerRadius={6}
         isAnimationActive={false}
-        onClick={(row) => selectable && activate(row)}
-        cursor={selectable ? "pointer" : "default"}
+        onClick={model.chartClick}
+        cursor={model.cursor}
       >
-        {entries.map((row) => (
-          <Cell key={row.id ?? row.label} fill={row.color} stroke={selected(row) ? "var(--text-strong)" : "none"} strokeWidth={2} />
-        ))}
+        {selectionCells(model)}
       </RadialBar>
-      <Tooltip formatter={(value) => formatValue(value)} />
+      <Tooltip formatter={model.formatValue} />
     </RadialBarChart>
   );
 }
 
-export function CategoryColumnsChart({ model, ...chartProps }) {
-  const { entries, suffix, selectable, selected, activate, formatValue } = model;
+export function renderColumnsChart(model) {
+  const { entries } = model;
   return (
-    <BarChart data={entries} margin={{ top: 22, right: 8, bottom: 0, left: -22 }} accessibilityLayer {...chartProps}>
+    <BarChart data={entries} margin={{ top: 22, right: 8, bottom: 0, left: -22 }} accessibilityLayer>
       <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="3 3" />
       <XAxis
         dataKey="label"
@@ -100,49 +106,30 @@ export function CategoryColumnsChart({ model, ...chartProps }) {
       />
       <YAxis
         allowDecimals={false}
-        domain={suffix === "%" ? [0, 100] : [0, "auto"]}
+        domain={model.suffix === "%" ? [0, 100] : [0, "auto"]}
         tickLine={false}
         axisLine={false}
         tick={{ fill: "var(--text-soft)", fontSize: 10 }}
       />
-      <Tooltip formatter={(value) => formatValue(value)} cursor={{ fill: "var(--surface-muted)" }} />
-      <Bar
-        dataKey="value"
-        maxBarSize={46}
-        radius={[4, 4, 0, 0]}
-        isAnimationActive={false}
-        onClick={(row) => selectable && activate(row)}
-        cursor={selectable ? "pointer" : "default"}
-      >
-        {entries.map((row) => (
-          <Cell key={row.id ?? row.label} fill={row.color} stroke={selected(row) ? "var(--text-strong)" : "none"} strokeWidth={2} />
-        ))}
-        <LabelList dataKey="value" position="top" formatter={formatValue} className="dashboard-column-value" />
+      <Tooltip formatter={model.formatValue} cursor={{ fill: "var(--surface-muted)" }} />
+      <Bar dataKey="value" maxBarSize={46} radius={[4, 4, 0, 0]} isAnimationActive={false} onClick={model.chartClick} cursor={model.cursor}>
+        {selectionCells(model)}
+        <LabelList dataKey="value" position="top" formatter={model.formatValue} className="dashboard-column-value" />
       </Bar>
     </BarChart>
   );
 }
 
 export function CategoryLegend({ model }) {
-  const { entries, selectable, selected, activate, formatValue, label, showPercentages, percentage, percentageDescription } = model;
+  const { entries } = model;
   return (
     <ul className="dashboard-chart-legend" aria-label="Dados do gráfico">
       {entries.map((row) => (
         <li key={row.id ?? row.label}>
-          <button
-            type="button"
-            disabled={!selectable || row.id == null}
-            aria-label={label(row)}
-            aria-description={percentageDescription(row)}
-            aria-pressed={selected(row)}
-            onClick={() => activate(row)}
-          >
+          <button type="button" {...model.selectionProps(row)}>
             <i style={{ background: row.color }} aria-hidden="true" />
             <span title={row.label}>{row.label}</span>
-            <span className="dashboard-chart-value">
-              <strong>{formatValue(row.value)}</strong>
-              {showPercentages && <small className="dashboard-chart-percentage">{percentage(row)}</small>}
-            </span>
+            <CategoryValue model={model} row={row} />
           </button>
         </li>
       ))}
