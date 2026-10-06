@@ -78,7 +78,7 @@ export default function InventoryVisualMapConnectionEditor({
           )}
         </div>
         {(draft.points || []).map((point, index) => (
-          <div className="inventory-visual-point-row" key={`${index}-${point.x}-${point.z}`}>
+          <div className="inventory-visual-point-row" key={index}>
             <span>{index + 1}</span>
             <input type="number" step="0.1" value={point.x} onChange={(event) => onPointChange(index, "x", event.target.value)} disabled={!canManage} aria-label={`Ponto ${index + 1} X`} />
             <input type="number" step="0.1" value={point.y} onChange={(event) => onPointChange(index, "y", event.target.value)} disabled={!canManage} aria-label={`Ponto ${index + 1} Y`} />
