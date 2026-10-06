@@ -56,6 +56,7 @@ export default function BoardModals({
         groups={groups}
         tabs={tabs}
         token={token}
+        user={user}
         notify={notify}
         systemMode={systemMode}
         statuses={configuredStatuses}

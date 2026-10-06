@@ -213,6 +213,11 @@ describe("ServiceOrdersBoard", () => {
     expect(screen.getByTestId("details")).toHaveAttribute("data-order", "");
   });
 
+  it("repassa o usuário ao detalhe para liberar a assistência remota conforme suas permissões", async () => {
+    await renderReady();
+    expect(captured.details.user).toEqual({ id: "u1", name: "Ana Técnica", sectorId: "sector-ti" });
+  });
+
   it("repassa a versão atual da OS selecionada ao detalhe", async () => {
     const { rerender } = await renderReady();
     click(screen.getByText("Impressora offline").closest("button"));
