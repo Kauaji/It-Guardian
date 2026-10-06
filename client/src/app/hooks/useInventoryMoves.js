@@ -1,11 +1,16 @@
-import { useState } from "react";
 import { updateDeviceSegment } from "../../api.js";
 import { useAppSession } from "../../context/AppSessionContext.jsx";
 import { backupSegmentId } from "../../components/inventory/inventoryLocalState.js";
 import { findSegmentById } from "../inventory/inventoryModel.js";
-
-const backupAreaMessage = "Use a ação Backup para enviar máquinas para a área de reserva.";
-const backupBlockedMessage = "Máquinas Backup disponíveis só podem ser alocadas temporariamente por uma OS.";
+import {
+  backupAreaMessage,
+  backupBlockedMessage,
+  isBackupMoveBlocked,
+  moveRequestOptions,
+  selectMachinesToMove,
+  snapshotPreviousSegments
+} from "../inventory/moveRules.js";
+import { useMoveModal } from "./useMoveModal.js";
 
 // Movimentacao de ativos entre segmentos (individual e em lote), com
 // atualizacao otimista e reversao em caso de erro, mais o estado do modal
@@ -16,8 +21,7 @@ export function useInventoryMoves({ data, deviceState, inventory, meta }) {
   const { activeAllDevices, activeSegments, decoratedSegments } = model;
   const { segments, loadData } = data;
   const { selectedAssetIds, clearAssetSelection } = selection;
-  const [moveModal, setMoveModal] = useState(null);
-  const [moveTarget, setMoveTarget] = useState("");
+  const { moveModal, setMoveModal, moveTarget, setMoveTarget, openMoveModal, closeMoveModal } = useMoveModal();
 
   const lookupSegment = (segmentId) =>
     findSegmentById(segmentId, activeSegments, decoratedSegments, segments);
@@ -33,7 +37,7 @@ export function useInventoryMoves({ data, deviceState, inventory, meta }) {
       return false;
     }
 
-    if (machine.isBackup && machine.backupStatus !== "in_use" && !options.allowBackupMove) {
+    if (isBackupMoveBlocked(machine, options)) {
       notify(backupBlockedMessage, "danger");
       return false;
     }
@@ -55,7 +59,7 @@ export function useInventoryMoves({ data, deviceState, inventory, meta }) {
     setMoveModal(null);
 
     try {
-      const response = await updateDeviceSegment(token, machine.id, segmentId, options.reason ? { reason: options.reason } : {});
+      const response = await updateDeviceSegment(token, machine.id, segmentId, moveRequestOptions(options));
       deviceState.updateDeviceSegmentInState(
         machine.id,
         response.device.segmentId,
@@ -87,12 +91,8 @@ export function useInventoryMoves({ data, deviceState, inventory, meta }) {
       notify("Segmento de destino inválido.", "danger");
       return false;
     }
-    const machinesToMove = activeAllDevices.filter(
-      (device) => machineIds.includes(device.id) && device.segmentId !== segmentId
-    );
-    const blockedBackup = machinesToMove.find(
-      (machine) => machine.isBackup && machine.backupStatus !== "in_use" && !options.allowBackupMove
-    );
+    const machinesToMove = selectMachinesToMove(activeAllDevices, machineIds, segmentId);
+    const blockedBackup = machinesToMove.find((machine) => isBackupMoveBlocked(machine, options));
 
     if (blockedBackup) {
       notify(backupBlockedMessage, "danger");
@@ -104,10 +104,7 @@ export function useInventoryMoves({ data, deviceState, inventory, meta }) {
       return false;
     }
 
-    const previous = new Map(machinesToMove.map((machine) => [
-      machine.id,
-      { id: machine.segmentId, name: machine.segmentName }
-    ]));
+    const previous = snapshotPreviousSegments(machinesToMove);
 
     meta.updateDeviceTabOwnership(machinesToMove.map((machine) => machine.id), target, options.targetTabId);
     machinesToMove.forEach((machine) => {
@@ -118,7 +115,7 @@ export function useInventoryMoves({ data, deviceState, inventory, meta }) {
     try {
       await Promise.all(
         machinesToMove.map((machine) =>
-          updateDeviceSegment(token, machine.id, segmentId, options.reason ? { reason: options.reason } : {})
+          updateDeviceSegment(token, machine.id, segmentId, moveRequestOptions(options))
         )
       );
       notify(`${machinesToMove.length} equipamentos movidos para ${target?.name || "Segmento"}.`, "ok");
@@ -139,15 +136,6 @@ export function useInventoryMoves({ data, deviceState, inventory, meta }) {
   function handleBulkMove() {
     if (!selection.bulkMoveTarget || !selectedAssetIds.size) return;
     handleMoveMachines(Array.from(selectedAssetIds), selection.bulkMoveTarget);
-  }
-
-  function openMoveModal(machine, targetSegmentId = machine.segmentId) {
-    setMoveModal(machine);
-    setMoveTarget(targetSegmentId);
-  }
-
-  function closeMoveModal() {
-    setMoveModal(null);
   }
 
   return {
