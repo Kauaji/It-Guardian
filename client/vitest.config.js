@@ -16,8 +16,8 @@ export default defineConfig({
       include: ["src/**/*.{js,jsx}"],
       exclude: ["src/**/*.test.*", "src/test/**", "src/main.jsx"],
       reporter: ["text-summary", "json-summary"],
-      // Catraca: so sobe. Medido em 2026-10 (1.701 testes): linhas 73,4 / ramos 83,3 / funcoes 69,5.
-      thresholds: { lines: 72, statements: 72, branches: 82, functions: 68 }
+      // Catraca: so sobe. Medido em 2026-10 (2.419 testes): linhas 93,4 / ramos 89,2 / funcoes 85,4.
+      thresholds: { lines: 92, statements: 92, branches: 88, functions: 84 }
     }
   }
 });
