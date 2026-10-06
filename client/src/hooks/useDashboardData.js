@@ -62,48 +62,12 @@ export function useDashboardData({
 
   useMonitoringStream({ applySegmentGroups, logout, notify, search, setSelectedDevice, state, status, token });
 
-  return {
-    alertCorrelations: state.alertCorrelations,
-    alertPriorityColors: state.alertPriorityColors,
-    alertPrioritySettings: state.alertPrioritySettings,
-    alertRules: state.alertRules,
-    alerts: state.alerts,
-    allDevices: state.allDevices,
-    devices: state.devices,
-    history: state.history,
-    lastUpdated: state.lastUpdated,
-    loading: state.loading,
-    loadData,
-    maintenanceScripts: state.maintenanceScripts,
-    preventiveAutomationManagement: state.preventiveAutomationManagement,
-    preventiveAutomationManagementError: state.preventiveAutomationManagementError,
-    preventiveAutomationPlans: state.preventiveAutomationPlans,
-    preventivePlans: state.preventivePlans,
-    segmentGroups: state.segmentGroups,
-    segments: state.segments,
-    serviceOrderSuggestions: state.serviceOrderSuggestions,
-    serviceOrders: state.serviceOrders,
-    setAlertCorrelations: state.setAlertCorrelations,
-    setAlertPriorityColors: state.setAlertPriorityColors,
-    setAlertPrioritySettings: state.setAlertPrioritySettings,
-    setAlertRules: state.setAlertRules,
-    setAlerts: state.setAlerts,
-    setAllDevices: state.setAllDevices,
-    setDevices: state.setDevices,
-    setHistory: state.setHistory,
-    setMaintenanceScripts: state.setMaintenanceScripts,
-    setPreventiveAutomationManagement: state.setPreventiveAutomationManagement,
-    setPreventiveAutomationManagementError: state.setPreventiveAutomationManagementError,
-    setPreventiveAutomationPlans: state.setPreventiveAutomationPlans,
-    setPreventivePlans: state.setPreventivePlans,
-    setSegmentGroups: state.setSegmentGroups,
-    setSegments: state.setSegments,
-    setServiceOrderSuggestions: state.setServiceOrderSuggestions,
-    setServiceOrders: state.setServiceOrders,
-    setSummary: state.setSummary,
-    setSystemMode: state.setSystemMode,
-    summary: state.summary,
-    systemMode: state.systemMode,
-    remoteScriptExecutionEnabledOnServer: state.remoteScriptExecutionEnabledOnServer
-  };
+  // `state` ja traz todos os valores e setters expostos; so os setters internos ficam de fora.
+  const {
+    setLoading: _setLoading,
+    setLastUpdated: _setLastUpdated,
+    setRemoteScriptExecutionEnabledOnServer: _setRemoteScriptExecutionEnabledOnServer,
+    ...exposed
+  } = state;
+  return { ...exposed, loadData };
 }
