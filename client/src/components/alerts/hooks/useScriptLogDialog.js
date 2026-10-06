@@ -43,17 +43,17 @@ export default function useScriptLogDialog({
 
   async function registerSuggestedSolution() {
     const confirmed = window.confirm(
-      "Esta acao nao executara comandos automaticamente nesta versao. Ela registrara uma acao corretiva sugerida para acompanhamento."
+      "Esta ação não executara comandos automaticamente nesta versão. Ela registrará uma ação corretiva sugerida para acompanhamento."
     );
     if (!confirmed) return;
     await onApplyScriptLogSuggestedSolution(selectedScriptLog.id, {
-      notes: selectedScriptLog.suggestedSolution || "Solucao sugerida registrada para acompanhamento."
+      notes: selectedScriptLog.suggestedSolution || "Solução sugerida registrada para acompanhamento."
     });
     finish();
   }
 
   async function registerCustomSolution() {
-    const notes = customNotes.trim() || "Solucao propria registrada pelo tecnico.";
+    const notes = customNotes.trim() || "Solução própria registrada pelo técnico.";
     await onApplyScriptLogSuggestedSolution(selectedScriptLog.id, { notes });
     finish();
   }

@@ -9,6 +9,7 @@ import {
 import { hasRemoteAssistanceAgent, isRemoteAssistanceAssetFresh } from "../../remoteAssistance/remoteAssistanceModel.js";
 import ScriptExecutionDiagnosticPanel from "../../maintenance/ScriptExecutionDiagnosticPanel.jsx";
 import PulseDot from "../../ui/PulseDot.jsx";
+import { useModalLifecycle } from "../../../hooks/useModalLifecycle.js";
 
 const RISK_LABELS = { low: "Baixo", medium: "Médio", high: "Alto", critical: "Crítico" };
 const STATUS_LABELS = {
@@ -49,6 +50,8 @@ export default function ServiceOrderScriptsTab({
   const [confirmingScript, setConfirmingScript] = useState(null);
   const [confirmMode, setConfirmMode] = useState("execute");
   const [queueing, setQueueing] = useState(false);
+  // Escape cancela a confirmacao (e nao o modal da OS por tras); foco preso e devolvido ao botao de origem.
+  const confirmDialogRef = useModalLifecycle(Boolean(confirmingScript), () => !queueing && setConfirmingScript(null));
 
   const serviceOrderId = serviceOrder?.id;
   const isFinalOrder = Boolean(serviceOrder?.closedAt);
@@ -249,6 +252,7 @@ export default function ServiceOrderScriptsTab({
       {confirmingScript && (
         <div className="modal-backdrop" role="presentation" onClick={() => !queueing && setConfirmingScript(null)}>
           <section
+            ref={confirmDialogRef}
             className="service-order-script-confirm-modal"
             role="dialog"
             aria-modal="true"

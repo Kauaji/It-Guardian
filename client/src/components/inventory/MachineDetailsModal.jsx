@@ -79,7 +79,7 @@ function formatDate(value) {
 
 function formatBytes(value) {
   const bytes = Number(value);
-  if (!Number.isFinite(bytes) || bytes < 0) return "Nao informado";
+  if (!Number.isFinite(bytes) || bytes < 0) return "Não informado";
   const units = ["B", "KB", "MB", "GB", "TB"];
   let amount = bytes;
   let unitIndex = 0;
@@ -92,7 +92,7 @@ function formatBytes(value) {
 
 function formatDuration(value) {
   const seconds = Number(value);
-  if (!Number.isFinite(seconds) || seconds < 0) return "Nao informado";
+  if (!Number.isFinite(seconds) || seconds < 0) return "Não informado";
   const days = Math.floor(seconds / 86400);
   const hours = Math.floor((seconds % 86400) / 3600);
   return days > 0 ? `${days} d ${hours} h` : `${hours} h`;
@@ -365,7 +365,7 @@ export default function MachineDetailsModal({
         <header className="asset-modal-header">
           <div>
             <span className="asset-eyebrow">
-              {isAgentAsset ? "Maquina real" : isManualAsset ? "Ativo de rede manual" : "Inventario integrado"}
+              {isAgentAsset ? "Máquina real" : isManualAsset ? "Ativo de rede manual" : "Inventário integrado"}
             </span>
             <h2>{alias || machine.name}</h2>
             <p>{machine.name} - {machine.ip}</p>
@@ -423,13 +423,13 @@ export default function MachineDetailsModal({
                   <>
                     <article>
                       <Clock3 size={18} />
-                      <span>Ultima comunicacao</span>
+                      <span>Última comunicação</span>
                       <strong>{formatDate(agent?.lastSeenAt || machine.lastSeenAt)}</strong>
                     </article>
                     <article>
                       <Network size={18} />
-                      <span>Versao do coletor</span>
-                      <strong>{agent?.agentVersion || "Nao informada"}</strong>
+                      <span>Versão do coletor</span>
+                      <strong>{agent?.agentVersion || "Não informada"}</strong>
                     </article>
                     <article>
                       <HardDrive size={18} />
@@ -460,17 +460,17 @@ export default function MachineDetailsModal({
                     <article>
                       <Cpu size={18} />
                       <span>CPU</span>
-                      <strong>{machine.metrics?.cpu == null ? "Nao disponivel" : `${machine.metrics.cpu}%`}</strong>
+                      <strong>{machine.metrics?.cpu == null ? "Não disponível" : `${machine.metrics.cpu}%`}</strong>
                     </article>
                     <article>
                       <MemoryStick size={18} />
                       <span>RAM</span>
-                      <strong>{machine.metrics?.ram == null ? "Nao disponivel" : `${machine.metrics.ram}%`}</strong>
+                      <strong>{machine.metrics?.ram == null ? "Não disponível" : `${machine.metrics.ram}%`}</strong>
                     </article>
                     <article>
                       <HardDrive size={18} />
                       <span>Disco</span>
-                      <strong>{machine.metrics?.disk == null ? "Nao disponivel" : `${machine.metrics.disk}%`}</strong>
+                      <strong>{machine.metrics?.disk == null ? "Não disponível" : `${machine.metrics.disk}%`}</strong>
                     </article>
                     <article>
                       <HardDrive size={18} />
@@ -523,14 +523,14 @@ export default function MachineDetailsModal({
                 {sourceCollections.map((collection) => (
                   <DetailItem
                     key={collection.source}
-                    label={`Ultima coleta ${collection.label}`}
+                    label={`Última coleta ${collection.label}`}
                     value={formatDate(collection.collectedAt)}
                   />
                 ))}
                 {Boolean(machine.sourceConflicts?.length) && (
                   <DetailItem
-                    label="Correlacao entre fontes"
-                    value="Conflito pendente de revisao"
+                    label="Correlação entre fontes"
+                    value="Conflito pendente de revisão"
                   />
                 )}
               </div>
@@ -731,7 +731,7 @@ export default function MachineDetailsModal({
                   </article>
                 ))}
               </div>
-              {!softwareRows.length && !isManualAsset && <p className="empty">Nenhum software coletado para esta maquina.</p>}
+              {!softwareRows.length && !isManualAsset && <p className="empty">Nenhum software coletado para esta máquina.</p>}
               {isManualAsset && <p className="empty">Softwares não se aplicam a este ativo manual.</p>}
             </section>
           )}

@@ -103,11 +103,11 @@ const item = (id, objectType, category, x, y, width, height, extra = {}) => ({ i
 
 const fixture = () => ({
   plan: { id: "plan-1", width: 1280, height: 820 },
-  floors: [{ id: "floor-1", name: "Terreo", width: 1280, height: 820 }],
+  floors: [{ id: "floor-1", name: "Térreo", width: 1280, height: 820 }],
   zones: [
     { id: "room-1", floorId: "floor-1", zoneType: "room", name: "Sala", color: "#dbeafe", geometry: { x: 100, y: 100, width: 600, height: 400 }, metadata: { floorTexture: "wood", room: { wallThickness: 10 } } },
     { id: "room-2", floorId: "floor-1", zoneType: "room", name: "Outra", color: "#fde68a", geometry: { x: 750, y: 100, width: 300, height: 300 }, metadata: { floorTexture: "carpet" } },
-    { id: "room-3", floorId: "floor-1", zoneType: "room", name: "Ceramica", color: "#bbf7d0", geometry: { x: 750, y: 450, width: 300, height: 200 }, metadata: { floorTexture: "ceramic" } },
+    { id: "room-3", floorId: "floor-1", zoneType: "room", name: "Cerâmica", color: "#bbf7d0", geometry: { x: 750, y: 450, width: 300, height: 200 }, metadata: { floorTexture: "ceramic" } },
     { id: "area-1", floorId: "floor-1", zoneType: "group", name: "Grupo", color: "#ef4444", geometry: { kind: "paint-mask", cellSize: 20, cells: ["10:10", "11:10", "12:10", "10:11"] } },
     { id: "area-2", floorId: "floor-1", zoneType: "segment", name: "Seg", color: "#22c55e", geometry: { kind: "paint-mask", cellSize: 20, cells: ["20:20"] } },
     { id: "zone-x", floorId: "floor-1", zoneType: "custom", name: "Generica", color: "#a78bfa", geometry: { x: 900, y: 700, width: 100, height: 80 } },
@@ -209,7 +209,7 @@ describe("cena 3D", () => {
     expect(scene.fog).toBeTruthy();
     expect(scene.environment).toBeTruthy();
     expect(camera.position.y).toBeGreaterThan(0);
-    expect(screen.getByRole("status")).toHaveTextContent("TerreoCena pronta");
+    expect(screen.getByRole("status")).toHaveTextContent("TérreoCena pronta");
     expect(view.container.querySelector(".floor-plan-studio-scene")).toHaveAttribute("data-scene-ready", "true");
     expect(scene.children.filter((child) => child.isLight)).toHaveLength(3);
     expect(scene.children.some((child) => child.type === "GridHelper" && child.visible)).toBe(true);

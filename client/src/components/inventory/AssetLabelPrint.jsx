@@ -19,7 +19,7 @@ export default function AssetLabelPrint({ qrSrc, name, assetTag, ip }) {
         <img src={qrSrc} alt="" />
         <div>
           <h1>{name}</h1>
-          <p>{assetTag || "Sem patrimonio"}</p>
+          <p>{assetTag || "Sem patrimônio"}</p>
           <p>{ip}</p>
         </div>
       </article>

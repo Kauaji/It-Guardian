@@ -70,7 +70,7 @@ export function duplicateRoomInDraft({ draft, zone, geometry, createId }) {
   const duplicatedZone = normalizeRoomZone({
     ...zone,
     id: createId("zone"),
-    name: `${zone.name} copia`,
+    name: `${zone.name} cópia`,
     geometry,
     orderIndex: (draft.zones || []).length
   }, draft.plan);

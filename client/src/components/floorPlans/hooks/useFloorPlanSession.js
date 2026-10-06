@@ -144,7 +144,7 @@ export function useFloorPlanSession({ token, activeTab, permissions, notify, doc
   }, [notify, token]);
 
   const removePlan = useCallback(async (plan) => {
-    if (!window.confirm(`Excluir a planta "${plan.name}"? Esta acao nao pode ser desfeita.`)) return;
+    if (!window.confirm(`Excluir a planta "${plan.name}"? Esta ação não pode ser desfeita.`)) return;
     try {
       await deleteFloorPlan(token, plan.id);
       setPlans((current) => current.filter((entry) => entry.id !== plan.id));

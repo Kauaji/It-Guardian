@@ -22,7 +22,7 @@ describe("TechnicalCalendarPage", () => {
     await waitFor(() => expect(api.fetchCalendarEvents).toHaveBeenCalled());
     const dayButtons = document.querySelectorAll(".calendar-day-cell:not(.outside)");
     fireEvent.click(dayButtons[0]);
-    expect(screen.getByRole("form", { name: "Novo agendamento" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Novo agendamento" })).toBeInTheDocument();
   });
 
   it("mantém uma agenda mensal enxuta sem controles redundantes", async () => {
@@ -55,7 +55,7 @@ describe("TechnicalCalendarPage", () => {
     const eventButton = document.querySelector(".calendar-event");
     expect(eventButton.closest(".calendar-day-cell")).toHaveClass("has-events");
     fireEvent.click(eventButton);
-    expect(screen.getByRole("form", { name: "Editar agendamento" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Editar agendamento" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Excluir" })).toBeInTheDocument();
   });
 

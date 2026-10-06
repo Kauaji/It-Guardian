@@ -16,7 +16,7 @@ export default function SuggestionsPanel({ visibleSuggestions, priorityColorById
         <ClipboardList size={18} />
       </div>
       <div className="toolbar inline-toolbar">
-        <select value={suggestionStatusFilter} onChange={(event) => setSuggestionStatusFilter(event.target.value)}>
+        <select aria-label="Filtrar sugestões por situação" value={suggestionStatusFilter} onChange={(event) => setSuggestionStatusFilter(event.target.value)}>
           <option value="all">Todas as sugestões</option>
           <option value="pending">Pendentes</option>
           <option value="observed_resolved">Observadas como normalizadas</option>

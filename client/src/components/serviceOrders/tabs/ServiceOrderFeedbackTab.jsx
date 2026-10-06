@@ -90,6 +90,7 @@ export default function ServiceOrderFeedbackTab({ serviceOrderId, token, notify,
           <StarRating value={rating} onChange={setRating} disabled={saving} />
           <textarea
             placeholder="Comentário (opcional)"
+            aria-label="Comentário da avaliação"
             value={comment}
             onChange={(event) => setComment(event.target.value)}
             disabled={saving}

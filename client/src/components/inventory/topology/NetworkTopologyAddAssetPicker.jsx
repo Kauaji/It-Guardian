@@ -82,6 +82,7 @@ export default function NetworkTopologyAddAssetPicker({ devices, onPick, disable
           type="search"
           className="network-topology-add-asset-input"
           placeholder="Adicionar ativo ao mapa..."
+          aria-label="Adicionar ativo ao mapa"
           value={query}
           disabled={disabled}
           onFocus={() => setOpen(true)}

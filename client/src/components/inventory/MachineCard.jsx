@@ -168,7 +168,7 @@ function MachineCardContent({
         <span className="asset-type-badge">{typeLabel}</span>
         {isBackup && (
           <span className={`backup-badge ${backupInUse ? "in-use" : "available"}`}>
-            {backupInUse ? "Backup em uso" : "Backup disponivel"}
+            {backupInUse ? "Backup em uso" : "Backup disponível"}
           </span>
         )}
         <AutomationIndicatorDots indicators={machine.automationIndicators} compact maxVisible={4} />
@@ -235,9 +235,9 @@ function MachineCardContent({
                 event.stopPropagation();
                 setActivePopoverId(expanded ? null : detailsPopoverId);
               }}
-              aria-label="Perifericos"
+              aria-label="Periféricos"
               aria-expanded={expanded}
-              title={expanded ? "Ocultar perifericos" : "Perifericos"}
+              title={expanded ? "Ocultar periféricos" : "Periféricos"}
             >
               <ChevronDown size={15} />
             </button>
@@ -249,7 +249,7 @@ function MachineCardContent({
               >
                 {isManualAsset ? (
                   <div className="manual-asset-mini">
-                    <span>{machine.manualAsset?.location || "Sem localizacao"}</span>
+                    <span>{machine.manualAsset?.location || "Sem localização"}</span>
                     <strong>{machine.manualAsset?.hostname || machine.manualAsset?.macAddress || "Sem hostname/MAC"}</strong>
                   </div>
                 ) : (

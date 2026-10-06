@@ -31,13 +31,13 @@ export default function PeripheralItem({ peripheral, canRemove = false, onRemove
     <li className="peripheral-item">
       <Icon size={15} />
       <span>{peripheral.type}</span>
-      <strong>{peripheral.name || peripheral.brand || "Sem identificacao"}</strong>
-      <em>{peripheral.assetTag || "Sem patrimonio"}</em>
+      <strong>{peripheral.name || peripheral.brand || "Sem identificação"}</strong>
+      <em>{peripheral.assetTag || "Sem patrimônio"}</em>
       {canRemove && (
         <button
           type="button"
           className="peripheral-remove-button"
-          title="Remover periferico"
+          title="Remover periférico"
           onClick={() => onRemove(peripheral)}
         >
           <Trash2 size={13} />

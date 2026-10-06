@@ -19,8 +19,8 @@ export default function PreventiveAutomationScopeFields({ form, scopeSources, on
       </label>
       {form.scopeType === "asset_list" && (
         <div className="preventive-automation-wide automation-asset-list-scope">
-          <strong>Maquinas selecionadas</strong>
-          <span>{(form.assetIds || []).length} maquina(s) herdada(s) da preventiva.</span>
+          <strong>Máquinas selecionadas</strong>
+          <span>{(form.assetIds || []).length} máquina(s) herdada(s) da preventiva.</span>
           <div>
             {(form.assetIds || []).map((assetId) => {
               const device = scopeSources.devices.find((item) => String(item.id) === String(assetId));

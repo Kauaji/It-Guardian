@@ -81,7 +81,7 @@ export function useMaintenanceScriptActions() {
 
   async function handleUseSuggestionScript(suggestionId, scriptId, payload) {
     if (!remoteScriptExecutionEnabled) {
-      notify("Execucao remota desabilitada. Use o registro em modo de simulacao.", "warning");
+      notify("Execução remota desabilitada. Use o registro em modo de simulação.", "warning");
       return;
     }
     await runAndReload(
@@ -97,7 +97,7 @@ export function useMaintenanceScriptActions() {
   function handleApplyScriptLogSuggestedSolution(logId, payload) {
     return runAndReload(
       () => applyScriptLogSuggestedSolution(token, logId, payload),
-      "Acao corretiva registrada. Nenhum comando foi executado."
+      "Ação corretiva registrada. Nenhum comando foi executado."
     );
   }
 

@@ -1019,8 +1019,8 @@ export default function ServiceOrdersBoard({
                 <section className="service-order-settings-panel">
                   <header>
                     <div>
-                      <strong>Formato do numero da OS</strong>
-                      <span>Aplicado somente as proximas ordens criadas.</span>
+                      <strong>Formato do número da OS</strong>
+                      <span>Aplicado somente às próximas ordens criadas.</span>
                     </div>
                     <button type="button" className="primary-action compact-action" onClick={saveServiceOrderSettings} disabled={settingsSaving}>
                       {settingsSaving ? "Salvando..." : "Salvar"}
@@ -1036,7 +1036,7 @@ export default function ServiceOrdersBoard({
                       />
                     </label>
                     <label>
-                      Proximo numero
+                      Próximo número
                       <input
                         type="number"
                         min="1"
@@ -1046,7 +1046,7 @@ export default function ServiceOrdersBoard({
                       />
                     </label>
                     <div className="service-order-number-preview">
-                      <span>Previa</span>
+                      <span>Prévia</span>
                       <strong>{buildServiceOrderNumberPreview(serviceOrderSettings)}</strong>
                     </div>
                     <label className="settings-inline-check">
@@ -1055,7 +1055,7 @@ export default function ServiceOrdersBoard({
                         checked={Boolean(serviceOrderSettings.numberFormat.useYear)}
                         onChange={(event) => updateServiceOrderSettingsField("numberFormat", "useYear", event.target.checked)}
                       />
-                      Usar ano no numero
+                      Usar ano no número
                     </label>
                     <label className="settings-inline-check">
                       <input

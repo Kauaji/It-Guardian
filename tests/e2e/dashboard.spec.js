@@ -162,8 +162,8 @@ test("catálogo mostra prévias de pizza, colunas, barras, rosca e linha antes d
       await expect(card.getByText("Prévia ilustrativa", { exact: true })).toBeVisible();
     }
 
-    const historyCard = catalogCard(page, catalog, "Grafico Historico de CPU");
-    await historyCard.getByRole("combobox", { name: "Visualização de Grafico Historico de CPU", exact: true }).selectOption("line");
+    const historyCard = catalogCard(page, catalog, "Gráfico Histórico de CPU");
+    await historyCard.getByRole("combobox", { name: "Visualização de Gráfico Histórico de CPU", exact: true }).selectOption("line");
     await expect(historyCard.getByRole("img", { name: "Prévia ilustrativa: Linha", exact: true })).toBeVisible();
 
     for (const [label, value, preview] of [

@@ -596,7 +596,7 @@ export default function GeneralSettingsModal({
     }
 
     if (!userForm.id && userForm.password.length < 12) {
-      notify("Informe uma senha temporaria com pelo menos 12 caracteres. A pessoa troca no primeiro acesso.", "danger");
+      notify("Informe uma senha temporária com pelo menos 12 caracteres. A pessoa troca no primeiro acesso.", "danger");
       return;
     }
 
@@ -624,7 +624,7 @@ export default function GeneralSettingsModal({
       });
       setUserForm(emptyUserForm());
       setUserPermissionsOpen(false);
-      notify(userForm.id ? "Usuario atualizado." : "Usuario criado.", "ok");
+      notify(userForm.id ? "Usuário atualizado." : "Usuário criado.", "ok");
     } catch (error) {
       notify(error.message, "danger");
     } finally {
@@ -740,7 +740,7 @@ export default function GeneralSettingsModal({
               <div className="general-settings-section">
                 <MonitorCog size={22} />
                 <h3>Usabilidade</h3>
-                <p>Preferencias simples para leitura, comportamento e acessibilidade da interface.</p>
+                <p>Preferências simples para leitura, comportamento e acessibilidade da interface.</p>
                 <div className="font-scale-card">
                   <div>
                     <strong>Tamanho geral das fontes</strong>
@@ -778,10 +778,10 @@ export default function GeneralSettingsModal({
                     onClick={restoreDefaultAppearance}
                   >
                     <RotateCcw size={15} />
-                    Restaurar padrao visual
+                    Restaurar padrão visual
                   </button>
                 </div>
-                <div className="appearance-preset-grid" aria-label="Presets de aparencia">
+                <div className="appearance-preset-grid" aria-label="Presets de aparência">
                   {appearancePresets.map((preset) => (
                     <button
                       key={preset.id}
@@ -806,7 +806,7 @@ export default function GeneralSettingsModal({
                       }}
                     />
                     <strong>Personalizado</strong>
-                    <small>Monte sua propria combinacao.</small>
+                    <small>Monte sua própria combinação.</small>
                   </button>
                 </div>
                 <div className="custom-theme-panel">
@@ -824,7 +824,7 @@ export default function GeneralSettingsModal({
                       />
                     </label>
                     <label>
-                      Areas principais
+                      Áreas principais
                       <input
                         type="color"
                         value={preferences.customTheme.surface}
@@ -832,7 +832,7 @@ export default function GeneralSettingsModal({
                       />
                     </label>
                     <label>
-                      Areas secundarias
+                      Áreas secundárias
                       <input
                         type="color"
                         value={preferences.customTheme.surfaceSoft}
@@ -947,13 +947,13 @@ export default function GeneralSettingsModal({
                         </label>
                         {!userForm.id && (
                           <label>
-                            Senha temporaria
+                            Senha temporária
                             <input
                               type="password"
                               autoComplete="new-password"
                               value={userForm.password}
                               onChange={(event) => setUserForm((current) => ({ ...current, password: event.target.value }))}
-                              placeholder="Minimo 12 caracteres"
+                              placeholder="Mínimo 12 caracteres"
                             />
                           </label>
                         )}
@@ -985,7 +985,7 @@ export default function GeneralSettingsModal({
                           checked={userForm.active}
                           onChange={(event) => setUserForm((current) => ({ ...current, active: event.target.checked }))}
                         />
-                        Usuario ativo
+                        Usuário ativo
                       </label>
                       <section className={`admin-form-collapsible${userPermissionsOpen ? " open" : ""}`}>
                         <button
@@ -1108,7 +1108,7 @@ export default function GeneralSettingsModal({
                           <div>
                             <strong>{item.name}</strong>
                             <span>{item.description || "Sem descrição"}</span>
-                            <small>{item.permissions.length} permissoes padrao</small>
+                            <small>{item.permissions.length} permissões padrão</small>
                           </div>
                           <div className="admin-record-meta">
                             <span className={item.active === false ? "admin-badge muted" : "admin-badge"}>{item.active === false ? "Inativo" : "Ativo"}</span>

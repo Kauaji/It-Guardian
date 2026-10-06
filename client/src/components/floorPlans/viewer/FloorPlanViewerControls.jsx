@@ -36,7 +36,7 @@ export default function FloorPlanViewerControls({
   if (mode !== "2d") return null;
 
   return (
-    <div className="floor-plan-viewer-controls" aria-label="Controles de visualizacao 2D">
+    <div className="floor-plan-viewer-controls" aria-label="Controles de visualização 2D">
       <button type="button" onClick={onZoomOut} title="Diminuir zoom" aria-label="Diminuir zoom">
         <Minus size={16} aria-hidden="true" />
       </button>

@@ -24,12 +24,12 @@ export default function AlertsCompactPanel({ visibleAlerts }) {
         <Bell size={18} />
       </div>
       <div className="toolbar inline-toolbar">
-        <select value={severityFilter} onChange={(event) => setSeverityFilter(event.target.value)}>
+        <select aria-label="Filtrar por severidade" value={severityFilter} onChange={(event) => setSeverityFilter(event.target.value)}>
           <option value="all">Todas</option>
           <option value="critical">Críticos</option>
           <option value="warning">Atenção</option>
         </select>
-        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+        <select aria-label="Filtrar por situação" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
           <option value="all">Todos</option>
           <option value="active">Ativos</option>
           <option value="resolved">Resolvidos</option>

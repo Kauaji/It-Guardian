@@ -2,7 +2,7 @@ import { Box, Grid3X3, House, Maximize2, Move3D, Orbit, Sparkles } from "lucide-
 import { CAMERA_VIEW_FRONT, CAMERA_VIEW_ISOMETRIC, CAMERA_VIEW_TOP } from "./constants.js";
 
 const VIEW_OPTIONS = [
-  { view: CAMERA_VIEW_ISOMETRIC, label: "Perspectiva", title: "Vista isometrica", Icon: Box },
+  { view: CAMERA_VIEW_ISOMETRIC, label: "Perspectiva", title: "Vista isométrica", Icon: Box },
   { view: CAMERA_VIEW_TOP, label: "Superior", title: "Vista superior", Icon: Move3D },
   { view: CAMERA_VIEW_FRONT, label: "Frontal", title: "Vista frontal", Icon: House }
 ];
@@ -65,7 +65,7 @@ export function SceneHelp({ editable }) {
       <Orbit size={16} />
       <span><strong>Arraste</strong> para orbitar</span>
       <i />
-      <span><strong>Roda ou pinca</strong> para aproximar</span>
+      <span><strong>Roda ou pinça</strong> para aproximar</span>
       {editable ? <><i /><span><strong>Arraste um item</strong> para mover</span></> : null}
     </div>
   );

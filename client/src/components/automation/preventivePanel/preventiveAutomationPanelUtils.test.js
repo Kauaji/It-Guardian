@@ -262,8 +262,8 @@ describe("rótulos de escopo e recorrência", () => {
 
   it("descreve o escopo do plano", () => {
     expect(getScopeLabel({ scopeType: "all" }, sources)).toBe("Todas as máquinas");
-    expect(getScopeLabel({ scopeType: "asset_list", assetIds: ["a", "b"] }, sources)).toBe("Maquinas selecionadas: 2 maquina(s)");
-    expect(getScopeLabel({ scopeType: "asset_list" }, sources)).toBe("Maquinas selecionadas: 0 maquina(s)");
+    expect(getScopeLabel({ scopeType: "asset_list", assetIds: ["a", "b"] }, sources)).toBe("Máquinas selecionadas: 2 máquina(s)");
+    expect(getScopeLabel({ scopeType: "asset_list" }, sources)).toBe("Máquinas selecionadas: 0 máquina(s)");
     expect(getScopeLabel({ scopeType: "segment", scopeId: "s1" }, sources)).toBe("Segmento: Recepção");
     expect(getScopeLabel({ scopeType: "group", scopeId: "zz" }, sources)).toBe("Grupo: zz");
     expect(getScopeLabel({ scopeType: "tab" }, sources)).toBe("Escopo: não informado");

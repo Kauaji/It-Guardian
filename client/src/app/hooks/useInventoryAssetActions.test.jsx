@@ -132,7 +132,7 @@ describe("useInventoryAssetActions", () => {
     expect(ok).toBe(true);
     expect(deviceState.removeDeviceFromState).toHaveBeenCalledWith("d1");
     expect(inventory.selection.deselectAsset).toHaveBeenCalledWith("d1");
-    expect(session.notify).toHaveBeenCalledWith("PC-01 removida do inventario.", "ok");
+    expect(session.notify).toHaveBeenCalledWith("PC-01 removida do inventário.", "ok");
 
     deleteDevice.mockRejectedValue(new Error("em uso"));
     await act(async () => {
@@ -178,7 +178,7 @@ describe("useInventoryAssetActions", () => {
     act(() => result.current.addMachineObservation("d1", "segunda"));
     expect(observations.get().d1.map((item) => item.text)).toEqual(["segunda", "primeira"]);
     expect(observations.get().d1[0]).toMatchObject({ user: "Ana Admin" });
-    expect(session.notify).toHaveBeenCalledWith("Observacao adicionada.", "ok");
+    expect(session.notify).toHaveBeenCalledWith("Observação adicionada.", "ok");
   });
 });
 
@@ -207,13 +207,13 @@ describe("useMachinePeripherals", () => {
     });
     expect(output.peripheral.id).toMatch(/^d1-peripheral-/);
     expect(output.event).toMatchObject({
-      change: "Periferico adicionado: Monitor",
-      message: "Monitor - Dell - Sem patrimonio",
+      change: "Periférico adicionado: Monitor",
+      message: "Monitor - Dell - Sem patrimônio",
       newValue: "Monitor Dell"
     });
     expect(manual.get().d1).toHaveLength(1);
     expect(history.get().d1[0]).toBe(output.event);
-    expect(session.notify).toHaveBeenCalledWith("Periferico adicionado e registrado no historico.", "ok");
+    expect(session.notify).toHaveBeenCalledWith("Periférico adicionado e registrado no histórico.", "ok");
 
     const patch = deviceState.patchDeviceInState.mock.calls[0][1];
     expect(patch({ id: "d1", hardware: { peripherals: [] } }).hardware.peripherals).toHaveLength(1);
@@ -232,10 +232,10 @@ describe("useMachinePeripherals", () => {
     act(() => {
       event = result.current.removeMachinePeripheral("d1", peripheral);
     });
-    expect(event).toMatchObject({ change: "Periferico removido: Teclado", newValue: "Removido" });
+    expect(event).toMatchObject({ change: "Periférico removido: Teclado", newValue: "Removido" });
     expect(manual.get().d1).toEqual([]);
     expect(history.get().d1[0]).toBe(event);
-    expect(session.notify).toHaveBeenCalledWith("Periferico removido e registrado no historico.", "ok");
+    expect(session.notify).toHaveBeenCalledWith("Periférico removido e registrado no histórico.", "ok");
 
     const patch = deviceState.patchDeviceInState.mock.calls[0][1];
     const updated = patch({ id: "d1", hardware: { peripherals: [peripheral] }, assetHistory: [] });

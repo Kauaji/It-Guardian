@@ -55,7 +55,7 @@ test("a aplicacao roda sob a CSP de producao sem violacoes nem chamadas a tercei
   expect(external, "requisicoes a origens externas").toEqual([]);
 });
 
-test("a fonte e servida pela propria origem (sem Google Fonts)", async ({ page }) => {
+test("a fonte e servida pela própria origem (sem Google Fonts)", async ({ page }) => {
   const fontRequests = [];
   page.on("response", (response) => {
     if (/\.(woff2?|ttf)(\?|$)/.test(response.url())) fontRequests.push(response.url());

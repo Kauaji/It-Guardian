@@ -25,7 +25,7 @@ export function getSafeScriptLabel(script, fallback = "Script cadastrado") {
 
 export function normalizeAlertLocation(location = {}) {
   return {
-    segmentName: formatDisplayText(location.segmentName || location.segment, "Nao organizadas"),
+    segmentName: formatDisplayText(location.segmentName || location.segment, "Não organizadas"),
     groupName: formatDisplayText(location.groupName || location.group, "Sem grupo")
   };
 }

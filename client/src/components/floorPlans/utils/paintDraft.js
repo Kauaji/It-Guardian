@@ -93,7 +93,7 @@ export function applyPaintAtPoint(current, point, { savedGroupAreas, zones, acti
     if (!room) {
       return {
         draft: current,
-        warning: "Nao foi possivel completar a area. Verifique se o espaco esta fechado por paredes."
+        warning: "Não foi possível completar a área. Verifique se o espaço está fechado por paredes."
       };
     }
     return {
@@ -118,20 +118,20 @@ export function applyPaintAtPoint(current, point, { savedGroupAreas, zones, acti
  * aviso ou `{ group, segment, parentArea }` com as entidades resolvidas.
  */
 export function resolvePaintConfirmation(paintDraft, { groups, segments, savedGroupAreas }) {
-  if (!paintDraft?.cells?.length) return { error: "Nenhuma area foi demarcada." };
+  if (!paintDraft?.cells?.length) return { error: "Nenhuma área foi demarcada." };
   const group = groups.find((entry) => entry.id === paintDraft.groupId) || null;
   const segment = segments.find((entry) => entry.id === paintDraft.segmentId) || null;
   if (paintDraft.areaType === "group" && !group) {
-    return { error: "Selecione o grupo da area demarcada." };
+    return { error: "Selecione o grupo da área demarcada." };
   }
   const parentArea = paintDraft.areaType === "segment"
     ? savedGroupAreas.find((area) => area.id === paintDraft.parentAreaId)
     : null;
   if (paintDraft.areaType === "segment" && (!parentArea || !segment)) {
-    return { error: "Selecione a area de grupo e o segmento antes de confirmar." };
+    return { error: "Selecione a área de grupo e o segmento antes de confirmar." };
   }
   if (parentArea?.groupId && segment?.groupId && parentArea.groupId !== segment.groupId) {
-    return { error: "O segmento selecionado nao pertence ao grupo desta area." };
+    return { error: "O segmento selecionado não pertence ao grupo desta área." };
   }
   return { group, segment, parentArea };
 }
@@ -144,7 +144,7 @@ export function addPaintAreaToDraft({ draft, paintDraft, activeFloorId, resolved
     planId: draft.plan.id,
     floorId: activeFloorId,
     areaType: paintDraft.areaType,
-    name: segment?.name || group?.name || "Area demarcada",
+    name: segment?.name || group?.name || "Área demarcada",
     color: segment?.color || group?.color || paintDraft.color,
     cells: paintDraft.cells,
     cellSize: paintDraft.cellSize,

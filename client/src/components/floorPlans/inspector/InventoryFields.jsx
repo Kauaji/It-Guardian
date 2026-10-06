@@ -27,16 +27,16 @@ function AssetSummary({ entity, linkedDevice }) {
       <span className="floor-plan-asset-icon"><AssetIcon size={27} /></span>
       <span>
         <strong className="floor-plan-asset-name">
-          {linkedDevice ? deviceLabel(linkedDevice) : entity.label || "Ativo sem vinculo"}
+          {linkedDevice ? deviceLabel(linkedDevice) : entity.label || "Ativo sem vínculo"}
           {linkedDevice ? (
             <i
               className={`floor-plan-asset-status-dot ${statusTone}`}
-              title={`Status ${linkedDevice.status || "nao informado"}`}
-              aria-label={`Status ${linkedDevice.status || "nao informado"}`}
+              title={`Status ${linkedDevice.status || "não informado"}`}
+              aria-label={`Status ${linkedDevice.status || "não informado"}`}
             />
           ) : null}
         </strong>
-        {!linkedDevice ? <small>Sem vinculo com o inventario</small> : null}
+        {!linkedDevice ? <small>Sem vínculo com o inventário</small> : null}
       </span>
     </div>
   );
@@ -72,14 +72,14 @@ function LinkAction({ entity, linkedDevice, canLink, showLinkPicker, onTogglePic
     return (
       <button className="floor-plan-unlink-action" type="button" disabled={!canLink} onClick={() => onUnlink(entity.id, "")}>
         <X size={16} />
-        Desvincular maquina
+        Desvincular máquina
       </button>
     );
   }
   return (
     <button className="floor-plan-correlate-action" type="button" disabled={!canLink} aria-expanded={showLinkPicker} onClick={onTogglePicker}>
       <Link2 size={16} />
-      Correlacionar maquina
+      Correlacionar máquina
     </button>
   );
 }
@@ -140,7 +140,7 @@ export function InventoryAssetFields({ entity, linkedDevice, inventory, showLink
 export function InventoryLinkPicker({ entity, devices, onLinkObject, onDone }) {
   return (
     <label>
-      Maquina do inventario
+      Máquina do inventário
       <select
         id="floor-plan-inventory-link"
         value=""
@@ -149,7 +149,7 @@ export function InventoryLinkPicker({ entity, devices, onLinkObject, onDone }) {
           onDone();
         }}
       >
-        <option value="">Selecione uma maquina</option>
+        <option value="">Selecione uma máquina</option>
         {devices.map((device) => (
           <option key={device.id} value={device.id}>
             {deviceLabel(device)}
@@ -196,9 +196,9 @@ export function InventoryLinkedFields({ entity, linkedDevice, editor, onChangeSe
         className="secondary-action compact-action floor-plan-open-inventory"
         type="button"
         disabled
-        title="Navegacao direta pelo editor em desenvolvimento"
+        title="Navegação direta pelo editor em desenvolvimento"
       >
-        Ver no inventario
+        Ver no inventário
       </button>
     </>
   );

@@ -2,7 +2,7 @@ export const VISUAL_MAP_LAYER_OPTIONS = [
   { key: "structure", label: "Estrutura" },
   { key: "assets", label: "Ativos" },
   { key: "infrastructure", label: "Infraestrutura" },
-  { key: "electrical", label: "Eletrica" }
+  { key: "electrical", label: "Elétrica" }
 ];
 
 export const QUICK_LAYER_VIEWS = [
@@ -10,29 +10,29 @@ export const QUICK_LAYER_VIEWS = [
   { key: "structure", label: "Estrutura", layers: ["structure"] },
   { key: "assets", label: "Ativos", layers: ["assets"] },
   { key: "infrastructure", label: "Infra", layers: ["infrastructure"] },
-  { key: "electrical", label: "Eletrica", layers: ["electrical"] },
+  { key: "electrical", label: "Elétrica", layers: ["electrical"] },
   { key: "infra-assets", label: "Infra + ativos", layers: ["infrastructure", "assets"] },
-  { key: "electrical-assets", label: "Eletrica + ativos", layers: ["electrical", "assets"] }
+  { key: "electrical-assets", label: "Elétrica + ativos", layers: ["electrical", "assets"] }
 ];
 
 export const INFRASTRUCTURE_PRESETS = [
   { type: "network_point", label: "Ponto de rede", layer: "infrastructure" },
   { type: "network_cable", label: "Cabo", layer: "infrastructure" },
   { type: "backbone", label: "Backbone", layer: "infrastructure" },
-  { type: "technical_rack", label: "Rack tecnico", layer: "infrastructure" },
+  { type: "technical_rack", label: "Rack técnico", layer: "infrastructure" },
   { type: "switch", label: "Switch", layer: "infrastructure" },
   { type: "router", label: "Roteador", layer: "infrastructure" },
   { type: "access_point", label: "Access point", layer: "infrastructure" },
   { type: "patch_panel", label: "Patch panel", layer: "infrastructure" },
-  { type: "ip_camera", label: "Camera IP", layer: "infrastructure" }
+  { type: "ip_camera", label: "Câmera IP", layer: "infrastructure" }
 ];
 
 export const ELECTRICAL_PRESETS = [
-  { type: "power_point", label: "Ponto eletrico", layer: "electrical" },
+  { type: "power_point", label: "Ponto elétrico", layer: "electrical" },
   { type: "outlet", label: "Tomada", layer: "electrical" },
   { type: "power_line", label: "Linha", layer: "electrical" },
   { type: "circuit", label: "Circuito", layer: "electrical" },
-  { type: "electrical_panel", label: "Quadro eletrico", layer: "electrical" },
+  { type: "electrical_panel", label: "Quadro elétrico", layer: "electrical" },
   { type: "ups", label: "Nobreak", layer: "electrical" }
 ];
 
@@ -42,7 +42,7 @@ export const CONNECTION_TYPE_OPTIONS = [
   { type: "uplink", label: "Uplink", layer: "infrastructure" },
   { type: "rack_link", label: "Rack link", layer: "infrastructure" },
   { type: "ap_coverage_link", label: "Cobertura AP", layer: "infrastructure" },
-  { type: "power_line", label: "Linha eletrica", layer: "electrical" },
+  { type: "power_line", label: "Linha elétrica", layer: "electrical" },
   { type: "circuit_line", label: "Circuito", layer: "electrical" },
   { type: "ups_line", label: "Linha nobreak", layer: "electrical" }
 ];
@@ -56,7 +56,7 @@ export function getQuickLayerState(viewKey) {
 }
 
 export function getConnectionTypeLabel(type) {
-  return CONNECTION_TYPE_OPTIONS.find((option) => option.type === type)?.label || type || "Conexao";
+  return CONNECTION_TYPE_OPTIONS.find((option) => option.type === type)?.label || type || "Conexão";
 }
 
 export function getConnectionLayer(type) {

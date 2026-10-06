@@ -36,7 +36,7 @@ export default function AlertHistoryTab({ resolvedAlerts, handledSuggestions }) 
             <small>
               {suggestion.createdServiceOrderId
                 ? `OS criada: ${formatDisplayText(suggestion.createdServiceOrderId)}`
-                : formatDisplayText(suggestion.rejectionReason, "Sem observacao")}
+                : formatDisplayText(suggestion.rejectionReason, "Sem observação")}
             </small>
           </article>
         ))}

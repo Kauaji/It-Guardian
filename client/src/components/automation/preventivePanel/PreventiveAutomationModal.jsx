@@ -54,12 +54,13 @@ export default function PreventiveAutomationModal({ formState, plans, activeScri
         className={`modal-panel preventive-automation-modal ${wizardMode ? "wizard-mode" : ""}`}
         role="dialog"
         aria-modal="true"
+        aria-labelledby="preventive-automation-modal-title"
         onSubmit={submitForm}
       >
         <header>
           <div>
             <span>{wizardMode ? "Etapa 3" : "Automação Preventiva"}</span>
-            <h2>{modalTitle({ reviewMode, wizardMode, form })}</h2>
+            <h2 id="preventive-automation-modal-title">{modalTitle({ reviewMode, wizardMode, form })}</h2>
           </div>
           <button type="button" className="icon-button" onClick={closeModal} aria-label="Fechar">
             <XCircle size={18} />

@@ -1,6 +1,6 @@
 export const FLOOR_PLAN_LAYER_OPTIONS = [
-  { id: "rooms", label: "Comodos" },
-  { id: "areas", label: "Areas" },
+  { id: "rooms", label: "Cômodos" },
+  { id: "areas", label: "Áreas" },
   { id: "objects", label: "Objetos" },
   { id: "network", label: "Rede" },
   { id: "energy", label: "Energia" },

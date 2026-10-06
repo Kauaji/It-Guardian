@@ -144,6 +144,6 @@ estrategia e lista em [`TIPAGEM.md`](TIPAGEM.md). `npm run check:bundle` aplica 
 1. Dividir `AlertCenterV2.jsx` por Sugestoes, Preventivas, Configuracoes e detalhes.
 2. Reduzir `App.jsx` movendo hidratacao de dominios para hooks especificos.
 3. ~~Separar `styles.css` por dominio sem alterar a cascata.~~ Feito: `client/src/styles/*.css`
-   (39 arquivos, ordem em `styles/index.css`); `node scripts/verify-css-split.mjs` prova a equivalencia byte a byte com o arquivo original (prova do corte, nao entra em `npm run check`).
+   (39 arquivos, ordem em `styles/index.css`); `node scripts/verify-css-split.mjs` confere a estrutura (imports, ordem, chaves balanceadas); a equivalencia byte a byte com o arquivo original so vale antes das edicoes de CSS e roda com `--byte-exact` (prova historica do corte, nao entra em `npm run check`).
 4. Converter o bootstrap legado em migracoes historicas versionadas.
 5. Ampliar testes de API e PostgreSQL real na CI.

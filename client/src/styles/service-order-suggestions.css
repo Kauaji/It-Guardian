@@ -102,7 +102,7 @@
 .suggestion-card .suggestion-actions .danger-action.compact-action {
   border-color: color-mix(in srgb, var(--status-danger) 34%, var(--border));
   background: color-mix(in srgb, var(--status-danger) 7%, var(--surface));
-  color: var(--red-700);
+  color: var(--text-danger);
   box-shadow: 0 8px 16px rgba(185, 28, 28, 0.08);
 }
 
@@ -121,7 +121,7 @@
   display: inline-grid;
   place-items: center;
   border-radius: 8px;
-  color: var(--status-danger);
+  color: var(--text-danger);
   background: color-mix(in srgb, var(--status-danger) 8%, var(--surface));
 }
 
@@ -170,7 +170,7 @@
   height: 28px;
   min-height: 28px;
   border-radius: 8px;
-  color: var(--status-danger);
+  color: var(--text-danger);
   background: color-mix(in srgb, var(--status-danger) 8%, var(--surface));
 }
 
@@ -186,7 +186,7 @@
   border: 1px solid color-mix(in srgb, var(--green-600) 34%, var(--border));
   border-radius: 999px;
   background: color-mix(in srgb, var(--green-600) 16%, var(--surface));
-  color: #15803d;
+  color: var(--text-ok);
   box-shadow: 0 8px 18px rgba(21, 128, 61, 0.16);
 }
 
@@ -195,7 +195,7 @@
 .suggestion-validation-indicator.validation_failed {
   border-color: color-mix(in srgb, var(--status-danger) 38%, var(--border));
   background: color-mix(in srgb, var(--status-danger) 14%, var(--surface));
-  color: var(--red-700);
+  color: var(--text-danger);
   box-shadow: 0 8px 18px rgba(185, 28, 28, 0.16);
 }
 
@@ -204,7 +204,7 @@
 .suggestion-validation-indicator.validation_success {
   border-color: color-mix(in srgb, #059669 42%, var(--border));
   background: color-mix(in srgb, #059669 16%, var(--surface));
-  color: #047857;
+  color: var(--text-ok);
 }
 
 .suggestion-validation-indicator.waiting_agent,
@@ -213,13 +213,13 @@
 .suggestion-validation-indicator.pending_validation {
   border-color: color-mix(in srgb, var(--status-info) 36%, var(--border));
   background: color-mix(in srgb, var(--status-info) 12%, var(--surface));
-  color: #1d4ed8;
+  color: var(--text-info);
 }
 
 .suggestion-validation-indicator.insufficient_data {
   border-color: color-mix(in srgb, var(--amber-600) 38%, var(--border));
   background: color-mix(in srgb, var(--status-warning) 16%, var(--surface));
-  color: #92400e;
+  color: var(--text-warn);
 }
 
 .suggestion-validation-indicator.validation_cancelled {
@@ -271,7 +271,7 @@
   border: 1px solid color-mix(in srgb, var(--green-600) 26%, var(--border-soft));
   border-radius: 999px;
   background: color-mix(in srgb, var(--green-600) 13%, var(--surface));
-  color: #15803d;
+  color: var(--text-ok);
   font-size: 0.68rem;
   font-style: normal;
   font-weight: 900;
@@ -319,18 +319,18 @@
 }
 
 .service-order-card .suggestion-script-popover p.suggestion-agent-status.active {
-  color: #047857;
+  color: var(--text-ok);
 }
 
 .service-order-card .suggestion-script-popover p.suggestion-agent-status.inactive {
-  color: var(--status-danger);
+  color: var(--text-danger);
 }
 
 .service-order-card .suggestion-script-popover p.suggestion-job-status {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #1d4ed8;
+  color: var(--text-info);
 }
 
 .suggestion-info-backdrop {

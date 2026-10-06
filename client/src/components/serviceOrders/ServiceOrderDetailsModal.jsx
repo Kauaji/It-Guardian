@@ -705,6 +705,7 @@ export default function ServiceOrderDetailsModal({
             />
             <select
               className="service-order-status-select"
+              aria-label="Situação da OS"
               value={serviceOrder.status}
               disabled={!canChangeStatus}
               onChange={(event) => onStatusChange(serviceOrder, event.target.value)}
@@ -1070,7 +1071,7 @@ export default function ServiceOrderDetailsModal({
                             <span>{item.quantity} x {formatCurrency(item.unitPrice)}</span>
                           </div>
                           <strong>{formatCurrency(item.subtotal)}</strong>
-                          <button type="button" className="icon-button danger" onClick={() => removePartItem(item.id)} title="Remover peca">
+                          <button type="button" className="icon-button danger" onClick={() => removePartItem(item.id)} title="Remover peça">
                             <X size={15} />
                           </button>
                         </article>

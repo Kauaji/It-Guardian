@@ -78,6 +78,7 @@ export default function NetworkTopologyAddClusterPicker({ items, onPick, disable
           type="search"
           className="network-topology-add-asset-input"
           placeholder="Adicionar grupo ou segmento ao mapa..."
+          aria-label="Adicionar grupo ou segmento ao mapa"
           value={query}
           disabled={disabled}
           onFocus={() => setOpen(true)}

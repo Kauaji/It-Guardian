@@ -10,9 +10,9 @@
 //   4. Todo arquivo .css da pasta deve estar importado exatamente uma vez e ter chaves
 //      balanceadas (nenhum bloco ou @media atravessa um corte).
 //
-// Ao editar CSS de proposito depois da divisao, o passo 3 deixa de valer. Atualize
-// ORIGINAL_SHA256/ORIGINAL_BYTES apenas se essa for a intencao, ou remova a verificacao
-// byte a byte e mantenha os passos 1, 2 e 4.
+// Depois que o CSS passou a ser editado de proposito (ex.: correcoes de acessibilidade em
+// tokens e componentes), o passo 3 deixou de valer e so roda com `--byte-exact` (prova historica
+// do corte, contra o commit 99ece40). Sem a flag, valem os passos 1, 2 e 4.
 import crypto from "node:crypto";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -97,32 +97,41 @@ for (const name of imported) {
 }
 
 const joined = Buffer.concat(parts);
-if (joined.length !== ORIGINAL_BYTES) {
-  fail(`tamanho concatenado ${joined.length} != original ${ORIGINAL_BYTES}`);
-}
-if (sha256(joined) !== ORIGINAL_SHA256) {
-  fail(`SHA-256 concatenado ${sha256(joined)} != original ${ORIGINAL_SHA256}`);
-}
-
-// Confirmacao extra contra o git, quando o commit de referencia estiver disponivel.
+const byteExact = process.argv.includes("--byte-exact");
 let gitChecked = false;
-try {
-  const original = execFileSync("git", ["show", `${ORIGINAL_COMMIT}:client/src/styles.css`], {
-    cwd: root,
-    maxBuffer: 64 * 1024 * 1024,
-    stdio: ["ignore", "pipe", "ignore"]
-  });
-  gitChecked = true;
-  if (sha256(original) !== ORIGINAL_SHA256) fail("o hash fixado nao confere com o git");
-  if (!original.equals(joined)) fail(`concatenacao difere de git show ${ORIGINAL_COMMIT}:client/src/styles.css`);
-} catch {
-  // Clone raso ou historico reescrito: o SHA-256 fixado continua sendo a prova.
+
+if (byteExact) {
+  if (joined.length !== ORIGINAL_BYTES) {
+    fail(`tamanho concatenado ${joined.length} != original ${ORIGINAL_BYTES}`);
+  }
+  if (sha256(joined) !== ORIGINAL_SHA256) {
+    fail(`SHA-256 concatenado ${sha256(joined)} != original ${ORIGINAL_SHA256}`);
+  }
+
+  // Confirmacao extra contra o git, quando o commit de referencia estiver disponivel.
+  try {
+    const original = execFileSync("git", ["show", `${ORIGINAL_COMMIT}:client/src/styles.css`], {
+      cwd: root,
+      maxBuffer: 64 * 1024 * 1024,
+      stdio: ["ignore", "pipe", "ignore"]
+    });
+    gitChecked = true;
+    if (sha256(original) !== ORIGINAL_SHA256) fail("o hash fixado nao confere com o git");
+    if (!original.equals(joined)) fail(`concatenacao difere de git show ${ORIGINAL_COMMIT}:client/src/styles.css`);
+  } catch {
+    // Clone raso ou historico reescrito: o SHA-256 fixado continua sendo a prova.
+  }
 }
 
 if (failures.length > 0) {
   console.error("verify-css-split: FALHOU");
   for (const message of failures) console.error(` - ${message}`);
   process.exit(1);
+}
+
+if (!byteExact) {
+  console.log(`verify-css-split: OK (estrutura). ${imported.length} arquivos, ${joined.length} bytes; use --byte-exact para a prova historica do corte.`);
+  process.exit(0);
 }
 
 console.log(

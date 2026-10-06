@@ -169,7 +169,7 @@ body:not(.modal-open):not(.alert-modal-open):not(.machine-details-open) {
 }
 
 .floor-plan-catalog-placement-preview.valid { color: #14805f; }
-.floor-plan-catalog-placement-preview.invalid { color: var(--status-danger); }
+.floor-plan-catalog-placement-preview.invalid { color: var(--text-danger); }
 
 .floor-plan-catalog-placement-preview > circle,
 .floor-plan-catalog-placement-preview > polyline,

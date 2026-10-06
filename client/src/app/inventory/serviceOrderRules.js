@@ -6,7 +6,7 @@ export function getServiceOrderModeError(payload, systemMode) {
   const category = payload?.category?.trim() || "";
   const requesterName = payload?.requesterName?.trim() || "";
 
-  if (title.length < 3) return "Informe um titulo com pelo menos 3 caracteres.";
+  if (title.length < 3) return "Informe um título com pelo menos 3 caracteres.";
 
   if (systemMode === "business") {
     if (!payload?.environmentId) {
@@ -15,7 +15,7 @@ export function getServiceOrderModeError(payload, systemMode) {
     if (!payload?.assetId) return "No modo Business, vincule uma máquina/ativo à OS.";
     if (!requesterName) return "No modo Business, informe o solicitante.";
     if (!category) return "No modo Business, informe a categoria da OS.";
-    if (!description) return "No modo Business, descreva a solicitacao.";
+    if (!description) return "No modo Business, descreva a solicitação.";
   }
 
   if (systemMode !== "business") {

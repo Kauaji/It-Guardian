@@ -60,7 +60,7 @@ describe("useInventoryMoves.handleMoveMachine", () => {
   it("recusa segmento de destino inexistente", async () => {
     const { result, session } = setup();
     expect(await result.current.handleMoveMachine(machine, "nao-existe")).toBe(false);
-    expect(session.notify).toHaveBeenLastCalledWith("Segmento de destino invalido.", "danger");
+    expect(session.notify).toHaveBeenLastCalledWith("Segmento de destino inválido.", "danger");
   });
 
   it("move de forma otimista, confirma no servidor e recarrega os dados", async () => {
@@ -141,7 +141,7 @@ describe("useInventoryMoves.handleMoveMachines", () => {
     expect(session.notify).toHaveBeenLastCalledWith(expect.stringContaining("alocadas temporariamente"), "danger");
     expect(await result.current.handleMoveMachines(["r1"], "system-backup")).toBe(false);
     expect(await result.current.handleMoveMachines(["r1"], "x")).toBe(false);
-    expect(session.notify).toHaveBeenLastCalledWith("Segmento de destino invalido.", "danger");
+    expect(session.notify).toHaveBeenLastCalledWith("Segmento de destino inválido.", "danger");
   });
 
   it("reverte todos os ativos quando alguma gravacao falha", async () => {

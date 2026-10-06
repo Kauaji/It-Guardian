@@ -38,7 +38,7 @@ describe("duplicateRoomInDraft", () => {
     const id = duplicateRoomInDraft({ draft, zone: draft.zones[0], geometry, createId: createIdSequence() });
     expect(id).toBe("zone-1");
     const copy = draft.zones.find((zone) => zone.id === id);
-    expect(copy.name).toBe("Sala copia");
+    expect(copy.name).toBe("Sala cópia");
     expect(copy.geometry).toEqual(geometry);
     const copiedDesk = draft.objects.find((object) => object.metadata?.parentRoomId === id && object.objectType === "desk");
     expect(copiedDesk).toMatchObject({ x: 800, y: 200 });

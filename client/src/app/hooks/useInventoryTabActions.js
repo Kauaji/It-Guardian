@@ -53,7 +53,7 @@ export function useInventoryTabActions({ inventory }) {
       (item) => item.id !== tabId && item.name.trim().toLowerCase() === cleanName.toLowerCase()
     );
     if (duplicate) {
-      notify("Ja existe uma aba com esse nome.", "danger");
+      notify("Já existe uma aba com esse nome.", "danger");
       return;
     }
 
@@ -66,7 +66,7 @@ export function useInventoryTabActions({ inventory }) {
 
   function deleteInventoryTab(tabId) {
     if (inventoryTabs.length <= 1) {
-      notify("Mantenha pelo menos uma aba no inventario.", "danger");
+      notify("Mantenha pelo menos uma aba no inventário.", "danger");
       return;
     }
 
@@ -75,14 +75,14 @@ export function useInventoryTabActions({ inventory }) {
     const remainingTabs = inventoryTabs.filter((item) => item.id !== tabId);
     const fallbackTab = remainingTabs[0] || defaultInventoryTab;
     const confirmed = window.confirm(
-      `Excluir a aba "${tab.name}"? Os dados locais dela serao movidos para "${fallbackTab.name}".`
+      `Excluir a aba "${tab.name}"? Os dados locais dela serão movidos para "${fallbackTab.name}".`
     );
     if (!confirmed) return;
 
     saveInventoryTabs(remainingTabs.map((item, index) => ({ ...item, order: index })));
     saveInventoryTabMeta((current) => reassignTabMeta(current, tabId, fallbackTab.id));
     setActiveInventoryTabId(fallbackTab.id);
-    notify("Aba excluida. Dados movidos para outro ambiente.", "ok");
+    notify("Aba excluída. Dados movidos para outro ambiente.", "ok");
   }
 
   function changeInventoryTabColor(tabId, color) {

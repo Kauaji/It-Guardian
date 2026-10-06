@@ -12,15 +12,15 @@ export default function ServiceOrdersSlaWidget({ data }) {
         <dd>{data.overdueCount}</dd>
       </div>
       <div className={data.nearDueCount > 0 ? "warning" : ""}>
-        <dt>Proximas do prazo</dt>
+        <dt>Próximas do prazo</dt>
         <dd>{data.nearDueCount}</dd>
       </div>
       <div>
-        <dt>Resolucao media</dt>
+        <dt>Resolução média</dt>
         <dd>{data.averageResolutionMinutes != null ? `${formatCount(data.averageResolutionMinutes)} min` : "--"}</dd>
       </div>
       <div>
-        <dt>1a resposta media</dt>
+        <dt>1ª resposta média</dt>
         <dd>{data.averageFirstResponseMinutes != null ? `${formatCount(data.averageFirstResponseMinutes)} min` : "--"}</dd>
       </div>
     </dl>

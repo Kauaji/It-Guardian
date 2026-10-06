@@ -95,7 +95,7 @@ describe("useScriptLogDialog - ações", () => {
 
     await act(async () => hook.result.current.registerSuggestedSolution());
 
-    expect(hook.props.onApplyScriptLogSuggestedSolution).toHaveBeenCalledWith("log-x", { notes: "Solucao sugerida registrada para acompanhamento." });
+    expect(hook.props.onApplyScriptLogSuggestedSolution).toHaveBeenCalledWith("log-x", { notes: "Solução sugerida registrada para acompanhamento." });
   });
 
   it("registra solução própria com as notas ou com o texto padrão e limpa tudo", async () => {
@@ -108,7 +108,7 @@ describe("useScriptLogDialog - ações", () => {
 
     await openLog(hook);
     await act(async () => hook.result.current.registerCustomSolution());
-    expect(hook.props.onApplyScriptLogSuggestedSolution).toHaveBeenLastCalledWith("log-1", { notes: "Solucao propria registrada pelo tecnico." });
+    expect(hook.props.onApplyScriptLogSuggestedSolution).toHaveBeenLastCalledWith("log-1", { notes: "Solução própria registrada pelo técnico." });
   });
 
   it("marca como analisado", async () => {

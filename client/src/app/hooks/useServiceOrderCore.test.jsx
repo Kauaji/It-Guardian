@@ -26,7 +26,7 @@ describe("useServiceOrderCore", () => {
   it("nao cria a OS quando a validacao do modo falha", async () => {
     const { result, session } = setup();
     expect(await result.current.handleCreateServiceOrder({ ...validPayload, title: "ab" })).toBeNull();
-    expect(session.notify).toHaveBeenCalledWith(expect.stringContaining("titulo"), "danger");
+    expect(session.notify).toHaveBeenCalledWith(expect.stringContaining("título"), "danger");
     expect(createServiceOrder).not.toHaveBeenCalled();
   });
 
@@ -102,7 +102,7 @@ describe("useServiceOrderCore", () => {
     });
     expect(event).toEqual({ id: "h1" });
     expect(stores.serviceOrders.get()[0].history.map((item) => item.id)).toEqual(["h1", "h0"]);
-    expect(session.notify).toHaveBeenCalledWith("Registro adicionado ao historico.", "ok");
+    expect(session.notify).toHaveBeenCalledWith("Registro adicionado ao histórico.", "ok");
   });
 
   it("historico de sistema nao notifica sucesso e devolve null em caso de erro", async () => {

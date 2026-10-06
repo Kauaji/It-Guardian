@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { LogOut } from "lucide-react";
+import { useDocumentTitle } from "../../hooks/useDocumentTitle.js";
 import AuthShell from "./AuthShell.jsx";
 import ChangePasswordForm from "./ChangePasswordForm.jsx";
 
@@ -8,6 +9,7 @@ import ChangePasswordForm from "./ChangePasswordForm.jsx";
 // senha ou sair.
 export default function ForcedPasswordChange({ token, user, onChanged, onSignOut }) {
   const titleRef = useRef(null);
+  useDocumentTitle("Trocar senha");
 
   useEffect(() => {
     titleRef.current?.focus();

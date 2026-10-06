@@ -6,7 +6,7 @@ export default function SelectionCheckbox({ checked, onToggle }) {
       type="button"
       className={`selection-checkbox ${checked ? "checked" : ""}`}
       aria-pressed={checked}
-      title={checked ? "Remover da selecao" : "Selecionar equipamento"}
+      title={checked ? "Remover da seleção" : "Selecionar equipamento"}
       onClick={(event) => {
         event.stopPropagation();
         onToggle();

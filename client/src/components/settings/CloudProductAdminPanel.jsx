@@ -37,9 +37,9 @@ const integrationNames = {
 };
 
 function formatDateTime(value) {
-  if (!value) return "Nao informado";
+  if (!value) return "Não informado";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Nao informado";
+  if (Number.isNaN(date.getTime())) return "Não informado";
   return date.toLocaleString("pt-BR", {
     dateStyle: "short",
     timeStyle: "short"
@@ -48,7 +48,7 @@ function formatDateTime(value) {
 
 function integrationStateLabel(integration) {
   if (integration.loading) return "Carregando";
-  if (integration.error) return "Indisponivel";
+  if (integration.error) return "Indisponível";
   if (!integration.configuration?.enabled || integration.configuration?.mode === "disabled") {
     return "Desativada";
   }
@@ -99,7 +99,7 @@ export default function CloudProductAdminPanel({ token, notify }) {
         const result = results[index];
         next[source] = result.status === "fulfilled"
           ? { ...result.value, loading: false, error: "" }
-          : { loading: false, error: result.reason?.message || "Falha ao consultar integracao." };
+          : { loading: false, error: result.reason?.message || "Falha ao consultar integração." };
       });
       return next;
     });
@@ -162,7 +162,7 @@ export default function CloudProductAdminPanel({ token, notify }) {
   async function submitProductKey(event) {
     event.preventDefault();
     if (!form.displayName.trim() || !form.organizationName.trim()) {
-      showMessage("Informe o nome da chave e a organizacao.", "danger");
+      showMessage("Informe o nome da chave e a organização.", "danger");
       return;
     }
 
@@ -194,7 +194,7 @@ export default function CloudProductAdminPanel({ token, notify }) {
       await navigator.clipboard.writeText(createdKey.value);
       showMessage("Chave copiada. Guarde-a em um local seguro.");
     } catch {
-      showMessage("Nao foi possivel copiar automaticamente. Selecione a chave exibida.", "danger");
+      showMessage("Não foi possível copiar automaticamente. Selecione a chave exibida.", "danger");
     }
   }
 
@@ -248,7 +248,7 @@ export default function CloudProductAdminPanel({ token, notify }) {
         response.skipped
           ? `${integrationNames[source]} esta desativado.`
           : action === "test"
-            ? `Conexao com ${integrationNames[source]} validada.`
+            ? `Conexão com ${integrationNames[source]} validada.`
             : `${integrationNames[source]} sincronizado.`
       );
       await loadIntegrations();
@@ -265,7 +265,7 @@ export default function CloudProductAdminPanel({ token, notify }) {
       <header className="cloud-admin-heading">
         <div>
           <strong>Cloud e coletores</strong>
-          <span>Licenciamento, computadores ativados e fontes opcionais de inventario.</span>
+          <span>Licenciamento, computadores ativados e fontes opcionais de inventário.</span>
         </div>
         {installerUrl ? (
           <a
@@ -284,7 +284,7 @@ export default function CloudProductAdminPanel({ token, notify }) {
             title="Defina VITE_COLLECTOR_INSTALLER_URL no build do frontend."
           >
             <Download size={16} />
-            Instalador indisponivel
+            Instalador indisponível
           </button>
         )}
       </header>
@@ -297,7 +297,7 @@ export default function CloudProductAdminPanel({ token, notify }) {
           </div>
           <div className="admin-form-grid">
             <label>
-              Nome de exibicao
+              Nome de exibição
               <input
                 value={form.displayName}
                 maxLength={120}
@@ -369,11 +369,11 @@ export default function CloudProductAdminPanel({ token, notify }) {
         <section className={`cloud-key-reveal${createdKey ? " visible" : ""}`}>
           <ShieldCheck size={21} />
           <div>
-            <strong>{createdKey ? "Chave criada" : "Exibicao unica"}</strong>
+            <strong>{createdKey ? "Chave criada" : "Exibição única"}</strong>
             <span>
               {createdKey
                 ? createdKey.warning
-                : "A chave completa aparece aqui uma unica vez e nunca e armazenada em texto puro."}
+                : "A chave completa aparece aqui uma única vez e nunca é armazenada em texto puro."}
             </span>
           </div>
           {createdKey && (
@@ -481,11 +481,11 @@ export default function CloudProductAdminPanel({ token, notify }) {
                   <strong>{item.alias || item.hostname}</strong>
                   <small>
                     {item.alias ? `${item.hostname} - ` : ""}
-                    coletor {item.collectorVersion || "sem versao"}
+                    coletor {item.collectorVersion || "sem versão"}
                   </small>
                 </div>
                 <small>Primeira ativacao: {formatDateTime(item.firstSeenAt)}</small>
-                <small>Ultimo contato: {formatDateTime(item.lastSeenAt)}</small>
+                <small>Último contato: {formatDateTime(item.lastSeenAt)}</small>
                 <button
                   type="button"
                   className="danger-action compact-action"
@@ -508,7 +508,7 @@ export default function CloudProductAdminPanel({ token, notify }) {
         <div className="cloud-admin-section-title">
           <div>
             <PlugZap size={18} />
-            <strong>Integracoes opcionais</strong>
+            <strong>Integrações opcionais</strong>
           </div>
           <span>Somente leitura</span>
         </div>
@@ -533,7 +533,7 @@ export default function CloudProductAdminPanel({ token, notify }) {
                     <dd>{integration.configuration?.mode || "indisponivel"}</dd>
                   </div>
                   <div>
-                    <dt>Ultimo sucesso</dt>
+                    <dt>Último sucesso</dt>
                     <dd>{formatDateTime(integration.state?.lastSyncAt)}</dd>
                   </div>
                   <div>

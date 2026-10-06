@@ -217,7 +217,7 @@ describe("useMaintenanceScriptActions", () => {
     expect(session.notify.mock.calls.map((call) => call[0])).toEqual([
       "Registro criado. Nenhum comando foi executado.",
       "Log marcado como revisado.",
-      "Acao corretiva registrada. Nenhum comando foi executado.",
+      "Ação corretiva registrada. Nenhum comando foi executado.",
       "Observação cancelada."
     ]);
   });
@@ -239,7 +239,7 @@ describe("useMaintenanceScriptActions", () => {
       await disabled.result.current.handleUseSuggestionScript("sg1", "sc1", {});
     });
     expect(api.useSuggestionScript).not.toHaveBeenCalled();
-    expect(disabled.session.notify).toHaveBeenCalledWith(expect.stringContaining("Execucao remota desabilitada"), "warning");
+    expect(disabled.session.notify).toHaveBeenCalledWith(expect.stringContaining("Execução remota desabilitada"), "warning");
 
     const enabled = setup(() => useMaintenanceScriptActions());
     await act(async () => {

@@ -318,12 +318,12 @@ body.is-inventory-dragging .segment-group-section.group-drop-over {
 
 .status-dot.offline,
 .status-dot.error {
-  color: var(--status-danger);
+  color: var(--text-danger);
   background: #ffd7d7;
 }
 
 .status-dot.unknown {
-  color: #b45309;
+  color: var(--text-warn);
   background: #ffedbd;
 }
 

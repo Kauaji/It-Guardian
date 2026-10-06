@@ -138,7 +138,7 @@
 }
 
 .dashboard-widget-menu-panel button.danger {
-  color: var(--status-danger);
+  color: var(--text-danger);
 }
 
 .dashboard-widget-size-picker {
@@ -184,7 +184,7 @@
   padding: 12px;
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--status-danger) 8%, var(--surface));
-  color: var(--status-danger);
+  color: var(--text-danger);
   font-size: 13px;
 }
 
@@ -232,11 +232,11 @@
 }
 
 .dashboard-widget-stat-grid > div.warning dd {
-  color: var(--status-warning);
+  color: var(--text-warn);
 }
 
 .dashboard-widget-stat-grid > div.danger dd {
-  color: var(--status-danger);
+  color: var(--text-danger);
 }
 
 .dashboard-widget-status-overview {

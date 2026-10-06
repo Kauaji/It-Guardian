@@ -225,14 +225,14 @@ export default function InventoryBoard({
         setActivePopoverId={setActivePopoverId}
       />
 
-      <div className="inventory-view-switch" role="tablist" aria-label="Visualizacao do inventario">
+      <div className="inventory-view-switch" role="group" aria-label="Visualização do inventário">
         <button
           type="button"
           className={inventoryViewMode === "board" ? "active" : ""}
           onClick={() => setInventoryViewMode("board")}
-          aria-selected={inventoryViewMode === "board"}
+          aria-pressed={inventoryViewMode === "board"}
         >
-          <Database size={16} />
+          <Database size={16} aria-hidden="true" />
           Quadro
         </button>
         {floorPlansView && (
@@ -240,7 +240,7 @@ export default function InventoryBoard({
             type="button"
             className={inventoryViewMode === "floor-plans" ? "active" : ""}
             onClick={() => setInventoryViewMode("floor-plans")}
-            aria-selected={inventoryViewMode === "floor-plans"}
+            aria-pressed={inventoryViewMode === "floor-plans"}
           >
             <MapIcon size={16} />
             Plantas
@@ -251,7 +251,7 @@ export default function InventoryBoard({
             type="button"
             className={inventoryViewMode === "topology" ? "active" : ""}
             onClick={() => setInventoryViewMode("topology")}
-            aria-selected={inventoryViewMode === "topology"}
+            aria-pressed={inventoryViewMode === "topology"}
           >
             <Network size={16} />
             Mapa de Rede
@@ -272,7 +272,8 @@ export default function InventoryBoard({
               onChange={(event) => setSearch(event.target.value)}
               onFocus={() => setSearchFocused(true)}
               onBlur={() => setSearchFocused(false)}
-              placeholder="Buscar maquina, IP, sistema ou segmento"
+              placeholder="Buscar máquina, IP, sistema ou segmento"
+              aria-label="Buscar máquina, IP, sistema ou segmento"
             />
           </div>
           <button
@@ -382,7 +383,7 @@ export default function InventoryBoard({
         isDragActive={isBulkSelectionDragging}
       />
 
-      <section className="segment-stack" aria-label="Segmentos de inventario">
+      <section className="segment-stack" aria-label="Segmentos de inventário">
         {groupedSections.map((group, groupIndex) => (
           <SegmentGroupContainer key={group.id} groupId={group.id} color={group.color || activeTab?.color}>
             <header>
@@ -525,7 +526,7 @@ export default function InventoryBoard({
               )) : (
                 <div className="segment-group-empty">
                   <strong>Grupo vazio</strong>
-                  <span>Use o seletor "Sem grupo" no cabecalho de um segmento para mover ele para ca.</span>
+                  <span>Use o seletor "Sem grupo" no cabeçalho de um segmento para mover ele para cá.</span>
                 </div>
               )
             )}

@@ -83,6 +83,7 @@ export default function ServiceOrderChecklistTab({ serviceOrderId, token, notify
             <textarea
               className="service-order-checklist-item-notes"
               placeholder="Observação (opcional)"
+              aria-label={`Observação do item ${item.label || ""}`.trim()}
               defaultValue={item.notes || ""}
               disabled={!canManage}
               onBlur={(event) => {

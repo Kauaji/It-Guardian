@@ -145,7 +145,7 @@ describe("AlertHistoryTab", () => {
     expect(within(cards[1]).getByText(/AVISO-2026-0001 · /)).toBeInTheDocument();
     expect(within(cards[2]).getByText("Recusada")).toHaveClass("danger");
     expect(within(cards[2]).getByText("Falso positivo")).toBeInTheDocument();
-    expect(within(cards[3]).getByText("Sem observacao")).toBeInTheDocument();
+    expect(within(cards[3]).getByText("Sem observação")).toBeInTheDocument();
   });
 
   it("mostra a mensagem de histórico vazio", () => {

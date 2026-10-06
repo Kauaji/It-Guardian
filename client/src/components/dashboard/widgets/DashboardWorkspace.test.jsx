@@ -36,7 +36,7 @@ function widget(overrides = {}) {
 function baseCatalog() {
   return [
     { type: "asset_availability", label: "Disponibilidade de Ativos", category: "assets", defaultSize: { w: "m", h: "s" } },
-    { type: "recent_events", label: "Ultimos Eventos Tecnicos", category: "events", defaultSize: { w: "l", h: "m" } }
+    { type: "recent_events", label: "Últimos Eventos Técnicos", category: "events", defaultSize: { w: "l", h: "m" } }
   ];
 }
 
@@ -90,11 +90,11 @@ describe("DashboardWorkspace", () => {
     fireEvent.click(screen.getByText("Editar dashboard"));
     fireEvent.click(screen.getByText("Adicionar widget"));
 
-    await waitFor(() => expect(screen.getAllByText("Ultimos Eventos Tecnicos").length).toBeGreaterThan(0));
-    fireEvent.click(screen.getByRole("button", { name: "Adicionar Ultimos Eventos Tecnicos" }));
+    await waitFor(() => expect(screen.getAllByText("Últimos Eventos Técnicos").length).toBeGreaterThan(0));
+    fireEvent.click(screen.getByRole("button", { name: "Adicionar Últimos Eventos Técnicos" }));
 
     await waitFor(() => {
-      const titles = screen.getAllByText("Ultimos Eventos Tecnicos");
+      const titles = screen.getAllByText("Últimos Eventos Técnicos");
       expect(titles.some((node) => node.tagName === "H4")).toBe(true);
     });
     expect(saveDashboardLayout).not.toHaveBeenCalled();
@@ -108,7 +108,7 @@ describe("DashboardWorkspace", () => {
     await waitFor(() => expect(screen.getByText("Disponibilidade de Ativos")).toBeTruthy());
 
     fireEvent.click(screen.getByText("Editar dashboard"));
-    const menuButtons = screen.getAllByTitle("Opcoes do widget");
+    const menuButtons = screen.getAllByTitle("Opções do widget");
     fireEvent.click(menuButtons[0]);
     fireEvent.click(screen.getByText("Remover"));
 
@@ -123,7 +123,7 @@ describe("DashboardWorkspace", () => {
     await waitFor(() => expect(screen.getByText("Disponibilidade de Ativos")).toBeTruthy());
 
     fireEvent.click(screen.getByText("Editar dashboard"));
-    const menuButtons = screen.getAllByTitle("Opcoes do widget");
+    const menuButtons = screen.getAllByTitle("Opções do widget");
     fireEvent.click(menuButtons[0]);
     fireEvent.click(screen.getByText("Remover"));
     await waitFor(() => expect(screen.queryByText("Disponibilidade de Ativos")).toBeNull());
@@ -174,7 +174,7 @@ describe("DashboardWorkspace", () => {
     await waitFor(() => expect(screen.getByText("Disponibilidade de Ativos")).toBeTruthy());
 
     fireEvent.click(screen.getByText("Editar dashboard"));
-    fireEvent.click(screen.getAllByTitle("Opcoes do widget")[0]);
+    fireEvent.click(screen.getAllByTitle("Opções do widget")[0]);
 
     const card = container.querySelector(".dashboard-widget-card");
     const widthPicker = within(card).getByText("Largura").closest("fieldset");

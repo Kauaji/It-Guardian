@@ -25,7 +25,7 @@ export function useBackupActions({ data, deviceState, inventory }) {
         ...getBackupOrigin(machine)
       });
       deviceState.upsertDeviceInState(response.device);
-      notify(nextIsBackup ? `${machine.name} marcada como Backup.` : `${machine.name} removida da area de Backup.`, "ok");
+      notify(nextIsBackup ? `${machine.name} marcada como Backup.` : `${machine.name} removida da área de Backup.`, "ok");
       await loadData(true);
       return true;
     } catch (error) {

@@ -418,12 +418,12 @@
 }
 
 .network-topology-toolbar-button.is-danger {
-  color: var(--status-danger);
+  color: var(--text-danger);
 }
 
 .network-topology-toolbar-button.is-danger:hover:not(:disabled) {
   border-color: var(--status-danger);
-  color: var(--status-danger);
+  color: var(--text-danger);
 }
 
 .network-topology-toolbar-button:disabled {
@@ -706,12 +706,12 @@
 
 .network-topology-node-badge.is-critical {
   right: -4px;
-  color: var(--status-danger);
+  color: var(--text-danger);
 }
 
 .network-topology-node-badge.is-maintenance {
   left: -4px;
-  color: var(--status-warning);
+  color: var(--text-warn);
 }
 
 .network-topology-node-body {

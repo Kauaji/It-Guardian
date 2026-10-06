@@ -32,7 +32,7 @@ export function buildPc(overrides = {}) {
     floorId: "floor-1",
     objectType: "pc",
     category: "asset",
-    label: "Estacao",
+    label: "Estação",
     x: 240,
     y: 210,
     width: 60,
@@ -47,7 +47,7 @@ export function buildPc(overrides = {}) {
 export function buildEditor({ objects = [buildDesk(), buildPc()], ...overrides } = {}) {
   return normalizeEditorData({
     plan: { id: "plan-1", width: 1280, height: 820, gridSize: 25, snapSize: 25 },
-    floors: [{ id: "floor-1", name: "Terreo", width: 1280, height: 820 }],
+    floors: [{ id: "floor-1", name: "Térreo", width: 1280, height: 820 }],
     zones: [{
       id: "room-1",
       floorId: "floor-1",

@@ -38,7 +38,7 @@ export default function AssetPublicView({ assetId }) {
     return (
       <main className="asset-public-page">
         <section className="asset-public-card">
-          <h1>Ativo nao encontrado</h1>
+          <h1>Ativo não encontrado</h1>
           <p>{error}</p>
         </section>
       </main>
@@ -49,7 +49,7 @@ export default function AssetPublicView({ assetId }) {
     return (
       <main className="asset-public-page">
         <section className="asset-public-card">
-          <h1>Carregando ficha tecnica...</h1>
+          <h1>Carregando ficha técnica...</h1>
         </section>
       </main>
     );
@@ -64,7 +64,7 @@ export default function AssetPublicView({ assetId }) {
         <header>
           <QrCode size={24} />
           <div>
-            <span>Ficha tecnica IT Guardian</span>
+            <span>Ficha técnica IT Guardian</span>
             <h1>{machine.name}</h1>
             <p>{machine.ip} - {machine.statusLabel} - {assetTypeLabel(machine.assetType)}</p>
           </div>
@@ -74,7 +74,7 @@ export default function AssetPublicView({ assetId }) {
           {isManualAsset ? (
             <>
               <article><AssetTypeIcon type={machine.assetType} size={16} />Tipo <strong>{assetTypeLabel(machine.assetType)}</strong></article>
-              <article><Clock3 size={16} />Ultimo ping <strong>{formatDate(machine.lastPingAt)}</strong></article>
+              <article><Clock3 size={16} />Último ping <strong>{formatDate(machine.lastPingAt)}</strong></article>
               <article><Network size={16} />Status <strong>{machine.statusLabel}</strong></article>
               <article><HardDrive size={16} />Patrimônio <strong>{hardware.assetTag}</strong></article>
             </>
@@ -96,12 +96,12 @@ export default function AssetPublicView({ assetId }) {
           <DetailItem label="Patrimônio" value={hardware.assetTag} />
           <DetailItem label="MAC Address" value={hardware.macAddress} />
           <DetailItem label="Hostname" value={machine.manualAsset?.hostname} />
-          <DetailItem label="Localizacao" value={machine.manualAsset?.location} />
+          <DetailItem label="Localização" value={machine.manualAsset?.location} />
         </div>
 
         {!isManualAsset && (
           <section className="asset-public-section">
-            <h2>Perifericos</h2>
+            <h2>Periféricos</h2>
             <ul className="peripheral-list">
               {(hardware.peripherals || []).map((peripheral) => (
                 <PeripheralItem key={peripheral.id} peripheral={peripheral} />

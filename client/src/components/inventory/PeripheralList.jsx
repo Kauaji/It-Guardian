@@ -57,7 +57,7 @@ export default function PeripheralList({
   return (
     <section className="peripheral-panel" style={{ "--machine-segment-color": segmentColor || "#1f7a61" }}>
       <header>
-        <span>Perifericos</span>
+        <span>Periféricos</span>
         <strong>{items.length}</strong>
       </header>
 
@@ -77,11 +77,11 @@ export default function PeripheralList({
             }}
           />
         ))}
-        {!items.length && <li className="peripheral-empty">Nenhum periferico vinculado.</li>}
+        {!items.length && <li className="peripheral-empty">Nenhum periférico vinculado.</li>}
       </ul>
 
       {allowAdd && <form className="peripheral-add-form" onSubmit={addPeripheral}>
-        <select value={draft.type} onChange={(event) => setDraft({ ...draft, type: event.target.value })}>
+        <select aria-label="Tipo de periférico" value={draft.type} onChange={(event) => setDraft({ ...draft, type: event.target.value })}>
           {peripheralTypes.map((type) => <option key={type} value={type}>{type}</option>)}
         </select>
         {draft.type === "Outro" && (
@@ -89,19 +89,22 @@ export default function PeripheralList({
             value={draft.customType}
             onChange={(event) => setDraft({ ...draft, customType: event.target.value })}
             placeholder="Tipo"
+            aria-label="Tipo personalizado"
           />
         )}
         <input
           value={draft.brand}
           onChange={(event) => setDraft({ ...draft, brand: event.target.value })}
           placeholder="Marca"
+          aria-label="Marca"
         />
         <input
           value={draft.assetTag}
           onChange={(event) => setDraft({ ...draft, assetTag: event.target.value })}
           placeholder="Patrimônio"
+          aria-label="Patrimônio"
         />
-        <button type="submit" title="Adicionar periferico">
+        <button type="submit" title="Adicionar periférico">
           <Plus size={14} />
         </button>
       </form>}

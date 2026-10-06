@@ -25,7 +25,7 @@ function HealthGauge({ score, tone }) {
       height={GAUGE_SIZE}
       viewBox={`0 0 ${GAUGE_SIZE} ${GAUGE_SIZE}`}
       role="img"
-      aria-label={`Nota de saude: ${score} de 100`}
+      aria-label={`Nota de saúde: ${score} de 100`}
     >
       <circle
         cx={GAUGE_SIZE / 2}
@@ -69,10 +69,10 @@ export default function DashboardHealthScore({ health, loading }) {
     return (
       <section className="panel dashboard-health-card">
         <div className="panel-heading">
-          <h3>Saude da infraestrutura</h3>
+          <h3>Saúde da infraestrutura</h3>
           <HeartPulse size={18} />
         </div>
-        <p className="dashboard-empty-state">Dados insuficientes para calcular a saude agora.</p>
+        <p className="dashboard-empty-state">Dados insuficientes para calcular a saúde agora.</p>
       </section>
     );
   }
@@ -82,7 +82,7 @@ export default function DashboardHealthScore({ health, loading }) {
   return (
     <section className={`panel dashboard-health-card tone-${tone}`}>
       <div className="panel-heading">
-        <h3>Saude da infraestrutura</h3>
+        <h3>Saúde da infraestrutura</h3>
         <HeartPulse size={18} />
       </div>
       <div className="dashboard-health-score-row">
@@ -93,7 +93,7 @@ export default function DashboardHealthScore({ health, loading }) {
         </div>
       </div>
       <p className="dashboard-health-caption">
-        Calculada a partir de ativos, alertas e ordens de servico reais: comeca em 100 pontos e perde pontos por
+        Calculada a partir de ativos, alertas e ordens de serviço reais: começa em 100 pontos e perde pontos por
         problema real encontrado.
       </p>
       {health.deductions.length > 0 ? (
@@ -106,7 +106,7 @@ export default function DashboardHealthScore({ health, loading }) {
           ))}
         </ul>
       ) : (
-        <p className="dashboard-empty-state">Nenhum fator de reducao identificado no momento.</p>
+        <p className="dashboard-empty-state">Nenhum fator de redução identificado no momento.</p>
       )}
     </section>
   );

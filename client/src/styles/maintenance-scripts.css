@@ -165,7 +165,7 @@
 
 .script-variable-list.error strong,
 .script-variable-list.error p {
-  color: var(--red-700);
+  color: var(--text-danger);
 }
 
 .script-form-actions,
@@ -319,21 +319,31 @@
 }
 
 .summary-card.ok svg,
-.pill.ok,
 .bar span.ok {
   color: var(--accent);
 }
 
 .summary-card.danger svg,
-.pill.danger,
 .bar span.danger {
-  color: var(--red-500);
+  color: var(--text-danger);
 }
 
 .summary-card.warning svg,
-.pill.warning,
 .bar span.warning {
   color: #d6a21f;
+}
+
+/* Texto das pilulas de estado usa os tokens de texto (>= 4.5:1 sobre o fundo da pilula). */
+.pill.ok {
+  color: var(--text-ok);
+}
+
+.pill.danger {
+  color: var(--text-danger);
+}
+
+.pill.warning {
+  color: var(--text-warn);
 }
 
 .toolbar {

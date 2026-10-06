@@ -9,7 +9,7 @@ export default function MetricGaugeWidget({ data, config }) {
     return <p className="dashboard-empty-state">Configure um ativo para este widget.</p>;
   }
   if (!data.available) {
-    return <p className="dashboard-empty-state">Ativo nao encontrado ou sem dado recente.</p>;
+    return <p className="dashboard-empty-state">Ativo não encontrado ou sem dado recente.</p>;
   }
 
   const tone = Number.isFinite(data.value) ? toneByMetricClass[metricClass(data.value)] : "ok";

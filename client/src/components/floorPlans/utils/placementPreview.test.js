@@ -36,7 +36,7 @@ describe("buildCatalogPlacementPreview", () => {
   });
 
   it("aceita objeto dentro do comodo e sem colisao", () => {
-    const item = { id: "cabinet", objectType: "cabinet", category: "furniture", width: 60, height: 40, label: "Armario" };
+    const item = { id: "cabinet", objectType: "cabinet", category: "furniture", width: 60, height: 40, label: "Armário" };
     const preview = buildCatalogPlacementPreview({ editor, floor, item, point: { x: 500, y: 420 } });
     expect(preview.type).toBe("object");
     expect(preview.valid).toBe(true);
@@ -45,11 +45,11 @@ describe("buildCatalogPlacementPreview", () => {
   });
 
   it("rejeita objeto fora do pavimento, fora do comodo ou colidindo", () => {
-    const item = { id: "cabinet", objectType: "cabinet", category: "furniture", width: 60, height: 40, label: "Armario" };
+    const item = { id: "cabinet", objectType: "cabinet", category: "furniture", width: 60, height: 40, label: "Armário" };
     const outsideFloor = buildCatalogPlacementPreview({ editor, floor, item, point: { x: -50, y: 300 } });
     expect(outsideFloor.reason).toBe("Fora dos limites da planta");
     const outsideRoom = buildCatalogPlacementPreview({ editor, floor, item, point: { x: 900, y: 300 } });
-    expect(outsideRoom.reason).toBe("Posicione o item inteiramente dentro de um comodo");
+    expect(outsideRoom.reason).toBe("Posicione o item inteiramente dentro de um cômodo");
     const colliding = buildCatalogPlacementPreview({ editor, floor, item, point: { x: 280, y: 240 } });
     expect(colliding).toMatchObject({ valid: false, reason: "Este item colide com outro objeto" });
   });
@@ -65,7 +65,7 @@ describe("buildCatalogPlacementPreview", () => {
 
   it("permite colocar objetos em planta sem comodos apenas respeitando os limites", () => {
     const bare = buildEditor({ zones: [], objects: [buildPc({ x: 10, y: 10 })] });
-    const item = { id: "cabinet", objectType: "cabinet", category: "furniture", width: 60, height: 40, label: "Armario" };
+    const item = { id: "cabinet", objectType: "cabinet", category: "furniture", width: 60, height: 40, label: "Armário" };
     const preview = buildCatalogPlacementPreview({ editor: bare, floor, item, point: { x: 600, y: 500 } });
     expect(preview.valid).toBe(true);
   });

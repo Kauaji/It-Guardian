@@ -92,7 +92,7 @@ describe("PreventiveAutomationPanel - lista de planos (variante isolada)", () =>
     expect(audit).toHaveClass("inactive");
     expect(within(audit).getByText("Inativo")).toBeInTheDocument();
     expect(within(audit).getByText("Sem descrição informada")).toBeInTheDocument();
-    expect(within(audit).getByText("Maquinas selecionadas: 2 maquina(s)")).toBeInTheDocument();
+    expect(within(audit).getByText("Máquinas selecionadas: 2 máquina(s)")).toBeInTheDocument();
     expect(within(audit).getByText("Sem exceções")).toBeInTheDocument();
     expect(within(audit).getByText("Não informado")).toBeInTheDocument();
 
@@ -294,7 +294,7 @@ describe("PreventiveAutomationPanel - formulário", () => {
     fireEvent.change(within(dialog).getByLabelText("Escopo"), { target: { value: "group" } });
     expect(within(within(dialog).getByLabelText("Alvo")).getByRole("option", { name: "Matriz" })).toBeInTheDocument();
     expect(within(dialog).getByLabelText("Alvo")).toHaveValue("");
-    expect(within(dialog).queryByRole("option", { name: "Maquinas selecionadas" })).toBeNull();
+    expect(within(dialog).queryByRole("option", { name: "Máquinas selecionadas" })).toBeNull();
   });
 
   it("adiciona e remove recorrências personalizadas", async () => {
@@ -372,9 +372,9 @@ describe("PreventiveAutomationPanel - variante embutida e assistente", () => {
     expect(within(dialog).getByText("Plano atual").nextElementSibling).toHaveTextContent("Rotina semanal");
     expect(within(dialog).getByText("Máquinas herdadas").nextElementSibling).toHaveTextContent("2");
     expect(within(dialog).getByText("Verificações herdadas").nextElementSibling).toHaveTextContent("1");
-    expect(within(dialog).getByText("Maquinas selecionadas", { selector: "strong" })).toBeInTheDocument();
-    expect(within(dialog).getByText("2 maquina(s) herdada(s) da preventiva.")).toBeInTheDocument();
-    expect(within(dialog).getByRole("option", { name: "Maquinas selecionadas" })).toBeInTheDocument();
+    expect(within(dialog).getByText("Máquinas selecionadas", { selector: "strong" })).toBeInTheDocument();
+    expect(within(dialog).getByText("2 máquina(s) herdada(s) da preventiva.")).toBeInTheDocument();
+    expect(within(dialog).getByRole("option", { name: "Máquinas selecionadas" })).toBeInTheDocument();
     expect(onCreateRequestHandled).toHaveBeenCalledWith(101);
   });
 

@@ -10,10 +10,10 @@ export default function MoveMachineModal({ machine, segments, targetSegmentId, o
 
   return (
     <div className="modal-backdrop" role="presentation">
-      <section ref={dialogRef} className="modal-panel" role="dialog" aria-modal="true" aria-label="Mover maquina">
+      <section ref={dialogRef} className="modal-panel" role="dialog" aria-modal="true" aria-label="Mover máquina">
         <header>
           <div>
-            <h2>Mover maquina</h2>
+            <h2>Mover máquina</h2>
             <p>{machine.name} - {machine.ip}</p>
           </div>
           <button className="icon-button" onClick={onClose} title="Fechar">

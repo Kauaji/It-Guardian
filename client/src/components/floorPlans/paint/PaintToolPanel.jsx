@@ -6,7 +6,7 @@ function PaintModeSwitch({ mode, onChange }) {
   return (
     <div className="segmented-control compact floor-plan-paint-modes">
       <button className={mode === "brush" ? "active" : ""} type="button" onClick={() => onChange({ mode: "brush" })} title="Pincel"><Paintbrush size={16} /></button>
-      <button className={mode === "bucket" ? "active" : ""} type="button" onClick={() => onChange({ mode: "bucket" })} title="Completar comodo"><PaintBucket size={16} /></button>
+      <button className={mode === "bucket" ? "active" : ""} type="button" onClick={() => onChange({ mode: "bucket" })} title="Completar cômodo"><PaintBucket size={16} /></button>
       <button className={mode === "eraser" ? "active" : ""} type="button" onClick={() => onChange({ mode: "eraser" })} title="Borracha"><Eraser size={16} /></button>
     </div>
   );
@@ -51,7 +51,7 @@ function SegmentFields({ draft, groupAreas, segments, onChange }) {
   return (
     <>
       <label>
-        Area de grupo
+        Área de grupo
         <select value={draft.parentAreaId || ""} onChange={(event) => onChange({ parentAreaId: event.target.value, cells: [] })}>
           {groupAreas.map((area) => <option key={area.id} value={area.id}>{area.name}</option>)}
         </select>
@@ -78,7 +78,7 @@ export default function PaintToolPanel({ draft, groups, segments, groupAreas, on
         <Paintbrush size={18} />
         <div>
           <strong>{isSegment ? "Demarcar segmento" : "Demarcar grupo"}</strong>
-          <span>{draft.cells.length} bloco(s) na demarcacao temporaria</span>
+          <span>{draft.cells.length} bloco(s) na demarcação temporária</span>
         </div>
       </div>
       <PaintModeSwitch mode={draft.mode} onChange={onChange} />
@@ -100,10 +100,10 @@ export default function PaintToolPanel({ draft, groups, segments, groupAreas, on
         </label>
       )}
       <div className="floor-plan-paint-actions">
-        <button className="icon-button primary-action" type="button" onClick={onConfirm} title="Confirmar area" aria-label="Confirmar area">
+        <button className="icon-button primary-action" type="button" onClick={onConfirm} title="Confirmar área" aria-label="Confirmar área">
           <Check size={18} />
         </button>
-        <button className="icon-button secondary-action" type="button" onClick={onCancel} title="Cancelar area" aria-label="Cancelar area">
+        <button className="icon-button secondary-action" type="button" onClick={onCancel} title="Cancelar área" aria-label="Cancelar área">
           <X size={18} />
         </button>
       </div>

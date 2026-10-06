@@ -28,8 +28,8 @@ function DimensionsBadge({ floor, isEditing, onExpand }) {
       <span>{Math.round(floor?.width || DEFAULT_PLAN_SIZE.width)} x {Math.round(floor?.height || DEFAULT_PLAN_SIZE.height)}</span>
       {isEditing ? (
         <span className="floor-plan-canvas-expand-actions">
-          <ExpandButton axis="width" label="Aumentar largura da area" letter="L" onExpand={onExpand} />
-          <ExpandButton axis="height" label="Aumentar altura da area" letter="A" onExpand={onExpand} />
+          <ExpandButton axis="width" label="Aumentar largura da área" letter="L" onExpand={onExpand} />
+          <ExpandButton axis="height" label="Aumentar altura da área" letter="A" onExpand={onExpand} />
         </span>
       ) : null}
     </span>

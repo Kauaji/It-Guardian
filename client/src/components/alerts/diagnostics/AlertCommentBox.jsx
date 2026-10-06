@@ -6,6 +6,7 @@ export default function AlertCommentBox({ value, onChange, onSubmit }) {
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder="Adicionar comentário interno"
+        aria-label="Comentário interno"
       />
       <button type="button" className="secondary-action compact-action" onClick={onSubmit}>
         Comentar

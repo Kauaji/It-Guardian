@@ -45,11 +45,11 @@ export default function SegmentFormModal({
 
   return (
     <div className="modal-backdrop" role="presentation">
-      <form ref={dialogRef} className="modal-panel segment-form-modal" role="dialog" aria-modal="true" onSubmit={submit}>
+      <form ref={dialogRef} className="modal-panel segment-form-modal" role="dialog" aria-modal="true" aria-labelledby="segment-form-title" onSubmit={submit}>
         <header>
           <div>
-            <h2>{isCreate ? "Novo segmento" : "Renomear segmento"}</h2>
-            <p>{isCreate ? "Crie uma categoria vazia para organizar maquinas." : "Atualize o nome da categoria."}</p>
+            <h2 id="segment-form-title">{isCreate ? "Novo segmento" : "Renomear segmento"}</h2>
+            <p>{isCreate ? "Crie uma categoria vazia para organizar máquinas." : "Atualize o nome da categoria."}</p>
           </div>
           <button type="button" className="icon-button" onClick={onClose} title="Fechar">
             <X size={18} />
@@ -65,7 +65,7 @@ export default function SegmentFormModal({
             placeholder="Ex: Servidores"
           />
         </label>
-        {duplicateName && <span className="form-error">Ja existe um segmento com esse nome neste grupo.</span>}
+        {duplicateName && <span className="form-error">Já existe um segmento com esse nome neste grupo.</span>}
 
         <label>
           Grupo

@@ -86,7 +86,7 @@
 }
 
 .disk-list span {
-  color: var(--slate-600);
+  color: var(--text-muted);
 }
 
 .disk-list strong {
@@ -219,6 +219,21 @@
     0 12px 24px color-mix(in srgb, var(--tab-color) 15%, transparent);
   transform: translateY(1px);
   z-index: 2;
+}
+
+.inventory-tab-select {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
 .inventory-tab-dot {
@@ -419,7 +434,7 @@
 .inventory-visual-map-error {
   border-color: color-mix(in srgb, var(--status-danger) 28%, var(--border));
   background: color-mix(in srgb, var(--status-danger) 8%, var(--surface));
-  color: #991b1b;
+  color: var(--text-danger);
 }
 
 .inventory-visual-map-error,

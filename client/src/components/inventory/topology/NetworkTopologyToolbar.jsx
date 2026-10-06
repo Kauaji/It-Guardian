@@ -153,11 +153,13 @@ export default function NetworkTopologyToolbar({
             type="search"
             className="network-topology-toolbar-input"
             placeholder="Buscar por nome ou IP"
+            aria-label="Buscar por nome ou IP"
             value={filters.search}
             onChange={(event) => onFiltersChange({ ...filters, search: event.target.value })}
           />
           <select
             className="network-topology-toolbar-select"
+            aria-label="Filtrar por status"
             value={filters.status}
             onChange={(event) => onFiltersChange({ ...filters, status: event.target.value })}
           >
@@ -170,6 +172,7 @@ export default function NetworkTopologyToolbar({
           {!lockSegmentFilter ? (
             <select
               className="network-topology-toolbar-select"
+              aria-label="Filtrar por segmento"
               value={filters.segmentId}
               onChange={(event) => onFiltersChange({ ...filters, segmentId: event.target.value })}
             >
@@ -183,6 +186,7 @@ export default function NetworkTopologyToolbar({
           ) : null}
           <select
             className="network-topology-toolbar-select"
+            aria-label="Filtrar por tipo de ativo"
             value={filters.assetType}
             onChange={(event) => onFiltersChange({ ...filters, assetType: event.target.value })}
           >

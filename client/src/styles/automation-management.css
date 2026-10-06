@@ -1035,7 +1035,7 @@
 
 .automation-machine-plan-heading .automation-recurrence-origin.personalized {
   background: color-mix(in srgb, var(--status-info) 12%, var(--surface));
-  color: #1d4ed8;
+  color: var(--text-info);
 }
 
 .automation-machine-plan-heading > div {
@@ -1055,7 +1055,7 @@
 }
 
 .automation-machine-detail-status.error {
-  color: var(--red-700);
+  color: var(--text-danger);
 }
 
 .automation-machine-history {
@@ -1105,7 +1105,7 @@
 }
 
 .automation-field-error {
-  color: var(--red-700);
+  color: var(--text-danger);
   font-size: 0.7rem;
   font-weight: 700;
 }

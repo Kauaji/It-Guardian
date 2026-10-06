@@ -135,3 +135,20 @@ tbody tr.selected {
 .pill.danger {
   background: #fde8e8;
 }
+
+/* Tema escuro: fundos claros fixos deixavam o texto claro ilegivel (contraste ~1:1). */
+:root[data-theme="dark"] .pill {
+  background: var(--surface-soft);
+}
+
+:root[data-theme="dark"] .pill.ok {
+  background: rgba(34, 197, 94, 0.2);
+}
+
+:root[data-theme="dark"] .pill.warning {
+  background: rgba(245, 158, 11, 0.2);
+}
+
+:root[data-theme="dark"] .pill.danger {
+  background: rgba(248, 113, 113, 0.2);
+}

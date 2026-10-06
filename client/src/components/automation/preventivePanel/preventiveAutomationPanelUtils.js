@@ -13,7 +13,7 @@ export const preventiveAutomationRecurrenceLabels = {
 export const preventiveAutomationScopeLabels = {
   all: "Todas as máquinas",
   asset: "Máquina",
-  asset_list: "Maquinas selecionadas",
+  asset_list: "Máquinas selecionadas",
   segment: "Segmento",
   group: "Grupo"
 };
@@ -277,7 +277,7 @@ export function getScopeLabel(plan, sources) {
   if (plan.scopeType === "all") return preventiveAutomationScopeLabels.all;
   if (plan.scopeType === "asset_list") {
     const count = Array.isArray(plan.assetIds) ? plan.assetIds.length : 0;
-    return `${preventiveAutomationScopeLabels.asset_list}: ${count} maquina(s)`;
+    return `${preventiveAutomationScopeLabels.asset_list}: ${count} máquina(s)`;
   }
   const option = getScopeOptions(plan.scopeType, sources).find((item) => String(item.id) === String(plan.scopeId));
   return `${preventiveAutomationScopeLabels[plan.scopeType] || "Escopo"}: ${option?.label || plan.scopeId || "não informado"}`;

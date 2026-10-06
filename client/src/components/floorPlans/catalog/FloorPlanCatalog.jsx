@@ -32,7 +32,7 @@ function CatalogItem({ item, isPending, isFavorite, showSection, onAddItem, onTo
 function CatalogHeader({ activeSection, query, collapsed, onQueryChange, onSelectSection, onToggleCollapsed }) {
   return (
     <header className="floor-plan-catalog-header">
-      <nav aria-label="Catalogo da planta">
+      <nav aria-label="Catálogo da planta">
         {getCatalogSections(FLOOR_PLAN_CATALOG).map((entry) => (
           <button className={activeSection === entry.id ? "active" : ""} key={entry.id} type="button" onClick={() => onSelectSection(entry.id)}>
             {entry.label}
@@ -42,9 +42,9 @@ function CatalogHeader({ activeSection, query, collapsed, onQueryChange, onSelec
       <div className="floor-plan-catalog-controls">
         <label className="floor-plan-catalog-search">
           <Search size={16} aria-hidden="true" />
-          <input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="Buscar em todo o catalogo" aria-label="Buscar item em todo o catalogo" />
+          <input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="Buscar em todo o catálogo" aria-label="Buscar item em todo o catálogo" />
         </label>
-        <button className="icon-button" type="button" onClick={onToggleCollapsed} title={collapsed ? "Expandir catalogo" : "Recolher catalogo"} aria-label={collapsed ? "Expandir catalogo" : "Recolher catalogo"}>
+        <button className="icon-button" type="button" onClick={onToggleCollapsed} title={collapsed ? "Expandir catálogo" : "Recolher catálogo"} aria-label={collapsed ? "Expandir catálogo" : "Recolher catálogo"}>
           {collapsed ? <ChevronUp size={17} /> : <ChevronDown size={17} />}
         </button>
       </div>

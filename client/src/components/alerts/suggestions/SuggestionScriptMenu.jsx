@@ -53,7 +53,7 @@ function ScriptPopover({ suggestion, scriptMenu, agentActive }) {
             <ScriptOption
               key={script.id}
               script={script}
-              fallbackLabel="Script disponivel"
+              fallbackLabel="Script disponível"
               detail={script.estimatedSummary || script.category}
               disabled={isDisabled(script)}
               onUse={useScript}

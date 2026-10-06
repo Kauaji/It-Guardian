@@ -11,7 +11,7 @@ const WALL_TEXTURES = [
 ];
 
 const FLOOR_TEXTURES = [
-  ["ceramic", "Ceramica"],
+  ["ceramic", "Cerâmica"],
   ["wood", "Madeira"],
   ["carpet", "Carpete"],
   ["concrete", "Concreto"]

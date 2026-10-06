@@ -19,7 +19,7 @@ export default function BulkActionsBar({
       aria-label="Ações em massa"
     >
       <strong>{count} selecionados</strong>
-      <select value={currentTarget} onChange={(event) => onTargetChange(event.target.value)}>
+      <select aria-label="Segmento de destino" value={currentTarget} onChange={(event) => onTargetChange(event.target.value)}>
         <option value="">Alterar segmento...</option>
         {segments.filter((segment) => !segment.isBackupSegment).map((segment) => (
           <option key={segment.id} value={segment.id}>{segment.name}</option>
@@ -39,7 +39,7 @@ export default function BulkActionsBar({
       </button>
       <button type="button" className="danger" onClick={onClear}>
         <X size={14} />
-        Limpar selecao
+        Limpar seleção
       </button>
     </section>
   );

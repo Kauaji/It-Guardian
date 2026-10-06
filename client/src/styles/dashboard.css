@@ -249,7 +249,7 @@
 }
 
 .pulse-dot.danger {
-  color: var(--red-500);
+  color: var(--text-danger);
 }
 
 .pulse-dot.offline {
@@ -383,7 +383,7 @@
 }
 
 .dashboard-health-deductions strong {
-  color: var(--red-500);
+  color: var(--text-danger);
   font-size: 12px;
 }
 

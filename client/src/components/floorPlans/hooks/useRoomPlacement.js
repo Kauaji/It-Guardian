@@ -44,7 +44,7 @@ export function useRoomPlacement({ doc, ui, notify, viewport }) {
 
   const commitRoomPlacement = (placementState, preview) => {
     if (!placementState?.template || !preview?.valid) {
-      notify?.("Escolha uma area livre da planta para posicionar o comodo.", "warning");
+      notify?.("Escolha uma área livre da planta para posicionar o cômodo.", "warning");
       return false;
     }
     const floor = getFloor();

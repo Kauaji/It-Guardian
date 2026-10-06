@@ -181,7 +181,7 @@ describe("contrato das visoes com os componentes de dominio", () => {
     expect(captured.InventoryBoard.canManage).toBe(false);
   });
 
-  it("Ordens de Servico, Agenda e Pecas recebem as props e permissoes originais", async () => {
+  it("Ordens de Serviço, Agenda e Pecas recebem as props e permissoes originais", async () => {
     const first = renderApp("/ordens-de-servico");
     await screen.findByTestId("ServiceOrdersBoard");
     expect(keysOf(captured.ServiceOrdersBoard)).toEqual(oldProps.ServiceOrdersBoard);
@@ -216,7 +216,7 @@ describe("contrato das visoes com os componentes de dominio", () => {
 });
 
 describe("navegacao originada pelas visoes", () => {
-  it("Avisos -> Ordens de Servico", async () => {
+  it("Avisos -> Ordens de Serviço", async () => {
     renderApp("/avisos");
     await screen.findByTestId("AlertCenterV2");
     act(() => captured.AlertCenterV2.onOpenServiceOrders());
@@ -224,7 +224,7 @@ describe("navegacao originada pelas visoes", () => {
     expect(location.pathname).toBe("/ordens-de-servico");
   });
 
-  it("Ordens de Servico -> Agenda com foco na OS ao criar evento, e sem foco caso contrario", async () => {
+  it("Ordens de Serviço -> Agenda com foco na OS ao criar evento, e sem foco caso contrario", async () => {
     renderApp("/ordens-de-servico");
     await screen.findByTestId("ServiceOrdersBoard");
     const order = { id: "os-1", number: 1 };

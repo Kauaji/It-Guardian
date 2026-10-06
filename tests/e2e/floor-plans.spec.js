@@ -36,8 +36,8 @@ function buildFloorPlanFixture() {
     plan: {
       name: `Laboratorio E2E ${unique}`,
       company: "IT Guardian",
-      unit: "Validacao automatizada",
-      floorLabel: "Terreo",
+      unit: "Validação automatizada",
+      floorLabel: "Térreo",
       status: "draft",
       width: 1280,
       height: 820,
@@ -45,7 +45,7 @@ function buildFloorPlanFixture() {
       snapSize: 10,
       activeFloorId: floorId
     },
-    floors: [{ id: floorId, name: "Terreo", level: 1, width: 1280, height: 820 }],
+    floors: [{ id: floorId, name: "Térreo", level: 1, width: 1280, height: 820 }],
     zones: [{
       id: roomId,
       floorId,
@@ -60,7 +60,7 @@ function buildFloorPlanFixture() {
         floorId,
         objectType: "desk",
         category: "furniture",
-        label: "Mesa tecnica",
+        label: "Mesa técnica",
         x: 330,
         y: 290,
         width: 180,
@@ -74,7 +74,7 @@ function buildFloorPlanFixture() {
         floorId,
         objectType: "pc",
         category: "it",
-        label: "Estacao E2E",
+        label: "Estação E2E",
         x: 375,
         y: 305,
         width: 70,
@@ -213,7 +213,7 @@ test("editor de plantas renderiza 2D e 3D em desktop e mobile", async ({ page, c
 
     const editor2d = page.locator("svg.floor-plan-canvas");
     await expect(editor2d).toBeVisible();
-    await expect(page.getByText("Estacao E2E", { exact: true })).toBeVisible();
+    await expect(page.getByText("Estação E2E", { exact: true })).toBeVisible();
     await editor2d.screenshot({ path: `${OUTPUT_DIR}/floor-plan-desktop-2d.png` });
 
     await page.getByRole("button", { name: "3D", exact: true }).click();

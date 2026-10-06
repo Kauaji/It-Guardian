@@ -185,10 +185,10 @@ export default function ServiceOrderFormModal({
 
   return (
     <div className="modal-backdrop service-order-backdrop" role="presentation">
-      <form ref={dialogRef} className="modal-panel service-order-form-modal" role="dialog" aria-modal="true" onSubmit={submit}>
+      <form ref={dialogRef} className="modal-panel service-order-form-modal" role="dialog" aria-modal="true" aria-labelledby="service-order-form-title" onSubmit={submit}>
         <header>
           <div>
-            <h2>Nova Ordem de Serviço</h2>
+            <h2 id="service-order-form-title">Nova Ordem de Serviço</h2>
             <p>{helperText}</p>
           </div>
           <button type="button" className="icon-button" onClick={onClose} title="Fechar">

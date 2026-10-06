@@ -88,7 +88,7 @@ export default function FloorPlanScene3D({
         role="region"
         tabIndex={preview ? -1 : 0}
         onKeyDown={handleSceneKeyDown}
-        aria-label={`Visualizacao 3D da planta${activeFloor?.name ? `, ${activeFloor.name}` : ""}. Arraste o fundo para girar, use a roda ou pinca para aproximar e clique em um item para selecionar.`}
+        aria-label={`Visualização 3D da planta${activeFloor?.name ? `, ${activeFloor.name}` : ""}. Arraste o fundo para girar, use a roda ou pinça para aproximar e clique em um item para selecionar.`}
       />
 
       {!preview ? (

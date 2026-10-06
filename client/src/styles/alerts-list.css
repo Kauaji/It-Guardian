@@ -42,7 +42,7 @@
 .alert-item small,
 .empty,
 .loading {
-  color: var(--text-soft);
+  color: var(--text-muted);
   font-size: 13px;
 }
 
@@ -79,7 +79,7 @@
   border: 1px solid #d5ddea;
   border-radius: 6px;
   background: var(--surface);
-  color: var(--slate-600);
+  color: var(--text-muted);
   font-weight: 800;
   padding: 0 10px;
 }
@@ -131,7 +131,7 @@
 }
 
 .alert-card p {
-  color: var(--slate-600);
+  color: var(--text-muted);
   font-size: 14px;
 }
 

@@ -62,8 +62,9 @@ function TemplateEditor({ template, problemTypes, notify, onSaved, onDeleted }) 
           value={name}
           onChange={(event) => setName(event.target.value)}
           placeholder="Nome do template"
+          aria-label="Nome do template"
         />
-        <select value={problemTypeKey} onChange={(event) => setProblemTypeKey(event.target.value)}>
+        <select aria-label="Tipo de problema" value={problemTypeKey} onChange={(event) => setProblemTypeKey(event.target.value)}>
           <option value="">Tipo de problema...</option>
           {problemTypes.map((problemType) => (
             <option key={problemType.id} value={problemType.id}>{problemType.name}</option>
@@ -80,11 +81,13 @@ function TemplateEditor({ template, problemTypes, notify, onSaved, onDeleted }) 
           <li key={index}>
             <input
               placeholder="Item do checklist"
+              aria-label="Item do checklist"
               value={item.label}
               onChange={(event) => updateItem(index, "label", event.target.value)}
             />
             <input
               placeholder="Descrição (opcional)"
+              aria-label="Descrição do item"
               value={item.description || ""}
               onChange={(event) => updateItem(index, "description", event.target.value)}
             />

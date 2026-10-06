@@ -71,7 +71,7 @@ export function useMaintenanceExit({ data, deviceState, inventory, moves }) {
       oldValue: machine.segmentName || "Manutenção",
       newValue: targetSegment.name
     });
-    notify(`${machine.name} retirada da manutencao.`, "ok");
+    notify(`${machine.name} retirada da manutenção.`, "ok");
     return true;
   }
 

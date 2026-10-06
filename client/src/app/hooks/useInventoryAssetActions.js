@@ -30,7 +30,7 @@ export function useInventoryAssetActions({ data, deviceState, inventory, meta })
       await deleteDevice(token, machine.id);
       deviceState.removeDeviceFromState(machine.id);
       selection.deselectAsset(machine.id);
-      notify(`${machine.name} removida do inventario.`, "ok");
+      notify(`${machine.name} removida do inventário.`, "ok");
       await loadData(true);
       return true;
     } catch (error) {
@@ -119,7 +119,7 @@ export function useInventoryAssetActions({ data, deviceState, inventory, meta })
         ...(current[machineId] || [])
       ]
     }));
-    notify("Observacao adicionada.", "ok");
+    notify("Observação adicionada.", "ok");
   }
 
   return {
