@@ -3,10 +3,10 @@ import {
   authenticateWithCredentials,
   changeOwnPassword,
   completeMfaLogin,
-  endSessionOnLogout,
   logoutEverywhere,
   registerFirstAdmin
 } from "../services/authService.js";
+import { endSessionOnLogout } from "../services/logoutService.js";
 import {
   beginMfaSetup,
   confirmMfaSetup,

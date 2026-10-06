@@ -2,9 +2,23 @@ import { resolveDatabaseConfig } from "./config/environment.js";
 import { logger } from "./lib/logger.js";
 import { gauge } from "./lib/metrics.js";
 
+/** @import { Pool, QueryResult } from "pg" */
+
+/**
+ * Executa SQL parametrizado. `Row` e o formato da linha, declarado pelo chamador como
+ * `@typedef` de linha de banco (padrao `Record<string, unknown>`); o chamador anota o
+ * resultado com `@type {QueryResult<UserRow>}` e `Row` e inferido.
+ * @typedef {<Row extends Record<string, unknown> = Record<string, unknown>>(
+ *   text: string, params?: readonly unknown[]
+ * ) => Promise<QueryResult<Row>>} QueryFn
+ */
+
+/** @type {Promise<Pool> | undefined} */
 let poolPromise;
+/** @type {Pool | null} */
 let currentPool = null;
 
+/** @returns {Promise<Pool>} */
 async function createPool() {
   const config = resolveDatabaseConfig();
 
@@ -37,6 +51,9 @@ async function createPool() {
   currentPool = pool;
   return pool;
 }
+/**
+ * @returns {Promise<Pool>} Pool compartilhado (criado sob demanda).
+ */
 export function getPool() {
   if (!poolPromise) {
     poolPromise = createPool();
@@ -45,14 +62,26 @@ export function getPool() {
   return poolPromise;
 }
 
+/**
+ * @template {Record<string, unknown>} [Row=Record<string, unknown>]
+ * @param {string} text
+ * @param {readonly unknown[]} [params]
+ * @returns {Promise<QueryResult<Row>>}
+ */
 export async function query(text, params = []) {
   const pool = await getPool();
   return pool.query(text, params);
 }
 
+/**
+ * @template T
+ * @param {(tx: QueryFn) => Promise<T>} operation Recebe o `query` da transacao; `COMMIT` ao resolver, `ROLLBACK` ao lancar.
+ * @returns {Promise<T>}
+ */
 export async function withTransaction(operation) {
   const pool = await getPool();
   const client = await pool.connect();
+  /** @type {QueryFn} */
   const txQuery = (text, params = []) => client.query(text, params);
 
   try {
@@ -68,17 +97,28 @@ export async function withTransaction(operation) {
   }
 }
 
-/** Uma conexao dedicada, sem transacao: necessario para locks de sessao (advisory lock) que precisam de unlock na MESMA conexao. */
+/**
+ * Uma conexao dedicada, sem transacao: necessario para locks de sessao (advisory lock) que precisam de unlock na MESMA conexao.
+ *
+ * @template T
+ * @param {(connectionQuery: QueryFn) => Promise<T>} operation
+ * @returns {Promise<T>}
+ */
 export async function withConnection(operation) {
   const pool = await getPool();
   const client = await pool.connect();
   try {
-    return await operation((text, params = []) => client.query(text, params));
+    /** @type {QueryFn} */
+    const connectionQuery = (text, params = []) => client.query(text, params);
+    return await operation(connectionQuery);
   } finally {
     client.release();
   }
 }
 
+/**
+ * @returns {Promise<void>}
+ */
 export async function closeDatabase() {
   if (!poolPromise) return;
   const pool = await poolPromise;
@@ -87,7 +127,11 @@ export async function closeDatabase() {
   currentPool = null;
 }
 
-/** Estatisticas do pool (sem abrir conexao): usadas por /metrics e pelo diagnostico. */
+/**
+ * Estatisticas do pool (sem abrir conexao): usadas por /metrics e pelo diagnostico.
+ *
+ * @returns {{ total: number, idle: number, waiting: number } | {}}
+ */
 export function getPoolStats() {
   return currentPool ? { total: currentPool.totalCount, idle: currentPool.idleCount, waiting: currentPool.waitingCount } : {};
 }

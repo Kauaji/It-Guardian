@@ -1,5 +1,8 @@
+/** @import { ServiceOrderSettings, ServiceOrderSettingsInput, ServiceOrderStatus, ServiceOrderStatusInput, SlaSettings } from "./types.js" */
+
 export const serviceOrderNumberDigits = 4;
 
+/** @type {Record<string, string>} */
 export const defaultPriorityColors = {
   low: "#16a34a",
   medium: "#d97706",
@@ -9,6 +12,7 @@ export const defaultPriorityColors = {
 
 export const maxServiceOrderStatuses = 10;
 
+/** @type {ServiceOrderStatus[]} */
 export const defaultServiceOrderStatuses = [
   { id: "open", name: "Aberta", color: "#2563eb", order: 0, isInitial: true, isFinal: false },
   { id: "in_progress", name: "Em atendimento", color: "#d97706", order: 1, isInitial: false, isFinal: false },
@@ -16,6 +20,7 @@ export const defaultServiceOrderStatuses = [
   { id: "closed", name: "Finalizada", color: "#16a34a", order: 3, isInitial: false, isFinal: true }
 ];
 
+/** @type {SlaSettings} */
 export const defaultSlaSettings = {
   low: 72,
   medium: 48,
@@ -25,6 +30,7 @@ export const defaultSlaSettings = {
   nearDueMinHours: 2
 };
 
+/** @type {ServiceOrderSettings} */
 export const defaultServiceOrderSettings = {
   numberFormat: {
     prefix: "OS",
@@ -45,6 +51,10 @@ export const defaultServiceOrderSettings = {
   requireChecklistBeforeFinish: false
 };
 
+/**
+ * @param {ServiceOrderSettingsInput} [value]
+ * @returns {Omit<ServiceOrderSettings, "statuses"> & { statuses: ServiceOrderStatusInput[] }} Padroes sobrepostos pelos campos presentes (sem normalizar).
+ */
 export function mergeServiceOrderSettings(value = {}) {
   return {
     numberFormat: {
@@ -69,6 +79,11 @@ export function mergeServiceOrderSettings(value = {}) {
   };
 }
 
+/**
+ * @param {unknown} value
+ * @param {string} fallback
+ * @returns {string}
+ */
 export function slugifyStatusId(value, fallback) {
   const id = String(value || "")
     .normalize("NFD")
@@ -81,10 +96,20 @@ export function slugifyStatusId(value, fallback) {
   return id || fallback;
 }
 
+/**
+ * @param {unknown} value
+ * @param {string} fallback
+ * @returns {string} `#rrggbb` valido ou `fallback`.
+ */
 export function sanitizeStatusColor(value, fallback) {
   return /^#[0-9a-f]{6}$/i.test(String(value || "")) ? String(value) : fallback;
 }
 
+/**
+ * @param {ServiceOrderStatusInput} [status]
+ * @param {number} [index]
+ * @returns {ServiceOrderStatus}
+ */
 export function normalizeStatus(status = {}, index = 0) {
   const fallback = defaultServiceOrderStatuses[index] || {
     id: `status_${index + 1}`,
@@ -108,6 +133,10 @@ export function normalizeStatus(status = {}, index = 0) {
   };
 }
 
+/**
+ * @param {ServiceOrderStatusInput[]} [statuses]
+ * @returns {ServiceOrderStatus[]} Entre 2 e 10 status unicos, com exatamente um inicial e um final.
+ */
 export function normalizeStatuses(statuses = []) {
   const source = (Array.isArray(statuses) && statuses.length ? statuses : defaultServiceOrderStatuses)
     .slice(0, maxServiceOrderStatuses);
@@ -155,6 +184,10 @@ export function normalizeStatuses(statuses = []) {
   }));
 }
 
+/**
+ * @param {ServiceOrderSettingsInput} [value]
+ * @returns {ServiceOrderSettings}
+ */
 export function normalizeServiceOrderSettings(value = {}) {
   const merged = mergeServiceOrderSettings(value);
   const nextNumber = Number(merged.numberFormat.nextNumber);
@@ -193,6 +226,11 @@ export function normalizeServiceOrderSettings(value = {}) {
   };
 }
 
+/**
+ * @param {number | string} sequence
+ * @param {ServiceOrderSettingsInput} [settings]
+ * @returns {string}
+ */
 export function formatServiceOrderNumber(sequence, settings = defaultServiceOrderSettings) {
   const { prefix, useYear, useMonth } = normalizeServiceOrderSettings(settings).numberFormat;
   const padded = String(sequence).padStart(serviceOrderNumberDigits, "0");
@@ -202,20 +240,37 @@ export function formatServiceOrderNumber(sequence, settings = defaultServiceOrde
   return [prefix, useYear ? year : "", useMonth ? month : "", padded].filter(Boolean).join("-");
 }
 
+/**
+ * @param {ServiceOrderSettingsInput} [settings]
+ * @returns {ServiceOrderStatus}
+ */
 export function getInitialStatus(settings = defaultServiceOrderSettings) {
   return normalizeServiceOrderSettings(settings).statuses.find((status) => status.isInitial)
     || defaultServiceOrderStatuses[0];
 }
 
+/**
+ * @param {ServiceOrderSettingsInput} [settings]
+ * @returns {ServiceOrderStatus}
+ */
 export function getFinalStatus(settings = defaultServiceOrderSettings) {
   return normalizeServiceOrderSettings(settings).statuses.find((status) => status.isFinal)
-    || defaultServiceOrderStatuses.at(-1);
+    || defaultServiceOrderStatuses[defaultServiceOrderStatuses.length - 1];
 }
 
+/**
+ * @param {ServiceOrderSettingsInput} settings
+ * @param {string} statusId
+ * @returns {boolean}
+ */
 export function hasServiceOrderStatus(settings, statusId) {
   return normalizeServiceOrderSettings(settings).statuses.some((status) => status.id === statusId);
 }
 
+/**
+ * @param {ServiceOrderSettingsInput} settings
+ * @returns {boolean}
+ */
 export function isDefaultSettings(settings) {
   return JSON.stringify(normalizeServiceOrderSettings(settings)) ===
     JSON.stringify(normalizeServiceOrderSettings(defaultServiceOrderSettings));
@@ -224,6 +279,10 @@ export function isDefaultSettings(settings) {
 /**
  * Combina o payload parcial de uma atualizacao de configuracoes com as
  * configuracoes atuais e normaliza o resultado (funcao pura).
+ *
+ * @param {ServiceOrderSettings} current
+ * @param {ServiceOrderSettingsInput} [payload]
+ * @returns {ServiceOrderSettings}
  */
 export function mergeServiceOrderSettingsUpdate(current, payload = {}) {
   return normalizeServiceOrderSettings({

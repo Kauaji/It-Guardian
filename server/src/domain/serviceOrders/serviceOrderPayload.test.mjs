@@ -47,6 +47,13 @@ test("itens: normaliza, descarta sem nome, soma subtotais e gera assinatura esta
   assert.equal(formatItemsForHistory([]), "");
 });
 
+test("itens: entradas nulas ou nao objeto no corpo cru sao descartadas em vez de lancar TypeError", () => {
+  const items = normalizeServiceOrderItems([null, undefined, "texto", 7, { productName: "Fonte", quantity: 1, unitPrice: 50 }]);
+  assert.equal(items.length, 1);
+  assert.equal(items[0].productName, "Fonte");
+  assert.equal(formatItemsForHistory([null]), "");
+});
+
 test("deteccao de campos presentes no payload", () => {
   assert.equal(hasSectorPayload({ sectorName: "x" }), true);
   assert.equal(hasSectorPayload({ title: "x" }), false);

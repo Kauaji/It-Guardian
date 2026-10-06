@@ -8,11 +8,20 @@ export const serviceOrderAttachmentCategories = new Set([
   "evidencia", "orcamento", "foto", "documento", "print", "outro"
 ]);
 
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
 function fileExtension(value) {
   const match = String(value || "").trim().match(/\.[a-z0-9]+$/i);
   return match ? match[0].toLowerCase() : "";
 }
 
+/**
+ * @param {unknown} value
+ * @param {string} fieldLabel
+ * @returns {void}
+ */
 export function assertSafeAttachmentReference(value, fieldLabel) {
   const ext = fileExtension(value);
   if (ext && BLOCKED_ATTACHMENT_EXTENSIONS.has(ext)) {
@@ -24,6 +33,9 @@ export function assertSafeAttachmentReference(value, fieldLabel) {
  * Valida e normaliza os metadados de um anexo (funcao pura). Lanca erro HTTP
  * 400 quando o nome esta vazio ou quando nome/referencia apontam para uma
  * extensao bloqueada. Os limites de tamanho espelham as colunas da tabela.
+ *
+ * @param {{ fileName?: unknown, fileType?: unknown, fileSize?: unknown, storageKey?: unknown, category?: unknown, description?: unknown }} input
+ * @returns {{ fileName: string, fileType: string | null, fileSize: number | null, storageKey: string | null, category: string, description: string | null, historyName: string }}
  */
 export function normalizeServiceOrderAttachmentInput({
   fileName,
@@ -40,7 +52,7 @@ export function normalizeServiceOrderAttachmentInput({
   assertSafeAttachmentReference(normalizedFileName, "O nome do anexo");
   assertSafeAttachmentReference(storageKey, "A referência do anexo");
 
-  const normalizedCategory = serviceOrderAttachmentCategories.has(category) ? category : "outro";
+  const normalizedCategory = typeof category === "string" && serviceOrderAttachmentCategories.has(category) ? category : "outro";
   const size = Number(fileSize);
 
   return {

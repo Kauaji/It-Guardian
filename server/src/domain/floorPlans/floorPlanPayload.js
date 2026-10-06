@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { validateFloorPlanEditorData } from "../floorPlanValidation.js";
 
+/** @import { CableRoute, ConnectionPoint, EditorData, Floor, FloorObject, FloorPlan, FloorPlanPayload, FloorPlanSource, FloorZone, NormalizedEditorChildren, RawEditorItem } from "./types.js" */
+
 const PLAN_STATUSES = new Set(["draft", "active", "archived"]);
 
 const ZONE_TYPES = new Set(["room", "group", "segment"]);
@@ -9,46 +11,121 @@ const POINT_TYPES = new Set(["network", "power"]);
 
 const ROUTE_TYPES = new Set(["network", "power"]);
 
+/**
+ * @param {unknown} value
+ * @param {string} [fallback]
+ * @returns {string}
+ */
 function normalizeText(value, fallback = "") {
   const text = String(value ?? "").trim();
   return text || fallback;
 }
 
+/**
+ * @param {unknown} value
+ * @returns {string | null}
+ */
 export function nullableText(value) {
   const text = String(value ?? "").trim();
   return text || null;
 }
 
+/**
+ * @param {unknown} value
+ * @param {string} [fallback]
+ * @returns {string} `#rrggbb` valido ou `fallback`.
+ */
 function normalizeColor(value, fallback = "#2563eb") {
   const color = String(value || "").trim();
   return /^#[0-9a-f]{6}$/i.test(color) ? color : fallback;
 }
 
+/**
+ * @param {unknown} value
+ * @param {number} [fallback]
+ * @param {{ min?: number, max?: number }} [limits]
+ * @returns {number}
+ */
 function normalizeNumber(value, fallback = 0, { min = -100000, max = 100000 } = {}) {
   const number = Number(value);
   if (!Number.isFinite(number)) return fallback;
   return Math.min(max, Math.max(min, number));
 }
 
+/**
+ * @param {unknown} value
+ * @param {number} [fallback]
+ * @param {{ min?: number, max?: number }} [limits]
+ * @returns {number}
+ */
 function normalizeInteger(value, fallback = 0, { min = -100000, max = 100000 } = {}) {
   return Math.round(normalizeNumber(value, fallback, { min, max }));
 }
 
+/**
+ * @param {unknown} value
+ * @param {Record<string, unknown>} [fallback]
+ * @returns {Record<string, unknown>}
+ */
 function normalizeMetadata(value, fallback = {}) {
-  if (value && typeof value === "object" && !Array.isArray(value)) return value;
+  if (value && typeof value === "object" && !Array.isArray(value)) return /** @type {Record<string, unknown>} */ (value);
   return fallback;
 }
 
+/**
+ * @param {unknown} value
+ * @returns {{ x?: unknown, y?: unknown }[]} Pontos do caminho (cada um validado depois por `validateFloorPlanEditorData`).
+ */
 function normalizeJsonArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+/**
+ * Valor `candidate` quando esta entre os permitidos, senao `fallback`.
+ * @param {Set<string>} allowed
+ * @param {unknown} candidate
+ * @param {string} fallback
+ * @returns {string}
+ */
+function pickAllowed(allowed, candidate, fallback) {
+  return typeof candidate === "string" && allowed.has(candidate) ? candidate : fallback;
+}
+
+/**
+ * Andar do item (`floorId`/`floor_id`) quando existe na planta, senao o andar padrao.
+ * @param {RawEditorItem} item
+ * @param {Set<string>} validFloorIds
+ * @param {string} fallbackFloorId
+ * @returns {string}
+ */
+function resolveFloorId(item, validFloorIds, fallbackFloorId) {
+  return pickAllowed(validFloorIds, item.floorId || item.floor_id, fallbackFloorId);
+}
+
+/**
+ * @template T
+ * @param {T | null | undefined} value
+ * @returns {value is T}
+ */
+function isPresent(value) {
+  return value != null;
+}
+
+/**
+ * @param {{ id?: string | null } | null | undefined} user
+ * @returns {string | null}
+ */
 export function getUserId(user) {
   return user?.id || null;
 }
 
+/**
+ * @param {FloorPlanPayload} [payload]
+ * @param {Partial<FloorPlan>} [existing]
+ * @returns {FloorPlan}
+ */
 export function normalizePlanPayload(payload = {}, existing = {}) {
-  const status = PLAN_STATUSES.has(payload.status) ? payload.status : existing.status || "draft";
+  const status = pickAllowed(PLAN_STATUSES, payload.status, existing.status || "draft");
   return {
     inventoryTabId: nullableText(payload.inventoryTabId ?? payload.inventory_tab_id ?? existing.inventoryTabId),
     name: normalizeText(payload.name ?? existing.name, "Planta sem nome"),
@@ -64,6 +141,12 @@ export function normalizePlanPayload(payload = {}, existing = {}) {
   };
 }
 
+/**
+ * @param {RawEditorItem} item
+ * @param {Partial<FloorPlan>} plan
+ * @param {number} [fallbackIndex]
+ * @returns {Floor}
+ */
 function normalizeFloorPayload(item = {}, plan, fallbackIndex = 0) {
   return {
     id: nullableText(item.id) || randomUUID(),
@@ -76,9 +159,17 @@ function normalizeFloorPayload(item = {}, plan, fallbackIndex = 0) {
   };
 }
 
+/**
+ * @param {RawEditorItem} item
+ * @param {string} planId
+ * @param {Set<string>} validFloorIds
+ * @param {string} fallbackFloorId
+ * @param {number} index
+ * @returns {FloorZone}
+ */
 function normalizeZonePayload(item = {}, planId, validFloorIds, fallbackFloorId, index) {
-  const floorId = validFloorIds.has(item.floorId || item.floor_id) ? item.floorId || item.floor_id : fallbackFloorId;
-  const zoneType = ZONE_TYPES.has(item.zoneType || item.zone_type) ? item.zoneType || item.zone_type : "room";
+  const floorId = resolveFloorId(item, validFloorIds, fallbackFloorId);
+  const zoneType = pickAllowed(ZONE_TYPES, item.zoneType || item.zone_type, "room");
   const geometry = normalizeMetadata(item.geometry, {});
   return {
     id: nullableText(item.id) || randomUUID(),
@@ -95,8 +186,15 @@ function normalizeZonePayload(item = {}, planId, validFloorIds, fallbackFloorId,
   };
 }
 
+/**
+ * @param {RawEditorItem} item
+ * @param {string} planId
+ * @param {Set<string>} validFloorIds
+ * @param {string} fallbackFloorId
+ * @returns {FloorObject}
+ */
 function normalizeObjectPayload(item = {}, planId, validFloorIds, fallbackFloorId) {
-  const floorId = validFloorIds.has(item.floorId || item.floor_id) ? item.floorId || item.floor_id : fallbackFloorId;
+  const floorId = resolveFloorId(item, validFloorIds, fallbackFloorId);
   return {
     id: nullableText(item.id) || randomUUID(),
     planId,
@@ -119,9 +217,16 @@ function normalizeObjectPayload(item = {}, planId, validFloorIds, fallbackFloorI
   };
 }
 
+/**
+ * @param {RawEditorItem} item
+ * @param {string} planId
+ * @param {Set<string>} validFloorIds
+ * @param {string} fallbackFloorId
+ * @returns {ConnectionPoint}
+ */
 function normalizePointPayload(item = {}, planId, validFloorIds, fallbackFloorId) {
-  const floorId = validFloorIds.has(item.floorId || item.floor_id) ? item.floorId || item.floor_id : fallbackFloorId;
-  const pointType = POINT_TYPES.has(item.pointType || item.point_type) ? item.pointType || item.point_type : "network";
+  const floorId = resolveFloorId(item, validFloorIds, fallbackFloorId);
+  const pointType = pickAllowed(POINT_TYPES, item.pointType || item.point_type, "network");
   return {
     id: nullableText(item.id) || randomUUID(),
     planId,
@@ -136,9 +241,16 @@ function normalizePointPayload(item = {}, planId, validFloorIds, fallbackFloorId
   };
 }
 
+/**
+ * @param {RawEditorItem} item
+ * @param {string} planId
+ * @param {Set<string>} validFloorIds
+ * @param {string} fallbackFloorId
+ * @returns {CableRoute}
+ */
 function normalizeRoutePayload(item = {}, planId, validFloorIds, fallbackFloorId) {
-  const floorId = validFloorIds.has(item.floorId || item.floor_id) ? item.floorId || item.floor_id : fallbackFloorId;
-  const routeType = ROUTE_TYPES.has(item.routeType || item.route_type) ? item.routeType || item.route_type : "network";
+  const floorId = resolveFloorId(item, validFloorIds, fallbackFloorId);
+  const routeType = pickAllowed(ROUTE_TYPES, item.routeType || item.route_type, "network");
   return {
     id: nullableText(item.id) || randomUUID(),
     planId,
@@ -154,16 +266,23 @@ function normalizeRoutePayload(item = {}, planId, validFloorIds, fallbackFloorId
   };
 }
 
+/**
+ * @param {string} planId
+ * @param {EditorData} data
+ * @returns {NormalizedEditorChildren}
+ * @throws {Error} 400 quando os dados do editor sao inconsistentes.
+ */
 export function normalizeEditorChildren(planId, data) {
   const floors = data.floors;
   const validFloorIds = new Set(floors.map((floor) => floor.id));
   const fallbackFloorId = floors[0].id;
-  const zones = (data.zones || []).map((item, index) => normalizeZonePayload(item, planId, validFloorIds, fallbackFloorId, index));
-  const objects = (data.objects || []).map((item) => normalizeObjectPayload(item, planId, validFloorIds, fallbackFloorId));
-  const connectionPoints = (data.connectionPoints || data.connection_points || []).map((item) => (
+  // Entradas nulas/nao objeto da lista crua antes derrubavam a gravacao com TypeError (500).
+  const zones = (data.zones || []).filter(isPresent).map((item, index) => normalizeZonePayload(item, planId, validFloorIds, fallbackFloorId, index));
+  const objects = (data.objects || []).filter(isPresent).map((item) => normalizeObjectPayload(item, planId, validFloorIds, fallbackFloorId));
+  const connectionPoints = (data.connectionPoints || data.connection_points || []).filter(isPresent).map((item) => (
     normalizePointPayload(item, planId, validFloorIds, fallbackFloorId)
   ));
-  const cableRoutes = (data.cableRoutes || data.cable_routes || []).map((item) => (
+  const cableRoutes = (data.cableRoutes || data.cable_routes || []).filter(isPresent).map((item) => (
     normalizeRoutePayload(item, planId, validFloorIds, fallbackFloorId)
   ));
   const normalized = { floors, zones, objects, connectionPoints, cableRoutes };
@@ -171,9 +290,15 @@ export function normalizeEditorChildren(planId, data) {
   return { ...normalized, fallbackFloorId };
 }
 
+/**
+ * @param {FloorPlanPayload} payload
+ * @param {Partial<FloorPlan>} plan
+ * @returns {EditorData}
+ */
 export function normalizeEditorData(payload = {}, plan) {
-  const floorsSource = Array.isArray(payload.floors) && payload.floors.length
-    ? payload.floors
+  const payloadFloors = Array.isArray(payload.floors) ? payload.floors.filter(isPresent) : [];
+  const floorsSource = payloadFloors.length
+    ? payloadFloors
     : [{ id: payload.activeFloorId || randomUUID(), name: plan.floorLabel || "Planta 1 - Terreo" }];
   const floors = floorsSource.map((item, index) => normalizeFloorPayload(item, plan, index));
   return {
@@ -185,7 +310,13 @@ export function normalizeEditorData(payload = {}, plan) {
   };
 }
 
-/** Andar ativo: o informado no plano quando existe entre os andares, senao o primeiro. */
+/**
+ * Andar ativo: o informado no plano quando existe entre os andares, senao o primeiro.
+ *
+ * @param {{ activeFloorId?: string | null }} plan
+ * @param {{ id: string }[]} floors
+ * @returns {string}
+ */
 export function resolveActiveFloorId(plan, floors) {
   return plan.activeFloorId && floors.some((floor) => floor.id === plan.activeFloorId)
     ? plan.activeFloorId
@@ -196,6 +327,9 @@ export function resolveActiveFloorId(plan, floors) {
  * Copia de uma planta: gera ids novos para andares, zonas, objetos, pontos e
  * rotas e remapeia as referencias entre eles (funcao pura). Referencias que nao
  * existem na origem caem no andar ativo ou em nulo.
+ *
+ * @param {FloorPlanSource} source
+ * @param {string} newPlanId
  */
 export function planFloorPlanDuplicate(source, newPlanId) {
   const floorIdMap = new Map();

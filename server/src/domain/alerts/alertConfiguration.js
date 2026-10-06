@@ -1,5 +1,9 @@
 import { normalizeBoolean } from "../../lib/textUtils.js";
 
+/** @import { HttpErrorLike } from "../../lib/errors.js" */
+/** @import { AlertRuleDefinition, AlertRulePayload, AlertRuleRow, AlertSettings, AlertSettingsInput, SuggestionRefreshRow } from "./types.js" */
+
+/** @type {AlertRuleDefinition[]} */
 export const defaultAlertRules = [
   {
     id: "rule-ram-high",
@@ -125,6 +129,7 @@ export const defaultAlertRules = [
 
 const allowedPriorities = new Set(["low", "medium", "high", "critical"]);
 
+/** @type {Record<string, string>} */
 const defaultAlertPriorityColors = {
   low: "#16a34a",
   medium: "#d97706",
@@ -132,6 +137,7 @@ const defaultAlertPriorityColors = {
   critical: "#dc2626"
 };
 
+/** @type {AlertSettings} */
 export const defaultAlertSettings = {
   rejectedAlertSilenceHours: 24,
   recurrenceCounterResetHours: 24,
@@ -147,21 +153,67 @@ export const defaultAlertSettings = {
   priorityColors: defaultAlertPriorityColors
 };
 
+/**
+ * Numero finito ou `fallback` (padrao `null`).
+ *
+ * @template T
+ * @overload
+ * @param {unknown} value
+ * @returns {number | null}
+ *
+ * @overload
+ * @param {unknown} value
+ * @param {number} fallback
+ * @returns {number}
+ *
+ * @overload
+ * @param {unknown} value
+ * @param {T} fallback
+ * @returns {number | T}
+ *
+ * @param {unknown} value
+ * @param {unknown} [fallback]
+ */
 export function toNumber(value, fallback = null) {
   const number = Number(value);
   return Number.isFinite(number) ? number : fallback;
 }
 
+/**
+ * Prioridade valida em minusculas ou `fallback` (padrao `medium`).
+ *
+ * @template F
+ * @overload
+ * @param {unknown} value
+ * @returns {string}
+ *
+ * @overload
+ * @param {unknown} value
+ * @param {F} fallback
+ * @returns {string | F}
+ *
+ * @param {unknown} value
+ * @param {unknown} [fallback]
+ */
 export function normalizePriority(value, fallback = "medium") {
   const priority = String(value || "").trim().toLowerCase();
   return allowedPriorities.has(priority) ? priority : fallback;
 }
 
+/**
+ * @param {unknown} value
+ * @param {string} fallback
+ * @returns {string}
+ */
 function sanitizeColor(value, fallback) {
   const color = String(value || "").trim();
   return /^#[0-9a-f]{6}$/i.test(color) ? color : fallback;
 }
 
+/**
+ * @param {AlertSettingsInput} [value]
+ * @returns {AlertSettings}
+ */
 export function normalizeAlertSettings(value = {}) {
   const autoPriority = value.autoPriority || {};
   const priorityColors = value.priorityColors || {};
@@ -210,17 +262,33 @@ export function normalizeAlertSettings(value = {}) {
   };
 }
 
+/**
+ * @param {string} currentStatus
+ * @param {string} observationStatus
+ * @returns {string}
+ */
 export function normalizeSuggestionStatusAfterObservation(currentStatus, observationStatus) {
   if (currentStatus === "accepted" || currentStatus === "rejected") return currentStatus;
   if (observationStatus === "observed_resolved") return "resolved";
   return "pending";
 }
 
+/**
+ * @param {object} payload
+ * @param {string} key
+ * @returns {boolean}
+ */
 function hasOwn(payload, key) {
   return Object.prototype.hasOwnProperty.call(payload, key);
 }
 
-/** Combina o payload parcial com as configuracoes atuais e normaliza (funcao pura). */
+/**
+ * Combina o payload parcial com as configuracoes atuais e normaliza (funcao pura).
+ *
+ * @param {AlertSettings} current
+ * @param {AlertSettingsInput} [payload]
+ * @returns {AlertSettings}
+ */
 export function mergeAlertSettingsUpdate(current, payload = {}) {
   return normalizeAlertSettings({
     rejectedAlertSilenceHours:
@@ -247,6 +315,10 @@ export function mergeAlertSettingsUpdate(current, payload = {}) {
 /**
  * Valores novos de uma regra de aviso a partir da linha atual (colunas do
  * banco) e do payload parcial: so campos enviados mudam (funcao pura).
+ *
+ * @param {AlertRuleRow} current
+ * @param {AlertRulePayload} [payload]
+ * @returns {{ threshold: number | string | null, durationMinutes: number, recurrenceCount: number, recurrenceWindow: string, suggestedPriority: string | null | undefined, createsSuggestion: boolean, enabled: boolean }}
  */
 export function buildAlertRuleUpdate(current, payload = {}) {
   return {
@@ -268,11 +340,18 @@ export function buildAlertRuleUpdate(current, payload = {}) {
   };
 }
 
-/** Comentario de aviso: obrigatorio, limitado a 1000 caracteres (funcao pura). */
+/**
+ * Comentario de aviso: obrigatorio, limitado a 1000 caracteres (funcao pura).
+ *
+ * @param {unknown} message
+ * @returns {string}
+ * @throws {Error} 400 quando o comentario esta vazio.
+ */
 export function normalizeAlertComment(message) {
   const cleanMessage = String(message || "").trim();
 
   if (!cleanMessage) {
+    /** @type {HttpErrorLike} */
     const error = new Error("Informe um comentário para registrar no aviso.");
     error.statusCode = 400;
     throw error;
@@ -284,6 +363,10 @@ export function normalizeAlertComment(message) {
 /**
  * Decide o que fazer ao gerar sugestao para um aviso que ja tem sugestao:
  * aceita -> nada; recusada e ainda silenciada -> ignora; demais -> reabre/atualiza.
+ *
+ * @param {SuggestionRefreshRow} existing
+ * @param {number} [now]
+ * @returns {"skip_accepted" | "skip_silenced" | "refresh"}
  */
 export function decideSuggestionRefresh(existing, now = Date.now()) {
   if (existing.status === "accepted") return "skip_accepted";

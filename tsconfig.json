@@ -31,6 +31,16 @@
     "server/src/config/**/*.js",
     "server/src/security/**/*.js",
     "server/src/middleware/**/*.js",
+    "server/src/jobs/dataRetention.js",
+    "server/src/repositories/authSessionRepository.js",
+    "server/src/repositories/logRepository.js",
+    "server/src/repositories/userRepository.js",
+    "server/src/repositories/userSecurityRepository.js",
+    "server/src/services/agentSigningService.js",
+    "server/src/services/authService.js",
+    "server/src/services/mfaService.js",
+    "server/src/services/sessionService.js",
+    "server/src/database.js",
     "server/src/types/**/*.d.ts"
   ],
   "exclude": [
@@ -38,9 +48,6 @@
     "**/*.test.jsx",
     "**/*.test.mjs",
     "**/node_modules",
-    "**/dist",
-    "server/src/middleware/authMiddleware.js",
-    "server/src/domain/problemTypes.js",
-    "server/src/domain/serviceOrderAggregates.js"
+    "**/dist"
   ]
 }

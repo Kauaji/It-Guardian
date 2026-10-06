@@ -1,6 +1,19 @@
 import { derivePublicKeyBase64, isP256PublicKey, signJob, verifyMessage, buildUpdateMessage } from "../security/agentSigning.js";
 import { logger } from "../lib/logger.js";
 
+/** @import { AgentAutoUpdateInfo } from "../config/environment.js" */
+/** @import { Env } from "../config/envParsing.js" */
+
+/**
+ * Job de script como o servico o entrega ao agente (so os campos que entram na assinatura).
+ * @typedef {{ id: string, type: string, timeoutSeconds: number, content: string }} AgentJobToSign
+ */
+
+/**
+ * Atualizacao oferecida ao agente: a anunciada mais a assinatura (tudo `null` quando nao ha oferta).
+ * @typedef {(AgentAutoUpdateInfo & { signature: string | null })} SignedUpdateOffer
+ */
+
 /**
  * Cola entre a configuracao (variaveis de ambiente) e o modulo de assinatura:
  *  - AGENT_JOB_SIGNING_PRIVATE_KEY: PEM da chave que assina cada job entregue ao agente.
@@ -10,14 +23,23 @@ import { logger } from "../lib/logger.js";
  *    a atualizacao, evitando propagar um manifesto invalido.
  */
 
+/** @type {{ raw: string | null, publicKey: string | null }} */
 let cachedKey = { raw: null, publicKey: null };
 let warnedMissing = false;
 
+/**
+ * @param {Env} [env]
+ * @returns {string | null}
+ */
 function jobPrivateKey(env = process.env) {
   const raw = String(env.AGENT_JOB_SIGNING_PRIVATE_KEY || "").trim();
   return raw || null;
 }
 
+/**
+ * @param {Env} [env]
+ * @returns {string | null} Chave publica (base64) derivada da privada configurada.
+ */
 export function getJobSigningPublicKey(env = process.env) {
   const raw = jobPrivateKey(env);
   if (!raw) return null;
@@ -25,17 +47,26 @@ export function getJobSigningPublicKey(env = process.env) {
     try {
       cachedKey = { raw, publicKey: derivePublicKeyBase64(raw) };
     } catch (error) {
-      logger.error("agent_job_signing_key_invalid", { message: error.message });
+      logger.error("agent_job_signing_key_invalid", { message: error instanceof Error ? error.message : String(error) });
       cachedKey = { raw, publicKey: null };
     }
   }
   return cachedKey.publicKey;
 }
 
-/** Acrescenta `signature` e `notAfter` ao job; sem chave configurada devolve o job sem assinatura (com aviso unico). */
+/**
+ * Acrescenta `signature` e `notAfter` ao job; sem chave configurada devolve o job sem assinatura (com aviso unico).
+ *
+ * @template {AgentJobToSign} T
+ * @param {T | null | undefined} job
+ * @param {string} assetId
+ * @param {{ env?: Env, now?: number }} [options]
+ * @returns {T | (T & { signature: string, notAfter: number }) | null | undefined}
+ */
 export function signJobForAgent(job, assetId, { env = process.env, now = Date.now() } = {}) {
   if (!job) return job;
-  if (!getJobSigningPublicKey(env)) {
+  const privateKey = jobPrivateKey(env);
+  if (!privateKey || !getJobSigningPublicKey(env)) {
     if (!warnedMissing) {
       warnedMissing = true;
       logger.warn("agent_job_signing_disabled", {
@@ -47,15 +78,22 @@ export function signJobForAgent(job, assetId, { env = process.env, now = Date.no
     return job;
   }
   const { signature, notAfter } = signJob(
-    jobPrivateKey(env),
+    privateKey,
     { jobId: job.id, assetId, interpreter: job.type, timeoutSeconds: job.timeoutSeconds, content: job.content },
     { now }
   );
   return { ...job, signature, notAfter };
 }
 
-/** Oferece a atualizacao so se vier assinada (e, quando a chave publica de release estiver configurada, assinatura valida). */
+/**
+ * Oferece a atualizacao so se vier assinada (e, quando a chave publica de release estiver configurada, assinatura valida).
+ *
+ * @param {AgentAutoUpdateInfo | null | undefined} autoUpdate
+ * @param {Env} [env]
+ * @returns {SignedUpdateOffer}
+ */
 export function resolveSignedUpdate(autoUpdate, env = process.env) {
+  /** @type {SignedUpdateOffer} */
   const empty = { version: null, downloadUrl: null, sha256: null, signature: null };
   if (!autoUpdate?.version) return empty;
   const signature = String(env.AGENT_LATEST_VERSION_SIGNATURE || "").trim();

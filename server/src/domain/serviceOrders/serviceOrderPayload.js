@@ -1,22 +1,45 @@
 import { sumServiceOrderItems, toMoneyValue } from "./serviceOrderItems.js";
 import { generalSector } from "./serviceOrderSector.js";
 
+/** @import { ServiceOrder, ServiceOrderChange, ServiceOrderMoney, ServiceOrderPayload, ServiceOrderSector, ServiceOrderService } from "./types.js" */
+
+/**
+ * @param {unknown} payload
+ * @param {string} key
+ * @returns {boolean} `true` quando a chave foi enviada (mesmo com valor vazio).
+ */
 export function hasOwn(payload, key) {
   return Object.prototype.hasOwnProperty.call(payload || {}, key);
 }
 
+/**
+ * @param {ServiceOrderPayload} [payload]
+ * @returns {boolean}
+ */
 export function hasSectorPayload(payload = {}) {
   return hasOwn(payload, "sectorId") || hasOwn(payload, "sectorName");
 }
 
+/**
+ * @param {ServiceOrderPayload} [payload]
+ * @returns {boolean}
+ */
 export function hasItemsPayload(payload = {}) {
   return hasOwn(payload, "items") || hasOwn(payload, "serviceItems");
 }
 
+/**
+ * @param {ServiceOrderPayload} [payload]
+ * @returns {boolean}
+ */
 export function hasAssignedTechniciansPayload(payload = {}) {
   return hasOwn(payload, "assignedTechnicianNames") || hasOwn(payload, "assignedTechnicianName");
 }
 
+/**
+ * @param {ServiceOrderPayload} [payload]
+ * @returns {boolean}
+ */
 export function hasServicePayload(payload = {}) {
   return (
     Object.prototype.hasOwnProperty.call(payload, "serviceId") ||
@@ -25,6 +48,11 @@ export function hasServicePayload(payload = {}) {
   );
 }
 
+/**
+ * @param {ServiceOrderPayload} [payload]
+ * @param {ServiceOrder | null} [current]
+ * @returns {string[]} Ate 12 nomes unicos e nao vazios.
+ */
 export function resolveAssignedTechnicianNames(payload = {}, current = null) {
   const hasList = Object.prototype.hasOwnProperty.call(payload, "assignedTechnicianNames");
   const hasSingle = Object.prototype.hasOwnProperty.call(payload, "assignedTechnicianName");
@@ -36,19 +64,36 @@ export function resolveAssignedTechnicianNames(payload = {}, current = null) {
   return [...new Set((Array.isArray(source) ? source : []).map((item) => String(item || "").trim()).filter(Boolean))].slice(0, 12);
 }
 
-/** Soma valor do servico e das pecas (arredondado em centavos). */
+/**
+ * Soma valor do servico e das pecas (arredondado em centavos).
+ *
+ * @param {number} serviceValue
+ * @param {{ subtotal?: unknown }[]} [items]
+ * @returns {ServiceOrderMoney}
+ */
 export function calculateServiceOrderTotals(serviceValue, items = []) {
   const totalPartsValue = sumServiceOrderItems(items);
   const totalValue = Math.round((serviceValue + totalPartsValue) * 100) / 100;
   return { serviceValue, totalPartsValue, totalValue };
 }
 
+/**
+ * @param {ServiceOrderPayload} [payload]
+ * @param {ServiceOrderService} [service]
+ * @returns {number}
+ */
 export function resolveCreateServiceValue(payload = {}, service = {}) {
   return payload.serviceValue !== undefined
     ? toMoneyValue(payload.serviceValue)
     : toMoneyValue(service.defaultValue);
 }
 
+/**
+ * @param {ServiceOrderPayload} [payload]
+ * @param {Partial<ServiceOrder>} [current]
+ * @param {ServiceOrderService} [service]
+ * @returns {number}
+ */
 export function resolveUpdateServiceValue(payload = {}, current = {}, service = {}) {
   if (payload.serviceValue !== undefined) return toMoneyValue(payload.serviceValue);
   if (hasServicePayload(payload) && service.defaultValue != null) return toMoneyValue(service.defaultValue);
@@ -59,6 +104,17 @@ export function resolveUpdateServiceValue(payload = {}, current = {}, service = 
  * Lista de alteracoes comparaveis de uma atualizacao de OS:
  * [tipoDoEvento, mensagem, valorAntigo, valorNovo]. Um valor novo `undefined`
  * significa "campo nao enviado" e nao gera evento de historico.
+ *
+ * @param {object} input
+ * @param {ServiceOrder} input.current
+ * @param {ServiceOrderPayload} input.payload
+ * @param {string[]} input.assignedTechnicianNames
+ * @param {string | null | undefined} input.nextAssetId
+ * @param {number} input.serviceValue
+ * @param {ServiceOrderSector} input.sector
+ * @param {ServiceOrderService} input.service
+ * @param {boolean} input.itemsInPayload
+ * @returns {ServiceOrderChange[]}
  */
 export function buildServiceOrderChanges({
   current,
@@ -70,7 +126,8 @@ export function buildServiceOrderChanges({
   service,
   itemsInPayload
 }) {
-  return [
+  /** @type {ServiceOrderChange[]} */
+  const changes = [
     ["title", "Título alterado.", current.title, payload.title],
     ["description", "Descrição alterada.", current.description, payload.description],
     ["status", "Status alterado.", current.status, payload.status],
@@ -94,5 +151,6 @@ export function buildServiceOrderChanges({
     ["sector", `Setor alterado de ${current.sectorName || generalSector.name} para ${sector.sectorName}.`, current.sectorName, sector.sectorName],
     ["service", "Serviço da OS alterado.", current.serviceName || current.serviceCode, service.serviceName || service.serviceCode],
     ["parts", "Peças trocadas registradas.", current.partsUsed, itemsInPayload ? undefined : payload.partsUsed]
-  ].filter(([, , oldValue, newValue]) => newValue !== undefined && String(oldValue ?? "") !== String(newValue ?? ""));
+  ];
+  return changes.filter(([, , oldValue, newValue]) => newValue !== undefined && String(oldValue ?? "") !== String(newValue ?? ""));
 }

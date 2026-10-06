@@ -11,11 +11,32 @@ import {
 } from "../repositories/authSessionRepository.js";
 import { findUserById } from "../repositories/userRepository.js";
 
+/** @import { Algorithm } from "jsonwebtoken" */
+/** @import { AuthSession, RequestContext, SessionTokenPayload, User } from "../types/identity.js" */
+
 const SESSION_TYPE = "session";
 const MFA_TYPE = "mfa";
+/** @type {Algorithm[]} */
 const ALGORITHMS = ["HS256"];
 const TOUCH_INTERVAL_MS = 60_000;
 
+/**
+ * Verifica assinatura e validade do JWT e devolve as claims; um corpo textual
+ * (nunca emitido por nos) conta como token invalido.
+ * @param {string} token
+ * @returns {SessionTokenPayload}
+ * @throws {Error} Token malformado, expirado ou com assinatura invalida.
+ */
+function verifyClaims(token) {
+  const payload = jwt.verify(token, getJwtSecret(), { algorithms: ALGORITHMS });
+  if (typeof payload === "string") throw new Error("corpo textual");
+  return /** @type {SessionTokenPayload} */ (payload);
+}
+
+/**
+ * @param {{ userId: string, sessionId: string, tokenVersion: number, expiresInSeconds: number }} input
+ * @returns {string}
+ */
 function signSessionToken({ userId, sessionId, tokenVersion, expiresInSeconds }) {
   return jwt.sign(
     { sub: userId, sid: sessionId, ver: tokenVersion, typ: SESSION_TYPE },
@@ -27,6 +48,10 @@ function signSessionToken({ userId, sessionId, tokenVersion, expiresInSeconds })
 /**
  * Abre uma sessao: grava a linha em auth_sessions (revogavel, com vida maxima
  * absoluta) e devolve o JWT que a representa.
+ *
+ * @param {User} user
+ * @param {RequestContext} [context]
+ * @returns {Promise<{ token: string, session: AuthSession, maxAgeSeconds: number }>}
  */
 export async function startSession(user, { ip = null, userAgent = null } = {}) {
   const config = getAuthConfig();
@@ -47,6 +72,10 @@ export async function startSession(user, { ip = null, userAgent = null } = {}) {
   return { token, session, maxAgeSeconds: Math.min(config.idleSeconds, config.absoluteSeconds) };
 }
 
+/**
+ * @param {string} [message]
+ * @param {string} [code]
+ */
 function invalidSession(message = "Sessão inválida ou expirada. Entre novamente.", code = "SESSION_INVALID") {
   return unauthorized(message, { code });
 }
@@ -55,11 +84,16 @@ function invalidSession(message = "Sessão inválida ou expirada. Entre novament
  * Valida um token de sessao ponta a ponta: assinatura, tipo, sessao nao
  * revogada, dentro da vida maxima, versao de token igual a do usuario e
  * usuario ativo. Usada pelo HTTP e pelo WebSocket.
+ *
+ * @param {string} token
+ * @returns {Promise<{ user: User, session: AuthSession, payload: SessionTokenPayload }>}
+ * @throws {Error} 401 `SESSION_INVALID` para qualquer falha.
  */
 export async function authenticateSessionToken(token) {
+  /** @type {SessionTokenPayload} */
   let payload;
   try {
-    payload = jwt.verify(token, getJwtSecret(), { algorithms: ALGORITHMS });
+    payload = verifyClaims(token);
   } catch {
     throw invalidSession();
   }
@@ -83,6 +117,9 @@ export async function authenticateSessionToken(token) {
  * Renova o token (mesma sessao) depois de `rotateAfterSeconds`, sem nunca
  * ultrapassar a vida maxima absoluta -- e isto que impede um token roubado de
  * se renovar para sempre.
+ *
+ * @param {{ token: string, payload: SessionTokenPayload, session: AuthSession, user: User }} input
+ * @returns {{ token: string, rotated: boolean, maxAgeSeconds: number }}
  */
 export function rotateSessionTokenIfNeeded({ token, payload, session, user }) {
   const config = getAuthConfig();
@@ -101,6 +138,10 @@ export function rotateSessionTokenIfNeeded({ token, payload, session, user }) {
   return { token: rotatedToken, rotated: true, maxAgeSeconds: expiresInSeconds };
 }
 
+/**
+ * @param {string} userId
+ * @returns {string}
+ */
 export function issueMfaChallengeToken(userId) {
   return jwt.sign({ sub: userId, typ: MFA_TYPE }, getJwtSecret(), {
     algorithm: "HS256",
@@ -108,9 +149,14 @@ export function issueMfaChallengeToken(userId) {
   });
 }
 
+/**
+ * @param {string} token
+ * @returns {string} Id do usuario do desafio.
+ * @throws {Error} 401 `MFA_CHALLENGE_INVALID`.
+ */
 export function verifyMfaChallengeToken(token) {
   try {
-    const payload = jwt.verify(token, getJwtSecret(), { algorithms: ALGORITHMS });
+    const payload = verifyClaims(token);
     if (payload.typ !== MFA_TYPE || !payload.sub) throw new Error("tipo");
     return payload.sub;
   } catch {
@@ -118,14 +164,30 @@ export function verifyMfaChallengeToken(token) {
   }
 }
 
+/**
+ * @param {string} userId
+ * @returns {Promise<AuthSession[]>}
+ */
 export function listUserSessions(userId) {
   return listActiveAuthSessions(userId);
 }
 
+/**
+ * @param {string} sessionId
+ * @param {string} userId
+ * @param {string} reason
+ * @returns {Promise<boolean>}
+ */
 export function revokeSession(sessionId, userId, reason) {
   return revokeAuthSession(sessionId, userId, reason);
 }
 
+/**
+ * @param {string} userId
+ * @param {string} reason
+ * @param {{ exceptSessionId?: string | null }} [options]
+ * @returns {Promise<number | null>}
+ */
 export function revokeAllSessions(userId, reason, options) {
   return revokeAllAuthSessions(userId, reason, options);
 }

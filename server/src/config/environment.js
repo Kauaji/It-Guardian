@@ -3,6 +3,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { boundedInteger, isTruthyEnv } from "./envParsing.js";
 
+/** @import { Env } from "./envParsing.js" */
+
 dotenv.config();
 dotenv.config({
   path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../.env")
@@ -19,6 +21,12 @@ export function isRemoteScriptExecutionEnabled(env = process.env) {
   return isTruthyEnv(env.ENABLE_REMOTE_SCRIPT_EXECUTION);
 }
 
+/**
+ * Atualizacao do agente anunciada pelo servidor: versao, URL https e SHA-256 sempre juntos.
+ * @typedef {{ version: string, downloadUrl: string, sha256: string }
+ *   | { version: null, downloadUrl: null, sha256: null }} AgentAutoUpdateInfo
+ */
+
 const SHA256_HEX_PATTERN = /^[0-9a-f]{64}$/i;
 
 // Sem certificado de assinatura em uso ainda, o hash SHA-256 declarado aqui e
@@ -29,7 +37,7 @@ const SHA256_HEX_PATTERN = /^[0-9a-f]{64}$/i;
 // ou um hash sem URL, nao habilita nada.
 /**
  * @param {Env} [env]
- * @returns {{ version: string | null, downloadUrl: string | null, sha256: string | null }}
+ * @returns {AgentAutoUpdateInfo} Os tres campos juntos, ou todos `null` (nada habilitado).
  */
 export function getAgentAutoUpdateInfo(env = process.env) {
   const version = String(env.AGENT_LATEST_VERSION || "").trim();
@@ -229,6 +237,21 @@ export function getJwtSecret() {
   return secret || "dev-secret";
 }
 
+/**
+ * @typedef {object} PostgresDatabaseConfig
+ * @property {"postgres"} mode
+ * @property {string} connectionString
+ * @property {boolean | { rejectUnauthorized: boolean, ca?: string }} ssl
+ * @property {string} tlsVerification `verified`, `unverified` ou `disabled`.
+ * @property {number} max
+ * @property {number} connectionTimeoutMillis
+ * @property {number} idleTimeoutMillis
+ * @property {boolean} allowExitOnIdle
+ */
+
+/** @typedef {{ mode: "memory" } | PostgresDatabaseConfig} DatabaseConfig */
+
+/** @returns {DatabaseConfig} Banco em memoria (pg-mem, so dev/teste) ou conexao PostgreSQL. */
 export function resolveDatabaseConfig() {
   const databaseUrl = process.env.DATABASE_URL || "";
   const wantsMemory = databaseUrl === "memory" || process.env.DB_MODE === "memory";

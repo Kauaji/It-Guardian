@@ -1,5 +1,7 @@
 import { makeHttpError } from "./topologyErrors.js";
 
+/** @import { NormalizedTopologyLink, NormalizedTopologyMap, NormalizedTopologyNode, TopologyLink, TopologyMap, TopologyNode, TopologyPayload } from "./types.js" */
+
 export const TOPOLOGY_MAP_SCOPE_TYPES = new Set(["global", "inventory_tab", "group", "segment"]);
 
 export const TOPOLOGY_NODE_TYPES = new Set(["asset", "segment", "group"]);
@@ -15,21 +17,41 @@ export const TOPOLOGY_LINK_STATUS_OVERRIDES = new Set([
   "manual"
 ]);
 
+/**
+ * @param {unknown} value
+ * @param {string} [fallback]
+ * @returns {string}
+ */
 function normalizeText(value, fallback = "") {
   const normalized = String(value ?? "").trim();
   return normalized || fallback;
 }
 
+/**
+ * @param {unknown} value
+ * @returns {string | null} Texto aparado ou `null` quando vazio.
+ */
 export function nullableText(value) {
   const normalized = String(value ?? "").trim();
   return normalized || null;
 }
 
+/**
+ * @param {unknown} value
+ * @param {number} fallback
+ * @returns {number}
+ */
 export function finiteNumber(value, fallback) {
   const numeric = Number(value);
   return Number.isFinite(numeric) ? numeric : fallback;
 }
 
+/**
+ * @param {TopologyPayload} [payload]
+ * @param {TopologyMap} [existing]
+ * @returns {NormalizedTopologyMap}
+ * @throws {Error} 400 para nome curto ou escopo desconhecido.
+ */
 export function normalizeMapPayload(payload = {}, existing = {}) {
   const name = normalizeText(payload.name, existing.name || "");
   if (name.length < 2) {
@@ -48,6 +70,12 @@ export function normalizeMapPayload(payload = {}, existing = {}) {
   };
 }
 
+/**
+ * @param {TopologyPayload} [payload]
+ * @param {TopologyNode} [existing]
+ * @returns {NormalizedTopologyNode}
+ * @throws {Error} 400 para tipo desconhecido ou referencia ausente.
+ */
 export function normalizeNodePayload(payload = {}, existing = {}) {
   const nodeType = normalizeText(payload.nodeType ?? payload.node_type ?? existing.nodeType, "asset");
   if (!TOPOLOGY_NODE_TYPES.has(nodeType)) {
@@ -76,6 +104,12 @@ export function normalizeNodePayload(payload = {}, existing = {}) {
   return { nodeType, assetId: null, refId, ...shared };
 }
 
+/**
+ * @param {TopologyPayload} [payload]
+ * @param {TopologyLink} [existing]
+ * @returns {NormalizedTopologyLink}
+ * @throws {Error} 400 para conexao invalida.
+ */
 export function normalizeLinkPayload(payload = {}, existing = {}) {
   const sourceType = normalizeText(payload.sourceType ?? payload.source_type ?? existing.sourceType, "asset");
   const targetType = normalizeText(payload.targetType ?? payload.target_type ?? existing.targetType, "asset");

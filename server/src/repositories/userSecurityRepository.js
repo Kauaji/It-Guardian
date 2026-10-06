@@ -1,7 +1,15 @@
 import { randomUUID } from "node:crypto";
 import { query, withTransaction } from "../database.js";
 
+/** @import { QueryResult } from "pg" */
+/** @import { SecurityState, SecurityStateRow } from "../types/identity.js" */
+
+/**
+ * @param {string} userId
+ * @returns {Promise<SecurityState | null>}
+ */
 export async function getSecurityState(userId) {
+  /** @type {QueryResult<SecurityStateRow>} */
   const result = await query(
     `
       SELECT token_version, failed_login_attempts, lockout_count, locked_until,
@@ -31,9 +39,14 @@ export async function getSecurityState(userId) {
  * Registra uma falha de login. Ao atingir `threshold` falhas seguidas bloqueia
  * a conta por um tempo progressivo (lockoutSeconds[n-esimo bloqueio]).
  * Devolve { lockedUntil } quando um bloqueio foi aplicado agora.
+ *
+ * @param {string} userId
+ * @param {{ threshold: number, lockoutSeconds: number[] }} policy
+ * @returns {Promise<{ lockedUntil: Date | null, attempts: number }>}
  */
 export async function recordFailedLogin(userId, { threshold, lockoutSeconds }) {
   return withTransaction(async (db) => {
+    /** @type {QueryResult<{ failed_login_attempts: number | string | null, lockout_count: number | string | null }>} */
     const current = await db(
       "SELECT failed_login_attempts, lockout_count FROM users WHERE id = $1 FOR UPDATE",
       [userId]
@@ -55,6 +68,10 @@ export async function recordFailedLogin(userId, { threshold, lockoutSeconds }) {
   });
 }
 
+/**
+ * @param {string} userId
+ * @returns {Promise<void>}
+ */
 export async function recordSuccessfulLogin(userId) {
   await query(
     `
@@ -66,6 +83,10 @@ export async function recordSuccessfulLogin(userId) {
   );
 }
 
+/**
+ * @param {string} userId
+ * @returns {Promise<void>}
+ */
 export async function clearLockout(userId) {
   await query(
     "UPDATE users SET failed_login_attempts = 0, lockout_count = 0, locked_until = NULL WHERE id = $1",
@@ -73,8 +94,16 @@ export async function clearLockout(userId) {
   );
 }
 
-/** Troca a senha e invalida todos os tokens antigos (token_version + 1). */
+/**
+ * Troca a senha e invalida todos os tokens antigos (token_version + 1).
+ *
+ * @param {string} userId
+ * @param {string} passwordHash
+ * @param {{ mustChangePassword?: boolean }} [options]
+ * @returns {Promise<number | null>} Nova `token_version`, ou `null` quando o usuario nao existe.
+ */
 export async function setUserPassword(userId, passwordHash, { mustChangePassword = false } = {}) {
+  /** @type {QueryResult<{ token_version: number | string }>} */
   const result = await query(
     `
       UPDATE users
@@ -94,7 +123,12 @@ export async function setUserPassword(userId, passwordHash, { mustChangePassword
   return result.rows[0] ? Number(result.rows[0].token_version) : null;
 }
 
+/**
+ * @param {string} userId
+ * @returns {Promise<number | null>}
+ */
 export async function bumpTokenVersion(userId) {
+  /** @type {QueryResult<{ token_version: number | string }>} */
   const result = await query(
     "UPDATE users SET token_version = token_version + 1 WHERE id = $1 RETURNING token_version",
     [userId]
@@ -102,10 +136,20 @@ export async function bumpTokenVersion(userId) {
   return result.rows[0] ? Number(result.rows[0].token_version) : null;
 }
 
+/**
+ * @param {string} userId
+ * @param {string} sealedSecret Segredo ja cifrado (`sealSecret`).
+ * @returns {Promise<void>}
+ */
 export async function saveMfaPendingSecret(userId, sealedSecret) {
   await query("UPDATE users SET mfa_pending_secret_encrypted = $2 WHERE id = $1", [userId, sealedSecret]);
 }
 
+/**
+ * @param {string} userId
+ * @param {{ lastUsedStep: number }} options
+ * @returns {Promise<void>}
+ */
 export async function activateMfa(userId, { lastUsedStep }) {
   await query(
     `
@@ -121,6 +165,10 @@ export async function activateMfa(userId, { lastUsedStep }) {
   );
 }
 
+/**
+ * @param {string} userId
+ * @returns {Promise<void>}
+ */
 export async function deactivateMfa(userId) {
   await withTransaction(async (db) => {
     await db(
@@ -140,6 +188,10 @@ export async function deactivateMfa(userId) {
  * Marca o passo TOTP como usado de forma atomica: so avanca se for maior que o
  * ultimo registrado (duas requisicoes simultaneas com o mesmo codigo nao
  * passam as duas).
+ *
+ * @param {string} userId
+ * @param {number} step
+ * @returns {Promise<boolean>} `true` quando o passo foi reivindicado agora.
  */
 export async function claimMfaStep(userId, step) {
   const result = await query(
@@ -150,9 +202,14 @@ export async function claimMfaStep(userId, step) {
     `,
     [userId, step]
   );
-  return result.rowCount > 0;
+  return (result.rowCount ?? 0) > 0;
 }
 
+/**
+ * @param {string} userId
+ * @param {string[]} codeHashes
+ * @returns {Promise<void>}
+ */
 export async function replaceRecoveryCodes(userId, codeHashes) {
   await withTransaction(async (db) => {
     await db("DELETE FROM user_recovery_codes WHERE user_id = $1", [userId]);
@@ -165,6 +222,11 @@ export async function replaceRecoveryCodes(userId, codeHashes) {
   });
 }
 
+/**
+ * @param {string} userId
+ * @param {string} codeHash
+ * @returns {Promise<boolean>}
+ */
 export async function consumeRecoveryCode(userId, codeHash) {
   const result = await query(
     `
@@ -174,10 +236,15 @@ export async function consumeRecoveryCode(userId, codeHash) {
     `,
     [userId, codeHash]
   );
-  return result.rowCount > 0;
+  return (result.rowCount ?? 0) > 0;
 }
 
+/**
+ * @param {string} userId
+ * @returns {Promise<number>}
+ */
 export async function countUnusedRecoveryCodes(userId) {
+  /** @type {QueryResult<{ total: number }>} */
   const result = await query(
     "SELECT COUNT(*)::int AS total FROM user_recovery_codes WHERE user_id = $1 AND used_at IS NULL",
     [userId]

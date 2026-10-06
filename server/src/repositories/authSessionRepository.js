@@ -1,6 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { query } from "../database.js";
 
+/** @import { QueryResult } from "pg" */
+/** @import { AuthSession, AuthSessionRow } from "../types/identity.js" */
+
+/**
+ * @param {AuthSessionRow} row
+ * @returns {AuthSession}
+ */
 function fromRow(row) {
   return {
     id: row.id,
@@ -16,7 +23,12 @@ function fromRow(row) {
   };
 }
 
+/**
+ * @param {{ userId: string, tokenVersion: number, absoluteExpiresAt: Date, ip?: string | null, userAgent?: string | null }} input
+ * @returns {Promise<AuthSession>}
+ */
 export async function createAuthSession({ userId, tokenVersion, absoluteExpiresAt, ip = null, userAgent = null }) {
+  /** @type {QueryResult<AuthSessionRow>} */
   const result = await query(
     `
       INSERT INTO auth_sessions (id, user_id, token_version, absolute_expires_at, ip, user_agent)
@@ -28,16 +40,30 @@ export async function createAuthSession({ userId, tokenVersion, absoluteExpiresA
   return fromRow(result.rows[0]);
 }
 
+/**
+ * @param {string} id
+ * @returns {Promise<AuthSession | null>}
+ */
 export async function findAuthSession(id) {
+  /** @type {QueryResult<AuthSessionRow>} */
   const result = await query("SELECT * FROM auth_sessions WHERE id = $1", [id]);
   return result.rows[0] ? fromRow(result.rows[0]) : null;
 }
 
+/**
+ * @param {string} id
+ * @returns {Promise<void>}
+ */
 export async function touchAuthSession(id) {
   await query("UPDATE auth_sessions SET last_seen_at = NOW() WHERE id = $1", [id]);
 }
 
+/**
+ * @param {string} userId
+ * @returns {Promise<AuthSession[]>}
+ */
 export async function listActiveAuthSessions(userId) {
+  /** @type {QueryResult<AuthSessionRow>} */
   const result = await query(
     `
       SELECT * FROM auth_sessions
@@ -49,6 +75,12 @@ export async function listActiveAuthSessions(userId) {
   return result.rows.map(fromRow);
 }
 
+/**
+ * @param {string} id
+ * @param {string} userId
+ * @param {string} reason
+ * @returns {Promise<boolean>} `true` quando a sessao estava ativa e foi revogada.
+ */
 export async function revokeAuthSession(id, userId, reason) {
   const result = await query(
     `
@@ -59,9 +91,15 @@ export async function revokeAuthSession(id, userId, reason) {
     `,
     [id, userId, reason]
   );
-  return result.rowCount > 0;
+  return (result.rowCount ?? 0) > 0;
 }
 
+/**
+ * @param {string} userId
+ * @param {string} reason
+ * @param {{ exceptSessionId?: string | null }} [options]
+ * @returns {Promise<number | null>} Quantidade revogada.
+ */
 export async function revokeAllAuthSessions(userId, reason, { exceptSessionId = null } = {}) {
   const result = await query(
     `
@@ -75,6 +113,10 @@ export async function revokeAllAuthSessions(userId, reason, { exceptSessionId = 
   return result.rowCount;
 }
 
+/**
+ * @param {number} [olderThanDays]
+ * @returns {Promise<number | null>} Quantidade apagada.
+ */
 export async function purgeExpiredAuthSessions(olderThanDays = 30) {
   const result = await query(
     `
