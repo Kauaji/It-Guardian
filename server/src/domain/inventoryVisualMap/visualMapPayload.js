@@ -9,46 +9,81 @@ import {
   resolveObjectLayer
 } from "./visualMapVocabulary.js";
 
+/** @import { NormalizedVisualMap, NormalizedVisualMapConnection, NormalizedVisualMapObject, VisualMap, VisualMapConnection, VisualMapObject, VisualMapPayload, VisualMapPoint } from "./types.js" */
+
+/**
+ * @param {unknown} value
+ * @param {string} [fallback]
+ * @returns {string}
+ */
 function normalizeText(value, fallback = "") {
   const normalized = String(value ?? "").trim();
   return normalized || fallback;
 }
 
+/**
+ * @param {unknown} value
+ * @returns {string | null}
+ */
 function nullableText(value) {
   const normalized = String(value ?? "").trim();
   return normalized || null;
 }
 
+/**
+ * @param {unknown} value
+ * @param {number} fallback
+ * @param {number} min
+ * @param {number} max
+ * @returns {number}
+ */
 function numberInRange(value, fallback, min, max) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return fallback;
   return Math.min(max, Math.max(min, numeric));
 }
 
+/**
+ * @param {unknown} value
+ * @returns {Record<string, unknown>}
+ */
 function parseMetadata(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  return value;
+  return /** @type {Record<string, unknown>} */ (value);
 }
 
+/**
+ * @param {unknown} value Objeto ou texto JSON de coluna.
+ * @returns {Record<string, unknown>}
+ */
 export function parseJsonField(value) {
   if (!value) return {};
-  if (typeof value === "object") return value;
+  if (typeof value === "object") return /** @type {Record<string, unknown>} */ (value);
 
   try {
-    return JSON.parse(value);
+    return JSON.parse(String(value));
   } catch (_error) {
     return {};
   }
 }
 
+/**
+ * @param {unknown} value
+ * @returns {boolean}
+ */
 function isHexColor(value) {
   return /^#[0-9a-f]{6}$/i.test(String(value || "").trim());
 }
 
+/**
+ * @param {unknown} point `[x, y, z]` ou objeto com `x/y/z` (ou `positionX/Y/Z`).
+ * @returns {VisualMapPoint}
+ */
 function normalizePoint(point) {
+  /** @type {Record<string, unknown>} */
   const source = Array.isArray(point)
     ? { x: point[0], y: point[1], z: point[2] }
-    : point || {};
+    : point && typeof point === "object" ? /** @type {Record<string, unknown>} */ (point) : {};
 
   return {
     x: numberInRange(source.x ?? source.positionX, 0, -200, 200),
@@ -57,10 +92,16 @@ function normalizePoint(point) {
   };
 }
 
+/**
+ * @param {unknown} value Lista de pontos ou texto JSON de lista.
+ * @returns {unknown[]}
+ */
 export function parsePoints(value) {
   if (typeof value === "string") {
     try {
-      return JSON.parse(value);
+      const parsed = JSON.parse(value);
+      // Texto JSON que nao e lista (`{}`, `5`, `null`) antes passava adiante e estourava em `.map`.
+      return Array.isArray(parsed) ? parsed : [];
     } catch (_error) {
       return [];
     }
@@ -69,6 +110,12 @@ export function parsePoints(value) {
   return Array.isArray(value) ? value : [];
 }
 
+/**
+ * @param {VisualMapPayload} [payload]
+ * @param {VisualMap} [existing]
+ * @returns {NormalizedVisualMap}
+ * @throws {Error} 400 para nome curto.
+ */
 export function normalizeMapPayload(payload = {}, existing = {}) {
   const name = normalizeText(payload.name, existing.name || "");
   if (name.length < 2) {
@@ -88,6 +135,12 @@ export function normalizeMapPayload(payload = {}, existing = {}) {
   };
 }
 
+/**
+ * @param {VisualMapPayload} [payload]
+ * @param {VisualMapObject} [existing]
+ * @returns {NormalizedVisualMapObject}
+ * @throws {Error} 400 para tipo desconhecido ou incompativel com a camada.
+ */
 export function normalizeObjectPayload(payload = {}, existing = {}) {
   const presetType = normalizeText(payload.presetType ?? payload.preset_type ?? payload.objectType ?? existing.presetType, "desktop");
   if (!ALL_PRESETS.has(presetType)) {
@@ -121,6 +174,12 @@ export function normalizeObjectPayload(payload = {}, existing = {}) {
   };
 }
 
+/**
+ * @param {VisualMapPayload} [payload]
+ * @param {VisualMapConnection} [existing]
+ * @returns {NormalizedVisualMapConnection}
+ * @throws {Error} 400 para camada/tipo invalidos ou menos de dois pontos.
+ */
 export function normalizeConnectionPayload(payload = {}, existing = {}) {
   const layer = normalizeText(payload.layer ?? existing.layer, "infrastructure");
   if (!CONNECTION_LAYERS.has(layer)) {

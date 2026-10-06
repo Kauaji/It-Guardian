@@ -1,3 +1,5 @@
+/** @import { PresetDimensions } from "./types.js" */
+
 export const STRUCTURE_PRESETS = new Set(["wall", "partition", "room", "corridor", "desk", "rack"]);
 
 export const VISUAL_MAP_LAYERS = new Set(["structure", "assets", "infrastructure", "electrical"]);
@@ -52,6 +54,7 @@ export const ELECTRICAL_CONNECTION_TYPES = new Set([
   "ups_line"
 ]);
 
+/** @type {Record<string, PresetDimensions>} */
 export const DEFAULT_STRUCTURE_DIMENSIONS = {
   wall: { width: 4, depth: 0.18, height: 2.4, color: "#64748b", label: "Parede" },
   partition: { width: 3, depth: 0.12, height: 1.6, color: "#94a3b8", label: "Divisoria" },
@@ -61,6 +64,7 @@ export const DEFAULT_STRUCTURE_DIMENSIONS = {
   rack: { width: 0.85, depth: 1, height: 2, color: "#334155", label: "Rack" }
 };
 
+/** @type {Record<string, PresetDimensions>} */
 export const DEFAULT_ASSET_DIMENSIONS = {
   desktop: { width: 0.9, depth: 0.65, height: 0.35, color: "#2563eb", label: "Desktop" },
   notebook: { width: 0.8, depth: 0.55, height: 0.18, color: "#7c3aed", label: "Notebook" },
@@ -74,6 +78,7 @@ export const DEFAULT_ASSET_DIMENSIONS = {
   power_point: { width: 0.28, depth: 0.12, height: 0.28, color: "#dc2626", label: "Ponto eletrico" }
 };
 
+/** @type {Record<string, PresetDimensions>} */
 export const DEFAULT_INFRASTRUCTURE_DIMENSIONS = {
   network_point: { width: 0.28, depth: 0.12, height: 0.28, color: "#16a34a", label: "Ponto de rede" },
   network_cable: { width: 2.2, depth: 0.08, height: 0.08, color: "#0ea5e9", label: "Cabo de rede" },
@@ -86,6 +91,7 @@ export const DEFAULT_INFRASTRUCTURE_DIMENSIONS = {
   ip_camera: { width: 0.35, depth: 0.35, height: 0.25, color: "#475569", label: "Camera IP" }
 };
 
+/** @type {Record<string, PresetDimensions>} */
 export const DEFAULT_ELECTRICAL_DIMENSIONS = {
   power_point: { width: 0.28, depth: 0.12, height: 0.28, color: "#dc2626", label: "Ponto eletrico" },
   outlet: { width: 0.28, depth: 0.12, height: 0.22, color: "#f97316", label: "Tomada" },
@@ -102,29 +108,42 @@ export const ALL_PRESETS = new Set([
   ...ELECTRICAL_PRESETS
 ]);
 
+/** @type {Record<string, Set<string>>} */
 export const CONNECTION_TYPES_BY_LAYER = {
   infrastructure: INFRASTRUCTURE_CONNECTION_TYPES,
   electrical: ELECTRICAL_CONNECTION_TYPES
 };
 
+/** @type {Record<string, string>} */
 export const DEFAULT_CONNECTION_BY_LAYER = {
   infrastructure: "network_cable",
   electrical: "power_line"
 };
 
+/** @type {Record<string, string>} */
 export const DEFAULT_CONNECTION_COLOR_BY_LAYER = {
   infrastructure: "#0ea5e9",
   electrical: "#f97316"
 };
 
+/**
+ * @param {string} presetType
+ * @param {unknown} explicitLayer
+ * @returns {string} Camada explicita valida ou a deduzida do tipo de objeto.
+ */
 export function resolveObjectLayer(presetType, explicitLayer) {
-  if (VISUAL_MAP_LAYERS.has(explicitLayer)) return explicitLayer;
+  if (typeof explicitLayer === "string" && VISUAL_MAP_LAYERS.has(explicitLayer)) return explicitLayer;
   if (STRUCTURE_PRESETS.has(presetType)) return "structure";
   if (INFRASTRUCTURE_PRESETS.has(presetType)) return "infrastructure";
   if (ELECTRICAL_PRESETS.has(presetType)) return "electrical";
   return "assets";
 }
 
+/**
+ * @param {string} presetType
+ * @param {string} layer
+ * @returns {PresetDimensions | undefined} `undefined` quando o tipo nao existe na camada.
+ */
 export function defaultsForPreset(presetType, layer) {
   if (layer === "structure") return DEFAULT_STRUCTURE_DIMENSIONS[presetType];
   if (layer === "infrastructure") return DEFAULT_INFRASTRUCTURE_DIMENSIONS[presetType];
@@ -132,6 +151,10 @@ export function defaultsForPreset(presetType, layer) {
   return DEFAULT_ASSET_DIMENSIONS[presetType];
 }
 
+/**
+ * @param {string} connectionType
+ * @returns {"infrastructure" | "electrical" | null}
+ */
 export function resolveConnectionTypeLayer(connectionType) {
   if (INFRASTRUCTURE_CONNECTION_TYPES.has(connectionType)) return "infrastructure";
   if (ELECTRICAL_CONNECTION_TYPES.has(connectionType)) return "electrical";
