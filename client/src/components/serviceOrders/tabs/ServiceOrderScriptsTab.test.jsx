@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as api from "../../../api.js";
 import ServiceOrderScriptsTab from "./ServiceOrderScriptsTab.jsx";
-import { makeDevice, makeOrder, wireApi } from "../test/fixtures.jsx";
+import { makeOrder, wireApi } from "../test/fixtures.jsx";
 
 vi.mock("../../../api.js", async () => (await import("../test/fixtures.jsx")).createApiMock());
 vi.mock("../../maintenance/ScriptExecutionDiagnosticPanel.jsx", () => ({
