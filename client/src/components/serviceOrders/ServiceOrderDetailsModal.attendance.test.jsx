@@ -204,6 +204,23 @@ describe("ServiceOrderDetailsModal - atendimento", () => {
       expect(within(form()).queryByPlaceholderText("Digite para buscar uma peça")).toBeNull();
     });
 
+    it("abre sugestões ao focar e fecha ao sair do campo de peças", async () => {
+      vi.useFakeTimers({ toFake: ["setTimeout"] });
+      try {
+        await openAttendance();
+        openParts();
+        fireEvent.focus(input());
+        expect(within(form()).getByRole("listbox")).toBeInTheDocument();
+        fireEvent.change(within(form()).getByLabelText("Quantidade"), { target: { value: "4" } });
+        expect(within(form()).getByLabelText("Quantidade")).toHaveValue(4);
+        fireEvent.blur(input());
+        act(() => vi.advanceTimersByTime(130));
+        expect(within(form()).queryByRole("listbox")).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it("mostra painel financeiro com valor de serviço mesmo sem peças", async () => {
       await openAttendance({ systemMode: "business", serviceOrder: makeOrder({ serviceValue: 40 }) });
       const panel = form().querySelector(".service-order-financial-panel");
