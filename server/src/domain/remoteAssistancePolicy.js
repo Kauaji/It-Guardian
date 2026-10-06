@@ -1,4 +1,16 @@
-/** @typedef {ReturnType<typeof import("../config/environment.js").getRemoteAssistanceConfig>} RemoteAssistanceConfig */
+/**
+ * Limites de captura que a politica de qualidade le. O formato vem de
+ * `getRemoteAssistanceConfig` (config/remoteAssistanceConfig.js), mas o dominio e puro e
+ * nao pode importar a configuracao (le variaveis de ambiente): ele declara so o que usa.
+ * @typedef {object} RemoteAssistanceCaptureConfig
+ * @property {number} minJpegQuality
+ * @property {number} maxJpegQuality
+ * @property {number} maxWidth
+ * @property {number} maxHeight
+ * @property {number} jpegQuality
+ * @property {boolean} adaptiveQuality
+ * @property {number} maxFrameBytes
+ */
 /** @typedef {{ enabled?: boolean, webrtc?: { enabled?: boolean }, rustdesk?: { enabled?: boolean, passwordLength?: number }, controlEnabled?: boolean }} RemoteAssistanceFlags Subconjunto da configuracao que as regras leem. */
 
 const activeStatuses = new Set(["requested", "waiting_consent", "connecting", "active"]);
@@ -203,7 +215,7 @@ export function deriveConnectionState({ session, relay, config, now = Date.now()
  * @param {number} input.width
  * @param {number} input.height
  * @param {number} input.lastFrameBytes
- * @param {Pick<RemoteAssistanceConfig, "minJpegQuality" | "maxJpegQuality" | "maxWidth" | "maxHeight" | "jpegQuality" | "adaptiveQuality" | "maxFrameBytes">} input.config
+ * @param {RemoteAssistanceCaptureConfig} input.config
  * @returns {{ quality: number, width: number, height: number, changed: boolean }}
  */
 export function stepAdaptiveQuality({ quality, width, height, lastFrameBytes, config }) {
