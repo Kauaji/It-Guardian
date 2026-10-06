@@ -105,14 +105,14 @@ export default function WidgetCategoryChart({ rows = [], variant = "bars", dimen
       <div className="dashboard-chart-visual" style={{ display: "contents" }} aria-hidden={isPie || isRadial ? "true" : undefined}>
       <WidgetChartFrame>
         {isPie ? (
-          <PieChart>
+          <PieChart accessibilityLayer={false}>
             <Pie data={entries} dataKey="value" nameKey="label" innerRadius={variant === "donut" ? "58%" : 0} outerRadius="90%" paddingAngle={1} isAnimationActive={false} onClick={(row) => selectable && activate(row)} cursor={selectable ? "pointer" : "default"}>
               {entries.map((row) => <Cell key={row.id ?? row.label} fill={row.color} stroke={selected(row) ? "var(--text-strong)" : "var(--surface)"} strokeWidth={selected(row) ? 3 : 1} />)}
             </Pie>
             <Tooltip formatter={(value) => showPercentages ? formatValue(value) + " · " + formatPercentage(value, total) : formatValue(value)} />
           </PieChart>
         ) : isRadial ? (
-          <RadialBarChart data={entries} innerRadius="24%" outerRadius="92%" startAngle={90} endAngle={-270} barSize={12}>
+          <RadialBarChart accessibilityLayer={false} data={entries} innerRadius="24%" outerRadius="92%" startAngle={90} endAngle={-270} barSize={12}>
             <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
             <RadialBar dataKey="value" background={{ fill: "var(--surface-muted)" }} cornerRadius={6} isAnimationActive={false} onClick={(row) => selectable && activate(row)} cursor={selectable ? "pointer" : "default"}>
               {entries.map((row) => <Cell key={row.id ?? row.label} fill={row.color} stroke={selected(row) ? "var(--text-strong)" : "none"} strokeWidth={2} />)}
