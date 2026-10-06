@@ -3,6 +3,22 @@ import { hashPassword } from "../security/passwordHasher.js";
 import { query } from "../database.js";
 import { getEffectivePermissions, normalizePermissions } from "../permissions.js";
 
+/** @import { QueryResult } from "pg" */
+/** @import { HttpErrorLike } from "../lib/errors.js" */
+/** @import { PublicUser, User, UserRow } from "../types/identity.js" */
+
+/**
+ * Corpo de atualizacao de acesso (so as chaves presentes mudam o usuario).
+ * @typedef {object} UserAccessPayload
+ * @property {string} [role]
+ * @property {boolean} [isAdmin]
+ * @property {unknown} [permissions]
+ * @property {string} [name]
+ * @property {string | null} [sectorId]
+ * @property {string | null} [jobTitle]
+ * @property {boolean} [active]
+ */
+
 const userSelect = `
   SELECT
     users.id,
@@ -34,14 +50,23 @@ const userSelect = `
   LEFT JOIN sectors ON sectors.id = users.sector_id
 `;
 
+/**
+ * @returns {Promise<PublicUser[]>}
+ */
 export async function listUsers() {
+  /** @type {QueryResult<UserRow>} */
   const result = await query(
     `${userSelect} ORDER BY users.created_at DESC`
   );
   return result.rows.map((row) => toPublicUser(fromRow(row)));
 }
 
+/**
+ * @param {string} email
+ * @returns {Promise<User | null>}
+ */
 export async function findUserByEmail(email) {
+  /** @type {QueryResult<UserRow>} */
   const result = await query(
     `${userSelect} WHERE LOWER(users.email) = LOWER($1)`,
     [email]
@@ -49,7 +74,12 @@ export async function findUserByEmail(email) {
   return result.rows[0] ? fromRow(result.rows[0]) : null;
 }
 
+/**
+ * @param {string} id
+ * @returns {Promise<User | null>}
+ */
 export async function findUserById(id) {
+  /** @type {QueryResult<UserRow>} */
   const result = await query(
     `${userSelect} WHERE users.id = $1`,
     [id]
@@ -57,6 +87,11 @@ export async function findUserById(id) {
   return result.rows[0] ? fromRow(result.rows[0]) : null;
 }
 
+/**
+ * @param {{ name: string, email: string, password: string, role?: string, active?: boolean, sectorId?: string | null, jobTitle?: string, permissions?: unknown, mustChangePassword?: boolean }} input
+ * @returns {Promise<User | null>}
+ * @throws {Error} 409 quando o e-mail ja existe.
+ */
 export async function createUser({
   name,
   email,
@@ -72,6 +107,7 @@ export async function createUser({
     const passwordHash = await hashPassword(password);
     const normalizedPermissions = normalizePermissions(permissions);
     const isAdmin = role === "admin";
+    /** @type {QueryResult<{ id: string }>} */
     const result = await query(
       `
         INSERT INTO users (
@@ -98,7 +134,8 @@ export async function createUser({
 
     return findUserById(result.rows[0].id);
   } catch (error) {
-    if (error.code === "23505") {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "23505") {
+      /** @type {HttpErrorLike} */
       const conflict = new Error("Este e-mail já está cadastrado.");
       conflict.statusCode = 409;
       conflict.expose = true;
@@ -108,7 +145,22 @@ export async function createUser({
   }
 }
 
+/**
+ * @param {string} id
+ * @returns {Promise<PublicUser | null>} `null` quando o usuario sumiu entre a escrita e a leitura.
+ */
+async function loadPublicUser(id) {
+  const user = await findUserById(id);
+  return user ? toPublicUser(user) : null;
+}
+
+/**
+ * @param {string} id
+ * @param {string} role
+ * @returns {Promise<PublicUser | null>}
+ */
 export async function updateUserRole(id, role) {
+  /** @type {QueryResult<{ id: string }>} */
   const result = await query(
     `
       UPDATE users
@@ -121,9 +173,14 @@ export async function updateUserRole(id, role) {
     [id, role]
   );
 
-  return result.rows[0] ? toPublicUser(await findUserById(result.rows[0].id)) : null;
+  return result.rows[0] ? loadPublicUser(result.rows[0].id) : null;
 }
 
+/**
+ * @param {string} id
+ * @param {UserAccessPayload} [payload]
+ * @returns {Promise<PublicUser | null>}
+ */
 export async function updateUserAccess(id, payload = {}) {
   const current = await findUserById(id);
   if (!current) return null;
@@ -144,6 +201,7 @@ export async function updateUserAccess(id, payload = {}) {
   const nextJobTitle = Object.prototype.hasOwnProperty.call(payload, "jobTitle")
     ? payload.jobTitle || null
     : current.jobTitle || null;
+  /** @type {QueryResult<{ id: string }>} */
   const result = await query(
     `
       UPDATE users
@@ -170,10 +228,16 @@ export async function updateUserAccess(id, payload = {}) {
     ]
   );
 
-  return result.rows[0] ? toPublicUser(await findUserById(result.rows[0].id)) : null;
+  return result.rows[0] ? loadPublicUser(result.rows[0].id) : null;
 }
 
+/**
+ * @param {string} id
+ * @param {unknown} [permissions]
+ * @returns {Promise<PublicUser | null>}
+ */
 export async function updateUserPermissions(id, permissions = []) {
+  /** @type {QueryResult<{ id: string }>} */
   const result = await query(
     `
       UPDATE users
@@ -185,10 +249,15 @@ export async function updateUserPermissions(id, permissions = []) {
     [id, JSON.stringify(normalizePermissions(permissions))]
   );
 
-  return result.rows[0] ? toPublicUser(await findUserById(result.rows[0].id)) : null;
+  return result.rows[0] ? loadPublicUser(result.rows[0].id) : null;
 }
 
+/**
+ * @param {string} id
+ * @returns {Promise<PublicUser | null>}
+ */
 export async function deactivateUser(id) {
+  /** @type {QueryResult<{ id: string }>} */
   const result = await query(
     `
       UPDATE users
@@ -200,10 +269,15 @@ export async function deactivateUser(id) {
     [id]
   );
 
-  return result.rows[0] ? toPublicUser(await findUserById(result.rows[0].id)) : null;
+  return result.rows[0] ? loadPublicUser(result.rows[0].id) : null;
 }
 
+/**
+ * @param {string} [userId]
+ * @returns {Promise<number>}
+ */
 export async function countActiveAdminsExcluding(userId = "") {
+  /** @type {QueryResult<{ total: number }>} */
   const result = await query(
     `
       SELECT COUNT(*)::int AS total
@@ -243,6 +317,10 @@ export async function seedDefaultAdmin() {
   );
 }
 
+/**
+ * @param {User} user
+ * @returns {PublicUser}
+ */
 export function toPublicUser(user) {
   return {
     id: user.id,
@@ -266,6 +344,10 @@ export function toPublicUser(user) {
   };
 }
 
+/**
+ * @param {UserRow} row
+ * @returns {User}
+ */
 function fromRow(row) {
   return {
     id: row.id,

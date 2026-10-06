@@ -17,20 +17,44 @@ import { verifyPassword } from "../security/passwordHasher.js";
 import { auditAuth, hashRecoveryCode } from "./authService.js";
 import { revokeAllSessions } from "./sessionService.js";
 
+/** @import { RequestContext, User } from "../types/identity.js" */
+
+/**
+ * Credenciais exigidas para desativar o MFA ou regenerar os codigos: a senha e um segundo fator
+ * (codigo do app ou codigo de recuperacao).
+ * @typedef {object} MfaCredentials
+ * @property {unknown} [password]
+ * @property {unknown} [code]
+ * @property {unknown} [recoveryCode]
+ */
+
 const RECOVERY_CODE_COUNT = 10;
 
+/**
+ * @param {string} userId
+ * @returns {Promise<User>}
+ * @throws {Error} 401 quando o usuario nao existe.
+ */
 async function loadUser(userId) {
   const user = await findUserById(userId);
   if (!user) throw unauthorized("Sessão inválida.");
   return user;
 }
 
+/**
+ * @param {string} userId
+ * @returns {Promise<string[]>} Codigos em claro (so existem aqui; o banco guarda o hash).
+ */
 async function issueRecoveryCodes(userId) {
   const codes = Array.from({ length: RECOVERY_CODE_COUNT }, () => generateRecoveryCode());
   await replaceRecoveryCodes(userId, codes.map(hashRecoveryCode));
   return codes;
 }
 
+/**
+ * @param {string} userId
+ * @returns {Promise<{ enabled: boolean, requiredForAdmins: boolean, recoveryCodesLeft: number }>}
+ */
 export async function getMfaStatus(userId) {
   const user = await loadUser(userId);
   return {
@@ -40,7 +64,12 @@ export async function getMfaStatus(userId) {
   };
 }
 
-/** Passo 1: gera um segredo pendente. So passa a valer depois de confirmado com um codigo. */
+/**
+ * Passo 1: gera um segredo pendente. So passa a valer depois de confirmado com um codigo.
+ *
+ * @param {string} userId
+ * @returns {Promise<{ secret: string, otpauthUri: string }>}
+ */
 export async function beginMfaSetup(userId) {
   const user = await loadUser(userId);
   if (user.mfaEnabled) throw conflict("A verificação em duas etapas já está ativa.", { code: "MFA_ALREADY_ENABLED" });
@@ -49,7 +78,14 @@ export async function beginMfaSetup(userId) {
   return { secret, otpauthUri: buildOtpauthUri({ secret, accountName: user.email }) };
 }
 
-/** Passo 2: confirma com um codigo do app, ativa o MFA e devolve os codigos de recuperacao (uma unica vez). */
+/**
+ * Passo 2: confirma com um codigo do app, ativa o MFA e devolve os codigos de recuperacao (uma unica vez).
+ *
+ * @param {string} userId
+ * @param {unknown} code
+ * @param {RequestContext} [context]
+ * @returns {Promise<{ recoveryCodes: string[] }>}
+ */
 export async function confirmMfaSetup(userId, code, context = {}) {
   const state = await getSecurityState(userId);
   if (!state?.mfaPendingSecretEncrypted) {
@@ -64,6 +100,11 @@ export async function confirmMfaSetup(userId, code, context = {}) {
   return { recoveryCodes };
 }
 
+/**
+ * @param {string} userId
+ * @param {MfaCredentials} credentials
+ * @returns {Promise<User>}
+ */
 async function assertSecondFactor(userId, { password, code, recoveryCode }) {
   const user = await loadUser(userId);
   if (!(await verifyPassword(password, user.passwordHash))) {
@@ -85,6 +126,12 @@ async function assertSecondFactor(userId, { password, code, recoveryCode }) {
   return user;
 }
 
+/**
+ * @param {string} userId
+ * @param {MfaCredentials} credentials
+ * @param {RequestContext} [context]
+ * @returns {Promise<void>}
+ */
 export async function disableMfa(userId, credentials, context = {}) {
   const user = await loadUser(userId);
   if (!user.mfaEnabled) throw conflict("A verificação em duas etapas não está ativa.", { code: "MFA_NOT_ENABLED" });
@@ -96,6 +143,12 @@ export async function disableMfa(userId, credentials, context = {}) {
   await auditAuth("auth_mfa_disabled", "Verificação em duas etapas desativada.", userId, context);
 }
 
+/**
+ * @param {string} userId
+ * @param {MfaCredentials} credentials
+ * @param {RequestContext} [context]
+ * @returns {Promise<{ recoveryCodes: string[] }>}
+ */
 export async function regenerateRecoveryCodes(userId, credentials, context = {}) {
   const user = await loadUser(userId);
   if (!user.mfaEnabled) throw conflict("Ative a verificação em duas etapas primeiro.", { code: "MFA_NOT_ENABLED" });
@@ -105,7 +158,14 @@ export async function regenerateRecoveryCodes(userId, credentials, context = {})
   return { recoveryCodes };
 }
 
-/** Administrador remove o MFA de alguem que perdeu o aparelho e os codigos de recuperacao. */
+/**
+ * Administrador remove o MFA de alguem que perdeu o aparelho e os codigos de recuperacao.
+ *
+ * @param {string} targetUserId
+ * @param {{ id: string }} actingUser
+ * @param {RequestContext} [context]
+ * @returns {Promise<void>}
+ */
 export async function adminResetMfa(targetUserId, actingUser, context = {}) {
   const target = await loadUser(targetUserId);
   await deactivateMfa(targetUserId);

@@ -21,18 +21,32 @@ import {
 } from "../repositories/userSecurityRepository.js";
 import { hashPassword, burnPasswordComparison, passwordNeedsRehash, verifyPassword } from "../security/passwordHasher.js";
 import { openSecret } from "../security/secretBox.js";
-import { endRemoteAssistanceSessionsOnLogout } from "./remoteAssistanceService.js";
 import {
   issueMfaChallengeToken,
   revokeAllSessions,
-  revokeSession,
   startSession,
   verifyMfaChallengeToken
 } from "./sessionService.js";
 
+/** @import { QueryResult } from "pg" */
+/** @import { AuthSession, PublicUser, RequestContext, User } from "../types/identity.js" */
+
+/**
+ * Resultado de um login concluido: usuario publico, JWT da sessao e sua validade (cookie).
+ * @typedef {object} LoginResult
+ * @property {PublicUser} user
+ * @property {string} token
+ * @property {AuthSession} session
+ * @property {number} maxAgeSeconds
+ */
+
 const GENERIC_LOGIN_ERROR = "E-mail ou senha inválidos.";
 const THROTTLED_MESSAGE = "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
 
+/**
+ * @param {unknown} code
+ * @returns {string} SHA-256 hexadecimal do codigo normalizado.
+ */
 export function hashRecoveryCode(code) {
   return createHash("sha256").update(normalizeRecoveryCode(code)).digest("hex");
 }
@@ -41,6 +55,14 @@ function invalidCredentials() {
   return unauthorized(GENERIC_LOGIN_ERROR, { code: "INVALID_CREDENTIALS" });
 }
 
+/**
+ * @param {string} type Evento (`auth`, `auth_login_failed`...).
+ * @param {string} message
+ * @param {string | null} userId
+ * @param {RequestContext} [context]
+ * @param {Record<string, unknown>} [meta]
+ * @returns {Promise<void>}
+ */
 export async function auditAuth(type, message, userId, context = {}, meta = {}) {
   authEvents.inc({ event: type });
   try {
@@ -55,12 +77,21 @@ export async function auditAuth(type, message, userId, context = {}, meta = {}) 
   }
 }
 
+/**
+ * @param {unknown} a
+ * @param {unknown} b
+ * @returns {boolean}
+ */
 function constantTimeEquals(a, b) {
   const left = Buffer.from(String(a));
   const right = Buffer.from(String(b));
   return left.length === right.length && timingSafeEqual(left, right);
 }
 
+/**
+ * @param {unknown} setupToken
+ * @returns {void}
+ */
 function assertSetupAllowed(setupToken) {
   if (!isProductionLike) return;
   const expected = getAuthConfig().setupToken;
@@ -75,6 +106,11 @@ function assertSetupAllowed(setupToken) {
   }
 }
 
+/**
+ * @param {{ name?: unknown, email?: unknown, password?: unknown, setupToken?: unknown }} input
+ * @param {RequestContext} [context]
+ * @returns {Promise<LoginResult>}
+ */
 export async function registerFirstAdmin({ name, email, password, setupToken }, context = {}) {
   assertSetupAllowed(setupToken);
   const cleanName = String(name || "").trim();
@@ -89,10 +125,12 @@ export async function registerFirstAdmin({ name, email, password, setupToken }, 
     if (resolveDatabaseConfig().mode === "postgres") {
       await db("SELECT pg_advisory_xact_lock($1)", [813_724_602]);
     }
+    /** @type {QueryResult<{ total: number }>} */
     const admins = await db(
       "SELECT COUNT(*)::int AS total FROM users WHERE active = TRUE AND (role = 'admin' OR is_admin = TRUE)"
     );
     if (Number(admins.rows[0]?.total || 0) > 0) return null;
+    /** @type {QueryResult<{ id: string }>} */
     const inserted = await db(
       `
         INSERT INTO users (id, name, email, password_hash, role, is_admin, active, permissions, password_changed_at)
@@ -108,11 +146,18 @@ export async function registerFirstAdmin({ name, email, password, setupToken }, 
   }
 
   const user = await findUserById(created);
+  if (!user) throw forbidden("Cadastro público desativado. Solicite acesso a um administrador.");
   await auditAuth("auth_first_admin", "Primeiro administrador cadastrado.", user.id, context);
   const { token, session, maxAgeSeconds } = await startSession(user, context);
   return { user: toPublicUser(user), token, session, maxAgeSeconds };
 }
 
+/**
+ * @param {User} user
+ * @param {unknown} password
+ * @param {RequestContext} context
+ * @returns {Promise<LoginResult>}
+ */
 async function finishLogin(user, password, context) {
   await recordSuccessfulLogin(user.id);
   if (passwordNeedsRehash(user.passwordHash)) {
@@ -127,12 +172,22 @@ async function finishLogin(user, password, context) {
   return { user: toPublicUser(fresh), token, session, maxAgeSeconds };
 }
 
+/**
+ * @param {User} user
+ * @returns {void}
+ */
 function assertNotLocked(user) {
   if (user.lockedUntil && new Date(user.lockedUntil).getTime() > Date.now()) {
     throw tooManyRequests(THROTTLED_MESSAGE, { code: "ACCOUNT_LOCKED" });
   }
 }
 
+/**
+ * @param {User} user
+ * @param {RequestContext} context
+ * @param {string} reason
+ * @returns {Promise<void>}
+ */
 async function registerFailure(user, context, reason) {
   const config = getAuthConfig();
   const result = await recordFailedLogin(user.id, {
@@ -152,6 +207,10 @@ async function registerFailure(user, context, reason) {
  * MFA, ou ja a sessao quando nao tem. O tempo de resposta e parecido para
  * e-mail inexistente, bloqueado e senha errada (compara contra um hash
  * descartavel), para nao revelar quais contas existem.
+ *
+ * @param {{ email?: unknown, password?: unknown }} credentials
+ * @param {RequestContext} [context]
+ * @returns {Promise<{ mfaRequired: true, mfaToken: string } | ({ mfaRequired: false } & LoginResult)>}
  */
 export async function authenticateWithCredentials({ email, password }, context = {}) {
   const user = await findUserByEmail(String(email || "").trim());
@@ -180,6 +239,11 @@ export async function authenticateWithCredentials({ email, password }, context =
   return { mfaRequired: false, ...(await finishLogin(user, password, context)) };
 }
 
+/**
+ * @param {User} user
+ * @param {{ code?: unknown, recoveryCode?: unknown }} factor
+ * @returns {Promise<boolean>}
+ */
 async function verifySecondFactor(user, { code, recoveryCode }) {
   const state = await getSecurityState(user.id);
   if (recoveryCode) {
@@ -191,7 +255,13 @@ async function verifySecondFactor(user, { code, recoveryCode }) {
   return claimMfaStep(user.id, step);
 }
 
-/** Passo 2 do login: troca o desafio MFA + codigo (ou codigo de recuperacao) por uma sessao. */
+/**
+ * Passo 2 do login: troca o desafio MFA + codigo (ou codigo de recuperacao) por uma sessao.
+ *
+ * @param {{ mfaToken?: unknown, code?: unknown, recoveryCode?: unknown }} input
+ * @param {RequestContext} [context]
+ * @returns {Promise<LoginResult>}
+ */
 export async function completeMfaLogin({ mfaToken, code, recoveryCode }, context = {}) {
   const userId = verifyMfaChallengeToken(String(mfaToken || ""));
   const user = await findUserById(userId);
@@ -219,6 +289,11 @@ export async function completeMfaLogin({ mfaToken, code, recoveryCode }, context
 /**
  * Troca de senha pelo proprio usuario. Revoga todas as sessoes (inclusive de
  * outros dispositivos) e abre uma nova para o dispositivo atual.
+ *
+ * @param {{ id: string }} user
+ * @param {{ currentPassword?: unknown, newPassword?: unknown }} passwords
+ * @param {RequestContext} [context]
+ * @returns {Promise<LoginResult>}
  */
 export async function changeOwnPassword(user, { currentPassword, newPassword }, context = {}) {
   const stored = await findUserById(user.id);
@@ -237,17 +312,18 @@ export async function changeOwnPassword(user, { currentPassword, newPassword }, 
   await setUserPassword(user.id, newHash, { mustChangePassword: false });
   await revokeAllSessions(user.id, "password_changed");
   const fresh = await findUserById(user.id);
+  if (!fresh) throw unauthorized("Sessão inválida.");
   const { token, session, maxAgeSeconds } = await startSession(fresh, context);
   await auditAuth("auth_password_changed", "Senha alterada pelo próprio usuário.", user.id, context);
   return { user: toPublicUser(fresh), token, session, maxAgeSeconds };
 }
 
-export async function endSessionOnLogout(user, sessionId, context = {}) {
-  if (sessionId) await revokeSession(sessionId, user.id, "logout");
-  await endRemoteAssistanceSessionsOnLogout(user);
-  await auditAuth("auth_logout", "Logout realizado.", user.id, context);
-}
-
+/**
+ * @param {{ id: string }} user
+ * @param {string | null | undefined} currentSessionId Sessao preservada (a do dispositivo atual).
+ * @param {RequestContext} [context]
+ * @returns {Promise<number | null>} Quantidade de sessoes encerradas.
+ */
 export async function logoutEverywhere(user, currentSessionId, context = {}) {
   const revoked = await revokeAllSessions(user.id, "logout_everywhere", { exceptSessionId: currentSessionId });
   await auditAuth("auth_sessions_revoked", "Outras sessões encerradas pelo usuário.", user.id, context, { revoked });
