@@ -1,12 +1,8 @@
 import { useMemo } from "react";
 import { useModalLifecycle } from "../../hooks/useModalLifecycle.js";
-import AssetTab from "./details/components/AssetTab.jsx";
-import AttendanceTab from "./details/components/AttendanceTab.jsx";
 import DetailsHeader from "./details/components/DetailsHeader.jsx";
 import DetailsTabBar from "./details/components/DetailsTabBar.jsx";
-import DetailsTabContent from "./details/components/DetailsTabContent.jsx";
-import GeneralTab from "./details/components/GeneralTab.jsx";
-import HistoryTab from "./details/components/HistoryTab.jsx";
+import DetailsTabPanels from "./details/components/DetailsTabPanels.jsx";
 import PrintFinancialSection from "./details/components/PrintFinancialSection.jsx";
 import { useAssetLinkWizard } from "./details/hooks/useAssetLinkWizard.js";
 import { useDetailCatalogs } from "./details/hooks/useDetailCatalogs.js";
@@ -106,67 +102,30 @@ export default function ServiceOrderDetailsModal({
 
         <DetailsTabBar activeTab={activeTab} onSelect={setActiveTab} />
 
-        <div className="asset-modal-body">
-          {activeTab === "general" && (
-            <GeneralTab
-              serviceOrder={serviceOrder}
-              statusLabelMap={statusLabelMap}
-              businessMode={businessMode}
-              environmentLabel={environmentLabel}
-              asset={asset}
-              backupAsset={backupAsset}
-              canChangeSector={canChangeSector}
-              availableSectors={availableSectors}
-              saving={saving}
-              onChangeSector={actions.changeServiceOrderSector}
-            />
-          )}
-
-          {activeTab === "attendance" && (
-            <AttendanceTab
-              draft={draft}
-              updateDraft={updateDraft}
-              technicians={technicians}
-              services={services}
-              products={products}
-              serviceSelector={serviceSelector}
-              partsEditor={partsEditor}
-              finance={finance}
-              businessMode={businessMode}
-              saving={saving}
-              canRegisterAttendance={can.attendance}
-              onSubmit={actions.submitAttendance}
-            />
-          )}
-
-          {activeTab === "asset" && (
-            <AssetTab
-              serviceOrder={serviceOrder}
-              asset={asset}
-              backupAsset={backupAsset}
-              availableBackupDevices={availableBackupDevices}
-              environmentLabel={environmentLabel}
-              inventoryTabs={inventoryTabs}
-              wizard={wizard}
-              saving={saving}
-              onSelectBackup={onSelectBackup}
-              onReleaseBackup={onReleaseBackup}
-            />
-          )}
-
-          {activeTab === "history" && <HistoryTab serviceOrder={serviceOrder} asset={asset} />}
-
-          <DetailsTabContent
-            activeTab={activeTab}
-            serviceOrder={serviceOrder}
-            asset={asset}
-            token={token}
-            notify={notify}
-            can={can}
-            onOpenCalendar={onOpenCalendar}
-            remoteScriptExecutionEnabled={remoteScriptExecutionEnabled}
-          />
-        </div>
+        <DetailsTabPanels
+          activeTab={activeTab}
+          serviceOrder={serviceOrder}
+          asset={asset}
+          backupAsset={backupAsset}
+          availableBackupDevices={availableBackupDevices}
+          statusLabelMap={statusLabelMap}
+          availableSectors={availableSectors}
+          businessMode={businessMode}
+          environmentLabel={environmentLabel}
+          inventoryTabs={inventoryTabs}
+          canChangeSector={canChangeSector}
+          saving={saving}
+          can={can}
+          token={token}
+          notify={notify}
+          remoteScriptExecutionEnabled={remoteScriptExecutionEnabled}
+          attendance={{ draft, updateDraft, technicians, services, products, serviceSelector, partsEditor, finance }}
+          wizard={wizard}
+          actions={actions}
+          onSelectBackup={onSelectBackup}
+          onReleaseBackup={onReleaseBackup}
+          onOpenCalendar={onOpenCalendar}
+        />
 
         {Boolean(businessMode || serviceValueNumber || partsTotal || serviceItems.length) && <PrintFinancialSection {...finance} />}
       </section>
