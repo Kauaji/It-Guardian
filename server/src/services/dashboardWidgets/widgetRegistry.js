@@ -51,7 +51,7 @@ export const widgetRegistry = {
     fetchData: assetWidgets.fetchTopAssetsDisk
   },
   metric_history_cpu: {
-    label: "Grafico Historico de CPU",
+    label: "Gráfico Histórico de CPU",
     category: "metrics",
     defaultSize: { w: "l", h: "m" },
     requiresAssetConfig: true,
@@ -59,7 +59,7 @@ export const widgetRegistry = {
     fetchData: metricWidgets.fetchMetricHistoryCpu
   },
   metric_history_ram: {
-    label: "Grafico Historico de RAM",
+    label: "Gráfico Histórico de RAM",
     category: "metrics",
     defaultSize: { w: "l", h: "m" },
     requiresAssetConfig: true,
@@ -67,7 +67,7 @@ export const widgetRegistry = {
     fetchData: metricWidgets.fetchMetricHistoryRam
   },
   metric_history_disk: {
-    label: "Grafico Historico de Disco",
+    label: "Gráfico Histórico de Disco",
     category: "metrics",
     defaultSize: { w: "l", h: "m" },
     requiresAssetConfig: true,
@@ -123,19 +123,19 @@ export const widgetRegistry = {
     fetchData: alertWidgets.fetchAlertsBySeverity
   },
   critical_assets: {
-    label: "Ativos Criticos",
+    label: "Ativos Críticos",
     category: "assets",
     defaultSize: { w: "m", h: "m" },
     fetchData: assetWidgets.fetchCriticalAssets
   },
   recent_events: {
-    label: "Ultimos Eventos Tecnicos",
+    label: "Últimos Eventos Técnicos",
     category: "events",
     defaultSize: { w: "l", h: "m" },
     fetchData: eventWidgets.fetchRecentEvents
   },
   script_executions: {
-    label: "Execucoes de Scripts",
+    label: "Execuções de Scripts",
     category: "events",
     defaultSize: { w: "l", h: "m" },
     fetchData: scriptWidgets.fetchScriptExecutions

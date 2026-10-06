@@ -99,6 +99,10 @@ export default function WidgetCategoryChart({ rows = [], variant = "bars", dimen
 
   return (
     <div className={"dashboard-category-chart " + (isPie ? "circular" : isRadial ? "radial" : "columns")}>
+      {/* Pizza/rosca/radial: os setores do recharts sao <path role="img"> sem texto; o grafico e decorativo
+          porque a legenda logo abaixo traz os mesmos dados como botoes acessiveis. A barra mantem a camada
+          de acessibilidade propria do recharts (foco por teclado). */}
+      <div className="dashboard-chart-visual" style={{ display: "contents" }} aria-hidden={isPie || isRadial ? "true" : undefined}>
       <WidgetChartFrame>
         {isPie ? (
           <PieChart>
@@ -128,6 +132,7 @@ export default function WidgetCategoryChart({ rows = [], variant = "bars", dimen
           </BarChart>
         )}
       </WidgetChartFrame>
+      </div>
       {legend}
     </div>
   );
