@@ -3,6 +3,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { boundedInteger, isTruthyEnv } from "./envParsing.js";
 
+/** @import { Env } from "./envParsing.js" */
+
 dotenv.config();
 dotenv.config({
   path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../.env")

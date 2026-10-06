@@ -1,5 +1,14 @@
 import { boundedInteger, isTruthyEnv, isTruthyEnvWithDefault, parseIceUrls } from "./envParsing.js";
 
+/** @import { Env } from "./envParsing.js" */
+
+/**
+ * @typedef {object} IceServer
+ * @property {string} urls
+ * @property {string} [username]
+ * @property {string} [credential]
+ */
+
 const allowedEnvironments = new Set([
   "lab",
   "laboratory",
@@ -13,6 +22,7 @@ const allowedEnvironments = new Set([
 
 // Ambiente e flags principais: a assistencia so liga com a flag explicita E em
 // um ambiente da lista permitida.
+/** @param {Env} env */
 function resolveActivation(env) {
   const environment = String(
     env.REMOTE_ASSISTANCE_ENV ||
@@ -42,6 +52,7 @@ function resolveActivation(env) {
 }
 
 // Limites de captura (FPS, qualidade JPEG), tempos limite e intervalos de polling.
+/** @param {Env} env */
 function resolveCaptureLimits(env) {
   // Limite rigido de FPS: nunca aceitar quadros mais rapido do que o servidor
   // consegue validar/descartar com seguranca. targetFps e o valor "desejado"
@@ -108,8 +119,11 @@ function resolveCaptureLimits(env) {
  * para redes sem NAT simetrico, mas sem garantia de conectividade universal
  * (isso exigiria um servidor TURN de verdade, que e infraestrutura separada,
  * fora do que o deploy serverless atual hospeda).
+ * @param {Env} env
+ * @returns {IceServer[]}
  */
 function buildIceServers(env) {
+  /** @type {IceServer[]} */
   const servers = parseIceUrls(env.REMOTE_ASSISTANCE_STUN_URLS, { schemes: ["stun:", "stuns:"] })
     .map((urls) => ({ urls }));
   const turnUrls = parseIceUrls(env.REMOTE_ASSISTANCE_TURN_URL, { maxEntries: 1, schemes: ["turn:", "turns:"] });
@@ -123,6 +137,10 @@ function buildIceServers(env) {
   return servers;
 }
 
+/**
+ * @param {Env} env
+ * @param {boolean} enabled
+ */
 function resolveWebrtc(env, enabled) {
   return {
     enabled: enabled && isTruthyEnv(env.REMOTE_ASSISTANCE_WEBRTC_ENABLED),
@@ -137,6 +155,10 @@ function resolveWebrtc(env, enabled) {
 // O backend nunca guarda a senha de sessao -- so o id do dispositivo
 // (publico por natureza, igual um numero de telefone) fica no card da
 // maquina. Ver docs/ASSISTENCIA-REMOTA.md, secao "Transporte RustDesk".
+/**
+ * @param {Env} env
+ * @param {boolean} enabled
+ */
 function resolveRustdesk(env, enabled) {
   // RustDesk so fica disponivel com um relay proprio configurado
   // (REMOTE_ASSISTANCE_RUSTDESK_ID_SERVER) -- nunca aponta para o relay
@@ -159,6 +181,11 @@ function resolveRustdesk(env, enabled) {
 
 // Transporte efetivo: o pedido so vale quando o recurso correspondente esta
 // habilitado; caso contrario cai no snapshot por polling HTTP.
+/**
+ * @param {Env} env
+ * @param {{ enabled: boolean }} webrtc
+ * @param {{ enabled: boolean }} rustdesk
+ */
 function resolveTransport(env, webrtc, rustdesk) {
   const requestedTransport = String(env.REMOTE_ASSISTANCE_TRANSPORT || "snapshot_polling")
     .trim()
@@ -177,6 +204,7 @@ function resolveTransport(env, webrtc, rustdesk) {
   };
 }
 
+/** @param {Env} [env] */
 export function getRemoteAssistanceConfig(env = process.env) {
   const { environment, publicDeployment, environmentAllowed, enabled, controlEnabled } = resolveActivation(env);
   const capture = resolveCaptureLimits(env);
