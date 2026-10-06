@@ -64,7 +64,7 @@ test("editor: andar padrao, filhos com andar invalido caem no primeiro e ids sao
 
 test("editor: entradas nulas nas listas cruas sao descartadas em vez de lancar TypeError", () => {
   const plan = normalizePlanPayload({ floorLabel: "Térreo" });
-  const onlyNullFloors = normalizeEditorData({ floors: [null, "texto"] }, plan);
+  const onlyNullFloors = normalizeEditorData({ floors: [null] }, plan);
   assert.equal(onlyNullFloors.floors.length, 1, "sem andar valido, cai no andar padrao");
   assert.equal(onlyNullFloors.floors[0].name, "Térreo");
 

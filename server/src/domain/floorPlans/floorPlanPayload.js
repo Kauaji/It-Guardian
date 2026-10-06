@@ -103,11 +103,12 @@ function resolveFloorId(item, validFloorIds, fallbackFloorId) {
 }
 
 /**
- * @param {unknown} value
- * @returns {value is Record<string, unknown>}
+ * @template T
+ * @param {T | null | undefined} value
+ * @returns {value is T}
  */
-function isRecord(value) {
-  return value != null && typeof value === "object";
+function isPresent(value) {
+  return value != null;
 }
 
 /**
@@ -276,12 +277,12 @@ export function normalizeEditorChildren(planId, data) {
   const validFloorIds = new Set(floors.map((floor) => floor.id));
   const fallbackFloorId = floors[0].id;
   // Entradas nulas/nao objeto da lista crua antes derrubavam a gravacao com TypeError (500).
-  const zones = (data.zones || []).filter(isRecord).map((item, index) => normalizeZonePayload(item, planId, validFloorIds, fallbackFloorId, index));
-  const objects = (data.objects || []).filter(isRecord).map((item) => normalizeObjectPayload(item, planId, validFloorIds, fallbackFloorId));
-  const connectionPoints = (data.connectionPoints || data.connection_points || []).filter(isRecord).map((item) => (
+  const zones = (data.zones || []).filter(isPresent).map((item, index) => normalizeZonePayload(item, planId, validFloorIds, fallbackFloorId, index));
+  const objects = (data.objects || []).filter(isPresent).map((item) => normalizeObjectPayload(item, planId, validFloorIds, fallbackFloorId));
+  const connectionPoints = (data.connectionPoints || data.connection_points || []).filter(isPresent).map((item) => (
     normalizePointPayload(item, planId, validFloorIds, fallbackFloorId)
   ));
-  const cableRoutes = (data.cableRoutes || data.cable_routes || []).filter(isRecord).map((item) => (
+  const cableRoutes = (data.cableRoutes || data.cable_routes || []).filter(isPresent).map((item) => (
     normalizeRoutePayload(item, planId, validFloorIds, fallbackFloorId)
   ));
   const normalized = { floors, zones, objects, connectionPoints, cableRoutes };
@@ -295,7 +296,7 @@ export function normalizeEditorChildren(planId, data) {
  * @returns {EditorData}
  */
 export function normalizeEditorData(payload = {}, plan) {
-  const payloadFloors = Array.isArray(payload.floors) ? payload.floors.filter(isRecord) : [];
+  const payloadFloors = Array.isArray(payload.floors) ? payload.floors.filter(isPresent) : [];
   const floorsSource = payloadFloors.length
     ? payloadFloors
     : [{ id: payload.activeFloorId || randomUUID(), name: plan.floorLabel || "Planta 1 - Terreo" }];
