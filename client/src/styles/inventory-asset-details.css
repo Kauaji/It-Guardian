@@ -505,7 +505,7 @@
   display: grid;
   place-items: center;
   gap: 6px;
-  color: #7a8798;
+  color: var(--text-muted);
   background: var(--surface);
 }
 
