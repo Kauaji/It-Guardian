@@ -60,6 +60,9 @@ function renderBoard(overrides = {}) {
 const settle = () => act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
 const group = (name) => screen.getByText(name, { selector: "strong" }).closest("section");
 
+// Fluxos longos com user-event ficam lentos sob cobertura.
+vi.setConfig({ testTimeout: 30000 });
+
 beforeEach(() => { vi.clearAllMocks(); window.history.pushState({}, "", "/"); });
 
 describe("boardProps", () => {

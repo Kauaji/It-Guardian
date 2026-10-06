@@ -25,6 +25,9 @@ vi.mock("./InventoryVisualMapScene.jsx", () => ({
   )
 }));
 
+// Fluxos longos com user-event ficam lentos sob cobertura.
+vi.setConfig({ testTimeout: 30000 });
+
 beforeEach(() => armApi());
 afterEach(() => vi.restoreAllMocks());
 

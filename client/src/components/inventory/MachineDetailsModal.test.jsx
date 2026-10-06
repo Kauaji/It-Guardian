@@ -62,6 +62,9 @@ async function renderModal(machine, overrides = {}) {
 const tab = (name) => screen.getByRole("button", { name });
 const body = () => document.querySelector(".asset-modal-body");
 
+// Fluxos longos com user-event ficam lentos sob cobertura.
+vi.setConfig({ testTimeout: 30000 });
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.useRealTimers();
