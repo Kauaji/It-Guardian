@@ -8,6 +8,9 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.js"],
     css: false,
+    // Fluxos longos de user-event ficam lentos sob cobertura/CPU compartilhada (CI de 2 vCPUs).
+    testTimeout: 15000,
+    hookTimeout: 15000,
     coverage: {
       provider: "v8",
       include: ["src/**/*.{js,jsx}"],
