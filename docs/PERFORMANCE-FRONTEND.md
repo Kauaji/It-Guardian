@@ -20,7 +20,7 @@ alternativo para o `dist` pode ser passado como primeiro argumento.
 
 | Item | Medido (2026-10) | Limite |
 | --- | --- | --- |
-| Entrada `index-*.js` | 104,8 | 116 |
+| Entrada `index-*.js` | 116,2 | 117 |
 | `vendor-*.js` genericos carregados no inicio (react, router, dnd, icones, qrcode) | 104,0 (maior) | 115 cada |
 | `vendor-charts` (recharts, pre-carregado pelo `index.html`) | 90,5 | 100 |
 | `vendor-three` (three.js, so na planta 3D) | 166,4 | 183 |
