@@ -20,6 +20,30 @@ async function fetchPlansForTab({ token, activeTab, canUpdate }) {
   return claimedEditor?.plan?.id ? [claimedEditor.plan] : [];
 }
 
+/** Corpo da criacao de uma planta nova na aba de inventario ativa. */
+function buildNewPlanPayload(activeTab) {
+  return {
+    name: `Planta ${activeTab?.name || "principal"}`,
+    inventoryTabId: activeTab?.id || null,
+    company: "IT Guardian",
+    unit: "Unidade principal",
+    floorLabel: "Planta 1",
+    status: "draft",
+    ...DEFAULT_PLAN_SIZE
+  };
+}
+
+/** Fecha o editor e limpa selecao/ferramentas quando a planta aberta e excluida. */
+function closeRemovedPlanEditor({ doc, ui, setView }) {
+  doc.setEditor(null);
+  ui.setSelected(null);
+  ui.setSelectedObjectIds([]);
+  ui.setPlacement(null);
+  ui.setPaintDraft(null);
+  ui.setZoomMode(false);
+  setView("list");
+}
+
 /** Mantem a URL (/plantas, /plantas/:id, /plantas/:id/editor) coerente com a tela. */
 function useFloorPlanUrlSync({ view, editor, isEditing }) {
   useEffect(() => {
@@ -44,7 +68,7 @@ export function useFloorPlanSession({ token, activeTab, permissions, notify, doc
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState("");
   const { editor, setEditor, setActiveFloorId, loadEditor } = doc;
-  const { setSelected, setSelectedObjectIds, setPlacement, setPaintDraft, setZoomMode } = ui;
+  const { setSelected } = ui;
   const { resetTracking } = tracker;
 
   const loadPlans = useCallback(async () => {
@@ -106,15 +130,7 @@ export function useFloorPlanSession({ token, activeTab, permissions, notify, doc
     if (!permissions.create) return;
     setPlansLoading(true);
     try {
-      const payload = await createFloorPlan(token, {
-        name: `Planta ${activeTab?.name || "principal"}`,
-        inventoryTabId: activeTab?.id || null,
-        company: "IT Guardian",
-        unit: "Unidade principal",
-        floorLabel: "Planta 1",
-        status: "draft",
-        ...DEFAULT_PLAN_SIZE
-      });
+      const payload = await createFloorPlan(token, buildNewPlanPayload(activeTab));
       const created = normalizeResponsePlan(payload);
       setPlans((current) => [created.plan, ...current]);
       setEditor(created);
@@ -148,15 +164,7 @@ export function useFloorPlanSession({ token, activeTab, permissions, notify, doc
       try {
         await deleteFloorPlan(token, plan.id);
         setPlans((current) => current.filter((entry) => entry.id !== plan.id));
-        if (editor?.plan?.id === plan.id) {
-          setEditor(null);
-          setSelected(null);
-          setSelectedObjectIds([]);
-          setPlacement(null);
-          setPaintDraft(null);
-          setZoomMode(false);
-          setView("list");
-        }
+        if (editor?.plan?.id === plan.id) closeRemovedPlanEditor({ doc, ui, setView });
         notify?.("Planta removida.", "ok");
       } catch (requestError) {
         notify?.(requestError.message, "danger");
