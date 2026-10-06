@@ -34,7 +34,8 @@ for (const file of yamlFiles) {
     for (const step of job.steps || []) {
       for (const line of String(step.run || "").split("\n")) {
         const npm = /\bnpm run ([\w:.-]+)/.exec(line);
-        if (npm && !line.includes("--workspace") && !(npm[1] in rootScripts)) errors.push(`${file}: job ${jobName} usa "npm run ${npm[1]}" que nao existe no package.json`);
+        if (npm && !line.includes("--workspace") && !(npm[1] in rootScripts))
+          errors.push(`${file}: job ${jobName} usa "npm run ${npm[1]}" que nao existe no package.json`);
         const script = /\bnode (scripts\/[\w./-]+\.m?js)/.exec(line);
         if (script && !fs.existsSync(path.join(root, script[1]))) errors.push(`${file}: job ${jobName} usa ${script[1]} que nao existe`);
       }
