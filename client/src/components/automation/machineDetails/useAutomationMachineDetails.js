@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useState } from "react";
 import {
   automationDraftsEqual,
   buildAutomationOverrideDraft,
@@ -6,8 +6,8 @@ import {
 } from "../automationFormUtils.js";
 import useUnsavedChanges from "../useUnsavedChanges.js";
 import { deriveMachineDetailView } from "./machineDetailsUtils.js";
-
-const emptyOverrideDraft = buildAutomationOverrideDraft();
+import { useMachinePlanDetail } from "./useMachinePlanDetail.js";
+import { useOverrideDraftState } from "./useOverrideDraftState.js";
 
 // Estado, carregamento do detalhe da agenda e acoes de recorrencia
 // personalizada do modal de detalhes da maquina.
@@ -20,77 +20,29 @@ export default function useAutomationMachineDetails({
   onRemoveOverride,
   onLoadDetails
 }) {
-  const [selectedPlanId, setSelectedPlanId] = useState("");
-  const [editingOverride, setEditingOverride] = useState(false);
-  const [confirmingRemoval, setConfirmingRemoval] = useState(false);
-  const [detail, setDetail] = useState(null);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [detailError, setDetailError] = useState("");
-  const [overrideDraft, setOverrideDraft] = useState(emptyOverrideDraft);
-  const [overrideBaseline, setOverrideBaseline] = useState(emptyOverrideDraft);
-  const [overrideErrors, setOverrideErrors] = useState({});
+  const draftState = useOverrideDraftState();
+  const {
+    editingOverride,
+    setEditingOverride,
+    confirmingRemoval,
+    setConfirmingRemoval,
+    overrideDraft,
+    setOverrideDraft,
+    overrideBaseline,
+    setOverrideBaseline,
+    overrideErrors,
+    setOverrideErrors
+  } = draftState;
   const [submitting, setSubmitting] = useState(false);
-  const onLoadDetailsRef = useRef(onLoadDetails);
+  const { selectedPlan, setSelectedPlanId, detail, setDetail, detailLoading, detailError } = useMachinePlanDetail({
+    machine,
+    open,
+    onLoadDetails,
+    draftState
+  });
 
-  useEffect(() => {
-    onLoadDetailsRef.current = onLoadDetails;
-  }, [onLoadDetails]);
-
-  useEffect(() => {
-    setSelectedPlanId(machine?.plans?.[0]?.id || "");
-    setEditingOverride(false);
-    setConfirmingRemoval(false);
-    setDetail(null);
-  }, [machine?.assetId]);
-
-  const selectedPlan = useMemo(
-    () => machine?.plans?.find((plan) => String(plan.id) === String(selectedPlanId)) || machine?.plans?.[0],
-    [machine, selectedPlanId]
-  );
   const isOverrideDirty = editingOverride && !automationDraftsEqual(overrideDraft, overrideBaseline);
   const unsavedChanges = useUnsavedChanges(isOverrideDirty);
-
-  useEffect(() => {
-    if (!open || !selectedPlan || !machine) return undefined;
-    let cancelled = false;
-    const fallbackDraft = buildAutomationOverrideDraft({ plan: selectedPlan });
-
-    setDetail(null);
-    setDetailLoading(Boolean(onLoadDetailsRef.current));
-    setDetailError("");
-    setEditingOverride(false);
-    setConfirmingRemoval(false);
-    setOverrideErrors({});
-    setOverrideDraft(fallbackDraft);
-    setOverrideBaseline(fallbackDraft);
-
-    if (!onLoadDetailsRef.current) return undefined;
-
-    onLoadDetailsRef.current(selectedPlan.id, machine.assetId)
-      .then((response) => {
-        if (cancelled) return;
-        const loadedDraft = buildAutomationOverrideDraft({
-          override: response?.override,
-          schedule: response?.schedule,
-          plan: response?.plan || selectedPlan
-        });
-        setDetail(response);
-        setOverrideDraft(loadedDraft);
-        setOverrideBaseline(loadedDraft);
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          setDetailError(error.message || "Não foi possível carregar os detalhes desta máquina.");
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setDetailLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [machine?.assetId, open, selectedPlan?.id]);
 
   function requestClose() {
     unsavedChanges.requestAction(onClose);

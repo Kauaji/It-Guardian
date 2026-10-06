@@ -1,86 +1,18 @@
-import { useState } from "react";
-import {
-  createSegmentGroup as createSegmentGroupApi,
-  deleteSegmentGroup as deleteSegmentGroupApi,
-  updateSegmentGroup
-} from "../../api.js";
+import { deleteSegmentGroup as deleteSegmentGroupApi, updateSegmentGroup } from "../../api.js";
 import { useAppSession } from "../../context/AppSessionContext.jsx";
-import { pickUnusedPaletteColor } from "../../components/inventory/inventoryLocalState.js";
-import { getSegmentGroupId, moveIdInList } from "../../components/inventory/inventoryUtils.js";
+import { moveIdInList } from "../../components/inventory/inventoryUtils.js";
 import { applyOrderedIds } from "../inventory/inventoryMeta.js";
+import { countSegmentsInGroup, deleteGroupConfirmation } from "../inventory/segmentGroupRules.js";
+import { useSegmentGroupForm } from "./useSegmentGroupForm.js";
 
-// Grupos de segmentos do inventario: formulario de criar/renomear, cor,
-// recolher, excluir e reordenar.
+// Grupos de segmentos do inventario: formulario de criar/renomear (useSegmentGroupForm),
+// cor, recolher, excluir e reordenar.
 export function useSegmentGroupActions({ data, inventory, meta }) {
   const { token, notify } = useAppSession();
   const { filters, model, persistence } = inventory;
   const { activeInventoryTab, activeSegmentGroups, activeSegments } = model;
   const { loadData, segmentGroups, setSegmentGroups, setSegments } = data;
-  const [segmentGroupForm, setSegmentGroupForm] = useState(null);
-  const [segmentGroupSaving, setSegmentGroupSaving] = useState(false);
-
-  function openSegmentGroupForm() {
-    setSegmentGroupForm({ mode: "create", group: null });
-  }
-
-  function renameSegmentGroup(groupId) {
-    const group = activeSegmentGroups.find((item) => item.id === groupId);
-    if (!group) return;
-    setSegmentGroupForm({ mode: "edit", group });
-  }
-
-  function closeSegmentGroupForm() {
-    setSegmentGroupForm(null);
-  }
-
-  async function submitSegmentGroupForm(name, color) {
-    const cleanName = name.trim();
-    const nextColor = color || pickUnusedPaletteColor(activeSegmentGroups);
-    const duplicate = activeSegmentGroups.some(
-      (group) =>
-        group.id !== segmentGroupForm?.group?.id &&
-        group.name.trim().toLowerCase() === cleanName.toLowerCase()
-    );
-
-    if (duplicate) {
-      notify("Já existe um grupo com esse nome.", "danger");
-      return;
-    }
-
-    setSegmentGroupSaving(true);
-    try {
-      if (segmentGroupForm?.mode === "create") {
-        const response = await createSegmentGroupApi(token, {
-          name: cleanName,
-          color: nextColor
-        });
-        setSegmentGroups([...segmentGroups, response.group]);
-        meta.updateInventoryMeta("groups", response.group.id, {
-          tabId: activeInventoryTab.id,
-          order: activeSegmentGroups.length
-        });
-        notify("Grupo criado.", "ok");
-      } else if (segmentGroupForm?.group?.id) {
-        const response = await updateSegmentGroup(token, segmentGroupForm.group.id, {
-          name: cleanName,
-          color: nextColor
-        });
-        setSegmentGroups(
-          segmentGroups.map((item) =>
-            item.id === segmentGroupForm.group.id ? { ...item, ...response.group } : item
-          )
-        );
-        notify("Grupo renomeado.", "ok");
-      }
-
-      setSegmentGroupForm(null);
-      await loadData(true);
-    } catch (error) {
-      notify(error.message, "danger");
-    } finally {
-      setSegmentGroupSaving(false);
-    }
-  }
+  const form = useSegmentGroupForm({ data, inventory, meta });
 
   function toggleSegmentGroup(groupId) {
     const group = activeSegmentGroups.find((item) => item.id === groupId);
@@ -114,12 +46,8 @@ export function useSegmentGroupActions({ data, inventory, meta }) {
     const group = activeSegmentGroups.find((item) => item.id === groupId);
     if (!group) return;
 
-    const segmentCount = activeSegments.filter((segment) => getSegmentGroupId(segment, activeSegmentGroups) === groupId).length;
-    const confirmed = segmentCount
-      ? window.confirm(`Excluir o grupo "${group.name}" e mover ${segmentCount} segmento(s) para Sem grupo?`)
-      : window.confirm(`Excluir o grupo "${group.name}"?`);
-
-    if (!confirmed) return;
+    const segmentCount = countSegmentsInGroup(activeSegments, activeSegmentGroups, groupId);
+    if (!window.confirm(deleteGroupConfirmation(group, segmentCount))) return;
 
     try {
       await deleteSegmentGroupApi(token, groupId);
@@ -152,14 +80,14 @@ export function useSegmentGroupActions({ data, inventory, meta }) {
 
   return {
     changeSegmentGroupColor,
-    closeSegmentGroupForm,
+    closeSegmentGroupForm: form.closeSegmentGroupForm,
     deleteSegmentGroup,
     moveGroupOrder,
-    openSegmentGroupForm,
-    renameSegmentGroup,
-    segmentGroupForm,
-    segmentGroupSaving,
-    submitSegmentGroupForm,
+    openSegmentGroupForm: form.openSegmentGroupForm,
+    renameSegmentGroup: form.renameSegmentGroup,
+    segmentGroupForm: form.segmentGroupForm,
+    segmentGroupSaving: form.segmentGroupSaving,
+    submitSegmentGroupForm: form.submitSegmentGroupForm,
     toggleSegmentGroup
   };
 }

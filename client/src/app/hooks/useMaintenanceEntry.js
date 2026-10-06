@@ -1,10 +1,15 @@
-import { createSegment, createServiceOrder } from "../../api.js";
+import { createServiceOrder } from "../../api.js";
 import { useAppSession } from "../../context/AppSessionContext.jsx";
-import { getSegmentGroupId, upsertSegmentList } from "../../components/inventory/inventoryUtils.js";
+import { getSegmentGroupId } from "../../components/inventory/inventoryUtils.js";
 import { isMaintenanceSegmentName } from "../../utils/display.js";
-import { isMaintenanceServiceOrder } from "../inventory/serviceOrderRules.js";
-
-const unorganizedLabel = "Não organizadas";
+import {
+  buildMaintenanceOrderPayload,
+  buildMaintenanceRecord,
+  hasOpenMaintenanceOrder,
+  resolveServiceOrderTargetTabId,
+  unorganizedLabel
+} from "../inventory/maintenanceEntryModel.js";
+import { useMaintenanceSegment } from "./useMaintenanceSegment.js";
 
 // Coloca maquinas no segmento de manutencao (manualmente ou ao vincular a
 // maquina a uma OS), registrando origem, historico e a OS de manutencao.
@@ -13,30 +18,8 @@ export function useMaintenanceEntry({ data, deviceState, exit, inventory, meta, 
   const { model, persistence } = inventory;
   const { activeInventoryTab, activeSegmentGroups, activeSegments, decoratedSegmentGroups, decoratedSegments } = model;
   const { saveMaintenanceRecords } = persistence;
-  const { serviceOrders, setSegments, setServiceOrders } = data;
-
-  async function getOrCreateMaintenanceSegment() {
-    const existingActive = decoratedSegments.find(
-      (segment) => !segment.isDefault && isMaintenanceSegmentName(segment.name)
-    );
-    if (existingActive) return existingActive;
-
-    const response = await createSegment(token, {
-      name: "Manutenção",
-      color: "#f59e0b",
-      groupId: null,
-      systemSegment: "maintenance"
-    });
-    const nextSegment = { ...response.segment, groupId: null };
-
-    setSegments((current) => upsertSegmentList(current, nextSegment));
-    meta.updateInventoryMeta("segments", response.segment.id, {
-      tabId: "shared",
-      order: -1
-    });
-
-    return nextSegment;
-  }
+  const { serviceOrders, setServiceOrders } = data;
+  const { getOrCreateMaintenanceSegment } = useMaintenanceSegment({ data, decoratedSegments, meta });
 
   // Grava o registro local de manutencao, atualiza o ativo na tela e lanca o
   // evento no historico do ativo.
@@ -75,23 +58,17 @@ export function useMaintenanceEntry({ data, deviceState, exit, inventory, meta, 
     }
 
     try {
-      const targetTabId =
-        machine.tabId && machine.tabId !== "global-unorganized"
-          ? machine.tabId
-          : serviceOrder.environmentId || activeInventoryTab.id;
+      const targetTabId = resolveServiceOrderTargetTabId(machine, serviceOrder, activeInventoryTab);
       const originSegment = decoratedSegments.find((segment) => segment.id === machine.segmentId);
       const originGroupId = originSegment ? getSegmentGroupId(originSegment, decoratedSegmentGroups) : "";
       const maintenanceSegment = await getOrCreateMaintenanceSegment();
       const previousSegment = machine.segmentName || unorganizedLabel;
-      const maintenanceRecord = {
-        active: true,
-        origin: {
-          tabId: targetTabId,
-          groupId: originGroupId,
-          segmentId: machine.segmentId,
-          segmentName: previousSegment
-        }
-      };
+      const maintenanceRecord = buildMaintenanceRecord({
+        tabId: targetTabId,
+        groupId: originGroupId,
+        segmentId: machine.segmentId,
+        segmentName: previousSegment
+      });
 
       const moved = await moves.handleMoveMachine(machine, maintenanceSegment.id, {
         reason: "maintenance",
@@ -133,15 +110,12 @@ export function useMaintenanceEntry({ data, deviceState, exit, inventory, meta, 
       const originGroupId = originSegment ? getSegmentGroupId(originSegment, activeSegmentGroups) : "";
       const maintenanceSegment = await getOrCreateMaintenanceSegment();
       const previousSegment = machine.segmentName || unorganizedLabel;
-      const maintenanceRecord = {
-        active: true,
-        origin: {
-          tabId: activeInventoryTab.id,
-          groupId: originGroupId,
-          segmentId: machine.segmentId,
-          segmentName: previousSegment
-        }
-      };
+      const maintenanceRecord = buildMaintenanceRecord({
+        tabId: activeInventoryTab.id,
+        groupId: originGroupId,
+        segmentId: machine.segmentId,
+        segmentName: previousSegment
+      });
 
       const moved = await moves.handleMoveMachine(machine, maintenanceSegment.id, { reason: "maintenance" });
       if (!moved) return false;
@@ -154,26 +128,11 @@ export function useMaintenanceEntry({ data, deviceState, exit, inventory, meta, 
         previousSegment
       });
 
-      const hasOpenMaintenanceOrder = serviceOrders.some(
-        (order) =>
-          order.assetId === machine.id &&
-          isMaintenanceServiceOrder(order) &&
-          order.status !== "closed"
-      );
-
-      if (!hasOpenMaintenanceOrder) {
-        const response = await createServiceOrder(token, {
-          title: `Manutenção - ${machine.name}`,
-          description: `Máquina ${machine.name} colocada em manutenção. Preencha o diagnóstico, atendimento e solução antes de finalizar.`,
-          priority: "medium",
-          category: "Manutenção",
-          assetId: machine.id,
-          environmentId: activeInventoryTab.id,
-          environmentName: activeInventoryTab.name || "Novo ambiente",
-          requesterName: user.name,
-          assignedTechnicianName: "",
-          notes: `Origem: ${previousSegment}`
-        });
+      if (!hasOpenMaintenanceOrder(serviceOrders, machine.id)) {
+        const response = await createServiceOrder(
+          token,
+          buildMaintenanceOrderPayload({ machine, activeInventoryTab, user, previousSegment })
+        );
 
         setServiceOrders((current) => [response.serviceOrder, ...current]);
       }

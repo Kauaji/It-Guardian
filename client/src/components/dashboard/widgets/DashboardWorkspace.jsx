@@ -1,20 +1,13 @@
-import { Grid3x3, Move, Pencil, Plus, RefreshCw, RotateCcw, Save, X } from "lucide-react";
 import { useState } from "react";
 import { useDashboardLayout } from "../../../hooks/useDashboardLayout.js";
-import { formatDateTime } from "../dashboardFormatters.js";
 import DashboardWidgetConfigModal from "./DashboardWidgetConfigModal.jsx";
 import { DashboardFilterBar, DashboardFilterProvider } from "./DashboardFilterContext.jsx";
 import WidgetCatalogPanel from "./catalog/WidgetCatalogPanel.jsx";
-import { reindexWidgetPositions } from "./widgetGridMath.js";
 import WidgetGrid from "./WidgetGrid.jsx";
+import WorkspaceToolbar from "./WorkspaceToolbar.jsx";
+import { MAX_WIDGETS } from "./workspaceModel.js";
+import { useWorkspaceDraft } from "./useWorkspaceDraft.js";
 import "./dashboardAnalytics.css";
-
-const DEFAULT_SIZE = { w: "m", h: "s" };
-const DEFAULT_REFRESH_SECONDS = 60;
-
-function createWidgetId() {
-  return `widget-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-}
 
 /**
  * Orquestrador do dashboard configuravel: modo edicao opera sobre uma copia
@@ -25,86 +18,9 @@ function createWidgetId() {
  */
 export default function DashboardWorkspace({ token, canCustomize, notify }) {
   const { layout, loading, error, saveLayout, resetLayout } = useDashboardLayout({ token, canView: true, notify });
-  const [editing, setEditing] = useState(false);
-  const [draftWidgets, setDraftWidgets] = useState([]);
-  const [catalogOpen, setCatalogOpen] = useState(false);
-  const [configuringWidget, setConfiguringWidget] = useState(null);
-  const [saving, setSaving] = useState(false);
+  const workspace = useWorkspaceDraft({ layout, saveLayout, resetLayout, notify });
   const [refreshNonce, setRefreshNonce] = useState(0);
-  const [lastLoadedAt, setLastLoadedAt] = useState(null);
-  const [arranging, setArranging] = useState(false);
-
-  const activeWidgets = editing ? draftWidgets : layout?.widgets || [];
-
-  function enterEditMode() {
-    setDraftWidgets(layout?.widgets || []);
-    setEditing(true);
-    setArranging(false);
-  }
-
-  function cancelEditing() {
-    setEditing(false);
-    setDraftWidgets([]);
-    setArranging(false);
-  }
-
-  async function persistDraft() {
-    setSaving(true);
-    try {
-      await saveLayout({ widgets: draftWidgets });
-      setLastLoadedAt(new Date().toISOString());
-      setEditing(false);
-      setArranging(false);
-      notify?.("Layout do dashboard salvo.", "ok");
-    } catch (saveError) {
-      notify?.(saveError.message || "Não foi possível salvar o layout.", "danger");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function restoreDefault() {
-    setSaving(true);
-    try {
-      const result = await resetLayout();
-      setDraftWidgets(result.widgets);
-      setLastLoadedAt(new Date().toISOString());
-      notify?.("Layout restaurado para o padrão.", "ok");
-    } catch (resetError) {
-      notify?.(resetError.message || "Não foi possível restaurar o layout padrão.", "danger");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  function addWidgetFromCatalog(catalogItem) {
-    const newWidget = {
-      id: createWidgetId(),
-      type: catalogItem.type,
-      x: 0,
-      y: draftWidgets.length,
-      w: catalogItem.defaultSize?.w || DEFAULT_SIZE.w,
-      h: catalogItem.defaultSize?.h || DEFAULT_SIZE.h,
-      refreshIntervalSeconds: DEFAULT_REFRESH_SECONDS,
-      config: catalogItem.config || {}
-    };
-    setDraftWidgets((current) => [...current, newWidget]);
-    setCatalogOpen(false);
-    if (catalogItem.requiresAssetConfig) setConfiguringWidget(newWidget);
-  }
-
-  function removeWidget(widgetId) {
-    setDraftWidgets((current) => reindexWidgetPositions(current.filter((widget) => widget.id !== widgetId)));
-  }
-
-  function resizeWidget(widgetId, sizePatch) {
-    setDraftWidgets((current) => current.map((widget) => (widget.id === widgetId ? { ...widget, ...sizePatch } : widget)));
-  }
-
-  function saveWidgetConfig(updatedWidget) {
-    setDraftWidgets((current) => current.map((widget) => (widget.id === updatedWidget.id ? updatedWidget : widget)));
-    setConfiguringWidget(null);
-  }
+  const { editing, arranging, draftWidgets, configuringWidget } = workspace;
 
   if (loading) {
     return <p className="dashboard-empty-state">Carregando dashboard...</p>;
@@ -117,49 +33,11 @@ export default function DashboardWorkspace({ token, canCustomize, notify }) {
   return (
     <DashboardFilterProvider key={token} enabled={!editing}>
     <div className="dashboard-workspace">
-      <div className="dashboard-workspace-toolbar">
-        <span className="dashboard-workspace-status">
-          <Grid3x3 size={16} /> {activeWidgets.length} widget(s)
-          {lastLoadedAt && ` - atualizado ${formatDateTime(lastLoadedAt)}`}
-        </span>
-        <div className="dashboard-workspace-actions">
-          {!editing ? (
-            <>
-              <button type="button" className="secondary-action" onClick={() => setRefreshNonce((value) => value + 1)}>
-                <RefreshCw size={16} /> Atualizar agora
-              </button>
-              {canCustomize && (
-                <button type="button" className="primary-action" onClick={enterEditMode}>
-                  <Pencil size={16} /> Editar dashboard
-                </button>
-              )}
-            </>
-          ) : (
-            <>
-              <button type="button" className="secondary-action" onClick={() => setCatalogOpen(true)}>
-                <Plus size={16} /> Adicionar widget
-              </button>
-              <button
-                type="button"
-                className={`secondary-action dashboard-arrange-toggle ${arranging ? "active" : ""}`}
-                aria-pressed={arranging}
-                onClick={() => setArranging((current) => !current)}
-              >
-                <Move size={16} /> {arranging ? "Finalizar organização" : "Organizar posições"}
-              </button>
-              <button type="button" className="secondary-action" onClick={restoreDefault} disabled={saving}>
-                <RotateCcw size={16} /> Restaurar padrao
-              </button>
-              <button type="button" className="secondary-action" onClick={cancelEditing} disabled={saving}>
-                <X size={16} /> Cancelar
-              </button>
-              <button type="button" className="primary-action" onClick={persistDraft} disabled={saving}>
-                <Save size={16} /> {saving ? "Salvando..." : "Salvar layout"}
-              </button>
-            </>
-          )}
-        </div>
-      </div>
+      <WorkspaceToolbar
+        workspace={workspace}
+        canCustomize={canCustomize}
+        onRefresh={() => setRefreshNonce((value) => value + 1)}
+      />
 
       <DashboardFilterBar />
       {editing && arranging ? (
@@ -170,22 +48,28 @@ export default function DashboardWorkspace({ token, canCustomize, notify }) {
       <WidgetGrid
         key={refreshNonce}
         token={token}
-        widgets={activeWidgets}
+        widgets={workspace.activeWidgets}
         editing={editing}
         arranging={arranging}
-        onReorder={setDraftWidgets}
-        onRemove={removeWidget}
-        onResize={resizeWidget}
-        onConfigure={setConfiguringWidget}
+        onReorder={workspace.setDraftWidgets}
+        onRemove={workspace.removeWidget}
+        onResize={workspace.resizeWidget}
+        onConfigure={workspace.setConfiguringWidget}
       />
 
-      <WidgetCatalogPanel token={token} open={catalogOpen} onClose={() => setCatalogOpen(false)} onAddWidget={addWidgetFromCatalog} remainingSlots={Math.max(0, 30 - draftWidgets.length)} />
+      <WidgetCatalogPanel
+        token={token}
+        open={workspace.catalogOpen}
+        onClose={() => workspace.setCatalogOpen(false)}
+        onAddWidget={workspace.addWidgetFromCatalog}
+        remainingSlots={Math.max(0, MAX_WIDGETS - draftWidgets.length)}
+      />
       {configuringWidget && (
         <DashboardWidgetConfigModal
           token={token}
           widget={configuringWidget}
-          onSave={saveWidgetConfig}
-          onClose={() => setConfiguringWidget(null)}
+          onSave={workspace.saveWidgetConfig}
+          onClose={() => workspace.setConfiguringWidget(null)}
         />
       )}
     </div>
