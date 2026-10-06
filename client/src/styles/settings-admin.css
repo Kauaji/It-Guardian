@@ -227,7 +227,7 @@
 
 .admin-badge.accent {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .admin-badge.muted {

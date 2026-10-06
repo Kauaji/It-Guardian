@@ -486,7 +486,7 @@
   background: var(--accent);
   border: 1px solid var(--accent);
   border-radius: 7px;
-  color: #fff;
+  color: var(--on-accent);
   cursor: pointer;
   display: flex;
   font-size: 0.74rem;

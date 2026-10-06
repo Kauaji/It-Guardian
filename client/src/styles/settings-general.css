@@ -282,7 +282,7 @@
 .general-settings-tabs button:hover,
 .general-settings-tabs button.active {
   background: color-mix(in srgb, var(--accent) 12%, var(--surface));
-  color: var(--accent);
+  color: var(--accent-strong);
 }
 
 .general-settings-content {

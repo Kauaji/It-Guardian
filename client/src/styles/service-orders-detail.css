@@ -55,7 +55,7 @@
   display: grid;
   place-items: center;
   border-radius: 999px;
-  color: var(--service-order-status-color, var(--accent));
+  color: color-mix(in srgb, var(--service-order-status-color, var(--accent)) 55%, var(--text-strong));
   background: color-mix(in srgb, var(--service-order-status-color, var(--accent)) 12%, transparent);
   font-size: 0.78rem;
 }
@@ -161,7 +161,7 @@
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--service-order-priority-color, var(--accent)) 28%, var(--border));
   background: color-mix(in srgb, var(--service-order-priority-color, var(--accent)) 22%, var(--surface));
-  color: color-mix(in srgb, var(--service-order-priority-color, var(--accent)) 84%, var(--text-strong));
+  color: color-mix(in srgb, var(--service-order-priority-color, var(--accent)) 55%, var(--text-strong));
   font-size: 0.66rem;
   font-style: normal;
   font-weight: 800;

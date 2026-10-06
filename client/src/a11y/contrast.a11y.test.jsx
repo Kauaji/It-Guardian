@@ -4,34 +4,34 @@ import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import * as api from "../api.js";
 import { renderA11yApp, setupA11yApiMocks, waitForAppReady } from "../test/a11yApp.jsx";
 import { modalScenarios, viewScenarios } from "../test/a11yScenarios.js";
-import { expectNoAxeViolations } from "../test/axe.js";
+import { expectNoContrastFailures } from "../test/axe.js";
 
 vi.mock("../api.js");
 
-// Axe (WCAG 2.1 A/AA) sobre as visoes REAIS montadas com dados mockados. Espelha
-// tests/e2e/a11y.spec.js (navegador). `color-contrast` nao roda no jsdom: ver contrast.a11y.test.jsx.
+// Contraste WCAG (4.5:1 texto normal, 3:1 texto grande) de todo texto visivel das visoes reais,
+// calculado com as folhas de estilo reais nos temas claro e escuro (ver test/contrastAudit.js).
 beforeEach(() => setupA11yApiMocks(api));
 afterEach(() => cleanup());
 
-describe("telas principais", () => {
+describe("contraste das telas principais (claro e escuro)", () => {
   for (const { name, path, marker } of viewScenarios) {
-    it(`${name}: sem violações axe (WCAG 2.1 A/AA)`, async () => {
+    it(name, async () => {
       renderA11yApp(path);
       await waitForAppReady(marker);
-      await expectNoAxeViolations();
+      expectNoContrastFailures();
     }, 40000);
   }
 });
 
-describe("modais principais", () => {
+describe("contraste dos modais principais (claro e escuro)", () => {
   for (const { name, path, marker, open } of modalScenarios) {
-    it(`${name}: sem violações axe`, async () => {
+    it(name, async () => {
       const user = userEvent.setup();
       renderA11yApp(path);
       await waitForAppReady(marker);
       await open(user);
       await screen.findByRole("dialog");
-      await expectNoAxeViolations();
+      expectNoContrastFailures();
     }, 40000);
   }
 });

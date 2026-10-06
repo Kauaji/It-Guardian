@@ -54,7 +54,7 @@ export default function AlertSettingsModal({ settings, devices, serviceOrders })
             <h2 id="alert-settings-modal-title">Configurações de aviso</h2>
             <p>Regras de recorrência, limites e cadastro seguro de scripts de manutenção.</p>
           </div>
-          <button type="button" className="icon-button" onClick={settings.closeSettings}>
+          <button type="button" className="icon-button" onClick={settings.closeSettings} aria-label="Fechar" title="Fechar">
             <XCircle size={18} />
           </button>
         </header>

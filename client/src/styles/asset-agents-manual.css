@@ -120,7 +120,7 @@
 .asset-type-editor label {
   display: grid;
   gap: 7px;
-  color: #536177;
+  color: var(--text-muted);
   font-size: 12px;
   font-weight: 800;
 }
@@ -525,14 +525,14 @@ table strong,
 :root[data-theme="dark"] .inventory-board-actions .secondary-action.compact-action {
   border-color: var(--accent);
   background: var(--accent);
-  color: #ffffff;
+  color: var(--on-accent);
   box-shadow: 0 12px 28px rgba(34, 197, 94, 0.16);
 }
 
 :root[data-theme="dark"] .inventory-board-actions .secondary-action.compact-action:hover:not(:disabled) {
   border-color: var(--accent-hover);
   background: var(--accent-hover);
-  color: #ffffff;
+  color: var(--on-accent);
 }
 
 :root[data-theme="dark"] .segment-color-popover,

@@ -16,10 +16,18 @@
   --text: #18212f;
   --text-strong: #101827;
   --text-muted: #536177;
-  --text-soft: #69758a;
+  --text-soft: #5a677c;
+  /* Cores de TEXTO para estados (>= 4.5:1 sobre superficies e fundos tingidos); os tokens --status-* seguem para bordas/fundos. */
+  --text-info: #1d4ed8;
+  --text-ok: #166534;
+  --text-warn: #8f4306;
+  --text-danger: #b91c1c;
+  --on-accent: #ffffff;
+  --brand-ink: #1b4d5a;
   --border: #dfe5ee;
   --border-soft: #e8edf5;
   --border-strong: #c9d4e4;
+  --control-border: #76849a;
   --sidebar-bg: #111c2a;
   --sidebar-bg-2: #18283b;
   --sidebar-text: #f3f8ff;
@@ -87,9 +95,16 @@
   --text-strong: #ffffff;
   --text-muted: #c5d1df;
   --text-soft: #9fb0c4;
+  --text-info: #8ab4ff;
+  --text-ok: #4ade80;
+  --text-warn: #fbbf24;
+  --text-danger: #fca5a5;
+  --on-accent: #052e22;
+  --brand-ink: #7ee7bd;
   --border: #253247;
   --border-soft: #1f2b40;
   --border-strong: #33435d;
+  --control-border: #6b7c95;
   --sidebar-bg: #080e18;
   --sidebar-bg-2: #111c2d;
   --sidebar-text: #ffffff;

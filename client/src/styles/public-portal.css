@@ -202,12 +202,12 @@
   justify-content: center;
   border-color: #1f7a61;
   background: var(--accent);
-  color: #ffffff;
+  color: var(--on-accent);
 }
 
 .public-support-actions .primary-action:hover {
   background: #17644f;
-  color: #ffffff;
+  color: var(--on-accent);
 }
 
 .public-support-success {

@@ -426,15 +426,15 @@
 }
 
 .segment-health-score.healthy {
-  --health-tone: #15803d;
+  --health-tone: #166534;
 }
 
 .segment-health-score.attention {
-  --health-tone: #b45309;
+  --health-tone: #8f4306;
 }
 
 .segment-health-score.critical {
-  --health-tone: #c2410c;
+  --health-tone: #b23a0a;
 }
 
 .segment-health-score.emergency {
@@ -542,7 +542,7 @@
 
 .segment-header-tools button:disabled:hover {
   background: var(--surface);
-  color: var(--slate-600);
+  color: var(--text-muted);
 }
 
 .segment-actions-menu-wrap,
@@ -881,4 +881,25 @@
   background:
     radial-gradient(circle at top left, color-mix(in srgb, var(--segment-color) 13%, transparent), transparent 34%),
     color-mix(in srgb, var(--segment-color) 8%, var(--surface));
+}
+
+/* Tons de saude (texto sobre cartao escuro): versoes claras com contraste >= 4.5:1. */
+:root[data-theme="dark"] .segment-health-score.healthy {
+  --health-tone: #4ade80;
+}
+
+:root[data-theme="dark"] .segment-health-score.attention {
+  --health-tone: #fbbf24;
+}
+
+:root[data-theme="dark"] .segment-health-score.critical {
+  --health-tone: #fb923c;
+}
+
+:root[data-theme="dark"] .segment-health-score.emergency {
+  --health-tone: #fca5a5;
+}
+
+:root[data-theme="dark"] .segment-health-score.no-data {
+  --health-tone: #94a3b8;
 }

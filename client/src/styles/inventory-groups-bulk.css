@@ -225,14 +225,14 @@
 .inventory-board-actions .secondary-action.compact-action {
   border-color: var(--accent);
   background: var(--accent);
-  color: #ffffff;
+  color: var(--on-accent);
   box-shadow: 0 10px 22px rgba(31, 122, 97, 0.18);
 }
 
 .inventory-board-actions .secondary-action.compact-action:hover:not(:disabled) {
   border-color: var(--accent-hover);
   background: var(--accent-hover);
-  color: #ffffff;
+  color: var(--on-accent);
   box-shadow: 0 12px 26px rgba(31, 122, 97, 0.24);
   transform: translateY(-1px);
 }

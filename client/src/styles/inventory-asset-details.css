@@ -135,15 +135,15 @@
 }
 
 .machine-metrics strong.ok {
-  color: var(--green-600);
+  color: var(--text-ok);
 }
 
 .machine-metrics strong.warning {
-  color: var(--amber-600);
+  color: var(--text-warn);
 }
 
 .machine-metrics strong.danger {
-  color: var(--status-danger);
+  color: var(--text-danger);
 }
 
 .agent-card-facts {
@@ -218,19 +218,19 @@
 }
 
 .disk-indicator.ok {
-  color: #15803d;
+  color: var(--text-ok);
   background: rgba(22, 163, 74, 0.12);
   border-color: rgba(22, 163, 74, 0.22);
 }
 
 .disk-indicator.warning {
-  color: #b45309;
+  color: var(--text-warn);
   background: rgba(217, 119, 6, 0.14);
   border-color: rgba(217, 119, 6, 0.28);
 }
 
 .disk-indicator.danger {
-  color: var(--status-danger);
+  color: var(--text-danger);
   background: rgba(220, 38, 38, 0.13);
   border-color: rgba(220, 38, 38, 0.28);
 }
@@ -407,7 +407,7 @@
 .peripheral-panel header {
   display: flex;
   justify-content: space-between;
-  color: var(--slate-600);
+  color: var(--text-muted);
   font-size: 12px;
   font-weight: 800;
 }
@@ -708,7 +708,7 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 12px;
-  background: var(--slate-50);
+  background: var(--surface-soft);
 }
 
 .asset-overview-grid svg {
@@ -753,7 +753,7 @@
   border: 1px solid #d5ddea;
   border-radius: 6px;
   background: var(--surface);
-  color: var(--slate-600);
+  color: var(--text-muted);
 }
 
 .alias-editor.editing {

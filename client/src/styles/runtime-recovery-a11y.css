@@ -59,7 +59,7 @@
   padding: 0 18px;
   border: 0;
   border-radius: var(--radius-md);
-  color: #fff;
+  color: var(--on-accent);
   background: var(--accent);
   font: inherit;
   font-weight: 700;

@@ -123,7 +123,7 @@
   font-weight: 850;
 }
 
-.parts-view-tabs button.active { background: var(--surface); color: #2563eb; box-shadow: var(--shadow-sm); }
+.parts-view-tabs button.active { background: var(--surface); color: var(--text-info); box-shadow: var(--shadow-sm); }
 
 .parts-search {
   display: flex;
@@ -156,7 +156,7 @@
   list-style: none;
 }
 .parts-state-filter summary::-webkit-details-marker { display: none; }
-.parts-state-filter[open] summary { color: #2563eb; border-color: #2563eb; box-shadow: 0 0 0 3px color-mix(in srgb, #2563eb 12%, transparent); }
+.parts-state-filter[open] summary { color: var(--text-info); border-color: #2563eb; box-shadow: 0 0 0 3px color-mix(in srgb, #2563eb 12%, transparent); }
 .parts-state-filter[open] summary svg { transform: rotate(180deg); }
 .parts-state-filter > div {
   position: absolute;
@@ -172,8 +172,8 @@
   box-shadow: var(--shadow-md);
 }
 .parts-state-filter button { padding: 9px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--text); font: inherit; text-align: left; }
-.parts-state-filter button:hover, .parts-state-filter button.active { background: color-mix(in srgb, #2563eb 9%, var(--surface)); color: #1d4ed8; font-weight: 850; }
-.parts-clear-discrepancy { display: inline-flex; align-items: center; gap: 6px; padding: 0 11px; border: 1px solid color-mix(in srgb, #d97706 30%, var(--border)); border-radius: 10px; background: color-mix(in srgb, #d97706 8%, var(--surface)); color: #b45309; font: inherit; font-size: 11px; font-weight: 850; }
+.parts-state-filter button:hover, .parts-state-filter button.active { background: color-mix(in srgb, #2563eb 9%, var(--surface)); color: var(--text-info); font-weight: 850; }
+.parts-clear-discrepancy { display: inline-flex; align-items: center; gap: 6px; padding: 0 11px; border: 1px solid color-mix(in srgb, #d97706 30%, var(--border)); border-radius: 10px; background: color-mix(in srgb, #d97706 8%, var(--surface)); color: var(--text-warn); font: inherit; font-size: 11px; font-weight: 850; }
 
 .parts-family-list { display: grid; gap: 16px; }
 .parts-family-section {

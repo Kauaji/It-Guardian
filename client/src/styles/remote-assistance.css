@@ -475,7 +475,7 @@
 .chat-bubble.chat-technician {
   justify-self: end;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .chat-bubble.chat-technician .chat-bubble-meta {

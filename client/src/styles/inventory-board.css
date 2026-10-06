@@ -86,7 +86,7 @@
 }
 
 .disk-list span {
-  color: var(--slate-600);
+  color: var(--text-muted);
 }
 
 .disk-list strong {
