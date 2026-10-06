@@ -113,6 +113,30 @@ describe("useServiceOrderBackupFlow.handleSelectBackupForServiceOrder", () => {
     expect(context.session.notify).toHaveBeenLastCalledWith("Reserva alocada como Backup da OS 4.", "ok");
   });
 
+  it("avisa quando nao encontra o segmento de origem nem o de destino", async () => {
+    const orphan = { id: "main", name: "PC principal", segmentId: "", segmentName: "", tabId: "tab-a" };
+    const noOrigin = build({ devices: [orphan, backup] });
+    noOrigin.shared.data.segments = [];
+    noOrigin.shared.inventory.model.activeSegments = [];
+    noOrigin.shared.inventory.model.decoratedSegments = [];
+    const first = renderBackupFlow(noOrigin);
+    expect(await first.result.current.handleSelectBackupForServiceOrder(order, backup)).toBe(false);
+    expect(noOrigin.session.notify).toHaveBeenLastCalledWith(
+      "Não foi possível localizar o segmento original da máquina principal.", "danger"
+    );
+
+    const noTarget = build();
+    noTarget.shared.data.segments = [];
+    noTarget.shared.inventory.model.activeSegments = [];
+    noTarget.shared.inventory.model.decoratedSegments = [];
+    const second = renderBackupFlow(noTarget);
+    expect(await second.result.current.handleSelectBackupForServiceOrder(order, backup)).toBe(false);
+    expect(noTarget.session.notify).toHaveBeenLastCalledWith(
+      "Não foi possível localizar o segmento de destino do Backup.", "danger"
+    );
+    expect(noTarget.shared.moves.handleMoveMachine).not.toHaveBeenCalled();
+  });
+
   it("avisa quando a API de Backup falha", async () => {
     updateDeviceBackup.mockRejectedValue(new Error("falha backup"));
     const context = build();
