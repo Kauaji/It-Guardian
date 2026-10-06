@@ -21,3 +21,7 @@ agent/windows/webrtc/obj/
 
 # Binarios gerados pelo build do instalador (build-installer.ps1) -- nao versionar
 installers/windows-collector/ITGuardian-Uninstaller.exe
+
+# Saidas de cobertura
+coverage/
+playwright-report/
