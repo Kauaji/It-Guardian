@@ -243,4 +243,93 @@ describe("DashboardWorkspace", () => {
     fireEvent.click(screen.getByRole("button", { name: "Editar dashboard" }));
     await waitFor(() => expect(screen.getByRole("button", { name: "Filtrar por Offline: 1" })).toBeDisabled());
   });
+
+  it("mostra carregando e o erro do layout quando nao ha layout salvo", async () => {
+    fetchDashboardLayout.mockRejectedValue(new Error("Layout fora"));
+    const notify = vi.fn();
+    render(<DashboardWorkspace token="tok" canCustomize notify={notify} />);
+    expect(screen.getByText("Carregando dashboard...")).toBeTruthy();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Layout fora");
+    expect(notify).toHaveBeenCalledWith("Layout fora", "danger");
+  });
+
+  it("falha ao salvar notifica e mantem o modo edicao; sem mensagem usa o texto padrao", async () => {
+    fetchDashboardLayout.mockResolvedValue({ widgets: [widget()] });
+    previewDashboardWidget.mockResolvedValue({ type: "t", data: {} });
+    saveDashboardLayout.mockRejectedValueOnce(new Error("Sem permissao")).mockRejectedValueOnce({});
+    const notify = vi.fn();
+    render(<DashboardWorkspace token="tok" canCustomize notify={notify} />);
+    await screen.findByText("Disponibilidade de Ativos");
+    fireEvent.click(screen.getByText("Editar dashboard"));
+    await act(async () => { fireEvent.click(screen.getByText("Salvar layout")); });
+    expect(notify).toHaveBeenCalledWith("Sem permissao", "danger");
+    await act(async () => { fireEvent.click(screen.getByText("Salvar layout")); });
+    expect(notify).toHaveBeenCalledWith("Não foi possível salvar o layout.", "danger");
+    expect(screen.getByText("Salvar layout")).toBeTruthy();
+  });
+
+  it("salvar com sucesso notifica e mostra a hora da atualizacao", async () => {
+    fetchDashboardLayout.mockResolvedValue({ widgets: [widget()] });
+    previewDashboardWidget.mockResolvedValue({ type: "t", data: {} });
+    saveDashboardLayout.mockResolvedValue({ widgets: [widget()] });
+    const notify = vi.fn();
+    render(<DashboardWorkspace token="tok" canCustomize notify={notify} />);
+    await screen.findByText("Disponibilidade de Ativos");
+    fireEvent.click(screen.getByText("Editar dashboard"));
+    await act(async () => { fireEvent.click(screen.getByText("Salvar layout")); });
+    expect(notify).toHaveBeenCalledWith("Layout do dashboard salvo.", "ok");
+    expect(document.querySelector(".dashboard-workspace-status").textContent).toMatch(/1 widget\(s\) - atualizado /);
+  });
+
+  it("restaurar padrao: sucesso notifica e falha usa mensagem padrao", async () => {
+    fetchDashboardLayout.mockResolvedValue({ widgets: [widget()] });
+    previewDashboardWidget.mockResolvedValue({ type: "t", data: {} });
+    resetDashboardLayout.mockResolvedValueOnce({ widgets: [widget({ id: "d1" })] }).mockRejectedValueOnce({});
+    const notify = vi.fn();
+    render(<DashboardWorkspace token="tok" canCustomize notify={notify} />);
+    await screen.findByText("Disponibilidade de Ativos");
+    fireEvent.click(screen.getByText("Editar dashboard"));
+    await act(async () => { fireEvent.click(screen.getByText("Restaurar padrao")); });
+    expect(notify).toHaveBeenCalledWith("Layout restaurado para o padrão.", "ok");
+    await act(async () => { fireEvent.click(screen.getByText("Restaurar padrao")); });
+    expect(notify).toHaveBeenCalledWith("Não foi possível restaurar o layout padrão.", "danger");
+  });
+
+  it("organizar posicoes alterna a dica e Atualizar agora remonta a grade", async () => {
+    fetchDashboardLayout.mockResolvedValue({ widgets: [widget()] });
+    previewDashboardWidget.mockResolvedValue({ type: "t", data: {} });
+    render(<DashboardWorkspace token="tok" canCustomize />);
+    await screen.findByText("Disponibilidade de Ativos");
+    previewDashboardWidget.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: /Atualizar agora/ }));
+    await waitFor(() => expect(previewDashboardWidget).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByText("Editar dashboard"));
+    const toggle = screen.getByRole("button", { name: /Organizar posições/ });
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(toggle);
+    expect(screen.getByText(/Arraste cada gráfico pela alça/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Finalizar organização/ })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByText("Cancelar"));
+    expect(screen.queryByText("Arraste cada gráfico pela alça pontilhada. A nova ordem só é aplicada ao salvar o layout.")).toBeNull();
+  });
+
+  it("widget do catalogo que exige ativo abre a configuracao e Salvar aplica ao draft", async () => {
+    fetchDashboardLayout.mockResolvedValue({ widgets: [] });
+    fetchDashboardWidgetCatalog.mockResolvedValue({
+      widgets: [{ type: "top_assets_cpu", label: "Top CPU por ativo", category: "metrics", requiresAssetConfig: true, defaultSize: { w: "l" } }]
+    });
+    previewDashboardWidget.mockResolvedValue({ type: "t", data: { rows: [] } });
+    render(<DashboardWorkspace token="tok" canCustomize />);
+    await screen.findByRole("button", { name: "Editar dashboard" });
+    fireEvent.click(screen.getByRole("button", { name: "Editar dashboard" }));
+    fireEvent.click(screen.getByRole("button", { name: "Adicionar widget" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Adicionar Top CPU por ativo" }));
+    const dialog = await screen.findByRole("dialog", { name: "Configurar widget" });
+    expect(screen.queryByRole("dialog", { name: "Adicionar widget" })).toBeNull();
+    fireEvent.click(within(dialog).getByTitle("Fechar"));
+    expect(screen.queryByRole("dialog", { name: "Configurar widget" })).toBeNull();
+    expect(screen.getByText("1 widget(s)", { exact: false })).toBeTruthy();
+  });
 });
+
