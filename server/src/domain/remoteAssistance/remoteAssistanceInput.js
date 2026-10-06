@@ -9,8 +9,22 @@ const namedKeys = new Set([
   "PageUp", "PageDown", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"
 ]);
 
-export function sanitizeInputCommand(value) {
-  const type = String(value?.type || "").trim();
+/**
+ * @typedef {{ type: "mouse_move", x: number, y: number }
+ *   | { type: "mouse_button", button: string, action: string }
+ *   | { type: "mouse_wheel", delta: number }
+ *   | { type: "key", key: string, action: string }
+ *   | { type: "block_input", enabled: boolean }} InputCommand
+ */
+
+/**
+ * @param {unknown} input Comando de entrada enviado pelo visualizador (nao confiavel).
+ * @returns {InputCommand | null} `null` quando o comando e invalido.
+ */
+export function sanitizeInputCommand(input) {
+  /** @type {Record<string, unknown>} Corpo cru do navegador; cada campo e validado abaixo. */
+  const value = input && typeof input === "object" ? /** @type {Record<string, unknown>} */ (input) : {};
+  const type = String(value.type || "").trim();
   if (type === "mouse_move") {
     const x = Number(value.x);
     const y = Number(value.y);
