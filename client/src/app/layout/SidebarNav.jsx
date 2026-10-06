@@ -28,16 +28,17 @@ export default function SidebarNav() {
   const { sidebar } = useLayout();
 
   return (
-    <nav>
+    <nav aria-label="Navegação principal">
       {navItems
         .filter((item) => item.isVisible(access))
         .map(({ viewId, icon: Icon }) => (
           <button
             key={viewId}
             className={activeView === viewId ? "nav-active" : ""}
+            aria-current={activeView === viewId ? "page" : undefined}
             onClick={() => (viewId === "inventory" ? openInventory() : goToView(viewId))}
           >
-            <Icon size={18} /> <span className="nav-label">{labelForView(viewId)}</span>
+            <Icon size={18} aria-hidden="true" /> <span className="nav-label">{labelForView(viewId)}</span>
           </button>
         ))}
       {activeView === "inventory" && sidebar.expanded && <SidebarInventoryFilter />}

@@ -80,10 +80,12 @@ export default function ServiceOrderAttachmentsTab({ serviceOrderId, token, noti
           <input
             type="text"
             placeholder="Nome do anexo (ex.: foto-fonte.jpg)"
+            aria-label="Nome do anexo"
             value={form.fileName}
             onChange={(event) => setForm((current) => ({ ...current, fileName: event.target.value }))}
           />
           <select
+            aria-label="Categoria do anexo"
             value={form.category}
             onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))}
           >
@@ -94,11 +96,13 @@ export default function ServiceOrderAttachmentsTab({ serviceOrderId, token, noti
           <input
             type="text"
             placeholder="Link ou referência (opcional)"
+            aria-label="Link ou referência"
             value={form.storageKey}
             onChange={(event) => setForm((current) => ({ ...current, storageKey: event.target.value }))}
           />
           <textarea
             placeholder="Descrição (opcional)"
+            aria-label="Descrição do anexo"
             value={form.description}
             onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
           />

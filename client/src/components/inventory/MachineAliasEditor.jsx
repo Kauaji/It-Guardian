@@ -23,6 +23,7 @@ export default function MachineAliasEditor({ alias, originalName, onSave }) {
           value={value}
           onChange={(event) => setValue(event.target.value)}
           placeholder="Nome fantasia"
+          aria-label="Nome fantasia"
           autoFocus
         />
         <button type="button" onClick={save} title="Salvar nome fantasia" disabled={saving}>

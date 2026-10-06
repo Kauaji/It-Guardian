@@ -32,10 +32,10 @@ export default function InventoryTabFormModal({ tab, tabs = [], onClose, onSubmi
 
   return (
     <div className="modal-backdrop" role="presentation">
-      <form ref={dialogRef} className="modal-panel segment-form-modal" role="dialog" aria-modal="true" onSubmit={submit}>
+      <form ref={dialogRef} className="modal-panel segment-form-modal" role="dialog" aria-modal="true" aria-labelledby="inventory-tab-form-title" onSubmit={submit}>
         <header>
           <div>
-            <h2>Renomear ambiente</h2>
+            <h2 id="inventory-tab-form-title">Renomear ambiente</h2>
             <p>Atualize o nome da aba do inventário.</p>
           </div>
           <button type="button" className="icon-button" onClick={onClose} title="Fechar">

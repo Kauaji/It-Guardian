@@ -42,10 +42,10 @@ export default function SegmentGroupFormModal({
 
   return (
     <div className="modal-backdrop" role="presentation">
-      <form ref={dialogRef} className="modal-panel segment-form-modal" role="dialog" aria-modal="true" onSubmit={submit}>
+      <form ref={dialogRef} className="modal-panel segment-form-modal" role="dialog" aria-modal="true" aria-labelledby="segment-group-form-title" onSubmit={submit}>
         <header>
           <div>
-            <h2>{isCreate ? "Novo grupo" : "Renomear grupo"}</h2>
+            <h2 id="segment-group-form-title">{isCreate ? "Novo grupo" : "Renomear grupo"}</h2>
             <p>
               {isCreate
                 ? "Crie um agrupador para organizar segmentos relacionados."

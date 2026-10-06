@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { useHoverPopover } from "../../hooks/useHoverPopover.js";
 
 const STATUS_MESSAGES = {
@@ -40,15 +41,18 @@ function relativeSince(value) {
  */
 export default function StatusTooltip({ status, lastSeenAt, className = "", children }) {
   const { open, triggerProps, popoverProps } = useHoverPopover();
+  const popoverId = useId();
+  // `aria-expanded` nao e permitido em <span> sem papel: o gatilho aponta para o popover com aria-describedby.
+  const { "aria-expanded": _expanded, ...triggerAttributes } = triggerProps;
   const message = STATUS_MESSAGES[status] || STATUS_MESSAGES.unknown;
   const lastSeenLabel = formatFullDate(lastSeenAt);
   const relativeLabel = relativeSince(lastSeenAt);
 
   return (
-    <span className={`status-tooltip-trigger ${className}`.trim()} tabIndex={0} {...triggerProps}>
+    <span className={`status-tooltip-trigger ${className}`.trim()} tabIndex={0} aria-describedby={open ? popoverId : undefined} {...triggerAttributes}>
       {children}
       {open && (
-        <div className="status-tooltip-popover" role="dialog" aria-label={message} {...popoverProps}>
+        <div id={popoverId} className="status-tooltip-popover" role="dialog" aria-label={message} {...popoverProps}>
           <strong>{message}</strong>
           {lastSeenLabel ? (
             <>

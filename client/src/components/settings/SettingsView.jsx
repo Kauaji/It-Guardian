@@ -317,10 +317,10 @@ function SettingsFormModal({ sectionId, record, records = [], businessMode, clie
 
   return (
     <div className="modal-backdrop settings-modal-backdrop" role="presentation">
-      <form ref={dialogRef} className="modal-panel settings-form-modal" role="dialog" aria-modal="true" onSubmit={submit}>
+      <form ref={dialogRef} className="modal-panel settings-form-modal" role="dialog" aria-modal="true" aria-labelledby="settings-form-title" onSubmit={submit}>
         <header>
           <div>
-            <h2>{record ? "Editar" : "Novo"} {config.singular}</h2>
+            <h2 id="settings-form-title">{record ? "Editar" : "Novo"} {config.singular}</h2>
             <p>Cadastro usado nas Ordens de Serviço.</p>
           </div>
           <button type="button" className="icon-button" onClick={onClose} title="Fechar">
@@ -593,6 +593,7 @@ export default function SettingsView({
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder={`Buscar ${config.searchLabel || config.plural}`}
+              aria-label={`Buscar ${config.searchLabel || config.plural}`}
             />
           </div>
           <div className="settings-actions">

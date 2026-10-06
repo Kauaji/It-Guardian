@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDownToLine, Boxes, CheckCircle2, ChevronDown, ChevronRight, CircuitBoard, Cpu, ExternalLink, FileUp, FolderTree, HardDrive, History, Keyboard, Layers3, MemoryStick, Monitor, MousePointer2, PackagePlus, Search, Settings2, ShieldAlert, Trash2, TriangleAlert, Warehouse, X, Zap } from "lucide-react";
 import { createPartCategory, createPartInventoryItem, createPartInventoryMovement, deletePartCategory, fetchPartCategories, fetchPartInventoryItem, fetchPartsInventory, importPartsInvoice, reviewPartInventoryDiscrepancy, syncPartsFromAssets, updatePartInventoryItem } from "../../api.js";
+import { useModalLifecycle } from "../../hooks/useModalLifecycle.js";
 import { formatSegmentName } from "../../utils/display.js";
 import { buildComputerKits, buildKitHierarchy, groupPartsByFamily, resolvePartFamily, summarizeKitFamily } from "./partFamilies.js";
 import "./partsInventory.css";
@@ -59,9 +60,10 @@ function ComputerKitsView({ kits, tabs, groups, segments, activeTabId, onSelectT
 function PartForm({ part, categories, saving, onClose, onSave }) {
   const [form, setForm] = useState(part ? { ...EMPTY_PART, ...part } : EMPTY_PART);
   const set = (field) => (event) => setForm((current) => ({ ...current, [field]: event.target.type === "number" ? Number(event.target.value) : event.target.value }));
+  const dialogRef = useModalLifecycle(true, onClose);
   return <div className="parts-modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-    <form className="parts-form-modal" onSubmit={(event) => { event.preventDefault(); onSave(form); }}>
-      <header><div><span>Cadastro rastreável</span><h2>{part ? "Editar peça" : "Nova peça"}</h2></div><button type="button" className="icon-button" onClick={onClose} aria-label="Fechar"><X /></button></header>
+    <form ref={dialogRef} className="parts-form-modal" role="dialog" aria-modal="true" aria-labelledby="parts-form-title" onSubmit={(event) => { event.preventDefault(); onSave(form); }}>
+      <header><div><span>Cadastro rastreável</span><h2 id="parts-form-title">{part ? "Editar peça" : "Nova peça"}</h2></div><button type="button" className="icon-button" onClick={onClose} aria-label="Fechar"><X /></button></header>
       <div className="parts-form-grid">
         <label className="wide">Nome<input value={form.name} onChange={set("name")} required /></label>
         <label>Categoria<select value={form.category || ""} onChange={set("category")} required><option value="">Selecione</option>{categories.map((category) => <option key={category.id} value={category.name}>{category.name}</option>)}</select></label>
@@ -80,8 +82,9 @@ function PartForm({ part, categories, saving, onClose, onSave }) {
 
 function CategoryModal({ categories, saving, onClose, onCreate, onDelete }) {
   const [name, setName] = useState("");
+  const dialogRef = useModalLifecycle(true, onClose);
   return <div className="parts-modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-    <section className="parts-form-modal parts-category-modal" role="dialog" aria-modal="true" aria-labelledby="parts-category-title">
+    <section ref={dialogRef} className="parts-form-modal parts-category-modal" role="dialog" aria-modal="true" aria-labelledby="parts-category-title">
       <header><div><span>Configuração do inventário</span><h2 id="parts-category-title">Categorias de peças</h2></div><button type="button" className="icon-button" onClick={onClose} aria-label="Fechar"><X /></button></header>
       <form className="parts-category-create" onSubmit={(event) => { event.preventDefault(); if (name.trim()) onCreate(name.trim()).then(() => setName("")); }}><label>Nova categoria<input value={name} onChange={(event) => setName(event.target.value)} placeholder="Ex.: Refrigeração" /></label><button className="primary-action" disabled={saving || !name.trim()}>Adicionar</button></form>
       <div className="parts-category-list">{categories.map((category) => <div key={category.id}><span style={{ "--category-color": category.color }} /><strong>{category.name}</strong><button type="button" className="icon-button danger" onClick={() => onDelete(category.id)} aria-label={`Remover ${category.name}`}><Trash2 size={15} /></button></div>)}</div>

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { ShieldCheck, UserRound } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ACCOUNT_SECURITY_PATH } from "../../auth/accountRoutes.js";
@@ -14,6 +14,7 @@ export default function UserMenu() {
   const rootRef = useRef(null);
   const buttonRef = useRef(null);
   const firstItemRef = useRef(null);
+  const menuId = useId();
 
   useEffect(() => {
     if (!open) return undefined;
@@ -31,13 +32,37 @@ export default function UserMenu() {
     if (restoreFocus) buttonRef.current?.focus();
   }
 
+  function menuItems() {
+    return Array.from(rootRef.current?.querySelectorAll('[role="menuitem"]') || []);
+  }
+
+  function moveFocus(event, target) {
+    event.preventDefault();
+    const items = menuItems();
+    if (!items.length) return;
+    const current = items.indexOf(document.activeElement);
+    const next = { first: 0, last: items.length - 1, next: (current + 1) % items.length, previous: (current - 1 + items.length) % items.length }[target];
+    items[next].focus();
+  }
+
   function onKeyDown(event) {
-    if (event.key === "Escape" && open) {
+    if (!open) {
+      // Seta abaixo/acima no botao abre o menu (padrao WAI-ARIA de botao de menu).
+      if ((event.key === "ArrowDown" || event.key === "ArrowUp") && event.target === buttonRef.current) {
+        event.preventDefault();
+        setOpen(true);
+      }
+      return;
+    }
+    if (event.key === "Escape") {
       event.stopPropagation();
       close();
-    } else if (event.key === "Tab" && open) {
+    } else if (event.key === "Tab") {
       close({ restoreFocus: false });
-    }
+    } else if (event.key === "ArrowDown") moveFocus(event, "next");
+    else if (event.key === "ArrowUp") moveFocus(event, "previous");
+    else if (event.key === "Home") moveFocus(event, "first");
+    else if (event.key === "End") moveFocus(event, "last");
   }
 
   function openAccount() {
@@ -55,12 +80,13 @@ export default function UserMenu() {
         aria-label="Minha conta"
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-controls={open ? menuId : undefined}
         onClick={() => setOpen((current) => !current)}
       >
         <UserRound size={18} aria-hidden="true" />
       </button>
       {open && (
-        <div className="user-menu-panel" role="menu" aria-label="Minha conta">
+        <div id={menuId} className="user-menu-panel" role="menu" aria-label="Minha conta">
           <div className="user-menu-identity">
             <strong>{user?.name}</strong>
             <small>{user?.email}</small>

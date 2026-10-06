@@ -221,6 +221,21 @@
   z-index: 2;
 }
 
+.inventory-tab-select {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
 .inventory-tab-dot {
   width: 11px;
   height: 11px;

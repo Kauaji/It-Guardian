@@ -28,6 +28,7 @@ export default function ObservationTimeline({ observations, userName, onAdd }) {
           value={text}
           onChange={(event) => setText(event.target.value)}
           placeholder="Adicionar observacao interna..."
+          aria-label="Observação interna"
         />
         <button className="primary-action compact-action" type="submit">
           <Send size={14} />

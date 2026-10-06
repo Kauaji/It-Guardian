@@ -175,9 +175,9 @@ export default function DashboardPage({
       <section className="toolbar">
         <div className="search-box">
           <Search size={18} />
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nome, IP ou status" />
+          <input aria-label="Buscar por nome, IP ou status" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nome, IP ou status" />
         </div>
-        <select value={status} onChange={(event) => setStatus(event.target.value)}>
+        <select aria-label="Filtrar por status" value={status} onChange={(event) => setStatus(event.target.value)}>
           <option value="">Todos os status</option>
           <option value="online">Online</option>
           <option value="offline">Offline</option>

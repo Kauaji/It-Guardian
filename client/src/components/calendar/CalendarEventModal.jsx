@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { CalendarClock, CheckCircle2, Trash2, X } from "lucide-react";
+import { useModalLifecycle } from "../../hooks/useModalLifecycle.js";
 import { EVENT_STATUS_LABELS, EVENT_TYPE_META, PRIORITY_LABELS, toLocalInput } from "./calendarModel.js";
 
 function normalizedName(value = "") {
@@ -33,6 +34,7 @@ function initialForm(event, selectedDate, defaults = {}) {
 export default function CalendarEventModal({ event, selectedDate, defaults, technicians, serviceOrders, devices, segments, groups, tabs, permissions, saving, onClose, onSave, onCancel, onComplete, onDelete }) {
   const [form, setForm] = useState(() => initialForm(event, selectedDate, defaults));
   useEffect(() => setForm(initialForm(event, selectedDate, defaults)), [defaults, event, selectedDate]);
+  const dialogRef = useModalLifecycle(true, onClose);
   const set = (field) => (e) => setForm((current) => ({ ...current, [field]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
 
   const selectableOrders = serviceOrders.filter((item) => !isFinalizedServiceOrder(item));
@@ -93,7 +95,7 @@ export default function CalendarEventModal({ event, selectedDate, defaults, tech
 
   return (
     <div className="calendar-modal-backdrop" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <form className="calendar-event-modal" onSubmit={submit} aria-label={event ? "Editar agendamento" : "Novo agendamento"}>
+      <form ref={dialogRef} className="calendar-event-modal" role="dialog" aria-modal="true" onSubmit={submit} aria-label={event ? "Editar agendamento" : "Novo agendamento"}>
         <header><div><span className="calendar-eyebrow"><CalendarClock size={15} /> Agenda técnica</span><h2>{event ? "Editar agendamento" : "Novo agendamento"}</h2></div><button type="button" className="icon-button" onClick={onClose} aria-label="Fechar"><X size={18} /></button></header>
         <div className="calendar-form-grid">
           <label className="calendar-field-wide">Título<input value={form.title} onChange={set("title")} minLength={3} maxLength={160} required /></label>

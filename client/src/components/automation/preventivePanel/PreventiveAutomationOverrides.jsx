@@ -25,6 +25,7 @@ export default function PreventiveAutomationOverrides({ formState, scopeSources 
         <div className="preventive-automation-overrides-body">
           <div className="preventive-automation-override-row">
             <select
+              aria-label="Tipo de alvo da exceção"
               value={overrideDraft.targetType}
               onChange={(event) => setOverrideDraft((current) => ({ ...current, targetType: event.target.value, targetId: "" }))}
             >
@@ -32,6 +33,7 @@ export default function PreventiveAutomationOverrides({ formState, scopeSources 
               <option value="asset">Máquina</option>
             </select>
             <select
+              aria-label="Alvo da exceção"
               value={overrideDraft.targetId}
               onChange={(event) => setOverrideDraft((current) => ({ ...current, targetId: event.target.value }))}
             >
@@ -41,6 +43,7 @@ export default function PreventiveAutomationOverrides({ formState, scopeSources 
               ))}
             </select>
             <select
+              aria-label="Recorrência da exceção"
               value={overrideDraft.recurrenceType}
               onChange={(event) => setOverrideDraft((current) => ({
                 ...current,

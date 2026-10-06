@@ -81,7 +81,7 @@ export default function PeripheralList({
       </ul>
 
       {allowAdd && <form className="peripheral-add-form" onSubmit={addPeripheral}>
-        <select value={draft.type} onChange={(event) => setDraft({ ...draft, type: event.target.value })}>
+        <select aria-label="Tipo de periférico" value={draft.type} onChange={(event) => setDraft({ ...draft, type: event.target.value })}>
           {peripheralTypes.map((type) => <option key={type} value={type}>{type}</option>)}
         </select>
         {draft.type === "Outro" && (
@@ -89,17 +89,20 @@ export default function PeripheralList({
             value={draft.customType}
             onChange={(event) => setDraft({ ...draft, customType: event.target.value })}
             placeholder="Tipo"
+            aria-label="Tipo personalizado"
           />
         )}
         <input
           value={draft.brand}
           onChange={(event) => setDraft({ ...draft, brand: event.target.value })}
           placeholder="Marca"
+          aria-label="Marca"
         />
         <input
           value={draft.assetTag}
           onChange={(event) => setDraft({ ...draft, assetTag: event.target.value })}
           placeholder="Patrimônio"
+          aria-label="Patrimônio"
         />
         <button type="submit" title="Adicionar periferico">
           <Plus size={14} />

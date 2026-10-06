@@ -94,6 +94,7 @@ function RuleRow({ rule, disabled, onUpdate }) {
       </span>
       <span>
         <select
+          aria-label="Janela de recorrência"
           value={rule.recurrenceWindow}
           disabled={disabled}
           onChange={(event) => onUpdate(rule.id, { recurrenceWindow: event.target.value })}
@@ -105,6 +106,7 @@ function RuleRow({ rule, disabled, onUpdate }) {
       </span>
       <span>
         <select
+          aria-label="Prioridade sugerida"
           value={rule.suggestedPriority || "medium"}
           disabled={disabled}
           onChange={(event) => onUpdate(rule.id, { suggestedPriority: event.target.value })}

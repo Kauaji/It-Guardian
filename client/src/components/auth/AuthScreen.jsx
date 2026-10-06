@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ShieldCheck, UserPlus } from "lucide-react";
+import { useDocumentTitle } from "../../hooks/useDocumentTitle.js";
 import AuthShell from "./AuthShell.jsx";
 import CredentialsForm from "./CredentialsForm.jsx";
 import MfaChallengeForm from "./MfaChallengeForm.jsx";
@@ -9,6 +10,7 @@ import MfaChallengeForm from "./MfaChallengeForm.jsx";
 export default function AuthScreen({ onAuth, notify }) {
   const useDemoCredentials = import.meta.env.DEV || import.meta.env.VITE_ENABLE_DEMO_LOGIN === "true";
   const [mode, setMode] = useState("login");
+  useDocumentTitle(mode === "login" ? "Entrar" : "Cadastro");
   const [challenge, setChallenge] = useState(null);
   const [notice, setNotice] = useState("");
   const [email, setEmail] = useState(useDemoCredentials ? "admin@itguardian.local" : "");

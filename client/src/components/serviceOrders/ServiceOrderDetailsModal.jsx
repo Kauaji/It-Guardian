@@ -705,6 +705,7 @@ export default function ServiceOrderDetailsModal({
             />
             <select
               className="service-order-status-select"
+              aria-label="Situação da OS"
               value={serviceOrder.status}
               disabled={!canChangeStatus}
               onChange={(event) => onStatusChange(serviceOrder, event.target.value)}

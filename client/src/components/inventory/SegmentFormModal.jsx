@@ -45,10 +45,10 @@ export default function SegmentFormModal({
 
   return (
     <div className="modal-backdrop" role="presentation">
-      <form ref={dialogRef} className="modal-panel segment-form-modal" role="dialog" aria-modal="true" onSubmit={submit}>
+      <form ref={dialogRef} className="modal-panel segment-form-modal" role="dialog" aria-modal="true" aria-labelledby="segment-form-title" onSubmit={submit}>
         <header>
           <div>
-            <h2>{isCreate ? "Novo segmento" : "Renomear segmento"}</h2>
+            <h2 id="segment-form-title">{isCreate ? "Novo segmento" : "Renomear segmento"}</h2>
             <p>{isCreate ? "Crie uma categoria vazia para organizar maquinas." : "Atualize o nome da categoria."}</p>
           </div>
           <button type="button" className="icon-button" onClick={onClose} title="Fechar">

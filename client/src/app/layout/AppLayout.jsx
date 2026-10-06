@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { DndContext } from "@dnd-kit/core";
-import { useLayout } from "../context/workspaceContexts.js";
+import { useDocumentTitle } from "../../hooks/useDocumentTitle.js";
+import { useLayout, useNavigation } from "../context/workspaceContexts.js";
+import { labelForView } from "../routes.js";
 import AppModals from "./AppModals.jsx";
 import InventoryDragLayer from "./InventoryDragLayer.jsx";
 import Sidebar from "./Sidebar.jsx";
+import SkipLink, { MAIN_CONTENT_ID } from "./SkipLink.jsx";
 import Topbar from "./Topbar.jsx";
 import { inventoryCollisionDetection } from "./dragGeometry.js";
 
@@ -12,6 +15,8 @@ import { inventoryCollisionDetection } from "./dragGeometry.js";
 // inventario porque a sidebar tambem e alvo de soltar.
 export default function AppLayout({ children }) {
   const { drag, sidebar } = useLayout();
+  const { activeView } = useNavigation();
+  useDocumentTitle(labelForView(activeView));
   const [generalSettingsOpen, setGeneralSettingsOpen] = useState(false);
 
   return (
@@ -22,17 +27,20 @@ export default function AppLayout({ children }) {
       onDragEnd={drag.handleDragEnd}
       onDragCancel={drag.handleDragCancel}
     >
-      <main className={`app-shell ${sidebar.expanded ? "" : "sidebar-collapsed"} ${sidebar.dragActive ? "sidebar-drag-active" : ""}`}>
+      <div className={`app-shell ${sidebar.expanded ? "" : "sidebar-collapsed"} ${sidebar.dragActive ? "sidebar-drag-active" : ""}`}>
+        <SkipLink />
         <Sidebar onOpenSettings={() => setGeneralSettingsOpen(true)} />
-        <section className="workspace">
+        <div className="workspace">
           <Topbar />
-          {children}
-        </section>
+          <main id={MAIN_CONTENT_ID} className="workspace-main" tabIndex={-1}>
+            {children}
+          </main>
+        </div>
         <AppModals
           generalSettingsOpen={generalSettingsOpen}
           onCloseGeneralSettings={() => setGeneralSettingsOpen(false)}
         />
-      </main>
+      </div>
       <InventoryDragLayer />
     </DndContext>
   );

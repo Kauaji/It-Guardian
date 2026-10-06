@@ -24,7 +24,7 @@ function ColorFieldset({ draft, error, onChange }) {
             aria-label={`Usar cor ${color}`}
           />
         ))}
-        <input value={draft.indicatorColor} onChange={(event) => onChange("indicatorColor", event.target.value)} />
+        <input aria-label="Código da cor do indicador" value={draft.indicatorColor} onChange={(event) => onChange("indicatorColor", event.target.value)} />
       </div>
       <FieldError message={error} />
     </fieldset>
