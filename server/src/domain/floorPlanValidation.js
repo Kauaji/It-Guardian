@@ -9,10 +9,10 @@
  * @property {unknown} [height]
  * @property {{ x?: unknown, y?: unknown, width?: unknown, height?: unknown }} [geometry]
  * @property {string} [objectType]
- * @property {{ anchorType?: string, parentObjectId?: string, anchorOffset?: unknown }} [metadata]
- * @property {string} [linkedObjectId]
- * @property {string} [sourcePointId]
- * @property {string} [targetPointId]
+ * @property {{ anchorType?: unknown, parentObjectId?: unknown, anchorOffset?: unknown }} [metadata]
+ * @property {string | null} [linkedObjectId]
+ * @property {string | null} [sourcePointId]
+ * @property {string | null} [targetPointId]
  * @property {Array<{ x?: unknown, y?: unknown } | null | undefined>} [path]
  */
 

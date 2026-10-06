@@ -62,6 +62,26 @@ test("editor: andar padrao, filhos com andar invalido caem no primeiro e ids sao
   assert.deepEqual(children.cableRoutes[0].path, []);
 });
 
+test("editor: entradas nulas nas listas cruas sao descartadas em vez de lancar TypeError", () => {
+  const plan = normalizePlanPayload({ floorLabel: "Térreo" });
+  const onlyNullFloors = normalizeEditorData({ floors: [null, "texto"] }, plan);
+  assert.equal(onlyNullFloors.floors.length, 1, "sem andar valido, cai no andar padrao");
+  assert.equal(onlyNullFloors.floors[0].name, "Térreo");
+
+  const children = normalizeEditorChildren("p1", {
+    floors: [{ id: "f1", name: "A", width: 800, height: 600 }],
+    zones: [null, { geometry: { x: 0, y: 0, width: 10, height: 10 } }],
+    objects: [null, { label: "PC" }],
+    connectionPoints: [null],
+    cableRoutes: [null]
+  });
+  assert.equal(children.zones.length, 1);
+  assert.equal(children.objects.length, 1);
+  assert.equal(children.objects[0].label, "PC");
+  assert.deepEqual(children.connectionPoints, []);
+  assert.deepEqual(children.cableRoutes, []);
+});
+
 test("pontos e rotas sem label/cor recebem padroes (colunas NOT NULL) em vez de falhar no banco", () => {
   const children = normalizeEditorChildren("p1", {
     floors: [{ id: "f1", name: "A", width: 800, height: 600 }],
