@@ -2,42 +2,32 @@ import { useRef } from "react";
 import {
   findObjectsInSelectionRect,
   getActiveFloor,
-  isEditorObjectLocked,
   normalizeSelectionRect
 } from "../utils/editorGeometry.js";
-import {
-  createEntityDrag,
-  createMarqueeDrag,
-  createObjectResizeDrag,
-  createRoomResizeDrag,
-  findDraggableEntity,
-  getDragObjectIds
-} from "../utils/dragState.js";
+import { createMarqueeDrag } from "../utils/dragState.js";
 import { applyDragToDraft, computeDragDeltas, computeObjectDragAlignment, getDragSnapSize } from "../utils/dragOperations.js";
-import { isRoomZone } from "../utils/roomGeometry.js";
 import { getPrimarySelection, mergeMarqueeSelection } from "../utils/selectionActions.js";
+import { useDragStarts } from "./useDragStarts.js";
 
 function isPanGesture(event, spacePressed) {
   return event.button === 1 || event.button === 2 || (spacePressed && event.button === 0);
 }
 
-function isMultiSelectModifier(event) {
-  return Boolean(event.shiftKey || event.ctrlKey || event.metaKey);
-}
-
 /**
  * Interacoes de ponteiro no canvas 2D: pan, zoom por clique, pincel,
- * posicionamento, selecao por retangulo, arrasto e redimensionamento.
+ * posicionamento, selecao por retangulo, arrasto e redimensionamento
+ * (inicio dos arrastos em useDragStarts).
  * O estado do arrasto em andamento fica em `dragRef`.
  */
 export function useCanvasInteractions({ doc, ui, viewport, paint, placementApi, entities, isEditing }) {
-  const { editor, activeFloorId, commitEditor, pushHistory } = doc;
+  const { editor, activeFloorId, commitEditor } = doc;
   const {
-    selectedTool, placement, paintDraft, selectedObjectIds, zoomMode,
+    selectedTool, placement, paintDraft, zoomMode,
     setSelected, setSelectedObjectIds, setSelectionBox, setAlignmentGuides
   } = ui;
   const { getSvgPoint, spacePressed } = viewport;
   const dragRef = useRef(null);
+  const { beginDrag, beginRoomResize, beginObjectResize } = useDragStarts({ doc, ui, viewport, entities, dragRef });
 
   const handleCanvasPointerDown = (event) => {
     if (isPanGesture(event, spacePressed)) {
@@ -76,25 +66,6 @@ export function useCanvasInteractions({ doc, ui, viewport, paint, placementApi, 
       setSelected(null);
       setSelectedObjectIds([]);
     }
-  };
-
-  /** Inicia o arrasto de um objeto, comodo ou ponto (ou apenas seleciona se travado/multisselecao). */
-  const beginDrag = (event, type, id) => {
-    if (selectedTool !== "select" || placement || paintDraft) return;
-    event.preventDefault();
-    event.stopPropagation();
-    const point = getSvgPoint(event);
-    const entity = findDraggableEntity(editor, type, id);
-    if (!entity) return;
-    if (type === "object" && (isEditorObjectLocked(entity) || isMultiSelectModifier(event))) {
-      entities.handleEntitySelect({ type, id }, event);
-      return;
-    }
-    const objectIds = getDragObjectIds(type, id, selectedObjectIds);
-    dragRef.current = createEntityDrag({ editor, type, id, entity, point, objectIds });
-    pushHistory(editor);
-    setSelected({ type, id });
-    setSelectedObjectIds(objectIds);
   };
 
   const moveDrag = (event) => {
@@ -150,32 +121,6 @@ export function useCanvasInteractions({ doc, ui, viewport, paint, placementApi, 
       placementApi.finishRoomPlacement(event);
     }
     dragRef.current = null;
-  };
-
-  const beginRoomResize = (event, zoneId, side) => {
-    if (!editor) return;
-    event.preventDefault();
-    event.stopPropagation();
-    const point = getSvgPoint(event);
-    const zone = (editor.zones || []).find((entry) => entry.id === zoneId);
-    if (!zone || !isRoomZone(zone)) return;
-    dragRef.current = createRoomResizeDrag({ editor, zone, side, point });
-    pushHistory(editor);
-    setSelected({ type: "zone", id: zoneId });
-    setSelectedObjectIds([]);
-  };
-
-  const beginObjectResize = (event, objectId, side) => {
-    if (!editor) return;
-    event.preventDefault();
-    event.stopPropagation();
-    const point = getSvgPoint(event);
-    const object = (editor.objects || []).find((entry) => entry.id === objectId);
-    if (!object || isEditorObjectLocked(object)) return;
-    dragRef.current = createObjectResizeDrag({ object, side, point });
-    pushHistory(editor);
-    setSelected({ type: "object", id: objectId });
-    setSelectedObjectIds([objectId]);
   };
 
   const handleCanvasPointerMove = (event) => {
