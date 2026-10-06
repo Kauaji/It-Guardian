@@ -39,6 +39,7 @@
     "check:architecture": "node scripts/check-architecture.mjs",
     "check:env": "node scripts/check-env-docs.mjs",
     "check:docs": "node scripts/check-docs.mjs",
+    "check:workflows": "node scripts/check-workflows.mjs",
     "check:bundle": "node scripts/check-bundle-budget.mjs",
     "check:contrast": "node scripts/check-contrast.mjs",
     "check:accents": "node scripts/check-ui-accents.mjs",
@@ -66,6 +67,7 @@
     "eslint-plugin-react-refresh": "^0.5.3",
     "globals": "^17.7.0",
     "prettier": "^3.9.9",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "yaml": "^2.9.1"
   }
 }
