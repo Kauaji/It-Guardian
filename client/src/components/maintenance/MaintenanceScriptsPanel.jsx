@@ -1,243 +1,9 @@
-import { useMemo, useRef, useState } from "react";
-import { AlertTriangle, ClipboardCheck, FileCode2, ShieldCheck } from "lucide-react";
-
-const emptyForm = {
-  name: "",
-  description: "",
-  type: "powershell",
-  content: "",
-  category: "",
-  riskLevel: "medium",
-  requiresConfirmation: true,
-  alertType: "",
-  problemType: "",
-  tags: "",
-  relatedAlertTypes: "",
-  relatedProblemTypes: "",
-  recommendedForCategories: "",
-  requiresLoggedUser: false,
-  requiresAdmin: false
-};
-
-const scriptTypeLabels = {
-  cmd: "CMD",
-  powershell: "PowerShell"
-};
-
-const riskLabels = {
-  low: "Baixo",
-  medium: "Médio",
-  high: "Alto",
-  critical: "Crítico"
-};
-
-function formatRisk(risk) {
-  return riskLabels[risk] || risk || "Médio";
-}
-
-function toCommaList(value) {
-  if (Array.isArray(value)) return value.join(", ");
-  return value || "";
-}
-
-function fromCommaList(value) {
-  return String(value || "")
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-function buildScriptPayload(form, analysis) {
-  return {
-    name: form.name,
-    description: form.description,
-    type: form.type,
-    content: form.content,
-    category: form.category,
-    riskLevel: form.riskLevel,
-    requiresConfirmation: form.requiresConfirmation,
-    alertType: form.alertType,
-    problemType: form.problemType,
-    tags: fromCommaList(form.tags),
-    relatedAlertTypes: fromCommaList(form.relatedAlertTypes),
-    relatedProblemTypes: fromCommaList(form.relatedProblemTypes),
-    recommendedForCategories: fromCommaList(form.recommendedForCategories),
-    requiresLoggedUser: form.requiresLoggedUser,
-    requiresAdmin: form.requiresAdmin,
-    supportedVariables: analysis?.detectedVariables || [],
-    safePreview: analysis?.safePreview,
-    variableValidationStatus: analysis?.variableValidationStatus,
-    estimatedSummary: analysis?.estimatedSummary,
-    suggestedRiskLevel: analysis?.suggestedRiskLevel
-  };
-}
-
-function inferScriptType(content = "") {
-  const text = String(content).toLowerCase();
-  if (/\b(get|set|new|remove|start|stop|write|test)-[a-z]/i.test(content) || text.includes("$env:") || text.includes("powershell")) {
-    return "powershell";
-  }
-
-  return "cmd";
-}
-
-function inferScriptName(analysis, content = "") {
-  const firstAction = analysis?.detectedActions?.[0];
-  if (firstAction) return firstAction;
-
-  const firstLine = String(content)
-    .split(/\r?\n/)
-    .map((line) => line.replace(/^rem\s+/i, "").replace(/^::\s*/, "").trim())
-    .find(Boolean);
-
-  return firstLine ? firstLine.slice(0, 80) : "Script de manutenção";
-}
-
-function inferScriptCategory(analysis, content = "") {
-  const text = `${content} ${(analysis?.detectedActions || []).join(" ")}`.toLowerCase();
-  if (text.includes("disco") || text.includes("disk") || text.includes("chkdsk")) return "Disco";
-  if (text.includes("rede") || text.includes("ping") || text.includes("ipconfig") || text.includes("netsh")) return "Rede";
-  if (text.includes("impress") || text.includes("printer")) return "Impressora";
-  if (text.includes("mem") || text.includes("ram")) return "Memória";
-  return "Manutenção";
-}
-
-function ScriptAnalysis({ analysis }) {
-  if (!analysis) return null;
-
-  return (
-    <div className="script-analysis-box">
-      <strong>Resumo estimado</strong>
-      <p>{analysis.estimatedSummary}</p>
-      <span className={`script-risk-pill ${analysis.suggestedRiskLevel}`}>
-        Risco sugerido: {formatRisk(analysis.suggestedRiskLevel)}
-      </span>
-      {!!analysis.allowedVariables?.length && (
-        <div className="script-variable-list">
-          <strong>Variáveis permitidas</strong>
-          <p>{analysis.allowedVariables.map((variable) => variable.name).join(", ")}</p>
-        </div>
-      )}
-      {!!analysis.detectedVariables?.length && (
-        <div className="script-variable-list">
-          <strong>Variáveis usadas</strong>
-          <p>{analysis.detectedVariables.join(", ")}</p>
-        </div>
-      )}
-      {!!analysis.unknownVariables?.length && (
-        <div className="script-variable-list error">
-          <strong>Variáveis não permitidas</strong>
-          <p>{analysis.unknownVariables.join(", ")}</p>
-        </div>
-      )}
-      {!!analysis.detectedActions?.length && (
-        <ul>
-          {analysis.detectedActions.map((action) => (
-            <li key={action}>{action}</li>
-          ))}
-        </ul>
-      )}
-      <small>{analysis.safetyWarnings?.join(" ")}</small>
-    </div>
-  );
-}
-
-function SimulationForm({ script, devices, serviceOrders, alerts, onRegister }) {
-  const [assetId, setAssetId] = useState("");
-  const [serviceOrderId, setServiceOrderId] = useState("");
-  const [alertId, setAlertId] = useState("");
-  const [mode, setMode] = useState("simulated");
-  const [notes, setNotes] = useState("");
-  const highRisk = script.riskLevel === "high" || script.riskLevel === "critical";
-
-  async function handleSubmit(event) {
-    event.preventDefault();
-    const baseConfirmation =
-      "Esta ação apenas registrará uma simulação/intenção de execução. Nenhum comando será executado na máquina ou no servidor.";
-
-    if (!window.confirm(baseConfirmation)) return;
-
-    if (highRisk) {
-      const riskConfirmation =
-        "Este script foi marcado como alto risco. A execução real não está disponível nesta versão. Deseja apenas registrar a simulação?";
-      if (!window.confirm(riskConfirmation)) return;
-    }
-
-    try {
-      await onRegister(script.id, {
-        assetId,
-        serviceOrderId,
-        alertId,
-        mode,
-        notes,
-        confirmed: true,
-        riskAcknowledged: highRisk
-      });
-
-      setNotes("");
-    } catch {
-      // A mensagem amigável já é exibida pelo App.
-    }
-  }
-
-  return (
-    <form className="script-simulation-form" onSubmit={handleSubmit}>
-      <label>
-        Máquina
-        <select value={assetId} onChange={(event) => setAssetId(event.target.value)}>
-          <option value="">Sem máquina vinculada</option>
-          {devices.map((device) => (
-            <option key={device.id} value={device.id}>
-              {device.name} - {device.ip || "sem IP"}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Ordem de Serviço
-        <select value={serviceOrderId} onChange={(event) => setServiceOrderId(event.target.value)}>
-          <option value="">Sem OS vinculada</option>
-          {serviceOrders.map((order) => (
-            <option key={order.id} value={order.id}>
-              {order.number} - {order.title}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Aviso
-        <select value={alertId} onChange={(event) => setAlertId(event.target.value)}>
-          <option value="">Sem aviso vinculado</option>
-          {alerts.map((alert) => (
-            <option key={alert.id} value={alert.id}>
-              {alert.title} - {alert.hostName || "sem máquina"}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Modo
-        <select value={mode} onChange={(event) => setMode(event.target.value)}>
-          <option value="simulated">Simulado</option>
-          <option value="prepared">Preparado</option>
-        </select>
-      </label>
-      <label className="script-simulation-notes">
-        Observação
-        <textarea
-          value={notes}
-          onChange={(event) => setNotes(event.target.value)}
-          placeholder="Contexto do registro. Nenhum comando será executado."
-          rows={3}
-        />
-      </label>
-      <button type="submit" className="primary-action compact-action">
-        <ClipboardCheck size={16} />
-        Registrar simulação
-      </button>
-    </form>
-  );
-}
+import { useMemo } from "react";
+import { AlertTriangle, FileCode2, ShieldCheck } from "lucide-react";
+import ScriptAnalysis from "./scripts/ScriptAnalysis.jsx";
+import ScriptCard from "./scripts/ScriptCard.jsx";
+import ScriptFormFields from "./scripts/ScriptFormFields.jsx";
+import { useScriptForm } from "./scripts/useScriptForm.js";
 
 export default function MaintenanceScriptsPanel({
   scripts,
@@ -256,82 +22,9 @@ export default function MaintenanceScriptsPanel({
   onDeactivate,
   onRegisterSimulation
 }) {
-  const [form, setForm] = useState(emptyForm);
-  const [editingId, setEditingId] = useState(null);
-  const [analysis, setAnalysis] = useState(null);
-  const formRef = useRef(null);
+  const scriptForm = useScriptForm({ onAnalyze, onSave });
+  const { form, analysis, editingId } = scriptForm;
   const activeScripts = useMemo(() => scripts.filter((script) => script.active !== false), [scripts]);
-
-  function updateForm(field, value) {
-    setForm((current) => ({ ...current, [field]: value }));
-  }
-
-  function resetForm() {
-    setForm(emptyForm);
-    setEditingId(null);
-    setAnalysis(null);
-  }
-
-  async function handleAnalyze() {
-    const result = await onAnalyze({ content: form.content, type: form.type });
-    setAnalysis(result);
-    setForm((current) => {
-      const inferredCategory = inferScriptCategory(result, current.content);
-      return {
-        ...current,
-        name: current.name.trim() || inferScriptName(result, current.content),
-        description: current.description.trim() || result?.estimatedSummary || "",
-        type: inferScriptType(current.content),
-        category: current.category.trim() || inferredCategory,
-        riskLevel: result?.suggestedRiskLevel || current.riskLevel,
-        alertType: current.alertType.trim() || inferredCategory.toLowerCase(),
-        problemType: current.problemType.trim() || inferScriptName(result, current.content)
-      };
-    });
-    return result;
-  }
-
-  async function handleSubmit(event) {
-    event.preventDefault();
-    try {
-      const result = analysis || (await handleAnalyze());
-      if (!window.confirm("Deseja cadastrar este script com este resumo estimado?")) return;
-      await onSave(buildScriptPayload(form, result), editingId);
-      resetForm();
-    } catch {
-      // A mensagem amigável já é exibida pelo App.
-    }
-  }
-
-  function editScript(script) {
-    setEditingId(script.id);
-    setForm({
-      name: script.name || "",
-      description: script.description || "",
-      type: script.type || "other",
-      content: script.content || "",
-      category: script.category || "",
-      riskLevel: script.riskLevel || "medium",
-      requiresConfirmation: script.requiresConfirmation !== false,
-      alertType: script.alertType || "",
-      problemType: script.problemType || "",
-      tags: toCommaList(script.tags),
-      relatedAlertTypes: toCommaList(script.relatedAlertTypes),
-      relatedProblemTypes: toCommaList(script.relatedProblemTypes),
-      recommendedForCategories: toCommaList(script.recommendedForCategories),
-      requiresLoggedUser: script.requiresLoggedUser === true,
-      requiresAdmin: script.requiresAdmin === true
-    });
-    setAnalysis({
-      estimatedSummary: script.estimatedSummary,
-      suggestedRiskLevel: script.suggestedRiskLevel,
-      detectedActions: [],
-      safetyWarnings: ["Resumo salvo anteriormente. Revise manualmente antes de usar."]
-    });
-    window.requestAnimationFrame(() => {
-      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  }
 
   async function deactivateScript(script) {
     if (!window.confirm(`Desativar o script "${script.name}"?`)) return;
@@ -364,118 +57,8 @@ export default function MaintenanceScriptsPanel({
       )}
 
       {canManage && showForm && (
-        <form ref={formRef} className={`maintenance-script-form ${analysis ? "has-analysis" : "needs-analysis"}`} onSubmit={handleSubmit}>
-          <label>
-            Nome
-            <input value={form.name} onChange={(event) => updateForm("name", event.target.value)} maxLength={120} required />
-          </label>
-          <label>
-            Tipo
-            <select value={form.type} onChange={(event) => updateForm("type", event.target.value)}>
-              {Object.entries(scriptTypeLabels).map(([value, label]) => (
-                <option key={value} value={value}>{label}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Categoria
-            <input value={form.category} onChange={(event) => updateForm("category", event.target.value)} maxLength={80} />
-          </label>
-          <label>
-            Risco
-            <select value={form.riskLevel} onChange={(event) => updateForm("riskLevel", event.target.value)}>
-              {Object.entries(riskLabels).map(([value, label]) => (
-                <option key={value} value={value}>{label}</option>
-              ))}
-            </select>
-          </label>
-          <label className="maintenance-script-wide">
-            Descrição
-            <textarea
-              value={form.description}
-              onChange={(event) => updateForm("description", event.target.value)}
-              maxLength={500}
-              rows={3}
-            />
-          </label>
-          <label>
-            Tipo de aviso
-            <input value={form.alertType} onChange={(event) => updateForm("alertType", event.target.value)} maxLength={80} />
-          </label>
-          <label>
-            Tipo de problema
-            <input value={form.problemType} onChange={(event) => updateForm("problemType", event.target.value)} maxLength={120} />
-          </label>
-          <label>
-            Tags
-            <input
-              value={form.tags}
-              onChange={(event) => updateForm("tags", event.target.value)}
-              placeholder="rede, disco, impressora"
-            />
-          </label>
-          <label>
-            Tipos de aviso relacionados
-            <input
-              value={form.relatedAlertTypes}
-              onChange={(event) => updateForm("relatedAlertTypes", event.target.value)}
-              placeholder="disk_usage, ping_failure"
-            />
-          </label>
-          <label>
-            Tipos de problema relacionados
-            <input
-              value={form.relatedProblemTypes}
-              onChange={(event) => updateForm("relatedProblemTypes", event.target.value)}
-              placeholder="Disco acima do limite, Internet lenta"
-            />
-          </label>
-          <label>
-            Categorias recomendadas
-            <input
-              value={form.recommendedForCategories}
-              onChange={(event) => updateForm("recommendedForCategories", event.target.value)}
-              placeholder="Hardware, Rede, Impressora"
-            />
-          </label>
-          <label className="inline-check maintenance-script-checkbox">
-            <input
-              type="checkbox"
-              checked={form.requiresLoggedUser}
-              onChange={(event) => updateForm("requiresLoggedUser", event.target.checked)}
-            />
-            Requer usuário logado
-          </label>
-          <label className="inline-check maintenance-script-checkbox">
-            <input
-              type="checkbox"
-              checked={form.requiresAdmin}
-              onChange={(event) => updateForm("requiresAdmin", event.target.checked)}
-            />
-            Requer administrador
-          </label>
-          <label className="inline-check maintenance-script-checkbox">
-            <input
-              type="checkbox"
-              checked={form.requiresConfirmation}
-              onChange={(event) => updateForm("requiresConfirmation", event.target.checked)}
-            />
-            Exige confirmação
-          </label>
-          <label className="maintenance-script-wide">
-            Prompt do script
-            <textarea
-              value={form.content}
-              onChange={(event) => {
-                updateForm("content", event.target.value);
-                setAnalysis(null);
-              }}
-              maxLength={10000}
-              rows={9}
-              required
-              placeholder="Cole aqui o conteúdo ou a descrição do BAT/CMD/PowerShell para o sistema analisar e preencher o cadastro."
-            />
-          </label>
+        <form ref={scriptForm.formRef} className={`maintenance-script-form ${analysis ? "has-analysis" : "needs-analysis"}`} onSubmit={scriptForm.handleSubmit}>
+          <ScriptFormFields form={form} onChange={scriptForm.updateForm} onChangeContent={scriptForm.changeContent} />
           <ScriptAnalysis analysis={analysis} />
           <div className="script-form-actions">
             {analysis && (
@@ -483,10 +66,10 @@ export default function MaintenanceScriptsPanel({
                 {editingId ? "Salvar alterações" : "Cadastrar script"}
               </button>
             )}
-            <button type="button" className="secondary-action compact-action" onClick={() => handleAnalyze().catch(() => null)}>
+            <button type="button" className="secondary-action compact-action" onClick={() => scriptForm.handleAnalyze().catch(() => null)}>
               Analisar texto
             </button>
-            <button type="button" className="secondary-action compact-action" onClick={resetForm}>
+            <button type="button" className="secondary-action compact-action" onClick={scriptForm.resetForm}>
               Limpar
             </button>
           </div>
@@ -495,59 +78,18 @@ export default function MaintenanceScriptsPanel({
 
       <div className="maintenance-script-grid">
         {activeScripts.map((script) => (
-          <article key={script.id} className={`maintenance-script-card ${script.riskLevel}`}>
-            <div className="script-card-header">
-              <div>
-                <h3>{script.name}</h3>
-                <span>{scriptTypeLabels[script.type] || script.type} - {script.category || "Sem categoria"}</span>
-              </div>
-              <span className={`script-risk-pill ${script.riskLevel}`}>{formatRisk(script.riskLevel)}</span>
-            </div>
-            {script.description && <p>{script.description}</p>}
-            <div className="script-card-summary">
-              <strong>Resumo estimado</strong>
-              <p>{script.estimatedSummary || "Resumo não informado."}</p>
-              <small>Nenhum comando será executado por este módulo.</small>
-            </div>
-            <pre className="script-content-preview">{script.content}</pre>
-            {(script.alertType || script.problemType) && (
-              <div className="script-links">
-                {script.alertType && <span>Aviso: {script.alertType}</span>}
-                {script.problemType && <span>Problema: {script.problemType}</span>}
-              </div>
-            )}
-            {!!script.tags?.length && (
-              <div className="script-links">
-                {script.tags.slice(0, 6).map((tag) => (
-                  <span key={tag}>#{tag}</span>
-                ))}
-              </div>
-            )}
-            {!!script.supportedVariables?.length && (
-              <div className="script-links">
-                <span>Variáveis: {script.supportedVariables.map((variable) => `{{${String(variable).replace(/[{}]/g, "")}}}`).join(", ")}</span>
-              </div>
-            )}
-            {canManage && (
-              <div className="script-card-actions">
-                <button type="button" className="secondary-action compact-action" onClick={() => editScript(script)}>
-                  Editar
-                </button>
-                <button type="button" className="danger-action compact-action" onClick={() => deactivateScript(script)}>
-                  Desativar
-                </button>
-              </div>
-            )}
-            {canRegisterSimulation && showSimulation && (
-              <SimulationForm
-                script={script}
-                devices={devices}
-                serviceOrders={serviceOrders}
-                alerts={alerts}
-                onRegister={onRegisterSimulation}
-              />
-            )}
-          </article>
+          <ScriptCard
+            key={script.id}
+            script={script}
+            devices={devices}
+            serviceOrders={serviceOrders}
+            alerts={alerts}
+            canManage={canManage}
+            showSimulationForm={canRegisterSimulation && showSimulation}
+            onEdit={scriptForm.editScript}
+            onDeactivate={deactivateScript}
+            onRegisterSimulation={onRegisterSimulation}
+          />
         ))}
         {!activeScripts.length && (
           <div className="script-empty-state">
