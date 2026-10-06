@@ -168,7 +168,8 @@ export function analyzeArchitecture({
   const layerViolations = [];
 
   for (const file of files) {
-    const source = fs.readFileSync(file, "utf8");
+    // Comentarios de bloco (JSDoc com `import("...")` so de tipos) nao sao dependencias de execucao.
+    const source = fs.readFileSync(file, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
     for (const match of source.matchAll(importPattern)) {
       const dependency = resolveLocalImport(file, match[1]);
       if (dependency && graph.has(dependency)) {
