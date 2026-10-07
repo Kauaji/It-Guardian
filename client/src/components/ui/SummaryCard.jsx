@@ -5,7 +5,9 @@ export default function SummaryCard({ icon: Icon, label, value, tone }) {
     <article className={`summary-card ${tone || ""}`}>
       <Icon size={22} />
       <span>{label}</span>
-      <strong><AnimatedNumber value={value} /></strong>
+      <strong>
+        <AnimatedNumber value={value} />
+      </strong>
     </article>
   );
 }

@@ -51,7 +51,7 @@ identificado (quando há um), via `chooseHigherPriority` em
 
 Quando o chamado é aberto a partir de um link já gerado pelo
 instalador/agente do IT Guardian, a URL carrega um token JWT assinado
-(`domain/publicMachineToken.js`, audience `"public-support-machine"`,
+(`services/publicMachineToken.js`, audience `"public-support-machine"`,
 gerado no backend na ativação do coletor). O frontend chama
 `GET /api/public/machine-context` com esse token; o backend resolve o
 ativo real e devolve só `{id, name, hostname, environmentName}` — sem
@@ -103,7 +103,7 @@ texto do cliente.
 
 ## Acompanhamento por token
 
-`server/src/domain/publicServiceOrderTrackingToken.js` — JWT sem
+`server/src/services/publicServiceOrderTrackingToken.js` — JWT sem
 estado, assinado com o mesmo segredo (`getJwtSecret()`) usado pelo
 token de máquina, mas com uma **audience diferente**
 (`"public-support-tracking"` vs. `"public-support-machine"`). Isso

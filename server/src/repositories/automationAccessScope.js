@@ -1,7 +1,5 @@
 function normalizeIds(value) {
-  return Array.isArray(value)
-    ? [...new Set(value.map((item) => String(item || "").trim()).filter(Boolean))]
-    : [];
+  return Array.isArray(value) ? [...new Set(value.map((item) => String(item || "").trim()).filter(Boolean))] : [];
 }
 
 function readId(source, keys = []) {

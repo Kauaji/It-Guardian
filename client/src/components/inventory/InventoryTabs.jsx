@@ -19,29 +19,23 @@ export default function InventoryTabs({
     const actionsOpen = activePopoverId === actionsMenuId;
 
     return (
-      <article
+      <div
         key={tab.id}
         className={`inventory-tab ${active ? "active" : ""}`}
         style={{ "--tab-color": tab.color || "#2563eb" }}
-        role="button"
-        tabIndex={0}
         onClick={() => onSelect(tab.id)}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") onSelect(tab.id);
-        }}
-        title={label ? `Abrir ambiente ${label}` : "Abrir ambiente padrao"}
       >
-        <span className="inventory-tab-dot" />
-        <strong className={!label ? "empty-tab-label" : ""}>{label}</strong>
+        {/* O seletor e um botao real; as acoes (menu da aba) ficam ao lado dele, nunca dentro, para
+            nao aninhar controles interativos. O clique na area do cartao continua selecionando. */}
+        <button type="button" className="inventory-tab-select" aria-current={active ? "true" : undefined} title={`Abrir ambiente ${label}`}>
+          <span className="inventory-tab-dot" aria-hidden="true" />
+          <strong className={!label ? "empty-tab-label" : ""}>{label}</strong>
+        </button>
         {active && (
           <div className="inventory-tab-actions" onClick={(event) => event.stopPropagation()}>
             {actionsOpen && (
               <div className="inline-action-strip tab-inline-actions" onClick={(event) => event.stopPropagation()}>
-                <ColorPickerSegment
-                  color={tab.color}
-                  onChange={(color) => onColorChange(tab.id, color)}
-                  title="Alterar cor da aba"
-                />
+                <ColorPickerSegment color={tab.color} onChange={(color) => onColorChange(tab.id, color)} title="Alterar cor da aba" />
                 <button
                   type="button"
                   className="inline-action-button"
@@ -85,12 +79,12 @@ export default function InventoryTabs({
             </button>
           </div>
         )}
-      </article>
+      </div>
     );
   }
 
   return (
-    <section className="inventory-tabs-shell" aria-label="Ambientes do inventario">
+    <section className="inventory-tabs-shell" aria-label="Ambientes do inventário">
       <div className="inventory-tabs-list">
         {tabs.map((tab) => renderTab(tab, tab.id === activeTabId))}
         <button type="button" className="inventory-tab-add" onClick={onCreate} title="Criar aba">

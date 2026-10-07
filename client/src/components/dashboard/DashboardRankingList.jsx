@@ -1,4 +1,7 @@
+import { useScrollableTabIndex } from "../../hooks/useScrollableTabIndex.js";
+
 export default function DashboardRankingList({ title, icon: Icon, items, loading, emptyMessage, renderItem, onSelectItem }) {
+  const scroll = useScrollableTabIndex();
   return (
     <section className="panel dashboard-ranking-card">
       <div className="panel-heading">
@@ -10,7 +13,12 @@ export default function DashboardRankingList({ title, icon: Icon, items, loading
       ) : !items?.length ? (
         <p className="dashboard-empty-state">{emptyMessage}</p>
       ) : (
-        <ol className="dashboard-ranking-list">
+        <ol
+          ref={scroll.ref}
+          className="dashboard-ranking-list"
+          tabIndex={scroll.tabIndex}
+          aria-label={scroll.scrollable ? title : undefined}
+        >
           {items.map((item, index) => (
             <li key={item.id || item.assetId || item.key || index}>
               {onSelectItem ? (

@@ -85,12 +85,7 @@ export default function ColorPickerSegment({
             />
           ))}
           <label className="custom-color" title="Escolher cor personalizada">
-            <input
-              type="color"
-              value={currentColor}
-              disabled={disabled}
-              onChange={(event) => selectColor(event.target.value)}
-            />
+            <input type="color" value={currentColor} disabled={disabled} onChange={(event) => selectColor(event.target.value)} />
           </label>
         </div>
       )}

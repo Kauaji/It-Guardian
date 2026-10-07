@@ -1,25 +1,29 @@
 import { badRequest, conflict, notFoundError } from "../lib/errors.js";
+import { listNetworkTopologyLinks } from "../repositories/networkTopology/topologyLinkRepository.js";
+import { getNetworkTopologyMap, listNetworkTopologyMaps } from "../repositories/networkTopology/topologyMapRepository.js";
+import { listNetworkTopologyNodes } from "../repositories/networkTopology/topologyNodeRepository.js";
 import {
   createNetworkTopologyLink,
-  createNetworkTopologyMap,
-  createNetworkTopologyNode,
   deleteNetworkTopologyLink,
+  updateNetworkTopologyLink
+} from "./networkTopology/topologyLinkCommandService.js";
+import {
+  createNetworkTopologyMap,
   deleteNetworkTopologyMap,
-  deleteNetworkTopologyNode,
-  bulkUpdateNetworkTopologyNodePositions,
-  getNetworkTopologyMap,
   getOrCreateNetworkTopologyMapByScope,
-  listNetworkTopologyLinks,
-  listNetworkTopologyMaps,
-  listNetworkTopologyNodes,
-  updateNetworkTopologyLink,
-  updateNetworkTopologyMap,
+  updateNetworkTopologyMap
+} from "./networkTopology/topologyMapCommandService.js";
+import {
+  bulkUpdateNetworkTopologyNodePositions,
+  createNetworkTopologyNode,
+  deleteNetworkTopologyNode,
   updateNetworkTopologyNode
-} from "../repositories/networkTopologyRepository.js";
+} from "./networkTopology/topologyNodeCommandService.js";
 import { findSegmentById } from "../repositories/segmentRepository.js";
 import { findSegmentGroupById } from "../repositories/segmentGroupRepository.js";
 import { computeAutoLayout } from "./networkTopologyAutoLayout.js";
 import { broadcastSnapshot } from "./realtimeService.js";
+import { logger } from "../lib/logger.js";
 
 // "Aba" nao tem tabela propria no banco (e um conceito 100% client-side, em
 // localStorage - inventoryTabRepository.js existe no codigo mas referencia
@@ -52,7 +56,7 @@ async function ensureNodeRefExists(nodeType, refId) {
 
 function notifySnapshot(context) {
   broadcastSnapshot().catch((error) => {
-    console.error(`Realtime broadcast failed after ${context}`, error);
+    logger.error("realtime_broadcast_failed", { context, error });
   });
 }
 
@@ -72,11 +76,7 @@ export async function listMaps() {
 }
 
 export async function getMapWithNodesAndLinks(id) {
-  const [map, nodes, links] = await Promise.all([
-    getNetworkTopologyMap(id),
-    listNetworkTopologyNodes(id),
-    listNetworkTopologyLinks(id)
-  ]);
+  const [map, nodes, links] = await Promise.all([getNetworkTopologyMap(id), listNetworkTopologyNodes(id), listNetworkTopologyLinks(id)]);
   return { map, nodes, links };
 }
 
@@ -109,10 +109,7 @@ export async function getMapByScope(scopeType, scopeId, user, scopeName) {
   }
 
   const map = await getOrCreateNetworkTopologyMapByScope(scopeType, scopeId, defaultName, user);
-  const [nodes, links] = await Promise.all([
-    listNetworkTopologyNodes(map.id),
-    listNetworkTopologyLinks(map.id)
-  ]);
+  const [nodes, links] = await Promise.all([listNetworkTopologyNodes(map.id), listNetworkTopologyLinks(map.id)]);
   return { map, nodes, links };
 }
 
@@ -205,15 +202,10 @@ export async function removeLink(id, user) {
  * assetIds contam como "centrais" (server/switch/router/nas).
  */
 export async function generateAutoLayout(mapId, hints, user) {
-  const [nodes, links] = await Promise.all([
-    listNetworkTopologyNodes(mapId),
-    listNetworkTopologyLinks(mapId)
-  ]);
+  const [nodes, links] = await Promise.all([listNetworkTopologyNodes(mapId), listNetworkTopologyLinks(mapId)]);
 
   const centralAssetIds = new Set(
-    (Array.isArray(hints) ? hints : [])
-      .filter((hint) => CENTRAL_ASSET_TYPES.has(hint?.assetType))
-      .map((hint) => hint.assetId)
+    (Array.isArray(hints) ? hints : []).filter((hint) => CENTRAL_ASSET_TYPES.has(hint?.assetType)).map((hint) => hint.assetId)
   );
 
   const positions = computeAutoLayout({ nodes, links, centralAssetIds });

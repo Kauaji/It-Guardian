@@ -29,7 +29,8 @@ export default function GaugeSvg({ value, max = 100, tone = "ok", label, size = 
       width={size}
       height={size}
       viewBox={`0 0 ${size} ${size}`}
-      role="img"
+      role={label ? "img" : undefined}
+      aria-hidden={label ? undefined : "true"}
       aria-label={label ? `${label}: ${Number.isFinite(value) ? value : "sem dado"}${suffix}` : undefined}
     >
       <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="var(--border)" strokeWidth={strokeWidth} />

@@ -14,9 +14,7 @@ const GRID_COLUMNS = 6;
 export function computeAutoLayout({ nodes = [], links = [], centralAssetIds = new Set(), center = DEFAULT_CENTER }) {
   const positions = new Map();
 
-  nodes
-    .filter((node) => node.pinned)
-    .forEach((node) => positions.set(node.id, { id: node.id, x: node.x, y: node.y }));
+  nodes.filter((node) => node.pinned).forEach((node) => positions.set(node.id, { id: node.id, x: node.x, y: node.y }));
 
   const movable = nodes.filter((node) => !node.pinned);
   const central = movable.filter((node) => centralAssetIds.has(node.assetId));
@@ -37,11 +35,7 @@ export function computeAutoLayout({ nodes = [], links = [], centralAssetIds = ne
   const findAnchorAngle = (assetId) => {
     for (const link of links) {
       const partnerAssetId =
-        link.sourceAssetId === assetId
-          ? link.targetAssetId
-          : link.targetAssetId === assetId
-            ? link.sourceAssetId
-            : null;
+        link.sourceAssetId === assetId ? link.targetAssetId : link.targetAssetId === assetId ? link.sourceAssetId : null;
       if (!partnerAssetId) continue;
       const partnerNode = nodeByAssetId.get(partnerAssetId);
       if (partnerNode && centralAngleByNodeId.has(partnerNode.id)) {

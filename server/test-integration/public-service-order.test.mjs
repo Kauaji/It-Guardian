@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { useTestDatabase } from "../test-support/database.mjs";
 
-process.env.DATABASE_URL = "memory";
+await useTestDatabase();
 process.env.ENABLE_DEMO_SEED = "true";
 process.env.JWT_SECRET = "public-service-order-integration-secret-32-chars";
 process.env.NODE_ENV = "test";
@@ -10,7 +11,7 @@ const { createApp } = await import("../src/app.js");
 const { initializeRuntime } = await import("../src/bootstrap.js");
 const { closeDatabase } = await import("../src/database.js");
 const { createProductKey, activateCollector } = await import("../src/repositories/productKeyRepository.js");
-const { createPublicMachineToken } = await import("../src/domain/publicMachineToken.js");
+const { createPublicMachineToken } = await import("../src/services/publicMachineToken.js");
 const { honeypotFieldName } = await import("../src/services/publicServiceOrderService.js");
 
 const trustedOrigin = "http://localhost:5173";
@@ -184,9 +185,7 @@ test("machineScope 'other' com assetId forjado nao vincula nem coloca o ativo em
   const createResponse = await fetch(`${baseUrl}/api/public/service-orders`, {
     method: "POST",
     headers: { "content-type": "application/json", origin: trustedOrigin },
-    body: JSON.stringify(
-      basePayload({ problemType: problemType.id, machineScope: "other", assetId: machineId })
-    )
+    body: JSON.stringify(basePayload({ problemType: problemType.id, machineScope: "other", assetId: machineId }))
   });
   const createBody = await createResponse.json();
   assert.equal(createResponse.status, 201, JSON.stringify(createBody));

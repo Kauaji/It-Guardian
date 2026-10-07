@@ -1,11 +1,7 @@
 import { query } from "../database.js";
 import { badRequest, conflict, notFoundError } from "../lib/errors.js";
 import { addLog } from "../repositories/logRepository.js";
-import {
-  getServiceOrderSettings,
-  maxServiceOrderStatuses,
-  updateServiceOrderSettings
-} from "../repositories/serviceOrderRepository.js";
+import { getServiceOrderSettings, maxServiceOrderStatuses, updateServiceOrderSettings } from "../repositories/serviceOrderRepository.js";
 
 function stripCombiningMarks(value) {
   let result = "";

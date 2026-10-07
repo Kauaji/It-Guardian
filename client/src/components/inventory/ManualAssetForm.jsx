@@ -43,7 +43,7 @@ export default function ManualAssetForm({ open, saving, onClose, onSubmit }) {
           <div>
             <span className="asset-eyebrow">Cadastro manual</span>
             <h2>Novo ativo de rede</h2>
-            <p>Equipamentos com IP proprio, monitorados por ping.</p>
+            <p>Equipamentos com IP próprio, monitorados por ping.</p>
           </div>
           <button type="button" className="icon-button" onClick={onClose} title="Fechar">
             <X size={18} />
@@ -59,7 +59,9 @@ export default function ManualAssetForm({ open, saving, onClose, onSubmit }) {
             Tipo do aparelho
             <select required value={form.type} onChange={(event) => update("type", event.target.value)}>
               {assetTypeOptions.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
               ))}
             </select>
           </label>
@@ -101,11 +103,17 @@ export default function ManualAssetForm({ open, saving, onClose, onSubmit }) {
           </label>
           <label className="manual-asset-wide">
             Observações
-            <textarea value={form.notes} onChange={(event) => update("notes", event.target.value)} placeholder="Reserva DHCP recomendada, sala, responsavel..." />
+            <textarea
+              value={form.notes}
+              onChange={(event) => update("notes", event.target.value)}
+              placeholder="Reserva DHCP recomendada, sala, responsável..."
+            />
           </label>
 
           <footer className="manual-asset-actions">
-            <button type="button" onClick={onClose}>Cancelar</button>
+            <button type="button" onClick={onClose}>
+              Cancelar
+            </button>
             <button className="primary-action compact-action" disabled={saving}>
               {saving ? "Salvando..." : "Criar ativo"}
             </button>

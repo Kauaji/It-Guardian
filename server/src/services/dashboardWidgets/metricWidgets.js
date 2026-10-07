@@ -21,7 +21,11 @@ function buildMetricHistoryFetcher(metric) {
     }
     if (ctx?.hasFilters && !(await ctx.getScopedAssetIds()).has(String(assetId))) {
       return {
-        metric, assetId, period: resolvePeriod(config?.period), points: [], summary: null,
+        metric,
+        assetId,
+        period: resolvePeriod(config?.period),
+        points: [],
+        summary: null,
         warnings: ["filtered_out"]
       };
     }
@@ -48,10 +52,15 @@ function buildMetricGaugeFetcher(metricKey) {
 
     const devices = await ctx.getDevices();
     const device = devices.find((candidate) => String(candidate.id) === String(assetId));
-    if (!device) return {
-      metric: metricKey, assetId, available: false, value: null, status: null,
-      ...(ctx.hasFilters ? { warnings: ["filtered_out"] } : {})
-    };
+    if (!device)
+      return {
+        metric: metricKey,
+        assetId,
+        available: false,
+        value: null,
+        status: null,
+        ...(ctx.hasFilters ? { warnings: ["filtered_out"] } : {})
+      };
 
     const value = device.metrics?.[metricKey];
     return {

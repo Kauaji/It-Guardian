@@ -9,7 +9,9 @@ export default function RecentEventsWidget({ data }) {
       renderItem={(log) => (
         <>
           <span>{log.message}</span>
-          <small>{log.userName || "Sistema"} - {formatDateTime(log.createdAt)}</small>
+          <small>
+            {log.userName || "Sistema"} - {formatDateTime(log.createdAt)}
+          </small>
         </>
       )}
     />

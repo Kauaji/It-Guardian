@@ -39,7 +39,7 @@ describe("snapMeasurementEndPoint", () => {
     const start = { x: 0, y: 0 };
     const end = { x: 100, y: 37 };
     const result = snapMeasurementEndPoint(start, end, { constrainAngle: false });
-    const rawAngle = Math.atan2(37, 100) * 180 / Math.PI;
+    const rawAngle = (Math.atan2(37, 100) * 180) / Math.PI;
     expect(result.angle).toBeCloseTo(rawAngle, 5);
   });
 

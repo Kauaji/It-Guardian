@@ -45,34 +45,28 @@ describe("validatePublicSupportForm", () => {
   });
 
   it("no modo business, exige contato", () => {
-    const error = validatePublicSupportForm(
-      validForm({ contactInfo: "", environmentName: "Filial Centro" }),
-      { businessMode: true }
-    );
+    const error = validatePublicSupportForm(validForm({ contactInfo: "", environmentName: "Filial Centro" }), { businessMode: true });
     expect(error).toMatch(/contato/);
   });
 
   it("no modo business, exige cliente/ambiente identificado", () => {
-    const error = validatePublicSupportForm(
-      validForm({ contactInfo: "11999999999", environmentName: "Não identificado" }),
-      { businessMode: true }
-    );
+    const error = validatePublicSupportForm(validForm({ contactInfo: "11999999999", environmentName: "Não identificado" }), {
+      businessMode: true
+    });
     expect(error).toMatch(/cliente/);
   });
 
   it("no modo business, aceita quando contato e ambiente estão preenchidos", () => {
-    const error = validatePublicSupportForm(
-      validForm({ contactInfo: "11999999999", environmentName: "Filial Centro" }),
-      { businessMode: true }
-    );
+    const error = validatePublicSupportForm(validForm({ contactInfo: "11999999999", environmentName: "Filial Centro" }), {
+      businessMode: true
+    });
     expect(error).toBe("");
   });
 
   it("ignora acentuação e caixa ao checar 'não identificado'", () => {
-    const error = validatePublicSupportForm(
-      validForm({ contactInfo: "11999999999", environmentName: "NAO IDENTIFICADO" }),
-      { businessMode: true }
-    );
+    const error = validatePublicSupportForm(validForm({ contactInfo: "11999999999", environmentName: "NAO IDENTIFICADO" }), {
+      businessMode: true
+    });
     expect(error).toMatch(/cliente/);
   });
 });

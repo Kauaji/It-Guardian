@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { useTestDatabase } from "../test-support/database.mjs";
 
-process.env.DATABASE_URL = "memory";
+await useTestDatabase();
 process.env.ENABLE_DEMO_SEED = "true";
 process.env.JWT_SECRET = "remote-assistance-integration-secret-32-chars";
 process.env.NODE_ENV = "test";
@@ -99,12 +100,11 @@ async function reauthenticate(baseUrl, cookie, serviceOrderId = null, password =
   });
 }
 
-async function startSession(baseUrl, cookie, {
-  token,
-  mode = "view",
-  serviceOrderId = null,
-  reason = "Atendimento remoto autorizado em laboratorio"
-} = {}) {
+async function startSession(
+  baseUrl,
+  cookie,
+  { token, mode = "view", serviceOrderId = null, reason = "Atendimento remoto autorizado em laboratorio" } = {}
+) {
   return fetch(`${baseUrl}/api/remote-assistance/assets/${machineId}/sessions`, {
     method: "POST",
     headers: browserHeaders(cookie),
@@ -127,26 +127,23 @@ async function pendingSession(baseUrl, enrollmentToken) {
 }
 
 async function consent(baseUrl, enrollmentToken, session, granted, controlAllowed = false) {
-  const response = await fetch(
-    `${baseUrl}/api/agents/remote-assistance/sessions/${session.id}/consent`,
-    {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${enrollmentToken}`,
-        "x-remote-session-token": session.sessionToken,
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({
-        granted,
-        controlAllowed,
-        monitors: [
-          { id: "display-1", name: "Tela principal", primary: true, width: 1920, height: 1080 },
-          { id: "display-2", name: "Tela secundaria", primary: false, width: 1280, height: 1024 }
-        ],
-        selectedMonitorId: "display-1"
-      })
-    }
-  );
+  const response = await fetch(`${baseUrl}/api/agents/remote-assistance/sessions/${session.id}/consent`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${enrollmentToken}`,
+      "x-remote-session-token": session.sessionToken,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      granted,
+      controlAllowed,
+      monitors: [
+        { id: "display-1", name: "Tela principal", primary: true, width: 1920, height: 1080 },
+        { id: "display-2", name: "Tela secundaria", primary: false, width: 1280, height: 1024 }
+      ],
+      selectedMonitorId: "display-1"
+    })
+  });
   assert.equal(response.status, 200);
   return (await response.json()).session;
 }
@@ -199,7 +196,9 @@ test("assistencia remota exige autorizacao, consentimento e mantem frames efemer
     idleTimeoutSeconds: 40,
     reconnectGraceSeconds: 30,
     webrtcEnabled: false,
-    iceServers: []
+    iceServers: [],
+    rustdeskEnabled: false,
+    rustdeskPasswordTtlSeconds: 300
   });
 
   const orderResponse = await fetch(`${baseUrl}/api/service-orders`, {
@@ -231,12 +230,7 @@ test("assistencia remota exige autorizacao, consentimento e mantem frames efemer
   });
   assert.equal(noReauthentication.status, 401);
 
-  const badReauthentication = await reauthenticate(
-    baseUrl,
-    adminCookie,
-    serviceOrderId,
-    "senha-incorreta"
-  );
+  const badReauthentication = await reauthenticate(baseUrl, adminCookie, serviceOrderId, "senha-incorreta");
   assert.equal(badReauthentication.status, 401);
 
   const reauthenticationResponse = await reauthenticate(baseUrl, adminCookie, serviceOrderId);
@@ -271,67 +265,49 @@ test("assistencia remota exige autorizacao, consentimento e mantem frames efemer
   assert.equal(active.controlConsentGranted, true);
   assert.equal(active.monitors.length, 2);
 
-  const monitorResponse = await fetch(
-    `${baseUrl}/api/remote-assistance/sessions/${active.id}/monitor`,
-    {
-      method: "POST",
-      headers: browserHeaders(adminCookie, { "x-remote-viewer-token": started.viewerToken }),
-      body: JSON.stringify({ monitorId: "display-2" })
-    }
-  );
+  const monitorResponse = await fetch(`${baseUrl}/api/remote-assistance/sessions/${active.id}/monitor`, {
+    method: "POST",
+    headers: browserHeaders(adminCookie, { "x-remote-viewer-token": started.viewerToken }),
+    body: JSON.stringify({ monitorId: "display-2" })
+  });
   assert.equal(monitorResponse.status, 200);
   assert.equal((await monitorResponse.json()).session.selectedMonitorId, "display-2");
 
-  const controlResponse = await fetch(
-    `${baseUrl}/api/remote-assistance/sessions/${active.id}/control`,
-    {
-      method: "POST",
-      headers: browserHeaders(adminCookie, { "x-remote-viewer-token": started.viewerToken }),
-      body: JSON.stringify({ enabled: true })
-    }
-  );
+  const controlResponse = await fetch(`${baseUrl}/api/remote-assistance/sessions/${active.id}/control`, {
+    method: "POST",
+    headers: browserHeaders(adminCookie, { "x-remote-viewer-token": started.viewerToken }),
+    body: JSON.stringify({ enabled: true })
+  });
   assert.equal(controlResponse.status, 200);
   assert.equal((await controlResponse.json()).session.remoteControlEnabled, true);
 
-  const inputResponse = await fetch(
-    `${baseUrl}/api/remote-assistance/sessions/${active.id}/input`,
-    {
-      method: "POST",
-      headers: browserHeaders(adminCookie, { "x-remote-viewer-token": started.viewerToken }),
-      body: JSON.stringify({ type: "mouse_move", x: 0.25, y: 0.75 })
-    }
-  );
+  const inputResponse = await fetch(`${baseUrl}/api/remote-assistance/sessions/${active.id}/input`, {
+    method: "POST",
+    headers: browserHeaders(adminCookie, { "x-remote-viewer-token": started.viewerToken }),
+    body: JSON.stringify({ type: "mouse_move", x: 0.25, y: 0.75 })
+  });
   assert.equal(inputResponse.status, 202);
 
-  const invalidInput = await fetch(
-    `${baseUrl}/api/remote-assistance/sessions/${active.id}/input`,
-    {
-      method: "POST",
-      headers: browserHeaders(adminCookie, { "x-remote-viewer-token": started.viewerToken }),
-      body: JSON.stringify({ type: "key", key: "Control+Alt+Delete", action: "press" })
-    }
-  );
+  const invalidInput = await fetch(`${baseUrl}/api/remote-assistance/sessions/${active.id}/input`, {
+    method: "POST",
+    headers: browserHeaders(adminCookie, { "x-remote-viewer-token": started.viewerToken }),
+    body: JSON.stringify({ type: "key", key: "Control+Alt+Delete", action: "press" })
+  });
   assert.equal(invalidInput.status, 400);
 
-  const lockKeyboardResponse = await fetch(
-    `${baseUrl}/api/remote-assistance/sessions/${active.id}/input`,
-    {
-      method: "POST",
-      headers: browserHeaders(adminCookie, { "x-remote-viewer-token": started.viewerToken }),
-      body: JSON.stringify({ type: "block_input", enabled: true })
-    }
-  );
+  const lockKeyboardResponse = await fetch(`${baseUrl}/api/remote-assistance/sessions/${active.id}/input`, {
+    method: "POST",
+    headers: browserHeaders(adminCookie, { "x-remote-viewer-token": started.viewerToken }),
+    body: JSON.stringify({ type: "block_input", enabled: true })
+  });
   assert.equal(lockKeyboardResponse.status, 202);
 
-  const commandsResponse = await fetch(
-    `${baseUrl}/api/agents/remote-assistance/sessions/${active.id}/commands`,
-    {
-      headers: {
-        authorization: `Bearer ${enrollment.token}`,
-        "x-remote-session-token": agentPending.sessionToken
-      }
+  const commandsResponse = await fetch(`${baseUrl}/api/agents/remote-assistance/sessions/${active.id}/commands`, {
+    headers: {
+      authorization: `Bearer ${enrollment.token}`,
+      "x-remote-session-token": agentPending.sessionToken
     }
-  );
+  });
   assert.equal(commandsResponse.status, 200);
   const commands = await commandsResponse.json();
   assert.equal(commands.controlEnabled, true);
@@ -347,43 +323,34 @@ test("assistencia remota exige autorizacao, consentimento e mantem frames efemer
   assert.deepEqual(commands.iceServers, []);
 
   const frame = "data:image/jpeg;base64,/9j/2Q==";
-  const frameResponse = await fetch(
-    `${baseUrl}/api/agents/remote-assistance/sessions/${active.id}/frame`,
-    {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${enrollment.token}`,
-        "x-remote-session-token": agentPending.sessionToken,
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({ frame, selectedMonitorId: "display-2" })
-    }
-  );
+  const frameResponse = await fetch(`${baseUrl}/api/agents/remote-assistance/sessions/${active.id}/frame`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${enrollment.token}`,
+      "x-remote-session-token": agentPending.sessionToken,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({ frame, selectedMonitorId: "display-2" })
+  });
   assert.equal(frameResponse.status, 202);
 
-  const excessiveFrame = await fetch(
-    `${baseUrl}/api/agents/remote-assistance/sessions/${active.id}/frame`,
-    {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${enrollment.token}`,
-        "x-remote-session-token": agentPending.sessionToken,
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({ frame })
-    }
-  );
+  const excessiveFrame = await fetch(`${baseUrl}/api/agents/remote-assistance/sessions/${active.id}/frame`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${enrollment.token}`,
+      "x-remote-session-token": agentPending.sessionToken,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({ frame })
+  });
   assert.equal(excessiveFrame.status, 429);
 
-  const viewerFrame = await fetch(
-    `${baseUrl}/api/remote-assistance/sessions/${active.id}/frame`,
-    {
-      headers: {
-        cookie: adminCookie,
-        "x-remote-viewer-token": started.viewerToken
-      }
+  const viewerFrame = await fetch(`${baseUrl}/api/remote-assistance/sessions/${active.id}/frame`, {
+    headers: {
+      cookie: adminCookie,
+      "x-remote-viewer-token": started.viewerToken
     }
-  );
+  });
   assert.equal(viewerFrame.status, 200);
   assert.equal(viewerFrame.headers.get("cache-control"), "private, no-store, max-age=0");
   const viewerFrameBody = await viewerFrame.json();
@@ -395,132 +362,103 @@ test("assistencia remota exige autorizacao, consentimento e mantem frames efemer
   assert.ok(viewerFrameBody.metrics.lastFrameBytes > 0);
   assert.equal(viewerFrameBody.metrics.duplicateFramesSkipped, 0);
 
-  const chatFromTechnician = await fetch(
-    `${baseUrl}/api/remote-assistance/sessions/${active.id}/chat`,
-    {
-      method: "POST",
-      headers: browserHeaders(adminCookie, { "x-remote-viewer-token": started.viewerToken }),
-      body: JSON.stringify({ text: "  Ola, pode descrever o problema? IT-GUARDIAN-CHAT-MARKER  " })
-    }
-  );
+  const chatFromTechnician = await fetch(`${baseUrl}/api/remote-assistance/sessions/${active.id}/chat`, {
+    method: "POST",
+    headers: browserHeaders(adminCookie, { "x-remote-viewer-token": started.viewerToken }),
+    body: JSON.stringify({ text: "  Ola, pode descrever o problema? IT-GUARDIAN-CHAT-MARKER  " })
+  });
   assert.equal(chatFromTechnician.status, 201);
   const technicianMessage = (await chatFromTechnician.json()).message;
   assert.equal(technicianMessage.sender, "technician");
   assert.equal(technicianMessage.text, "Ola, pode descrever o problema? IT-GUARDIAN-CHAT-MARKER");
 
-  const emptyChat = await fetch(
-    `${baseUrl}/api/remote-assistance/sessions/${active.id}/chat`,
-    {
-      method: "POST",
-      headers: browserHeaders(adminCookie, { "x-remote-viewer-token": started.viewerToken }),
-      body: JSON.stringify({ text: "   " })
-    }
-  );
+  const emptyChat = await fetch(`${baseUrl}/api/remote-assistance/sessions/${active.id}/chat`, {
+    method: "POST",
+    headers: browserHeaders(adminCookie, { "x-remote-viewer-token": started.viewerToken }),
+    body: JSON.stringify({ text: "   " })
+  });
   assert.equal(emptyChat.status, 400);
 
-  const chatFromAgent = await fetch(
-    `${baseUrl}/api/agents/remote-assistance/sessions/${active.id}/chat`,
-    {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${enrollment.token}`,
-        "x-remote-session-token": agentPending.sessionToken,
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({ text: "A impressora nao liga" })
-    }
-  );
+  const chatFromAgent = await fetch(`${baseUrl}/api/agents/remote-assistance/sessions/${active.id}/chat`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${enrollment.token}`,
+      "x-remote-session-token": agentPending.sessionToken,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({ text: "A impressora nao liga" })
+  });
   assert.equal(chatFromAgent.status, 201);
   const agentMessage = (await chatFromAgent.json()).message;
   assert.equal(agentMessage.sender, "agent");
 
-  const commandsWithChat = await fetch(
-    `${baseUrl}/api/agents/remote-assistance/sessions/${active.id}/commands`,
-    {
-      headers: {
-        authorization: `Bearer ${enrollment.token}`,
-        "x-remote-session-token": agentPending.sessionToken
-      }
+  const commandsWithChat = await fetch(`${baseUrl}/api/agents/remote-assistance/sessions/${active.id}/commands`, {
+    headers: {
+      authorization: `Bearer ${enrollment.token}`,
+      "x-remote-session-token": agentPending.sessionToken
     }
-  );
+  });
   const commandsWithChatBody = await commandsWithChat.json();
   assert.deepEqual(
     commandsWithChatBody.chatMessages.map((message) => message.id),
     [technicianMessage.id, agentMessage.id]
   );
 
-  const viewerFrameWithChat = await fetch(
-    `${baseUrl}/api/remote-assistance/sessions/${active.id}/frame`,
-    { headers: { cookie: adminCookie, "x-remote-viewer-token": started.viewerToken } }
-  );
+  const viewerFrameWithChat = await fetch(`${baseUrl}/api/remote-assistance/sessions/${active.id}/frame`, {
+    headers: { cookie: adminCookie, "x-remote-viewer-token": started.viewerToken }
+  });
   const viewerFrameWithChatBody = await viewerFrameWithChat.json();
   assert.deepEqual(
     viewerFrameWithChatBody.chatMessages.map((message) => message.id),
     [technicianMessage.id, agentMessage.id]
   );
 
-  const pauseResponse = await fetch(
-    `${baseUrl}/api/remote-assistance/sessions/${active.id}/pause`,
-    {
-      method: "POST",
-      headers: browserHeaders(adminCookie, { "x-remote-viewer-token": started.viewerToken }),
-      body: JSON.stringify({ paused: true })
-    }
-  );
+  const pauseResponse = await fetch(`${baseUrl}/api/remote-assistance/sessions/${active.id}/pause`, {
+    method: "POST",
+    headers: browserHeaders(adminCookie, { "x-remote-viewer-token": started.viewerToken }),
+    body: JSON.stringify({ paused: true })
+  });
   assert.equal(pauseResponse.status, 200);
   assert.equal((await pauseResponse.json()).session.paused, true);
 
-  const commandsWhilePaused = await fetch(
-    `${baseUrl}/api/agents/remote-assistance/sessions/${active.id}/commands`,
-    {
-      headers: {
-        authorization: `Bearer ${enrollment.token}`,
-        "x-remote-session-token": agentPending.sessionToken
-      }
+  const commandsWhilePaused = await fetch(`${baseUrl}/api/agents/remote-assistance/sessions/${active.id}/commands`, {
+    headers: {
+      authorization: `Bearer ${enrollment.token}`,
+      "x-remote-session-token": agentPending.sessionToken
     }
-  );
+  });
   assert.equal((await commandsWhilePaused.json()).capturePaused, true);
 
-  const resumeResponse = await fetch(
-    `${baseUrl}/api/remote-assistance/sessions/${active.id}/pause`,
-    {
-      method: "POST",
-      headers: browserHeaders(adminCookie, { "x-remote-viewer-token": started.viewerToken }),
-      body: JSON.stringify({ paused: false })
-    }
-  );
+  const resumeResponse = await fetch(`${baseUrl}/api/remote-assistance/sessions/${active.id}/pause`, {
+    method: "POST",
+    headers: browserHeaders(adminCookie, { "x-remote-viewer-token": started.viewerToken }),
+    body: JSON.stringify({ paused: false })
+  });
   assert.equal(resumeResponse.status, 200);
   assert.equal((await resumeResponse.json()).session.paused, false);
 
   await new Promise((resolve) => setTimeout(resolve, 1100));
-  const unchangedPing = await fetch(
-    `${baseUrl}/api/agents/remote-assistance/sessions/${active.id}/frame`,
-    {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${enrollment.token}`,
-        "x-remote-session-token": agentPending.sessionToken,
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({ unchanged: true })
-    }
-  );
+  const unchangedPing = await fetch(`${baseUrl}/api/agents/remote-assistance/sessions/${active.id}/frame`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${enrollment.token}`,
+      "x-remote-session-token": agentPending.sessionToken,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({ unchanged: true })
+  });
   assert.equal(unchangedPing.status, 202);
   assert.equal((await unchangedPing.json()).unchanged, true);
-  const viewerFrameAfterUnchanged = await fetch(
-    `${baseUrl}/api/remote-assistance/sessions/${active.id}/frame`,
-    { headers: { cookie: adminCookie, "x-remote-viewer-token": started.viewerToken } }
-  );
+  const viewerFrameAfterUnchanged = await fetch(`${baseUrl}/api/remote-assistance/sessions/${active.id}/frame`, {
+    headers: { cookie: adminCookie, "x-remote-viewer-token": started.viewerToken }
+  });
   const unchangedBody = await viewerFrameAfterUnchanged.json();
   assert.equal(unchangedBody.frame, frame);
   assert.equal(unchangedBody.metrics.framesTotal, 1);
   assert.equal(unchangedBody.metrics.unchangedPings, 1);
   assert.ok(unchangedBody.metrics.frameAgeMs < 1000);
 
-  const eventsResponse = await fetch(
-    `${baseUrl}/api/remote-assistance/sessions/${active.id}/events`,
-    { headers: { cookie: adminCookie } }
-  );
+  const eventsResponse = await fetch(`${baseUrl}/api/remote-assistance/sessions/${active.id}/events`, { headers: { cookie: adminCookie } });
   assert.equal(eventsResponse.status, 200);
   const eventTypes = (await eventsResponse.json()).events.map((event) => event.eventType);
   for (const expected of [
@@ -548,14 +486,11 @@ test("assistencia remota exige autorizacao, consentimento e mantem frames efemer
   assert.doesNotMatch(JSON.stringify(persistedBeforeEnd), /data:image\/jpeg/i);
   assert.doesNotMatch(JSON.stringify(persistedBeforeEnd), /IT-GUARDIAN-CHAT-MARKER/);
 
-  const endResponse = await fetch(
-    `${baseUrl}/api/remote-assistance/sessions/${active.id}/end`,
-    {
-      method: "POST",
-      headers: browserHeaders(adminCookie, { "x-remote-viewer-token": started.viewerToken }),
-      body: "{}"
-    }
-  );
+  const endResponse = await fetch(`${baseUrl}/api/remote-assistance/sessions/${active.id}/end`, {
+    method: "POST",
+    headers: browserHeaders(adminCookie, { "x-remote-viewer-token": started.viewerToken }),
+    body: "{}"
+  });
   assert.equal(endResponse.status, 200);
   assert.equal((await endResponse.json()).session.status, "ended");
 
@@ -576,10 +511,7 @@ test("assistencia remota exige autorizacao, consentimento e mantem frames efemer
   const reusableReauthentication = await reauthenticate(baseUrl, adminCookie);
   assert.equal(reusableReauthentication.status, 200);
   const reusableToken = (await reusableReauthentication.json()).token;
-  await query("UPDATE agent_assets SET last_seen_at = $2 WHERE asset_id = $1", [
-    machineId,
-    new Date(Date.now() - 2 * 60 * 60 * 1000)
-  ]);
+  await query("UPDATE agent_assets SET last_seen_at = $2 WHERE asset_id = $1", [machineId, new Date(Date.now() - 2 * 60 * 60 * 1000)]);
   const staleStart = await startSession(baseUrl, adminCookie, { token: reusableToken });
   assert.equal(staleStart.status, 409);
   await heartbeat(baseUrl, enrollment.token);
@@ -587,14 +519,10 @@ test("assistencia remota exige autorizacao, consentimento e mantem frames efemer
   const expiringStart = await startSession(baseUrl, adminCookie, { token: reusableToken });
   assert.equal(expiringStart.status, 201);
   const expiring = await expiringStart.json();
-  await query("UPDATE remote_assistance_sessions SET expires_at = $2 WHERE id = $1", [
-    expiring.session.id,
-    new Date(Date.now() - 1000)
-  ]);
-  const expiredResponse = await fetch(
-    `${baseUrl}/api/remote-assistance/sessions/${expiring.session.id}`,
-    { headers: { cookie: adminCookie } }
-  );
+  await query("UPDATE remote_assistance_sessions SET expires_at = $2 WHERE id = $1", [expiring.session.id, new Date(Date.now() - 1000)]);
+  const expiredResponse = await fetch(`${baseUrl}/api/remote-assistance/sessions/${expiring.session.id}`, {
+    headers: { cookie: adminCookie }
+  });
   assert.equal(expiredResponse.status, 200);
   assert.equal((await expiredResponse.json()).session.status, "expired");
 
@@ -614,10 +542,9 @@ test("assistencia remota exige autorizacao, consentimento e mantem frames efemer
     body: "{}"
   });
   assert.equal(logoutResponse.status, 204);
-  const loggedOutSession = await query(
-    "SELECT status, end_reason FROM remote_assistance_sessions WHERE id = $1",
-    [logoutSession.session.id]
-  );
+  const loggedOutSession = await query("SELECT status, end_reason FROM remote_assistance_sessions WHERE id = $1", [
+    logoutSession.session.id
+  ]);
   assert.equal(loggedOutSession.rows[0].status, "ended");
   assert.equal(loggedOutSession.rows[0].end_reason, "technician_logout");
 });

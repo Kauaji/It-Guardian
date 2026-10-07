@@ -10,10 +10,6 @@ import {
 } from "../repositories/assetLifecycleRepository.js";
 import {
   addServiceOrderHistory,
-  createServiceOrder,
-  createServiceOrderAttachment,
-  deleteServiceOrder,
-  deleteServiceOrderAttachment,
   findServiceOrderById,
   findServiceOrderFeedback,
   getFinalStatus,
@@ -23,14 +19,15 @@ import {
   listServiceOrderAttachments,
   listServiceOrders,
   maxServiceOrderStatuses,
-  reopenServiceOrder,
   serviceOrderPriorities,
   setFirstResponseAtIfNeeded,
-  submitServiceOrderFeedback,
-  updateServiceOrder,
-  updateServiceOrderSettings,
-  updateServiceOrderStatus
+  updateServiceOrderSettings
 } from "../repositories/serviceOrderRepository.js";
+import { createServiceOrderAttachment, deleteServiceOrderAttachment } from "./serviceOrders/serviceOrderAttachmentService.js";
+import { createServiceOrder } from "./serviceOrders/serviceOrderCreationService.js";
+import { submitServiceOrderFeedback } from "./serviceOrders/serviceOrderFeedbackService.js";
+import { deleteServiceOrder, reopenServiceOrder, updateServiceOrderStatus } from "./serviceOrders/serviceOrderLifecycleService.js";
+import { updateServiceOrder } from "./serviceOrders/serviceOrderUpdateService.js";
 import { applyChecklistTemplateOnCreate, assertChecklistCompleteForFinish } from "./serviceOrderChecklistService.js";
 
 const notFoundMessage = "Ordem de servico nao encontrada.";
@@ -81,7 +78,7 @@ async function syncServiceOrderMaintenance({ previous = null, serviceOrder, user
     });
   }
 
-  const resolvedSettings = settings || await getServiceOrderSettings();
+  const resolvedSettings = settings || (await getServiceOrderSettings());
   const isFinal = serviceOrder.status === getFinalStatus(resolvedSettings).id;
   if (isFinal) {
     await releaseBackupFromServiceOrder({ serviceOrderId: serviceOrder.id, user, allowMissing: true });
@@ -107,10 +104,7 @@ export async function getServiceOrderDetails(id, user) {
 
   // So busca a sugestao de alerta relacionada quando a origem indica isso -
   // evita uma consulta extra desnecessaria pra OS manuais/publicas.
-  const relatedAlertSuggestion =
-    serviceOrder.source === "alert_suggestion"
-      ? await findServiceOrderSuggestionByServiceOrderId(id)
-      : null;
+  const relatedAlertSuggestion = serviceOrder.source === "alert_suggestion" ? await findServiceOrderSuggestionByServiceOrderId(id) : null;
 
   return { ...serviceOrder, relatedAlertSuggestion };
 }
@@ -155,8 +149,7 @@ export async function updateExistingServiceOrder(id, payload, user) {
   if (!previous) throw notFoundError(notFoundMessage);
 
   const hasSectorPayload =
-    Object.prototype.hasOwnProperty.call(payload || {}, "sectorId") ||
-    Object.prototype.hasOwnProperty.call(payload || {}, "sectorName");
+    Object.prototype.hasOwnProperty.call(payload || {}, "sectorId") || Object.prototype.hasOwnProperty.call(payload || {}, "sectorName");
 
   if (hasSectorPayload && !hasPermission(user, "service_orders.change_sector")) {
     throw forbidden("Voce nao possui permissao para alterar o setor da OS.");
@@ -207,9 +200,7 @@ export async function changeServiceOrderPriority(id, priority, user) {
 }
 
 export async function assignServiceOrderTechnician(id, payload, user) {
-  const assignedTechnicianName = String(
-    payload?.assignedTechnicianName ?? payload?.technicianName ?? payload?.name ?? ""
-  ).trim();
+  const assignedTechnicianName = String(payload?.assignedTechnicianName ?? payload?.technicianName ?? payload?.name ?? "").trim();
 
   const serviceOrder = await updateServiceOrder({
     id,
@@ -260,7 +251,7 @@ export async function linkServiceOrderAsset(id, body, user) {
 }
 
 export async function replaceServiceOrderItems(id, body, user) {
-  const items = Array.isArray(body) ? body : body?.items ?? body?.serviceItems ?? [];
+  const items = Array.isArray(body) ? body : (body?.items ?? body?.serviceItems ?? []);
   const serviceOrder = await updateServiceOrder({ id, payload: { items }, user });
   if (!serviceOrder) throw notFoundError(notFoundMessage);
 

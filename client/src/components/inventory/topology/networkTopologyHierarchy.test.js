@@ -134,18 +134,18 @@ describe("summarizeGroup", () => {
   ]);
 
   it("so inclui segmentos cujo groupId bate com o grupo (relacao real do banco)", () => {
-    const summary = summarizeGroup({ id: "g1", name: "Recepcao" }, segments, devicesBySegment);
+    const summary = summarizeGroup({ id: "g1", name: "Recepção" }, segments, devicesBySegment);
     expect(summary.segments.map((segment) => segment.id)).toEqual(["s1", "s2"]);
     expect(summary.segmentCount).toBe(2);
   });
 
   it("soma os ativos de todos os segmentos do grupo", () => {
-    const summary = summarizeGroup({ id: "g1", name: "Recepcao" }, segments, devicesBySegment);
+    const summary = summarizeGroup({ id: "g1", name: "Recepção" }, segments, devicesBySegment);
     expect(summary.deviceCount).toBe(2);
   });
 
   it("status do grupo agrega o status dos segmentos (misto quando discordam)", () => {
-    const summary = summarizeGroup({ id: "g1", name: "Recepcao" }, segments, devicesBySegment);
+    const summary = summarizeGroup({ id: "g1", name: "Recepção" }, segments, devicesBySegment);
     // s1 = online (1 ativo online), s2 = atencao (1 ativo offline) -> misto
     expect(summary.status).toBe("misto");
   });
@@ -192,7 +192,7 @@ describe("buildHierarchyTree", () => {
   });
 
   it("monta grupos com seus segmentos e separa segmentos sem grupo", () => {
-    const groups = [{ id: "g1", name: "Recepcao" }];
+    const groups = [{ id: "g1", name: "Recepção" }];
     const segments = [
       { id: "s1", name: "Atendimento", groupId: "g1" },
       { id: "s2", name: "Solta", groupId: "" }
@@ -221,25 +221,28 @@ describe("buildHierarchyTree", () => {
   });
 
   it("exclui filas especiais dos totais e do status, mas mantém nomes comuns e grupos vazios", () => {
-    const groups = Object.freeze([
-      Object.freeze({ id: "g1", name: "Infraestrutura" }),
-      Object.freeze({ id: "g2", name: "Grupo real" })
-    ]);
-    const segments = Object.freeze([
-      { id: "s1", name: "Estações", groupId: "g1" },
-      { id: "s2", name: "Servidores de backup", groupId: "g1" },
-      { id: "m1", name: "Manutenção", groupId: "g1" },
-      { id: "b1", name: "Backup" },
-      { id: "m2", name: "Oficina", isMaintenanceSegment: true },
-      { id: "b2", name: "Reserva técnica", isBackupSegment: true, groupId: "g2" },
-      { id: "m3", name: "Reparos", systemSegment: "maintenance", groupId: "g1" },
-      { id: "b3", name: "Estoque", systemSegment: "backup" }
-    ].map(Object.freeze));
-    const devices = Object.freeze(segments.map((segment, index) => Object.freeze({
-      id: `d${index}`,
-      segmentId: segment.id,
-      status: index === 0 ? "online" : index === 1 ? "offline" : "problem"
-    })));
+    const groups = Object.freeze([Object.freeze({ id: "g1", name: "Infraestrutura" }), Object.freeze({ id: "g2", name: "Grupo real" })]);
+    const segments = Object.freeze(
+      [
+        { id: "s1", name: "Estações", groupId: "g1" },
+        { id: "s2", name: "Servidores de backup", groupId: "g1" },
+        { id: "m1", name: "Manutenção", groupId: "g1" },
+        { id: "b1", name: "Backup" },
+        { id: "m2", name: "Oficina", isMaintenanceSegment: true },
+        { id: "b2", name: "Reserva técnica", isBackupSegment: true, groupId: "g2" },
+        { id: "m3", name: "Reparos", systemSegment: "maintenance", groupId: "g1" },
+        { id: "b3", name: "Estoque", systemSegment: "backup" }
+      ].map(Object.freeze)
+    );
+    const devices = Object.freeze(
+      segments.map((segment, index) =>
+        Object.freeze({
+          id: `d${index}`,
+          segmentId: segment.id,
+          status: index === 0 ? "online" : index === 1 ? "offline" : "problem"
+        })
+      )
+    );
     const tree = buildHierarchyTree({ groups, segments, devices });
 
     expect(tree.groupCount).toBe(2);

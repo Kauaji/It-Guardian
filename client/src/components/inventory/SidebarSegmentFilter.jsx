@@ -1,64 +1,13 @@
-import { useDraggable, useDroppable } from "@dnd-kit/core";
-import { useEffect, useMemo, useState } from "react";
-import { isMaintenanceSegmentName } from "../../utils/display.js";
-import { getSegmentGroupId } from "./inventoryUtils.js";
-
-function SidebarSegmentDropItem({ segment, selected, count, machineDragActive, onSelectSegment }) {
-  const isMaintenance = isMaintenanceSegmentName(segment.name || "");
-  const { isOver, setNodeRef } = useDroppable({
-    id: `sidebar-segment-${segment.id}`,
-    data: { type: "sidebar-segment", segmentId: segment.id }
-  });
-  const {
-    attributes,
-    listeners,
-    setNodeRef: setDragNodeRef,
-    isDragging
-  } = useDraggable({
-    id: `sidebar-segment-drag-${segment.id}`,
-    data: { type: "segment", segmentId: segment.id, origin: "sidebar" },
-    disabled: segment.isDefault || isMaintenance || machineDragActive
-  });
-
-  return (
-    <button
-      ref={setNodeRef}
-      type="button"
-      className={`sidebar-segment-item ${selected ? "active" : ""} ${isOver ? "drop-over" : ""}`}
-      onClick={() => onSelectSegment(segment.id)}
-    >
-      <span
-        ref={setDragNodeRef}
-        className={`sidebar-segment-drag-handle ${isDragging ? "dragging" : ""}`}
-        title={isMaintenance ? "Manutenção não pertence a grupos" : segment.isDefault ? "Segmento padrao nao pode ser movido" : "Mover segmento"}
-        {...attributes}
-        {...listeners}
-      >
-        <span className="segment-filter-dot" style={{ backgroundColor: segment.color || "#1f7a61" }} />
-        <span className="sidebar-filter-label">{segment.name}</span>
-      </span>
-      <small>{count}</small>
-    </button>
-  );
-}
-
-function SidebarGroupDropSection({ groupId, collapsed = false, machineDragActive, onExpand, children }) {
-  const { isOver, setNodeRef } = useDroppable({
-    id: `sidebar-group-${groupId || "ungrouped"}`,
-    data: { type: "sidebar-segment-group-drop", groupId },
-    disabled: machineDragActive
-  });
-
-  useEffect(() => {
-    if (!machineDragActive && isOver && collapsed) onExpand?.();
-  }, [collapsed, isOver, machineDragActive, onExpand]);
-
-  return (
-    <section ref={setNodeRef} className={`sidebar-segment-group ${isOver ? "sidebar-group-drop-over" : ""}`}>
-      {children}
-    </section>
-  );
-}
+import { useMemo, useState } from "react";
+import SidebarGroupDropSection from "./sidebarSegmentFilter/SidebarGroupDropSection.jsx";
+import SidebarGroupRow from "./sidebarSegmentFilter/SidebarGroupRow.jsx";
+import SidebarSegmentDropItem from "./sidebarSegmentFilter/SidebarSegmentDropItem.jsx";
+import {
+  countDevicesBySegment,
+  getOccupiedMaintenanceSegments,
+  groupSegmentsByGroupId,
+  sumGroupCount
+} from "./sidebarSegmentFilter/sidebarSegmentModel.js";
 
 export default function SidebarSegmentFilter({
   devices,
@@ -73,40 +22,25 @@ export default function SidebarSegmentFilter({
 }) {
   const [ungroupedCollapsed, setUngroupedCollapsed] = useState(false);
   const visibleSegments = segments;
-  const countBySegment = useMemo(() => {
-    const next = new Map();
-    for (const device of devices) {
-      next.set(device.segmentId, (next.get(device.segmentId) || 0) + 1);
-    }
-    return next;
-  }, [devices]);
+  const countBySegment = useMemo(() => countDevicesBySegment(devices), [devices]);
   const maintenanceSegments = useMemo(
-    () => visibleSegments.filter((segment) => (
-      isMaintenanceSegmentName(segment.name || "") && (countBySegment.get(segment.id) || 0) > 0
-    )),
+    () => getOccupiedMaintenanceSegments(visibleSegments, countBySegment),
     [countBySegment, visibleSegments]
   );
-  const segmentsByGroupId = useMemo(() => {
-    const next = new Map([["", []]]);
-
-    for (const group of groups) {
-      next.set(group.id, []);
-    }
-
-    for (const segment of visibleSegments) {
-      if (isMaintenanceSegmentName(segment.name || "")) continue;
-      const groupId = getSegmentGroupId(segment, groups);
-      const list = next.get(groupId) || [];
-      list.push(segment);
-      next.set(groupId, list);
-    }
-
-    return next;
-  }, [groups, visibleSegments]);
+  const segmentsByGroupId = useMemo(() => groupSegmentsByGroupId(visibleSegments, groups), [groups, visibleSegments]);
   const ungrouped = segmentsByGroupId.get("") || [];
 
-  function groupCount(groupSegments) {
-    return groupSegments.reduce((total, segment) => total + (countBySegment.get(segment.id) || 0), 0);
+  function renderSegmentItems(list) {
+    return list.map((segment) => (
+      <SidebarSegmentDropItem
+        key={segment.id}
+        segment={segment}
+        selected={selectedSegmentId === segment.id}
+        count={countBySegment.get(segment.id) || 0}
+        machineDragActive={machineDragActive}
+        onSelectSegment={onSelectSegment}
+      />
+    ));
   }
 
   return (
@@ -122,8 +56,6 @@ export default function SidebarSegmentFilter({
       </button>
       {groups.map((group) => {
         const groupSegments = segmentsByGroupId.get(group.id) || [];
-        const count = groupCount(groupSegments);
-
         return (
           <SidebarGroupDropSection
             key={group.id}
@@ -132,35 +64,17 @@ export default function SidebarSegmentFilter({
             machineDragActive={machineDragActive}
             onExpand={() => onToggleGroup?.(group.id)}
           >
-            <div className="sidebar-group-row">
-              <button
-                type="button"
-                className={`sidebar-group-filter ${selectedGroupId === group.id && selectedSegmentId === "all" ? "active" : ""}`}
-                onClick={() => onSelectGroup(group.id)}
-              >
-                <span className="segment-filter-dot group" style={{ backgroundColor: group.color || "#8b9bb0" }} />
-                <span className="sidebar-filter-label">{group.name}</span>
-                <small>{count}</small>
-              </button>
-              <button
-                type="button"
-                className="sidebar-group-collapse"
-                onClick={() => onToggleGroup?.(group.id)}
-                title={group.collapsed ? "Expandir grupo" : "Recolher grupo"}
-              >
-                {group.collapsed ? "+" : "-"}
-              </button>
-            </div>
-            {!group.collapsed && groupSegments.map((segment) => (
-              <SidebarSegmentDropItem
-                key={segment.id}
-                segment={segment}
-                selected={selectedSegmentId === segment.id}
-                count={countBySegment.get(segment.id) || 0}
-                machineDragActive={machineDragActive}
-                onSelectSegment={onSelectSegment}
-              />
-            ))}
+            <SidebarGroupRow
+              active={selectedGroupId === group.id && selectedSegmentId === "all"}
+              dotStyle={{ backgroundColor: group.color || "#8b9bb0" }}
+              label={group.name}
+              count={sumGroupCount(groupSegments, countBySegment)}
+              collapsed={group.collapsed}
+              collapseTitle={group.collapsed ? "Expandir grupo" : "Recolher grupo"}
+              onSelect={() => onSelectGroup(group.id)}
+              onToggle={() => onToggleGroup?.(group.id)}
+            />
+            {!group.collapsed && renderSegmentItems(groupSegments)}
           </SidebarGroupDropSection>
         );
       })}
@@ -171,47 +85,19 @@ export default function SidebarSegmentFilter({
           machineDragActive={machineDragActive}
           onExpand={() => setUngroupedCollapsed(false)}
         >
-          <div className="sidebar-group-row">
-            <button
-              type="button"
-              className={`sidebar-group-filter ${selectedGroupId === "ungrouped" && selectedSegmentId === "all" ? "active" : ""}`}
-              onClick={() => onSelectGroup("ungrouped")}
-            >
-              <span className="segment-filter-dot group" />
-              <span className="sidebar-filter-label">Sem grupo</span>
-              <small>{groupCount(ungrouped)}</small>
-            </button>
-            <button
-              type="button"
-              className="sidebar-group-collapse"
-              onClick={() => setUngroupedCollapsed((current) => !current)}
-              title={ungroupedCollapsed ? "Expandir Sem grupo" : "Recolher Sem grupo"}
-            >
-              {ungroupedCollapsed ? "+" : "-"}
-            </button>
-          </div>
-          {!ungroupedCollapsed && ungrouped.map((segment) => (
-            <SidebarSegmentDropItem
-              key={segment.id}
-              segment={segment}
-              selected={selectedSegmentId === segment.id}
-              count={countBySegment.get(segment.id) || 0}
-              machineDragActive={machineDragActive}
-              onSelectSegment={onSelectSegment}
-            />
-          ))}
+          <SidebarGroupRow
+            active={selectedGroupId === "ungrouped" && selectedSegmentId === "all"}
+            label="Sem grupo"
+            count={sumGroupCount(ungrouped, countBySegment)}
+            collapsed={ungroupedCollapsed}
+            collapseTitle={ungroupedCollapsed ? "Expandir Sem grupo" : "Recolher Sem grupo"}
+            onSelect={() => onSelectGroup("ungrouped")}
+            onToggle={() => setUngroupedCollapsed((current) => !current)}
+          />
+          {!ungroupedCollapsed && renderSegmentItems(ungrouped)}
         </SidebarGroupDropSection>
       )}
-      {maintenanceSegments.map((segment) => (
-        <SidebarSegmentDropItem
-          key={segment.id}
-          segment={segment}
-          selected={selectedSegmentId === segment.id}
-          count={countBySegment.get(segment.id) || 0}
-          machineDragActive={machineDragActive}
-          onSelectSegment={onSelectSegment}
-        />
-      ))}
+      {renderSegmentItems(maintenanceSegments)}
     </div>
   );
 }

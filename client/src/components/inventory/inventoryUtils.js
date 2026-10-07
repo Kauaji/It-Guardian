@@ -3,9 +3,7 @@ export function normalizeGroupId(groupId) {
 }
 
 export function getSegmentGroupId(segment, groups = []) {
-  return normalizeGroupId(
-    segment?.groupId || groups.find((group) => (group.segmentIds || []).includes(segment?.id))?.id
-  );
+  return normalizeGroupId(segment?.groupId || groups.find((group) => (group.segmentIds || []).includes(segment?.id))?.id);
 }
 
 export function assignSegmentToGroup(groups = [], segmentId, groupId) {
@@ -14,9 +12,7 @@ export function assignSegmentToGroup(groups = [], segmentId, groupId) {
   return groups.map((group) => {
     const segmentIds = (group.segmentIds || []).filter((id) => id !== segmentId);
 
-    return group.id === targetGroupId
-      ? { ...group, segmentIds: [...segmentIds, segmentId] }
-      : { ...group, segmentIds };
+    return group.id === targetGroupId ? { ...group, segmentIds: [...segmentIds, segmentId] } : { ...group, segmentIds };
   });
 }
 

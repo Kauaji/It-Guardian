@@ -31,3 +31,14 @@ test("permissões efetivas bloqueiam admin.* para usuário não administrador", 
   assert.equal(permissions.includes("admin.full"), false);
   assert.equal(permissions.includes("preventive_plans.create_service_order"), true);
 });
+
+test("usuário ausente (null/undefined) não tem permissões e não lança erro", () => {
+  assert.deepEqual(sharedPermissions.getEffectivePermissions(null), []);
+  assert.deepEqual(sharedPermissions.getEffectivePermissions(undefined), []);
+  assert.equal(sharedPermissions.hasPermission(null, "inventory.view"), false);
+  assert.equal(sharedPermissions.hasPermission(null, ""), true);
+});
+
+test("normalizePermissions ignora entradas que não são texto", () => {
+  assert.deepEqual(sharedPermissions.normalizePermissions(["inventory.view", 7, null, { id: "x" }, "inventory.view"]), ["inventory.view"]);
+});

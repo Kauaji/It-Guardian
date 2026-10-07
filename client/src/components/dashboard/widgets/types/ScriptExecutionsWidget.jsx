@@ -5,12 +5,14 @@ export default function ScriptExecutionsWidget({ data }) {
   return (
     <WidgetList
       items={data.rows}
-      emptyMessage="Nenhuma execucao de script registrada ainda."
+      emptyMessage="Nenhuma execução de script registrada ainda."
       renderItem={(log) => (
         <>
           <span>{log.scriptName || "Script removido"}</span>
           <span className={`pill ${log.errorDetected ? "danger" : "ok"}`}>{log.status}</span>
-          <small>{log.executedBy || "Agente"} - {formatDateTime(log.executedAt || log.createdAt)}</small>
+          <small>
+            {log.executedBy || "Agente"} - {formatDateTime(log.executedAt || log.createdAt)}
+          </small>
         </>
       )}
     />

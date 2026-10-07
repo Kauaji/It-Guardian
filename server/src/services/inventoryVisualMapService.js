@@ -1,23 +1,27 @@
+import { getInventoryVisualMap, listInventoryVisualMaps } from "../repositories/inventoryVisualMap/visualMapRepository.js";
+import { listInventoryVisualMapConnections } from "../repositories/inventoryVisualMap/visualMapConnectionRepository.js";
+import { listInventoryVisualMapObjects } from "../repositories/inventoryVisualMap/visualMapObjectRepository.js";
+import {
+  createInventoryVisualMapConnection,
+  deleteInventoryVisualMapConnection,
+  updateInventoryVisualMapConnection
+} from "./inventoryVisualMap/visualMapConnectionService.js";
 import {
   createInventoryVisualMap,
-  createInventoryVisualMapConnection,
-  createInventoryVisualMapObject,
   deleteInventoryVisualMap,
-  deleteInventoryVisualMapConnection,
+  updateInventoryVisualMap
+} from "./inventoryVisualMap/visualMapCommandService.js";
+import {
+  createInventoryVisualMapObject,
   deleteInventoryVisualMapObject,
-  getInventoryVisualMap,
-  listInventoryVisualMapConnections,
-  listInventoryVisualMapObjects,
-  listInventoryVisualMaps,
-  updateInventoryVisualMap,
-  updateInventoryVisualMapConnection,
   updateInventoryVisualMapObject
-} from "../repositories/inventoryVisualMapRepository.js";
+} from "./inventoryVisualMap/visualMapObjectService.js";
 import { broadcastSnapshot } from "./realtimeService.js";
+import { logger } from "../lib/logger.js";
 
 function notifyInventoryChanged() {
   broadcastSnapshot().catch((error) => {
-    console.error("Failed to broadcast inventory visual map snapshot", error);
+    logger.error("realtime_broadcast_failed", { context: "inventory_visual_map", error });
   });
 }
 

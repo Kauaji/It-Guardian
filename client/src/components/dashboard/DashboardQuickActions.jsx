@@ -1,11 +1,6 @@
 import { AlertTriangle, ClipboardPlus, Server, Settings } from "lucide-react";
 
-export default function DashboardQuickActions({
-  onNavigateInventory,
-  onNavigateAlerts,
-  onNavigateServiceOrders,
-  onOpenSettings
-}) {
+export default function DashboardQuickActions({ onNavigateInventory, onNavigateAlerts, onNavigateServiceOrders, onOpenSettings }) {
   const actions = [
     {
       key: "new-service-order",

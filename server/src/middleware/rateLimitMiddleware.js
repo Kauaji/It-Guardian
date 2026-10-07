@@ -1,6 +1,16 @@
+/** @import { NextFunction, Request, Response } from "express" */
+import { logger } from "../lib/logger.js";
+import { rateLimitStoreErrors, rateLimited } from "../lib/metrics.js";
 import { getSharedRedisClient } from "../lib/redisClient.js";
 
 const RATE_LIMIT_KEY_PREFIX = "ratelimit:";
+
+/** @typedef {{ count: number, resetAt: number }} LimiterHit Contagem na janela atual e quando ela zera (ms). */
+/**
+ * @typedef {object} LimiterStore
+ * @property {string} name
+ * @property {(key: string, windowMs: number) => Promise<LimiterHit>} increment
+ */
 
 /**
  * Store em memoria do processo: unico backend viavel sem Redis configurado
@@ -8,7 +18,9 @@ const RATE_LIMIT_KEY_PREFIX = "ratelimit:";
  * serverless -- cada instancia tem seu proprio Map e um cold start zera o
  * estado, entao o limite so e confiavel com o store Redis abaixo.
  */
+/** @returns {LimiterStore} */
 function createMemoryLimiterStore() {
+  /** @type {Map<string, { count: number, resetAt: number }>} */
   const buckets = new Map();
   return {
     name: "memory",
@@ -20,9 +32,7 @@ function createMemoryLimiterStore() {
         }
       }
       const current = buckets.get(key);
-      const bucket = !current || current.resetAt <= now
-        ? { count: 0, resetAt: now + windowMs }
-        : current;
+      const bucket = !current || current.resetAt <= now ? { count: 0, resetAt: now + windowMs } : current;
       bucket.count += 1;
       buckets.set(key, bucket);
       return { count: bucket.count, resetAt: bucket.resetAt };
@@ -38,6 +48,11 @@ function createMemoryLimiterStore() {
  * Resta uma janela de corrida infinitesimal se a chave expirar exatamente
  * entre o SET NX falho e o INCR seguinte -- nesse caso raríssimo o INCR cria
  * a chave de novo sem TTL; aceitavel frente ao ganho de robustez do resto.
+ */
+/**
+ * @param {NonNullable<ReturnType<typeof getSharedRedisClient>>} redisClient
+ * @param {string} limiterName
+ * @returns {LimiterStore}
  */
 function createRedisLimiterStore(redisClient, limiterName) {
   return {
@@ -58,11 +73,31 @@ function createRedisLimiterStore(redisClient, limiterName) {
 
 let limiterInstanceCounter = 0;
 
+/**
+ * @param {string | undefined} value
+ * @param {number} fallback
+ */
 function positiveInteger(value, fallback) {
-  const parsed = Number.parseInt(value, 10);
+  const parsed = Number.parseInt(String(value), 10);
   return Number.isInteger(parsed) && parsed > 0 ? Math.min(parsed, 10_000) : fallback;
 }
 
+/**
+ * @typedef {object} RateLimiterOptions
+ * @property {number} [windowMs] Janela fixa em ms (padrao 15 min).
+ * @property {number} [max] Requisicoes permitidas por janela (padrao 10).
+ * @property {(req: Request) => string | undefined} [keyGenerator] Chave de contagem (padrao: IP).
+ * @property {string} [message] Mensagem do 429.
+ * @property {string} [name] Nome nas metricas e na chave Redis.
+ */
+
+/**
+ * Cria um middleware de limite de taxa (Redis quando configurado, senao memoria).
+ * Falhas do store liberam a requisicao em vez de derrubar a rota.
+ *
+ * @param {RateLimiterOptions} [options]
+ * @returns {(req: Request, res: Response, next: NextFunction) => Promise<void | Response>}
+ */
 export function createRateLimiter({
   windowMs = 15 * 60 * 1000,
   max = 10,
@@ -73,12 +108,11 @@ export function createRateLimiter({
   limiterInstanceCounter += 1;
   const limiterName = name || `limiter-${limiterInstanceCounter}`;
   const redisClient = getSharedRedisClient();
-  const store = redisClient
-    ? createRedisLimiterStore(redisClient, limiterName)
-    : createMemoryLimiterStore();
+  const store = redisClient ? createRedisLimiterStore(redisClient, limiterName) : createMemoryLimiterStore();
 
   return async (req, res, next) => {
     const key = String(keyGenerator(req) || req.ip || "unknown").toLowerCase();
+    /** @type {LimiterHit} */
     let result;
     try {
       result = await store.increment(key, windowMs);
@@ -86,7 +120,12 @@ export function createRateLimiter({
       // Uma falha do Redis nunca deve derrubar a rota que ele protege --
       // registra e deixa passar, em vez de transformar uma instabilidade do
       // store num 500 para todo mundo.
-      console.error(`[rateLimit:${limiterName}] falha ao consultar o store (${store.name}), permitindo a requisicao:`, error.message);
+      rateLimitStoreErrors.inc({ limiter: limiterName, store: store.name });
+      logger.warn("rate_limit_store_error", {
+        limiter: limiterName,
+        store: store.name,
+        message: error instanceof Error ? error.message : String(error)
+      });
       return next();
     }
 
@@ -96,6 +135,7 @@ export function createRateLimiter({
     res.setHeader("RateLimit-Reset", Math.ceil(resetAt / 1000));
 
     if (count > max) {
+      rateLimited.inc({ limiter: limiterName });
       res.setHeader("Retry-After", Math.max(1, Math.ceil((resetAt - Date.now()) / 1000)));
       return res.status(429).json({ message });
     }
@@ -107,6 +147,9 @@ export function createRateLimiter({
 export const authRateLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000,
   max: positiveInteger(process.env.AUTH_RATE_LIMIT_MAX, 12),
-  keyGenerator: (req) => `${req.ip}:${String(req.body?.email || "").trim().toLowerCase()}`,
+  keyGenerator: (req) =>
+    `${req.ip}:${String(req.body?.email || "")
+      .trim()
+      .toLowerCase()}`,
   name: "auth"
 });

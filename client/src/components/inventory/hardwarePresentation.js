@@ -1,12 +1,4 @@
-const preferredObjectKeys = [
-  "label",
-  "name",
-  "status",
-  "value",
-  "version",
-  "manufacturer",
-  "product"
-];
+const preferredObjectKeys = ["label", "name", "status", "value", "version", "manufacturer", "product"];
 
 function isPresent(value) {
   return value !== null && value !== undefined && value !== "";
@@ -24,9 +16,7 @@ export function formatHardwareValue(value, fallback = "Não disponível") {
   }
 
   if (Array.isArray(value)) {
-    const formattedValues = value
-      .map((item) => formatHardwareValue(item, ""))
-      .filter(Boolean);
+    const formattedValues = value.map((item) => formatHardwareValue(item, "")).filter(Boolean);
     return formattedValues.length ? formattedValues.join(", ") : fallback;
   }
 
@@ -55,10 +45,13 @@ export function formatHardwareValue(value, fallback = "Não disponível") {
 
 export function formatSoftwareLabel(software) {
   if (typeof software === "string") return software;
-  return formatHardwareValue({
-    name: software?.name || software?.title,
-    version: software?.version
-  }, "Software sem nome");
+  return formatHardwareValue(
+    {
+      name: software?.name || software?.title,
+      version: software?.version
+    },
+    "Software sem nome"
+  );
 }
 
 export function softwareIdentity(software, index = 0) {

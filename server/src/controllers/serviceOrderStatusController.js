@@ -1,9 +1,4 @@
-import {
-  createStatus,
-  listStatuses,
-  removeStatus,
-  updateStatus
-} from "../services/serviceOrderStatusService.js";
+import { createStatus, listStatuses, removeStatus, updateStatus } from "../services/serviceOrderStatusService.js";
 
 export async function list(req, res, next) {
   try {

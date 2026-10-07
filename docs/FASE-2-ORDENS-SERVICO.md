@@ -1,5 +1,7 @@
 # Fase 2 - Ordens de Servico
 
+> **Documento histórico.** Descreve o estado do projeto numa data passada e pode estar desatualizado; a fonte da verdade é o código e os documentos listados em [docs/README.md](README.md).
+
 Este documento registra a primeira base do modulo de Ordens de Servico do IT Guardian.
 
 ## Objetivo

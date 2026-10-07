@@ -1,0 +1,82 @@
+# Regras de alerta do IT Guardian (Prometheus). Carregue com `rule_files:` no prometheus.yml.
+# Cada alerta aponta para uma secao de docs/OBSERVABILIDADE.md (runbook).
+# Metricas expostas por GET /metrics (Authorization: Bearer $METRICS_TOKEN).
+groups:
+  - name: it-guardian-api
+    rules:
+      - alert: ITGuardianApiDown
+        expr: up{job="it-guardian"} == 0
+        for: 3m
+        labels: { severity: critical }
+        annotations:
+          summary: "API do IT Guardian fora do ar"
+          runbook: "docs/OBSERVABILIDADE.md#api-fora-do-ar"
+
+      - alert: ITGuardianHighErrorRate
+        expr: |
+          sum(rate(itguardian_http_requests_total{status=~"5.."}[5m]))
+            / clamp_min(sum(rate(itguardian_http_requests_total[5m])), 0.001) > 0.05
+        for: 10m
+        labels: { severity: critical }
+        annotations:
+          summary: "Mais de 5% das requisicoes terminam em 5xx"
+          runbook: "docs/OBSERVABILIDADE.md#taxa-alta-de-erros-5xx"
+
+      - alert: ITGuardianSlowRequests
+        expr: |
+          histogram_quantile(0.95, sum by (le) (rate(itguardian_http_request_duration_seconds_bucket[5m]))) > 2
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: "p95 de latencia acima de 2s"
+          runbook: "docs/OBSERVABILIDADE.md#latencia-alta"
+
+      - alert: ITGuardianEventLoopLag
+        expr: itguardian_nodejs_eventloop_lag_p99_seconds > 0.5
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Event loop do Node atrasado (p99 > 500ms)"
+          runbook: "docs/OBSERVABILIDADE.md#latencia-alta"
+
+  - name: it-guardian-database
+    rules:
+      - alert: ITGuardianDbPoolExhausted
+        expr: itguardian_db_pool_connections{state="waiting"} > 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Requisicoes esperando conexao do pool do banco"
+          runbook: "docs/OBSERVABILIDADE.md#pool-do-banco-saturado"
+
+  - name: it-guardian-security
+    rules:
+      - alert: ITGuardianLoginFailureSpike
+        expr: sum(rate(itguardian_auth_events_total{event="auth_login_failed"}[5m])) > 1
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Pico de falhas de login (possivel forca bruta)"
+          runbook: "docs/OBSERVABILIDADE.md#pico-de-falhas-de-login"
+
+      - alert: ITGuardianAccountLockouts
+        expr: sum(increase(itguardian_auth_events_total{event="auth_lockout"}[15m])) >= 5
+        labels: { severity: warning }
+        annotations:
+          summary: "Varias contas bloqueadas em 15 minutos"
+          runbook: "docs/OBSERVABILIDADE.md#pico-de-falhas-de-login"
+
+      - alert: ITGuardianRateLimitRejections
+        expr: sum(rate(itguardian_rate_limit_rejections_total[5m])) > 2
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Limitador de taxa recusando requisicoes de forma sustentada"
+          runbook: "docs/OBSERVABILIDADE.md#limitador-de-taxa"
+
+      - alert: ITGuardianRateLimitStoreFailing
+        expr: increase(itguardian_rate_limit_store_errors_total[10m]) > 0
+        labels: { severity: warning }
+        annotations:
+          summary: "Armazenamento do limitador (Redis) falhando: limites nao estao sendo aplicados"
+          runbook: "docs/OBSERVABILIDADE.md#limitador-de-taxa"

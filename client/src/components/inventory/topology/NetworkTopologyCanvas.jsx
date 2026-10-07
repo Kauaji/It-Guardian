@@ -79,35 +79,47 @@ const NetworkTopologyCanvas = forwardRef(function NetworkTopologyCanvas(
   // A scope or mode change must not open an inspector from an earlier click.
   useEffect(() => clearPendingActivation, [clearPendingActivation, nodeScopeKey, editMode, linkDraftActive]);
 
-  const activateNodeImmediately = useCallback((nodeId) => {
-    clearPendingActivation();
-    onNodeActivate(nodeId);
-  }, [clearPendingActivation, onNodeActivate]);
-
-  const activatePointerNode = useCallback((nodeId) => {
-    clearPendingActivation();
-    const node = nodes.find((entry) => entry.id === nodeId);
-    if (!node) return;
-    if (linkDraftActive || !isClusterNode(node)) {
+  const activateNodeImmediately = useCallback(
+    (nodeId) => {
+      clearPendingActivation();
       onNodeActivate(nodeId);
-      return;
-    }
-    // Opening the inspector can move or cover a cluster before a second click.
-    pendingActivationRef.current = window.setTimeout(() => {
-      pendingActivationRef.current = null;
-      latestActivationRef.current(nodeId);
-    }, CLUSTER_ACTIVATION_DELAY);
-  }, [clearPendingActivation, linkDraftActive, nodes, onNodeActivate]);
+    },
+    [clearPendingActivation, onNodeActivate]
+  );
 
-  const handleNodeOpen = useCallback((node) => {
-    clearPendingActivation();
-    onNodeOpen?.(node);
-  }, [clearPendingActivation, onNodeOpen]);
+  const activatePointerNode = useCallback(
+    (nodeId) => {
+      clearPendingActivation();
+      const node = nodes.find((entry) => entry.id === nodeId);
+      if (!node) return;
+      if (linkDraftActive || !isClusterNode(node)) {
+        onNodeActivate(nodeId);
+        return;
+      }
+      // Opening the inspector can move or cover a cluster before a second click.
+      pendingActivationRef.current = window.setTimeout(() => {
+        pendingActivationRef.current = null;
+        latestActivationRef.current(nodeId);
+      }, CLUSTER_ACTIVATION_DELAY);
+    },
+    [clearPendingActivation, linkDraftActive, nodes, onNodeActivate]
+  );
 
-  const handleSelectLink = useCallback((linkId) => {
-    clearPendingActivation();
-    onSelectLink(linkId);
-  }, [clearPendingActivation, onSelectLink]);
+  const handleNodeOpen = useCallback(
+    (node) => {
+      clearPendingActivation();
+      onNodeOpen?.(node);
+    },
+    [clearPendingActivation, onNodeOpen]
+  );
+
+  const handleSelectLink = useCallback(
+    (linkId) => {
+      clearPendingActivation();
+      onSelectLink(linkId);
+    },
+    [clearPendingActivation, onSelectLink]
+  );
 
   const getSvgPoint = useCallback((clientX, clientY, inverseMatrix) => {
     const svg = svgRef.current;
@@ -206,10 +218,7 @@ const NetworkTopologyCanvas = forwardRef(function NetworkTopologyCanvas(
       const point = getSvgPoint(event.clientX, event.clientY, drag.inverseMatrix);
       const dx = point.x - drag.startSvgX;
       const dy = point.y - drag.startSvgY;
-      if (!drag.moved && Math.hypot(
-        event.clientX - drag.startClientX,
-        event.clientY - drag.startClientY
-      ) > DRAG_THRESHOLD) {
+      if (!drag.moved && Math.hypot(event.clientX - drag.startClientX, event.clientY - drag.startClientY) > DRAG_THRESHOLD) {
         drag.moved = true;
         clearPendingActivation();
       }
@@ -231,50 +240,59 @@ const NetworkTopologyCanvas = forwardRef(function NetworkTopologyCanvas(
     [clearPendingActivation, getSvgPoint, linkDraftActive, linkDraftSourceNodeId, onNodeDrag]
   );
 
-  const handlePointerUp = useCallback((event) => {
-    const drag = dragRef.current;
-    if (!drag || drag.pointerId !== event.pointerId) return;
-    dragRef.current = null;
-    releasePointer(drag);
+  const handlePointerUp = useCallback(
+    (event) => {
+      const drag = dragRef.current;
+      if (!drag || drag.pointerId !== event.pointerId) return;
+      dragRef.current = null;
+      releasePointer(drag);
 
-    if (drag.type === "node") {
-      if (drag.moved) {
-        onNodeDragEnd?.(drag.nodeId);
-      } else {
-        activatePointerNode(drag.nodeId);
+      if (drag.type === "node") {
+        if (drag.moved) {
+          onNodeDragEnd?.(drag.nodeId);
+        } else {
+          activatePointerNode(drag.nodeId);
+        }
+        return;
       }
-      return;
-    }
 
-    if (drag.type === "select" && !drag.moved) {
-      activatePointerNode(drag.nodeId);
-      return;
-    }
+      if (drag.type === "select" && !drag.moved) {
+        activatePointerNode(drag.nodeId);
+        return;
+      }
 
-    if (drag.type === "pan" && !drag.moved) {
+      if (drag.type === "pan" && !drag.moved) {
+        clearPendingActivation();
+        onCanvasBackgroundClick();
+      }
+    },
+    [activatePointerNode, clearPendingActivation, onCanvasBackgroundClick, onNodeDragEnd]
+  );
+
+  const handlePointerCancel = useCallback(
+    (event) => {
       clearPendingActivation();
-      onCanvasBackgroundClick();
-    }
-  }, [activatePointerNode, clearPendingActivation, onCanvasBackgroundClick, onNodeDragEnd]);
+      const drag = dragRef.current;
+      if (!drag || drag.pointerId !== event.pointerId) return;
+      dragRef.current = null;
+      releasePointer(drag);
+      if (drag.type === "node" && drag.moved) {
+        onNodeDrag(drag.nodeId, drag.originX, drag.originY);
+      }
+    },
+    [clearPendingActivation, onNodeDrag]
+  );
 
-  const handlePointerCancel = useCallback((event) => {
-    clearPendingActivation();
-    const drag = dragRef.current;
-    if (!drag || drag.pointerId !== event.pointerId) return;
-    dragRef.current = null;
-    releasePointer(drag);
-    if (drag.type === "node" && drag.moved) {
-      onNodeDrag(drag.nodeId, drag.originX, drag.originY);
-    }
-  }, [clearPendingActivation, onNodeDrag]);
-
-  const handlePointerLeave = useCallback((event) => {
-    setDraftPointer(null);
-    const drag = dragRef.current;
-    if (drag && !drag.captureTarget?.hasPointerCapture?.(drag.pointerId)) {
-      handlePointerUp(event);
-    }
-  }, [handlePointerUp]);
+  const handlePointerLeave = useCallback(
+    (event) => {
+      setDraftPointer(null);
+      const drag = dragRef.current;
+      if (drag && !drag.captureTarget?.hasPointerCapture?.(drag.pointerId)) {
+        handlePointerUp(event);
+      }
+    },
+    [handlePointerUp]
+  );
 
   const handleWheel = useCallback(
     (event) => {
@@ -296,20 +314,12 @@ const NetworkTopologyCanvas = forwardRef(function NetworkTopologyCanvas(
   }, [handleWheel]);
 
   const nodeByRefKey = useMemo(() => new Map(nodes.map((node) => [topologyNodeKey(node), node])), [nodes]);
-  const draftSource = linkDraftActive
-    ? nodes.find((node) => node.id === linkDraftSourceNodeId)
-    : null;
+  const draftSource = linkDraftActive ? nodes.find((node) => node.id === linkDraftSourceNodeId) : null;
 
   return (
     <div className="network-topology-canvas-wrap">
       {onNavigateBack ? (
-        <button
-          type="button"
-          className="network-topology-canvas-back"
-          onClick={onNavigateBack}
-          aria-label={backLabel}
-          title={backLabel}
-        >
+        <button type="button" className="network-topology-canvas-back" onClick={onNavigateBack} aria-label={backLabel} title={backLabel}>
           <ArrowLeft size={18} aria-hidden="true" />
         </button>
       ) : null}
@@ -325,12 +335,7 @@ const NetworkTopologyCanvas = forwardRef(function NetworkTopologyCanvas(
         onPointerLeave={handlePointerLeave}
       >
         <defs>
-          <pattern
-            id="network-topology-grid"
-            width={48}
-            height={48}
-            patternUnits="userSpaceOnUse"
-          >
+          <pattern id="network-topology-grid" width={48} height={48} patternUnits="userSpaceOnUse">
             <path d="M 48 0 L 0 0 0 48" className="network-topology-grid-line" />
           </pattern>
         </defs>

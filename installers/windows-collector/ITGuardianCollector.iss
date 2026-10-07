@@ -4,6 +4,24 @@
 #ifndef ApiBaseUrl
   #define ApiBaseUrl "https://it-guardian-server.vercel.app"
 #endif
+#ifndef RustdeskIdServer
+  #define RustdeskIdServer ""
+#endif
+#ifndef RustdeskRelayServer
+  #define RustdeskRelayServer ""
+#endif
+#ifndef RustdeskKey
+  #define RustdeskKey ""
+#endif
+; Chaves PUBLICAS de assinatura (ECDSA P-256, base64 SPKI). Passadas por build-installer.ps1
+; (-ReleasePublicKey / release-public-key.txt / -JobSigningPublicKey). Vazias = o agente instalado
+; ignora atualizacoes automaticas (release) ou so recebe a chave de jobs pela ativacao.
+#ifndef ReleasePublicKey
+  #define ReleasePublicKey ""
+#endif
+#ifndef JobSigningPublicKey
+  #define JobSigningPublicKey ""
+#endif
 
 [Setup]
 AppId={{7CA73097-A67E-4551-94A2-CB11A0F61E91}
@@ -48,6 +66,15 @@ Source: "Uninstall-Collector.ps1"; DestDir: "{app}"; Flags: ignoreversion
 ; transporte JPEG de sempre, nunca como uma falha de instalacao.
 Source: "{#WebrtcHelperPath}"; DestDir: "{app}"; Flags: ignoreversion
 #endif
+#ifdef RustdeskInstallerPath
+; Instalador oficial do RustDesk, empacotado sob o nome fixo
+; "rustdesk-installer.exe" (ver build-installer.ps1). Sem esse arquivo
+; presente no momento de gerar o instalador, este define nunca chega a
+; existir e o IT Guardian e instalado normalmente sem o RustDesk -- o
+; transporte RustDesk so fica disponivel quando REMOTE_ASSISTANCE_RUSTDESK_ENABLED
+; tambem estiver ligado no servidor (ver docs/ASSISTENCIA-REMOTA.md).
+Source: "{#RustdeskInstallerPath}"; DestDir: "{app}"; DestName: "rustdesk-installer.exe"; Flags: ignoreversion
+#endif
 
 [Icons]
 Name: "{commondesktop}\Abrir chamado - IT Guardian"; Filename: "{code:GetSupportUrl}"; WorkingDir: "{app}"; IconFilename: "{app}\ITGuardian.exe"
@@ -76,6 +103,7 @@ var
   ExistingInstallDetected: Boolean;
   ActivatedProductKey: string;
   AgentToken: string;
+  ActivatedJobSigningPublicKey: string;
   SupportUrl: string;
   MachineFingerprint: string;
   IntervalSeconds: Integer;
@@ -265,6 +293,9 @@ begin
     end;
 
     AgentToken := JsonStringValue(ResponseBody, 'agentToken');
+    { Chave publica de assinatura de jobs: confianca no primeiro uso, sobre TLS, no
+      momento da ativacao. So vira config se o agente ainda nao tiver uma fixada. }
+    ActivatedJobSigningPublicKey := JsonStringValue(ResponseBody, 'jobSigningPublicKey');
     SupportUrl := JsonStringValue(ResponseBody, 'supportUrl');
     IntervalSeconds := JsonIntegerValue(ResponseBody, 'intervalSeconds', 300);
     if AgentToken = '' then
@@ -345,6 +376,7 @@ begin
   MachineFingerprint := ReadMachineFingerprint();
   ActivatedProductKey := '';
   AgentToken := '';
+  ActivatedJobSigningPublicKey := '';
   if not ExistingConfigAvailable then
     SupportUrl := '';
   IntervalSeconds := 300;
@@ -479,6 +511,12 @@ var
   PreservedIncludeLoggedUser: Boolean;
   PreservedEnableRemoteScriptExecution: Boolean;
   PreservedEnableRemoteAssistance: Boolean;
+  PreservedReleasePublicKey: string;
+  PreservedJobSigningPublicKey: string;
+  PreservedAllowUnsignedUpdates: Boolean;
+  PreservedAllowUnsignedJobs: Boolean;
+  ReleasePublicKeyToWrite: string;
+  JobSigningPublicKeyToWrite: string;
 begin
   if CurStep <> ssPostInstall then Exit;
 
@@ -504,6 +542,10 @@ begin
       PreservedIncludeLoggedUser := JsonConfigBooleanValue(ExistingConfig, 'includeLoggedUser', False);
       PreservedEnableRemoteScriptExecution := JsonConfigBooleanValue(ExistingConfig, 'enableRemoteScriptExecution', False);
       PreservedEnableRemoteAssistance := JsonConfigBooleanValue(ExistingConfig, 'enableRemoteAssistance', False);
+      PreservedReleasePublicKey := JsonConfigStringValue(ExistingConfig, 'releasePublicKey');
+      PreservedJobSigningPublicKey := JsonConfigStringValue(ExistingConfig, 'jobSigningPublicKey');
+      PreservedAllowUnsignedUpdates := JsonConfigBooleanValue(ExistingConfig, 'allowUnsignedUpdates', False);
+      PreservedAllowUnsignedJobs := JsonConfigBooleanValue(ExistingConfig, 'allowUnsignedJobs', False);
     end
     else
     begin
@@ -514,7 +556,22 @@ begin
       PreservedIncludeLoggedUser := False;
       PreservedEnableRemoteScriptExecution := ScriptExecutionPage.Values[0];
       PreservedEnableRemoteAssistance := RemoteAssistancePage.Values[0];
+      PreservedReleasePublicKey := '';
+      PreservedJobSigningPublicKey := '';
+      PreservedAllowUnsignedUpdates := False;
+      PreservedAllowUnsignedJobs := False;
     end;
+
+    { Uma chave ja fixada NUNCA e sobrescrita: a preservada vence; so na falta dela entram a
+      embutida no instalador (release) ou a entregue na ativacao (jobs). }
+    ReleasePublicKeyToWrite := PreservedReleasePublicKey;
+    if ReleasePublicKeyToWrite = '' then
+      ReleasePublicKeyToWrite := '{#ReleasePublicKey}';
+    JobSigningPublicKeyToWrite := PreservedJobSigningPublicKey;
+    if JobSigningPublicKeyToWrite = '' then
+      JobSigningPublicKeyToWrite := ActivatedJobSigningPublicKey;
+    if JobSigningPublicKeyToWrite = '' then
+      JobSigningPublicKeyToWrite := '{#JobSigningPublicKey}';
 
     ConfigJson :=
       '{' + #13#10 +
@@ -529,7 +586,14 @@ begin
       '  "segment": "' + JsonEscape(PreservedSegment) + '",' + #13#10 +
       '  "includeLoggedUser": ' + BoolToJson(PreservedIncludeLoggedUser) + ',' + #13#10 +
       '  "enableRemoteScriptExecution": ' + BoolToJson(PreservedEnableRemoteScriptExecution) + ',' + #13#10 +
-      '  "enableRemoteAssistance": ' + BoolToJson(PreservedEnableRemoteAssistance) + #13#10 +
+      '  "enableRemoteAssistance": ' + BoolToJson(PreservedEnableRemoteAssistance) + ',' + #13#10 +
+      '  "releasePublicKey": "' + JsonEscape(ReleasePublicKeyToWrite) + '",' + #13#10 +
+      '  "jobSigningPublicKey": "' + JsonEscape(JobSigningPublicKeyToWrite) + '",' + #13#10 +
+      '  "allowUnsignedUpdates": ' + BoolToJson(PreservedAllowUnsignedUpdates) + ',' + #13#10 +
+      '  "allowUnsignedJobs": ' + BoolToJson(PreservedAllowUnsignedJobs) + ',' + #13#10 +
+      '  "rustdeskIdServer": "' + JsonEscape('{#RustdeskIdServer}') + '",' + #13#10 +
+      '  "rustdeskRelayServer": "' + JsonEscape('{#RustdeskRelayServer}') + '",' + #13#10 +
+      '  "rustdeskKey": "' + JsonEscape('{#RustdeskKey}') + '"' + #13#10 +
       '}';
     SaveStringToFile(ExpandConstant('{app}\config.json'), ConfigJson, False);
   end;
@@ -538,6 +602,12 @@ begin
     '-NoProfile -ExecutionPolicy Bypass -File "' +
     ExpandConstant('{app}\Finalize-CollectorInstall.ps1') +
     '" -InstallDirectory "' + ExpandConstant('{app}') + '"';
+  { Reparo/atualizacao com config existente nao reescreve config.json: o Finalize acrescenta as
+    chaves embutidas somente se ainda nao houver uma fixada (nunca sobrescreve). }
+  if '{#ReleasePublicKey}' <> '' then
+    FinalizeParameters := FinalizeParameters + ' -ReleasePublicKey "{#ReleasePublicKey}"';
+  if '{#JobSigningPublicKey}' <> '' then
+    FinalizeParameters := FinalizeParameters + ' -JobSigningPublicKey "{#JobSigningPublicKey}"';
 
   if not Exec(
     ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),

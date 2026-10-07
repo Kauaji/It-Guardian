@@ -34,19 +34,21 @@ test("login usa cookie HttpOnly e restaura a sessao apos recarregar", async ({ p
   expect(storage.localToken).toBeNull();
 
   const cookies = await context.cookies();
-  expect(cookies).toEqual(expect.arrayContaining([
-    expect.objectContaining({
-      name: "it_guardian_session",
-      httpOnly: true,
-      sameSite: "Lax"
-    })
-  ]));
+  expect(cookies).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        name: "it_guardian_session",
+        httpOnly: true,
+        sameSite: "Lax"
+      })
+    ])
+  );
 
   await page.reload();
   await expect(page.getByRole("heading", { name: "Infraestrutura em tempo real" })).toBeVisible();
 });
 
-test("navega para Ordens de Servico e fecha detalhes com Escape", async ({ page }) => {
+test("navega para Ordens de Serviço e fecha detalhes com Escape", async ({ page }) => {
   await login(page);
 
   await page.getByRole("button", { name: /Ordens de Servi/ }).click();

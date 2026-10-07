@@ -1,7 +1,14 @@
 [CmdletBinding()]
 param(
   [string]$ApiBaseUrl = "https://it-guardian-server.vercel.app",
-  [string]$OutputDirectory = ""
+  [string]$OutputDirectory = "",
+  # Chave PUBLICA de release (ECDSA P-256, base64 de SubjectPublicKeyInfo) embutida no instalador:
+  # sem ela o agente instalado IGNORA atualizacoes automaticas. Se omitida, usa o conteudo de
+  # installers/windows-collector/release-public-key.txt quando o arquivo existir.
+  [string]$ReleasePublicKey = "",
+  # Opcional: chave publica de assinatura de jobs a embutir. Normalmente NAO e necessaria: o servidor
+  # a entrega na ativacao (confianca no primeiro uso sobre TLS).
+  [string]$JobSigningPublicKey = ""
 )
 
 Set-StrictMode -Version Latest
@@ -82,6 +89,21 @@ $executablePath = Join-Path $PSScriptRoot "ITGuardian.exe"
 $uninstallerExecutablePath = Join-Path $PSScriptRoot "ITGuardian-Uninstaller.exe"
 $sourcePath = Join-Path $PSScriptRoot "..\..\agent\windows\ITGuardian.Windows.cs"
 $remoteAssistanceSourcePath = Join-Path $PSScriptRoot "..\..\agent\windows\ITGuardian.RemoteAssistance.cs"
+$rustdeskControllerSourcePath = Join-Path $PSScriptRoot "..\..\agent\windows\ITGuardian.RustdeskController.cs"
+# Politica de confianca (assinatura ECDSA, anti-replay), configuracao e log: testados em agent\windows\tests.
+$loggingSourcePath = Join-Path $PSScriptRoot "..\..\agent\windows\ITGuardian.Logging.cs"
+$signingSourcePath = Join-Path $PSScriptRoot "..\..\agent\windows\ITGuardian.Signing.cs"
+$policySourcePath = Join-Path $PSScriptRoot "..\..\agent\windows\ITGuardian.Policy.cs"
+$configSourcePath = Join-Path $PSScriptRoot "..\..\agent\windows\ITGuardian.Config.cs"
+$agentSourcePaths = @(
+  $sourcePath,
+  $remoteAssistanceSourcePath,
+  $rustdeskControllerSourcePath,
+  $loggingSourcePath,
+  $signingSourcePath,
+  $policySourcePath,
+  $configSourcePath
+)
 $uninstallerSourcePath = Join-Path $PSScriptRoot "ITGuardian.Uninstaller.cs"
 $iconScriptPath = Join-Path $PSScriptRoot "New-ITGuardianIcon.ps1"
 $frameworkDirectory = Join-Path $env:WINDIR "Microsoft.NET\Framework64\v4.0.30319"
@@ -98,6 +120,14 @@ if (-not (Test-Path -LiteralPath $sourcePath)) {
 if (-not (Test-Path -LiteralPath $remoteAssistanceSourcePath)) {
   throw "Codigo-fonte da assistencia remota nao encontrado."
 }
+if (-not (Test-Path -LiteralPath $rustdeskControllerSourcePath)) {
+  throw "Codigo-fonte do controlador RustDesk nao encontrado."
+}
+foreach ($agentSource in $agentSourcePaths) {
+  if (-not (Test-Path -LiteralPath $agentSource)) {
+    throw "Codigo-fonte do agente nao encontrado: $agentSource"
+  }
+}
 if (-not (Test-Path -LiteralPath $uninstallerSourcePath)) {
   throw "Codigo-fonte do desinstalador Windows nao encontrado."
 }
@@ -113,10 +143,10 @@ if (-not (Test-Path -LiteralPath $uninstallerSourcePath)) {
   "/reference:$(Join-Path $frameworkDirectory 'System.Core.dll')" `
   "/reference:$(Join-Path $frameworkDirectory 'System.Drawing.dll')" `
   "/reference:$(Join-Path $frameworkDirectory 'System.Management.dll')" `
+  "/reference:$(Join-Path $frameworkDirectory 'System.Numerics.dll')" `
   "/reference:$(Join-Path $frameworkDirectory 'System.Web.Extensions.dll')" `
   "/reference:$(Join-Path $frameworkDirectory 'System.Windows.Forms.dll')" `
-  $sourcePath `
-  $remoteAssistanceSourcePath
+  @agentSourcePaths
 if ($LASTEXITCODE -ne 0) {
   throw "A compilacao do ITGuardian.exe falhou com codigo $LASTEXITCODE."
 }
@@ -200,6 +230,51 @@ if (-not $dotnetExecutable) {
   }
 }
 
+# --- Instalador do RustDesk (opcional) --------------------------------------
+# O IT Guardian nao redistribui o RustDesk por conta propria. Se
+# installers/windows-collector/vendor/rustdesk-installer.exe ja existir (voce
+# baixou manualmente, ou um build anterior ja baixou), ele e reaproveitado
+# sem nova tentativa de rede. Caso contrario, o script tenta baixar
+# automaticamente a ultima release oficial do GitHub -- e so uma
+# conveniencia: sem internet, sem acesso ao GitHub, ou se o padrao de nome do
+# asset mudar numa release futura, o download falha silenciosamente e o build
+# segue sem o RustDesk (mesma logica de "ausencia nunca e erro" do helper
+# WebRTC acima) -- Finalize-CollectorInstall.ps1 ja trata a ausencia do
+# instalador embutido como aviso, nao como falha. Para pular o download
+# automatico (ambiente sem saida para a internet), defina
+# $env:RUSTDESK_SKIP_AUTO_DOWNLOAD = "1" antes de rodar este script.
+$rustdeskInstallerVendorPath = Join-Path $PSScriptRoot "vendor\rustdesk-installer.exe"
+if (-not (Test-Path -LiteralPath $rustdeskInstallerVendorPath) -and -not $env:RUSTDESK_SKIP_AUTO_DOWNLOAD) {
+  Write-Host "Instalador do RustDesk nao encontrado em vendor/; tentando baixar a ultima release oficial..." -ForegroundColor Yellow
+  try {
+    $release = Invoke-RestMethod `
+      -Uri "https://api.github.com/repos/rustdesk/rustdesk/releases/latest" `
+      -Headers @{ "User-Agent" = "ITGuardian-Installer-Build" } `
+      -TimeoutSec 20
+    $asset = $release.assets |
+      Where-Object { $_.name -match "^rustdesk-.*-x86_64\.exe$" -and $_.name -notmatch "sciter" } |
+      Select-Object -First 1
+    if (-not $asset) {
+      $asset = $release.assets | Where-Object { $_.name -match "^rustdesk-.*\.exe$" } | Select-Object -First 1
+    }
+    if ($asset) {
+      New-Item -ItemType Directory -Force -Path (Join-Path $PSScriptRoot "vendor") | Out-Null
+      Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $rustdeskInstallerVendorPath -TimeoutSec 120
+      Write-Host "RustDesk $($release.tag_name) baixado automaticamente ($($asset.name))." -ForegroundColor Green
+    } else {
+      Write-Host "Aviso: nenhum instalador x86_64 encontrado na ultima release do RustDesk -- baixe manualmente se precisar dele." -ForegroundColor Yellow
+    }
+  } catch {
+    Write-Host "Aviso: download automatico do RustDesk falhou ($($_.Exception.Message)) -- baixe manualmente para vendor/rustdesk-installer.exe se precisar dele." -ForegroundColor Yellow
+  }
+}
+if (Test-Path -LiteralPath $rustdeskInstallerVendorPath) {
+  Write-Host "Instalador do RustDesk encontrado; sera empacotado junto do coletor." -ForegroundColor Green
+} else {
+  Write-Host "Aviso: instalador sera gerado sem o RustDesk." -ForegroundColor Yellow
+  $rustdeskInstallerVendorPath = $null
+}
+
 $uri = $null
 if (
   -not [Uri]::TryCreate($ApiBaseUrl, [UriKind]::Absolute, [ref]$uri) -or
@@ -247,8 +322,56 @@ $resolvedOutputDirectory = [IO.Path]::GetFullPath($OutputDirectory)
 New-Item -ItemType Directory -Force -Path $resolvedOutputDirectory | Out-Null
 $isccArgs = [Collections.Generic.List[string]]::new()
 $isccArgs.Add("/DApiBaseUrl=$($ApiBaseUrl.TrimEnd('/'))")
+# Chaves publicas de confianca (assinatura de atualizacao e de jobs). Formato validado aqui para
+# nunca embutir lixo: SPKI DER de P-256 = 91 bytes, prefixo fixo "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE".
+function Test-P256PublicKeyShape {
+  param([string]$Value)
+  return $Value -match '^MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE[A-Za-z0-9+/]{86}==$'
+}
+$releaseKeyFile = Join-Path $PSScriptRoot "release-public-key.txt"
+if ([string]::IsNullOrWhiteSpace($ReleasePublicKey) -and (Test-Path -LiteralPath $releaseKeyFile)) {
+  $ReleasePublicKey = (Get-Content -LiteralPath $releaseKeyFile -Encoding UTF8 |
+    Where-Object { $_ -and -not $_.TrimStart().StartsWith("#") } |
+    Select-Object -First 1)
+  Write-Host "Chave publica de release lida de release-public-key.txt." -ForegroundColor Green
+}
+$ReleasePublicKey = "$ReleasePublicKey".Trim()
+$JobSigningPublicKey = "$JobSigningPublicKey".Trim()
+if ($ReleasePublicKey) {
+  if (-not (Test-P256PublicKeyShape $ReleasePublicKey)) {
+    throw "ReleasePublicKey invalida: esperado base64 de SubjectPublicKeyInfo ECDSA P-256 (124 caracteres, gerado por 'npm run agent:keys -- release')."
+  }
+  $isccArgs.Add("/DReleasePublicKey=$ReleasePublicKey")
+  Write-Host "Instalador embute a chave publica de release: atualizacoes automaticas exigem assinatura." -ForegroundColor Green
+} else {
+  Write-Host "Aviso: sem chave publica de release (-ReleasePublicKey ou release-public-key.txt). O agente instalado IGNORARA atualizacoes automaticas ate receber releasePublicKey no config.json." -ForegroundColor Yellow
+}
+if ($JobSigningPublicKey) {
+  if (-not (Test-P256PublicKeyShape $JobSigningPublicKey)) {
+    throw "JobSigningPublicKey invalida: esperado base64 de SubjectPublicKeyInfo ECDSA P-256 (124 caracteres)."
+  }
+  $isccArgs.Add("/DJobSigningPublicKey=$JobSigningPublicKey")
+}
+# Relay RustDesk proprio (opcional): lido de variaveis de ambiente no momento
+# do build, nao de parametro de linha de comando, porque sao valores de
+# infraestrutura fixos da organizacao (o mesmo relay para toda a frota), nao
+# algo que muda por execucao do script -- mesmo raciocinio de ApiBaseUrl
+# acima, so que sem valor padrao (vazio = cliente RustDesk continua no relay
+# publico de fabrica ate alguem configurar isto).
+if (-not [string]::IsNullOrWhiteSpace($env:RUSTDESK_ID_SERVER)) {
+  $isccArgs.Add("/DRustdeskIdServer=$($env:RUSTDESK_ID_SERVER)")
+}
+if (-not [string]::IsNullOrWhiteSpace($env:RUSTDESK_RELAY_SERVER)) {
+  $isccArgs.Add("/DRustdeskRelayServer=$($env:RUSTDESK_RELAY_SERVER)")
+}
+if (-not [string]::IsNullOrWhiteSpace($env:RUSTDESK_KEY)) {
+  $isccArgs.Add("/DRustdeskKey=$($env:RUSTDESK_KEY)")
+}
 if ($webrtcHelperPath) {
   $isccArgs.Add("/DWebrtcHelperPath=$webrtcHelperPath")
+}
+if ($rustdeskInstallerVendorPath) {
+  $isccArgs.Add("/DRustdeskInstallerPath=$rustdeskInstallerVendorPath")
 }
 $isccArgs.Add("/O$resolvedOutputDirectory")
 $isccArgs.Add((Join-Path $PSScriptRoot "ITGuardianCollector.iss"))
@@ -260,6 +383,9 @@ if ($webrtcHelperPath) {
   Write-Host "Instalador inclui o transporte WebRTC (video em tempo real)." -ForegroundColor Green
 } else {
   Write-Host "Instalador gerado sem o transporte WebRTC (video continua por JPEG)." -ForegroundColor Yellow
+}
+if ($rustdeskInstallerVendorPath) {
+  Write-Host "Instalador inclui o cliente RustDesk (transporte alternativo)." -ForegroundColor Green
 }
 $installerExecutablePath = Join-Path $resolvedOutputDirectory "ITGuardian-Collector-Setup.exe"
 $signedInstaller = Invoke-CodeSigning -FilePath $installerExecutablePath

@@ -1,14 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { useTestDatabase } from "../test-support/database.mjs";
 
-process.env.DATABASE_URL = "memory";
+await useTestDatabase();
 process.env.ENABLE_DEMO_SEED = "true";
 process.env.JWT_SECRET = "integration-test-secret-with-at-least-32-characters";
 process.env.NODE_ENV = "test";
 
 const { createApp } = await import("../src/app.js");
-const { createMaintenanceScript } = await import("../src/repositories/maintenanceScriptRepository.js");
+const { createMaintenanceScript } = await import("../src/services/maintenanceScripts/maintenanceScriptsFacade.js");
 const { createManualAsset } = await import("../src/repositories/manualAssetRepository.js");
+const { checkPingStatus } = await import("../src/services/pingStatusService.js");
 
 const trustedOrigin = "http://localhost:5173";
 const basePath = "/api/preventive-automation-plans";
@@ -57,7 +59,8 @@ test("plano de automacao preventiva: criar, listar, pausar, reativar e excluir",
       assetTag: "AUTOMATION-TEST-1",
       ip: "203.0.113.50"
     },
-    user: { id: null }
+    user: { id: null },
+    checkPing: checkPingStatus
   });
 
   const createResponse = await fetch(baseUrl + basePath, {
@@ -80,7 +83,10 @@ test("plano de automacao preventiva: criar, listar, pausar, reativar e excluir",
   const listResponse = await fetch(baseUrl + basePath, { headers: { cookie } });
   assert.equal(listResponse.status, 200);
   const listedPlans = (await listResponse.json()).preventiveAutomationPlans;
-  assert.ok(listedPlans.some((plan) => plan.id === created.id), "plano recem-criado deve aparecer na listagem");
+  assert.ok(
+    listedPlans.some((plan) => plan.id === created.id),
+    "plano recem-criado deve aparecer na listagem"
+  );
 
   const detailResponse = await fetch(`${baseUrl}${basePath}/${created.id}`, { headers: { cookie } });
   assert.equal(detailResponse.status, 200);

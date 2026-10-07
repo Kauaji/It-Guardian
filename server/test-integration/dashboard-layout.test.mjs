@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { useTestDatabase } from "../test-support/database.mjs";
 
-process.env.DATABASE_URL = "memory";
+await useTestDatabase();
 process.env.ENABLE_DEMO_SEED = "true";
 process.env.JWT_SECRET = "dashboard-layout-integration-secret-32ch";
 process.env.NODE_ENV = "test";
@@ -159,9 +160,7 @@ test("usuario sem nenhuma permissao de dashboard recebe 403 em GET/PUT/reset", a
 test("usuario com dashboard.view mas sem dashboard.customize consegue ver o layout, nao consegue salvar nem resetar", async (t) => {
   await initializeRuntime();
   const { query } = await import("../src/database.js");
-  await query("UPDATE users SET permissions = '[\"dashboard.view\"]'::jsonb WHERE email = $1", [
-    "sem.permissao@itguardian.local"
-  ]);
+  await query("UPDATE users SET permissions = '[\"dashboard.view\"]'::jsonb WHERE email = $1", ["sem.permissao@itguardian.local"]);
   const server = await listen(createApp());
   t.after(async () => {
     await new Promise((resolve) => server.close(resolve));

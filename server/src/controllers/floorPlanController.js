@@ -91,7 +91,11 @@ export async function uploadFloorPlanBackgroundController(req, res, next) {
   try {
     const encodedName = String(req.headers["x-file-name"] || "planta");
     let fileName = encodedName;
-    try { fileName = decodeURIComponent(encodedName); } catch { /* Repository sanitizes malformed names. */ }
+    try {
+      fileName = decodeURIComponent(encodedName);
+    } catch {
+      /* Repository sanitizes malformed names. */
+    }
     const background = await saveFloorPlanBackground(
       req.params.id,
       req.params.floorId,
@@ -146,12 +150,7 @@ export async function floorPlanAssetHeatmapController(req, res, next) {
 export async function floorPlanServiceOrderHeatmapController(req, res, next) {
   try {
     res.json({
-      heatmap: await getFloorPlanServiceOrderHeatmap(
-        req.params.id,
-        req.query.startDate,
-        req.query.endDate,
-        req.query
-      )
+      heatmap: await getFloorPlanServiceOrderHeatmap(req.params.id, req.query.startDate, req.query.endDate, req.query)
     });
   } catch (error) {
     next(error);

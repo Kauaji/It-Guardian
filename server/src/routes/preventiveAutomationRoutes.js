@@ -34,21 +34,9 @@ router.post("/process-due", requirePermission("preventive_automation.run_prepare
 router.get("/:id", requirePermission("preventive_automation.view"), detail);
 router.get("/:id/history", requirePermission("preventive_automation.view"), history);
 router.get("/:id/assets/:assetId", requirePermission("preventive_automation.view"), assetDetail);
-router.put(
-  "/:id/assets/:assetId/override",
-  requirePermission("preventive_automation.manage_asset_override"),
-  saveAssetOverride
-);
-router.delete(
-  "/:id/assets/:assetId/override",
-  requirePermission("preventive_automation.manage_asset_override"),
-  removeAssetOverride
-);
-router.delete(
-  "/:id/assets/:assetId",
-  requirePermission("preventive_automation.remove_asset"),
-  removeAsset
-);
+router.put("/:id/assets/:assetId/override", requirePermission("preventive_automation.manage_asset_override"), saveAssetOverride);
+router.delete("/:id/assets/:assetId/override", requirePermission("preventive_automation.manage_asset_override"), removeAssetOverride);
+router.delete("/:id/assets/:assetId", requirePermission("preventive_automation.remove_asset"), removeAsset);
 router.patch("/:id", requirePermission("preventive_automation.update"), update);
 router.post("/:id/disable", requirePermission("preventive_automation.disable"), disable);
 router.post("/:id/reactivate", requirePermission("preventive_automation.disable"), reactivate);

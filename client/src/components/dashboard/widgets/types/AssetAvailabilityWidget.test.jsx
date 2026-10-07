@@ -6,7 +6,9 @@ vi.mock("../WidgetChartFrame.jsx", () => ({ default: () => <div data-testid="cha
 
 describe("AssetAvailabilityWidget", () => {
   it("mostra contagem e percentual de cada status", () => {
-    const { container } = render(<AssetAvailabilityWidget data={{ total: 8, byStatus: { online: 4, offline: 2, problem: 1, unknown: 1 } }} />);
+    const { container } = render(
+      <AssetAvailabilityWidget data={{ total: 8, byStatus: { online: 4, offline: 2, problem: 1, unknown: 1 } }} />
+    );
 
     expect(container.querySelector(".dashboard-category-chart.circular")).toBeInTheDocument();
     expect(screen.getByText("50%")).toBeVisible();

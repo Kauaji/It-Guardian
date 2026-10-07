@@ -158,11 +158,16 @@ historico no servidor e preservado.
   manutencao" abaixo e
   [SCRIPTS-MANUTENCAO-SEGURANCA.md](SCRIPTS-MANUTENCAO-SEGURANCA.md));
 - `enableRemoteAssistance` (default `false` — ver
-  [ASSISTENCIA-REMOTA.md](ASSISTENCIA-REMOTA.md#habilitar-tambem-no-agente-windows-flag-separada-por-maquina)).
+  [ASSISTENCIA-REMOTA.md](ASSISTENCIA-REMOTA.md#habilitar-tambem-no-agente-windows-flag-separada-por-maquina));
+- `releasePublicKey` e `jobSigningPublicKey` (chaves PUBLICAS ECDSA P-256 que
+  autorizam atualizacao automatica e jobs; ausentes = ambos bloqueados) e
+  `allowUnsignedUpdates` / `allowUnsignedJobs` (opt-out de laboratorio, default
+  `false`) — ver [SEGURANCA-DO-AGENTE.md](SEGURANCA-DO-AGENTE.md#assinatura-de-atualizacoes-e-de-jobs).
 
 O backend rejeita campos adicionais no inventario. Trabalhos de manutencao sao
 obtidos por uma fila autenticada separada; nao existe campo de comando no
-`config.json`, download arbitrario ou atualizacao remota.
+`config.json` nem download arbitrario. A unica coisa baixada e o proprio
+executavel do agente, e somente com manifesto assinado (ver "Atualizacoes").
 
 ## Trabalhos de manutencao
 
@@ -188,6 +193,11 @@ computador:
   presente na maquina.
 - **Manualmente**: editar `"enableRemoteScriptExecution": true` direto no
   `config.json` instalado e reiniciar o servico/tarefa do coletor.
+
+Alem das duas flags, o agente so executa um job com **assinatura valida**
+(`jobSigningPublicKey` no `config.json`, entregue na ativacao): job sem
+assinatura, adulterado, para outra maquina, vencido ou repetido e recusado e
+reportado ao servidor como falha. Sem a chave, todos os jobs sao recusados.
 
 Detalhes completos (bloqueio de conteudo perigoso, controle duplo,
 diagnostico visual de bloqueio, roteiro de teste ponta a ponta) em
@@ -215,11 +225,22 @@ dependem do agente daquele endpoint estar online.
 
 ## Atualizacoes
 
-A versao atual possui reparo/upgrade preservando a ativacao, mas ainda nao tem
-autoatualizador silencioso. Para atualizar, execute o instalador mais novo e use
-`Reparar ou atualizar`. Um autoatualizador seguro futuro deve exigir binarios e
-manifesto assinados, verificacao de hash, rollback e canal de versao; ele nao
-deve baixar e executar arquivos arbitrarios.
+Ha dois caminhos de atualizacao, ambos preservando a ativacao:
+
+1. **Manual**: execute o instalador mais novo e use `Reparar ou atualizar`.
+2. **Automatica** (so quando o servidor define `AGENT_LATEST_VERSION`,
+   `AGENT_LATEST_VERSION_URL`, `AGENT_LATEST_VERSION_SHA256` e
+   `AGENT_LATEST_VERSION_SIGNATURE`): o heartbeat oferece a nova versao; o
+   agente verifica, **antes de baixar**, a assinatura do manifesto
+   (`releasePublicKey`), HTTPS e versao estritamente maior; baixa, confere o
+   SHA-256 assinado, troca `ITGuardian.exe` (guardando `ITGuardian.exe.old`) e
+   sai com codigo 42 para a tarefa agendada reinicia-lo. Sem
+   `releasePublicKey` a atualizacao automatica e **ignorada** (seguro por
+   padrao). A chave privada de release fica fora do servidor da API; o CI
+   (`.github/workflows/windows-agent.yml`) gera o manifesto assinado. Modelo
+   completo e limites em [SEGURANCA-DO-AGENTE.md](SEGURANCA-DO-AGENTE.md).
+
+O heartbeat `--once` do instalador nao verifica atualizacao.
 
 No reparo 1.6.1, o agente tambem renova no servidor o link assinado do atalho
 `Abrir chamado - IT Guardian`. Esse link permite que a pagina publica reconheca

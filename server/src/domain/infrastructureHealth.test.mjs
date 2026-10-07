@@ -56,18 +56,9 @@ test("nota nunca fica negativa mesmo com todos os fatores no maximo", () => {
 
 test("classificacao segue os limiares documentados", () => {
   assert.equal(calculateInfrastructureHealth({ totalAssets: 100, offlineAssets: 0 }).classification, "healthy");
-  assert.equal(
-    calculateInfrastructureHealth({ totalAssets: 100, offlineAssets: 45 }).classification,
-    "attention"
-  );
-  assert.equal(
-    calculateInfrastructureHealth({ totalAssets: 100, offlineAssets: 80 }).classification,
-    "critical"
-  );
-  assert.equal(
-    calculateInfrastructureHealth({ totalAssets: 100, offlineAssets: 100, criticalAlerts: 10 }).classification,
-    "emergency"
-  );
+  assert.equal(calculateInfrastructureHealth({ totalAssets: 100, offlineAssets: 45 }).classification, "attention");
+  assert.equal(calculateInfrastructureHealth({ totalAssets: 100, offlineAssets: 80 }).classification, "critical");
+  assert.equal(calculateInfrastructureHealth({ totalAssets: 100, offlineAssets: 100, criticalAlerts: 10 }).classification, "emergency");
 });
 
 test("deducoes explicam a nota em texto legivel para o tooltip", () => {

@@ -8,7 +8,13 @@ export const EVENT_TYPE_META = {
   other: { label: "Outro", color: "#536177" }
 };
 
-export const EVENT_STATUS_LABELS = { scheduled: "Agendado", in_progress: "Em andamento", completed: "Concluído", cancelled: "Cancelado", missed: "Não realizado" };
+export const EVENT_STATUS_LABELS = {
+  scheduled: "Agendado",
+  in_progress: "Em andamento",
+  completed: "Concluído",
+  cancelled: "Cancelado",
+  missed: "Não realizado"
+};
 export const PRIORITY_LABELS = { low: "Baixa", normal: "Normal", high: "Alta", urgent: "Urgente" };
 export const PRIORITY_META = {
   low: { label: "Baixa", color: "#64748b", rank: 1 },
@@ -17,9 +23,19 @@ export const PRIORITY_META = {
   urgent: { label: "Urgente", color: "#dc2626", rank: 4 }
 };
 
-export function startOfDay(date) { const value = new Date(date); value.setHours(0, 0, 0, 0); return value; }
-export function addDays(date, amount) { const value = new Date(date); value.setDate(value.getDate() + amount); return value; }
-export function dateKey(date) { return new Date(date).toLocaleDateString("en-CA"); }
+export function startOfDay(date) {
+  const value = new Date(date);
+  value.setHours(0, 0, 0, 0);
+  return value;
+}
+export function addDays(date, amount) {
+  const value = new Date(date);
+  value.setDate(value.getDate() + amount);
+  return value;
+}
+export function dateKey(date) {
+  return new Date(date).toLocaleDateString("en-CA");
+}
 
 export function getCalendarRange(anchor, view) {
   const date = startOfDay(anchor);

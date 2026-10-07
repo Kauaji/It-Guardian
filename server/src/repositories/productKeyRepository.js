@@ -1,12 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { query, withTransaction } from "../database.js";
 import { createAgentToken, hashAgentToken } from "../domain/agentToken.js";
-import {
-  generateProductKey,
-  hashMachineFingerprint,
-  hashProductKey,
-  productKeyHint
-} from "../domain/productKey.js";
+import { generateProductKey, hashMachineFingerprint, hashProductKey, productKeyHint } from "../domain/productKey.js";
 
 function activationError(message, statusCode = 400, code = "ACTIVATION_FAILED") {
   const error = new Error(message);
@@ -62,13 +57,7 @@ function activationFromRow(row) {
   };
 }
 
-async function insertEnrollment(db, {
-  name,
-  token,
-  productKeyId,
-  activationId,
-  createdBy = null
-}) {
+async function insertEnrollment(db, { name, token, productKeyId, activationId, createdBy = null }) {
   const tokenHash = hashAgentToken(token);
   const id = randomUUID();
 
@@ -137,14 +126,14 @@ export async function listProductKeys() {
 export async function listDeviceActivations(productKeyId = null) {
   const result = productKeyId
     ? await query(
-      `
+        `
         SELECT *
         FROM device_activations
         WHERE product_key_id = $1
         ORDER BY last_seen_at DESC
       `,
-      [productKeyId]
-    )
+        [productKeyId]
+      )
     : await query(`
         SELECT *
         FROM device_activations
@@ -153,13 +142,7 @@ export async function listDeviceActivations(productKeyId = null) {
   return result.rows.map(activationFromRow);
 }
 
-export async function activateCollector({
-  productKey,
-  machineFingerprint,
-  hostname,
-  alias = null,
-  collectorVersion = null
-}) {
+export async function activateCollector({ productKey, machineFingerprint, hostname, alias = null, collectorVersion = null }) {
   const keyHash = hashProductKey(productKey);
   const fingerprintHash = hashMachineFingerprint(machineFingerprint);
   if (!keyHash || !fingerprintHash) {
@@ -167,10 +150,7 @@ export async function activateCollector({
   }
 
   return withTransaction(async (db) => {
-    const keyResult = await db(
-      "SELECT * FROM product_keys WHERE key_hash = $1 FOR UPDATE",
-      [keyHash]
-    );
+    const keyResult = await db("SELECT * FROM product_keys WHERE key_hash = $1 FOR UPDATE", [keyHash]);
     const keyRow = keyResult.rows[0];
     if (!keyRow) {
       throw activationError("Chave de produto invalida.", 401, "INVALID_PRODUCT_KEY");
@@ -209,11 +189,7 @@ export async function activateCollector({
         [keyRow.id]
       );
       if (!reservedSeat.rows[0]) {
-        throw activationError(
-          "O limite de ativacoes desta chave foi atingido.",
-          409,
-          "ACTIVATION_LIMIT_REACHED"
-        );
+        throw activationError("O limite de ativacoes desta chave foi atingido.", 409, "ACTIVATION_LIMIT_REACHED");
       }
       currentKeyRow = reservedSeat.rows[0];
     }
@@ -295,10 +271,7 @@ export async function touchDeviceActivation(activationId, { hostname, alias, col
 
 export async function deactivateDeviceActivation(id) {
   return withTransaction(async (db) => {
-    const result = await db(
-      "SELECT * FROM device_activations WHERE id = $1 FOR UPDATE",
-      [id]
-    );
+    const result = await db("SELECT * FROM device_activations WHERE id = $1 FOR UPDATE", [id]);
     const activation = result.rows[0];
     if (!activation) return null;
     if (activation.status !== "active") return activationFromRow(activation);
@@ -385,12 +358,7 @@ export async function updateProductKeyMonitoring(id, monitoring) {
       WHERE id = $1
       RETURNING *
     `,
-    [
-      id,
-      monitoring.ocsServerUrl,
-      monitoring.zabbixServer,
-      monitoring.zabbixServerActive
-    ]
+    [id, monitoring.ocsServerUrl, monitoring.zabbixServer, monitoring.zabbixServerActive]
   );
   return result.rows[0] ? productKeyFromRow(result.rows[0]) : null;
 }

@@ -71,8 +71,7 @@ export default function ServiceOrderAttachmentsTab({ serviceOrderId, token, noti
   return (
     <section className="service-order-attachments-panel">
       <p className="service-order-attachments-limitation">
-        Anexos guardam metadados e uma referência (link/descrição) da evidência - não há upload real de arquivo
-        nesta versão.
+        Anexos guardam metadados e uma referência (link/descrição) da evidência - não há upload real de arquivo nesta versão.
       </p>
 
       {canAdd && (
@@ -80,25 +79,31 @@ export default function ServiceOrderAttachmentsTab({ serviceOrderId, token, noti
           <input
             type="text"
             placeholder="Nome do anexo (ex.: foto-fonte.jpg)"
+            aria-label="Nome do anexo"
             value={form.fileName}
             onChange={(event) => setForm((current) => ({ ...current, fileName: event.target.value }))}
           />
           <select
+            aria-label="Categoria do anexo"
             value={form.category}
             onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))}
           >
             {CATEGORY_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
             ))}
           </select>
           <input
             type="text"
             placeholder="Link ou referência (opcional)"
+            aria-label="Link ou referência"
             value={form.storageKey}
             onChange={(event) => setForm((current) => ({ ...current, storageKey: event.target.value }))}
           />
           <textarea
             placeholder="Descrição (opcional)"
+            aria-label="Descrição do anexo"
             value={form.description}
             onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
           />

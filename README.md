@@ -4,7 +4,7 @@
 
 ### Plataforma de inventário, monitoramento e gestão de atendimento para ambientes de TI
 
-![React](https://img.shields.io/badge/React-18-20232A?logo=react)
+![React](https://img.shields.io/badge/React-19-20232A?logo=react)
 ![Node.js](https://img.shields.io/badge/Node.js-Express-339933?logo=node.js&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-4169E1?logo=postgresql&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Local%20Lab-2496ED?logo=docker&logoColor=white)
@@ -64,8 +64,11 @@ A arquitetura foi preparada para dois cenários:
 
 ### Administração e segurança
 
-- Autenticação JWT.
-- Cadastro inicial controlado do primeiro administrador.
+- Sessões revogáveis no servidor (cookie `HttpOnly`), rotação e vida absoluta, bloqueio progressivo de login e política de senha forte.
+- MFA (TOTP) com códigos de recuperação, obrigatório para administradores quando configurado; reset assistido por administrador.
+- Cadastro inicial controlado do primeiro administrador (`SETUP_TOKEN` em produção).
+- Jobs e atualizações do agente Windows **assinados** (ECDSA P-256); o agente recusa o que não verificar.
+- CSP estrita, cabeçalhos de segurança, limitação de taxa global e matriz de autorização testada em todas as rotas.
 - Permissões e configurações validadas no backend.
 - Bloqueio de configurações inseguras em produção.
 - Logs de auditoria e confirmações de alertas.
@@ -101,8 +104,11 @@ reautenticacao do tecnico e consentimento visivel na maquina atendida. O
 transporte `snapshot_polling` agora tem FPS, resolucao e qualidade JPEG
 ajustaveis com limites seguros, ajuste automatico de qualidade, pausa da
 visualizacao e reconexao manual; uma sinalizacao WebRTC ja existe no backend
-como base para uma evolucao futura, mas permanece desligada por padrao.
-Consulte [`docs/ASSISTENCIA-REMOTA.md`](docs/ASSISTENCIA-REMOTA.md).
+como base para uma evolucao futura, mas permanece desligada por padrao. Um
+transporte alternativo via cliente nativo RustDesk (open source, self-hosted)
+tambem esta disponivel como opt-in, com senha de sessao gerada pelo servidor
+por atendimento (nunca fixa nem compartilhada entre maquinas) e desligado por
+padrao. Consulte [`docs/ASSISTENCIA-REMOTA.md`](docs/ASSISTENCIA-REMOTA.md).
 
 Estrutura principal:
 
@@ -112,15 +118,20 @@ it-guardian/
 ├── client/                  Frontend React + Vite
 ├── server/src/
 │   ├── config/              Ambiente, banco, CORS e segurança
+│   ├── domain/              Regras puras (sem banco/rede/ambiente)
 │   ├── controllers/         Controllers HTTP
 │   ├── routes/              Rotas da API
-│   ├── repositories/        Persistência e acesso a dados
-│   ├── services/            Regras e orquestração de domínio
+│   ├── repositories/        Persistência e acesso a dados (só SQL)
+│   ├── services/            Orquestração e transações
+│   ├── migrations/          Migrações numeradas (somente-avante)
+│   ├── schema/legacy/       Esquema inicial congelado
 │   ├── integrations/        Ping, OCS Inventory e Zabbix
 │   └── jobs/                Processos persistentes e sincronizações
-├── agents/                  Agente e coletor Windows
+├── agent/                   Agente Windows (C#), testes e instaladores de apoio
 ├── installers/              Scripts e instaladores
-├── docs/                    Documentação técnica e acadêmica
+├── ops/                     Regras de alerta (Prometheus)
+├── scripts/                 Verificações (arquitetura, docs, CSS, bundle) e ferramentas
+├── docs/                    Documentação técnica (índice em docs/README.md)
 └── release/                 Checklists e artefatos de beta
 ```
 
@@ -129,12 +140,12 @@ it-guardian/
 | Camada | Tecnologias |
 |---|---|
 | Frontend | React, Vite, React Router, dnd-kit, Recharts e Lucide |
-| Backend | Node.js, Express e JWT |
+| Backend | Node.js, Express, sessões em PostgreSQL, bcrypt e TOTP |
 | Banco de dados | PostgreSQL |
 | Infraestrutura local | Docker Compose, Nginx e scripts PowerShell |
 | Deploy de demonstração | Vercel com Supabase ou Neon |
-| Integrações | Agente Windows, OCS Inventory e Zabbix |
-| Testes e validação | Node Test Runner, smoke tests e checklists manuais |
+| Integrações | Agente Windows, OCS Inventory, Zabbix e RustDesk (assistencia remota, opt-in) |
+| Testes e validação | Node Test Runner (pg-mem e PostgreSQL real), Vitest, Playwright (e2e, CSP, axe), testes C# sob Mono, CodeQL e gitleaks |
 
 ## Executar o beta local
 
@@ -223,9 +234,17 @@ npm run build        # Build de produção
 npm run start        # API em modo start
 npm run docker:up    # Inicia o ambiente Docker
 npm run docker:down  # Encerra o ambiente Docker
+npm run lint         # ESLint (0 avisos)
+npm run check        # lint + arquitetura + docs + testes + build
+npm run db:status    # Situação das migrações (db:migrate aplica)
+npm run test:e2e     # Playwright
 ```
 
+Guia completo para contribuir: [`CONTRIBUTING.md`](CONTRIBUTING.md). Segurança: [`SECURITY.md`](SECURITY.md).
+
 ## Documentação
+
+Índice completo em [`docs/README.md`](docs/README.md) (arquitetura e ADRs, segurança, operação, módulos).
 
 ### Beta e operação
 
@@ -271,7 +290,8 @@ O projeto está em **beta funcional** e já possui:
 - Evoluir o monitoramento contínuo em ambiente persistente.
 - Validar a implantação em uma rede real com múltiplos equipamentos.
 - Refinar dashboards, indicadores e notificações.
-- Aplicar code splitting no frontend para reduzir o bundle principal.
+- Validar o agente Windows, o instalador e o RustDesk em máquinas reais (o código é testado sob Mono, não em Windows).
+- Configurar certificado Authenticode e a chave de release do agente (ver `docs/SEGURANCA-DO-AGENTE.md`).
 
 ## Autor
 

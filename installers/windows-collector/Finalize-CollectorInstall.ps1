@@ -1,6 +1,10 @@
 [CmdletBinding()]
 param(
-  [Parameter(Mandatory = $true)][string]$InstallDirectory
+  [Parameter(Mandatory = $true)][string]$InstallDirectory,
+  # Chaves PUBLICAS de assinatura (ECDSA P-256, base64 SPKI). So sao gravadas no config.json se o
+  # agente ainda NAO tiver uma fixada: uma chave existente nunca e sobrescrita.
+  [string]$ReleasePublicKey = "",
+  [string]$JobSigningPublicKey = ""
 )
 
 Set-StrictMode -Version Latest
@@ -60,6 +64,43 @@ if (-not $config.serverUrl -or -not $config.agentToken) {
   throw "A configuracao nao contem servidor e token do agente."
 }
 
+# --- Chaves de confianca (assinatura) ---------------------------------------
+# releasePublicKey: assina o manifesto de atualizacao (privada fora do servidor da API).
+# jobSigningPublicKey: assina cada job de script. Sem elas o agente e SEGURO por padrao: ignora
+# atualizacoes automaticas e recusa jobs. Formato validado: SPKI DER de P-256 = 91 bytes em base64.
+function Test-P256PublicKeyShape {
+  param([string]$Value)
+  return $Value -match '^MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE[A-Za-z0-9+/]{86}==$'
+}
+function Set-ConfigKeyIfAbsent {
+  param([string]$Name, [string]$Value)
+  if ([string]::IsNullOrWhiteSpace($Value)) { return $false }
+  $existing = $config.PSObject.Properties[$Name]
+  if ($existing -and -not [string]::IsNullOrWhiteSpace([string]$existing.Value)) {
+    Write-InstallLog "Chave $Name ja fixada no config.json; mantida (nunca sobrescrita)."
+    return $false
+  }
+  if (-not (Test-P256PublicKeyShape $Value.Trim())) {
+    Write-InstallLog "AVISO: valor recebido para $Name nao e uma chave publica ECDSA P-256 valida; ignorado."
+    return $false
+  }
+  $config | Add-Member -NotePropertyName $Name -NotePropertyValue $Value.Trim() -Force
+  Write-InstallLog "Chave $Name gravada no config.json."
+  return $true
+}
+$keysChanged = $false
+if (Set-ConfigKeyIfAbsent -Name "releasePublicKey" -Value $ReleasePublicKey) { $keysChanged = $true }
+if (Set-ConfigKeyIfAbsent -Name "jobSigningPublicKey" -Value $JobSigningPublicKey) { $keysChanged = $true }
+if ($keysChanged) {
+  $config | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $configPath -Encoding UTF8
+}
+foreach ($pair in @(@("releasePublicKey", "atualizacoes automaticas"), @("jobSigningPublicKey", "jobs de script"))) {
+  $property = $config.PSObject.Properties[$pair[0]]
+  if (-not $property -or [string]::IsNullOrWhiteSpace([string]$property.Value)) {
+    Write-InstallLog "AVISO: $($pair[0]) nao configurada; $($pair[1]) permanecem BLOQUEADOS (seguro por padrao) ate a chave ser fornecida."
+  }
+}
+
 try {
   $supportResponse = Invoke-RestMethod `
     -Uri ("{0}/api/agents/support-link" -f $config.serverUrl.TrimEnd('/')) `
@@ -102,6 +143,26 @@ foreach ($sidValue in @("S-1-5-18", "S-1-5-32-544")) {
 }
 Set-Acl -LiteralPath $configPath -AclObject $configAcl
 Write-InstallLog "ACL da configuracao aplicada."
+
+# state\ guarda o registro anti-replay de jobs (seen-job-ids.txt). Diferente de logs\, NAO e gravavel
+# por usuarios comuns: so SYSTEM e Administradores.
+$stateDirectory = Join-Path $resolvedDirectory "state"
+New-Item -ItemType Directory -Path $stateDirectory -Force | Out-Null
+$stateAcl = New-Object System.Security.AccessControl.DirectorySecurity
+$stateAcl.SetAccessRuleProtection($true, $false)
+foreach ($sidValue in @("S-1-5-18", "S-1-5-32-544")) {
+  $sid = New-Object System.Security.Principal.SecurityIdentifier($sidValue)
+  $stateRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+    $sid,
+    "FullControl",
+    "ContainerInherit,ObjectInherit",
+    "None",
+    "Allow"
+  )
+  $stateAcl.AddAccessRule($stateRule)
+}
+Set-Acl -LiteralPath $stateDirectory -AclObject $stateAcl
+Write-InstallLog "ACL de state\ (anti-replay de jobs) aplicada."
 
 foreach ($serviceName in @("Schedule", "Winmgmt")) {
   $service = Get-Service -Name $serviceName -ErrorAction Stop
@@ -245,6 +306,41 @@ for ($attempt = 1; $attempt -le 3; $attempt++) {
 }
 if (-not $trayStarted) {
   Write-InstallLog "AVISO: o icone de bandeja nao foi confirmado rodando apos 3 tentativas nesta sessao; a chave HKLM Run ja registrada vai inicia-lo no proximo logon (deslogar/logar de novo ou reiniciar resolve)."
+}
+
+# --- Instalacao opcional do cliente RustDesk (transporte alternativo) ------
+# So roda quando o instalador foi gerado com um instalador do RustDesk
+# empacotado (ver installers/windows-collector/README.md e build-installer.ps1,
+# variavel RustdeskInstallerPath). Falha aqui nunca derruba a instalacao do
+# coletor -- so registra aviso; o transporte RustDesk fica indisponivel ate
+# alguem instalar o RustDesk manualmente ou reexecutar este instalador com o
+# pacote presente. O id do dispositivo criado por este install e reportado
+# sozinho ao IT Guardian no primeiro heartbeat com "enableRemoteAssistance"
+# ligado (ver ReportRustdeskIdIfChanged em agent/windows/ITGuardian.Windows.cs).
+$rustdeskInstallerPath = Join-Path $resolvedDirectory "rustdesk-installer.exe"
+if (Test-Path -LiteralPath $rustdeskInstallerPath) {
+  try {
+    # NOTA DE VERIFICACAO (nao testado neste ambiente): "--silent-install" e o
+    # flag documentado publicamente pelo projeto RustDesk nas versoes
+    # disponiveis ate a escrita deste script. O RustDesk nao e mantido pelo IT
+    # Guardian -- confirme esse flag contra a versao efetivamente empacotada
+    # antes de confiar nisto em producao.
+    $rustdeskProcess = Start-Process `
+      -FilePath $rustdeskInstallerPath `
+      -ArgumentList @("--silent-install") `
+      -WindowStyle Hidden `
+      -Wait `
+      -PassThru
+    if ($rustdeskProcess.ExitCode -eq 0) {
+      Write-InstallLog "Cliente RustDesk instalado silenciosamente."
+    } else {
+      Write-InstallLog "AVISO: instalador do RustDesk retornou codigo $($rustdeskProcess.ExitCode)."
+    }
+  } catch {
+    Write-InstallLog "AVISO: falha ao instalar o RustDesk automaticamente. $($_.Exception.Message)"
+  }
+} else {
+  Write-InstallLog "Instalador do RustDesk nao empacotado; transporte RustDesk permanece indisponivel nesta maquina."
 }
 
 Write-InstallLog "Instalacao finalizada com sucesso."

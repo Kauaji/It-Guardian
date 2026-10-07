@@ -1,7 +1,9 @@
 import { createHash } from "node:crypto";
 
 function hashScriptContent(content) {
-  return createHash("sha256").update(String(content || ""), "utf8").digest("hex");
+  return createHash("sha256")
+    .update(String(content || ""), "utf8")
+    .digest("hex");
 }
 
 export const migration015AgentScriptJobContentIntegrity = {
@@ -21,10 +23,7 @@ export const migration015AgentScriptJobContentIntegrity = {
       WHERE status = 'queued' AND content_hash IS NULL
     `);
     for (const row of pending.rows) {
-      await db("UPDATE agent_script_jobs SET content_hash = $2 WHERE id = $1", [
-        row.id,
-        hashScriptContent(row.script_content)
-      ]);
+      await db("UPDATE agent_script_jobs SET content_hash = $2 WHERE id = $1", [row.id, hashScriptContent(row.script_content)]);
     }
   }
 };

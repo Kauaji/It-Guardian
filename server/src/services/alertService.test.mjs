@@ -22,26 +22,28 @@ function agentAsset(overrides = {}) {
 }
 
 test("gera alertas somente para metricas reais acima do limite", () => {
-  const alerts = buildAgentAlerts(agentAsset({
-    cpuUsagePercent: 96,
-    memoryUsedBytes: 9_000,
-    diskFreeBytes: 10_000
-  }), now);
+  const alerts = buildAgentAlerts(
+    agentAsset({
+      cpuUsagePercent: 96,
+      memoryUsedBytes: 9_000,
+      diskFreeBytes: 10_000
+    }),
+    now
+  );
 
-  assert.deepEqual(alerts.map((alert) => alert.type).sort(), [
-    "cpu_high",
-    "disk_high",
-    "ram_high"
-  ]);
+  assert.deepEqual(alerts.map((alert) => alert.type).sort(), ["cpu_high", "disk_high", "ram_high"]);
   assert.ok(alerts.every((alert) => alert.source === "agent"));
   assert.ok(alerts.every((alert) => alert.assetId === "asset-real-1"));
 });
 
 test("heartbeat atrasado gera aviso offline sem inventar metricas", () => {
-  const alerts = buildAgentAlerts(agentAsset({
-    lastSeenAt: "2026-07-29T11:30:00.000Z",
-    cpuUsagePercent: 99
-  }), now);
+  const alerts = buildAgentAlerts(
+    agentAsset({
+      lastSeenAt: "2026-07-29T11:30:00.000Z",
+      cpuUsagePercent: 99
+    }),
+    now
+  );
 
   assert.equal(alerts.length, 1);
   assert.equal(alerts[0].type, "machine_offline");
@@ -49,9 +51,12 @@ test("heartbeat atrasado gera aviso offline sem inventar metricas", () => {
 });
 
 test("disco praticamente cheio gera apenas o aviso critico especifico", () => {
-  const alerts = buildAgentAlerts(agentAsset({
-    diskFreeBytes: 4_000
-  }), now);
+  const alerts = buildAgentAlerts(
+    agentAsset({
+      diskFreeBytes: 4_000
+    }),
+    now
+  );
 
   assert.equal(alerts.length, 1);
   assert.equal(alerts[0].type, "disk_full");

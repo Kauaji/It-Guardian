@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { useTestDatabase } from "../test-support/database.mjs";
 
-process.env.DATABASE_URL = "memory";
+await useTestDatabase();
 process.env.ENABLE_DEMO_SEED = "false";
 process.env.ENABLE_REMOTE_SCRIPT_EXECUTION = "true";
 process.env.JWT_SECRET = "content-integrity-integration-test-secret-32-chars";
@@ -11,16 +12,9 @@ const { createApp } = await import("../src/app.js");
 const { initializeRuntime } = await import("../src/bootstrap.js");
 const { closeDatabase, query } = await import("../src/database.js");
 const { createAgentEnrollment } = await import("../src/repositories/agentRepository.js");
-const {
-  claimNextAgentScriptJob,
-  queueAgentScriptJob
-} = await import("../src/repositories/agentScriptJobRepository.js");
-const {
-  createMaintenanceScript,
-  createScriptSimulationLog,
-  deactivateMaintenanceScript,
-  updateMaintenanceScript
-} = await import("../src/repositories/maintenanceScriptRepository.js");
+const { claimNextAgentScriptJob, queueAgentScriptJob } = await import("../src/services/agentScriptJobService.js");
+const { createMaintenanceScript, createScriptSimulationLog, deactivateMaintenanceScript, updateMaintenanceScript } =
+  await import("../src/services/maintenanceScripts/maintenanceScriptsFacade.js");
 
 function heartbeatPayload(overrides = {}) {
   return {
@@ -119,17 +113,13 @@ test("trabalhos do agente so entregam conteudo de script que ainda bate com o ca
   });
   assert.equal(claimedTampered, null);
 
-  const tamperedJobRow = await query(
-    "SELECT status, error_message FROM agent_script_jobs WHERE id = $1",
-    [tamperedJob.id]
-  );
+  const tamperedJobRow = await query("SELECT status, error_message FROM agent_script_jobs WHERE id = $1", [tamperedJob.id]);
   assert.equal(tamperedJobRow.rows[0].status, "failed");
   assert.match(tamperedJobRow.rows[0].error_message, /conteudo do script cadastrado mudou/);
 
-  const tamperedLogRow = await query(
-    "SELECT status, error_detected, attention_required FROM script_execution_logs WHERE id = $1",
-    [tamperedLog.id]
-  );
+  const tamperedLogRow = await query("SELECT status, error_detected, attention_required FROM script_execution_logs WHERE id = $1", [
+    tamperedLog.id
+  ]);
   assert.deepEqual(
     {
       status: tamperedLogRow.rows[0].status,
@@ -172,9 +162,6 @@ test("trabalhos do agente so entregam conteudo de script que ainda bate com o ca
   });
   assert.equal(claimedDeactivated, null);
 
-  const deactivatedJobRow = await query(
-    "SELECT status FROM agent_script_jobs WHERE id = $1",
-    [deactivatedJob.id]
-  );
+  const deactivatedJobRow = await query("SELECT status FROM agent_script_jobs WHERE id = $1", [deactivatedJob.id]);
   assert.equal(deactivatedJobRow.rows[0].status, "failed");
 });

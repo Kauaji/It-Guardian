@@ -1,20 +1,11 @@
-import {
-  findIntegrationAsset,
-  listIntegrationAssets
-} from "../repositories/integrationRepository.js";
+import { findIntegrationAsset, listIntegrationAssets } from "../repositories/integrationRepository.js";
 
 function correlatedZabbixAsset(asset, assets) {
   const matchedId = asset.correlation?.matchedIntegrationAssetId;
-  const directMatch = matchedId
-    ? assets.find((candidate) => candidate.id === matchedId && candidate.source === "zabbix")
-    : null;
+  const directMatch = matchedId ? assets.find((candidate) => candidate.id === matchedId && candidate.source === "zabbix") : null;
   if (directMatch) return directMatch;
 
-  return assets.find(
-    (candidate) =>
-      candidate.source === "zabbix" &&
-      candidate.correlation?.matchedIntegrationAssetId === asset.id
-  ) || null;
+  return assets.find((candidate) => candidate.source === "zabbix" && candidate.correlation?.matchedIntegrationAssetId === asset.id) || null;
 }
 
 function toLegacyInventory(asset, assets) {
@@ -43,17 +34,13 @@ function toLegacyInventory(asset, assets) {
     software: asset.hardware?.software || [],
     lastInventoryAt: asset.collectedAt,
     collectedAt: asset.collectedAt,
-    sourceConflicts: asset.correlation?.conflict
-      ? [{ source: "ocs", externalId: asset.externalId }]
-      : []
+    sourceConflicts: asset.correlation?.conflict ? [{ source: "ocs", externalId: asset.externalId }] : []
   };
 }
 
 export async function getInventory() {
   const assets = await listIntegrationAssets();
-  return assets
-    .filter((asset) => asset.source === "ocs")
-    .map((asset) => toLegacyInventory(asset, assets));
+  return assets.filter((asset) => asset.source === "ocs").map((asset) => toLegacyInventory(asset, assets));
 }
 
 export async function getInventoryByHostId(hostId) {

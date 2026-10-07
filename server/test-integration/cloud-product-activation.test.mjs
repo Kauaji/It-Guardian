@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { useTestDatabase } from "../test-support/database.mjs";
 
-process.env.DATABASE_URL = "memory";
+await useTestDatabase();
 process.env.ENABLE_DEMO_SEED = "false";
 process.env.JWT_SECRET = "cloud-activation-test-secret-with-32-characters";
 process.env.NODE_ENV = "test";
@@ -10,12 +11,8 @@ process.env.PUBLIC_APP_URL = "https://it-guardian-server.vercel.app";
 const { createApp } = await import("../src/app.js");
 const { initializeRuntime } = await import("../src/bootstrap.js");
 const { closeDatabase, query } = await import("../src/database.js");
-const { default: jwt } = await import("jsonwebtoken");
-const {
-  createProductKey,
-  deactivateDeviceActivation,
-  setProductKeyActive
-} = await import("../src/repositories/productKeyRepository.js");
+const { startSession } = await import("../src/services/sessionService.js");
+const { createProductKey, deactivateDeviceActivation, setProductKeyActive } = await import("../src/repositories/productKeyRepository.js");
 const { createUser } = await import("../src/repositories/userRepository.js");
 
 const monitoringA = {
@@ -101,8 +98,8 @@ test("ativacao cloud controla licencas, reinstalacao, revogacao e heartbeat", as
     role: "admin",
     permissions: ["admin.full"]
   });
-  const regularToken = jwt.sign({ sub: regularUser.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
-  const adminToken = jwt.sign({ sub: adminUser.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+  const regularToken = (await startSession(regularUser)).token;
+  const adminToken = (await startSession(adminUser)).token;
 
   const forbiddenList = await fetch(`${baseUrl}/api/product-keys`, {
     headers: { authorization: `Bearer ${regularToken}` }
@@ -137,10 +134,7 @@ test("ativacao cloud controla licencas, reinstalacao, revogacao e heartbeat", as
   assert.equal(missingMonitoringBody.ocsServerUrl, null);
   assert.equal(missingMonitoringBody.zabbixServer, null);
   assert.equal(missingMonitoringBody.zabbixServerActive, null);
-  const activatedKey = await query(
-    "SELECT activation_count FROM product_keys WHERE id = $1",
-    [created.productKey.id]
-  );
+  const activatedKey = await query("SELECT activation_count FROM product_keys WHERE id = $1", [created.productKey.id]);
   assert.equal(Number(activatedKey.rows[0].activation_count), 1);
   const activatedRelations = await query(
     `
@@ -153,48 +147,36 @@ test("ativacao cloud controla licencas, reinstalacao, revogacao e heartbeat", as
   assert.equal(Number(activatedRelations.rows[0].activations), 1);
   assert.equal(Number(activatedRelations.rows[0].enrollments), 1);
 
-  const forbiddenMonitoring = await fetch(
-    `${baseUrl}/api/product-keys/${created.productKey.id}/monitoring`,
-    {
-      method: "PUT",
-      headers: {
-        authorization: `Bearer ${regularToken}`,
-        "content-type": "application/json"
-      },
-      body: JSON.stringify(monitoringA)
-    }
-  );
+  const forbiddenMonitoring = await fetch(`${baseUrl}/api/product-keys/${created.productKey.id}/monitoring`, {
+    method: "PUT",
+    headers: {
+      authorization: `Bearer ${regularToken}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(monitoringA)
+  });
   assert.equal(forbiddenMonitoring.status, 403);
 
-  const invalidMonitoring = await fetch(
-    `${baseUrl}/api/product-keys/${created.productKey.id}/monitoring`,
-    {
-      method: "PUT",
-      headers: {
-        authorization: `Bearer ${adminToken}`,
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({ ...monitoringA, ocsServerUrl: "file:///servidor" })
-    }
-  );
+  const invalidMonitoring = await fetch(`${baseUrl}/api/product-keys/${created.productKey.id}/monitoring`, {
+    method: "PUT",
+    headers: {
+      authorization: `Bearer ${adminToken}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({ ...monitoringA, ocsServerUrl: "file:///servidor" })
+  });
   assert.equal(invalidMonitoring.status, 400);
 
-  const configuredMonitoring = await fetch(
-    `${baseUrl}/api/product-keys/${created.productKey.id}/monitoring`,
-    {
-      method: "PUT",
-      headers: {
-        authorization: `Bearer ${adminToken}`,
-        "content-type": "application/json"
-      },
-      body: JSON.stringify(monitoringA)
-    }
-  );
+  const configuredMonitoring = await fetch(`${baseUrl}/api/product-keys/${created.productKey.id}/monitoring`, {
+    method: "PUT",
+    headers: {
+      authorization: `Bearer ${adminToken}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(monitoringA)
+  });
   assert.equal(configuredMonitoring.status, 200);
-  assert.deepEqual(
-    (await configuredMonitoring.json()).productKey.monitoring,
-    { configured: true, ...monitoringA }
-  );
+  assert.deepEqual((await configuredMonitoring.json()).productKey.monitoring, { configured: true, ...monitoringA });
 
   const first = await activate(baseUrl, created.key, "fingerprint-a");
   assert.equal(first.status, 201);
@@ -221,9 +203,7 @@ test("ativacao cloud controla licencas, reinstalacao, revogacao e heartbeat", as
   });
   assert.equal(accepted.status, 202);
 
-  const assetRows = await query(
-    "SELECT cpu_usage_percent, device_manufacturer, serial_number FROM agent_assets"
-  );
+  const assetRows = await query("SELECT cpu_usage_percent, device_manufacturer, serial_number FROM agent_assets");
   assert.deepEqual(
     {
       cpuUsagePercent: Number(assetRows.rows[0].cpu_usage_percent),
@@ -248,17 +228,13 @@ test("ativacao cloud controla licencas, reinstalacao, revogacao e heartbeat", as
   });
   assert.equal(oldToken.status, 401);
 
-  const keyRows = await query(
-    "SELECT key_hash, activation_count FROM product_keys WHERE id = $1",
-    [created.productKey.id]
-  );
+  const keyRows = await query("SELECT key_hash, activation_count FROM product_keys WHERE id = $1", [created.productKey.id]);
   assert.equal(Number(keyRows.rows[0].activation_count), 1);
   assert.notEqual(keyRows.rows[0].key_hash, created.key);
 
-  const activationRows = await query(
-    "SELECT id, machine_fingerprint FROM device_activations WHERE product_key_id = $1",
-    [created.productKey.id]
-  );
+  const activationRows = await query("SELECT id, machine_fingerprint FROM device_activations WHERE product_key_id = $1", [
+    created.productKey.id
+  ]);
   assert.equal(activationRows.rows.length, 1);
   assert.notEqual(activationRows.rows[0].machine_fingerprint, "fingerprint-a");
 
@@ -295,10 +271,7 @@ test("ativacao cloud controla licencas, reinstalacao, revogacao e heartbeat", as
     activate(baseUrl, concurrent.key, "concurrent-a", "CLOUD-CONCURRENT-A"),
     activate(baseUrl, concurrent.key, "concurrent-b", "CLOUD-CONCURRENT-B")
   ]);
-  assert.deepEqual(
-    concurrentResponses.map((response) => response.status).sort(),
-    [201, 409]
-  );
+  assert.deepEqual(concurrentResponses.map((response) => response.status).sort(), [201, 409]);
   const concurrentRows = await query(
     `
       SELECT
@@ -323,12 +296,7 @@ test("ativacao cloud controla licencas, reinstalacao, revogacao e heartbeat", as
     activationLimit: 1,
     monitoring: monitoringB
   });
-  const isolatedResponse = await activate(
-    baseUrl,
-    isolated.key,
-    "fingerprint-isolated",
-    "CLOUD-ISOLATED"
-  );
+  const isolatedResponse = await activate(baseUrl, isolated.key, "fingerprint-isolated", "CLOUD-ISOLATED");
   assert.equal(isolatedResponse.status, 201);
   const isolatedBody = await isolatedResponse.json();
   assert.deepEqual(isolatedBody.monitoring, { configured: true, ...monitoringB });

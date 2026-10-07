@@ -11,6 +11,7 @@ import {
   monitor,
   pause,
   read,
+  rustdeskCredentials,
   start,
   webrtcAnswer,
   webrtcOffer
@@ -38,6 +39,12 @@ const chatLimiter = createRateLimiter({
   keyGenerator: (req) => `${req.user?.id || req.ip}:${req.params.id}`,
   name: "remote-assistance-chat"
 });
+const rustdeskCredentialsLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: 10,
+  keyGenerator: (req) => `${req.user?.id || req.ip}:${req.params.id}`,
+  name: "remote-assistance-rustdesk-credentials"
+});
 
 router.use(requireAuth, protectRemoteAssistanceResponse);
 router.get("/config", requirePermission("remote_assistance.view"), config);
@@ -48,6 +55,12 @@ router.get("/sessions/:id/events/integrity", requirePermission("remote_assistanc
 router.get("/sessions/:id/frame", requirePermission("remote_assistance.view"), frame);
 router.post("/sessions/:id/input", requirePermission("remote_assistance.control"), inputLimiter, input);
 router.post("/sessions/:id/chat", requirePermission("remote_assistance.chat"), chatLimiter, chat);
+router.get(
+  "/sessions/:id/rustdesk-credentials",
+  requirePermission("remote_assistance.control"),
+  rustdeskCredentialsLimiter,
+  rustdeskCredentials
+);
 router.post("/sessions/:id/monitor", requirePermission("remote_assistance.view"), monitor);
 router.post("/sessions/:id/pause", requirePermission("remote_assistance.view"), pause);
 router.post("/sessions/:id/control", requirePermission("remote_assistance.control"), control);

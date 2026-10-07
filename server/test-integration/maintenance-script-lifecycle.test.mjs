@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { useTestDatabase } from "../test-support/database.mjs";
 
-process.env.DATABASE_URL = "memory";
+await useTestDatabase();
 process.env.ENABLE_DEMO_SEED = "true";
 process.env.JWT_SECRET = "integration-test-secret-with-at-least-32-characters";
 process.env.NODE_ENV = "test";
@@ -69,7 +70,10 @@ test("script de manutencao: analisar, criar, listar, atualizar, registrar simula
   const listResponse = await fetch(baseUrl + basePath, { headers: { cookie } });
   assert.equal(listResponse.status, 200);
   const listed = (await listResponse.json()).scripts;
-  assert.ok(listed.some((script) => script.id === created.id), "script recem-criado deve aparecer na listagem");
+  assert.ok(
+    listed.some((script) => script.id === created.id),
+    "script recem-criado deve aparecer na listagem"
+  );
 
   const updateResponse = await fetch(`${baseUrl}${basePath}/${created.id}`, {
     method: "PATCH",
@@ -93,11 +97,7 @@ test("script de manutencao: analisar, criar, listar, atualizar, registrar simula
     headers: requestHeaders(cookie),
     body: JSON.stringify({ notes: "Sem confirmacao" })
   });
-  assert.equal(
-    unconfirmedSimulationResponse.status,
-    400,
-    "registrar simulacao sem confirmar explicitamente deve ser recusado"
-  );
+  assert.equal(unconfirmedSimulationResponse.status, 400, "registrar simulacao sem confirmar explicitamente deve ser recusado");
 
   const removeResponse = await fetch(`${baseUrl}${basePath}/${created.id}`, {
     method: "DELETE",

@@ -22,7 +22,7 @@ export default class ViewErrorBoundary extends React.Component {
       recoverFromAssetFailure(error);
       return;
     }
-    console.error(`Falha de renderizacao em "${this.props.label || "tela"}"`, {
+    console.error(`Falha de renderização em "${this.props.label || "tela"}"`, {
       error,
       componentStack: info.componentStack
     });

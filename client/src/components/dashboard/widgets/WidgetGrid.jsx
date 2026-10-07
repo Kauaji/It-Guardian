@@ -14,7 +14,10 @@ import { reindexWidgetPositions, sortWidgetsByPosition } from "./widgetGridMath.
  */
 export default function WidgetGrid({ token, widgets, editing, arranging, onReorder, onRemove, onResize, onConfigure }) {
   const [openMenuWidgetId, setOpenMenuWidgetId] = useState(null);
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
   const ordered = sortWidgetsByPosition(widgets);
 
   useEffect(() => {
@@ -64,7 +67,7 @@ export default function WidgetGrid({ token, widgets, editing, arranging, onReord
               editing={editing}
               arranging={arranging}
               menuOpen={openMenuWidgetId === widget.id}
-              onToggleMenu={() => setOpenMenuWidgetId((current) => current === widget.id ? null : widget.id)}
+              onToggleMenu={() => setOpenMenuWidgetId((current) => (current === widget.id ? null : widget.id))}
               onCloseMenu={() => setOpenMenuWidgetId(null)}
               label={widget.title || widgetRegistry[widget.type]?.label || widget.type}
               onRemove={() => onRemove(widget.id)}

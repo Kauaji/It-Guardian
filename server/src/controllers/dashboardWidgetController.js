@@ -1,8 +1,4 @@
-import {
-  getDashboardLayoutForUser,
-  resetDashboardLayoutForUser,
-  saveDashboardLayoutForUser
-} from "../services/dashboardLayoutService.js";
+import { getDashboardLayoutForUser, resetDashboardLayoutForUser, saveDashboardLayoutForUser } from "../services/dashboardLayoutService.js";
 import { listWidgetCatalog, previewWidget } from "../services/dashboardWidgetService.js";
 
 export async function getLayout(req, res, next) {

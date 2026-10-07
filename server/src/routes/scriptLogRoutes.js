@@ -1,10 +1,5 @@
 import { Router } from "express";
-import {
-  acknowledgeLog,
-  applySuggestedSolution,
-  getLog,
-  pendingLogs
-} from "../controllers/maintenanceScriptController.js";
+import { acknowledgeLog, applySuggestedSolution, getLog, pendingLogs } from "../controllers/maintenanceScriptController.js";
 import { requireAuth, requirePermission } from "../middleware/authMiddleware.js";
 
 const router = Router();

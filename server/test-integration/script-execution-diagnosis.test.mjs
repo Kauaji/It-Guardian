@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { useTestDatabase } from "../test-support/database.mjs";
 
-process.env.DATABASE_URL = "memory";
+await useTestDatabase();
 process.env.ENABLE_DEMO_SEED = "true";
 process.env.ENABLE_REMOTE_SCRIPT_EXECUTION = "true";
 process.env.JWT_SECRET = "script-execution-diagnosis-integration-secret-32c";
@@ -12,7 +13,7 @@ const { initializeRuntime } = await import("../src/bootstrap.js");
 const { closeDatabase, query } = await import("../src/database.js");
 const { createUser } = await import("../src/repositories/userRepository.js");
 const { createAgentEnrollment } = await import("../src/repositories/agentRepository.js");
-const { default: jwt } = await import("jsonwebtoken");
+const { startSession } = await import("../src/services/sessionService.js");
 
 const trustedOrigin = "http://localhost:5173";
 
@@ -48,7 +49,7 @@ async function bearerUser({ role, permissions = [] }) {
     role,
     permissions
   });
-  const token = jwt.sign({ sub: user.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+  const token = (await startSession(user)).token;
   return { user, token };
 }
 
@@ -224,7 +225,11 @@ test("diagnostico: risco alto/critico reflete controle duplo por identidade e po
   });
   assert.equal(sameAuthorResult.status, 200);
   assert.equal(sameAuthorResult.json.diagnosis.script.riskRequiresSecondReviewer, true);
-  assert.equal(sameAuthorResult.json.diagnosis.script.secondReviewerSatisfied, false, "admin editou o script, nao pode ser o proprio segundo revisor");
+  assert.equal(
+    sameAuthorResult.json.diagnosis.script.secondReviewerSatisfied,
+    false,
+    "admin editou o script, nao pode ser o proprio segundo revisor"
+  );
   assert.equal(sameAuthorResult.json.diagnosis.userHasHighRiskApproval, true, "admin sempre tem todas as permissoes");
   assert.equal(sameAuthorResult.json.diagnosis.overallAvailable, false);
 

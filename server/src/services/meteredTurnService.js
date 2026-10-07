@@ -1,3 +1,4 @@
+import { logger } from "../lib/logger.js";
 const CACHE_SAFETY_MARGIN_MS = 15 * 60 * 1000;
 const CREDENTIAL_TTL_SECONDS = 6 * 60 * 60;
 
@@ -9,33 +10,28 @@ function isMeteredConfigured(env) {
 }
 
 function logWarn(message, extra = {}) {
-  console.warn(JSON.stringify({ level: "warn", event: "metered_turn", message, ...extra }));
+  logger.warn("metered_turn", { message, ...extra });
 }
 
 async function fetchMeteredIceServers(env, fetchImpl) {
   const domain = String(env.REMOTE_ASSISTANCE_METERED_DOMAIN).trim().replace(/\/$/, "");
   const secretKey = String(env.REMOTE_ASSISTANCE_METERED_SECRET_KEY).trim();
 
-  const createResponse = await fetchImpl(
-    `https://${domain}/api/v1/turn/credential?secretKey=${encodeURIComponent(secretKey)}`,
-    {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        expiryInSeconds: CREDENTIAL_TTL_SECONDS,
-        label: "it-guardian-remote-assistance"
-      })
-    }
-  );
+  const createResponse = await fetchImpl(`https://${domain}/api/v1/turn/credential?secretKey=${encodeURIComponent(secretKey)}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      expiryInSeconds: CREDENTIAL_TTL_SECONDS,
+      label: "it-guardian-remote-assistance"
+    })
+  });
   if (!createResponse.ok) {
     throw new Error(`create-credential HTTP ${createResponse.status}`);
   }
   const created = await createResponse.json();
   if (!created?.apiKey) throw new Error("create-credential sem apiKey na resposta");
 
-  const credentialsResponse = await fetchImpl(
-    `https://${domain}/api/v1/turn/credentials?apiKey=${encodeURIComponent(created.apiKey)}`
-  );
+  const credentialsResponse = await fetchImpl(`https://${domain}/api/v1/turn/credentials?apiKey=${encodeURIComponent(created.apiKey)}`);
   if (!credentialsResponse.ok) {
     throw new Error(`get-credentials HTTP ${credentialsResponse.status}`);
   }

@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { useTestDatabase } from "../test-support/database.mjs";
 
-process.env.DATABASE_URL = "memory";
+await useTestDatabase();
 process.env.ENABLE_DEMO_SEED = "true";
 process.env.ENABLE_REMOTE_SCRIPT_EXECUTION = "true";
 process.env.JWT_SECRET = "service-order-script-execution-integration-secret-32c";
@@ -12,7 +13,7 @@ const { initializeRuntime } = await import("../src/bootstrap.js");
 const { closeDatabase, query } = await import("../src/database.js");
 const { createUser } = await import("../src/repositories/userRepository.js");
 const { createAgentEnrollment } = await import("../src/repositories/agentRepository.js");
-const { default: jwt } = await import("jsonwebtoken");
+const { startSession } = await import("../src/services/sessionService.js");
 
 const trustedOrigin = "http://localhost:5173";
 
@@ -48,7 +49,7 @@ async function bearerUser({ role, permissions = [] }) {
     role,
     permissions
   });
-  const token = jwt.sign({ sub: user.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+  const token = (await startSession(user)).token;
   return { user, token };
 }
 
@@ -127,7 +128,10 @@ test("execucao real de script via Ordem de Servico: recomendacao, enfileiramento
   const recommendationsBody = await recommendationsResponse.json();
   assert.equal(recommendationsResponse.status, 200, JSON.stringify(recommendationsBody));
   const allRecommended = [...recommendationsBody.recommended, ...recommendationsBody.others];
-  assert.ok(allRecommended.some((item) => item.id === script.id), "o script cadastrado deve aparecer na recomendacao para a OS");
+  assert.ok(
+    allRecommended.some((item) => item.id === script.id),
+    "o script cadastrado deve aparecer na recomendacao para a OS"
+  );
 
   const useResponse = await fetch(`${baseUrl}/api/service-orders/${order.id}/scripts/${script.id}/use`, {
     method: "POST",

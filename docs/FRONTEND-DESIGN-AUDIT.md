@@ -1,5 +1,7 @@
 # Auditoria Visual do Frontend
 
+> **Documento histórico.** Descreve o estado do projeto numa data passada e pode estar desatualizado; a fonte da verdade é o código e os documentos listados em [docs/README.md](README.md).
+
 ## Contexto
 
 Esta auditoria registra a primeira leitura visual do IT Guardian antes da rodada de refinamento. A skill `frontend-design` foi carregada e usada como guia, com uma restricao importante para este projeto: o IT Guardian deve parecer uma ferramenta B2B de operacao tecnica diaria, nao uma landing page, template generico ou painel decorativo.

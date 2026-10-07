@@ -1,5 +1,7 @@
 # Rodada de correções das anotações
 
+> **Documento histórico.** Descreve o estado do projeto numa data passada e pode estar desatualizado; a fonte da verdade é o código e os documentos listados em [docs/README.md](README.md).
+
 ## Resumo
 
 Rodada focada em correções seguras nas telas de Ordens de Serviço, Configurações Gerais e Configurações da OS, sem recriar módulos e sem alterar regras de backend já migradas.

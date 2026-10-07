@@ -4,23 +4,34 @@ import {
   createPreventiveAutomationPlan,
   deletePreventiveAutomationPlan,
   disablePreventiveAutomationPlan,
+  reactivatePreventiveAutomationPlan,
+  updatePreventiveAutomationPlan
+} from "./preventiveAutomationPlanService.js";
+import { findPreventiveAutomationPlanById, listPreventiveAutomationPlans } from "./preventiveAutomationPlanQueryService.js";
+import {
   findPreventiveAutomationAssetDetails,
-  findPreventiveAutomationPlanById,
   listPreventiveAutomationAgenda,
   listPreventiveAutomationManagement,
-  listPreventiveAutomationPlanHistory,
-  listPreventiveAutomationPlans,
-  preparePreventiveAutomationPlan,
-  processDuePreventiveAutomationPlans,
-  processScheduledMaintenanceTasks,
-  reactivatePreventiveAutomationPlan,
+  listPreventiveAutomationPlanHistory
+} from "./preventiveAutomationManagementService.js";
+import {
   removeAssetFromPreventiveAutomationPlan,
   removePreventiveAutomationAssetOverride,
-  upsertPreventiveAutomationAssetOverride,
-  updatePreventiveAutomationPlan
-} from "../repositories/preventiveAutomationRepository.js";
+  upsertPreventiveAutomationAssetOverride
+} from "./preventiveAutomationAssetService.js";
+import {
+  preparePreventiveAutomationPlan,
+  processDuePreventiveAutomationPlans,
+  processScheduledMaintenanceTasks
+} from "./preventiveAutomationRunService.js";
 
 const notFoundMessage = "Plano de automação preventiva não encontrado.";
+
+/**
+ * Ator do scheduler: nao pertence a um usuario, entao precisa de visao global
+ * para preparar os planos vencidos. O acesso ja foi autorizado pelo segredo do cron.
+ */
+const schedulerActor = Object.freeze({ id: null, name: "Scheduler preventivo", isAdmin: true });
 
 function safeEquals(left = "", right = "") {
   const leftBuffer = Buffer.from(String(left));
@@ -140,7 +151,7 @@ export async function runScheduledMaintenanceCron(receivedSecret) {
   verifyCronSecret(receivedSecret);
 
   const startedAt = new Date();
-  const result = await processScheduledMaintenanceTasks({ id: null, name: "Scheduler preventivo" });
+  const result = await processScheduledMaintenanceTasks(schedulerActor);
   const finishedAt = new Date();
 
   return {
@@ -158,8 +169,11 @@ export async function runScheduledMaintenanceCron(receivedSecret) {
       ...(result.preventiveAutomation?.plans || [])
         .filter((plan) => plan.status === "failed")
         .map((plan) => ({ scope: "preventiveAutomation", planId: plan.planId, message: plan.message })),
-      ...(result.scriptValidations?.failedValidations || [])
-        .map((validation) => ({ scope: "scriptValidations", validationId: validation.validationId, message: validation.message }))
+      ...(result.scriptValidations?.failedValidations || []).map((validation) => ({
+        scope: "scriptValidations",
+        validationId: validation.validationId,
+        message: validation.message
+      }))
     ],
     durationMs: finishedAt.getTime() - startedAt.getTime()
   };

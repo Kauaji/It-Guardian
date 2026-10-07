@@ -66,7 +66,76 @@ padrao, configuravel via `IT_GUARDIAN_CODE_SIGN_TIMESTAMP_URL`. Os três
 executaveis (`ITGuardian.exe`, `ITGuardian-Uninstaller.exe` e o instalador
 final) sao assinados quando um certificado esta configurado.
 
+### Chaves de assinatura (atualizacao e jobs)
+
+O agente instalado e seguro por padrao: sem chave publica no `config.json`, ele
+**ignora atualizacoes automaticas** (`releasePublicKey`) e **recusa jobs de
+script** (`jobSigningPublicKey`). Veja `docs/SEGURANCA-DO-AGENTE.md`.
+
+- Gere a chave de release **fora do servidor** (`npm run agent:keys -- release`),
+  guarde a privada em cofre/secret do CI (`AGENT_RELEASE_PRIVATE_KEY`) e embuta a
+  publica no instalador com `-ReleasePublicKey "<base64>"` ou colocando a
+  chave publica (uma linha; `#` inicia comentario) em
+  `installers/windows-collector/release-public-key.txt`. O build valida o formato
+  e a grava em `releasePublicKey` do `config.json`.
+- A chave de jobs normalmente nao precisa ser informada: o servidor a entrega na
+  ativacao e o instalador a grava. `-JobSigningPublicKey` permite fixa-la no
+  build. Uma chave ja gravada no `config.json` **nunca e sobrescrita** (reparo,
+  troca de chave de produto ou novo instalador).
+- Em "Reparar", o `Finalize-CollectorInstall.ps1` acrescenta as chaves embutidas
+  se ainda nao existirem e cria `state\` (so SYSTEM/Administradores) para o
+  registro anti-replay de jobs.
+
+### Transporte RustDesk no instalador (opcional)
+
+O IT Guardian nao redistribui o RustDesk. `npm run installer:windows` baixa
+sozinho a ultima release oficial do
+[repositorio do RustDesk](https://github.com/rustdesk/rustdesk/releases) na
+primeira vez (precisa de saida para `api.github.com`/`github.com` na maquina
+que gera o instalador) e guarda em
+`installers/windows-collector/vendor/rustdesk-installer.exe` (pasta ignorada
+pelo git — o binario nunca vai para o repositorio; builds seguintes
+reaproveitam o arquivo sem baixar de novo). Sem internet, o download falha
+silenciosamente e o instalador e gerado normalmente, so sem o RustDesk — para
+usar uma versao especifica ou pular o download automatico, baixe manualmente
+e salve no mesmo caminho antes de rodar o script (ou defina
+`$env:RUSTDESK_SKIP_AUTO_DOWNLOAD = "1"`).
+
+Sem esse arquivo presente, o instalador do IT Guardian e gerado normalmente,
+so sem o RustDesk (mesmo comportamento de ausencia do helper de WebRTC acima).
+`Finalize-CollectorInstall.ps1` roda o instalador do RustDesk silenciosamente
+(`--silent-install`) sempre que o pacote estiver presente, independente da
+flag do servidor — instalar o cliente e reportar o id da maquina e uma coisa,
+o backend so passa a usar esse transporte quando
+`REMOTE_ASSISTANCE_RUSTDESK_ENABLED=true` tambem estiver ligado (caso
+contrario a maquina so fica com o RustDesk instalado e ocioso).
+
+Para apontar o cliente instalado para um relay proprio (recomendado — sem
+isso ele fica no relay publico do RustDesk), suba `docker compose --profile
+rustdesk up -d` (ver `docker-compose.local.yml`) e defina, antes de rodar
+`npm run installer:windows`:
+
+```powershell
+$env:RUSTDESK_ID_SERVER = "seu-host-ou-ip:21116"
+$env:RUSTDESK_RELAY_SERVER = "seu-host-ou-ip:21117"
+$env:RUSTDESK_KEY = "conteudo do arquivo id_ed25519.pub gerado pelo hbbs"
+npm run installer:windows
+```
+
+Esses tres valores viram `config.json` em cada maquina instalada e sao
+tambem os que voce configura manualmente, uma vez, no cliente RustDesk do
+proprio tecnico (Configuracoes → Rede → ID/Relay Server) — os dois lados
+precisam apontar para o mesmo relay. Consulte
+[`docs/ASSISTENCIA-REMOTA.md`](../../docs/ASSISTENCIA-REMOTA.md), secao
+"Transporte RustDesk", para o modelo de seguranca completo (senha por sessao,
+nunca compartilhada entre maquinas, relay proprio obrigatorio).
+
 ## Resultado da instalacao
+
+Tambem: `config.json` com `releasePublicKey`, `jobSigningPublicKey` e
+`allowUnsignedUpdates`/`allowUnsignedJobs` (`false`); pasta `state\` com ACL
+restrita.
+
 
 - arquivos em `C:\ProgramData\ITGuardian`;
 - token derivado salvo em `config.json` com acesso somente a SYSTEM e

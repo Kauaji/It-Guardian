@@ -1,14 +1,5 @@
 import { Router } from "express";
-import {
-  create,
-  createGroup,
-  list,
-  listGroups,
-  remove,
-  removeGroup,
-  rename,
-  renameGroup
-} from "../controllers/segmentController.js";
+import { create, createGroup, list, listGroups, remove, removeGroup, rename, renameGroup } from "../controllers/segmentController.js";
 import { requireAuth, requirePermission } from "../middleware/authMiddleware.js";
 
 const router = Router();

@@ -1,8 +1,16 @@
 // Presentation only: changing the visual never changes a widget's data source.
 export const visualizationLabels = {
-  stats: "Indicadores", bars: "Barras", columns: "Colunas", pie: "Pizza",
-  donut: "Rosca", line: "Linha", area: "Área", list: "Lista", gauge: "Medidor",
-  radial: "Anéis radiais", heatmap: "Mapa de calor"
+  stats: "Indicadores",
+  bars: "Barras",
+  columns: "Colunas",
+  pie: "Pizza",
+  donut: "Rosca",
+  line: "Linha",
+  area: "Área",
+  list: "Lista",
+  gauge: "Medidor",
+  radial: "Anéis radiais",
+  heatmap: "Mapa de calor"
 };
 
 export function widgetVisualizations(type) {

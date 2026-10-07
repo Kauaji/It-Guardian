@@ -71,7 +71,10 @@ test("comandos sao drenados uma unica vez e respeitam o limite de fila", async (
   }
   const drained = await drainRelayCommands(sessionId);
   assert.equal(drained.length, 3);
-  assert.deepEqual(drained.map((command) => command.id), ["2", "3", "4"]);
+  assert.deepEqual(
+    drained.map((command) => command.id),
+    ["2", "3", "4"]
+  );
   assert.deepEqual(await drainRelayCommands(sessionId), []);
   await clearRelay(sessionId);
 });
@@ -235,17 +238,15 @@ test("store Redis: o frame fica numa chave propria e a escrita nao le o valor an
 
   const getCallsBefore = client._getCalls.length;
   await redisStore.setFrame(sessionId, "data:image/jpeg;base64,AAA=");
-  assert.equal(
-    client._getCalls.length,
-    getCallsBefore,
-    "setFrame deve ser um SET puro, sem GET do valor antigo antes"
-  );
+  assert.equal(client._getCalls.length, getCallsBefore, "setFrame deve ser um SET puro, sem GET do valor antigo antes");
 
   assert.equal(await redisStore.getFrame(sessionId), "data:image/jpeg;base64,AAA=");
   assert.equal(client._rawValue(`remote-assistance:relay:${sessionId}:frame`), "data:image/jpeg;base64,AAA=");
   assert.ok(client._ttlCalls.some((call) => call.key === `remote-assistance:relay:${sessionId}:frame` && call.ex === 1800));
 
-  await redisStore.mutate(sessionId, (relay) => { relay.agentToken = "a"; });
+  await redisStore.mutate(sessionId, (relay) => {
+    relay.agentToken = "a";
+  });
   assert.equal(
     await redisStore.getFrame(sessionId),
     "data:image/jpeg;base64,AAA=",
@@ -258,8 +259,12 @@ test("store Redis: mutacoes sucessivas leem o estado mais recente (nao perdem es
   const redisStore = createRedisStore(client);
   const sessionId = freshSessionId();
 
-  await redisStore.mutate(sessionId, (relay) => { relay.monitors = [{ id: "d1" }]; });
-  await redisStore.mutate(sessionId, (relay) => { relay.viewerPaused = true; });
+  await redisStore.mutate(sessionId, (relay) => {
+    relay.monitors = [{ id: "d1" }];
+  });
+  await redisStore.mutate(sessionId, (relay) => {
+    relay.viewerPaused = true;
+  });
 
   const relay = await redisStore.get(sessionId);
   assert.deepEqual(relay.monitors, [{ id: "d1" }]);
@@ -271,7 +276,9 @@ test("store Redis: clear remove estado, frame e fila de comandos", async () => {
   const redisStore = createRedisStore(client);
   const sessionId = freshSessionId();
 
-  await redisStore.mutate(sessionId, (relay) => { relay.agentToken = "a"; });
+  await redisStore.mutate(sessionId, (relay) => {
+    relay.agentToken = "a";
+  });
   await redisStore.setFrame(sessionId, "data:image/jpeg;base64,AAA=");
   await redisStore.enqueueCommand(sessionId, { type: "mouse_move" }, 10);
 
@@ -293,7 +300,10 @@ test("store Redis: fila de comandos usa RPUSH/LPOP atomico e respeita o limite",
   assert.equal(client._rawList(`remote-assistance:relay:${sessionId}:cmds`).length, 3);
 
   const drained = await redisStore.drainCommands(sessionId);
-  assert.deepEqual(drained.map((command) => command.id), ["2", "3", "4"]);
+  assert.deepEqual(
+    drained.map((command) => command.id),
+    ["2", "3", "4"]
+  );
   assert.deepEqual(await redisStore.drainCommands(sessionId), []);
 });
 

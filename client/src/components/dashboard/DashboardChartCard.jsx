@@ -1,15 +1,7 @@
 import { ResponsiveContainer } from "recharts";
 import { useSettledWidthKey } from "../../hooks/useSettledWidthKey.js";
 
-export default function DashboardChartCard({
-  title,
-  icon: Icon,
-  loading,
-  empty,
-  emptyMessage,
-  height = 220,
-  children
-}) {
+export default function DashboardChartCard({ title, icon: Icon, loading, empty, emptyMessage, height = 220, children }) {
   const settledWidthKey = useSettledWidthKey();
 
   return (
@@ -21,7 +13,9 @@ export default function DashboardChartCard({
       {loading ? (
         <div key="skeleton" className="dashboard-chart-skeleton" style={{ height }} aria-hidden="true" />
       ) : empty ? (
-        <p key="empty" className="dashboard-empty-state">{emptyMessage || "Sem dados suficientes neste periodo."}</p>
+        <p key="empty" className="dashboard-empty-state">
+          {emptyMessage || "Sem dados suficientes neste período."}
+        </p>
       ) : (
         <div key="chart" className="chart-box" style={{ height }}>
           <ResponsiveContainer key={settledWidthKey} width="100%" height="100%">

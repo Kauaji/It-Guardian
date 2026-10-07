@@ -28,7 +28,10 @@ export default function NetworkTopologyLink({
       role="button"
       tabIndex={0}
       aria-label={`Conexão entre ${endpointName("source")} e ${endpointName("target")}${link.label ? `: ${link.label}` : ""}`}
-      onClick={(event) => { event.stopPropagation(); onClick(link.id); }}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick(link.id);
+      }}
       onKeyDown={(event) => {
         if (event.key !== "Enter" && event.key !== " ") return;
         event.preventDefault();
@@ -36,14 +39,7 @@ export default function NetworkTopologyLink({
         onClick(link.id);
       }}
     >
-      <line
-        x1={sourceNode.x}
-        y1={sourceNode.y}
-        x2={targetNode.x}
-        y2={targetNode.y}
-        stroke="transparent"
-        strokeWidth={16}
-      />
+      <line x1={sourceNode.x} y1={sourceNode.y} x2={targetNode.x} y2={targetNode.y} stroke="transparent" strokeWidth={16} />
       <line
         x1={sourceNode.x}
         y1={sourceNode.y}

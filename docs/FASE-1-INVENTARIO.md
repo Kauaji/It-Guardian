@@ -1,5 +1,7 @@
 # Fase 1 - Inventario
 
+> **Documento histórico.** Descreve o estado do projeto numa data passada e pode estar desatualizado; a fonte da verdade é o código e os documentos listados em [docs/README.md](README.md).
+
 Este documento registra o escopo estabilizado da Fase 1 do IT Guardian antes da expansao para Ordens de Servico.
 
 ## Objetivo

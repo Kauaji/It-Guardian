@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { useTestDatabase } from "../test-support/database.mjs";
 
-process.env.DATABASE_URL = "memory";
+await useTestDatabase();
 process.env.ENABLE_DEMO_SEED = "true";
 process.env.ENABLE_REMOTE_SCRIPT_EXECUTION = "true";
 process.env.JWT_SECRET = "dual-control-integration-test-secret-32-characters";
@@ -11,13 +12,9 @@ const { createApp } = await import("../src/app.js");
 const { initializeRuntime } = await import("../src/bootstrap.js");
 const { closeDatabase } = await import("../src/database.js");
 const { createAgentEnrollment } = await import("../src/repositories/agentRepository.js");
-const { queueAgentScriptJob } = await import("../src/repositories/agentScriptJobRepository.js");
-const {
-  createMaintenanceScript,
-  createScriptSimulationLog,
-  findMaintenanceScriptById,
-  updateMaintenanceScript
-} = await import("../src/repositories/maintenanceScriptRepository.js");
+const { queueAgentScriptJob } = await import("../src/services/agentScriptJobService.js");
+const { createMaintenanceScript, createScriptSimulationLog, findMaintenanceScriptById, updateMaintenanceScript } =
+  await import("../src/services/maintenanceScripts/maintenanceScriptsFacade.js");
 
 function heartbeatPayload(overrides = {}) {
   return {

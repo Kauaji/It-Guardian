@@ -56,16 +56,9 @@ function isLayoutResponse(response, method) {
 }
 
 function isPreviewResponse(response, type, assetStatus) {
-  if (
-    response.request().method() !== "POST" ||
-    new URL(response.url()).pathname !== "/api/dashboard/widgets/preview"
-  ) return false;
+  if (response.request().method() !== "POST" || new URL(response.url()).pathname !== "/api/dashboard/widgets/preview") return false;
   const payload = response.request().postDataJSON();
-  return payload.type === type && (
-    assetStatus
-      ? payload.filters?.assetStatus === assetStatus
-      : !Object.keys(payload.filters || {}).length
-  );
+  return payload.type === type && (assetStatus ? payload.filters?.assetStatus === assetStatus : !Object.keys(payload.filters || {}).length);
 }
 
 async function withDashboardFixture(page, run) {
@@ -80,7 +73,10 @@ async function withDashboardFixture(page, run) {
     const defaultLayout = await apiJson(page, "/api/dashboard/layout/reset", { method: "POST" });
     const unique = `${Date.now().toString(36)}-${test.info().retry}`;
     // PingService's local mock is deterministic: .23 is offline, .21 is online.
-    for (const [status, ip] of [["offline", "203.0.113.23"], ["online", "203.0.113.21"]]) {
+    for (const [status, ip] of [
+      ["offline", "203.0.113.23"],
+      ["online", "203.0.113.21"]
+    ]) {
       const { device } = await apiJson(page, "/api/devices/manual", {
         method: "POST",
         data: {
@@ -140,11 +136,7 @@ test("dashboard mostra os widgets atuais, indicadores e gráficos sem erros de e
     await expect(page.locator(".dashboard-widget-error")).toHaveCount(0);
   });
 
-  const meaningfulErrors = consoleErrors.filter(
-    (text) =>
-      !text.includes("WebSocket") &&
-      !text.includes("401 (Unauthorized)")
-  );
+  const meaningfulErrors = consoleErrors.filter((text) => !text.includes("WebSocket") && !text.includes("401 (Unauthorized)"));
   expect(meaningfulErrors).toEqual([]);
   expect(runtimeErrors).toEqual([]);
 });
@@ -155,15 +147,20 @@ test("catálogo mostra prévias de pizza, colunas, barras, rosca e linha antes d
     const card = catalogCard(page, catalog, availabilityLabel);
     const visualization = card.getByRole("combobox", { name: `Visualização de ${availabilityLabel}`, exact: true });
 
-    for (const [value, label] of [["pie", "Pizza"], ["columns", "Colunas"], ["bars", "Barras"], ["donut", "Rosca"]]) {
+    for (const [value, label] of [
+      ["pie", "Pizza"],
+      ["columns", "Colunas"],
+      ["bars", "Barras"],
+      ["donut", "Rosca"]
+    ]) {
       await visualization.selectOption(value);
       await expect(visualization).toHaveValue(value);
       await expect(card.getByRole("img", { name: `Prévia ilustrativa: ${label}`, exact: true })).toBeVisible();
       await expect(card.getByText("Prévia ilustrativa", { exact: true })).toBeVisible();
     }
 
-    const historyCard = catalogCard(page, catalog, "Grafico Historico de CPU");
-    await historyCard.getByRole("combobox", { name: "Visualização de Grafico Historico de CPU", exact: true }).selectOption("line");
+    const historyCard = catalogCard(page, catalog, "Gráfico Histórico de CPU");
+    await historyCard.getByRole("combobox", { name: "Visualização de Gráfico Histórico de CPU", exact: true }).selectOption("line");
     await expect(historyCard.getByRole("img", { name: "Prévia ilustrativa: Linha", exact: true })).toBeVisible();
 
     for (const [label, value, preview] of [
@@ -202,7 +199,12 @@ test("escolher pizza no catálogo, adicionar e salvar preserva chartType após r
     const savedLayout = await saved.json();
     const addedWidget = savedLayout.widgets.find((widget) => !existingIds.has(widget.id));
     expect(addedWidget).toMatchObject({ type: "asset_availability", config: { chartType: "pie" } });
-    expect(saved.request().postDataJSON().widgets.find((widget) => widget.id === addedWidget.id).config.chartType).toBe("pie");
+    expect(
+      saved
+        .request()
+        .postDataJSON()
+        .widgets.find((widget) => widget.id === addedWidget.id).config.chartType
+    ).toBe("pie");
     await expect(page.getByRole("button", { name: "Editar dashboard", exact: true })).toBeVisible();
 
     const reloadedResponse = page.waitForResponse((response) => isLayoutResponse(response, "GET"));
@@ -211,7 +213,8 @@ test("escolher pizza no catálogo, adicionar e salvar preserva chartType após r
     expect(reloaded.ok()).toBeTruthy();
     const reloadedLayout = await reloaded.json();
     expect(reloadedLayout.widgets.find((widget) => widget.id === addedWidget.id)).toMatchObject({
-      type: "asset_availability", config: { chartType: "pie" }
+      type: "asset_availability",
+      config: { chartType: "pie" }
     });
     await expect(widgetCards(page, availabilityLabel)).toHaveCount(initialAvailabilityCount + 1);
     await expect(widgetCards(page, availabilityLabel).last().locator(".recharts-pie").first()).toBeVisible();
@@ -221,7 +224,8 @@ test("escolher pizza no catálogo, adicionar e salvar preserva chartType após r
 test("clicar em Offline filtra outros widgets e limpar restaura os dados completos", async ({ page }) => {
   await withDashboardFixture(page, async () => {
     const baseline = await apiJson(page, "/api/dashboard/widgets/preview", {
-      method: "POST", data: { type: "asset_availability", config: {} }
+      method: "POST",
+      data: { type: "asset_availability", config: {} }
     });
     const offlineCount = baseline.data.byStatus.offline;
     expect(offlineCount).toBeGreaterThan(0);
@@ -229,7 +233,12 @@ test("clicar em Offline filtra outros widgets e limpar restaura os dados complet
 
     const availability = widgetCards(page, availabilityLabel);
     const overview = widgetCards(page, overviewLabel);
-    await expect(overview.locator(".dashboard-widget-stat").filter({ has: page.getByText("Ativos", { exact: true }) }).locator("dd")).toHaveText(String(baseline.data.total));
+    await expect(
+      overview
+        .locator(".dashboard-widget-stat")
+        .filter({ has: page.getByText("Ativos", { exact: true }) })
+        .locator("dd")
+    ).toHaveText(String(baseline.data.total));
     const filteredAvailability = page.waitForResponse((response) => isPreviewResponse(response, "asset_availability", "offline"));
     const filteredOverview = page.waitForResponse((response) => isPreviewResponse(response, "status_overview", "offline"));
     await availability.getByRole("button", { name: `Filtrar por Offline: ${offlineCount}`, exact: true }).click();
@@ -245,7 +254,12 @@ test("clicar em Offline filtra outros widgets e limpar restaura os dados complet
         expect(payload.data).toMatchObject({ totalAssets: offlineCount, onlineAssets: 0, offlineAssets: offlineCount });
       }
     }
-    await expect(overview.locator(".dashboard-widget-stat").filter({ has: page.getByText("Ativos", { exact: true }) }).locator("dd")).toHaveText(String(offlineCount));
+    await expect(
+      overview
+        .locator(".dashboard-widget-stat")
+        .filter({ has: page.getByText("Ativos", { exact: true }) })
+        .locator("dd")
+    ).toHaveText(String(offlineCount));
     await expect(overview.getByRole("button", { name: "Filtrar por Online: 0", exact: true })).toBeVisible();
     await expect(availability.getByRole("button", { name: "Filtrar por Online: 0", exact: true })).toBeVisible();
 
@@ -264,24 +278,43 @@ test("clicar em Offline filtra outros widgets e limpar restaura os dados complet
     expect(restoredAssets.total).toBeGreaterThan(offlineCount);
     expect(restoredAssets.byStatus.online).toBeGreaterThan(0);
     expect(restoredStatus.totalAssets).toBe(restoredAssets.total);
-    await expect(overview.locator(".dashboard-widget-stat").filter({ has: page.getByText("Ativos", { exact: true }) }).locator("dd")).toHaveText(String(restoredAssets.total));
-    await expect(availability.getByRole("button", {
-      name: `Filtrar por Online: ${restoredAssets.byStatus.online}`, exact: true
-    })).toBeVisible();
+    await expect(
+      overview
+        .locator(".dashboard-widget-stat")
+        .filter({ has: page.getByText("Ativos", { exact: true }) })
+        .locator("dd")
+    ).toHaveText(String(restoredAssets.total));
+    await expect(
+      availability.getByRole("button", {
+        name: `Filtrar por Online: ${restoredAssets.byStatus.online}`,
+        exact: true
+      })
+    ).toBeVisible();
     await expect(page.locator(".dashboard-widget-error")).toHaveCount(0);
   });
 });
 
 test("resumo cabe no próprio card em desktop compacto e celular", async ({ page }) => {
   await withDashboardFixture(page, async () => {
-    for (const viewport of [{ width: 903, height: 574 }, { width: 390, height: 844 }]) {
+    for (const viewport of [
+      { width: 903, height: 574 },
+      { width: 390, height: 844 }
+    ]) {
       await page.setViewportSize(viewport);
       const overview = widgetCards(page, overviewLabel);
       await expect(overview).toBeVisible();
       await expect(overview.getByText("Alertas críticos", { exact: true })).toBeVisible();
-      await expect.poll(() => overview.locator(".dashboard-widget-card-body").evaluate((body) => body.scrollHeight - body.clientHeight)).toBeLessThanOrEqual(1);
+      await expect
+        .poll(() => overview.locator(".dashboard-widget-card-body").evaluate((body) => body.scrollHeight - body.clientHeight))
+        .toBeLessThanOrEqual(1);
       await expect.poll(() => overview.evaluate((card) => card.scrollWidth - card.clientWidth)).toBeLessThanOrEqual(1);
-      await expect.poll(() => page.locator(".dashboard-widget-card").evaluateAll((cards) => Math.max(...cards.map((card) => card.scrollWidth - card.clientWidth), 0))).toBeLessThanOrEqual(1);
+      await expect
+        .poll(() =>
+          page
+            .locator(".dashboard-widget-card")
+            .evaluateAll((cards) => Math.max(...cards.map((card) => card.scrollWidth - card.clientWidth), 0))
+        )
+        .toBeLessThanOrEqual(1);
       await expect.poll(() => page.locator("html").evaluate((root) => root.scrollWidth - root.clientWidth)).toBeLessThanOrEqual(1);
     }
   });

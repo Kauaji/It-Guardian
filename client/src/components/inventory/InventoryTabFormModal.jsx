@@ -12,13 +12,7 @@ export default function InventoryTabFormModal({ tab, tabs = [], onClose, onSubmi
 
   const cleanName = name.trim();
   const duplicateName = useMemo(
-    () =>
-      Boolean(cleanName) &&
-      tabs.some(
-        (item) =>
-          item.id !== tab?.id &&
-          item.name.trim().toLowerCase() === cleanName.toLowerCase()
-      ),
+    () => Boolean(cleanName) && tabs.some((item) => item.id !== tab?.id && item.name.trim().toLowerCase() === cleanName.toLowerCase()),
     [cleanName, tab?.id, tabs]
   );
 
@@ -32,10 +26,17 @@ export default function InventoryTabFormModal({ tab, tabs = [], onClose, onSubmi
 
   return (
     <div className="modal-backdrop" role="presentation">
-      <form ref={dialogRef} className="modal-panel segment-form-modal" role="dialog" aria-modal="true" onSubmit={submit}>
+      <form
+        ref={dialogRef}
+        className="modal-panel segment-form-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="inventory-tab-form-title"
+        onSubmit={submit}
+      >
         <header>
           <div>
-            <h2>Renomear ambiente</h2>
+            <h2 id="inventory-tab-form-title">Renomear ambiente</h2>
             <p>Atualize o nome da aba do inventário.</p>
           </div>
           <button type="button" className="icon-button" onClick={onClose} title="Fechar">
@@ -45,17 +46,14 @@ export default function InventoryTabFormModal({ tab, tabs = [], onClose, onSubmi
 
         <label>
           Nome da aba
-          <input
-            autoFocus
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Ex: Cacau Center"
-          />
+          <input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder="Ex: Cacau Center" />
         </label>
         {duplicateName && <span className="form-error">Já existe uma aba com esse nome.</span>}
 
         <div className="modal-actions">
-          <button type="button" className="ghost-action" onClick={onClose}>Cancelar</button>
+          <button type="button" className="ghost-action" onClick={onClose}>
+            Cancelar
+          </button>
           <button className="primary-action compact-action" disabled={cleanName.length < 2 || duplicateName}>
             Salvar
           </button>

@@ -36,7 +36,7 @@ function widget(overrides = {}) {
 function baseCatalog() {
   return [
     { type: "asset_availability", label: "Disponibilidade de Ativos", category: "assets", defaultSize: { w: "m", h: "s" } },
-    { type: "recent_events", label: "Ultimos Eventos Tecnicos", category: "events", defaultSize: { w: "l", h: "m" } }
+    { type: "recent_events", label: "Últimos Eventos Técnicos", category: "events", defaultSize: { w: "l", h: "m" } }
   ];
 }
 
@@ -90,11 +90,11 @@ describe("DashboardWorkspace", () => {
     fireEvent.click(screen.getByText("Editar dashboard"));
     fireEvent.click(screen.getByText("Adicionar widget"));
 
-    await waitFor(() => expect(screen.getAllByText("Ultimos Eventos Tecnicos").length).toBeGreaterThan(0));
-    fireEvent.click(screen.getByRole("button", { name: "Adicionar Ultimos Eventos Tecnicos" }));
+    await waitFor(() => expect(screen.getAllByText("Últimos Eventos Técnicos").length).toBeGreaterThan(0));
+    fireEvent.click(screen.getByRole("button", { name: "Adicionar Últimos Eventos Técnicos" }));
 
     await waitFor(() => {
-      const titles = screen.getAllByText("Ultimos Eventos Tecnicos");
+      const titles = screen.getAllByText("Últimos Eventos Técnicos");
       expect(titles.some((node) => node.tagName === "H4")).toBe(true);
     });
     expect(saveDashboardLayout).not.toHaveBeenCalled();
@@ -108,7 +108,7 @@ describe("DashboardWorkspace", () => {
     await waitFor(() => expect(screen.getByText("Disponibilidade de Ativos")).toBeTruthy());
 
     fireEvent.click(screen.getByText("Editar dashboard"));
-    const menuButtons = screen.getAllByTitle("Opcoes do widget");
+    const menuButtons = screen.getAllByTitle("Opções do widget");
     fireEvent.click(menuButtons[0]);
     fireEvent.click(screen.getByText("Remover"));
 
@@ -123,7 +123,7 @@ describe("DashboardWorkspace", () => {
     await waitFor(() => expect(screen.getByText("Disponibilidade de Ativos")).toBeTruthy());
 
     fireEvent.click(screen.getByText("Editar dashboard"));
-    const menuButtons = screen.getAllByTitle("Opcoes do widget");
+    const menuButtons = screen.getAllByTitle("Opções do widget");
     fireEvent.click(menuButtons[0]);
     fireEvent.click(screen.getByText("Remover"));
     await waitFor(() => expect(screen.queryByText("Disponibilidade de Ativos")).toBeNull());
@@ -174,7 +174,7 @@ describe("DashboardWorkspace", () => {
     await waitFor(() => expect(screen.getByText("Disponibilidade de Ativos")).toBeTruthy());
 
     fireEvent.click(screen.getByText("Editar dashboard"));
-    fireEvent.click(screen.getAllByTitle("Opcoes do widget")[0]);
+    fireEvent.click(screen.getAllByTitle("Opções do widget")[0]);
 
     const card = container.querySelector(".dashboard-widget-card");
     const widthPicker = within(card).getByText("Largura").closest("fieldset");
@@ -199,34 +199,61 @@ describe("DashboardWorkspace", () => {
     expect(saveDashboardLayout).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Adicionar Disponibilidade de Ativos" }));
     fireEvent.click(screen.getByRole("button", { name: "Salvar layout" }));
-    await waitFor(() => expect(saveDashboardLayout).toHaveBeenCalledWith("tok", {
-      widgets: [expect.objectContaining({ type: "asset_availability", config: { chartType: "pie" } })]
-    }));
+    await waitFor(() =>
+      expect(saveDashboardLayout).toHaveBeenCalledWith("tok", {
+        widgets: [expect.objectContaining({ type: "asset_availability", config: { chartType: "pie" } })]
+      })
+    );
   });
 
   it("cruza status entre os widgets, combina ativo e remove filtros sem persistir o layout", async () => {
-    const widgets = [widget({ config: { chartType: "bars" } }), widget({ id: "w2", type: "top_assets_cpu", config: { chartType: "bars" } })];
+    const widgets = [
+      widget({ config: { chartType: "bars" } }),
+      widget({ id: "w2", type: "top_assets_cpu", config: { chartType: "bars" } })
+    ];
     fetchDashboardLayout.mockResolvedValue({ widgets });
     previewDashboardWidget.mockImplementation(async (_token, { type, filters }) => ({
       type,
-      data: type === "asset_availability"
-        ? { total: filters?.assetStatus ? 1 : 3, byStatus: { online: filters?.assetStatus ? 0 : 2, offline: 1 } }
-        : { metric: "cpu", rows: [{ id: "asset-1", name: "Servidor A", value: 62 }] }
+      data:
+        type === "asset_availability"
+          ? { total: filters?.assetStatus ? 1 : 3, byStatus: { online: filters?.assetStatus ? 0 : 2, offline: 1 } }
+          : { metric: "cpu", rows: [{ id: "asset-1", name: "Servidor A", value: 62 }] }
     }));
     render(<DashboardWorkspace token="tok" canCustomize />);
     fireEvent.click(await screen.findByRole("button", { name: "Filtrar por Offline: 1" }));
     expect(screen.getByRole("button", { name: "Remover filtro Status: Offline" })).toBeTruthy();
-    await waitFor(() => expect(previewDashboardWidget).toHaveBeenCalledWith("tok", expect.objectContaining({
-      type: "top_assets_cpu", filters: { assetStatus: "offline" }
-    }), expect.anything()));
+    await waitFor(() =>
+      expect(previewDashboardWidget).toHaveBeenCalledWith(
+        "tok",
+        expect.objectContaining({
+          type: "top_assets_cpu",
+          filters: { assetStatus: "offline" }
+        }),
+        expect.anything()
+      )
+    );
     fireEvent.click(await screen.findByRole("button", { name: "Filtrar por Servidor A: 62%" }));
-    await waitFor(() => expect(previewDashboardWidget).toHaveBeenCalledWith("tok", expect.objectContaining({
-      type: "asset_availability", filters: { assetStatus: "offline", assetId: "asset-1" }
-    }), expect.anything()));
+    await waitFor(() =>
+      expect(previewDashboardWidget).toHaveBeenCalledWith(
+        "tok",
+        expect.objectContaining({
+          type: "asset_availability",
+          filters: { assetStatus: "offline", assetId: "asset-1" }
+        }),
+        expect.anything()
+      )
+    );
     fireEvent.click(screen.getByRole("button", { name: "Remover filtro Status: Offline" }));
-    await waitFor(() => expect(previewDashboardWidget).toHaveBeenCalledWith("tok", expect.objectContaining({
-      type: "asset_availability", filters: { assetId: "asset-1" }
-    }), expect.anything()));
+    await waitFor(() =>
+      expect(previewDashboardWidget).toHaveBeenCalledWith(
+        "tok",
+        expect.objectContaining({
+          type: "asset_availability",
+          filters: { assetId: "asset-1" }
+        }),
+        expect.anything()
+      )
+    );
     fireEvent.click(screen.getByRole("button", { name: "Limpar filtros" }));
     await waitFor(() => expect(screen.queryByRole("button", { name: /Remover filtro/ })).toBeNull());
     expect(saveDashboardLayout).not.toHaveBeenCalled();
@@ -242,5 +269,105 @@ describe("DashboardWorkspace", () => {
     await waitFor(() => expect(screen.queryByRole("button", { name: "Remover filtro Status: Offline" })).toBeNull());
     fireEvent.click(screen.getByRole("button", { name: "Editar dashboard" }));
     await waitFor(() => expect(screen.getByRole("button", { name: "Filtrar por Offline: 1" })).toBeDisabled());
+  });
+
+  it("mostra carregando e o erro do layout quando nao ha layout salvo", async () => {
+    fetchDashboardLayout.mockRejectedValue(new Error("Layout fora"));
+    const notify = vi.fn();
+    render(<DashboardWorkspace token="tok" canCustomize notify={notify} />);
+    expect(screen.getByText("Carregando dashboard...")).toBeTruthy();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Layout fora");
+    expect(notify).toHaveBeenCalledWith("Layout fora", "danger");
+  });
+
+  it("falha ao salvar notifica e mantem o modo edicao; sem mensagem usa o texto padrao", async () => {
+    fetchDashboardLayout.mockResolvedValue({ widgets: [widget()] });
+    previewDashboardWidget.mockResolvedValue({ type: "t", data: {} });
+    saveDashboardLayout.mockRejectedValueOnce(new Error("Sem permissao")).mockRejectedValueOnce({});
+    const notify = vi.fn();
+    render(<DashboardWorkspace token="tok" canCustomize notify={notify} />);
+    await screen.findByText("Disponibilidade de Ativos");
+    fireEvent.click(screen.getByText("Editar dashboard"));
+    await act(async () => {
+      fireEvent.click(screen.getByText("Salvar layout"));
+    });
+    expect(notify).toHaveBeenCalledWith("Sem permissao", "danger");
+    await act(async () => {
+      fireEvent.click(screen.getByText("Salvar layout"));
+    });
+    expect(notify).toHaveBeenCalledWith("Não foi possível salvar o layout.", "danger");
+    expect(screen.getByText("Salvar layout")).toBeTruthy();
+  });
+
+  it("salvar com sucesso notifica e mostra a hora da atualizacao", async () => {
+    fetchDashboardLayout.mockResolvedValue({ widgets: [widget()] });
+    previewDashboardWidget.mockResolvedValue({ type: "t", data: {} });
+    saveDashboardLayout.mockResolvedValue({ widgets: [widget()] });
+    const notify = vi.fn();
+    render(<DashboardWorkspace token="tok" canCustomize notify={notify} />);
+    await screen.findByText("Disponibilidade de Ativos");
+    fireEvent.click(screen.getByText("Editar dashboard"));
+    await act(async () => {
+      fireEvent.click(screen.getByText("Salvar layout"));
+    });
+    expect(notify).toHaveBeenCalledWith("Layout do dashboard salvo.", "ok");
+    expect(document.querySelector(".dashboard-workspace-status").textContent).toMatch(/1 widget\(s\) - atualizado /);
+  });
+
+  it("restaurar padrao: sucesso notifica e falha usa mensagem padrao", async () => {
+    fetchDashboardLayout.mockResolvedValue({ widgets: [widget()] });
+    previewDashboardWidget.mockResolvedValue({ type: "t", data: {} });
+    resetDashboardLayout.mockResolvedValueOnce({ widgets: [widget({ id: "d1" })] }).mockRejectedValueOnce({});
+    const notify = vi.fn();
+    render(<DashboardWorkspace token="tok" canCustomize notify={notify} />);
+    await screen.findByText("Disponibilidade de Ativos");
+    fireEvent.click(screen.getByText("Editar dashboard"));
+    await act(async () => {
+      fireEvent.click(screen.getByText("Restaurar padrao"));
+    });
+    expect(notify).toHaveBeenCalledWith("Layout restaurado para o padrão.", "ok");
+    await act(async () => {
+      fireEvent.click(screen.getByText("Restaurar padrao"));
+    });
+    expect(notify).toHaveBeenCalledWith("Não foi possível restaurar o layout padrão.", "danger");
+  });
+
+  it("organizar posicoes alterna a dica e Atualizar agora remonta a grade", async () => {
+    fetchDashboardLayout.mockResolvedValue({ widgets: [widget()] });
+    previewDashboardWidget.mockResolvedValue({ type: "t", data: {} });
+    render(<DashboardWorkspace token="tok" canCustomize />);
+    await screen.findByText("Disponibilidade de Ativos");
+    previewDashboardWidget.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: /Atualizar agora/ }));
+    await waitFor(() => expect(previewDashboardWidget).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByText("Editar dashboard"));
+    const toggle = screen.getByRole("button", { name: /Organizar posições/ });
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(toggle);
+    expect(screen.getByText(/Arraste cada gráfico pela alça/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Finalizar organização/ })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByText("Cancelar"));
+    expect(screen.queryByText("Arraste cada gráfico pela alça pontilhada. A nova ordem só é aplicada ao salvar o layout.")).toBeNull();
+  });
+
+  it("widget do catalogo que exige ativo abre a configuracao e Salvar aplica ao draft", async () => {
+    fetchDashboardLayout.mockResolvedValue({ widgets: [] });
+    fetchDashboardWidgetCatalog.mockResolvedValue({
+      widgets: [
+        { type: "top_assets_cpu", label: "Top CPU por ativo", category: "metrics", requiresAssetConfig: true, defaultSize: { w: "l" } }
+      ]
+    });
+    previewDashboardWidget.mockResolvedValue({ type: "t", data: { rows: [] } });
+    render(<DashboardWorkspace token="tok" canCustomize />);
+    await screen.findByRole("button", { name: "Editar dashboard" });
+    fireEvent.click(screen.getByRole("button", { name: "Editar dashboard" }));
+    fireEvent.click(screen.getByRole("button", { name: "Adicionar widget" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Adicionar Top CPU por ativo" }));
+    const dialog = await screen.findByRole("dialog", { name: "Configurar widget" });
+    expect(screen.queryByRole("dialog", { name: "Adicionar widget" })).toBeNull();
+    fireEvent.click(within(dialog).getByTitle("Fechar"));
+    expect(screen.queryByRole("dialog", { name: "Configurar widget" })).toBeNull();
+    expect(screen.getByText("1 widget(s)", { exact: false })).toBeTruthy();
   });
 });

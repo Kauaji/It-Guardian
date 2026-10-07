@@ -109,7 +109,15 @@ describe("NetworkTopologyCanvas", () => {
   it("não mostra voltar na raiz e mantém a volta em mapas vazios", () => {
     const { rerender, props } = renderCanvas();
     expect(screen.queryByRole("button", { name: /^Voltar/ })).not.toBeInTheDocument();
-    rerender(<NetworkTopologyCanvas {...props} nodes={[]} onNavigateBack={vi.fn()} backLabel="Voltar para Grupo A" emptyState={<p>Nenhum ativo</p>} />);
+    rerender(
+      <NetworkTopologyCanvas
+        {...props}
+        nodes={[]}
+        onNavigateBack={vi.fn()}
+        backLabel="Voltar para Grupo A"
+        emptyState={<p>Nenhum ativo</p>}
+      />
+    );
     expect(screen.getByRole("button", { name: "Voltar para Grupo A" })).toBeVisible();
     expect(screen.getByText("Nenhum ativo")).toBeVisible();
   });
@@ -144,9 +152,9 @@ describe("NetworkTopologyCanvas", () => {
     const addListener = vi.spyOn(EventTarget.prototype, "addEventListener");
     const removeListener = vi.spyOn(EventTarget.prototype, "removeEventListener");
     const { svg, unmount } = renderCanvas();
-    const listenerIndex = addListener.mock.calls.findIndex(([type, , options], index) => (
-      type === "wheel" && options?.passive === false && addListener.mock.contexts[index] === svg
-    ));
+    const listenerIndex = addListener.mock.calls.findIndex(
+      ([type, , options], index) => type === "wheel" && options?.passive === false && addListener.mock.contexts[index] === svg
+    );
     expect(listenerIndex).toBeGreaterThanOrEqual(0);
     const callback = addListener.mock.calls[listenerIndex][1];
     unmount();
@@ -159,10 +167,10 @@ describe("NetworkTopologyCanvas", () => {
     pointer(svg, "pointerdown");
     pointer(svg, "pointermove", { clientX: 130 });
     const first = readViewBox(svg);
-    expect(first.x).toBeCloseTo(initial.x - 30 * initial.width / 1600);
+    expect(first.x).toBeCloseTo(initial.x - (30 * initial.width) / 1600);
     pointer(svg, "pointermove", { clientX: 160 });
     const second = readViewBox(svg);
-    expect(second.x).toBeCloseTo(initial.x - 60 * initial.width / 1600);
+    expect(second.x).toBeCloseTo(initial.x - (60 * initial.width) / 1600);
     pointer(svg, "pointerup", { clientX: 160 });
     expect(props.onCanvasBackgroundClick).not.toHaveBeenCalled();
     expect(props.onNodeActivate).not.toHaveBeenCalled();
@@ -197,7 +205,7 @@ describe("NetworkTopologyCanvas", () => {
     props.onNodeActivate.mockClear();
     pointer(node, "pointerdown");
     pointer(svg, "pointermove", { clientX: 160 });
-    expect(props.onNodeDrag).toHaveBeenLastCalledWith("node-a", 800 + 60 * initial.width / 1600, 500);
+    expect(props.onNodeDrag).toHaveBeenLastCalledWith("node-a", 800 + (60 * initial.width) / 1600, 500);
     pointer(svg, "pointerup", { clientX: 160 });
     expect(props.onNodeDragEnd).toHaveBeenCalledExactlyOnceWith("node-a");
     expect(props.onNodeActivate).not.toHaveBeenCalled();
@@ -292,8 +300,8 @@ describe("NetworkTopologyCanvas", () => {
     const box = readViewBox(svg);
     expect(line).toHaveAttribute("x1", "800");
     expect(line).toHaveAttribute("y1", "500");
-    expect(Number(line.getAttribute("x2"))).toBeCloseTo(box.x + 600 * box.width / 1600);
-    expect(Number(line.getAttribute("y2"))).toBeCloseTo(box.y + 400 * box.height / 1000);
+    expect(Number(line.getAttribute("x2"))).toBeCloseTo(box.x + (600 * box.width) / 1600);
+    expect(Number(line.getAttribute("y2"))).toBeCloseTo(box.y + (400 * box.height) / 1000);
     expect(line).toHaveAttribute("stroke-dasharray", "6 5");
     expect(line).toHaveAttribute("pointer-events", "none");
     expect(svg.querySelectorAll(".network-topology-link")).toHaveLength(0);

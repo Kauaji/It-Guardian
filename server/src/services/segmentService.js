@@ -1,24 +1,15 @@
 import { badRequest, conflict } from "../lib/errors.js";
 import { addLog } from "../repositories/logRepository.js";
-import {
-  createSegment,
-  deleteSegment,
-  listSegments,
-  renameSegment
-} from "../repositories/segmentRepository.js";
-import {
-  createSegmentGroup,
-  deleteSegmentGroup,
-  listSegmentGroups,
-  updateSegmentGroup
-} from "../repositories/segmentGroupRepository.js";
+import { createSegment, deleteSegment, listSegments, renameSegment } from "../repositories/segmentRepository.js";
+import { createSegmentGroup, deleteSegmentGroup, listSegmentGroups, updateSegmentGroup } from "../repositories/segmentGroupRepository.js";
 import { broadcastSnapshot } from "./realtimeService.js";
+import { logger } from "../lib/logger.js";
 
 const hexColorPattern = /^#[0-9a-f]{6}$/i;
 
 function notifySnapshot(context) {
   broadcastSnapshot().catch((error) => {
-    console.error(`Realtime broadcast failed after ${context}`, error);
+    logger.error("realtime_broadcast_failed", { context, error });
   });
 }
 

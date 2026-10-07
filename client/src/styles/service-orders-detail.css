@@ -1,0 +1,863 @@
+
+.service-order-kanban {
+  align-items: start;
+}
+
+.service-order-kanban.layout-horizontal {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.service-order-kanban.layout-vertical {
+  grid-template-columns: 1fr;
+}
+
+.service-order-kanban.layout-vertical .service-order-column-list {
+  grid-template-columns: repeat(auto-fit, minmax(252px, 286px));
+}
+
+.service-order-column {
+  min-width: 0;
+  min-height: 340px;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--service-order-status-color, var(--accent)) 10%, transparent), transparent 160px),
+    var(--surface-soft);
+  transition:
+    border-color 160ms var(--ease-premium),
+    box-shadow 160ms var(--ease-premium),
+    transform 160ms var(--ease-premium);
+}
+
+.service-order-column.is-drop-target {
+  border-color: var(--service-order-status-color, var(--accent));
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--service-order-status-color, var(--accent)) 18%, transparent);
+}
+
+.service-order-column > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 6px;
+}
+
+.service-order-column > header strong {
+  color: var(--text-strong);
+}
+
+.service-order-column > header span {
+  min-width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: color-mix(in srgb, var(--service-order-status-color, var(--accent)) 55%, var(--text-strong));
+  background: color-mix(in srgb, var(--service-order-status-color, var(--accent)) 12%, transparent);
+  font-size: 0.78rem;
+}
+
+.service-order-column-list {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  justify-items: start;
+}
+
+.service-order-card {
+  width: min(100%, 286px);
+  max-width: 286px;
+  height: 214px;
+  min-height: 214px;
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  grid-template-rows: auto minmax(2.25em, auto) auto auto 1fr;
+  gap: 8px;
+  padding: 14px 15px 12px;
+  border: 1px solid color-mix(in srgb, var(--service-order-priority-color, var(--accent)) 48%, var(--border));
+  border-left: 5px solid color-mix(in srgb, var(--service-order-priority-color, var(--accent)) 92%, var(--border));
+  border-radius: var(--radius-lg);
+  background: var(--service-order-priority-bg, color-mix(in srgb, var(--service-order-priority-color, var(--accent)) 15%, var(--surface)));
+  color: var(--text);
+  text-align: left;
+  cursor: grab;
+  box-shadow: 0 8px 18px rgba(24, 33, 47, 0.06);
+  transition:
+    transform 160ms var(--ease-premium),
+    border-color 160ms var(--ease-premium),
+    box-shadow 160ms var(--ease-premium);
+}
+
+.service-order-card:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--service-order-priority-color, var(--accent)) 66%, var(--border-strong));
+  box-shadow: 0 12px 24px rgba(24, 33, 47, 0.09);
+}
+
+.service-order-card:active {
+  cursor: grabbing;
+}
+
+.service-order-card.is-dragging {
+  opacity: 0.58;
+  transform: scale(0.98);
+  box-shadow: none;
+}
+
+.service-order-card > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.service-order-card strong {
+  min-width: 0;
+  display: -webkit-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: normal;
+  color: var(--text-strong);
+  font-size: 0.98rem;
+  line-height: 1.14;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.service-order-card small {
+  min-width: 0;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font-size: 0.86rem;
+}
+
+.service-order-card div,
+.service-order-card footer {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+.service-order-card em {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--service-order-priority-color, var(--accent)) 28%, var(--border));
+  background: color-mix(in srgb, var(--service-order-priority-color, var(--accent)) 22%, var(--surface));
+  color: color-mix(in srgb, var(--service-order-priority-color, var(--accent)) 55%, var(--text-strong));
+  font-size: 0.66rem;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.service-order-card div > em:nth-of-type(3) {
+  display: none;
+}
+
+.service-order-card footer {
+  margin-top: auto;
+  color: var(--text);
+  font-size: 0.78rem;
+}
+
+.service-order-card footer span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.service-order-card footer time {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.service-order-backdrop {
+  z-index: var(--dialog-backdrop-layer);
+}
+
+.service-order-form-modal {
+  width: min(900px, calc(100vw - 32px));
+  max-height: min(92vh, 860px);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.service-order-form-modal header,
+.service-order-wide {
+  grid-column: 1 / -1;
+}
+
+.service-order-form-modal header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.service-order-form-modal h2 {
+  margin: 0 0 4px;
+}
+
+.service-order-form-modal p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.service-order-form-modal label,
+.service-order-attendance-form label {
+  display: grid;
+  gap: 7px;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
+.service-order-form-modal input,
+.service-order-form-modal select,
+.service-order-form-modal textarea,
+.service-order-attendance-form input,
+.service-order-attendance-form select,
+.service-order-attendance-form textarea,
+.service-order-status-select {
+  width: 100%;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text-strong);
+  font: inherit;
+  font-weight: 850;
+  padding: 11px 12px;
+  outline: none;
+  transition:
+    border-color 150ms var(--ease-premium),
+    box-shadow 150ms var(--ease-premium);
+}
+
+.service-order-form-modal textarea,
+.service-order-attendance-form textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.service-order-form-modal input::placeholder,
+.service-order-form-modal textarea::placeholder,
+.service-order-attendance-form input::placeholder,
+.service-order-attendance-form textarea::placeholder {
+  color: var(--text-soft);
+  font: inherit;
+  font-weight: 750;
+}
+
+.service-order-form-modal input:focus,
+.service-order-form-modal select:focus,
+.service-order-form-modal textarea:focus,
+.service-order-attendance-form input:focus,
+.service-order-attendance-form select:focus,
+.service-order-attendance-form textarea:focus,
+.service-order-status-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.service-order-field-help {
+  color: var(--text-soft);
+  font-size: 0.72rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.service-order-technician-picker {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  margin: 0;
+  padding: 13px;
+  border: 1px solid var(--border-strong);
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--accent) 3%, var(--surface));
+}
+
+.service-order-technician-picker legend {
+  padding: 0 5px;
+  color: var(--text-strong);
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.service-order-technician-picker > p {
+  font-size: 0.75rem;
+}
+
+.service-order-technician-picker > div {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.service-order-technician-picker label {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 2px 8px;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.service-order-technician-picker label.selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 9%, transparent);
+}
+
+.service-order-technician-picker label input {
+  grid-row: 1 / span 2;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  accent-color: var(--accent);
+}
+
+.service-order-technician-picker label span { color: var(--text-strong); font-weight: 850; }
+.service-order-technician-picker label small { color: var(--text-soft); font-size: 0.68rem; }
+
+.service-order-asset-preview {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 12px;
+}
+
+.service-order-asset-preview span {
+  color: var(--text-muted);
+}
+
+.service-order-detail-modal {
+  width: min(1180px, calc(100vw - 48px));
+  height: min(92vh, 860px);
+}
+
+.service-order-detail-modal .asset-modal-body {
+  min-height: 0;
+}
+
+.service-order-status-select {
+  min-width: 190px;
+}
+
+.service-order-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.service-order-detail-item {
+  min-height: 94px;
+  display: grid;
+  align-content: center;
+  gap: 6px;
+  padding: 14px;
+  border-radius: 14px;
+}
+
+.service-order-detail-item span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.service-order-detail-item strong {
+  color: var(--text-strong);
+  overflow-wrap: anywhere;
+}
+
+.service-order-sla-chip,
+.service-order-sla-badge,
+.service-order-origin-badge {
+  display: inline-block;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 1px 7px;
+  margin-left: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.4;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.service-order-sla-badge {
+  font-size: 11px;
+}
+
+.service-order-origin-badge {
+  border: 1px solid color-mix(in srgb, var(--status-info) 45%, var(--border));
+  background: color-mix(in srgb, var(--status-info) 14%, var(--surface-soft));
+  color: color-mix(in srgb, var(--status-info) 78%, var(--text-strong));
+}
+
+.service-order-sla-chip-breached,
+.service-order-sla-badge-breached,
+.service-order-sla-status.service-order-sla-breached {
+  border: 1px solid color-mix(in srgb, var(--status-danger) 45%, var(--border));
+  background: color-mix(in srgb, var(--status-danger) 16%, var(--surface-soft));
+  color: color-mix(in srgb, var(--status-danger) 82%, var(--text-strong));
+}
+
+.service-order-sla-chip-near_due,
+.service-order-sla-badge-near_due,
+.service-order-sla-status.service-order-sla-near_due {
+  border: 1px solid color-mix(in srgb, var(--status-warning) 45%, var(--border));
+  background: color-mix(in srgb, var(--status-warning) 16%, var(--surface-soft));
+  color: var(--text-warn);
+}
+
+.service-order-sla-badge-not_applicable {
+  border: 1px solid color-mix(in srgb, var(--text-muted) 32%, var(--border));
+  background: color-mix(in srgb, var(--text-muted) 12%, var(--surface-soft));
+  color: var(--text-muted);
+}
+
+.service-order-sla-status.service-order-sla-on_track {
+  border: 1px solid color-mix(in srgb, var(--green-600) 34%, var(--border));
+  background: color-mix(in srgb, var(--green-600) 12%, var(--surface));
+  color: color-mix(in srgb, var(--green-600) 80%, var(--text-strong));
+}
+
+.service-order-sla-status.service-order-sla-resolved {
+  border: 1px solid color-mix(in srgb, var(--green-600) 34%, var(--border));
+  background: color-mix(in srgb, var(--green-600) 12%, var(--surface));
+  color: color-mix(in srgb, var(--green-600) 80%, var(--text-strong));
+}
+
+.service-order-sla-status.service-order-sla-not_applicable {
+  border: 1px solid color-mix(in srgb, var(--text-muted) 30%, var(--border));
+  background: var(--surface-soft);
+  color: var(--text-muted);
+}
+
+.service-order-sla-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.service-order-sla-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+}
+
+.service-order-sla-status > div {
+  display: grid;
+  gap: 2px;
+}
+
+.service-order-sla-status strong {
+  font-size: 0.95rem;
+}
+
+.service-order-sla-status span {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.service-order-sla-reopen-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.service-order-checklist-panel,
+.service-order-attachments-panel,
+.service-order-feedback-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.service-order-checklist-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.service-order-checklist-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.service-order-checklist-list li {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.service-order-checklist-list li.checked {
+  border-color: color-mix(in srgb, var(--green-600) 40%, var(--border));
+  background: color-mix(in srgb, var(--green-600) 8%, var(--surface));
+}
+
+.service-order-checklist-list label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.service-order-checklist-list label em {
+  color: var(--text-danger);
+  font-style: normal;
+}
+
+.service-order-checklist-item-description {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.service-order-checklist-item-notes {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-soft);
+  color: var(--text);
+  font: inherit;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.service-order-attachments-limitation {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--status-warning) 40%, var(--border));
+  background: color-mix(in srgb, var(--status-warning) 12%, var(--surface-soft));
+  color: var(--text-warn);
+  font-size: 0.8rem;
+}
+
+.service-order-attachment-form,
+.service-order-feedback-form {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.service-order-attachment-form input,
+.service-order-attachment-form select,
+.service-order-attachment-form textarea,
+.service-order-feedback-form textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  padding: 8px 10px;
+}
+
+.service-order-attachment-form textarea,
+.service-order-feedback-form textarea {
+  min-height: 60px;
+  resize: vertical;
+}
+
+.service-order-attachments-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.service-order-attachments-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.service-order-attachments-list li > div {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.service-order-attachments-list li span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.service-order-attachments-list li p {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.service-order-attachment-reference {
+  color: var(--text-info);
+  overflow-wrap: anywhere;
+}
+
+.service-order-attachments-list li button {
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
+.service-order-feedback-current {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.service-order-feedback-current span {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.service-order-feedback-stars {
+  display: flex;
+  gap: 4px;
+}
+
+.service-order-feedback-stars button {
+  display: inline-flex;
+  border: none;
+  background: none;
+  padding: 2px;
+  color: color-mix(in srgb, var(--status-warning) 70%, var(--text-strong));
+  cursor: pointer;
+}
+
+.service-order-feedback-stars button:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.service-order-scripts-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.service-order-scripts-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--status-warning) 40%, var(--border));
+  background: color-mix(in srgb, var(--status-warning) 12%, var(--surface-soft));
+  color: var(--text-warn);
+  font-size: 0.8rem;
+}
+
+.service-order-scripts-list,
+.service-order-scripts-activity {
+  display: grid;
+  gap: 10px;
+}
+
+.service-order-scripts-list h4,
+.service-order-scripts-activity h4 {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.service-order-script-card {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.service-order-script-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.service-order-script-card > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.service-order-script-card p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.service-order-script-risk {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  color: var(--text-muted);
+}
+
+.service-order-script-risk.risk-high {
+  border-color: color-mix(in srgb, var(--status-warning) 45%, var(--border));
+  background: color-mix(in srgb, var(--status-warning) 15%, var(--surface-soft));
+  color: var(--text-warn);
+}
+
+.service-order-script-risk.risk-critical {
+  border-color: color-mix(in srgb, var(--status-danger) 45%, var(--border));
+  background: color-mix(in srgb, var(--status-danger) 15%, var(--surface-soft));
+  color: var(--text-danger);
+}
+
+.service-order-scripts-activity ul {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.service-order-scripts-activity li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.service-order-scripts-activity li > div {
+  display: grid;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.service-order-scripts-activity li span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.service-order-script-output {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.76rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 140px;
+  overflow-y: auto;
+}
+
+.service-order-script-output.error {
+  color: var(--text-danger);
+}
+
+.service-order-script-confirm-modal {
+  display: grid;
+  gap: 14px;
+  width: min(480px, 92vw);
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 20px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.service-order-script-confirm-modal h3 {
+  margin: 0;
+}
+
+.service-order-script-confirm-modal dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 12px;
+  margin: 0;
+}
+
+.service-order-script-confirm-modal dt {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.service-order-script-confirm-modal dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.service-order-script-confirm-modal > p {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-soft);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.service-order-script-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}

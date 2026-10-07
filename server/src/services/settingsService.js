@@ -22,11 +22,11 @@ const importFieldMaps = {
     email: "email",
     "e-mail": "email",
     endereco: "address",
-    "endereço": "address",
+    endereço: "address",
     responsavel: "contactName",
-    "responsável": "contactName",
+    responsável: "contactName",
     observacoes: "notes",
-    "observações": "notes"
+    observações: "notes"
   },
   products: {
     nome: "name",
@@ -36,7 +36,7 @@ const importFieldMaps = {
     marca: "brand",
     modelo: "model",
     codigo: "internalCode",
-    "código": "internalCode",
+    código: "internalCode",
     "codigo interno": "internalCode",
     "código interno": "internalCode",
     patrimonio: "assetTag",
@@ -48,7 +48,7 @@ const importFieldMaps = {
     "valor unitario": "unitPrice",
     unidade: "unit",
     observacoes: "notes",
-    "observações": "notes"
+    observações: "notes"
   }
 };
 

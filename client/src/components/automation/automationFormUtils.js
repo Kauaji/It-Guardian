@@ -1,5 +1,6 @@
 export const automationRecurrenceTypes = ["daily", "weekly", "biweekly", "monthly", "custom_days"];
 export const automationTimezoneOptions = ["America/Sao_Paulo", "America/Manaus", "America/Recife", "UTC"];
+export const automationColorOptions = ["#1f7a61", "#2563eb", "#7c3aed", "#d97706", "#dc2626", "#0f766e"];
 
 function normalizedInterval(source = {}) {
   return Number(source.recurrenceIntervalDays || source.recurrenceInterval || 30);
@@ -87,7 +88,5 @@ function normalizeComparable(value) {
 
 export function automationDraftsEqual(left = {}, right = {}) {
   const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
-  return [...keys].every((key) => (
-    JSON.stringify(normalizeComparable(left[key])) === JSON.stringify(normalizeComparable(right[key]))
-  ));
+  return [...keys].every((key) => JSON.stringify(normalizeComparable(left[key])) === JSON.stringify(normalizeComparable(right[key])));
 }

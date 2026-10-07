@@ -1,0 +1,53 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "types": [
+      "node",
+      "vite/client"
+    ],
+    "lib": [
+      "ES2023",
+      "DOM",
+      "DOM.Iterable"
+    ]
+  },
+  "include": [
+    "client/src/api/**/*.js",
+    "client/src/permissions.js",
+    "client/src/authSession.js",
+    "client/src/utils/**/*.js",
+    "client/src/config/**/*.js",
+    "shared/**/*.js",
+    "server/src/domain/**/*.js",
+    "server/src/lib/**/*.js",
+    "server/src/config/**/*.js",
+    "server/src/security/**/*.js",
+    "server/src/middleware/**/*.js",
+    "server/src/jobs/dataRetention.js",
+    "server/src/repositories/authSessionRepository.js",
+    "server/src/repositories/logRepository.js",
+    "server/src/repositories/userRepository.js",
+    "server/src/repositories/userSecurityRepository.js",
+    "server/src/services/agentSigningService.js",
+    "server/src/services/authService.js",
+    "server/src/services/mfaService.js",
+    "server/src/services/sessionService.js",
+    "server/src/database.js",
+    "server/src/types/**/*.d.ts"
+  ],
+  "exclude": [
+    "**/*.test.js",
+    "**/*.test.jsx",
+    "**/*.test.mjs",
+    "**/node_modules",
+    "**/dist"
+  ]
+}

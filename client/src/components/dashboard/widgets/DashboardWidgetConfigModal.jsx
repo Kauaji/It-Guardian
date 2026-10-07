@@ -41,7 +41,13 @@ export default function DashboardWidgetConfigModal({ token, widget, onSave, onCl
 
   return (
     <div className="modal-backdrop" role="presentation">
-      <section ref={dialogRef} className="modal-panel dashboard-widget-config-modal" role="dialog" aria-modal="true" aria-label="Configurar widget">
+      <section
+        ref={dialogRef}
+        className="modal-panel dashboard-widget-config-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Configurar widget"
+      >
         <header>
           <h2>Configurar widget</h2>
           <button type="button" className="icon-button" onClick={onClose} title="Fechar">
@@ -50,73 +56,90 @@ export default function DashboardWidgetConfigModal({ token, widget, onSave, onCl
         </header>
         <form onSubmit={handleSubmit}>
           <div className="dashboard-widget-config-fields">
-          <label>
-            Titulo
-            <input
-              type="text"
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              placeholder={entry?.label}
-              maxLength={60}
-            />
-          </label>
-
-          {visualizations.length > 1 && (
             <label>
-              Visualização
-              <select value={resolveVisualization(widget.type, config.chartType)} onChange={(event) => updateConfig({ chartType: event.target.value })}>
-                {visualizations.map((variant) => <option key={variant} value={variant}>{visualizationLabels[variant]}</option>)}
-              </select>
-            </label>
-          )}
-
-          {configFields.includes("asset") && (
-            <AssetPickerField token={token} value={config.assetId} onChange={(assetId) => updateConfig({ assetId })} />
-          )}
-
-          {configFields.includes("period") && (
-            <label>
-              Periodo
-              <select value={config.period || "24h"} onChange={(event) => updateConfig({ period: event.target.value })}>
-                {periodOptions.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </label>
-          )}
-
-          {configFields.includes("limit") && (
-            <label>
-              Quantidade de itens
+              Titulo
               <input
-                type="number"
-                min={1}
-                max={30}
-                value={config.limit || 5}
-                onChange={(event) => updateConfig({ limit: Number(event.target.value) })}
+                type="text"
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                placeholder={entry?.label}
+                maxLength={60}
               />
             </label>
-          )}
 
-          <label>
-            Atualizar a cada
-            <select value={refreshIntervalSeconds} onChange={(event) => setRefreshIntervalSeconds(event.target.value)}>
-              <option value={30}>30s</option>
-              <option value={60}>1 min</option>
-              <option value={300}>5 min</option>
-              <option value={900}>15 min</option>
-            </select>
-          </label>
+            {visualizations.length > 1 && (
+              <label>
+                Visualização
+                <select
+                  value={resolveVisualization(widget.type, config.chartType)}
+                  onChange={(event) => updateConfig({ chartType: event.target.value })}
+                >
+                  {visualizations.map((variant) => (
+                    <option key={variant} value={variant}>
+                      {visualizationLabels[variant]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
 
+            {configFields.includes("asset") && (
+              <AssetPickerField token={token} value={config.assetId} onChange={(assetId) => updateConfig({ assetId })} />
+            )}
+
+            {configFields.includes("period") && (
+              <label>
+                Periodo
+                <select value={config.period || "24h"} onChange={(event) => updateConfig({ period: event.target.value })}>
+                  {periodOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+            {configFields.includes("limit") && (
+              <label>
+                Quantidade de itens
+                <input
+                  type="number"
+                  min={1}
+                  max={30}
+                  value={config.limit || 5}
+                  onChange={(event) => updateConfig({ limit: Number(event.target.value) })}
+                />
+              </label>
+            )}
+
+            <label>
+              Atualizar a cada
+              <select value={refreshIntervalSeconds} onChange={(event) => setRefreshIntervalSeconds(event.target.value)}>
+                <option value={30}>30s</option>
+                <option value={60}>1 min</option>
+                <option value={300}>5 min</option>
+                <option value={900}>15 min</option>
+              </select>
+            </label>
           </div>
           <section className="dashboard-widget-config-preview" aria-label="Prévia do widget">
-            <div className="dashboard-config-preview-heading"><strong>{title || entry?.label}</strong><small>Prévia com dados reais · sem filtros do dashboard</small></div>
-            <div className="dashboard-widget-card-body"><WidgetBody token={token} widget={{ ...widget, config }} ignoreDashboardFilters /></div>
+            <div className="dashboard-config-preview-heading">
+              <strong>{title || entry?.label}</strong>
+              <small>Prévia com dados reais · sem filtros do dashboard</small>
+            </div>
+            <div className="dashboard-widget-card-body">
+              <WidgetBody token={token} widget={{ ...widget, config }} ignoreDashboardFilters />
+            </div>
           </section>
 
           <div className="dashboard-widget-config-actions">
-            <button type="button" className="secondary-action" onClick={onClose}>Cancelar</button>
-            <button type="submit" className="primary-action" disabled={configFields.includes("asset") && !config.assetId}>Salvar</button>
+            <button type="button" className="secondary-action" onClick={onClose}>
+              Cancelar
+            </button>
+            <button type="submit" className="primary-action" disabled={configFields.includes("asset") && !config.assetId}>
+              Salvar
+            </button>
           </div>
         </form>
       </section>

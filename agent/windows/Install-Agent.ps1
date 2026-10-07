@@ -9,7 +9,13 @@ param(
   [string]$Segment = "",
   [bool]$IncludeLoggedUser = $false,
   [bool]$EnableRemoteScriptExecution = $false,
-  [bool]$EnableRemoteAssistance = $false
+  [bool]$EnableRemoteAssistance = $false,
+  # Chaves PUBLICAS ECDSA P-256 (base64 SPKI) de assinatura. Gravadas no config.json no mesmo formato
+  # do coletor nativo (ITGuardian.exe), que as usa para exigir assinatura em atualizacoes
+  # automaticas (-ReleasePublicKey) e em jobs de script (-JobSigningPublicKey). O agente PowerShell
+  # (it-guardian-agent.ps1) nao baixa atualizacoes nem executa jobs e ignora estes campos.
+  [string]$ReleasePublicKey = "",
+  [string]$JobSigningPublicKey = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -23,6 +29,12 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
 }
 if ($IntervalSeconds -lt 30 -or $IntervalSeconds -gt 86400) {
   throw "IntervalSeconds deve estar entre 30 e 86400."
+}
+foreach ($keyParameter in @(@("ReleasePublicKey", $ReleasePublicKey), @("JobSigningPublicKey", $JobSigningPublicKey))) {
+  $keyValue = "$($keyParameter[1])".Trim()
+  if ($keyValue -and $keyValue -notmatch '^MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE[A-Za-z0-9+/]{86}==$') {
+    throw "$($keyParameter[0]) invalida: esperado base64 de SubjectPublicKeyInfo ECDSA P-256 (124 caracteres, gerado por 'npm run agent:keys')."
+  }
 }
 
 New-Item -ItemType Directory -Force -Path $installDirectory | Out-Null
@@ -43,6 +55,10 @@ Copy-Item -LiteralPath (Join-Path $PSScriptRoot "test-heartbeat.ps1") -Destinati
   includeLoggedUser = [bool]$IncludeLoggedUser
   enableRemoteScriptExecution = [bool]$EnableRemoteScriptExecution
   enableRemoteAssistance = [bool]$EnableRemoteAssistance
+  releasePublicKey = $ReleasePublicKey.Trim()
+  jobSigningPublicKey = $JobSigningPublicKey.Trim()
+  allowUnsignedUpdates = $false
+  allowUnsignedJobs = $false
 } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $installDirectory "config.json") -Encoding UTF8
 
 $configPath = Join-Path $installDirectory "config.json"

@@ -55,5 +55,54 @@ services:
     depends_on:
       - server
 
+  # --- Relay RustDesk self-hosted (opcional) ---------------------------------
+  # So sobe com `docker compose --profile rustdesk up -d` (perfil separado:
+  # nao inicia com o `docker compose up` normal do resto do stack). O IT
+  # Guardian nunca aponta para o relay publico do RustDesk por padrao -- ver
+  # docs/ASSISTENCIA-REMOTA.md, secao "Transporte RustDesk". Imagem e flags
+  # sao as documentadas publicamente pelo projeto rustdesk-server; confirme
+  # contra a versao efetivamente usada antes de expor a porta publicamente.
+  #
+  # Depois de subir, o par de chaves gerado fica em rustdesk_hbbs_data
+  # (arquivo id_ed25519.pub) -- o CONTEUDO desse arquivo .pub e o valor de
+  # RUSTDESK_KEY na hora de GERAR O INSTALADOR do coletor (variavel de
+  # ambiente lida por build-installer.ps1, nao pelo servidor IT Guardian: o
+  # backend nunca fala o protocolo RustDesk diretamente, so o cliente em cada
+  # maquina precisa desse valor -- ver installers/windows-collector/README.md).
+  #
+  # RUSTDESK_RELAY_HOST usa um default de "localhost" de proposito (NUNCA
+  # ${VAR:?obrigatorio}): o Docker Compose interpola as variaveis de TODOS os
+  # servicos do arquivo ao fazer o parse, mesmo os de um perfil que nao foi
+  # pedido -- uma variavel obrigatoria aqui quebraria `docker compose up` do
+  # resto do stack (perfil padrao) para quem nunca definiu RUSTDESK_RELAY_HOST
+  # em .env.local. Troque pelo host/IP publico real em .env.local antes de
+  # usar o perfil "rustdesk" fora de uma rede de laboratorio isolada --
+  # "localhost" so serve para o hbbs subir sem erro em modo desligado.
+  rustdesk-hbbs:
+    image: rustdesk/rustdesk-server:latest
+    profiles: ["rustdesk"]
+    restart: unless-stopped
+    command: hbbs -r ${RUSTDESK_RELAY_HOST:-localhost}:21117 -k _
+    volumes:
+      - rustdesk_hbbs_data:/root
+    ports:
+      - "21115:21115"
+      - "21116:21116/tcp"
+      - "21116:21116/udp"
+      - "21118:21118"
+
+  rustdesk-hbbr:
+    image: rustdesk/rustdesk-server:latest
+    profiles: ["rustdesk"]
+    restart: unless-stopped
+    command: hbbr -k _
+    volumes:
+      - rustdesk_hbbr_data:/root
+    ports:
+      - "21117:21117"
+      - "21119:21119"
+
 volumes:
   it_guardian_local_pgdata:
+  rustdesk_hbbs_data:
+  rustdesk_hbbr_data:

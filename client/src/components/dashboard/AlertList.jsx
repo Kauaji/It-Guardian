@@ -15,7 +15,9 @@ export default function AlertList({ alerts }) {
             <AlertTriangle size={18} />
             <div>
               <strong>{formatDisplayText(alert.title, "Aviso ativo")}</strong>
-              <span>{formatDisplayText(alert.hostName || alert.assetName, "Máquina não vinculada")} - {formatDate(alert.startedAt)}</span>
+              <span>
+                {formatDisplayText(alert.hostName || alert.assetName, "Máquina não vinculada")} - {formatDate(alert.startedAt)}
+              </span>
               <p>{formatDisplayText(alert.description, "Sem descrição informada.")}</p>
               {alert.acknowledgement && (
                 <small className="inline-resolved">

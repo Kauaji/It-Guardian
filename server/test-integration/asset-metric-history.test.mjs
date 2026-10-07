@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { useTestDatabase } from "../test-support/database.mjs";
 
-process.env.DATABASE_URL = "memory";
+await useTestDatabase();
 process.env.ENABLE_DEMO_SEED = "true";
 process.env.JWT_SECRET = "asset-metric-history-integration-secret-32ch";
 process.env.NODE_ENV = "test";
@@ -74,10 +75,7 @@ test("heartbeat com metricas grava uma amostra em asset_metric_history; heartbea
   });
   assert.equal(withMetrics.status, 202);
 
-  const rowsWithMetrics = await query(
-    "SELECT * FROM asset_metric_history WHERE asset_id = $1",
-    ["metric-hist-machine-1"]
-  );
+  const rowsWithMetrics = await query("SELECT * FROM asset_metric_history WHERE asset_id = $1", ["metric-hist-machine-1"]);
   assert.equal(rowsWithMetrics.rows.length, 1);
   assert.equal(rowsWithMetrics.rows[0].cpu_usage_percent, 20);
   assert.equal(rowsWithMetrics.rows[0].memory_usage_percent, 25);
@@ -98,10 +96,7 @@ test("heartbeat com metricas grava uma amostra em asset_metric_history; heartbea
   });
   assert.equal(withoutMetrics.status, 202);
 
-  const rowsWithoutMetrics = await query(
-    "SELECT * FROM asset_metric_history WHERE asset_id = $1",
-    ["metric-hist-machine-2"]
-  );
+  const rowsWithoutMetrics = await query("SELECT * FROM asset_metric_history WHERE asset_id = $1", ["metric-hist-machine-2"]);
   assert.equal(rowsWithoutMetrics.rows.length, 0);
 });
 
@@ -194,10 +189,9 @@ test("preview de historico reflete amostras reais, nunca inventa dado quando nao
   assert.ok(allMetrics.ram);
   assert.ok(allMetrics.disk);
 
-  await query(
-    "UPDATE asset_metric_history SET collected_at = NOW() - INTERVAL '2 hours' WHERE asset_id = $1 AND cpu_usage_percent = 33",
-    ["metric-hist-machine-real"]
-  );
+  await query("UPDATE asset_metric_history SET collected_at = NOW() - INTERVAL '2 hours' WHERE asset_id = $1 AND cpu_usage_percent = 33", [
+    "metric-hist-machine-real"
+  ]);
 
   const within1h = await (
     await fetch(`${baseUrl}/api/devices/metric-hist-machine-real/metrics-history?metric=cpu&period=1h`, {

@@ -1,5 +1,7 @@
 # Fase 3 - Preparacao para Implementacao Real
 
+> **Documento histórico.** Descreve o estado do projeto numa data passada e pode estar desatualizado; a fonte da verdade é o código e os documentos listados em [docs/README.md](README.md).
+
 > Documento historico. A politica atual de execucao esta em
 > `SCRIPTS-MANUTENCAO-SEGURANCA.md`: o navegador e o servidor nao abrem shell,
 > mas o Coletor IT Guardian pode consumir trabalhos cadastrados por uma fila

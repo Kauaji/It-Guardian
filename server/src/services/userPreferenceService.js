@@ -1,8 +1,5 @@
 import { badRequest } from "../lib/errors.js";
-import {
-  findUserPreference,
-  upsertUserPreference
-} from "../repositories/userPreferenceRepository.js";
+import { findUserPreference, upsertUserPreference } from "../repositories/userPreferenceRepository.js";
 
 const allowedKeys = new Set(["inventory-workspace"]);
 

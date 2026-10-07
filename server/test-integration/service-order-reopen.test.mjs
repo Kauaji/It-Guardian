@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { useTestDatabase } from "../test-support/database.mjs";
 
-process.env.DATABASE_URL = "memory";
+await useTestDatabase();
 process.env.ENABLE_DEMO_SEED = "true";
 process.env.JWT_SECRET = "service-order-reopen-integration-secret-32c";
 process.env.NODE_ENV = "test";
@@ -94,10 +95,9 @@ test("reabrir uma OS finalizada exige motivo, reseta status e incrementa o conta
   assert.ok(reopened.reopenedAt);
   assert.equal(reopened.reopenReason, "Cliente reportou que o problema voltou.");
 
-  const historyRow = await query(
-    "SELECT * FROM service_order_history WHERE service_order_id = $1 AND event_type = 'reopened'",
-    [closed.id]
-  );
+  const historyRow = await query("SELECT * FROM service_order_history WHERE service_order_id = $1 AND event_type = 'reopened'", [
+    closed.id
+  ]);
   assert.equal(historyRow.rowCount, 1);
 });
 

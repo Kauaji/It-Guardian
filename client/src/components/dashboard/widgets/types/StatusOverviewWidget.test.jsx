@@ -4,7 +4,20 @@ import StatusOverviewWidget from "./StatusOverviewWidget.jsx";
 
 describe("StatusOverviewWidget", () => {
   it("preserva as OS sem ativo vinculado e não mostra saúde 100 para um recorte sem máquinas", () => {
-    const { container } = render(<StatusOverviewWidget data={{ totalAssets: 0, onlineAssets: 0, offlineAssets: 0, criticalAssets: 0, openServiceOrders: 3, overdueServiceOrders: 2, criticalAlerts: 0, health: { score: 100, classification: "healthy", classificationLabel: "Saudável" } }} />);
+    const { container } = render(
+      <StatusOverviewWidget
+        data={{
+          totalAssets: 0,
+          onlineAssets: 0,
+          offlineAssets: 0,
+          criticalAssets: 0,
+          openServiceOrders: 3,
+          overdueServiceOrders: 2,
+          criticalAlerts: 0,
+          health: { score: 100, classification: "healthy", classificationLabel: "Saudável" }
+        }}
+      />
+    );
     expect(screen.queryByRole("img", { name: /Saúde/ })).toBeNull();
     expect(screen.queryByText("Saudável")).toBeNull();
     expect(screen.getByText("Saúde indisponível neste recorte")).toBeTruthy();

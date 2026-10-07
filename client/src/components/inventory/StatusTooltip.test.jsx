@@ -13,8 +13,8 @@ describe("StatusTooltip", () => {
 
     fireEvent.mouseEnter(screen.getByText("Offline").closest(".status-tooltip-trigger"));
 
-    expect(screen.getByText("Maquina offline")).toBeTruthy();
-    expect(screen.getByText(/Ultimo contato:/)).toBeTruthy();
+    expect(screen.getByText("Máquina offline")).toBeTruthy();
+    expect(screen.getByText(/Último contato:/)).toBeTruthy();
   });
 
   it("nunca inventa um timestamp quando lastSeenAt e null", () => {
@@ -26,8 +26,8 @@ describe("StatusTooltip", () => {
 
     fireEvent.mouseEnter(screen.getByText("Sem dados").closest(".status-tooltip-trigger"));
 
-    expect(screen.getByText("Sem historico de contato disponivel.")).toBeTruthy();
-    expect(screen.queryByText(/Ultimo contato:/)).toBeNull();
+    expect(screen.getByText("Sem histórico de contato disponível.")).toBeTruthy();
+    expect(screen.queryByText(/Último contato:/)).toBeNull();
   });
 
   it("maquina online mostra a mensagem de status online", () => {
@@ -38,6 +38,6 @@ describe("StatusTooltip", () => {
     );
 
     fireEvent.mouseEnter(screen.getByText("Online").closest(".status-tooltip-trigger"));
-    expect(screen.getByText("Maquina online")).toBeTruthy();
+    expect(screen.getByText("Máquina online")).toBeTruthy();
   });
 });

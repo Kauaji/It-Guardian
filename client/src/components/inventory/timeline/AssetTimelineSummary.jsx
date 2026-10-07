@@ -24,10 +24,7 @@ export default function AssetTimelineSummary({ summary }) {
         label="Última manutenção"
         value={summary.lastMaintenanceAt ? formatEventDateTime(summary.lastMaintenanceAt) : "Sem registro"}
       />
-      <SummaryStat
-        label="Mapas de rede"
-        value={summary.networkTopologyMapCount > 0 ? summary.networkTopologyMapCount : "Nenhum"}
-      />
+      <SummaryStat label="Mapas de rede" value={summary.networkTopologyMapCount > 0 ? summary.networkTopologyMapCount : "Nenhum"} />
     </div>
   );
 }

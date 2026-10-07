@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { useTestDatabase } from "../test-support/database.mjs";
 
-process.env.DATABASE_URL = "memory";
+await useTestDatabase();
 process.env.ENABLE_DEMO_SEED = "true";
 process.env.JWT_SECRET = "remote-assistance-frame-relay-integration-secret-32";
 process.env.NODE_ENV = "test";
@@ -97,23 +98,20 @@ async function startActiveSession(baseUrl, cookie, enrollmentToken, machineId) {
   });
   const pendingSession = (await pending.json()).session;
 
-  const consent = await fetch(
-    `${baseUrl}/api/agents/remote-assistance/sessions/${session.id}/consent`,
-    {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${enrollmentToken}`,
-        "x-remote-session-token": pendingSession.sessionToken,
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({
-        granted: true,
-        controlAllowed: false,
-        monitors: [{ id: "display-1", name: "Monitor 1", primary: true, width: 1920, height: 1080 }],
-        selectedMonitorId: "display-1"
-      })
-    }
-  );
+  const consent = await fetch(`${baseUrl}/api/agents/remote-assistance/sessions/${session.id}/consent`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${enrollmentToken}`,
+      "x-remote-session-token": pendingSession.sessionToken,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      granted: true,
+      controlAllowed: false,
+      monitors: [{ id: "display-1", name: "Monitor 1", primary: true, width: 1920, height: 1080 }],
+      selectedMonitorId: "display-1"
+    })
+  });
   assert.equal(consent.status, 200);
   return { sessionId: session.id, viewerToken, agentSessionToken: pendingSession.sessionToken };
 }

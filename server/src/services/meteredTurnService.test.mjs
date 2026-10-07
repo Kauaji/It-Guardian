@@ -85,20 +85,14 @@ test("falha da API da Metered cai de volta na lista estatica, nunca quebra a ass
 
 test("resposta sem apiKey ou lista vazia de iceServers tambem cai no fallback", async () => {
   const missingApiKey = fakeFetchSequence([jsonResponse(200, { username: "u1", password: "p1" })]);
-  assert.deepEqual(
-    await resolveIceServers(baseConfig, meteredEnv, missingApiKey.fetchImpl),
-    baseConfig.webrtc.iceServers
-  );
+  assert.deepEqual(await resolveIceServers(baseConfig, meteredEnv, missingApiKey.fetchImpl), baseConfig.webrtc.iceServers);
 
   resetMeteredTurnCacheForTests();
   const emptyList = fakeFetchSequence([
     jsonResponse(200, { username: "u1", password: "p1", expiryInSeconds: 3600, apiKey: "k" }),
     jsonResponse(200, [])
   ]);
-  assert.deepEqual(
-    await resolveIceServers(baseConfig, meteredEnv, emptyList.fetchImpl),
-    baseConfig.webrtc.iceServers
-  );
+  assert.deepEqual(await resolveIceServers(baseConfig, meteredEnv, emptyList.fetchImpl), baseConfig.webrtc.iceServers);
 });
 
 test("uma falha depois de uma credencial ja cacheada continua servindo o cache antigo", async () => {

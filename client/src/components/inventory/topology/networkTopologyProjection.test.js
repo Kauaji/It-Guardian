@@ -27,7 +27,8 @@ describe("buildInventoryTopologyNodes", () => {
   it("mostra grupos e segmentos elegíveis como nós automáticos, sem estado de prévia", () => {
     const nodes = buildInventoryTopologyNodes({ tree, viewLevel: "tab" });
     expect(nodes.map((node) => [node.nodeType, node.refId])).toEqual([
-      ["group", "g1"], ["segment", "s2"]
+      ["group", "g1"],
+      ["segment", "s2"]
     ]);
     expect(nodes.every((node) => node.automatic && node.id.startsWith("inventory-default:"))).toBe(true);
     expect(nodes.every((node) => !Object.hasOwn(node, "preview"))).toBe(true);
@@ -78,8 +79,13 @@ describe("buildInventoryTopologyNodes", () => {
 describe("resolveTopologyDisplayNodes", () => {
   it("mescla todos os ativos do escopo com um layout parcial, preservando o nó salvo inteiro", () => {
     const savedNode = Object.freeze({
-      id: "saved", assetId: "d1", x: -800, y: 4500, pinned: true,
-      labelOverride: "Meu PC", metadata: Object.freeze({ note: "personalizado" })
+      id: "saved",
+      assetId: "d1",
+      x: -800,
+      y: 4500,
+      pinned: true,
+      labelOverride: "Meu PC",
+      metadata: Object.freeze({ note: "personalizado" })
     });
     const saved = Object.freeze([savedNode]);
     const inventory = buildInventoryTopologyNodes({ tree, viewLevel: "segment", selectedSegmentId: "s1" });

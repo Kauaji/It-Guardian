@@ -3,6 +3,8 @@ import {
   createManaged,
   list,
   removeManaged,
+  resetMfa,
+  resetPassword,
   updateAccess,
   updatePermissions,
   updateRole
@@ -17,6 +19,8 @@ router.post("/", createManaged);
 router.patch("/:id/permissions", updatePermissions);
 router.patch("/:id", updateAccess);
 router.patch("/:id/role", updateRole);
+router.post("/:id/reset-password", resetPassword);
+router.post("/:id/mfa/reset", resetMfa);
 router.delete("/:id", removeManaged);
 
 export default router;

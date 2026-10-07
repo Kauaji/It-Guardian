@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { useTestDatabase } from "../test-support/database.mjs";
 
-process.env.DATABASE_URL = "memory";
+await useTestDatabase();
 process.env.ENABLE_DEMO_SEED = "true";
 process.env.JWT_SECRET = "asset-timeline-integration-secret-32-chars";
 process.env.NODE_ENV = "test";
@@ -10,13 +11,10 @@ const { createApp } = await import("../src/app.js");
 const { createUser } = await import("../src/repositories/userRepository.js");
 const { upsertAlert } = await import("../src/repositories/alertRepository.js");
 const { createAgentEnrollment } = await import("../src/repositories/agentRepository.js");
-const {
-  createRemoteAssistanceSession,
-  addRemoteAssistanceEvent
-} = await import("../src/repositories/remoteAssistanceRepository.js");
-const { default: jwt } = await import("jsonwebtoken");
+const { createRemoteAssistanceSession, addRemoteAssistanceEvent } = await import("../src/repositories/remoteAssistanceRepository.js");
+const { startSession } = await import("../src/services/sessionService.js");
 const { query, closeDatabase } = await import("../src/database.js");
-const { syncSlaBreaches } = await import("../src/repositories/serviceOrderRepository.js");
+const { syncSlaBreaches } = await import("../src/services/serviceOrders/serviceOrderSlaSyncService.js");
 
 const trustedOrigin = "http://localhost:5173";
 
@@ -69,7 +67,7 @@ async function bearerUser(role) {
     password: "senha-segura-123",
     role
   });
-  const token = jwt.sign({ sub: user.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+  const token = (await startSession(user)).token;
   return { user, token };
 }
 
@@ -175,10 +173,7 @@ test("prontuario tecnico do ativo: consolida OS, alerta, manutencao e mapa de re
   const sorted = [...timestamps].sort((a, b) => b - a);
   assert.deepEqual(timestamps, sorted, "eventos devem vir do mais recente para o mais antigo");
 
-  const filteredResponse = await fetch(
-    `${baseUrl}/api/devices/${asset.id}/timeline?category=service_order`,
-    { headers: { cookie } }
-  );
+  const filteredResponse = await fetch(`${baseUrl}/api/devices/${asset.id}/timeline?category=service_order`, { headers: { cookie } });
   const filteredBody = await filteredResponse.json();
   assert.equal(filteredResponse.status, 200);
   assert.ok(filteredBody.events.length >= 2);
@@ -296,11 +291,15 @@ test("prontuario tecnico do ativo: inclui SLA vencido, reabertura e avaliacao da
   const syncResult = await syncSlaBreaches();
   assert.ok(syncResult.breached >= 1);
 
-  const order = (await (await fetch(`${baseUrl}/api/service-orders`, {
-    method: "POST",
-    headers: requestHeaders(cookie),
-    body: JSON.stringify({ title: "OS com reabertura e avaliacao", assetId: asset.id })
-  })).json()).serviceOrder;
+  const order = (
+    await (
+      await fetch(`${baseUrl}/api/service-orders`, {
+        method: "POST",
+        headers: requestHeaders(cookie),
+        body: JSON.stringify({ title: "OS com reabertura e avaliacao", assetId: asset.id })
+      })
+    ).json()
+  ).serviceOrder;
 
   await fetch(`${baseUrl}/api/service-orders/${order.id}/technician`, {
     method: "PATCH",

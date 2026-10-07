@@ -4,22 +4,13 @@ import { markDeviceRemoved, updateDeviceBackup, updateDeviceType } from "../repo
 import { createManualAsset, deleteManualAsset, refreshManualAssetPing, updateManualAsset } from "../repositories/manualAssetRepository.js";
 import { updateDeviceSegment } from "../repositories/segmentRepository.js";
 import { updateAgentAssetAlias } from "../repositories/agentRepository.js";
+import { checkPingStatus } from "./pingStatusService.js";
 import { getDashboardSummary, getDeviceDetails, listDevices } from "./monitoringService.js";
 import { broadcastSnapshot } from "./realtimeService.js";
 import { badRequest, notFoundError } from "../lib/errors.js";
+import { logger } from "../lib/logger.js";
 
-const assetTypes = new Set([
-  "server",
-  "desktop",
-  "notebook",
-  "printer",
-  "router",
-  "switch",
-  "access_point",
-  "camera_ip",
-  "nas",
-  "other"
-]);
+const assetTypes = new Set(["server", "desktop", "notebook", "printer", "router", "switch", "access_point", "camera_ip", "nas", "other"]);
 
 const backupStatuses = new Set(["available", "in_use"]);
 const deviceNotFoundMessage = "Device not found";
@@ -39,7 +30,7 @@ export function validateManualAsset(payload) {
 
 function notifySnapshot(context) {
   broadcastSnapshot().catch((error) => {
-    console.error(`Realtime broadcast failed after ${context}`, error);
+    logger.error("realtime_broadcast_failed", { context, error });
   });
 }
 
@@ -75,7 +66,7 @@ export async function getPublicDeviceDetails(id) {
 export async function createManualDevice(payload, user) {
   validateManualAsset(payload);
 
-  const asset = await createManualAsset({ payload, user });
+  const asset = await createManualAsset({ payload, user, checkPing: checkPingStatus });
   const device = await getDeviceDetails(asset.id);
 
   await addLog({
@@ -105,7 +96,7 @@ export async function updateManualDevice(id, payload, user) {
 }
 
 export async function refreshDevicePing(id, user) {
-  const response = await refreshManualAssetPing({ id, user });
+  const response = await refreshManualAssetPing({ id, user, checkPing: checkPingStatus });
   if (!response) throw notFoundError("Manual asset not found");
 
   await addLog({

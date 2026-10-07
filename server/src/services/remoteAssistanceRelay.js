@@ -34,7 +34,13 @@ function emptyRelay() {
     webrtcOffer: null,
     webrtcOfferAt: null,
     webrtcAnswer: null,
-    webrtcAnswerAt: null
+    webrtcAnswerAt: null,
+    // Credencial de sessao do transporte RustDesk: como o frame e o chat,
+    // nunca persistida em banco, some quando o relay e limpo e carrega o
+    // proprio prazo de expiracao (ver setRelayRustdeskCredential).
+    rustdeskPassword: null,
+    rustdeskPasswordExpiresAt: null,
+    rustdeskPasswordRevealCount: 0
   };
 }
 
@@ -313,6 +319,41 @@ export async function setRelayWebrtcAnswer(sessionId, sdp, now = Date.now()) {
   const { relay } = await store.mutate(sessionId, (relay) => {
     relay.webrtcAnswer = sdp;
     relay.webrtcAnswerAt = new Date(now).toISOString();
+  });
+  return relay;
+}
+
+/**
+ * Grava a senha de sessao do transporte RustDesk com seu proprio prazo de
+ * expiracao (independente do TTL geral da sessao). Reaproveita o TTL de
+ * seguranca do relay (RELAY_TTL_SECONDS) como rede de seguranca adicional em
+ * cima do controle explicito de expiresAt feito pelo servico.
+ */
+export async function setRelayRustdeskCredential(sessionId, { password, expiresAt }) {
+  const { relay } = await store.mutate(sessionId, (relay) => {
+    relay.rustdeskPassword = password;
+    relay.rustdeskPasswordExpiresAt = expiresAt;
+    relay.rustdeskPasswordRevealCount = 0;
+  });
+  return relay;
+}
+
+/**
+ * Le a credencial atual sem apagar (o tecnico pode reabrir o painel de
+ * conexao durante a mesma sessao), mas conta cada leitura para auditoria --
+ * ver eventType "rustdesk_credentials_revealed" no servico.
+ */
+export async function consumeRelayRustdeskCredential(sessionId) {
+  const { relay } = await store.mutate(sessionId, (relay) => {
+    relay.rustdeskPasswordRevealCount = (relay.rustdeskPasswordRevealCount || 0) + 1;
+  });
+  return relay;
+}
+
+export async function clearRelayRustdeskCredential(sessionId) {
+  const { relay } = await store.mutate(sessionId, (relay) => {
+    relay.rustdeskPassword = null;
+    relay.rustdeskPasswordExpiresAt = null;
   });
   return relay;
 }

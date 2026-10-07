@@ -1,5 +1,6 @@
 import { initializeRuntime } from "../bootstrap.js";
 import { closeDatabase } from "../database.js";
+import { assertValidPassword } from "../domain/passwordPolicy.js";
 import { createUser, findUserByEmail, toPublicUser } from "../repositories/userRepository.js";
 
 function option(name) {
@@ -12,11 +13,12 @@ async function main() {
   const email = option("email").toLowerCase();
   const password = option("password");
 
-  if (!name || !email || password.length < 12) {
+  if (!name || !email || !password) {
     throw new Error(
-      'Uso: node src/cli/createLocalAdmin.js --name "Administrador" --email "admin@empresa.local" --password "senha-com-12-ou-mais"'
+      'Uso: node src/cli/createLocalAdmin.js --name "Administrador" --email "admin@empresa.local" --password "frase-longa-com-12-ou-mais-caracteres"'
     );
   }
+  assertValidPassword(password, { email, name });
 
   await initializeRuntime();
   if (await findUserByEmail(email)) {

@@ -34,9 +34,7 @@ async function main() {
     );
   }
   if (monitoringValues.some(Boolean) && !monitoringValues.every(Boolean)) {
-    throw new Error(
-      "Informe --ocs-url, --zabbix-server e --zabbix-active em conjunto."
-    );
+    throw new Error("Informe --ocs-url, --zabbix-server e --zabbix-active em conjunto.");
   }
   if (expiresAt && Number.isNaN(new Date(expiresAt).getTime())) {
     throw new Error("A data informada em --expires e invalida.");
@@ -49,20 +47,20 @@ async function main() {
     planName,
     activationLimit,
     expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
-    monitoring: monitoringValues.every(Boolean)
-      ? validateMonitoringConfig({ ocsServerUrl, zabbixServer, zabbixServerActive })
-      : null
+    monitoring: monitoringValues.every(Boolean) ? validateMonitoringConfig({ ocsServerUrl, zabbixServer, zabbixServerActive }) : null
   });
 
-  process.stdout.write([
-    `Chave criada para ${result.productKey.organizationName}.`,
-    `Plano: ${result.productKey.planName}`,
-    `Limite: ${result.productKey.activationLimit}`,
-    `Monitoramento: ${result.productKey.monitoring.configured ? "configurado" : "pendente"}`,
-    `Chave: ${result.key}`,
-    "A chave completa e exibida somente agora. Armazene-a em local seguro.",
-    ""
-  ].join("\n"));
+  process.stdout.write(
+    [
+      `Chave criada para ${result.productKey.organizationName}.`,
+      `Plano: ${result.productKey.planName}`,
+      `Limite: ${result.productKey.activationLimit}`,
+      `Monitoramento: ${result.productKey.monitoring.configured ? "configurado" : "pendente"}`,
+      `Chave: ${result.key}`,
+      "A chave completa e exibida somente agora. Armazene-a em local seguro.",
+      ""
+    ].join("\n")
+  );
 }
 
 main()

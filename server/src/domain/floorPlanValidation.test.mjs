@@ -50,10 +50,7 @@ test("accepts a valid floor plan editor payload", () => {
 });
 
 test("rejects editor data without floors", () => {
-  assert.throws(
-    () => validateFloorPlanEditorData({ ...validEditorData, floors: [] }),
-    /pelo menos um andar/
-  );
+  assert.throws(() => validateFloorPlanEditorData({ ...validEditorData, floors: [] }), /pelo menos um andar/);
 });
 
 test("rejects duplicated entity ids before persistence", () => {
@@ -61,10 +58,7 @@ test("rejects duplicated entity ids before persistence", () => {
     ...validEditorData,
     objects: [validEditorData.objects[0], { ...validEditorData.objects[0] }]
   };
-  assert.throws(
-    () => validateFloorPlanEditorData(duplicateObjects),
-    /Objeto duplicado: object-1/
-  );
+  assert.throws(() => validateFloorPlanEditorData(duplicateObjects), /Objeto duplicado: object-1/);
 });
 
 test("rejects connection points linked to missing objects", () => {
@@ -72,10 +66,7 @@ test("rejects connection points linked to missing objects", () => {
     ...validEditorData,
     connectionPoints: [{ ...validEditorData.connectionPoints[0], linkedObjectId: "missing-object" }]
   };
-  assert.throws(
-    () => validateFloorPlanEditorData(brokenLink),
-    /referencia um objeto inexistente/
-  );
+  assert.throws(() => validateFloorPlanEditorData(brokenLink), /referencia um objeto inexistente/);
 });
 
 test("rejects cable routes linked to missing points", () => {
@@ -83,10 +74,7 @@ test("rejects cable routes linked to missing points", () => {
     ...validEditorData,
     cableRoutes: [{ ...validEditorData.cableRoutes[0], targetPointId: "missing-point" }]
   };
-  assert.throws(
-    () => validateFloorPlanEditorData(brokenRoute),
-    /referencia ponto de destino inexistente/
-  );
+  assert.throws(() => validateFloorPlanEditorData(brokenRoute), /referencia ponto de destino inexistente/);
 });
 
 test("accepts a door anchored to a wall", () => {

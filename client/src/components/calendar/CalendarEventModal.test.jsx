@@ -3,13 +3,26 @@ import { describe, expect, it, vi } from "vitest";
 import CalendarEventModal from "./CalendarEventModal.jsx";
 
 const baseProps = {
-  selectedDate: new Date("2026-09-03T12:00:00"), defaults: {}, technicians: [],
-  serviceOrders: [{ id: "open", number: "OS-1", title: "Aberta", status: "new" }, { id: "closed", number: "OS-2", title: "Finalizada", status: "finalizado" }],
-  tabs: [{ id: "t1", name: "Matriz" }], groups: [{ id: "g1", name: "Operação", tabId: "t1" }],
-  segments: [{ id: "s1", name: "Financeiro", groupId: "g1", tabId: "t1" }, { id: "maintenance", name: "Manutenção", groupId: "g1", tabId: "t1" }],
+  selectedDate: new Date("2026-09-03T12:00:00"),
+  defaults: {},
+  technicians: [],
+  serviceOrders: [
+    { id: "open", number: "OS-1", title: "Aberta", status: "new" },
+    { id: "closed", number: "OS-2", title: "Finalizada", status: "finalizado" }
+  ],
+  tabs: [{ id: "t1", name: "Matriz" }],
+  groups: [{ id: "g1", name: "Operação", tabId: "t1" }],
+  segments: [
+    { id: "s1", name: "Financeiro", groupId: "g1", tabId: "t1" },
+    { id: "maintenance", name: "Manutenção", groupId: "g1", tabId: "t1" }
+  ],
   devices: [{ id: "d1", name: "Desktop A", segmentId: "s1", tabId: "t1" }],
-  permissions: { create: true, update: true, delete: true, cancel: true, assignTechnician: true }, saving: false,
-  onClose: vi.fn(), onSave: vi.fn(), onCancel: vi.fn(), onDelete: vi.fn()
+  permissions: { create: true, update: true, delete: true, cancel: true, assignTechnician: true },
+  saving: false,
+  onClose: vi.fn(),
+  onSave: vi.fn(),
+  onCancel: vi.fn(),
+  onDelete: vi.fn()
 };
 
 describe("CalendarEventModal", () => {

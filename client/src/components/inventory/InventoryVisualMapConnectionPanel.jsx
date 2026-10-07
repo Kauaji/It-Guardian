@@ -1,11 +1,8 @@
 import { Cable, PlugZap } from "lucide-react";
-import {
-  VISUAL_MAP_LAYER_OPTIONS,
-  getConnectionTypeLabel
-} from "./inventoryVisualMapConnectionUtils.js";
+import { VISUAL_MAP_LAYER_OPTIONS, getConnectionTypeLabel } from "./inventoryVisualMapConnectionUtils.js";
 
 function getLayerLabel(layer) {
-  return VISUAL_MAP_LAYER_OPTIONS.find((option) => option.key === layer)?.label || "Conexao";
+  return VISUAL_MAP_LAYER_OPTIONS.find((option) => option.key === layer)?.label || "Conexão";
 }
 
 function metadataEntries(metadata) {
@@ -22,7 +19,7 @@ export default function InventoryVisualMapConnectionPanel({ connection }) {
     <section className="inventory-visual-connection-summary">
       <div className="inventory-visual-section-title">
         {icon}
-        Detalhes da conexao
+        Detalhes da conexão
       </div>
       <dl>
         <div>
@@ -34,8 +31,8 @@ export default function InventoryVisualMapConnectionPanel({ connection }) {
           <dd>{getConnectionTypeLabel(connection.connectionType)}</dd>
         </div>
         <div>
-          <dt>Identificacao</dt>
-          <dd>{connection.label || "Sem identificacao"}</dd>
+          <dt>Identificação</dt>
+          <dd>{connection.label || "Sem identificação"}</dd>
         </div>
         <div>
           <dt>Pontos</dt>

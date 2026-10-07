@@ -3,7 +3,15 @@ import test from "node:test";
 import { fetchAlertsBySeverity, fetchCurrentProblems } from "./alertWidgets.js";
 
 function alert(overrides = {}) {
-  return { id: "alert-1", hostId: "host-1", hostName: "Host 1", severity: "critical", type: "cpu_high", lastSeenAt: new Date().toISOString(), ...overrides };
+  return {
+    id: "alert-1",
+    hostId: "host-1",
+    hostName: "Host 1",
+    severity: "critical",
+    type: "cpu_high",
+    lastSeenAt: new Date().toISOString(),
+    ...overrides
+  };
 }
 
 function fakeCtx(activeAlerts = []) {

@@ -2,17 +2,19 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 import test from "node:test";
+import { computeNextScheduledFor, normalizeRecurrenceIntervalDays, recurrenceToDays } from "../domain/preventiveSchedule.js";
+import { normalizeAssetIds } from "../domain/preventiveAutomationNormalizers.js";
 import {
   buildRunIdempotencyKey,
-  computeNextScheduledFor,
   getAssetScheduleSyncActions,
   hasPreventiveScheduleChanged,
-  normalizeAssetIds,
-  normalizeRecurrenceIntervalDays,
-  recurrenceToDays,
   resolveAssetListDevices,
   resolveEffectiveRecurrence
-} from "./preventiveAutomationRepository.js";
+} from "../domain/preventiveAutomationSchedule.js";
+
+function sourceOf(relativePath) {
+  return readFileSync(fileURLToPath(new URL(relativePath, import.meta.url)), "utf8");
+}
 
 test("normaliza recorrencia como dias sem multiplicar novamente", () => {
   assert.equal(recurrenceToDays("daily", 1), 1);
@@ -32,14 +34,8 @@ test("calcula proxima preparacao respeitando fuso horario", () => {
     timezone: "America/Sao_Paulo"
   };
 
-  assert.equal(
-    computeNextScheduledFor(schedule, new Date("2026-06-14T10:00:00.000Z")),
-    "2026-06-14T11:00:00.000Z"
-  );
-  assert.equal(
-    computeNextScheduledFor(schedule, new Date("2026-06-14T12:00:00.000Z")),
-    "2026-06-15T11:00:00.000Z"
-  );
+  assert.equal(computeNextScheduledFor(schedule, new Date("2026-06-14T10:00:00.000Z")), "2026-06-14T11:00:00.000Z");
+  assert.equal(computeNextScheduledFor(schedule, new Date("2026-06-14T12:00:00.000Z")), "2026-06-15T11:00:00.000Z");
 });
 
 test("aplica prioridade de recorrencia: maquina acima de segmento e plano", () => {
@@ -86,14 +82,8 @@ test("gera chave idempotente estavel para o mesmo plano, ativo e janela", () => 
 
 test("recorrencia personalizada exige quantidade explicita de dias", () => {
   assert.equal(normalizeRecurrenceIntervalDays(45, "custom_days", { strict: true }), 45);
-  assert.throws(
-    () => normalizeRecurrenceIntervalDays(undefined, "custom_days", { strict: true }),
-    /quantidade de dias/
-  );
-  assert.throws(
-    () => normalizeRecurrenceIntervalDays(366, "custom_days", { strict: true }),
-    /quantidade de dias/
-  );
+  assert.throws(() => normalizeRecurrenceIntervalDays(undefined, "custom_days", { strict: true }), /quantidade de dias/);
+  assert.throws(() => normalizeRecurrenceIntervalDays(366, "custom_days", { strict: true }), /quantidade de dias/);
 });
 
 test("identifica quando agenda individual precisa recalcular proxima execucao", () => {
@@ -174,13 +164,12 @@ test("diff de agendas permite multiplos planos para a mesma maquina", () => {
 });
 
 test("indicadores de automacao usam agendas ativas por ativo como fonte", () => {
-  const repositoryPath = fileURLToPath(new URL("./automationIndicatorRepository.js", import.meta.url));
-  const source = readFileSync(repositoryPath, "utf8");
+  const source = sourceOf("./automationIndicatorRepository.js");
   const functionBody = source.slice(source.indexOf("export async function listAutomationIndicatorsByAssetIds"));
 
   assert.match(functionBody, /FROM\s+preventive_automation_asset_schedules\s+schedules/i);
   assert.match(functionBody, /INNER\s+JOIN\s+preventive_automation_plans\s+plans\s+ON\s+plans\.id\s*=\s*schedules\.plan_id/i);
-  assert.match(functionBody, /schedules\.asset_id\s*=\s*ANY\(\$1\)/i);
+  assert.match(functionBody, /schedules\.asset_id\s+IN\s*\(\$\{placeholders\}\)/i);
   assert.match(functionBody, /schedules\.active\s*=\s*TRUE/i);
   assert.match(functionBody, /plans\.active\s*=\s*TRUE/i);
   assert.doesNotMatch(functionBody, /scope_id\s*=\s*ANY/i);
@@ -212,37 +201,58 @@ test("componente de indicadores limita pontos visiveis e oferece acessibilidade"
 });
 
 test("lista de preventivas usa indicadores apenas visuais", () => {
-  const appPath = fileURLToPath(new URL("../../../client/src/components/alerts/AlertCenterV2.jsx", import.meta.url));
-  const source = readFileSync(appPath, "utf8");
+  // A Central de Avisos foi dividida: a juncao dos indicadores mora em preventiveUtils.js e a
+  // linha da maquina (com os indicadores visuais) em PreventiveDeviceRow.jsx.
+  const alertsDir = "../../../client/src/components/alerts/";
+  const source = ["AlertCenterV2.jsx", "hooks/useAlertCenterController.js", "preventiveUtils.js", "preventives/PreventiveDeviceRow.jsx"]
+    .map((file) => readFileSync(fileURLToPath(new URL(`${alertsDir}${file}`, import.meta.url)), "utf8"))
+    .join("\n");
 
   assert.match(source, /preventiveAutomationManagement\?\.machines/);
   assert.match(source, /managementMachine\?\.plans/);
   assert.match(source, /automationIndicators:\s*\[\.\.\.indicatorsByPlanId\.values\(\)\]/);
-  assert.match(
-    source,
-    /<AutomationIndicatorDots[\s\S]*?indicators=\{device\.automationIndicators\}[\s\S]*?interactive=\{false\}/
-  );
+  assert.match(source, /<AutomationIndicatorDots[\s\S]*?indicators=\{device\.automationIndicators\}[\s\S]*?interactive=\{false\}/);
 });
 
 test("criacao e edicao de automacao validam nome e cor unicos", () => {
-  const repositoryPath = fileURLToPath(new URL("./preventiveAutomationRepository.js", import.meta.url));
-  const source = readFileSync(repositoryPath, "utf8");
+  const service = sourceOf("../services/preventiveAutomationPlanService.js");
+  const repository = sourceOf("./preventiveAutomationPlanRepository.js");
 
-  assert.match(source, /async function assertUniquePlanIdentity/);
-  assert.match(source, /LOWER\(name\)\s*=\s*LOWER\(\$1\)/);
-  assert.match(source, /LOWER\(indicator_color\)\s*=\s*LOWER\(\$2\)/);
-  assert.match(source, /assertUniquePlanIdentity\(normalized,\s*null,\s*db\)/);
-  assert.match(source, /assertUniquePlanIdentity\(normalized,\s*id,\s*db\)/);
-  assert.match(source, /statusCode\s*=\s*409|createHttpError\([^)]*,\s*409\)/);
+  assert.match(service, /async function assertUniquePlanIdentity/);
+  assert.match(repository, /LOWER\(name\)\s*=\s*LOWER\(\$1\)/);
+  assert.match(repository, /LOWER\(indicator_color\)\s*=\s*LOWER\(\$2\)/);
+  assert.match(service, /assertUniquePlanIdentity\(normalized,\s*null,\s*db\)/);
+  assert.match(service, /assertUniquePlanIdentity\(normalized,\s*id,\s*db\)/);
+  assert.match(service, /conflict\("Já existe uma automatização com esse nome\."\)/);
+  assert.match(service, /conflict\(`A cor \$\{indicatorColor\} já está sendo usada por outra automatização\.`\)/);
 });
 
 test("repositorio de automacao nao usa primitivas de execucao de comandos", () => {
-  const repositoryPath = fileURLToPath(new URL("./preventiveAutomationRepository.js", import.meta.url));
-  const scriptRepositoryPath = fileURLToPath(new URL("./maintenanceScriptRepository.js", import.meta.url));
   const source = [
-    readFileSync(repositoryPath, "utf8"),
-    readFileSync(scriptRepositoryPath, "utf8")
-  ].join("\n");
+    "../domain/preventiveAutomationNormalizers.js",
+    "../domain/preventiveAutomationPayload.js",
+    "../domain/preventiveAutomationRun.js",
+    "../domain/preventiveAutomationSchedule.js",
+    "../domain/preventiveAutomationViews.js",
+    "./preventiveAutomationMappers.js",
+    "./preventiveAutomationPlanRepository.js",
+    "./preventiveAutomationScheduleRepository.js",
+    "./preventiveAutomationOverrideRepository.js",
+    "./preventiveAutomationRunRepository.js",
+    "./preventiveAutomationQueryRepository.js",
+    "./preventiveAutomationScopeRepository.js",
+    "../services/preventiveAutomationBackfillService.js",
+    "../services/preventiveAutomationPlanQueryService.js",
+    "../services/preventiveAutomationPlanService.js",
+    "../services/preventiveAutomationAssetService.js",
+    "../services/preventiveAutomationManagementService.js",
+    "../services/preventiveAutomationRunService.js",
+    "../services/preventiveAutomationScheduleService.js",
+    "../services/preventiveAutomationScopeService.js",
+    "../services/maintenanceScripts/maintenanceScriptsFacade.js"
+  ]
+    .map(sourceOf)
+    .join("\n");
 
   assert.doesNotMatch(source, /child_process/);
   assert.doesNotMatch(source, /\bexec\s*\(/);

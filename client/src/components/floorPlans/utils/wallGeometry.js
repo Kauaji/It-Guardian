@@ -29,7 +29,7 @@ export function getWallSegment(wall) {
   const length = Math.max(MIN_WALL_LENGTH, Number(wall?.width || MIN_WALL_LENGTH));
   const thickness = Math.max(4, Number(wall?.height || DEFAULT_WALL_THICKNESS));
   const rotation = Number(wall?.rotation || 0);
-  const radians = rotation * Math.PI / 180;
+  const radians = (rotation * Math.PI) / 180;
   const center = {
     x: Number(wall?.x || 0) + length / 2,
     y: Number(wall?.y || 0) + thickness / 2
@@ -57,10 +57,10 @@ export function snapWallEndPoint(start, end, gridSize = 5, angleStep = 45) {
   const deltaX = Number(end?.x || 0) - Number(start?.x || 0);
   const deltaY = Number(end?.y || 0) - Number(start?.y || 0);
   const rawLength = Math.hypot(deltaX, deltaY);
-  const rawAngle = Math.atan2(deltaY, deltaX) * 180 / Math.PI;
+  const rawAngle = (Math.atan2(deltaY, deltaX) * 180) / Math.PI;
   const angle = Math.round(rawAngle / angleStep) * angleStep;
   const length = Math.max(MIN_WALL_LENGTH, snap(rawLength, gridSize));
-  const radians = angle * Math.PI / 180;
+  const radians = (angle * Math.PI) / 180;
   return {
     x: Number(start?.x || 0) + Math.cos(radians) * length,
     y: Number(start?.y || 0) + Math.sin(radians) * length,
@@ -151,25 +151,31 @@ export function resolveAnchoredOpening(opening, wall) {
 
 export function attachOpeningToWall(opening, wall, point) {
   if (!opening || !wall) return opening;
-  const projection = projectPointToWall(point || {
-    x: Number(opening.x || 0) + Number(opening.width || 0) / 2,
-    y: Number(opening.y || 0) + Number(opening.height || 0) / 2
-  }, wall);
-  return resolveAnchoredOpening({
-    ...opening,
-    metadata: {
-      ...(opening.metadata || {}),
-      anchoringVersion: 2,
-      anchorType: "wall",
-      parentObjectId: wall.id,
-      anchorOffset: projection.anchorOffset,
-      anchorMetadata: {
-        side: opening.metadata?.anchorMetadata?.side || "center",
-        sillHeight: Number(opening.metadata?.anchorMetadata?.sillHeight ?? (opening.objectType === "window" ? 48 : 0)),
-        openingHeight: Number(opening.metadata?.anchorMetadata?.openingHeight ?? (opening.objectType === "window" ? 48 : 96))
+  const projection = projectPointToWall(
+    point || {
+      x: Number(opening.x || 0) + Number(opening.width || 0) / 2,
+      y: Number(opening.y || 0) + Number(opening.height || 0) / 2
+    },
+    wall
+  );
+  return resolveAnchoredOpening(
+    {
+      ...opening,
+      metadata: {
+        ...(opening.metadata || {}),
+        anchoringVersion: 2,
+        anchorType: "wall",
+        parentObjectId: wall.id,
+        anchorOffset: projection.anchorOffset,
+        anchorMetadata: {
+          side: opening.metadata?.anchorMetadata?.side || "center",
+          sillHeight: Number(opening.metadata?.anchorMetadata?.sillHeight ?? (opening.objectType === "window" ? 48 : 0)),
+          openingHeight: Number(opening.metadata?.anchorMetadata?.openingHeight ?? (opening.objectType === "window" ? 48 : 96))
+        }
       }
-    }
-  }, wall);
+    },
+    wall
+  );
 }
 
 export function findNearestWall(point, objects = [], floorId = null, maxDistance = 36) {
@@ -240,13 +246,16 @@ const ROOM_WALL_SIDES = ["top", "right", "bottom", "left"];
 function stableUuid(value) {
   const text = String(value || "floor-plan-wall");
   const seeds = [2166136261, 2246822507, 3266489909, 668265263];
-  const hex = seeds.map((seed) => {
-    let hash = seed >>> 0;
-    for (let index = 0; index < text.length; index += 1) {
-      hash = Math.imul(hash ^ text.charCodeAt(index), 16777619);
-    }
-    return (hash >>> 0).toString(16).padStart(8, "0");
-  }).join("").split("");
+  const hex = seeds
+    .map((seed) => {
+      let hash = seed >>> 0;
+      for (let index = 0; index < text.length; index += 1) {
+        hash = Math.imul(hash ^ text.charCodeAt(index), 16777619);
+      }
+      return (hash >>> 0).toString(16).padStart(8, "0");
+    })
+    .join("")
+    .split("");
 
   hex[12] = "5";
   hex[16] = ["8", "9", "a", "b"][Number.parseInt(hex[16], 16) % 4];
@@ -267,10 +276,22 @@ export function createRoomWallObjects(room, planId = room?.planId) {
   const thickness = Math.max(4, Number(room?.metadata?.room?.wallThickness || 10));
   const wallHeight = Number(room?.metadata?.room?.wallHeight || 110);
   const segments = {
-    top: [{ x, y }, { x: x + width, y }],
-    right: [{ x: x + width, y }, { x: x + width, y: y + height }],
-    bottom: [{ x: x + width, y: y + height }, { x, y: y + height }],
-    left: [{ x, y: y + height }, { x, y }]
+    top: [
+      { x, y },
+      { x: x + width, y }
+    ],
+    right: [
+      { x: x + width, y },
+      { x: x + width, y: y + height }
+    ],
+    bottom: [
+      { x: x + width, y: y + height },
+      { x, y: y + height }
+    ],
+    left: [
+      { x, y: y + height },
+      { x, y }
+    ]
   };
 
   return ROOM_WALL_SIDES.map((side, orderIndex) => {
@@ -313,20 +334,25 @@ export function ensureRoomWallObjects(objects = [], zones = []) {
   for (const room of rooms) {
     for (const wall of createRoomWallObjects(room, room.planId)) {
       const existing = byId.get(wall.id);
-      byId.set(wall.id, existing ? {
-        ...wall,
-        color: existing.color || wall.color,
-        metadata: { ...(existing.metadata || {}), ...wall.metadata }
-      } : wall);
+      byId.set(
+        wall.id,
+        existing
+          ? {
+              ...wall,
+              color: existing.color || wall.color,
+              metadata: { ...(existing.metadata || {}), ...wall.metadata }
+            }
+          : wall
+      );
     }
   }
   return [...byId.values()];
 }
 
 export function removeRoomCascade(objects = [], zones = [], roomId) {
-  const roomWallIds = new Set(objects
-    .filter((object) => object.metadata?.parentRoomId === roomId && object.metadata?.generatedFromRoom)
-    .map((object) => object.id));
+  const roomWallIds = new Set(
+    objects.filter((object) => object.metadata?.parentRoomId === roomId && object.metadata?.generatedFromRoom).map((object) => object.id)
+  );
   return {
     objects: objects.filter((object) => object.metadata?.parentRoomId !== roomId && !roomWallIds.has(object.metadata?.parentObjectId)),
     zones: zones.filter((zone) => zone.id !== roomId && zone.metadata?.paintArea?.parentAreaId !== roomId)

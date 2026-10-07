@@ -178,6 +178,7 @@ export const permissionGroups = [
 
 export const allPermissionIds = permissionGroups.flatMap((group) => group.permissions.map((permission) => permission.id));
 
+/** @type {Record<string, string>} Ids antigos aceitos na entrada e convertidos para o id atual. */
 export const legacyPermissionAliases = {
   "inventory.print_qr": "inventory.print_qrcode",
   "service_orders.close": "service_orders.finish",
@@ -186,10 +187,12 @@ export const legacyPermissionAliases = {
 
 const acceptedPermissionIds = new Set([...allPermissionIds, ...Object.keys(legacyPermissionAliases)]);
 
+/** @param {string} permission */
 function canonicalPermissionId(permission) {
   return legacyPermissionAliases[permission] || permission;
 }
 
+/** @type {Record<string, string[]>} Permissoes padrao por papel (`admin`, `operator`, `viewer`). */
 export const roleDefaultPermissions = {
   admin: allPermissionIds,
   operator: [
@@ -269,7 +272,14 @@ export const roleDefaultPermissions = {
   viewer: []
 };
 
+/**
+ * Aceita array, string JSON ou lixo; devolve ids canonicos, unicos e conhecidos.
+ *
+ * @param {unknown} [value]
+ * @returns {string[]}
+ */
 export function normalizePermissions(value = []) {
+  /** @type {unknown} */
   let source = value;
 
   if (typeof value === "string") {
@@ -280,22 +290,44 @@ export function normalizePermissions(value = []) {
     }
   }
 
-  if (!Array.isArray(source)) source = [];
+  const entries = Array.isArray(source) ? source : [];
 
   return [
     ...new Set(
-      source
+      entries
+        .filter((permission) => typeof permission === "string")
         .map((permission) => canonicalPermissionId(permission))
         .filter((permission) => acceptedPermissionIds.has(permission))
     )
   ];
 }
 
+/**
+ * @param {string | null | undefined} role
+ * @returns {string[]}
+ */
 export function getRolePermissions(role) {
-  return roleDefaultPermissions[role] || roleDefaultPermissions.viewer;
+  return (role && roleDefaultPermissions[role]) || roleDefaultPermissions.viewer;
 }
 
+/**
+ * Usuario minimo exigido pelas funcoes de permissao (compativel com `User`).
+ * @typedef {object} PermissionUser
+ * @property {boolean} [active]
+ * @property {string | null} [role]
+ * @property {boolean} [isAdmin]
+ * @property {string[]} [effectivePermissions]
+ * @property {string[]} [sectorPermissions]
+ * @property {string[]} [permissions]
+ */
+
+/**
+ * @param {PermissionUser | null} [user] `null`/`undefined` equivalem a um usuario sem papel (visualizador).
+ * @returns {string[]}
+ */
 export function getEffectivePermissions(user = {}) {
+  // Antes `null` estourava com TypeError aqui, embora `hasPermission` aceite usuario nulo.
+  if (!user) return getEffectivePermissions({});
   if (user.active === false) return [];
   if (user.role === "admin" || user.isAdmin) return allPermissionIds;
   if (Array.isArray(user.effectivePermissions) && user.effectivePermissions.length) {
@@ -309,6 +341,11 @@ export function getEffectivePermissions(user = {}) {
   ]).filter((permission) => !permission.startsWith("admin."));
 }
 
+/**
+ * @param {PermissionUser | null | undefined} user
+ * @param {string | null | undefined} permission Vazio significa "sem requisito" (sempre permitido).
+ * @returns {boolean}
+ */
 export function hasPermission(user, permission) {
   if (!permission) return true;
   if (user?.role === "admin" || user?.isAdmin) return true;

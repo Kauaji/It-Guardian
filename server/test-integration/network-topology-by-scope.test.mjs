@@ -1,14 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { useTestDatabase } from "../test-support/database.mjs";
 
-process.env.DATABASE_URL = "memory";
+await useTestDatabase();
 process.env.ENABLE_DEMO_SEED = "true";
 process.env.JWT_SECRET = "integration-test-secret-with-at-least-32-characters";
 process.env.NODE_ENV = "test";
 
 const { createApp } = await import("../src/app.js");
 const { createUser } = await import("../src/repositories/userRepository.js");
-const { default: jwt } = await import("jsonwebtoken");
+const { startSession } = await import("../src/services/sessionService.js");
 
 const trustedOrigin = "http://localhost:5173";
 
@@ -66,10 +67,9 @@ test("mapa de rede por escopo: mapa de segmento e criado sob demanda e reaprovei
 
   const segment = await createSegment(baseUrl, cookie, `Segmento By-Scope ${Date.now()}`);
 
-  const firstResponse = await fetch(
-    `${baseUrl}/api/topology-maps/by-scope?scopeType=segment&scopeId=${segment.id}`,
-    { headers: { cookie } }
-  );
+  const firstResponse = await fetch(`${baseUrl}/api/topology-maps/by-scope?scopeType=segment&scopeId=${segment.id}`, {
+    headers: { cookie }
+  });
   const firstBody = await firstResponse.json();
   assert.equal(firstResponse.status, 200, JSON.stringify(firstBody));
   assert.equal(firstBody.map.scopeType, "segment");
@@ -78,10 +78,9 @@ test("mapa de rede por escopo: mapa de segmento e criado sob demanda e reaprovei
   assert.deepEqual(firstBody.nodes, []);
   assert.deepEqual(firstBody.links, []);
 
-  const secondResponse = await fetch(
-    `${baseUrl}/api/topology-maps/by-scope?scopeType=segment&scopeId=${segment.id}`,
-    { headers: { cookie } }
-  );
+  const secondResponse = await fetch(`${baseUrl}/api/topology-maps/by-scope?scopeType=segment&scopeId=${segment.id}`, {
+    headers: { cookie }
+  });
   const secondBody = await secondResponse.json();
   assert.equal(secondResponse.status, 200);
   assert.equal(secondBody.map.id, firstBody.map.id, "segunda chamada reaproveita o mesmo mapa (get-or-create)");
@@ -95,10 +94,7 @@ test("mapa de rede por escopo: funciona tambem para grupo", async (t) => {
 
   const group = await createGroup(baseUrl, cookie, `Grupo By-Scope ${Date.now()}`);
 
-  const response = await fetch(
-    `${baseUrl}/api/topology-maps/by-scope?scopeType=group&scopeId=${group.id}`,
-    { headers: { cookie } }
-  );
+  const response = await fetch(`${baseUrl}/api/topology-maps/by-scope?scopeType=group&scopeId=${group.id}`, { headers: { cookie } });
   const body = await response.json();
   assert.equal(response.status, 200, JSON.stringify(body));
   assert.equal(body.map.scopeType, "group");
@@ -112,10 +108,9 @@ test("mapa de rede por escopo: segmento inexistente devolve 404", async (t) => {
   const baseUrl = `http://127.0.0.1:${server.address().port}`;
   const cookie = await login(baseUrl);
 
-  const response = await fetch(
-    `${baseUrl}/api/topology-maps/by-scope?scopeType=segment&scopeId=segmento-que-nao-existe`,
-    { headers: { cookie } }
-  );
+  const response = await fetch(`${baseUrl}/api/topology-maps/by-scope?scopeType=segment&scopeId=segmento-que-nao-existe`, {
+    headers: { cookie }
+  });
   assert.equal(response.status, 404);
 });
 
@@ -125,10 +120,7 @@ test("mapa de rede por escopo: escopo nao suportado devolve 400", async (t) => {
   const baseUrl = `http://127.0.0.1:${server.address().port}`;
   const cookie = await login(baseUrl);
 
-  const response = await fetch(
-    `${baseUrl}/api/topology-maps/by-scope?scopeType=asset&scopeId=qualquer`,
-    { headers: { cookie } }
-  );
+  const response = await fetch(`${baseUrl}/api/topology-maps/by-scope?scopeType=asset&scopeId=qualquer`, { headers: { cookie } });
   assert.equal(response.status, 400);
 });
 
@@ -150,10 +142,9 @@ test("mapa de rede por escopo: mapa de aba e criado sob demanda e reaproveitado,
   assert.equal(firstBody.map.scopeId, tabId);
   assert.equal(firstBody.map.name, "Minha Aba", "usa o nome mandado pelo cliente na primeira criacao");
 
-  const secondResponse = await fetch(
-    `${baseUrl}/api/topology-maps/by-scope?scopeType=inventory_tab&scopeId=${tabId}`,
-    { headers: { cookie } }
-  );
+  const secondResponse = await fetch(`${baseUrl}/api/topology-maps/by-scope?scopeType=inventory_tab&scopeId=${tabId}`, {
+    headers: { cookie }
+  });
   const secondBody = await secondResponse.json();
   assert.equal(secondResponse.status, 200);
   assert.equal(secondBody.map.id, firstBody.map.id, "segunda chamada reaproveita o mesmo mapa mesmo sem scopeName");
@@ -166,10 +157,7 @@ test("mapa de rede por escopo: aba sem scopeId devolve 400", async (t) => {
   const baseUrl = `http://127.0.0.1:${server.address().port}`;
   const cookie = await login(baseUrl);
 
-  const response = await fetch(
-    `${baseUrl}/api/topology-maps/by-scope?scopeType=inventory_tab`,
-    { headers: { cookie } }
-  );
+  const response = await fetch(`${baseUrl}/api/topology-maps/by-scope?scopeType=inventory_tab`, { headers: { cookie } });
   assert.equal(response.status, 400);
 });
 
@@ -193,7 +181,7 @@ test("mapa de rede por escopo: usuario sem permissao de visualizar recebe 403", 
     password: "not-used-in-this-test",
     role: "viewer"
   });
-  const noPermissionToken = jwt.sign({ sub: noPermissionUser.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+  const noPermissionToken = (await startSession(noPermissionUser)).token;
 
   const response = await fetch(`${baseUrl}/api/topology-maps/by-scope?scopeType=segment&scopeId=qualquer`, {
     headers: {

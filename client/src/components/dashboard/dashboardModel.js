@@ -1,14 +1,17 @@
 export function buildAlertTrend(history) {
-  return (history || []).slice(0, 6).reverse().map((alert, index) => ({
-    label: `#${index + 1}`,
-    critical: alert.severity === "critical" ? 1 : 0,
-    warning: alert.severity === "warning" ? 1 : 0
-  }));
+  return (history || [])
+    .slice(0, 6)
+    .reverse()
+    .map((alert, index) => ({
+      label: `#${index + 1}`,
+      critical: alert.severity === "critical" ? 1 : 0,
+      warning: alert.severity === "warning" ? 1 : 0
+    }));
 }
 
 export function onlineSubtitle(overview) {
   if (!overview) return "";
-  return `${overview.onlineAssets} de ${overview.totalAssets} maquinas online`;
+  return `${overview.onlineAssets} de ${overview.totalAssets} máquinas online`;
 }
 
 export function offlineSubtitle(overview) {
@@ -20,20 +23,20 @@ export function offlineSubtitle(overview) {
 
 export function criticalAlertsSubtitle(overview) {
   if (!overview) return "";
-  if (!overview.criticalAlerts) return "Nenhum alerta critico ativo";
-  return `${overview.criticalAlerts} alerta(s) critico(s) ativo(s)`;
+  if (!overview.criticalAlerts) return "Nenhum alerta crítico ativo";
+  return `${overview.criticalAlerts} alerta(s) crítico(s) ativo(s)`;
 }
 
 export function overdueSubtitle(overview) {
   if (!overview) return "";
   if (!overview.overdueServiceOrdersAvailable) {
-    return "Depende de prazo/SLA persistido (ainda nao disponivel)";
+    return "Depende de prazo/SLA persistido (ainda não disponível)";
   }
   return `${overview.overdueServiceOrders} ordem(ns) vencida(s)`;
 }
 
 export function healthSubtitle() {
-  return "Calculada a partir de ativos, alertas e ordens de servico reais";
+  return "Calculada a partir de ativos, alertas e ordens de serviço reais";
 }
 
 export function isSectionEmpty(entries) {

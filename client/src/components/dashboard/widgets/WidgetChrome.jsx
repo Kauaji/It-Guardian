@@ -12,7 +12,19 @@ const heightTierLabels = { s: "P", m: "M", l: "G" };
  * titulo, o corpo real fica limpo. Redimensionar e por tier discreto (P/M/G/
  * Largo), nao drag de pixel livre.
  */
-export default function WidgetChrome({ widget, editing, arranging, menuOpen, onToggleMenu, onCloseMenu, label, onRemove, onConfigure, onResize, children }) {
+export default function WidgetChrome({
+  widget,
+  editing,
+  arranging,
+  menuOpen,
+  onToggleMenu,
+  onCloseMenu,
+  label,
+  onRemove,
+  onConfigure,
+  onResize,
+  children
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: widget.id,
     disabled: !editing || !arranging
@@ -26,16 +38,18 @@ export default function WidgetChrome({ widget, editing, arranging, menuOpen, onT
   };
 
   return (
-    <article ref={setNodeRef} style={style} data-widget-type={widget.type} data-width={widget.w || "m"} data-height={widget.h || "s"} aria-label={label} className={`dashboard-widget-card ${editing ? "editing" : ""}`}>
+    <article
+      ref={setNodeRef}
+      style={style}
+      data-widget-type={widget.type}
+      data-width={widget.w || "m"}
+      data-height={widget.h || "s"}
+      aria-label={label}
+      className={`dashboard-widget-card ${editing ? "editing" : ""}`}
+    >
       <header className="dashboard-widget-card-header">
         {editing && arranging && (
-          <button
-            type="button"
-            className="dashboard-widget-drag-handle"
-            title="Mover widget"
-            {...attributes}
-            {...listeners}
-          >
+          <button type="button" className="dashboard-widget-drag-handle" title="Mover widget" {...attributes} {...listeners}>
             <GripVertical size={16} />
           </button>
         )}
@@ -46,7 +60,7 @@ export default function WidgetChrome({ widget, editing, arranging, menuOpen, onT
               type="button"
               className="icon-button"
               onClick={onToggleMenu}
-              title="Opcoes do widget"
+              title="Opções do widget"
               aria-haspopup="menu"
               aria-expanded={menuOpen}
             >
@@ -68,12 +82,7 @@ export default function WidgetChrome({ widget, editing, arranging, menuOpen, onT
                 <fieldset className="dashboard-widget-size-picker">
                   <legend>Largura</legend>
                   {WIDTH_TIERS.map((tier) => (
-                    <button
-                      key={tier}
-                      type="button"
-                      className={widget.w === tier ? "active" : ""}
-                      onClick={() => onResize({ w: tier })}
-                    >
+                    <button key={tier} type="button" className={widget.w === tier ? "active" : ""} onClick={() => onResize({ w: tier })}>
                       {widthTierLabels[tier]}
                     </button>
                   ))}
@@ -81,12 +90,7 @@ export default function WidgetChrome({ widget, editing, arranging, menuOpen, onT
                 <fieldset className="dashboard-widget-size-picker">
                   <legend>Altura</legend>
                   {HEIGHT_TIERS.map((tier) => (
-                    <button
-                      key={tier}
-                      type="button"
-                      className={widget.h === tier ? "active" : ""}
-                      onClick={() => onResize({ h: tier })}
-                    >
+                    <button key={tier} type="button" className={widget.h === tier ? "active" : ""} onClick={() => onResize({ h: tier })}>
                       {heightTierLabels[tier]}
                     </button>
                   ))}

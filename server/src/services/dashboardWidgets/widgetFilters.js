@@ -14,10 +14,7 @@ function invalidFilter(message) {
 /** Transient selections are separate from widget config/layout; no coercion of arrays or booleans. */
 export function normalizeDashboardFilters(value) {
   if (value === undefined || value === null) return {};
-  if (
-    typeof value !== "object" || Array.isArray(value) ||
-    ![Object.prototype, null].includes(Object.getPrototypeOf(value))
-  ) {
+  if (typeof value !== "object" || Array.isArray(value) || ![Object.prototype, null].includes(Object.getPrototypeOf(value))) {
     throw invalidFilter("filters deve ser um objeto.");
   }
   if (Object.keys(value).length > filterNames.size) throw invalidFilter("quantidade de dimensoes excedida.");
@@ -31,7 +28,9 @@ export function normalizeDashboardFilters(value) {
       continue;
     }
     if (
-      typeof selection !== "string" || !selection.trim() || selection.length > MAX_FILTER_VALUE_LENGTH ||
+      typeof selection !== "string" ||
+      !selection.trim() ||
+      selection.length > MAX_FILTER_VALUE_LENGTH ||
       [...selection].some((character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)
     ) {
       throw invalidFilter(`${key} deve conter uma selecao de ate ${MAX_FILTER_VALUE_LENGTH} caracteres.`);
@@ -100,17 +99,16 @@ export function buildDashboardAssetScope({ devices, activeAlerts = [], serviceOr
 
 export function filterDashboardAlerts(alerts, filters, assetIds) {
   const needsAssetRelation = hasAssetFilter(filters) || hasOrderFilter(filters);
-  return alerts.filter((alert) =>
-    (!filters.alertSeverity || alert.severity === filters.alertSeverity) &&
-    (!needsAssetRelation || assetIds.has(alertAssetId(alert)))
+  return alerts.filter(
+    (alert) =>
+      (!filters.alertSeverity || alert.severity === filters.alertSeverity) && (!needsAssetRelation || assetIds.has(alertAssetId(alert)))
   );
 }
 
 export function filterDashboardServiceOrders(orders, filters, assetIds, settings, now = new Date()) {
   const needsAssetRelation = hasAssetFilter(filters) || Boolean(filters.alertSeverity);
-  return orders.filter((order) =>
-    matchesOrderDimensions(order, filters, settings, now) &&
-    (!needsAssetRelation || assetIds.has(idOf(order.assetId)))
+  return orders.filter(
+    (order) => matchesOrderDimensions(order, filters, settings, now) && (!needsAssetRelation || assetIds.has(idOf(order.assetId)))
   );
 }
 
@@ -137,26 +135,29 @@ export function withDashboardFilters(context, filters = {}) {
     if (!cache.has(key)) cache.set(key, load());
     return cache.get(key);
   };
-  const validateFilters = () => memo("validation", async () => {
-    if (filters.serviceOrderStatus) validateDashboardOrderStatus(filters, await context.getServiceOrderSettings());
-  });
+  const validateFilters = () =>
+    memo("validation", async () => {
+      if (filters.serviceOrderStatus) validateDashboardOrderStatus(filters, await context.getServiceOrderSettings());
+    });
   if (!hasFilters) return { ...context, filters, hasFilters, validateFilters };
 
-  const getScope = () => memo("scope", async () => {
-    await validateFilters();
-    const [devices, activeAlerts, serviceOrders, settings] = await Promise.all([
-      context.getDevices(),
-      filters.alertSeverity ? context.getActiveAlerts() : [],
-      hasOrderFilter(filters) ? context.getServiceOrders() : [],
-      hasOrderFilter(filters) ? context.getServiceOrderSettings() : null
-    ]);
-    return buildDashboardAssetScope({ devices, activeAlerts, serviceOrders, settings }, filters, now);
-  });
-  const getAlerts = (key, load, requireKnownAsset = false) => memo(key, async () => {
-    const [alerts, scope] = await Promise.all([load(), getScope()]);
-    const matching = filterDashboardAlerts(alerts, filters, scope.assetIds);
-    return requireKnownAsset ? matching.filter((alert) => scope.assetIds.has(alertAssetId(alert))) : matching;
-  });
+  const getScope = () =>
+    memo("scope", async () => {
+      await validateFilters();
+      const [devices, activeAlerts, serviceOrders, settings] = await Promise.all([
+        context.getDevices(),
+        filters.alertSeverity ? context.getActiveAlerts() : [],
+        hasOrderFilter(filters) ? context.getServiceOrders() : [],
+        hasOrderFilter(filters) ? context.getServiceOrderSettings() : null
+      ]);
+      return buildDashboardAssetScope({ devices, activeAlerts, serviceOrders, settings }, filters, now);
+    });
+  const getAlerts = (key, load, requireKnownAsset = false) =>
+    memo(key, async () => {
+      const [alerts, scope] = await Promise.all([load(), getScope()]);
+      const matching = filterDashboardAlerts(alerts, filters, scope.assetIds);
+      return requireKnownAsset ? matching.filter((alert) => scope.assetIds.has(alertAssetId(alert))) : matching;
+    });
   const filteredContext = {
     ...context,
     filters,
@@ -168,23 +169,27 @@ export function withDashboardFilters(context, filters = {}) {
     // Historical recurrences belong to the selected inventory, not unrelated
     // resolved alerts that happen to have the same severity.
     getAllAlerts: () => getAlerts("allAlerts", context.getAllAlerts, true),
-    getServiceOrders: () => memo("orders", async () => {
-      const [orders, scope, settings] = await Promise.all([
-        context.getServiceOrders(), getScope(), context.getServiceOrderSettings()
-      ]);
-      return filterDashboardServiceOrders(orders, filters, scope.assetIds, settings, now);
-    })
+    getServiceOrders: () =>
+      memo("orders", async () => {
+        const [orders, scope, settings] = await Promise.all([context.getServiceOrders(), getScope(), context.getServiceOrderSettings()]);
+        return filterDashboardServiceOrders(orders, filters, scope.assetIds, settings, now);
+      })
   };
-  filteredContext.getScopedEventReferences = () => memo("eventReferences", async () => {
-    const [assetIds, activeAlerts, allAlerts, orders] = await Promise.all([
-      filteredContext.getScopedAssetIds(), filteredContext.getActiveAlerts(),
-      filteredContext.getAllAlerts(), filteredContext.getServiceOrders()
-    ]);
-    return {
-      assetIds,
-      alertIds: new Set([...allAlerts, ...activeAlerts].filter((alert) => assetIds.has(alertAssetId(alert))).map((alert) => idOf(alert.id))),
-      serviceOrderIds: new Set(orders.filter((order) => assetIds.has(idOf(order.assetId))).map((order) => idOf(order.id)))
-    };
-  });
+  filteredContext.getScopedEventReferences = () =>
+    memo("eventReferences", async () => {
+      const [assetIds, activeAlerts, allAlerts, orders] = await Promise.all([
+        filteredContext.getScopedAssetIds(),
+        filteredContext.getActiveAlerts(),
+        filteredContext.getAllAlerts(),
+        filteredContext.getServiceOrders()
+      ]);
+      return {
+        assetIds,
+        alertIds: new Set(
+          [...allAlerts, ...activeAlerts].filter((alert) => assetIds.has(alertAssetId(alert))).map((alert) => idOf(alert.id))
+        ),
+        serviceOrderIds: new Set(orders.filter((order) => assetIds.has(idOf(order.assetId))).map((order) => idOf(order.id)))
+      };
+    });
   return filteredContext;
 }

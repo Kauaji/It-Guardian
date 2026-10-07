@@ -38,9 +38,7 @@ export default function NetworkTopologyAddAssetPicker({ devices, onPick, disable
 
   const results = useMemo(() => {
     const items = query.trim() ? searchCatalogItems(sections, query) : sections[0].items;
-    return items
-      .map((item) => ({ item, device: devices.find((device) => device.id === item.id) }))
-      .filter((entry) => entry.device);
+    return items.map((item) => ({ item, device: devices.find((device) => device.id === item.id) })).filter((entry) => entry.device);
   }, [sections, query, devices]);
 
   useEffect(() => {
@@ -82,6 +80,7 @@ export default function NetworkTopologyAddAssetPicker({ devices, onPick, disable
           type="search"
           className="network-topology-add-asset-input"
           placeholder="Adicionar ativo ao mapa..."
+          aria-label="Adicionar ativo ao mapa"
           value={query}
           disabled={disabled}
           onFocus={() => setOpen(true)}

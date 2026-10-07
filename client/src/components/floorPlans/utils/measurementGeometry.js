@@ -15,7 +15,7 @@ export function isMeasurementObject(object) {
 export function getMeasurementSegment(measurement) {
   const length = Math.max(MIN_MEASUREMENT_LENGTH, Number(measurement?.width || MIN_MEASUREMENT_LENGTH));
   const rotation = Number(measurement?.rotation || 0);
-  const radians = rotation * Math.PI / 180;
+  const radians = (rotation * Math.PI) / 180;
   const center = {
     x: Number(measurement?.x || 0) + length / 2,
     y: Number(measurement?.y || 0) + Number(measurement?.height || DISPLAY_THICKNESS) / 2
@@ -43,12 +43,11 @@ export function snapMeasurementEndPoint(start, end, { constrainAngle = false, ov
   const deltaX = Number(end?.x || 0) - Number(start?.x || 0);
   const deltaY = Number(end?.y || 0) - Number(start?.y || 0);
   const rawLength = Math.hypot(deltaX, deltaY);
-  const rawAngle = Math.atan2(deltaY, deltaX) * 180 / Math.PI;
+  const rawAngle = (Math.atan2(deltaY, deltaX) * 180) / Math.PI;
   const angle = constrainAngle ? Math.round(rawAngle / CONSTRAINED_ANGLE_STEP) * CONSTRAINED_ANGLE_STEP : rawAngle;
-  const length = overrideLengthPx != null
-    ? Math.max(MIN_MEASUREMENT_LENGTH, overrideLengthPx)
-    : Math.max(MIN_MEASUREMENT_LENGTH, rawLength);
-  const radians = angle * Math.PI / 180;
+  const length =
+    overrideLengthPx != null ? Math.max(MIN_MEASUREMENT_LENGTH, overrideLengthPx) : Math.max(MIN_MEASUREMENT_LENGTH, rawLength);
+  const radians = (angle * Math.PI) / 180;
   return {
     x: Number(start?.x || 0) + Math.cos(radians) * length,
     y: Number(start?.y || 0) + Math.sin(radians) * length,

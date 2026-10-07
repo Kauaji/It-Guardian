@@ -41,12 +41,11 @@ export function severityToken(severity) {
 }
 
 export function matchesTimelineSearch(event, queryText) {
-  const normalizedQuery = String(queryText || "").trim().toLowerCase();
-  if (!normalizedQuery) return true;
-  const haystack = [event.title, event.description, event.actorName, event.type]
-    .filter(Boolean)
-    .join(" ")
+  const normalizedQuery = String(queryText || "")
+    .trim()
     .toLowerCase();
+  if (!normalizedQuery) return true;
+  const haystack = [event.title, event.description, event.actorName, event.type].filter(Boolean).join(" ").toLowerCase();
   return haystack.includes(normalizedQuery);
 }
 
@@ -101,7 +100,5 @@ export function mergeObservationsIntoEvents(events, observations = []) {
     metadata: {}
   }));
 
-  return [...events, ...observationEvents].sort(
-    (a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()
-  );
+  return [...events, ...observationEvents].sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime());
 }

@@ -2,11 +2,13 @@ import { Server } from "lucide-react";
 import PulseDot from "../ui/PulseDot.jsx";
 
 function pulseTone(status) {
-  return {
-    online: "ok",
-    offline: "offline",
-    problem: "danger"
-  }[status] || "offline";
+  return (
+    {
+      online: "ok",
+      offline: "offline",
+      problem: "danger"
+    }[status] || "offline"
+  );
 }
 
 export default function DeviceTable({ devices, selectedId, onSelect, statusClass }) {
@@ -26,11 +28,7 @@ export default function DeviceTable({ devices, selectedId, onSelect, statusClass
         </thead>
         <tbody>
           {devices.map((device) => (
-            <tr
-              key={device.id}
-              className={selectedId === device.id ? "selected" : ""}
-              onClick={() => onSelect(device.id)}
-            >
+            <tr key={device.id} className={selectedId === device.id ? "selected" : ""} onClick={() => onSelect(device.id)}>
               <td>
                 <div className="device-name">
                   <PulseDot tone={pulseTone(device.status)} title={device.statusLabel} />
@@ -39,11 +37,22 @@ export default function DeviceTable({ devices, selectedId, onSelect, statusClass
                 </div>
               </td>
               <td className="tabular-nums">{device.ip}</td>
-              <td><span className={`pill ${statusClass(device.status)}`}>{device.statusLabel}</span></td>
-              <td className="tabular-nums">{device.metrics?.cpu ?? "-"}{device.metrics ? "%" : ""}</td>
-              <td className="tabular-nums">{device.metrics?.ram ?? "-"}{device.metrics ? "%" : ""}</td>
-              <td className="tabular-nums">{device.metrics?.disk ?? "-"}{device.metrics ? "%" : ""}</td>
-              <td>{device.hardware?.model || "Sem inventario"}</td>
+              <td>
+                <span className={`pill ${statusClass(device.status)}`}>{device.statusLabel}</span>
+              </td>
+              <td className="tabular-nums">
+                {device.metrics?.cpu ?? "-"}
+                {device.metrics ? "%" : ""}
+              </td>
+              <td className="tabular-nums">
+                {device.metrics?.ram ?? "-"}
+                {device.metrics ? "%" : ""}
+              </td>
+              <td className="tabular-nums">
+                {device.metrics?.disk ?? "-"}
+                {device.metrics ? "%" : ""}
+              </td>
+              <td>{device.hardware?.model || "Sem inventário"}</td>
             </tr>
           ))}
         </tbody>

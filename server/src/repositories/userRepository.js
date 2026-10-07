@@ -1,7 +1,23 @@
 import { randomUUID } from "node:crypto";
-import bcrypt from "bcryptjs";
+import { hashPassword } from "../security/passwordHasher.js";
 import { query } from "../database.js";
 import { getEffectivePermissions, normalizePermissions } from "../permissions.js";
+
+/** @import { QueryResult } from "pg" */
+/** @import { HttpErrorLike } from "../lib/errors.js" */
+/** @import { PublicUser, User, UserRow } from "../types/identity.js" */
+
+/**
+ * Corpo de atualizacao de acesso (so as chaves presentes mudam o usuario).
+ * @typedef {object} UserAccessPayload
+ * @property {string} [role]
+ * @property {boolean} [isAdmin]
+ * @property {unknown} [permissions]
+ * @property {string} [name]
+ * @property {string | null} [sectorId]
+ * @property {string | null} [jobTitle]
+ * @property {boolean} [active]
+ */
 
 const userSelect = `
   SELECT
@@ -17,6 +33,14 @@ const userSelect = `
     users.permissions,
     users.created_at,
     users.updated_at,
+    users.token_version,
+    users.must_change_password,
+    users.password_changed_at,
+    users.failed_login_attempts,
+    users.lockout_count,
+    users.locked_until,
+    users.last_login_at,
+    users.mfa_enabled,
     sectors.name AS sector_name,
     CASE
       WHEN sectors.active = TRUE THEN sectors.permissions
@@ -26,29 +50,40 @@ const userSelect = `
   LEFT JOIN sectors ON sectors.id = users.sector_id
 `;
 
+/**
+ * @returns {Promise<PublicUser[]>}
+ */
 export async function listUsers() {
-  const result = await query(
-    `${userSelect} ORDER BY users.created_at DESC`
-  );
+  /** @type {QueryResult<UserRow>} */
+  const result = await query(`${userSelect} ORDER BY users.created_at DESC`);
   return result.rows.map((row) => toPublicUser(fromRow(row)));
 }
 
+/**
+ * @param {string} email
+ * @returns {Promise<User | null>}
+ */
 export async function findUserByEmail(email) {
-  const result = await query(
-    `${userSelect} WHERE LOWER(users.email) = LOWER($1)`,
-    [email]
-  );
+  /** @type {QueryResult<UserRow>} */
+  const result = await query(`${userSelect} WHERE LOWER(users.email) = LOWER($1)`, [email]);
   return result.rows[0] ? fromRow(result.rows[0]) : null;
 }
 
+/**
+ * @param {string} id
+ * @returns {Promise<User | null>}
+ */
 export async function findUserById(id) {
-  const result = await query(
-    `${userSelect} WHERE users.id = $1`,
-    [id]
-  );
+  /** @type {QueryResult<UserRow>} */
+  const result = await query(`${userSelect} WHERE users.id = $1`, [id]);
   return result.rows[0] ? fromRow(result.rows[0]) : null;
 }
 
+/**
+ * @param {{ name: string, email: string, password: string, role?: string, active?: boolean, sectorId?: string | null, jobTitle?: string, permissions?: unknown, mustChangePassword?: boolean }} input
+ * @returns {Promise<User | null>}
+ * @throws {Error} 409 quando o e-mail ja existe.
+ */
 export async function createUser({
   name,
   email,
@@ -57,16 +92,21 @@ export async function createUser({
   active = true,
   sectorId = null,
   jobTitle = "",
-  permissions = []
+  permissions = [],
+  mustChangePassword = false
 }) {
   try {
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await hashPassword(password);
     const normalizedPermissions = normalizePermissions(permissions);
     const isAdmin = role === "admin";
+    /** @type {QueryResult<{ id: string }>} */
     const result = await query(
       `
-        INSERT INTO users (id, name, email, password_hash, role, active, sector_id, job_title, is_admin, permissions)
-        VALUES ($1, $2, LOWER($3), $4, $5, $6, $7, $8, $9, $10::jsonb)
+        INSERT INTO users (
+          id, name, email, password_hash, role, active, sector_id, job_title, is_admin, permissions,
+          must_change_password, password_changed_at
+        )
+        VALUES ($1, $2, LOWER($3), $4, $5, $6, $7, $8, $9, $10::jsonb, $11, NOW())
         RETURNING id
       `,
       [
@@ -79,22 +119,40 @@ export async function createUser({
         sectorId || null,
         jobTitle || null,
         isAdmin,
-        JSON.stringify(normalizedPermissions)
+        JSON.stringify(normalizedPermissions),
+        Boolean(mustChangePassword)
       ]
     );
 
     return findUserById(result.rows[0].id);
   } catch (error) {
-    if (error.code === "23505") {
-      const conflict = new Error("Email is already registered");
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "23505") {
+      /** @type {HttpErrorLike} */
+      const conflict = new Error("Este e-mail já está cadastrado.");
       conflict.statusCode = 409;
+      conflict.expose = true;
       throw conflict;
     }
     throw error;
   }
 }
 
+/**
+ * @param {string} id
+ * @returns {Promise<PublicUser | null>} `null` quando o usuario sumiu entre a escrita e a leitura.
+ */
+async function loadPublicUser(id) {
+  const user = await findUserById(id);
+  return user ? toPublicUser(user) : null;
+}
+
+/**
+ * @param {string} id
+ * @param {string} role
+ * @returns {Promise<PublicUser | null>}
+ */
 export async function updateUserRole(id, role) {
+  /** @type {QueryResult<{ id: string }>} */
   const result = await query(
     `
       UPDATE users
@@ -107,9 +165,14 @@ export async function updateUserRole(id, role) {
     [id, role]
   );
 
-  return result.rows[0] ? toPublicUser(await findUserById(result.rows[0].id)) : null;
+  return result.rows[0] ? loadPublicUser(result.rows[0].id) : null;
 }
 
+/**
+ * @param {string} id
+ * @param {UserAccessPayload} [payload]
+ * @returns {Promise<PublicUser | null>}
+ */
 export async function updateUserAccess(id, payload = {}) {
   const current = await findUserById(id);
   if (!current) return null;
@@ -121,15 +184,10 @@ export async function updateUserAccess(id, payload = {}) {
   const normalizedPermissions = Object.prototype.hasOwnProperty.call(payload, "permissions")
     ? normalizePermissions(payload.permissions)
     : current.permissions;
-  const nextName = Object.prototype.hasOwnProperty.call(payload, "name") && payload.name?.trim()
-    ? payload.name.trim()
-    : current.name;
-  const nextSectorId = Object.prototype.hasOwnProperty.call(payload, "sectorId")
-    ? payload.sectorId || null
-    : current.sectorId || null;
-  const nextJobTitle = Object.prototype.hasOwnProperty.call(payload, "jobTitle")
-    ? payload.jobTitle || null
-    : current.jobTitle || null;
+  const nextName = Object.prototype.hasOwnProperty.call(payload, "name") && payload.name?.trim() ? payload.name.trim() : current.name;
+  const nextSectorId = Object.prototype.hasOwnProperty.call(payload, "sectorId") ? payload.sectorId || null : current.sectorId || null;
+  const nextJobTitle = Object.prototype.hasOwnProperty.call(payload, "jobTitle") ? payload.jobTitle || null : current.jobTitle || null;
+  /** @type {QueryResult<{ id: string }>} */
   const result = await query(
     `
       UPDATE users
@@ -156,10 +214,16 @@ export async function updateUserAccess(id, payload = {}) {
     ]
   );
 
-  return result.rows[0] ? toPublicUser(await findUserById(result.rows[0].id)) : null;
+  return result.rows[0] ? loadPublicUser(result.rows[0].id) : null;
 }
 
+/**
+ * @param {string} id
+ * @param {unknown} [permissions]
+ * @returns {Promise<PublicUser | null>}
+ */
 export async function updateUserPermissions(id, permissions = []) {
+  /** @type {QueryResult<{ id: string }>} */
   const result = await query(
     `
       UPDATE users
@@ -171,10 +235,15 @@ export async function updateUserPermissions(id, permissions = []) {
     [id, JSON.stringify(normalizePermissions(permissions))]
   );
 
-  return result.rows[0] ? toPublicUser(await findUserById(result.rows[0].id)) : null;
+  return result.rows[0] ? loadPublicUser(result.rows[0].id) : null;
 }
 
+/**
+ * @param {string} id
+ * @returns {Promise<PublicUser | null>}
+ */
 export async function deactivateUser(id) {
+  /** @type {QueryResult<{ id: string }>} */
   const result = await query(
     `
       UPDATE users
@@ -186,10 +255,15 @@ export async function deactivateUser(id) {
     [id]
   );
 
-  return result.rows[0] ? toPublicUser(await findUserById(result.rows[0].id)) : null;
+  return result.rows[0] ? loadPublicUser(result.rows[0].id) : null;
 }
 
+/**
+ * @param {string} [userId]
+ * @returns {Promise<number>}
+ */
 export async function countActiveAdminsExcluding(userId = "") {
+  /** @type {QueryResult<{ total: number }>} */
   const result = await query(
     `
       SELECT COUNT(*)::int AS total
@@ -204,22 +278,18 @@ export async function countActiveAdminsExcluding(userId = "") {
   return Number(result.rows[0]?.total || 0);
 }
 
+/**
+ * Seeds de demonstracao SO CRIAM: se o e-mail ja existe, nada e alterado.
+ * Antes, ligar a flag num banco existente redefinia a senha para "123456" e
+ * devolvia o papel de administrador a cada inicializacao.
+ */
 export async function seedDefaultAdmin() {
-  const passwordHash = await bcrypt.hash("123456", 10);
+  const passwordHash = await hashPassword("123456");
   await query(
     `
       INSERT INTO users (id, name, email, password_hash, role, is_admin, active, sector_id, job_title, permissions)
       VALUES ($1, $2, $3, $4, 'admin', TRUE, TRUE, $5, $6, $7::jsonb)
-      ON CONFLICT (email) DO UPDATE SET
-        name = EXCLUDED.name,
-        password_hash = EXCLUDED.password_hash,
-        role = 'admin',
-        is_admin = TRUE,
-        active = TRUE,
-        sector_id = EXCLUDED.sector_id,
-        job_title = EXCLUDED.job_title,
-        permissions = EXCLUDED.permissions,
-        updated_at = NOW()
+      ON CONFLICT (email) DO NOTHING
     `,
     [
       "seed-admin",
@@ -233,174 +303,10 @@ export async function seedDefaultAdmin() {
   );
 }
 
-export async function seedDemoUsers() {
-  const passwordHash = await bcrypt.hash("123456", 10);
-  const users = [
-    {
-      id: "seed-admin",
-      name: "Admin Sistema",
-      email: "admin@itguardian.local",
-      role: "admin",
-      sectorId: "sector-administracao",
-      jobTitle: "Administrador principal",
-      isAdmin: true,
-      permissions: ["admin.full"]
-    },
-    {
-      id: "seed-admin-marina",
-      name: "Marina Duarte",
-      email: "marina.duarte@itguardian.local",
-      role: "admin",
-      sectorId: "sector-administracao",
-      jobTitle: "Administradora auxiliar",
-      isAdmin: true,
-      permissions: ["admin.full"]
-    },
-    {
-      id: "seed-user-rafael",
-      name: "Rafael Nunes",
-      email: "rafael.nunes@itguardian.local",
-      role: "viewer",
-      sectorId: "sector-support-n1",
-      jobTitle: "Tecnico N1",
-      isAdmin: false,
-      permissions: []
-    },
-    {
-      id: "seed-user-felipe",
-      name: "Felipe Castro",
-      email: "felipe.castro@itguardian.local",
-      role: "viewer",
-      sectorId: "sector-suporte-n2",
-      jobTitle: "Tecnico avancado",
-      isAdmin: false,
-      permissions: ["service_orders.edit", "service_orders.parts"]
-    },
-    {
-      id: "seed-user-bruno",
-      name: "Bruno Almeida",
-      email: "bruno.almeida@itguardian.local",
-      role: "viewer",
-      sectorId: "sector-infra",
-      jobTitle: "Tecnico de infraestrutura",
-      isAdmin: false,
-      permissions: ["inventory.move_assets"]
-    },
-    {
-      id: "seed-user-camila",
-      name: "Camila Rocha",
-      email: "camila.rocha@itguardian.local",
-      role: "viewer",
-      sectorId: "sector-redes",
-      jobTitle: "Analista de redes",
-      isAdmin: false,
-      permissions: []
-    },
-    {
-      id: "seed-user-patricia",
-      name: "Patricia Lima",
-      email: "patricia.lima@itguardian.local",
-      role: "viewer",
-      sectorId: "sector-financeiro",
-      jobTitle: "Usuario comum",
-      isAdmin: false,
-      permissions: []
-    },
-    {
-      id: "seed-user-andre",
-      name: "Andre Torres",
-      email: "andre.torres@itguardian.local",
-      role: "viewer",
-      sectorId: "sector-diretoria",
-      jobTitle: "Gestor",
-      isAdmin: false,
-      permissions: []
-    },
-    {
-      id: "seed-user-lucas",
-      name: "Lucas Pereira",
-      email: "lucas.pereira@itguardian.local",
-      role: "viewer",
-      sectorId: "sector-geral",
-      jobTitle: "Usuario novo",
-      isAdmin: false,
-      permissions: []
-    },
-    {
-      id: "seed-demo-tecnico-n1",
-      name: "Tecnico N1 Demo",
-      email: "tecnico.n1@itguardian.local",
-      role: "viewer",
-      sectorId: "sector-support-n1",
-      jobTitle: "Tecnico N1",
-      isAdmin: false,
-      permissions: []
-    },
-    {
-      id: "seed-demo-tecnico-n2",
-      name: "Tecnico N2 Demo",
-      email: "tecnico.n2@itguardian.local",
-      role: "viewer",
-      sectorId: "sector-suporte-n2",
-      jobTitle: "Tecnico N2",
-      isAdmin: false,
-      permissions: ["service_orders.edit", "service_orders.parts"]
-    },
-    {
-      id: "seed-demo-usuario-comum",
-      name: "Usuario Comum Demo",
-      email: "usuario.comum@itguardian.local",
-      role: "viewer",
-      sectorId: "sector-geral",
-      jobTitle: "Solicitante",
-      isAdmin: false,
-      permissions: ["service_orders.view", "service_orders.create"]
-    },
-    {
-      id: "seed-demo-sem-permissao",
-      name: "Sem Permissao Demo",
-      email: "sem.permissao@itguardian.local",
-      role: "viewer",
-      sectorId: "sector-geral",
-      jobTitle: "Usuario sem permissao",
-      isAdmin: false,
-      permissions: []
-    }
-  ];
-
-  for (const user of users) {
-    await query(
-      `
-        INSERT INTO users (
-          id, name, email, password_hash, role, active, sector_id, job_title, is_admin, permissions
-        )
-        VALUES ($1, $2, LOWER($3), $4, $5, TRUE, $6, $7, $8, $9::jsonb)
-        ON CONFLICT (email) DO UPDATE SET
-          name = EXCLUDED.name,
-          password_hash = EXCLUDED.password_hash,
-          role = EXCLUDED.role,
-          active = TRUE,
-          sector_id = EXCLUDED.sector_id,
-          job_title = EXCLUDED.job_title,
-          is_admin = EXCLUDED.is_admin,
-          permissions = EXCLUDED.permissions,
-          updated_at = NOW()
-      `,
-      [
-        user.id,
-        user.name,
-        user.email,
-        passwordHash,
-        user.role,
-        user.sectorId,
-        user.jobTitle,
-        user.isAdmin,
-        JSON.stringify(normalizePermissions(user.permissions))
-      ]
-    );
-  }
-}
-
+/**
+ * @param {User} user
+ * @returns {PublicUser}
+ */
 export function toPublicUser(user) {
   return {
     id: user.id,
@@ -415,11 +321,19 @@ export function toPublicUser(user) {
     permissions: user.permissions,
     sectorPermissions: user.sectorPermissions,
     effectivePermissions: getEffectivePermissions(user),
+    mfaEnabled: Boolean(user.mfaEnabled),
+    mustChangePassword: Boolean(user.mustChangePassword),
+    passwordChangedAt: user.passwordChangedAt || null,
+    lastLoginAt: user.lastLoginAt || null,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt
   };
 }
 
+/**
+ * @param {UserRow} row
+ * @returns {User}
+ */
 function fromRow(row) {
   return {
     id: row.id,
@@ -434,6 +348,14 @@ function fromRow(row) {
     isAdmin: Boolean(row.is_admin || row.role === "admin"),
     permissions: normalizePermissions(row.permissions),
     sectorPermissions: normalizePermissions(row.sector_permissions),
+    tokenVersion: Number(row.token_version || 0),
+    mustChangePassword: Boolean(row.must_change_password),
+    passwordChangedAt: row.password_changed_at || null,
+    failedLoginAttempts: Number(row.failed_login_attempts || 0),
+    lockoutCount: Number(row.lockout_count || 0),
+    lockedUntil: row.locked_until || null,
+    lastLoginAt: row.last_login_at || null,
+    mfaEnabled: Boolean(row.mfa_enabled),
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };

@@ -42,7 +42,7 @@ export function useMetricHistory({ token, deviceId, metric, period, enabled }) {
       })
       .catch((fetchError) => {
         if (fetchError.name === "AbortError") return;
-        setError(fetchError.message || "Nao foi possivel carregar o historico da metrica.");
+        setError(fetchError.message || "Não foi possível carregar o histórico da métrica.");
       })
       .finally(() => setLoading(false));
 

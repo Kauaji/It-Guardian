@@ -10,7 +10,9 @@ describe("TopAssetsWidget", () => {
     ["ram", ".dashboard-category-chart.radial"],
     ["disk", ".dashboard-heatmap-grid"]
   ])("aplica a assinatura operacional padrão de %s sem configuração salva", (metric, selector) => {
-    const { container } = render(<TopAssetsWidget data={{ metric, rows: [{ id: `asset-${metric}`, name: `Ativo ${metric}`, value: 68 }] }} />);
+    const { container } = render(
+      <TopAssetsWidget data={{ metric, rows: [{ id: `asset-${metric}`, name: `Ativo ${metric}`, value: 68 }] }} />
+    );
 
     expect(container.querySelector(selector)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: `Filtrar por Ativo ${metric}: 68%` })).toBeVisible();

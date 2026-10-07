@@ -248,7 +248,7 @@
 
 .network-topology-inspector-error {
   margin: 0;
-  color: var(--status-danger);
+  color: var(--text-danger);
   font-size: 0.67rem;
   line-height: 1.6;
 }

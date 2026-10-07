@@ -20,11 +20,7 @@ export default function RoomCatalog({ onSelectTemplate, onAddItem }) {
           </button>
         );
       })}
-      <button
-        type="button"
-        onClick={() => onAddItem(FLOOR_PLAN_DIVIDER_ITEM)}
-        className="room-catalog-card room-divider-card"
-      >
+      <button type="button" onClick={() => onAddItem(FLOOR_PLAN_DIVIDER_ITEM)} className="room-catalog-card room-divider-card">
         <span className="room-divider-thumbnail" aria-hidden="true">
           <i />
         </span>

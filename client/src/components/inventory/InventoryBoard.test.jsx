@@ -10,7 +10,9 @@ const machine = { id: "device-1", name: "Computador em reparo", segmentId: maint
 
 function DndProbe({ onContext }) {
   const context = useDndContext();
-  useEffect(() => { onContext?.(context); }, [context, onContext]);
+  useEffect(() => {
+    onContext?.(context);
+  }, [context, onContext]);
   return null;
 }
 
@@ -185,7 +187,7 @@ describe("InventoryBoard — manutenção independente", () => {
       onMoveMachine
     });
     expect(screen.queryByRole("heading", { name: maintenance.name })).not.toBeInTheDocument();
-    const modal = screen.getByRole("dialog", { name: "Mover maquina" });
+    const modal = screen.getByRole("dialog", { name: "Mover máquina" });
     expect(within(modal).getByRole("option", { name: maintenance.name })).toHaveValue(maintenance.id);
     fireEvent.click(within(modal).getByRole("button", { name: "Mover", exact: true }));
     expect(onMoveMachine).toHaveBeenCalledExactlyOnceWith(movingMachine, maintenance.id);

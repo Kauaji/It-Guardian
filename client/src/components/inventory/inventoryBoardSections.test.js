@@ -252,9 +252,14 @@ describe("getOccupiedInventorySegmentIds", () => {
   });
 
   it("usa a distribuição de máquinas quando o componente não recebe inventário bruto", () => {
-    expect([...getOccupiedInventorySegmentIds({
-      machinesBySegment: new Map([[maintenance.id, [maintenanceMachine]], [regular.id, []]])
-    })]).toEqual([maintenance.id]);
+    expect([
+      ...getOccupiedInventorySegmentIds({
+        machinesBySegment: new Map([
+          [maintenance.id, [maintenanceMachine]],
+          [regular.id, []]
+        ])
+      })
+    ]).toEqual([maintenance.id]);
     expect(getOccupiedInventorySegmentIds().size).toBe(0);
   });
 });

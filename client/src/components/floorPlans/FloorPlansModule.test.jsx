@@ -37,7 +37,15 @@ describe("Mapa de Infraestrutura", () => {
 
   it("oferece período, grupo, segmento e ajustes precisos do fundo", () => {
     const onBackgroundSettings = vi.fn();
-    render(<InfrastructureModeBar {...baseProps} mode="heatmap-os" hasBackground backgroundSettings={{ opacity: 0.7 }} onBackgroundSettings={onBackgroundSettings} />);
+    render(
+      <InfrastructureModeBar
+        {...baseProps}
+        mode="heatmap-os"
+        hasBackground
+        backgroundSettings={{ opacity: 0.7 }}
+        onBackgroundSettings={onBackgroundSettings}
+      />
+    );
     expect(screen.getByLabelText("Período do mapa de OS")).toBeInTheDocument();
     expect(screen.getByLabelText("Filtrar por grupo")).toBeInTheDocument();
     expect(screen.getByLabelText("Filtrar por segmento")).toBeInTheDocument();

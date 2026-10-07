@@ -9,16 +9,16 @@ export default function CriticalAssetsWidget({ data }) {
       items={data.rows}
       onSelectItem={enabled ? (asset) => toggleFilter("assetId", asset.id, asset.name) : undefined}
       isSelected={(asset) => filters.assetId === asset.id}
-      emptyMessage="Nenhum ativo em estado critico agora."
+      emptyMessage="Nenhum ativo em estado crítico agora."
       renderItem={(asset) => (
         <>
           <span>{asset.name}</span>
           <span className={`pill ${statusClass(asset.status) || ""}`}>{asset.status}</span>
           {asset.metrics && (
             <small>
-              CPU <span className={metricClass(asset.metrics.cpu)}>{asset.metrics.cpu ?? "--"}%</span>{" "}
-              RAM <span className={metricClass(asset.metrics.ram)}>{asset.metrics.ram ?? "--"}%</span>{" "}
-              Disco <span className={metricClass(asset.metrics.disk)}>{asset.metrics.disk ?? "--"}%</span>
+              CPU <span className={metricClass(asset.metrics.cpu)}>{asset.metrics.cpu ?? "--"}%</span> RAM{" "}
+              <span className={metricClass(asset.metrics.ram)}>{asset.metrics.ram ?? "--"}%</span> Disco{" "}
+              <span className={metricClass(asset.metrics.disk)}>{asset.metrics.disk ?? "--"}%</span>
             </small>
           )}
         </>

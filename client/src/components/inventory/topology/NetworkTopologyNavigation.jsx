@@ -34,8 +34,8 @@ export default function NetworkTopologyNavigation({ children }) {
       if (event.key !== "Escape" || event.defaultPrevented) return;
       // A hover-open panel may not own focus. Let an active dialog handle
       // Escape first; closing navigation must never steal its focus.
-      if (document.body.classList.contains("modal-open") ||
-          event.target?.closest?.('[role="dialog"], [role="alertdialog"], dialog[open]')) return;
+      if (document.body.classList.contains("modal-open") || event.target?.closest?.('[role="dialog"], [role="alertdialog"], dialog[open]'))
+        return;
       event.preventDefault();
       event.stopPropagation();
       closeNavigation();

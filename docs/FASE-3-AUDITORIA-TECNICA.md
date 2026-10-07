@@ -1,5 +1,7 @@
 # Fase 3 - Auditoria Tecnica
 
+> **Documento histórico.** Descreve o estado do projeto numa data passada e pode estar desatualizado; a fonte da verdade é o código e os documentos listados em [docs/README.md](README.md).
+
 Auditoria documental do IT Guardian para mapear o que ainda esta no frontend,
 em `localStorage`, mockado, hardcoded ou como regra de negocio no React.
 
@@ -62,9 +64,9 @@ Chaves antigas nao encontradas no uso atual: `it_guardian_system_mode`,
 | `server/src/data/mockOcs.js` | Inventario OCS simulado | 4 | Manter ate integracao OCS real. | Dados de infraestrutura nao representam ambiente real. |
 | `server/src/data/mockZabbix.js` | Hosts, alertas e historico Zabbix simulados | 4 | Manter ate integracao Zabbix real. | Dashboard/alertas sao demonstrativos. |
 | `server/src/integrations/ping/PingService.js` | Ping simulado por IP/hash | 4 | Manter ate VPS/coletor/agente real. | Status pode parecer real sem ser. |
-| `server/src/repositories/demoDataRepository.js` | Grupos, segmentos, OS, clientes, pecas, servicos e backups de demo | 4 | Manter apenas fora de producao. | Seed demo em producao causaria dados falsos. |
+| `server/src/repositories/demoDataRepository.js` (+ `repositories/demo/*`) | Grupos, segmentos, OS, clientes, pecas, servicos e backups de demo | 4 | Manter apenas fora de producao. | Seed demo em producao causaria dados falsos. |
 | `server/src/repositories/manualAssetRepository.js` | Ativos manuais iniciais de demo | 4 | Manter como seed de desenvolvimento. | Baixo se production-like continuar bloqueando seed demo. |
-| `server/src/repositories/userRepository.js` | Usuarios ficticios de teste | 4 | Manter apenas ambiente demo/dev. | Contas demo nao podem existir em producao real. |
+| `server/src/repositories/demo/demoUserSeed.js` | Usuarios ficticios de teste | 4 | Manter apenas ambiente demo/dev. | Contas demo nao podem existir em producao real. |
 | `server/src/repositories/sectorRepository.js` | Setores padrao com permissoes iniciais | 3 | Pode ficar como bootstrap controlado; revisar para multiempresa. | Permissoes iniciais podem nao servir para todas empresas. |
 | `PublicSupportRequest.jsx` | Categorias e tipos de problema fallback | 4 | Manter fallback ate API/configuracao real estar sempre disponivel. | Prioridade visual pode divergir da regra real. |
 | `server/src/controllers/publicServiceOrderController.js` | Categorias/tipos fallback para formulario publico | 4 | Manter fallback, mas preferir dados configurados. | Baixo, desde que prioridade final seja backend. |

@@ -69,16 +69,10 @@ export function normalizePrioritySettings(settings = {}) {
       1,
       Number(settings.inactiveAlertAutoResolveHours || defaultAlertOperationalSettings.inactiveAlertAutoResolveHours)
     ),
-    preventiveDueDays: Math.max(
-      1,
-      Number(settings.preventiveDueDays || defaultAlertOperationalSettings.preventiveDueDays)
-    ),
+    preventiveDueDays: Math.max(1, Number(settings.preventiveDueDays || defaultAlertOperationalSettings.preventiveDueDays)),
     scriptValidationWindowMinutes: Math.min(
       10080,
-      Math.max(
-        5,
-        Number(settings.scriptValidationWindowMinutes || defaultAlertOperationalSettings.scriptValidationWindowMinutes)
-      )
+      Math.max(5, Number(settings.scriptValidationWindowMinutes || defaultAlertOperationalSettings.scriptValidationWindowMinutes))
     ),
     autoPriority: {
       ...defaultAutoPriority,
@@ -110,9 +104,7 @@ export function formatDisplayText(value, fallback = "Não informado") {
   }
 
   if (Array.isArray(value)) {
-    const items = value
-      .map((item) => formatDisplayText(item, ""))
-      .filter(Boolean);
+    const items = value.map((item) => formatDisplayText(item, "")).filter(Boolean);
     return items.length ? items.join(", ") : fallback;
   }
 
@@ -157,12 +149,7 @@ export const suggestionStatusLabels = {
   validated: "Validada"
 };
 
-const actionableSuggestionStatuses = new Set([
-  "pending",
-  "observed_persistent",
-  "insufficient_data",
-  "validation_cancelled"
-]);
+const actionableSuggestionStatuses = new Set(["pending", "observed_persistent", "insufficient_data", "validation_cancelled"]);
 
 export function canCreateServiceOrderFromSuggestion(suggestion = {}) {
   return actionableSuggestionStatuses.has(suggestion.status) && !suggestion.createdServiceOrderId;
@@ -214,7 +201,7 @@ export function getScriptValidationTooltip(validation = {}) {
     return "Execução confirmada com erro por log de agente seguro.";
   }
   return `Observação em andamento. O sistema aguardará novas coletas para verificar o aviso.${dueText}`;
-};
+}
 
 export function formatAlertValue(alert) {
   if (alert.value === null || alert.value === undefined) return "Não informado";
@@ -286,10 +273,12 @@ export function findSuggestionDevice(suggestion, devices = []) {
     .filter(Boolean)
     .map((value) => normalizeText(value));
 
-  return devices.find((device) => {
-    const deviceIdentifiers = getDeviceIdentityValues(device);
-    return identifiers.some((identifier) => deviceIdentifiers.includes(identifier));
-  }) || null;
+  return (
+    devices.find((device) => {
+      const deviceIdentifiers = getDeviceIdentityValues(device);
+      return identifiers.some((identifier) => deviceIdentifiers.includes(identifier));
+    }) || null
+  );
 }
 
 export function getCompactAlertProblemLabel(suggestion) {
@@ -312,13 +301,7 @@ export function consolidateSuggestionsByMachine(suggestions = [], devices = []) 
     const device = findSuggestionDevice(suggestion, devices);
     const fallbackLabel = getSuggestionMachineLabel(suggestion);
     const machineLabel = device ? getDeviceDisplayName(device) : fallbackLabel;
-    const machineKey = normalizeText(
-      device?.id ||
-      suggestion?.assetId ||
-      suggestion?.hostId ||
-      suggestion?.hostName ||
-      fallbackLabel
-    );
+    const machineKey = normalizeText(device?.id || suggestion?.assetId || suggestion?.hostId || suggestion?.hostName || fallbackLabel);
     const group = grouped.get(machineKey) || {
       machineKey,
       machineLabel,
@@ -332,32 +315,20 @@ export function consolidateSuggestionsByMachine(suggestions = [], devices = []) 
 
   return Array.from(grouped.values()).map((group) => {
     const members = [...group.members].sort((left, right) => {
-      const priorityDifference =
-        (priorityRank[right.suggestedPriority] ?? 1) - (priorityRank[left.suggestedPriority] ?? 1);
+      const priorityDifference = (priorityRank[right.suggestedPriority] ?? 1) - (priorityRank[left.suggestedPriority] ?? 1);
       if (priorityDifference) return priorityDifference;
       return new Date(right.updatedAt || right.createdAt || 0) - new Date(left.updatedAt || left.createdAt || 0);
     });
     const representative = members[0];
     const problemLabels = Array.from(new Set(members.map(getCompactAlertProblemLabel).filter(Boolean)));
-    const occurrencesCount = members.reduce(
-      (total, suggestion) => total + Math.max(1, Number(suggestion.occurrencesCount || 1)),
-      0
-    );
-    const baseRank = members.reduce(
-      (highest, suggestion) => Math.max(highest, priorityRank[suggestion.suggestedPriority] ?? 1),
-      0
-    );
+    const occurrencesCount = members.reduce((total, suggestion) => total + Math.max(1, Number(suggestion.occurrencesCount || 1)), 0);
+    const baseRank = members.reduce((highest, suggestion) => Math.max(highest, priorityRank[suggestion.suggestedPriority] ?? 1), 0);
     const recurrencePressure = occurrencesCount >= 3 ? 1 : 0;
     const escalatedRank = Math.min(3, baseRank + Math.max(0, problemLabels.length - 1) + recurrencePressure);
     const visibleProblems = problemLabels.slice(0, 3);
     const hiddenProblemCount = Math.max(0, problemLabels.length - visibleProblems.length);
-    const summary = [
-      visibleProblems.join(" + "),
-      hiddenProblemCount ? `+${hiddenProblemCount}` : ""
-    ].filter(Boolean).join(" ");
-    const scriptValidations = members
-      .flatMap((suggestion) => suggestion.scriptValidations || suggestion.validations || [])
-      .filter(Boolean);
+    const summary = [visibleProblems.join(" + "), hiddenProblemCount ? `+${hiddenProblemCount}` : ""].filter(Boolean).join(" ");
+    const scriptValidations = members.flatMap((suggestion) => suggestion.scriptValidations || suggestion.validations || []).filter(Boolean);
 
     return {
       ...representative,
@@ -400,9 +371,7 @@ export function formatCompactSuggestionTitle(suggestion, machineLabel) {
     .replace(/^Verifica\S+\s+preventiva:\s*/i, "")
     .replace(/\s+acima do limite\b/gi, " alta");
   const originalName = String(suggestion.hostName || "");
-  return originalName && originalName !== displayMachineLabel
-    ? title.split(originalName).join(displayMachineLabel)
-    : title;
+  return originalName && originalName !== displayMachineLabel ? title.split(originalName).join(displayMachineLabel) : title;
 }
 
 export function formatAlertThreshold(alert) {
@@ -412,14 +381,7 @@ export function formatAlertThreshold(alert) {
   return String(alert.threshold);
 }
 
-const percentThresholdAlertTypes = new Set([
-  "cpu_high",
-  "ram_high",
-  "disk_high",
-  "disk_full",
-  "disk_health_low",
-  "network_high"
-]);
+const percentThresholdAlertTypes = new Set(["cpu_high", "ram_high", "disk_high", "disk_full", "disk_health_low", "network_high"]);
 const thresholdlessAlertTypes = new Set(["machine_offline", "ping_failure", "service_unavailable"]);
 const durationlessAlertTypes = new Set(["disk_health_low", "machine_offline", "ping_failure", "service_unavailable"]);
 
@@ -496,7 +458,9 @@ export function getAlertImpact(alert) {
 }
 
 export function getAlertRecommendedAction(alert) {
-  return alertRecommendedActions[alert.type] || alertRecommendedActions[alert.metric] || "Validar o equipamento e registrar análise técnica.";
+  return (
+    alertRecommendedActions[alert.type] || alertRecommendedActions[alert.metric] || "Validar o equipamento e registrar análise técnica."
+  );
 }
 
 export function getAlertProbableCause(alert) {

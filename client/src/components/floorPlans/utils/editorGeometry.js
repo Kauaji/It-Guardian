@@ -71,7 +71,7 @@ export function duplicateEditorObject(object, { id, offset = FINE_OBJECT_SNAP_SI
     id,
     x: Number(object.x || 0) + Number(offset || 0),
     y: Number(object.y || 0) + Number(offset || 0),
-    label: object.label ? `${object.label} copia` : object.label,
+    label: object.label ? `${object.label} cópia` : object.label,
     linkedAssetId: null,
     metadata: {
       ...(object.metadata || {}),
@@ -88,7 +88,7 @@ export function isEditorObjectLocked(object) {
 
 export function rotateEditorObject(object, delta = 90) {
   if (!object) return object;
-  const rotation = ((Number(object.rotation || 0) + Number(delta || 0)) % 360 + 360) % 360;
+  const rotation = (((Number(object.rotation || 0) + Number(delta || 0)) % 360) + 360) % 360;
   return { ...object, rotation };
 }
 
@@ -133,7 +133,7 @@ export function getObjectBounds(object) {
   const { width, height } = getObjectSize(object);
   const x = Number(object?.x || 0);
   const y = Number(object?.y || 0);
-  const angle = Number(object?.rotation || 0) * Math.PI / 180;
+  const angle = (Number(object?.rotation || 0) * Math.PI) / 180;
   if (!angle) return { x, y, width, height };
   const centerX = x + width / 2;
   const centerY = y + height / 2;
@@ -156,15 +156,7 @@ export function getObjectBounds(object) {
   };
 }
 
-export function snapObjectToAlignment({
-  object,
-  proposedX,
-  proposedY,
-  objects = [],
-  floor = null,
-  excludedIds = [],
-  threshold = 6
-}) {
+export function snapObjectToAlignment({ object, proposedX, proposedY, objects = [], floor = null, excludedIds = [], threshold = 6 }) {
   const { width, height } = getObjectSize(object);
   const x = Number(proposedX || 0);
   const y = Number(proposedY || 0);
@@ -209,10 +201,7 @@ export function snapObjectToAlignment({
   return {
     x: x + (horizontal?.delta || 0),
     y: y + (vertical?.delta || 0),
-    guides: [
-      ...(horizontal ? [{ axis: "x", value: horizontal.value }] : []),
-      ...(vertical ? [{ axis: "y", value: vertical.value }] : [])
-    ]
+    guides: [...(horizontal ? [{ axis: "x", value: horizontal.value }] : []), ...(vertical ? [{ axis: "y", value: vertical.value }] : [])]
   };
 }
 
@@ -223,10 +212,7 @@ export function findObjectsInSelectionRect(objects = [], rectangle, floorId = nu
   return objects.filter((object) => {
     if (floorId && object.floorId !== floorId) return false;
     const bounds = getObjectBounds(object);
-    return bounds.x <= right
-      && bounds.x + bounds.width >= rectangle.x
-      && bounds.y <= bottom
-      && bounds.y + bounds.height >= rectangle.y;
+    return bounds.x <= right && bounds.x + bounds.width >= rectangle.x && bounds.y <= bottom && bounds.y + bounds.height >= rectangle.y;
   });
 }
 
@@ -235,11 +221,19 @@ export function getFineSnapSize(editor) {
 }
 
 export function isTableObject(object) {
-  return TABLE_OBJECT_TYPES.has(String(object?.objectType || "").trim().toLowerCase());
+  return TABLE_OBJECT_TYPES.has(
+    String(object?.objectType || "")
+      .trim()
+      .toLowerCase()
+  );
 }
 
 export function isDesktopObject(object) {
-  return DESKTOP_OBJECT_TYPES.has(String(object?.objectType || "").trim().toLowerCase());
+  return DESKTOP_OBJECT_TYPES.has(
+    String(object?.objectType || "")
+      .trim()
+      .toLowerCase()
+  );
 }
 
 export function isPowerAccessoryObject(object) {
@@ -251,13 +245,17 @@ export function getRoomForObject(editor, object, floor) {
   const explicitRoom = rooms.find((zone) => zone.id === object?.metadata?.parentRoomId);
   if (explicitRoom) return explicitRoom;
   const center = getObjectCenter(object);
-  return rooms.find((zone) => {
-    const interior = getRoomInterior(zone);
-    return center.x >= interior.x
-      && center.x <= interior.x + interior.width
-      && center.y >= interior.y
-      && center.y <= interior.y + interior.height;
-  }) || null;
+  return (
+    rooms.find((zone) => {
+      const interior = getRoomInterior(zone);
+      return (
+        center.x >= interior.x &&
+        center.x <= interior.x + interior.width &&
+        center.y >= interior.y &&
+        center.y <= interior.y + interior.height
+      );
+    }) || null
+  );
 }
 
 export function getDefaultPlacementBounds(editor, floor) {
@@ -283,11 +281,11 @@ export function constrainObjectToBounds(object, editor, floor, patch = {}) {
   const bounds = room
     ? getRoomInterior(room)
     : {
-      x: 0,
-      y: 0,
-      width: Number(floor?.width || DEFAULT_PLAN_SIZE.width),
-      height: Number(floor?.height || DEFAULT_PLAN_SIZE.height)
-    };
+        x: 0,
+        y: 0,
+        width: Number(floor?.width || DEFAULT_PLAN_SIZE.width),
+        height: Number(floor?.height || DEFAULT_PLAN_SIZE.height)
+      };
   const x = clamp(Number(next.x || 0), bounds.x, bounds.x + Math.max(0, bounds.width - width));
   const y = clamp(Number(next.y || 0), bounds.y, bounds.y + Math.max(0, bounds.height - height));
   return {
@@ -305,31 +303,35 @@ export function constrainObjectToBounds(object, editor, floor, patch = {}) {
 
 export function findNearestObject(source, candidates) {
   const sourceCenter = getObjectCenter(source);
-  return candidates
-    .map((candidate) => {
-      const candidateCenter = getObjectCenter(candidate);
-      return {
-        candidate,
-        distance: Math.hypot(sourceCenter.x - candidateCenter.x, sourceCenter.y - candidateCenter.y)
-      };
-    })
-    .sort((a, b) => a.distance - b.distance)[0]?.candidate || null;
+  return (
+    candidates
+      .map((candidate) => {
+        const candidateCenter = getObjectCenter(candidate);
+        return {
+          candidate,
+          distance: Math.hypot(sourceCenter.x - candidateCenter.x, sourceCenter.y - candidateCenter.y)
+        };
+      })
+      .sort((a, b) => a.distance - b.distance)[0]?.candidate || null
+  );
 }
 
 export function findNearestTable(asset, objects) {
-  const anchoredTable = (objects || []).find((object) => (
-    object?.id === asset?.metadata?.anchorObjectId
-    && isTableObject(object)
-    && (!asset?.floorId || !object?.floorId || object.floorId === asset.floorId)
-  ));
+  const anchoredTable = (objects || []).find(
+    (object) =>
+      object?.id === asset?.metadata?.anchorObjectId &&
+      isTableObject(object) &&
+      (!asset?.floorId || !object?.floorId || object.floorId === asset.floorId)
+  );
   if (anchoredTable) return anchoredTable;
 
   const roomId = asset?.metadata?.parentRoomId || null;
-  const tables = (objects || []).filter((object) => (
-    isTableObject(object)
-    && (!asset?.floorId || !object?.floorId || object.floorId === asset.floorId)
-    && (!roomId || object.metadata?.parentRoomId === roomId)
-  ));
+  const tables = (objects || []).filter(
+    (object) =>
+      isTableObject(object) &&
+      (!asset?.floorId || !object?.floorId || object.floorId === asset.floorId) &&
+      (!roomId || object.metadata?.parentRoomId === roomId)
+  );
   return findNearestObject(asset, tables);
 }
 

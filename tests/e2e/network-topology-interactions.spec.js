@@ -38,7 +38,8 @@ async function withTopologyFixture(page, run) {
   try {
     for (const letter of ["A", "B"]) {
       const { group } = await apiJson(page, "/api/segments/groups", {
-        method: "POST", data: { name: `Grupo ${letter} ${suffix}`, color: "#137c6b" }
+        method: "POST",
+        data: { name: `Grupo ${letter} ${suffix}`, color: "#137c6b" }
       });
       groups.push(group);
       const { segment } = await apiJson(page, "/api/segments", {
@@ -61,7 +62,8 @@ async function withTopologyFixture(page, run) {
       });
       devices.push(device);
       await apiJson(page, `/api/devices/${device.id}/segment`, {
-        method: "PATCH", data: { segmentId: segments[index === 2 ? 1 : 0].id }
+        method: "PATCH",
+        data: { segmentId: segments[index === 2 ? 1 : 0].id }
       });
     }
     await page.reload();
@@ -97,8 +99,13 @@ function mapNode(page, name, kind) {
 }
 
 async function openMap(page) {
-  await page.getByRole("button", { name: "Inventário de Ativos", exact: true }).click();
-  await page.getByRole("button", { name: "Mapa de Rede", exact: true }).click();
+  // Com o roteador, recarregar em /inventario ja reabre o Inventario: so clica no menu quando ainda nao estiver nele.
+  const mapTab = page.getByRole("button", { name: "Mapa de Rede", exact: true });
+  const sidebarItem = page.getByRole("button", { name: "Inventário de Ativos", exact: true });
+  await expect(sidebarItem).toBeVisible();
+  await page.waitForLoadState("networkidle");
+  if (!(await mapTab.isVisible())) await sidebarItem.click();
+  await mapTab.click();
   await expect(page.getByRole("navigation", { name: breadcrumbLabel })).toBeVisible();
   await page.getByRole("heading", { name: "Infraestrutura em tempo real" }).hover();
 }
@@ -120,11 +127,12 @@ async function getScopedMap(page, scopeType, scopeId) {
 }
 
 function waitForLinkWrite(page, method) {
-  return page.waitForResponse((response) =>
-    response.request().method() === method &&
-    (method === "POST"
-      ? /^\/api\/topology-maps\/[^/]+\/links$/.test(new URL(response.url()).pathname)
-      : /^\/api\/topology-map-links\/[^/]+$/.test(new URL(response.url()).pathname)),
+  return page.waitForResponse(
+    (response) =>
+      response.request().method() === method &&
+      (method === "POST"
+        ? /^\/api\/topology-maps\/[^/]+\/links$/.test(new URL(response.url()).pathname)
+        : /^\/api\/topology-map-links\/[^/]+$/.test(new URL(response.url()).pathname)),
     { timeout: 12_000 }
   );
 }
@@ -139,7 +147,8 @@ test("um clique inspeciona; dois cliques editam grupos e segmentos sem gravar po
     ]) {
       const { map } = await apiJson(page, `/api/topology-maps/by-scope?scopeType=${scopeType}&scopeId=${scopeId}`);
       await apiJson(page, `/api/topology-maps/${map.id}/links`, {
-        method: "POST", data: { sourceType, targetType: sourceType, sourceAssetId: source, targetAssetId: target, label, type: "ethernet" }
+        method: "POST",
+        data: { sourceType, targetType: sourceType, sourceAssetId: source, targetAssetId: target, label, type: "ethernet" }
       });
     }
     await openMap(page);
@@ -156,12 +165,12 @@ test("um clique inspeciona; dois cliques editam grupos e segmentos sem gravar po
     await expect(groupInspector.getByText("Uplink entre segmentos", { exact: true })).toBeVisible();
     await expect(page.getByRole("navigation", { name: breadcrumbLabel })).not.toContainText(groups[0].name);
     const fixtureScopeIds = new Set([...groups, ...segments].map((item) => item.id));
-    const fixtureMapIds = (maps) => maps
-      .filter((map) => fixtureScopeIds.has(map.scopeId))
-      .map((map) => map.id)
-      .sort();
-    expect(fixtureMapIds((await apiJson(page, "/api/topology-maps")).maps))
-      .toEqual(fixtureMapIds(initialMaps.maps));
+    const fixtureMapIds = (maps) =>
+      maps
+        .filter((map) => fixtureScopeIds.has(map.scopeId))
+        .map((map) => map.id)
+        .sort();
+    expect(fixtureMapIds((await apiJson(page, "/api/topology-maps")).maps)).toEqual(fixtureMapIds(initialMaps.maps));
     const drawerBox = await groupInspector.boundingBox();
     const canvasBox = await page.locator(".network-topology-canvas-wrap").boundingBox();
     expect(drawerBox.y).toBeLessThan(canvasBox.y + 24);
@@ -217,13 +226,17 @@ test("cria conexão e salva posições de itens automáticos, mantendo tudo ao r
     expect(bundle.nodes).toEqual([]);
     expect(bundle.links).toHaveLength(1);
     expect(bundle.links[0]).toMatchObject({ sourceType: "asset", targetType: "asset", label: "Backup principal", type: "fiber" });
-    expect(new Set([bundle.links[0].sourceAssetId, bundle.links[0].targetAssetId])).toEqual(new Set(devices.slice(0, 2).map((device) => device.id)));
+    expect(new Set([bundle.links[0].sourceAssetId, bundle.links[0].targetAssetId])).toEqual(
+      new Set(devices.slice(0, 2).map((device) => device.id))
+    );
     await page.reload();
     await openSegment(page, groups[0], segments[0]);
     const line = page.getByRole("button", { name: /^Conexão entre .+: Backup principal$/ });
     await expect(line).toBeVisible();
     await line.click();
-    await expect(page.getByRole("complementary", { name: "Detalhes da conexão" }).getByLabel("Rótulo", { exact: true })).toHaveValue("Backup principal");
+    await expect(page.getByRole("complementary", { name: "Detalhes da conexão" }).getByLabel("Rótulo", { exact: true })).toHaveValue(
+      "Backup principal"
+    );
     bundle = await getScopedMap(page, "segment", segments[0].id);
     expect(bundle.links).toHaveLength(1);
     expect(bundle.nodes).toEqual([]);
@@ -244,8 +257,8 @@ test("cria conexão e salva posições de itens automáticos, mantendo tudo ao r
     await page.mouse.move(nodeBox.x + nodeBox.width / 2 + 75, nodeBox.y + nodeBox.height / 2 + 45, { steps: 8 });
     await page.mouse.up();
     await expect.poll(() => firstNode.evaluate((element) => element.closest("g").getAttribute("transform"))).not.toBe(initialTransform);
-    const positionSaved = page.waitForResponse((response) =>
-      response.request().method() === "PATCH" && new URL(response.url()).pathname.endsWith("/nodes/positions")
+    const positionSaved = page.waitForResponse(
+      (response) => response.request().method() === "PATCH" && new URL(response.url()).pathname.endsWith("/nodes/positions")
     );
     await page.getByRole("button", { name: "Salvar layout", exact: true }).click();
     expect((await positionSaved).ok()).toBeTruthy();
@@ -258,7 +271,8 @@ test("cria conexão e salva posições de itens automáticos, mantendo tudo ao r
     expect(bundle.links).toHaveLength(1);
     const storedPosition = bundle.nodes[0];
     await apiJson(page, `/api/devices/${devices[2].id}/segment`, {
-      method: "PATCH", data: { segmentId: segments[0].id }
+      method: "PATCH",
+      data: { segmentId: segments[0].id }
     });
     await page.reload();
     await openSegment(page, groups[0], segments[0]);
@@ -272,9 +286,9 @@ test("cria conexão e salva posições de itens automáticos, mantendo tudo ao r
     await line.scrollIntoViewIfNeeded();
     await page.screenshot({ path: test.info().outputPath("persisted-connection.png") });
     await page.setViewportSize({ width: 390, height: 844 });
-    expect(await page.locator(".network-topology-toolbar").evaluate((element) =>
-      element.scrollWidth <= element.clientWidth + 1
-    )).toBe(true);
+    expect(await page.locator(".network-topology-toolbar").evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(
+      true
+    );
     await page.screenshot({ path: test.info().outputPath("mobile-toolbar.png") });
   });
 });

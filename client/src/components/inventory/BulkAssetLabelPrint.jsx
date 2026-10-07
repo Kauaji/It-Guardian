@@ -13,13 +13,14 @@ export default function BulkAssetLabelPrint({ assets = [], aliases = {}, onReady
   const readySent = useRef(false);
 
   const labelRequests = useMemo(
-    () => assets.map((asset) => ({
-      id: asset.id,
-      name: aliases[asset.id] || asset.name,
-      ip: asset.ip,
-      assetTag: asset.hardware?.assetTag || asset.manualAsset?.assetTag || "Sem patrimonio",
-      url: assetUrlFor(asset)
-    })),
+    () =>
+      assets.map((asset) => ({
+        id: asset.id,
+        name: aliases[asset.id] || asset.name,
+        ip: asset.ip,
+        assetTag: asset.hardware?.assetTag || asset.manualAsset?.assetTag || "Sem patrimônio",
+        url: assetUrlFor(asset)
+      })),
     [aliases, assets]
   );
 

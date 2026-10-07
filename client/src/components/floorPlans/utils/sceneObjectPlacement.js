@@ -12,15 +12,7 @@ const TABLE_OBJECT_TYPES = new Set([
   "side_table",
   "table"
 ]);
-const SUPPORTED_OBJECT_TYPES = new Set([
-  "microwave",
-  "monitor",
-  "notebook",
-  "pc",
-  "printer",
-  "radio",
-  "speaker"
-]);
+const SUPPORTED_OBJECT_TYPES = new Set(["microwave", "monitor", "notebook", "pc", "printer", "radio", "speaker"]);
 const NORMALIZED_TELEVISION_LABEL = /^(tv|tela|televisao)\b/i;
 const TELEVISION_LABEL = /^(tv|tela|televis[aã]o)\b/i;
 
@@ -30,7 +22,9 @@ export const BASE_FLOOR_SURFACE_ELEVATION = 5;
 export const ROOM_FLOOR_SURFACE_ELEVATION = 10;
 
 function normalizeType(value) {
-  return String(value || "").trim().toLowerCase();
+  return String(value || "")
+    .trim()
+    .toLowerCase();
 }
 
 function centerOf(object) {
@@ -77,56 +71,49 @@ export function resolveSceneObjectType(object) {
   const normalizedLabel = String(object?.label || "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
-  if (
-    type === "camera"
-    && (
-      TELEVISION_LABEL.test(String(object?.label || ""))
-      || NORMALIZED_TELEVISION_LABEL.test(normalizedLabel)
-    )
-  ) return "tv";
+  if (type === "camera" && (TELEVISION_LABEL.test(String(object?.label || "")) || NORMALIZED_TELEVISION_LABEL.test(normalizedLabel)))
+    return "tv";
   return type || "object";
 }
 
 export function findSupportingFurniture(object, objects = []) {
   if (!SUPPORTED_OBJECT_TYPES.has(resolveSceneObjectType(object))) return null;
 
-  const anchored = objects.find((candidate) => (
-    candidate?.id === object?.metadata?.anchorObjectId
-    && TABLE_OBJECT_TYPES.has(normalizeType(candidate?.objectType))
-    && isSamePlacementContext(object, candidate)
-  ));
+  const anchored = objects.find(
+    (candidate) =>
+      candidate?.id === object?.metadata?.anchorObjectId &&
+      TABLE_OBJECT_TYPES.has(normalizeType(candidate?.objectType)) &&
+      isSamePlacementContext(object, candidate)
+  );
   if (anchored) return anchored;
 
   const objectCenter = centerOf(object);
   const objectBounds = boundsOf(object);
   const objectArea = Math.max(1, objectBounds.width * objectBounds.height);
-  return objects
-    .filter((candidate) => (
-      candidate?.id !== object?.id
-      && TABLE_OBJECT_TYPES.has(normalizeType(candidate?.objectType))
-      && isSamePlacementContext(object, candidate)
-    ))
-    .map((candidate) => {
-      const candidateCenter = centerOf(candidate);
-      const candidateBounds = boundsOf(candidate);
-      const overlapRatio = intersectionArea(objectBounds, candidateBounds) / objectArea;
-      const nearbyOverlapRatio = intersectionArea(
-        objectBounds,
-        boundsOf(candidate, SUPPORT_EDGE_TOLERANCE)
-      ) / objectArea;
-      return {
-        candidate,
-        overlapRatio,
-        nearbyOverlapRatio,
-        distance: Math.hypot(objectCenter.x - candidateCenter.x, objectCenter.y - candidateCenter.y)
-      };
-    })
-    .filter((entry) => entry.overlapRatio >= 0.08 || entry.nearbyOverlapRatio >= 0.55)
-    .sort((a, b) => (
-      b.overlapRatio - a.overlapRatio
-      || b.nearbyOverlapRatio - a.nearbyOverlapRatio
-      || a.distance - b.distance
-    ))[0]?.candidate || null;
+  return (
+    objects
+      .filter(
+        (candidate) =>
+          candidate?.id !== object?.id &&
+          TABLE_OBJECT_TYPES.has(normalizeType(candidate?.objectType)) &&
+          isSamePlacementContext(object, candidate)
+      )
+      .map((candidate) => {
+        const candidateCenter = centerOf(candidate);
+        const candidateBounds = boundsOf(candidate);
+        const overlapRatio = intersectionArea(objectBounds, candidateBounds) / objectArea;
+        const nearbyOverlapRatio = intersectionArea(objectBounds, boundsOf(candidate, SUPPORT_EDGE_TOLERANCE)) / objectArea;
+        return {
+          candidate,
+          overlapRatio,
+          nearbyOverlapRatio,
+          distance: Math.hypot(objectCenter.x - candidateCenter.x, objectCenter.y - candidateCenter.y)
+        };
+      })
+      .filter((entry) => entry.overlapRatio >= 0.08 || entry.nearbyOverlapRatio >= 0.55)
+      .sort((a, b) => b.overlapRatio - a.overlapRatio || b.nearbyOverlapRatio - a.nearbyOverlapRatio || a.distance - b.distance)[0]
+      ?.candidate || null
+  );
 }
 
 export function getSceneBaseElevation(object, objects = []) {
@@ -143,10 +130,10 @@ export function getSceneFloorElevation(object, zones = []) {
     if (parentRoomId && zone.id === parentRoomId) return true;
     const interior = getRoomInterior(zone);
     return (
-      objectCenter.x >= interior.x
-      && objectCenter.x <= interior.x + interior.width
-      && objectCenter.y >= interior.y
-      && objectCenter.y <= interior.y + interior.height
+      objectCenter.x >= interior.x &&
+      objectCenter.x <= interior.x + interior.width &&
+      objectCenter.y >= interior.y &&
+      objectCenter.y <= interior.y + interior.height
     );
   });
   return room ? ROOM_FLOOR_SURFACE_ELEVATION : BASE_FLOOR_SURFACE_ELEVATION;

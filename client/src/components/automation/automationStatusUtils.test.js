@@ -148,9 +148,7 @@ describe("machineMatchesAutomationStatus", () => {
   });
 
   it("nao corresponde a inactive, error ou without_schedule quando a maquina nao tem plano nesse estado", () => {
-    const healthyMachine = buildMachine([
-      { active: true, nextRunAt: "2026-08-20T00:00:00Z", status: "ok" }
-    ]);
+    const healthyMachine = buildMachine([{ active: true, nextRunAt: "2026-08-20T00:00:00Z", status: "ok" }]);
     expect(machineMatchesAutomationStatus(healthyMachine, "inactive")).toBe(false);
     expect(machineMatchesAutomationStatus(healthyMachine, "error")).toBe(false);
     expect(machineMatchesAutomationStatus(healthyMachine, "without_schedule")).toBe(false);
@@ -174,15 +172,11 @@ describe("formatAutomationMachineStatusSummary", () => {
       { active: true, nextRunAt: "2026-08-21T00:00:00Z", status: "ok" }
     ]);
 
-    expect(formatAutomationMachineStatusSummary(machine)).toBe(
-      "3 ativos • 1 inativo • 1 com erro • 1 sem agenda"
-    );
+    expect(formatAutomationMachineStatusSummary(machine)).toBe("3 ativos • 1 inativo • 1 com erro • 1 sem agenda");
   });
 
   it("usa singular quando ha apenas um plano ativo e nenhum outro estado presente", () => {
-    const machine = buildMachine([
-      { active: true, nextRunAt: "2026-08-20T00:00:00Z", status: "ok" }
-    ]);
+    const machine = buildMachine([{ active: true, nextRunAt: "2026-08-20T00:00:00Z", status: "ok" }]);
 
     expect(formatAutomationMachineStatusSummary(machine)).toBe("1 ativo");
   });

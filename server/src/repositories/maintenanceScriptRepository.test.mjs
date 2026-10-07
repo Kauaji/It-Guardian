@@ -5,7 +5,7 @@ import {
   assertScriptContentIsSafe,
   recommendMaintenanceScripts,
   scoreMaintenanceScriptForContext
-} from "./maintenanceScriptRepository.js";
+} from "../services/maintenanceScripts/maintenanceScriptsFacade.js";
 
 test("pontua script recomendado pelo contexto do aviso", () => {
   const score = scoreMaintenanceScriptForContext(
@@ -61,8 +61,14 @@ test("separa recomendados e outros sem incluir scripts inativos", () => {
     ]
   );
 
-  assert.deepEqual(result.recommended.map((script) => script.id), ["network"]);
-  assert.deepEqual(result.others.map((script) => script.id), ["inventory"]);
+  assert.deepEqual(
+    result.recommended.map((script) => script.id),
+    ["network"]
+  );
+  assert.deepEqual(
+    result.others.map((script) => script.id),
+    ["inventory"]
+  );
 });
 
 const dangerousContentSamples = [

@@ -21,8 +21,13 @@ const context = { token, mapId };
 function automaticAsset(assetId = "asset-a", overrides = {}) {
   return {
     id: `inventory-default:asset:${assetId}`,
-    nodeType: "asset", assetId, refId: null,
-    x: 800, y: 500, pinned: false, automatic: true,
+    nodeType: "asset",
+    assetId,
+    refId: null,
+    x: 800,
+    y: 500,
+    pinned: false,
+    automatic: true,
     ...overrides
   };
 }
@@ -30,8 +35,13 @@ function automaticAsset(assetId = "asset-a", overrides = {}) {
 function automaticCluster(nodeType = "segment", refId = "cluster-a", overrides = {}) {
   return {
     id: `inventory-default:${nodeType}:${refId}`,
-    nodeType, refId, assetId: null,
-    x: 400, y: 250, pinned: false, automatic: true,
+    nodeType,
+    refId,
+    assetId: null,
+    x: 400,
+    y: 250,
+    pinned: false,
+    automatic: true,
     ...overrides
   };
 }
@@ -43,7 +53,9 @@ function persisted(node, overrides = {}) {
     nodeType: node.nodeType,
     assetId: node.assetId || null,
     refId: node.refId || null,
-    x: node.x, y: node.y, pinned: node.pinned,
+    x: node.x,
+    y: node.y,
+    pinned: node.pinned,
     labelOverride: node.labelOverride || null,
     ...overrides
   };
@@ -82,8 +94,12 @@ describe("ensureTopologyNode", () => {
 
     expect(await ensureTopologyNode({ ...context, node, onMaterialized })).toBe(saved);
     expect(createNetworkTopologyNode).toHaveBeenCalledExactlyOnceWith(token, mapId, {
-      nodeType: "asset", assetId: "device-real", x: 800, y: 500,
-      pinned: true, labelOverride: "Servidor principal"
+      nodeType: "asset",
+      assetId: "device-real",
+      x: 800,
+      y: 500,
+      pinned: true,
+      labelOverride: "Servidor principal"
     });
     expect(onMaterialized).toHaveBeenCalledExactlyOnceWith(saved, node);
     expect(fetchNetworkTopologyMap).not.toHaveBeenCalled();
@@ -98,7 +114,11 @@ describe("ensureTopologyNode", () => {
 
     expect(await ensureTopologyNode({ ...context, node })).toBe(saved);
     expect(createNetworkTopologyNode).toHaveBeenCalledExactlyOnceWith(token, mapId, {
-      nodeType, refId: "real-reference", x: 400, y: 250, pinned: false
+      nodeType,
+      refId: "real-reference",
+      x: 400,
+      y: 250,
+      pinned: false
     });
   });
 
@@ -142,7 +162,8 @@ describe("ensureTopologyNode", () => {
   });
 
   it.each(["missing-reference", "wrong-type", "wrong-map", "failed-read"])(
-    "mantém o erro original quando reconciliação falha: %s", async (scenario) => {
+    "mantém o erro original quando reconciliação falha: %s",
+    async (scenario) => {
       const node = automaticAsset();
       const error = httpError(409);
       const onMaterialized = vi.fn();
@@ -152,9 +173,10 @@ describe("ensureTopologyNode", () => {
       } else {
         fetchNetworkTopologyMap.mockResolvedValue({
           map: { id: scenario === "wrong-map" ? "different-map" : mapId },
-          nodes: scenario === "missing-reference" ? [] : [
-            scenario === "wrong-type" ? persisted(automaticCluster("segment", node.assetId)) : persisted(node)
-          ]
+          nodes:
+            scenario === "missing-reference"
+              ? []
+              : [scenario === "wrong-type" ? persisted(automaticCluster("segment", node.assetId)) : persisted(node)]
         });
       }
 
@@ -210,15 +232,20 @@ describe("ensureTopologyNode", () => {
 describe("saveTopologyPositions", () => {
   it("materializa só os itens alterados e aplica todas as posições em um PATCH final", async () => {
     const automatic = Object.freeze(automaticAsset());
-    const existing = Object.freeze(persisted(automaticCluster("group", "group-existing"), {
-      pinned: true, labelOverride: "Grupo principal"
-    }));
+    const existing = Object.freeze(
+      persisted(automaticCluster("group", "group-existing"), {
+        pinned: true,
+        labelOverride: "Grupo principal"
+      })
+    );
     const created = Object.freeze(persisted(automatic));
-    const response = { nodes: [{ ...created, x: 70, y: 90 }, { ...existing, x: -50, y: 800 }] };
-    const changes = Object.freeze([
-      Object.freeze({ node: automatic, x: 70, y: 90 }),
-      Object.freeze({ node: existing, x: -50, y: 800 })
-    ]);
+    const response = {
+      nodes: [
+        { ...created, x: 70, y: 90 },
+        { ...existing, x: -50, y: 800 }
+      ]
+    };
+    const changes = Object.freeze([Object.freeze({ node: automatic, x: 70, y: 90 }), Object.freeze({ node: existing, x: -50, y: 800 })]);
     const calls = [];
     const onMaterialized = vi.fn(() => calls.push("materialized"));
     createNetworkTopologyNode.mockImplementation(async () => {
@@ -232,10 +259,15 @@ describe("saveTopologyPositions", () => {
 
     expect(await saveTopologyPositions({ ...context, changes, onMaterialized })).toBe(response);
     expect(createNetworkTopologyNode).toHaveBeenCalledExactlyOnceWith(token, mapId, {
-      nodeType: "asset", assetId: automatic.assetId, x: 800, y: 500, pinned: false
+      nodeType: "asset",
+      assetId: automatic.assetId,
+      x: 800,
+      y: 500,
+      pinned: false
     });
     expect(saveNetworkTopologyNodePositions).toHaveBeenCalledExactlyOnceWith(token, mapId, [
-      { nodeId: created.id, x: 70, y: 90 }, { nodeId: existing.id, x: -50, y: 800 }
+      { nodeId: created.id, x: 70, y: 90 },
+      { nodeId: existing.id, x: -50, y: 800 }
     ]);
     expect(calls).toEqual(["create", "materialized", "positions"]);
     expect(onMaterialized).toHaveBeenCalledExactlyOnceWith(created, automatic);
@@ -261,14 +293,18 @@ describe("saveTopologyPositions", () => {
     createNetworkTopologyNode.mockResolvedValueOnce({ node: savedAsset }).mockResolvedValueOnce({ node: savedSegment });
     saveNetworkTopologyNodePositions.mockResolvedValue({ nodes: [savedAsset, savedSegment] });
 
-    await saveTopologyPositions({ ...context, changes: [
-      { node: asset, x: 10, y: 20 },
-      { node: segment, x: 30, y: 40 },
-      { node: { ...asset, id: "another-local-id" }, x: 50, y: 60 }
-    ] });
+    await saveTopologyPositions({
+      ...context,
+      changes: [
+        { node: asset, x: 10, y: 20 },
+        { node: segment, x: 30, y: 40 },
+        { node: { ...asset, id: "another-local-id" }, x: 50, y: 60 }
+      ]
+    });
     expect(createNetworkTopologyNode).toHaveBeenCalledTimes(2);
     expect(saveNetworkTopologyNodePositions).toHaveBeenCalledExactlyOnceWith(token, mapId, [
-      { nodeId: savedAsset.id, x: 50, y: 60 }, { nodeId: savedSegment.id, x: 30, y: 40 }
+      { nodeId: savedAsset.id, x: 50, y: 60 },
+      { nodeId: savedSegment.id, x: 30, y: 40 }
     ]);
   });
 
@@ -284,10 +320,15 @@ describe("saveTopologyPositions", () => {
   });
 
   it.each([NaN, Infinity, -Infinity, null, "12", undefined])("rejeita coordenada inválida %s antes da primeira escrita", async (x) => {
-    await expect(saveTopologyPositions({ ...context, changes: [
-      { node: automaticAsset("valid-first"), x: 20, y: 30 },
-      { node: persisted(automaticAsset("invalid-second")), x, y: 40 }
-    ] })).rejects.toThrow("coordenadas válidas");
+    await expect(
+      saveTopologyPositions({
+        ...context,
+        changes: [
+          { node: automaticAsset("valid-first"), x: 20, y: 30 },
+          { node: persisted(automaticAsset("invalid-second")), x, y: 40 }
+        ]
+      })
+    ).rejects.toThrow("coordenadas válidas");
     expectNoWrites();
   });
 
@@ -298,9 +339,15 @@ describe("saveTopologyPositions", () => {
     { name: "tipo desconhecido", node: automaticCluster("unknown") },
     { name: "UUID ausente", node: persisted(automaticAsset(), { id: "" }) }
   ])("valida $name no lote completo antes de materializar", async ({ node }) => {
-    await expect(saveTopologyPositions({ ...context, changes: [
-      { node: automaticAsset("valid-first"), x: 10, y: 20 }, { node, x: 30, y: 40 }
-    ] })).rejects.toThrow();
+    await expect(
+      saveTopologyPositions({
+        ...context,
+        changes: [
+          { node: automaticAsset("valid-first"), x: 10, y: 20 },
+          { node, x: 30, y: 40 }
+        ]
+      })
+    ).rejects.toThrow();
     expectNoWrites();
   });
 
@@ -340,9 +387,16 @@ describe("saveTopologyPositions", () => {
     const onMaterialized = vi.fn();
     createNetworkTopologyNode.mockResolvedValueOnce({ node: saved }).mockRejectedValueOnce(error);
 
-    await expect(saveTopologyPositions({ ...context, changes: [
-      { node: first, x: 40, y: 50 }, { node: second, x: 60, y: 70 }
-    ], onMaterialized })).rejects.toBe(error);
+    await expect(
+      saveTopologyPositions({
+        ...context,
+        changes: [
+          { node: first, x: 40, y: 50 },
+          { node: second, x: 60, y: 70 }
+        ],
+        onMaterialized
+      })
+    ).rejects.toBe(error);
     expect(onMaterialized).toHaveBeenCalledExactlyOnceWith(saved, first);
     expect(saveNetworkTopologyNodePositions).not.toHaveBeenCalled();
     expect(deleteNetworkTopologyNode).not.toHaveBeenCalled();
@@ -354,7 +408,9 @@ describe("saveTopologyPositions", () => {
   });
 
   it("contexto cancelado antes do início não escreve", async () => {
-    expect(await saveTopologyPositions({ ...context, changes: [{ node: automaticAsset(), x: 1, y: 2 }], isCurrent: () => false })).toBeNull();
+    expect(
+      await saveTopologyPositions({ ...context, changes: [{ node: automaticAsset(), x: 1, y: 2 }], isCurrent: () => false })
+    ).toBeNull();
     expectNoWrites();
   });
 
@@ -364,9 +420,15 @@ describe("saveTopologyPositions", () => {
     const first = automaticAsset("first");
     const onMaterialized = vi.fn();
     createNetworkTopologyNode.mockReturnValue(pending.promise);
-    const saving = saveTopologyPositions({ ...context, changes: [
-      { node: first, x: 1, y: 2 }, { node: automaticAsset("second"), x: 3, y: 4 }
-    ], isCurrent: () => current, onMaterialized });
+    const saving = saveTopologyPositions({
+      ...context,
+      changes: [
+        { node: first, x: 1, y: 2 },
+        { node: automaticAsset("second"), x: 3, y: 4 }
+      ],
+      isCurrent: () => current,
+      onMaterialized
+    });
 
     current = false;
     pending.resolve({ node: persisted(first) });
@@ -379,12 +441,22 @@ describe("saveTopologyPositions", () => {
   it("nova navegação após callback impede as escritas seguintes", async () => {
     let current = true;
     const first = automaticAsset("first");
-    const onMaterialized = vi.fn(() => { current = false; });
+    const onMaterialized = vi.fn(() => {
+      current = false;
+    });
     createNetworkTopologyNode.mockResolvedValue({ node: persisted(first) });
 
-    expect(await saveTopologyPositions({ ...context, changes: [
-      { node: first, x: 1, y: 2 }, { node: automaticAsset("second"), x: 3, y: 4 }
-    ], isCurrent: () => current, onMaterialized })).toBeNull();
+    expect(
+      await saveTopologyPositions({
+        ...context,
+        changes: [
+          { node: first, x: 1, y: 2 },
+          { node: automaticAsset("second"), x: 3, y: 4 }
+        ],
+        isCurrent: () => current,
+        onMaterialized
+      })
+    ).toBeNull();
     expect(onMaterialized).toHaveBeenCalledTimes(1);
     expect(createNetworkTopologyNode).toHaveBeenCalledTimes(1);
     expect(saveNetworkTopologyNodePositions).not.toHaveBeenCalled();

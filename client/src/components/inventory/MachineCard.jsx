@@ -1,59 +1,13 @@
-import { ChevronDown, Clock3, Cpu, HardDrive, Info, MemoryStick, MoveRight } from "lucide-react";
 import { useDraggable } from "@dnd-kit/core";
-import { useRef, useState } from "react";
-import AssetTypeIcon from "./AssetTypeIcon.jsx";
+import { useState } from "react";
 import { assetTypeLabel } from "./assetTypes.js";
-import PeripheralList from "./PeripheralList.jsx";
 import SelectionCheckbox from "./SelectionCheckbox.jsx";
-import StatusTooltip from "./StatusTooltip.jsx";
-import MetricBadge from "./metrics/MetricBadge.jsx";
 import MetricHistoryModal from "./metrics/MetricHistoryModal.jsx";
-import AutomationIndicatorDots from "../AutomationIndicatorDots.jsx";
-import RemoteAssistanceAction from "../remoteAssistance/RemoteAssistanceAction.jsx";
-import PulseDot from "../ui/PulseDot.jsx";
-
-const pingTimeFormatter = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
-
-function statusLabel(status) {
-  return {
-    online: "Online",
-    offline: "Offline",
-    problem: "Erro",
-    unknown: "Sem dados"
-  }[status] || "Sem dados";
-}
-
-function statusTone(status) {
-  return {
-    online: "online",
-    offline: "unknown",
-    problem: "error"
-  }[status] || "unknown";
-}
-
-function pulseTone(status) {
-  return {
-    online: "ok",
-    offline: "offline",
-    problem: "danger"
-  }[status] || "offline";
-}
-
-function metricTone(value) {
-  if (value >= 85) return "danger";
-  if (value >= 70) return "warning";
-  return "ok";
-}
-
-function DiskIndicator({ value }) {
-  if (value == null) return null;
-  return (
-    <span className={`disk-indicator ${metricTone(value)}`} title={`Disco ${value}%`}>
-      <HardDrive size={12} />
-      {value}%
-    </span>
-  );
-}
+import MachineBadgeRow from "./machineCard/MachineBadgeRow.jsx";
+import MachineCardActions from "./machineCard/MachineCardActions.jsx";
+import MachineCardHeader from "./machineCard/MachineCardHeader.jsx";
+import MachineMetricsBlock from "./machineCard/MachineMetricsBlock.jsx";
+import { buildMachineCardClassName } from "./machineCard/machineCardPresentation.js";
 
 function MachineCardContent({
   machine,
@@ -81,30 +35,16 @@ function MachineCardContent({
   setNodeRef,
   style
 }) {
-  const menuRef = useRef(null);
-  const detailsRef = useRef(null);
   const [metricModalTarget, setMetricModalTarget] = useState(null);
   const movePopoverId = `move-${machine.id}`;
   const detailsPopoverId = `peripherals-${machine.id}`;
   const moveMenuOpen = activePopoverId === movePopoverId;
   const expanded = activePopoverId === detailsPopoverId;
   const availableSegments = segments.filter((segment) => segment.id !== machine.segmentId && !segment.isBackupSegment);
-  const showMoveMenu = availableSegments.length > 0;
-  const showDetails = true;
   const isManualAsset = machine.source === "manual";
   const isBackup = Boolean(machine.isBackup);
   const backupInUse = machine.backupStatus === "in_use";
-  const metrics = machine.metrics || {};
-  const typeLabel = assetTypeLabel(machine.assetType || machine.type);
   const { onPointerDown: onDragPointerDown, ...safeDragHandleProps } = dragHandleProps;
-  const lastPing = machine.lastPingAt
-    ? pingTimeFormatter.format(new Date(machine.lastPingAt))
-    : "--:--";
-
-  function moveToSegment(segmentId) {
-    setActivePopoverId(null);
-    onMoveMachine(machine, segmentId);
-  }
 
   function handleCardClick(event) {
     if (isOverlay) return;
@@ -114,213 +54,74 @@ function MachineCardContent({
 
   return (
     <>
-    <article
-      ref={setNodeRef}
-      style={style}
-      className={`machine-card ${isBackup ? "backup-card" : ""} ${backupInUse ? "backup-in-use" : ""} ${selected ? "selected" : ""} ${expanded ? "details-open" : ""} ${moveMenuOpen ? "move-menu-open" : ""} ${isDragging ? "dragging" : ""} ${isOverlay ? "drag-overlay" : ""}`}
-      onClick={handleCardClick}
-    >
-      {!isOverlay && (
-        <SelectionCheckbox checked={selected} onToggle={() => onToggleSelection(machine.id)} />
-      )}
-      {isOverlay && selectionCount > 1 && (
-        <span className="drag-selection-badge">+{selectionCount - 1} equipamentos</span>
-      )}
-      <div className="machine-card-header">
-        <div>
-          <button
-            className="asset-drag-handle"
-            type="button"
-            {...safeDragHandleProps}
-            title="Arrastar ativo"
-            onPointerDown={(event) => {
-              setActivePopoverId(null);
-              onDragPointerDown?.(event);
-            }}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <AssetTypeIcon type={machine.assetType || machine.type} size={16} />
-          </button>
-          <strong>{alias || machine.name}</strong>
-        </div>
-      </div>
-      <div className="machine-badge-row">
-        <StatusTooltip status={machine.status} lastSeenAt={machine.lastSeenAt}>
-          <PulseDot tone={pulseTone(machine.status)} title={statusLabel(machine.status)} />
-          {isManualAsset ? (
-            <button
-              type="button"
-              className={`status-dot status-action ${statusTone(machine.status)}`}
-              disabled={!canManage}
-              onClick={(event) => {
-                event.stopPropagation();
-                setActivePopoverId(null);
-                onRefreshPing(machine);
-              }}
-              title="Atualizar ping"
-            >
-              {statusLabel(machine.status)}
-            </button>
-          ) : (
-            <span className={`status-dot ${statusTone(machine.status)}`}>{statusLabel(machine.status)}</span>
-          )}
-        </StatusTooltip>
-        <span className="asset-type-badge">{typeLabel}</span>
-        {isBackup && (
-          <span className={`backup-badge ${backupInUse ? "in-use" : "available"}`}>
-            {backupInUse ? "Backup em uso" : "Backup disponivel"}
+      <article
+        ref={setNodeRef}
+        style={style}
+        className={buildMachineCardClassName({ isBackup, backupInUse, selected, expanded, moveMenuOpen, isDragging, isOverlay })}
+        onClick={handleCardClick}
+      >
+        {!isOverlay && <SelectionCheckbox checked={selected} onToggle={() => onToggleSelection(machine.id)} />}
+        {isOverlay && selectionCount > 1 && <span className="drag-selection-badge">+{selectionCount - 1} equipamentos</span>}
+        <MachineCardHeader
+          machine={machine}
+          alias={alias}
+          dragHandleProps={safeDragHandleProps}
+          onDragPointerDown={onDragPointerDown}
+          setActivePopoverId={setActivePopoverId}
+        />
+        <MachineBadgeRow
+          machine={machine}
+          typeLabel={assetTypeLabel(machine.assetType || machine.type)}
+          isManualAsset={isManualAsset}
+          isBackup={isBackup}
+          backupInUse={backupInUse}
+          canManage={canManage}
+          onRefreshPing={onRefreshPing}
+          setActivePopoverId={setActivePopoverId}
+        />
+        <span className="machine-ip">{machine.ip}</span>
+        {machine.inventorySearchTabName && (
+          <span className="machine-search-tab" title={`Aba: ${machine.inventorySearchTabName}`}>
+            Aba: {machine.inventorySearchTabName}
           </span>
         )}
-        <AutomationIndicatorDots indicators={machine.automationIndicators} compact maxVisible={4} />
-      </div>
-      <span className="machine-ip">{machine.ip}</span>
-      {machine.inventorySearchTabName && (
-        <span className="machine-search-tab" title={`Aba: ${machine.inventorySearchTabName}`}>
-          Aba: {machine.inventorySearchTabName}
-        </span>
-      )}
 
-      {isManualAsset ? (
-        <div className="network-asset-facts">
-          <div>
-            <span>Marca/modelo</span>
-            <strong>{machine.manualAsset?.brand} {machine.manualAsset?.model}</strong>
-          </div>
-          <div>
-            <span>Patrimônio</span>
-            <strong>{machine.manualAsset?.assetTag}</strong>
-          </div>
-          <div>
-            <span><Clock3 size={13} /> Ping</span>
-            <strong>{lastPing}</strong>
-          </div>
-        </div>
-      ) : (
-        <div className="machine-metrics">
-          <MetricBadge metric="cpu" onOpenModal={setMetricModalTarget}>
-            <span><Cpu size={13} /> CPU</span>
-            <strong className={metrics.cpu == null ? "" : metricTone(metrics.cpu)}>
-              {metrics.cpu == null ? "--" : `${metrics.cpu}%`}
-            </strong>
-          </MetricBadge>
-          <MetricBadge metric="ram" onOpenModal={setMetricModalTarget}>
-            <span><MemoryStick size={13} /> RAM</span>
-            <strong className={metrics.ram == null ? "" : metricTone(metrics.ram)}>
-              {metrics.ram == null ? "--" : `${metrics.ram}%`}
-            </strong>
-          </MetricBadge>
-        </div>
-      )}
+        <MachineMetricsBlock
+          machine={machine}
+          metrics={machine.metrics || {}}
+          isManualAsset={isManualAsset}
+          onOpenMetricModal={setMetricModalTarget}
+        />
 
-      {showDetails && (
-        <div className="machine-card-actions">
-          {!isManualAsset && metrics?.disk != null && (
-            <MetricBadge metric="disk" onOpenModal={setMetricModalTarget} className="metric-badge--disk">
-              <DiskIndicator value={metrics.disk} />
-            </MetricBadge>
-          )}
-          <RemoteAssistanceAction
-            asset={machine}
-            alias={alias}
-            token={token}
-            user={user}
-            notify={notify}
-            compact
-          />
-          <div className="details-menu">
-            <button
-              type="button"
-              className={`details-toggle ${expanded ? "expanded" : ""}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                setActivePopoverId(expanded ? null : detailsPopoverId);
-              }}
-              aria-label="Perifericos"
-              aria-expanded={expanded}
-              title={expanded ? "Ocultar perifericos" : "Perifericos"}
-            >
-              <ChevronDown size={15} />
-            </button>
-            {showDetails && (
-              <div
-                ref={detailsRef}
-                className={`machine-details ${expanded ? "expanded" : ""}`}
-                onClick={(event) => event.stopPropagation()}
-              >
-                {isManualAsset ? (
-                  <div className="manual-asset-mini">
-                    <span>{machine.manualAsset?.location || "Sem localizacao"}</span>
-                    <strong>{machine.manualAsset?.hostname || machine.manualAsset?.macAddress || "Sem hostname/MAC"}</strong>
-                  </div>
-                ) : (
-                  <PeripheralList
-                    peripherals={machine.hardware?.peripherals || []}
-                    segmentColor={segmentColor}
-                    canManage={canManage}
-                    allowAdd={canManage}
-                    onAdd={(peripheral) => onAddPeripheral(machine.id, peripheral)}
-                    onRemove={(peripheral) => onRemovePeripheral(machine.id, peripheral)}
-                  />
-                )}
-              </div>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
+        <MachineCardActions
+          machine={machine}
+          alias={alias}
+          metrics={machine.metrics || {}}
+          isManualAsset={isManualAsset}
+          flags={{ expanded, moveMenuOpen }}
+          ids={{ movePopoverId, detailsPopoverId }}
+          availableSegments={availableSegments}
+          context={{ canManage, segmentColor, token, user, notify }}
+          handlers={{
+            setActivePopoverId,
+            onOpenMetricModal: setMetricModalTarget,
+            onOpenDetails,
+            onMoveToSegment: (segmentId) => {
               setActivePopoverId(null);
-              onOpenDetails(machine);
-            }}
-            aria-label="Ficha"
-            title="Ficha"
-          >
-            <Info size={15} />
-          </button>
-          {showMoveMenu && (
-            <div className="move-menu" ref={menuRef}>
-              <button
-                type="button"
-                disabled={!canManage}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setActivePopoverId(moveMenuOpen ? null : movePopoverId);
-                }}
-                aria-label="Mover"
-                title="Mover"
-              >
-                <MoveRight size={15} />
-              </button>
-              {moveMenuOpen && (
-                <div className="move-menu-popover" onClick={(event) => event.stopPropagation()}>
-                  {availableSegments.map((segment) => (
-                    <button
-                      key={segment.id}
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        moveToSegment(segment.id);
-                      }}
-                    >
-                      <span style={{ backgroundColor: segment.color || "#1f7a61" }} />
-                      {segment.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-    </article>
-    <MetricHistoryModal
-      metric={metricModalTarget}
-      deviceId={machine.id}
-      deviceName={alias || machine.name}
-      token={token}
-      onClose={() => setMetricModalTarget(null)}
-    />
+              onMoveMachine(machine, segmentId);
+            },
+            onAddPeripheral,
+            onRemovePeripheral
+          }}
+        />
+      </article>
+      <MetricHistoryModal
+        metric={metricModalTarget}
+        deviceId={machine.id}
+        deviceName={alias || machine.name}
+        token={token}
+        onClose={() => setMetricModalTarget(null)}
+      />
     </>
   );
 }

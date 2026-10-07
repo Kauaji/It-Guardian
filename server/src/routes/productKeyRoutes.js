@@ -1,12 +1,5 @@
 import { Router } from "express";
-import {
-  activations,
-  changeStatus,
-  configureMonitoring,
-  create,
-  deactivateActivation,
-  list
-} from "../controllers/productKeyController.js";
+import { activations, changeStatus, configureMonitoring, create, deactivateActivation, list } from "../controllers/productKeyController.js";
 import { requireAdmin, requireAuth } from "../middleware/authMiddleware.js";
 
 const router = Router();

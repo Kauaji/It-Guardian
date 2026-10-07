@@ -10,7 +10,9 @@ function SvgIcon({ Icon, x, y, size = 18 }) {
 }
 
 function formatArea(value) {
-  return `${Number(value || 0).toFixed(1).replace(".", ",")} m2`;
+  return `${Number(value || 0)
+    .toFixed(1)
+    .replace(".", ",")} m2`;
 }
 
 export default function RoomSelectionOverlay({ zone, plan, onResizeStart, onDuplicate, onDelete, onRotate }) {
@@ -45,16 +47,36 @@ export default function RoomSelectionOverlay({ zone, plan, onResizeStart, onDupl
 
       <g className="room-floating-toolbar" transform={`translate(${toolbarX} ${toolbarY})`}>
         <rect width="132" height="36" rx="12" />
-        <text x="10" y="23">{formatArea(measurements.areaMeters)}</text>
-        <g onPointerDown={(event) => { event.stopPropagation(); onRotate?.(); }} transform="translate(62 8)">
+        <text x="10" y="23">
+          {formatArea(measurements.areaMeters)}
+        </text>
+        <g
+          onPointerDown={(event) => {
+            event.stopPropagation();
+            onRotate?.();
+          }}
+          transform="translate(62 8)"
+        >
           <rect width="22" height="22" rx="6" />
           <SvgIcon Icon={RotateCw} x={11} y={11} size={15} />
         </g>
-        <g onPointerDown={(event) => { event.stopPropagation(); onDuplicate?.(); }} transform="translate(86 8)">
+        <g
+          onPointerDown={(event) => {
+            event.stopPropagation();
+            onDuplicate?.();
+          }}
+          transform="translate(86 8)"
+        >
           <rect width="22" height="22" rx="6" />
           <SvgIcon Icon={Copy} x={11} y={11} size={15} />
         </g>
-        <g onPointerDown={(event) => { event.stopPropagation(); onDelete?.(); }} transform="translate(110 8)">
+        <g
+          onPointerDown={(event) => {
+            event.stopPropagation();
+            onDelete?.();
+          }}
+          transform="translate(110 8)"
+        >
           <rect width="22" height="22" rx="6" />
           <SvgIcon Icon={Trash2} x={11} y={11} size={15} />
         </g>

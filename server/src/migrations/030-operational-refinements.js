@@ -28,10 +28,10 @@ export const migration030OperationalRefinements = {
         AND assigned_technician_names = '[]'::jsonb
     `);
     for (const order of legacyAssignments.rows) {
-      await db(
-        "UPDATE service_orders SET assigned_technician_names = $2::jsonb WHERE id = $1",
-        [order.id, JSON.stringify([order.assigned_technician_name])]
-      );
+      await db("UPDATE service_orders SET assigned_technician_names = $2::jsonb WHERE id = $1", [
+        order.id,
+        JSON.stringify([order.assigned_technician_name])
+      ]);
     }
 
     await db(`
@@ -48,10 +48,7 @@ export const migration030OperationalRefinements = {
     await db(`CREATE UNIQUE INDEX IF NOT EXISTS idx_part_categories_name ON part_categories (lower(name));`);
 
     for (const [name, color] of DEFAULT_PART_CATEGORIES) {
-      await db(
-        `INSERT INTO part_categories (id, name, color) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
-        [randomUUID(), name, color]
-      );
+      await db(`INSERT INTO part_categories (id, name, color) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`, [randomUUID(), name, color]);
     }
 
     await db(`
@@ -67,7 +64,9 @@ export const migration030OperationalRefinements = {
         ADD COLUMN IF NOT EXISTS discrepancy_status TEXT NOT NULL DEFAULT 'ok',
         ADD COLUMN IF NOT EXISTS discrepancy_details JSONB NOT NULL DEFAULT '{}'::jsonb;
     `);
-    await db(`CREATE UNIQUE INDEX IF NOT EXISTS idx_products_asset_hardware ON products (source_asset_id, hardware_key) WHERE source_asset_id IS NOT NULL AND hardware_key IS NOT NULL;`);
+    await db(
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_products_asset_hardware ON products (source_asset_id, hardware_key) WHERE source_asset_id IS NOT NULL AND hardware_key IS NOT NULL;`
+    );
     await db(`CREATE INDEX IF NOT EXISTS idx_products_discrepancy ON products (discrepancy_status) WHERE discrepancy_status <> 'ok';`);
 
     await db(`
@@ -82,7 +81,9 @@ export const migration030OperationalRefinements = {
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `);
-    await db(`CREATE UNIQUE INDEX IF NOT EXISTS idx_part_imports_invoice_key ON part_inventory_imports (invoice_key) WHERE invoice_key IS NOT NULL AND invoice_key <> '';`);
+    await db(
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_part_imports_invoice_key ON part_inventory_imports (invoice_key) WHERE invoice_key IS NOT NULL AND invoice_key <> '';`
+    );
 
     const maintenance = await db(`
       SELECT id
@@ -96,13 +97,18 @@ export const migration030OperationalRefinements = {
       await db("UPDATE inventory_segments SET name = 'Manutenção', group_id = NULL, updated_at = NOW() WHERE id = $1", [canonicalId]);
       for (const duplicateId of duplicates) {
         await db("UPDATE device_segments SET segment_id = $1 WHERE segment_id = $2", [canonicalId, duplicateId]);
-        await db("UPDATE maintenance_records SET maintenance_segment_id = $1 WHERE maintenance_segment_id = $2", [canonicalId, duplicateId]);
+        await db("UPDATE maintenance_records SET maintenance_segment_id = $1 WHERE maintenance_segment_id = $2", [
+          canonicalId,
+          duplicateId
+        ]);
         await db("DELETE FROM inventory_segments WHERE id = $1", [duplicateId]);
       }
     }
 
     if (resolveDatabaseConfig().mode === "postgres") {
-      await db(`CREATE UNIQUE INDEX IF NOT EXISTS idx_inventory_single_maintenance ON inventory_segments ((1)) WHERE lower(name) IN ('manutencao', 'manutenção');`);
+      await db(
+        `CREATE UNIQUE INDEX IF NOT EXISTS idx_inventory_single_maintenance ON inventory_segments ((1)) WHERE lower(name) IN ('manutencao', 'manutenção');`
+      );
       await db("ALTER TABLE part_categories ENABLE ROW LEVEL SECURITY;");
       await db("ALTER TABLE part_inventory_imports ENABLE ROW LEVEL SECURITY;");
     }

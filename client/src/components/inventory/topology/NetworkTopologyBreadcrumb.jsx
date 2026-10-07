@@ -14,9 +14,13 @@ export default function NetworkTopologyBreadcrumb({ crumbs }) {
         return (
           <span key={`${crumb.label}-${index}`} className="network-topology-breadcrumb-item">
             {isLast || !crumb.onClick ? (
-              <span className="is-current" aria-current="location">{crumb.label}</span>
+              <span className="is-current" aria-current="location">
+                {crumb.label}
+              </span>
             ) : (
-              <button type="button" onClick={crumb.onClick}>{crumb.label}</button>
+              <button type="button" onClick={crumb.onClick}>
+                {crumb.label}
+              </button>
             )}
             {!isLast ? <ChevronRight size={14} className="network-topology-breadcrumb-separator" /> : null}
           </span>

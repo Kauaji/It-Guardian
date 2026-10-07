@@ -46,7 +46,10 @@ cheio.
 - inventario completo de softwares: exige politica de volume e privacidade;
 - temperatura: o Windows nao oferece uma fonte universal e confiavel;
 - metricas historicas densas: exigem retencao e agregacao proprias;
-- atualizacao automatica do coletor: exige assinatura e cadeia de distribuicao.
+- atualizacao automatica do coletor: so com manifesto assinado por chave fora do
+  servidor e `releasePublicKey` no agente (ver `docs/SEGURANCA-DO-AGENTE.md`);
+  a cadeia de distribuicao (certificado Authenticode, hospedagem do executavel)
+  continua sendo responsabilidade de quem publica.
 
 Essas ausencias nao tornam OCS ou Zabbix obrigatorios para a beta.
 

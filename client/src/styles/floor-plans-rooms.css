@@ -1,0 +1,461 @@
+
+.room-catalog-grid {
+  display: grid;
+  gap: 6px;
+  grid-auto-rows: 80px;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  max-height: 80px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: auto;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
+}
+
+.room-catalog-card {
+  align-items: stretch;
+  background: var(--surface);
+  border: 1px solid var(--slate-200);
+  border-radius: 12px;
+  color: var(--slate-950);
+  cursor: pointer;
+  display: grid;
+  gap: 2px;
+  grid-template-rows: 36px minmax(0, 1fr) auto;
+  min-height: 80px;
+  min-width: 0;
+  padding: 5px 6px;
+  text-align: left;
+}
+
+.room-catalog-card:hover,
+.room-catalog-card:focus-visible {
+  border-color: #7db9a8;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.1);
+  transform: translateY(-1px);
+}
+
+.room-catalog-card span {
+  align-items: center;
+  color: #102034;
+  display: flex;
+  font-size: 0.68rem;
+  font-weight: 950;
+  gap: 6px;
+  line-height: 1.15;
+}
+
+.room-catalog-card span svg {
+  color: #0f766e;
+  flex: 0 0 auto;
+  height: 13px;
+  width: 13px;
+}
+
+.room-catalog-card small {
+  color: var(--system-neutral);
+  font-size: 0.6rem;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.room-template-thumbnail {
+  background: var(--slate-50);
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  display: block;
+  height: 36px;
+  width: 100%;
+}
+
+.room-divider-thumbnail {
+  align-items: center;
+  background:
+    linear-gradient(#edf2f7 1px, transparent 1px),
+    linear-gradient(90deg, #edf2f7 1px, transparent 1px),
+    var(--slate-50);
+  background-size: 10px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  display: flex;
+  height: 36px;
+  justify-content: center;
+  width: 100%;
+}
+
+.room-divider-thumbnail i {
+  background: #94a3b8;
+  border-radius: 999px;
+  display: block;
+  height: 4px;
+  width: 78%;
+}
+
+.floor-plan-room {
+  cursor: grab;
+}
+
+.floor-plan-room:active {
+  cursor: grabbing;
+}
+
+.floor-plan-room rect {
+  vector-effect: non-scaling-stroke;
+}
+
+.floor-plan-room text {
+  pointer-events: none;
+  user-select: none;
+}
+
+.floor-plan-room.selected {
+  filter: drop-shadow(0 10px 18px rgba(15, 23, 42, 0.16));
+}
+
+.floor-plan-room-name {
+  fill: var(--slate-900);
+  font-size: 18px;
+  font-weight: 950;
+  letter-spacing: 0;
+}
+
+.floor-plan-room-dimensions {
+  fill: #475569;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.room-placement-preview {
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.room-placement-preview.valid .floor-plan-room > rect:first-of-type {
+  stroke: #0f766e;
+}
+
+.room-placement-preview.invalid .floor-plan-room > rect:first-of-type {
+  fill: #fecaca;
+  stroke: var(--status-danger);
+}
+
+.room-placement-preview text {
+  fill: var(--slate-950);
+  font-size: 14px;
+  font-weight: 950;
+  paint-order: stroke;
+  stroke: #ffffff;
+  stroke-width: 4px;
+}
+
+.floor-plan-wall-preview line {
+  stroke: var(--status-info);
+  stroke-linecap: round;
+  stroke-width: 12px;
+}
+
+.floor-plan-wall-preview circle {
+  fill: #ffffff;
+  stroke: var(--status-info);
+  stroke-width: 3px;
+}
+
+.floor-plan-wall-preview text {
+  fill: var(--slate-950);
+  font-size: 13px;
+  font-weight: 900;
+  paint-order: stroke;
+  stroke: #ffffff;
+  stroke-width: 5px;
+}
+
+.floor-plan-measurement-preview line {
+  stroke: var(--amber-600);
+  stroke-linecap: round;
+  stroke-width: 3px;
+  stroke-dasharray: 2 6;
+}
+
+.floor-plan-measurement-preview circle {
+  fill: #ffffff;
+  stroke: var(--amber-600);
+  stroke-width: 2.5px;
+}
+
+.floor-plan-measurement-preview text {
+  fill: var(--slate-950);
+  font-size: 13px;
+  font-weight: 900;
+  paint-order: stroke;
+  stroke: #ffffff;
+  stroke-width: 5px;
+}
+
+.floor-plan-object-glyph.measurement .floor-plan-measurement-line {
+  stroke: currentColor;
+  stroke-width: 2px;
+}
+
+.floor-plan-object-glyph.measurement .floor-plan-measurement-tick {
+  stroke: currentColor;
+  stroke-width: 2px;
+}
+
+.floor-plan-object-glyph.measurement.selected .floor-plan-measurement-line,
+.floor-plan-object-glyph.measurement.selected .floor-plan-measurement-tick {
+  stroke: var(--accent);
+}
+
+.floor-plan-object-glyph.measurement .floor-plan-measurement-label rect {
+  fill: var(--surface);
+  stroke: var(--border);
+  stroke-width: 1px;
+}
+
+.floor-plan-object-glyph.measurement .floor-plan-measurement-label text {
+  fill: var(--text);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.room-selection-overlay {
+  pointer-events: all;
+}
+
+.room-resize-handle {
+  cursor: grab;
+}
+
+.room-resize-handle circle {
+  fill: #ffffff;
+  filter: drop-shadow(0 7px 12px rgba(15, 23, 42, 0.18));
+  stroke: var(--status-info);
+  stroke-width: 2.4;
+}
+
+.room-resize-handle svg {
+  color: var(--text-info);
+}
+
+.room-floating-toolbar {
+  filter: drop-shadow(0 9px 18px rgba(15, 23, 42, 0.16));
+}
+
+.room-floating-toolbar > rect {
+  fill: #ffffff;
+  stroke: var(--slate-300);
+  stroke-width: 1.2;
+}
+
+.room-floating-toolbar text {
+  fill: var(--slate-950);
+  font-size: 12px;
+  font-weight: 950;
+  pointer-events: none;
+}
+
+.room-floating-toolbar > g {
+  cursor: pointer;
+}
+
+.room-floating-toolbar > g rect {
+  fill: #eff6ff;
+  stroke: #bfdbfe;
+}
+
+.room-floating-toolbar > g svg {
+  color: var(--text-info);
+}
+
+.room-floating-toolbar > g:last-child rect {
+  fill: #fef2f2;
+  stroke: #fecaca;
+}
+
+.room-floating-toolbar > g:last-child svg {
+  color: var(--text-danger);
+}
+
+.floor-plan-inspector {
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: calc(100dvh - 190px);
+  overflow: auto;
+  padding: 14px;
+  position: sticky;
+  top: 90px;
+}
+
+.floor-plan-inspector header {
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 10px;
+}
+
+.floor-plan-inspector header > span {
+  color: var(--slate-950);
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.floor-plan-inspector label {
+  color: var(--system-neutral);
+  display: grid;
+  font-size: 0.78rem;
+  font-weight: 900;
+  gap: 7px;
+  text-transform: uppercase;
+}
+
+.floor-plan-inspector input,
+.floor-plan-inspector select {
+  text-transform: none;
+}
+
+.floor-plan-inspector input[type="color"] {
+  height: 44px;
+  padding: 4px;
+}
+
+.floor-plan-inspector-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.floor-plan-linked-asset,
+.floor-plan-inspector-note {
+  background: #f1f8f5;
+  border: 1px solid #cfe7de;
+  border-radius: 12px;
+  display: grid;
+  gap: 5px;
+  padding: 11px;
+}
+
+.floor-plan-linked-asset strong {
+  color: var(--slate-950);
+}
+
+.floor-plan-inspector-note {
+  align-items: flex-start;
+  color: #475569;
+  grid-template-columns: auto 1fr;
+}
+
+.floor-plan-scene-3d {
+  min-height: 430px;
+}
+
+.floor-plan-scene-shell {
+  min-height: 430px;
+  position: relative;
+}
+
+.floor-plan-scene-actions {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid var(--slate-200);
+  border-radius: 8px;
+  bottom: 14px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.14);
+  display: flex;
+  font-size: 0.78rem;
+  font-weight: 800;
+  gap: 10px;
+  justify-content: space-between;
+  left: 14px;
+  max-width: calc(100% - 28px);
+  padding: 8px 10px;
+  position: absolute;
+  z-index: 3;
+}
+
+.floor-plan-scene-3d canvas {
+  display: block;
+  height: 100% !important;
+  min-height: 430px;
+  width: 100% !important;
+}
+
+@media (max-width: 1180px) {
+  .floor-plan-editor-layout {
+    grid-template-columns: 74px minmax(0, 1fr);
+  }
+
+  .floor-plan-inspector {
+    grid-column: 1 / -1;
+    max-height: none;
+    position: static;
+  }
+
+  .floor-plan-paint-panel {
+    align-items: stretch;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .floor-plan-paint-actions {
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 760px) {
+  .floor-plans-view {
+    padding: 16px;
+  }
+
+  .floor-plans-header,
+  .floor-plan-editor-topbar,
+  .floor-plan-editor-actions,
+  .floor-plan-editor-center-actions,
+  .floor-plan-floorbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .floor-plan-editor-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .floor-plan-toolrail {
+    flex-direction: row;
+    overflow-x: auto;
+  }
+
+  .floor-plan-toolrail button {
+    flex: 0 0 82px;
+  }
+
+  .floor-plan-paint-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .floor-plan-paint-actions,
+  .floor-plan-paint-actions button {
+    width: 100%;
+  }
+
+  .floor-plan-card dl,
+  .floor-plan-inspector-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .floor-plan-canvas,
+  .floor-plan-scene-shell,
+  .floor-plan-scene-3d,
+  .floor-plan-scene-3d canvas {
+    min-height: 360px;
+  }
+
+  .floor-plan-scene-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .floor-plan-scene-actions::before {
+    color: var(--text-warn);
+    content: "A edicao 3D funciona melhor em telas maiores.";
+    font-size: 0.72rem;
+  }
+}

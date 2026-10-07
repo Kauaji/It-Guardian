@@ -1,5 +1,7 @@
 # IT Guardian Beta Funcional
 
+> **Documento histórico.** Descreve o estado do projeto numa data passada e pode estar desatualizado; a fonte da verdade é o código e os documentos listados em [docs/README.md](README.md).
+
 Este e o roteiro oficial para validar o IT Guardian em um laboratorio local. O
 perfil usa PostgreSQL persistente, API Express e frontend Nginx no Docker
 Compose. OCS e Zabbix ficam desabilitados e nao sao requisitos.
@@ -145,7 +147,9 @@ O script pede confirmacao antes de remover configuracao e logs.
 
 - a validacao oficial e para laboratorio em LAN ou VPN;
 - HTTP nao deve ser exposto diretamente na internet;
-- o coletor nativo nao possui atualizacao automatica;
+- a atualizacao automatica do coletor nativo so atua com manifesto assinado e
+  `releasePublicKey` configurada; sem isso e ignorada (ver
+  `docs/SEGURANCA-DO-AGENTE.md`);
 - OCS e Zabbix sao fontes opcionais e ficam desabilitados por padrao;
 - scripts de manutencao operam em simulacao/registro por padrao; a execucao
   real fica bloqueada por `ENABLE_REMOTE_SCRIPT_EXECUTION=false`;

@@ -1,3 +1,4 @@
+/** @param {string | number | Date | null | undefined} value */
 export function formatDate(value) {
   if (!value) return "Sem data";
 
@@ -9,6 +10,7 @@ export function formatDate(value) {
   }).format(new Date(value));
 }
 
+/** @param {string} [name] */
 export function normalizeMaintenanceName(name = "") {
   return name
     .normalize("NFD")
@@ -17,10 +19,12 @@ export function normalizeMaintenanceName(name = "") {
     .toLowerCase();
 }
 
+/** @param {string} [name] */
 export function isMaintenanceSegmentName(name = "") {
   return normalizeMaintenanceName(name) === "manutencao";
 }
 
+/** @param {string} [name] */
 export function formatSegmentName(name = "") {
   const normalized = normalizeMaintenanceName(name);
   if (normalized === "nao organizadas" || normalized === "sem segmento") return "Não organizadas";

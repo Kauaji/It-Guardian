@@ -42,14 +42,14 @@ export default function ServiceOrderSlaTab({ serviceOrder }) {
       </div>
 
       {sla.status === "not_applicable" ? (
-        <p className="empty">
-          Esta OS não tem prazo de SLA calculável (prioridade sem prazo configurado nas configurações de SLA).
-        </p>
+        <p className="empty">Esta OS não tem prazo de SLA calculável (prioridade sem prazo configurado nas configurações de SLA).</p>
       ) : (
         <div className="service-order-detail-grid">
           <div className="service-order-detail-item">
             <span>Tempo restante</span>
-            <strong>{sla.status === "resolved" || sla.status === "breached" && !sla.dueAt ? "-" : formatDuration(sla.remainingMinutes)}</strong>
+            <strong>
+              {sla.status === "resolved" || (sla.status === "breached" && !sla.dueAt) ? "-" : formatDuration(sla.remainingMinutes)}
+            </strong>
           </div>
         </div>
       )}

@@ -62,10 +62,16 @@ export default function MetricHistoryModal({ metric, deviceId, deviceName, token
 
   return createPortal(
     <div className="modal-backdrop" role="presentation">
-      <section ref={dialogRef} className="modal-panel metric-history-modal" role="dialog" aria-modal="true" aria-label={`Historico de ${label}`}>
+      <section
+        ref={dialogRef}
+        className="modal-panel metric-history-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Histórico de ${label}`}
+      >
         <header>
           <div>
-            <h2>Historico de {label}</h2>
+            <h2>Histórico de {label}</h2>
             <p>{deviceName}</p>
           </div>
           <button type="button" className="icon-button" onClick={onClose} title="Fechar">
@@ -93,7 +99,7 @@ export default function MetricHistoryModal({ metric, deviceId, deviceName, token
             title={`${label} - ${periodLabel}`}
             loading={loading}
             empty={!loading && chartData.length === 0}
-            emptyMessage="Sem historico suficiente para esta metrica neste periodo."
+            emptyMessage="Sem histórico suficiente para esta métrica neste período."
             height={260}
           >
             <MetricTrendChart data={chartData} />
@@ -104,7 +110,7 @@ export default function MetricHistoryModal({ metric, deviceId, deviceName, token
           <div className="metric-history-modal-summary">
             <span>Media: {data.summary.average}%</span>
             <span>Pico: {data.summary.max}%</span>
-            <span>Minimo: {data.summary.min}%</span>
+            <span>Mínimo: {data.summary.min}%</span>
             <span>Amostras: {data.summary.samples}</span>
           </div>
         )}

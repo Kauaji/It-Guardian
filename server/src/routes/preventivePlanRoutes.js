@@ -1,12 +1,5 @@
 import { Router } from "express";
-import {
-  create,
-  createServiceOrder,
-  detail,
-  list,
-  logs,
-  prepare
-} from "../controllers/preventivePlanController.js";
+import { create, createServiceOrder, detail, list, logs, prepare } from "../controllers/preventivePlanController.js";
 import { requireAuth, requirePermission } from "../middleware/authMiddleware.js";
 
 const router = Router();

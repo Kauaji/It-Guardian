@@ -3,10 +3,7 @@ import bcrypt from "bcryptjs";
 import { getRemoteAssistanceConfig } from "../config/environment.js";
 import { assertRemoteAssistanceEnabled } from "../domain/remoteAssistancePolicy.js";
 import { findAgentAssetById } from "../repositories/agentRepository.js";
-import {
-  addSecurityReauthenticationAttempt,
-  createSecurityReauthentication
-} from "../repositories/securityReauthenticationRepository.js";
+import { addSecurityReauthenticationAttempt, createSecurityReauthentication } from "../repositories/securityReauthenticationRepository.js";
 import { findServiceOrderById } from "../repositories/serviceOrderRepository.js";
 import { findUserById } from "../repositories/userRepository.js";
 
@@ -20,7 +17,9 @@ function publicError(message, statusCode = 400) {
 }
 
 export function hashSecurityToken(token) {
-  return createHash("sha256").update(String(token || "")).digest("hex");
+  return createHash("sha256")
+    .update(String(token || ""))
+    .digest("hex");
 }
 
 export async function reauthenticateForRemoteAssistance({
@@ -46,10 +45,7 @@ export async function reauthenticateForRemoteAssistance({
     throw publicError("Selecione a maquina antes de confirmar sua senha.");
   }
 
-  const [storedUser, asset] = await Promise.all([
-    findUserById(user?.id),
-    findAgentAssetById(normalizedAssetId)
-  ]);
+  const [storedUser, asset] = await Promise.all([findUserById(user?.id), findAgentAssetById(normalizedAssetId)]);
   if (!storedUser || storedUser.active === false) {
     throw publicError("Usuario autenticado nao encontrado.", 401);
   }

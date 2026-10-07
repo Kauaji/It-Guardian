@@ -1,0 +1,19 @@
+node_modules
+dist
+coverage
+client/dist
+client/coverage
+test-results
+playwright-report
+package-lock.json
+# Esquema legado congelado por hash (server/src/schema/legacySchemaFrozen.test.mjs)
+server/src/schema/legacy
+# CSS: ordem/cascata verificada por scripts proprios
+**/*.css
+**/*.md
+**/*.json
+**/*.cs
+**/*.yml
+vercel.json
+agent/windows/tests/signing-vectors.json
+.claude

@@ -30,19 +30,19 @@ export const widgetRegistry = {
   top_assets_disk: { Component: TopAssetsWidget, label: "Top Ativos por Disco", configFields: ["limit"] },
   metric_history_cpu: {
     Component: MetricHistoryChartWidget,
-    label: "Grafico Historico de CPU",
+    label: "Gráfico Histórico de CPU",
     requiresAssetConfig: true,
     configFields: ["asset", "period"]
   },
   metric_history_ram: {
     Component: MetricHistoryChartWidget,
-    label: "Grafico Historico de RAM",
+    label: "Gráfico Histórico de RAM",
     requiresAssetConfig: true,
     configFields: ["asset", "period"]
   },
   metric_history_disk: {
     Component: MetricHistoryChartWidget,
-    label: "Grafico Historico de Disco",
+    label: "Gráfico Histórico de Disco",
     requiresAssetConfig: true,
     configFields: ["asset", "period"]
   },
@@ -58,9 +58,9 @@ export const widgetRegistry = {
   service_orders_sla: { Component: ServiceOrdersSlaWidget, label: "SLA das OS", configFields: [] },
   service_orders_overdue: { Component: ServiceOrdersOverdueWidget, label: "OS Vencidas", configFields: ["limit"] },
   alerts_by_severity: { Component: AlertsBySeverityWidget, label: "Alertas por Severidade", configFields: [] },
-  critical_assets: { Component: CriticalAssetsWidget, label: "Ativos Criticos", configFields: ["limit"] },
-  recent_events: { Component: RecentEventsWidget, label: "Ultimos Eventos Tecnicos", configFields: ["limit"] },
-  script_executions: { Component: ScriptExecutionsWidget, label: "Execucoes de Scripts", configFields: ["limit"] }
+  critical_assets: { Component: CriticalAssetsWidget, label: "Ativos Críticos", configFields: ["limit"] },
+  recent_events: { Component: RecentEventsWidget, label: "Últimos Eventos Técnicos", configFields: ["limit"] },
+  script_executions: { Component: ScriptExecutionsWidget, label: "Execuções de Scripts", configFields: ["limit"] }
 };
 
 export const knownWidgetTypes = new Set(Object.keys(widgetRegistry));

@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { useTestDatabase } from "../test-support/database.mjs";
 
-process.env.DATABASE_URL = "memory";
+await useTestDatabase();
 process.env.ENABLE_DEMO_SEED = "true";
 process.env.JWT_SECRET = "service-order-auto-priority-secret-32c";
 process.env.NODE_ENV = "test";
@@ -9,7 +10,7 @@ process.env.NODE_ENV = "test";
 const { createApp } = await import("../src/app.js");
 const { initializeRuntime } = await import("../src/bootstrap.js");
 const { closeDatabase, query } = await import("../src/database.js");
-const { syncAutoPriorities } = await import("../src/repositories/serviceOrderRepository.js");
+const { syncAutoPriorities } = await import("../src/services/serviceOrders/serviceOrderSlaSyncService.js");
 
 function listen(app) {
   return new Promise((resolve) => {
@@ -101,17 +102,18 @@ test("prioridade automatica por tempo aparece na leitura sem gravar, e so persis
 
   const afterSyncRow = await query("SELECT priority FROM service_orders WHERE id = $1", [created.id]);
   assert.equal(afterSyncRow.rows[0].priority, "medium", "o job agendado deve persistir a prioridade calculada");
-  const historyAfterSync = await query(
-    "SELECT * FROM service_order_history WHERE service_order_id = $1 AND event_type = 'auto_priority'",
-    [created.id]
-  );
+  const historyAfterSync = await query("SELECT * FROM service_order_history WHERE service_order_id = $1 AND event_type = 'auto_priority'", [
+    created.id
+  ]);
   assert.equal(historyAfterSync.rowCount, 1);
 
   const secondSyncResult = await syncAutoPriorities();
-  const unchangedForThisOrder = secondSyncResult.updated === 0 ||
-    (await query(
-      "SELECT COUNT(*)::int AS total FROM service_order_history WHERE service_order_id = $1 AND event_type = 'auto_priority'",
-      [created.id]
-    )).rows[0].total === 1;
+  const unchangedForThisOrder =
+    secondSyncResult.updated === 0 ||
+    (
+      await query("SELECT COUNT(*)::int AS total FROM service_order_history WHERE service_order_id = $1 AND event_type = 'auto_priority'", [
+        created.id
+      ])
+    ).rows[0].total === 1;
   assert.ok(unchangedForThisOrder, "rodar o job de novo sem mudanca de horario nao deve duplicar o evento desta OS");
 });

@@ -93,6 +93,16 @@ Modais grandes ficam acima da sidebar, com backdrop bloqueando interacao de fund
 - Status deve ser consistente entre Dashboard, Inventario, OS e Avisos.
 - Preferir truncamento controlado a cards de altura variavel em listas densas.
 
+## Acessibilidade e idioma
+
+Meta: WCAG 2.1 A/AA nas telas principais, nos fluxos de identidade e nos modais, sem violações `serious`/`critical` do axe.
+
+- **Idioma e acentos.** Todo texto visível (JSX, `aria-label`, `title`, `placeholder`, mensagens de erro/aviso, rótulos) é escrito em português correto, com acentos. Identificadores, chaves de objeto, classes CSS, rotas (`/ordens-de-servico`), valores enviados à API e enums continuam sem acento. `npm run check:accents` (`scripts/check-ui-accents.mjs`) falha o CI se uma lista curada de termos aparecer sem acento em literais de interface; casos legítimos recebem o comentário `accents-ok` na linha. O HTML declara `lang="pt-BR"` e `document.title` muda por rota ("Avisos · IT Guardian").
+- **Cor e contraste.** Texto normal precisa de 4,5:1; texto grande e componentes de interface (borda de campo, anel de foco, ícones) de 3:1, nos dois temas. Use os tokens de texto (`--text`, `--text-muted`, `--text-soft`, `--text-info/ok/warn/danger`) em vez de hex soltos; `--text-soft` (eyebrow, subtítulo da topbar, placeholder) vale 5,1:1 sobre a página. Botões sobre o acento usam `--on-accent` (branco no claro, verde-escuro no escuro). `npm run check:contrast` (`scripts/check-contrast.mjs`) valida os pares de tokens sem navegador; `client/src/a11y/contrast.a11y.test.jsx` mede o texto real das telas e modais com as folhas de estilo completas, nos dois temas.
+- **Estrutura.** Um `<main id="conteudo-principal" tabindex="-1">`, um `<header>`, `<nav aria-label>` e um único `<h1>` por tela. O primeiro foco é o link "Pular para o conteúdo". Controles interativos nunca ficam dentro de outros (ex.: aba do inventário = botão seletor + menu de ações irmãos). Todo `<select>`/`<input>` tem rótulo (`<label>` ou `aria-label`); `placeholder` não é rótulo.
+- **Teclado e foco.** Modais usam `useModalLifecycle` (Escape fecha, Tab fica preso, foco volta ao disparador) com `role="dialog"`, `aria-modal` e nome (`aria-label`/`aria-labelledby`). Menus (`UserMenu`) navegam por setas/Home/End/Escape. O anel `:focus-visible` global (`--focus-outline`, 3px) vale para todos os controles; não remova `outline` sem substituto. `prefers-reduced-motion` desliga animações e transições globalmente.
+- **Como medir sem navegador.** `client/src/a11y/*.a11y.test.jsx` montam as visões reais com dados mockados e rodam `axe.run` (WCAG 2.1 A/AA; `color-contrast` é desligado no jsdom e coberto pelos testes de contraste acima), além dos testes de teclado/foco. O e2e `tests/e2e/a11y.spec.js` roda o axe completo no navegador (CI). O que só um navegador real confirma: contraste sobre gradientes/imagens e sobreposições, cálculo de layout (alvos de toque, `scrollable-region-focusable`), foco visual real, leitores de tela e zoom/reflow.
+
 ## Proximas Evolucoes
 
 - Extrair componentes reutilizaveis de `App.jsx`.

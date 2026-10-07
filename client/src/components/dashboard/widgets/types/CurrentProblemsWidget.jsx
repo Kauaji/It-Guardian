@@ -12,7 +12,9 @@ export default function CurrentProblemsWidget({ data }) {
         <>
           <span>{alert.hostName || alert.hostId}</span>
           <span className={`pill ${severityTones[alert.severity] || ""}`}>{alert.severityLabel}</span>
-          <small>{alert.typeLabel} - {formatDateTime(alert.lastSeenAt)}</small>
+          <small>
+            {alert.typeLabel} - {formatDateTime(alert.lastSeenAt)}
+          </small>
         </>
       )}
     />

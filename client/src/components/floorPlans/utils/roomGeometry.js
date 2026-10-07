@@ -156,7 +156,8 @@ export function resizeRoomGeometry({ geometry, side, deltaX, deltaY, floor, snap
 export function isRoomPlacementValid(geometry, floor, zones = [], ignoredZoneId = null) {
   const floorWidth = Number(floor?.width || 1280);
   const floorHeight = Number(floor?.height || 820);
-  if (geometry.x < 0 || geometry.y < 0 || geometry.x + geometry.width > floorWidth || geometry.y + geometry.height > floorHeight) return false;
+  if (geometry.x < 0 || geometry.y < 0 || geometry.x + geometry.width > floorWidth || geometry.y + geometry.height > floorHeight)
+    return false;
 
   return !(zones || []).some((zone) => {
     if (!isRoomZone(zone) || zone.id === ignoredZoneId) return false;

@@ -9,10 +9,7 @@ import AutomationIndicatorDots, {
 
 describe("normalizeAutomationIndicators", () => {
   it("remove entradas nulas/undefined e trata entrada nao-array como vazia", () => {
-    expect(normalizeAutomationIndicators([{ id: "a" }, null, undefined, { id: "b" }])).toEqual([
-      { id: "a" },
-      { id: "b" }
-    ]);
+    expect(normalizeAutomationIndicators([{ id: "a" }, null, undefined, { id: "b" }])).toEqual([{ id: "a" }, { id: "b" }]);
     expect(normalizeAutomationIndicators(null)).toEqual([]);
     expect(normalizeAutomationIndicators(undefined)).toEqual([]);
   });

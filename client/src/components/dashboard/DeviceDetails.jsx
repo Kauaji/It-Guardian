@@ -1,19 +1,7 @@
 import { Cpu, HardDrive, MemoryStick, Monitor, Network } from "lucide-react";
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis
-} from "recharts";
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { formatDate } from "../../utils/display.js";
-import {
-  formatHardwareValue,
-  formatSoftwareLabel,
-  softwareIdentity
-} from "../inventory/hardwarePresentation.js";
+import { formatHardwareValue, formatSoftwareLabel, softwareIdentity } from "../inventory/hardwarePresentation.js";
 import { useSettledWidthKey } from "../../hooks/useSettledWidthKey.js";
 import MetricBar from "./MetricBar.jsx";
 
@@ -35,7 +23,9 @@ export default function DeviceDetails({ device, statusClass, metricClass }) {
       <div className="panel-heading">
         <div>
           <h2>{device.name}</h2>
-          <p>{device.ip} - {device.hardware?.os}</p>
+          <p>
+            {device.ip} - {device.hardware?.os}
+          </p>
         </div>
         <span className={`pill ${statusClass(device.status)}`}>{device.statusLabel}</span>
       </div>
@@ -70,12 +60,32 @@ export default function DeviceDetails({ device, statusClass, metricClass }) {
       )}
 
       <div className="inventory-grid">
-        <div><span>Fabricante</span><strong>{formatHardwareValue(device.hardware?.manufacturer)}</strong></div>
-        <div><span>Modelo</span><strong>{formatHardwareValue(device.hardware?.model)}</strong></div>
-        <div><span>{isManualAsset ? "Tipo" : "CPU"}</span><strong>{formatHardwareValue(isManualAsset ? device.assetType : device.hardware?.cpuModel)}</strong></div>
-        <div><span>{isManualAsset ? "Patrimônio" : "Memória"}</span><strong>{formatHardwareValue(isManualAsset ? device.hardware?.assetTag : device.hardware?.ramGb ? `${device.hardware.ramGb} GB` : null)}</strong></div>
-        <div><span>Uptime</span><strong>{formatHardwareValue(device.uptimeHours != null ? `${device.uptimeHours} h` : null)}</strong></div>
-        <div><span>Inventário</span><strong>{formatDate(device.hardware?.lastInventoryAt)}</strong></div>
+        <div>
+          <span>Fabricante</span>
+          <strong>{formatHardwareValue(device.hardware?.manufacturer)}</strong>
+        </div>
+        <div>
+          <span>Modelo</span>
+          <strong>{formatHardwareValue(device.hardware?.model)}</strong>
+        </div>
+        <div>
+          <span>{isManualAsset ? "Tipo" : "CPU"}</span>
+          <strong>{formatHardwareValue(isManualAsset ? device.assetType : device.hardware?.cpuModel)}</strong>
+        </div>
+        <div>
+          <span>{isManualAsset ? "Patrimônio" : "Memória"}</span>
+          <strong>
+            {formatHardwareValue(isManualAsset ? device.hardware?.assetTag : device.hardware?.ramGb ? `${device.hardware.ramGb} GB` : null)}
+          </strong>
+        </div>
+        <div>
+          <span>Uptime</span>
+          <strong>{formatHardwareValue(device.uptimeHours != null ? `${device.uptimeHours} h` : null)}</strong>
+        </div>
+        <div>
+          <span>Inventário</span>
+          <strong>{formatDate(device.hardware?.lastInventoryAt)}</strong>
+        </div>
       </div>
 
       <div className="software-list">

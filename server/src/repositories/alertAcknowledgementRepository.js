@@ -53,10 +53,7 @@ export async function upsertAcknowledgement({ alertId, userId, note }) {
 }
 
 export async function deleteAcknowledgement(alertId) {
-  const result = await query(
-    "DELETE FROM alert_acknowledgements WHERE alert_id = $1 RETURNING alert_id",
-    [alertId]
-  );
+  const result = await query("DELETE FROM alert_acknowledgements WHERE alert_id = $1 RETURNING alert_id", [alertId]);
 
   return result.rowCount > 0;
 }

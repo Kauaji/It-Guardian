@@ -1,12 +1,6 @@
 import { badRequest, conflict, notFoundError } from "../lib/errors.js";
 import { addLog } from "../repositories/logRepository.js";
-import {
-  createSector,
-  deactivateSector,
-  listSectors,
-  updateSector,
-  updateSectorPermissions
-} from "../repositories/sectorRepository.js";
+import { createSector, deactivateSector, listSectors, updateSector, updateSectorPermissions } from "../repositories/sectorRepository.js";
 
 function remapUniqueViolation(error) {
   if (error.code === "23505") {

@@ -1,8 +1,4 @@
-import {
-  ExternalIntegrationError,
-  joinIntegrationUrl,
-  requestJson
-} from "../httpJsonClient.js";
+import { ExternalIntegrationError, joinIntegrationUrl, requestJson } from "../httpJsonClient.js";
 
 export class OcsInventoryService {
   constructor({
@@ -17,9 +13,7 @@ export class OcsInventoryService {
     fetchImpl = globalThis.fetch
   } = {}) {
     this.mode = mode === "real" ? "real" : "disabled";
-    this.enabled = enabled ?? (
-      this.mode === "real" && String(process.env.OCS_ENABLED || "").toLowerCase() === "true"
-    );
+    this.enabled = enabled ?? (this.mode === "real" && String(process.env.OCS_ENABLED || "").toLowerCase() === "true");
     this.baseUrl = baseUrl.replace(/\/+$/, "");
     this.username = username;
     this.password = password;
@@ -51,10 +45,7 @@ export class OcsInventoryService {
 
   async listInventoryFromApi() {
     if (!this.baseUrl || !this.username || !this.password) {
-      throw new ExternalIntegrationError(
-        "OCS Inventory",
-        "A integracao OCS Inventory nao esta completamente configurada."
-      );
+      throw new ExternalIntegrationError("OCS Inventory", "A integracao OCS Inventory nao esta completamente configurada.");
     }
     const credentials = Buffer.from(`${this.username}:${this.password}`, "utf8").toString("base64");
     const payload = await requestJson({
@@ -65,14 +56,9 @@ export class OcsInventoryService {
       retries: this.retries,
       fetchImpl: this.fetchImpl
     });
-    const assets = Array.isArray(payload)
-      ? payload
-      : payload?.computers || payload?.data || payload?.results || payload?.items;
+    const assets = Array.isArray(payload) ? payload : payload?.computers || payload?.data || payload?.results || payload?.items;
     if (!Array.isArray(assets)) {
-      throw new ExternalIntegrationError(
-        "OCS Inventory",
-        "A integracao OCS Inventory respondeu em um formato invalido."
-      );
+      throw new ExternalIntegrationError("OCS Inventory", "A integracao OCS Inventory respondeu em um formato invalido.");
     }
     return assets;
   }

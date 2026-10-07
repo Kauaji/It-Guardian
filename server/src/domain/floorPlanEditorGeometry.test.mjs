@@ -187,11 +187,10 @@ describe("floor plan editor geometry rules", () => {
 
   it("keeps anchored openings attached when their wall moves", () => {
     const wall = { id: "wall-1", objectType: "wall", x: 50, y: 80, width: 200, height: 12, rotation: 0 };
-    const door = attachOpeningToWall(
-      { id: "door-1", objectType: "door", x: 0, y: 0, width: 60, height: 16, metadata: {} },
-      wall,
-      { x: 150, y: 86 }
-    );
+    const door = attachOpeningToWall({ id: "door-1", objectType: "door", x: 0, y: 0, width: 60, height: 16, metadata: {} }, wall, {
+      x: 150,
+      y: 86
+    });
     const movedWall = { ...wall, x: 100, y: 120 };
     const syncedDoor = syncAnchoredOpenings([movedWall, door]).find((object) => object.id === "door-1");
 
@@ -201,30 +200,41 @@ describe("floor plan editor geometry rules", () => {
   });
 
   it("removes anchored openings together with their parent wall", () => {
-    const remaining = removeObjectCascade([
-      { id: "wall-1", objectType: "wall" },
-      { id: "door-1", objectType: "door", metadata: { parentObjectId: "wall-1" } },
-      { id: "pc-1", objectType: "pc" }
-    ], "wall-1");
+    const remaining = removeObjectCascade(
+      [
+        { id: "wall-1", objectType: "wall" },
+        { id: "door-1", objectType: "door", metadata: { parentObjectId: "wall-1" } },
+        { id: "pc-1", objectType: "pc" }
+      ],
+      "wall-1"
+    );
 
-    assert.deepEqual(remaining.map((object) => object.id), ["pc-1"]);
+    assert.deepEqual(
+      remaining.map((object) => object.id),
+      ["pc-1"]
+    );
   });
 
   it("selects only objects intersecting the marquee on the active floor", () => {
     const rectangle = normalizeSelectionRect({ x: 90, y: 90 }, { x: 230, y: 190 });
-    const selected = findObjectsInSelectionRect([
-      { id: "desk-1", floorId: "floor-1", x: 100, y: 100, width: 100, height: 60, rotation: 0 },
-      { id: "chair-1", floorId: "floor-1", x: 218, y: 170, width: 30, height: 30, rotation: 45 },
-      { id: "pc-other-floor", floorId: "floor-2", x: 120, y: 120, width: 50, height: 40 }
-    ], rectangle, "floor-1");
+    const selected = findObjectsInSelectionRect(
+      [
+        { id: "desk-1", floorId: "floor-1", x: 100, y: 100, width: 100, height: 60, rotation: 0 },
+        { id: "chair-1", floorId: "floor-1", x: 218, y: 170, width: 30, height: 30, rotation: 45 },
+        { id: "pc-other-floor", floorId: "floor-2", x: 120, y: 120, width: 50, height: 40 }
+      ],
+      rectangle,
+      "floor-1"
+    );
 
-    assert.deepEqual(selected.map((object) => object.id), ["desk-1", "chair-1"]);
+    assert.deepEqual(
+      selected.map((object) => object.id),
+      ["desk-1", "chair-1"]
+    );
   });
 
   it("snaps new wall points to nearby wall endpoints", () => {
-    const walls = [
-      { id: "wall-1", floorId: "floor-1", objectType: "wall", x: 100, y: 100, width: 120, height: 10, rotation: 0 }
-    ];
+    const walls = [{ id: "wall-1", floorId: "floor-1", objectType: "wall", x: 100, y: 100, width: 120, height: 10, rotation: 0 }];
 
     const snapped = snapPointToWallEndpoints({ x: 216, y: 104 }, walls, "floor-1", null, 10);
 

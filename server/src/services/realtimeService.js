@@ -1,11 +1,11 @@
-import jwt from "jsonwebtoken";
 import { WebSocket, WebSocketServer } from "ws";
-import { getCorsOrigins, getJwtSecret, isAllowedVercelOrigin } from "../config/environment.js";
-import { findUserById } from "../repositories/userRepository.js";
+import { getCorsOrigins, isAllowedVercelOrigin } from "../config/environment.js";
 import { readSessionCookie } from "../security/sessionCookie.js";
 import { listSegments } from "../repositories/segmentRepository.js";
 import { getActiveAlertsWithAcknowledgements } from "./alertService.js";
+import { authenticateSessionToken } from "./sessionService.js";
 import { getDashboardSummary, listDevices } from "./monitoringService.js";
+import { logger } from "../lib/logger.js";
 
 const sockets = new Set();
 
@@ -32,9 +32,10 @@ export function attachRealtimeServer(server) {
   });
 
   const interval = setInterval(
-    () => broadcastSnapshot().catch((error) => {
-      console.error("Realtime snapshot failed", error);
-    }),
+    () =>
+      broadcastSnapshot().catch((error) => {
+        logger.error("realtime_snapshot_failed", { error });
+      }),
     Number(process.env.STREAM_INTERVAL_MS || 10000)
   );
 
@@ -82,27 +83,19 @@ async function buildSnapshot() {
 }
 
 async function authenticateSocket(request) {
-  const url = new URL(request.url, "http://localhost");
-  const legacyToken = url.searchParams.get("token");
-  const cookieToken = readSessionCookie(request);
-  const token = cookieToken || legacyToken;
+  const token = readSessionCookie(request);
 
   if (!token) {
     throw new Error("Missing token");
   }
 
-  if (cookieToken) {
-    if (!isTrustedRealtimeOrigin(request.headers.origin)) {
-      throw new Error("Untrusted WebSocket origin");
-    }
+  if (!isTrustedRealtimeOrigin(request.headers.origin)) {
+    throw new Error("Untrusted WebSocket origin");
   }
 
-  const payload = jwt.verify(token, getJwtSecret());
-  const user = await findUserById(payload.sub);
-
-  if (!user) {
-    throw new Error("Invalid token");
-  }
-
+  // Mesma validacao do HTTP: sessao nao revogada, dentro da vida maxima e
+  // com a versao de token atual. O token na query string foi removido (URLs
+  // acabam em logs de proxy e historico).
+  const { user } = await authenticateSessionToken(token);
   return user;
 }

@@ -18,6 +18,7 @@ import {
   agentEnd,
   agentFrame,
   agentPending,
+  agentRustdeskId,
   agentWebrtcAnswer,
   agentWebrtcOffer
 } from "../controllers/remoteAssistanceController.js";
@@ -41,6 +42,7 @@ router.post("/heartbeat", agentRateLimiter, receive);
 router.post("/inventory", agentRateLimiter, receive);
 router.post("/jobs/:id/result", agentRateLimiter, completeJob);
 router.get("/support-link", agentRateLimiter, supportLink);
+router.post("/remote-assistance/rustdesk-id", protectRemoteAssistanceResponse, agentRateLimiter, agentRustdeskId);
 router.get("/remote-assistance/pending", protectRemoteAssistanceResponse, agentRateLimiter, agentPending);
 router.post("/remote-assistance/sessions/:id/consent", protectRemoteAssistanceResponse, agentRateLimiter, agentConsent);
 router.post("/remote-assistance/sessions/:id/frame", protectRemoteAssistanceResponse, agentRateLimiter, agentFrame);

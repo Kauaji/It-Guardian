@@ -1,11 +1,5 @@
 import { Router } from "express";
-import {
-  getLayout,
-  getWidgetCatalog,
-  previewWidgetData,
-  resetLayout,
-  saveLayout
-} from "../controllers/dashboardWidgetController.js";
+import { getLayout, getWidgetCatalog, previewWidgetData, resetLayout, saveLayout } from "../controllers/dashboardWidgetController.js";
 import { requireAuth, requirePermission } from "../middleware/authMiddleware.js";
 import { createRateLimiter } from "../middleware/rateLimitMiddleware.js";
 

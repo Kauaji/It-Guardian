@@ -49,8 +49,8 @@ export default function ServiceOrderChecklistTab({ serviceOrderId, token, notify
     return (
       <section className="service-order-checklist-panel">
         <p className="empty">
-          Nenhum checklist aplicado a esta OS. Configure um template de checklist para o tipo de problema nas
-          configurações de OS para que ele seja aplicado automaticamente em novas ordens.
+          Nenhum checklist aplicado a esta OS. Configure um template de checklist para o tipo de problema nas configurações de OS para que
+          ele seja aplicado automaticamente em novas ordens.
         </p>
       </section>
     );
@@ -62,7 +62,9 @@ export default function ServiceOrderChecklistTab({ serviceOrderId, token, notify
     <section className="service-order-checklist-panel">
       <div className="service-order-checklist-summary">
         <ListChecks size={16} />
-        <span>{completed} de {items.length} itens concluídos</span>
+        <span>
+          {completed} de {items.length} itens concluídos
+        </span>
       </div>
       <ul className="service-order-checklist-list">
         {items.map((item) => (
@@ -83,6 +85,7 @@ export default function ServiceOrderChecklistTab({ serviceOrderId, token, notify
             <textarea
               className="service-order-checklist-item-notes"
               placeholder="Observação (opcional)"
+              aria-label={`Observação do item ${item.label || ""}`.trim()}
               defaultValue={item.notes || ""}
               disabled={!canManage}
               onBlur={(event) => {

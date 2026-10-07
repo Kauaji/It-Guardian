@@ -35,15 +35,18 @@ const activeAlerts = [
   { id: "alert-c", hostId: "asset-c", severity: "critical", status: "active" },
   { id: "alert-orphan", hostId: "removed", hostName: "Mesmo nome", severity: "critical", status: "active" }
 ];
-const allAlerts = [
-  ...activeAlerts,
-  { id: "alert-old", hostId: "asset-b", severity: "critical", status: "resolved" }
-];
+const allAlerts = [...activeAlerts, { id: "alert-old", hostId: "asset-b", severity: "critical", status: "resolved" }];
 const serviceOrders = [
   { id: "order-a", assetId: "asset-a", status: "open", slaDueAt: "2026-08-26T12:00:00.000Z" },
   { id: "order-b", assetId: "asset-b", status: "in_progress", slaDueAt: "2026-09-01T12:00:00.000Z" },
   { id: "order-c", assetId: "asset-c", status: "open", slaDueAt: "2026-09-01T12:00:00.000Z" },
-  { id: "order-closed", assetId: "asset-a", status: "resolved_custom", slaDueAt: "2026-08-01T12:00:00.000Z", closedAt: "2026-08-02T12:00:00.000Z" },
+  {
+    id: "order-closed",
+    assetId: "asset-a",
+    status: "resolved_custom",
+    slaDueAt: "2026-08-01T12:00:00.000Z",
+    closedAt: "2026-08-02T12:00:00.000Z"
+  },
   { id: "order-orphan", assetId: "removed", assetName: "Mesmo nome", status: "open" },
   { id: "order-unlinked", assetId: null, status: "open" }
 ];
@@ -51,14 +54,17 @@ const serviceOrders = [
 const ids = (items) => items.map((item) => item.id);
 const scopeFor = (filters) => buildDashboardAssetScope({ devices, activeAlerts, serviceOrders, settings }, filters, now);
 function contextFor(filters, overrides = {}) {
-  return withDashboardFilters({
-    getDevices: async () => devices,
-    getActiveAlerts: async () => activeAlerts,
-    getAllAlerts: async () => allAlerts,
-    getServiceOrders: async () => serviceOrders,
-    getServiceOrderSettings: async () => settings,
-    ...overrides
-  }, normalizeDashboardFilters(filters));
+  return withDashboardFilters(
+    {
+      getDevices: async () => devices,
+      getActiveAlerts: async () => activeAlerts,
+      getAllAlerts: async () => allAlerts,
+      getServiceOrders: async () => serviceOrders,
+      getServiceOrderSettings: async () => settings,
+      ...overrides
+    },
+    normalizeDashboardFilters(filters)
+  );
 }
 
 test("filtros aceitam uma selecao por dimensao, aparando espacos sem alterar o original", () => {
@@ -72,10 +78,23 @@ test("filtros aceitam uma selecao por dimensao, aparando espacos sem alterar o o
 
 test("filtros rejeitam dimensoes desconhecidas, tipos errados, enums invalidos e valores excessivos", () => {
   for (const invalid of [
-    [], "online", 1, true, new Date(), { unexpected: "x" }, { assetStatus: "Offline" },
-    { assetStatus: "critical" }, { alertSeverity: "urgent" }, { assetId: [] },
-    { assetId: " " }, { assetId: "x".repeat(201) }, { serviceOrderStatus: { id: "open" } },
-    { serviceOrderStatus: "x".repeat(201) }, { assetId: "a\u0000b" }, { overdue: "true" }, { overdue: 1 },
+    [],
+    "online",
+    1,
+    true,
+    new Date(),
+    { unexpected: "x" },
+    { assetStatus: "Offline" },
+    { assetStatus: "critical" },
+    { alertSeverity: "urgent" },
+    { assetId: [] },
+    { assetId: " " },
+    { assetId: "x".repeat(201) },
+    { serviceOrderStatus: { id: "open" } },
+    { serviceOrderStatus: "x".repeat(201) },
+    { assetId: "a\u0000b" },
+    { overdue: "true" },
+    { overdue: 1 },
     JSON.parse('{"__proto__":{"assetStatus":"online"}}')
   ]) {
     assert.throws(() => normalizeDashboardFilters(invalid), { statusCode: 400, code: "invalid_dashboard_filter" });
@@ -145,7 +164,11 @@ test("overdue usa o mesmo SLA real do widget e exclui finais mesmo encerradas co
   assert.deepEqual(ids(filterDashboardAlerts(activeAlerts, filters, scope.assetIds)), ["alert-a", "alert-warning"]);
   const notOverdue = { overdue: false };
   assert.deepEqual(ids(filterDashboardServiceOrders(serviceOrders, notOverdue, scopeFor(notOverdue).assetIds, settings, now)), [
-    "order-b", "order-c", "order-closed", "order-orphan", "order-unlinked"
+    "order-b",
+    "order-c",
+    "order-closed",
+    "order-orphan",
+    "order-unlinked"
   ]);
 });
 
@@ -196,15 +219,18 @@ test("metricas fora da selecao nao consultam historico nem mostram valor de outr
 });
 
 test("eventos correlacionam metadados explicitos e rejeitam nomes iguais ou referencias contraditorias", () => {
-  const result = filterDashboardEvents([
-    { id: "direct", meta: { deviceId: "asset-a" } },
-    { id: "order", meta: { serviceOrderId: "order-a" } },
-    { id: "alert", meta: { alertId: "alert-a", hostId: "asset-a" } },
-    { id: "contradictory", meta: { assetId: "asset-a", serviceOrderId: "hidden" } },
-    { id: "same-name", message: "Mesmo nome", meta: {} },
-    { id: "foreign", meta: { deviceId: "asset-b" } },
-    { id: "no-meta" }
-  ], { assetIds: new Set(["asset-a"]), alertIds: new Set(["alert-a"]), serviceOrderIds: new Set(["order-a"]) });
+  const result = filterDashboardEvents(
+    [
+      { id: "direct", meta: { deviceId: "asset-a" } },
+      { id: "order", meta: { serviceOrderId: "order-a" } },
+      { id: "alert", meta: { alertId: "alert-a", hostId: "asset-a" } },
+      { id: "contradictory", meta: { assetId: "asset-a", serviceOrderId: "hidden" } },
+      { id: "same-name", message: "Mesmo nome", meta: {} },
+      { id: "foreign", meta: { deviceId: "asset-b" } },
+      { id: "no-meta" }
+    ],
+    { assetIds: new Set(["asset-a"]), alertIds: new Set(["alert-a"]), serviceOrderIds: new Set(["order-a"]) }
+  );
   assert.deepEqual(ids(result), ["direct", "order", "alert"]);
 });
 
@@ -234,15 +260,32 @@ test("scripts filtram a janela por IDs reais antes do limite e preservam o shape
     { id: "unlinked", assetId: null, scriptName: "Mesmo nome" }
   ];
   let queriedLimit;
-  const ctx = contextFor({ assetId: "asset-a" }, { getRecentScriptExecutionLogs: async (limit) => { queriedLimit = limit; return logs; } });
+  const ctx = contextFor(
+    { assetId: "asset-a" },
+    {
+      getRecentScriptExecutionLogs: async (limit) => {
+        queriedLimit = limit;
+        return logs;
+      }
+    }
+  );
   const result = await fetchScriptExecutions({ limit: 1 }, ctx);
   assert.equal(queriedLimit, 500);
   assert.deepEqual(ids(result.rows), ["matching"]);
   assert.equal(result.filterScope, "asset");
   assert.deepEqual(result.warnings, ["recent_window_only"]);
-  const plain = await fetchScriptExecutions({ limit: 1 }, contextFor({}, {
-    getRecentScriptExecutionLogs: async (limit) => { queriedLimit = limit; return logs.slice(0, limit); }
-  }));
+  const plain = await fetchScriptExecutions(
+    { limit: 1 },
+    contextFor(
+      {},
+      {
+        getRecentScriptExecutionLogs: async (limit) => {
+          queriedLimit = limit;
+          return logs.slice(0, limit);
+        }
+      }
+    )
+  );
   assert.equal(queriedLimit, 1);
   assert.equal(plain.filterScope, undefined);
   assert.deepEqual(ids(plain.rows), ["other"]);

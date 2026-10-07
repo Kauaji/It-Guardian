@@ -10,11 +10,13 @@ export default function MoveMachineModal({ machine, segments, targetSegmentId, o
 
   return (
     <div className="modal-backdrop" role="presentation">
-      <section ref={dialogRef} className="modal-panel" role="dialog" aria-modal="true" aria-label="Mover maquina">
+      <section ref={dialogRef} className="modal-panel" role="dialog" aria-modal="true" aria-label="Mover máquina">
         <header>
           <div>
-            <h2>Mover maquina</h2>
-            <p>{machine.name} - {machine.ip}</p>
+            <h2>Mover máquina</h2>
+            <p>
+              {machine.name} - {machine.ip}
+            </p>
           </div>
           <button className="icon-button" onClick={onClose} title="Fechar">
             <X size={18} />
@@ -24,16 +26,21 @@ export default function MoveMachineModal({ machine, segments, targetSegmentId, o
           Segmento
           <select value={targetSegmentId} onChange={(event) => onTargetChange(event.target.value)}>
             {segments.map((segment) => (
-              <option key={segment.id} value={segment.id}>{segment.name}</option>
+              <option key={segment.id} value={segment.id}>
+                {segment.name}
+              </option>
             ))}
           </select>
         </label>
         <div className="modal-actions">
-          <button className="ghost-action" onClick={onClose}>Cancelar</button>
-          <button className="primary-action compact-action" onClick={onConfirm}>Mover</button>
+          <button className="ghost-action" onClick={onClose}>
+            Cancelar
+          </button>
+          <button className="primary-action compact-action" onClick={onConfirm}>
+            Mover
+          </button>
         </div>
       </section>
     </div>
   );
 }
-

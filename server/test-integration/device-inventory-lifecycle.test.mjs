@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { useTestDatabase } from "../test-support/database.mjs";
 
-process.env.DATABASE_URL = "memory";
+await useTestDatabase();
 process.env.ENABLE_DEMO_SEED = "true";
 process.env.JWT_SECRET = "integration-test-secret-with-at-least-32-characters";
 process.env.NODE_ENV = "test";
@@ -64,7 +65,10 @@ test("ativo manual do inventario: criar, listar, detalhar, atualizar tipo, mover
   const listResponse = await fetch(`${baseUrl}/api/devices`, { headers: { cookie } });
   assert.equal(listResponse.status, 200);
   const listed = (await listResponse.json()).devices;
-  assert.ok(listed.some((device) => device.id === created.id), "ativo recem-criado deve aparecer na listagem");
+  assert.ok(
+    listed.some((device) => device.id === created.id),
+    "ativo recem-criado deve aparecer na listagem"
+  );
 
   const detailResponse = await fetch(`${baseUrl}/api/devices/${created.id}`, { headers: { cookie } });
   assert.equal(detailResponse.status, 200);
@@ -85,11 +89,7 @@ test("ativo manual do inventario: criar, listar, detalhar, atualizar tipo, mover
     headers: requestHeaders(cookie),
     body: JSON.stringify({ alias: "Apelido nao deveria ser aceito" })
   });
-  assert.equal(
-    aliasResponse.status,
-    400,
-    "nome fantasia persistente e exclusivo de ativos do agente, ativo manual deve ser recusado"
-  );
+  assert.equal(aliasResponse.status, 400, "nome fantasia persistente e exclusivo de ativos do agente, ativo manual deve ser recusado");
 
   const moveResponse = await fetch(`${baseUrl}/api/devices/${created.id}/segment`, {
     method: "PATCH",

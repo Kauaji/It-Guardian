@@ -1,9 +1,6 @@
 import { MoreHorizontal } from "lucide-react";
 import AutomationIndicatorDots from "../AutomationIndicatorDots.jsx";
-import {
-  formatAutomationMachineStatusSummary,
-  getAutomationMachineStatusSummary
-} from "./automationStatusUtils.js";
+import { formatAutomationMachineStatusSummary, getAutomationMachineStatusSummary } from "./automationStatusUtils.js";
 
 function AutomationMachineRow({ machine, location, onSelectPlan, onOpenMachine }) {
   const statusSummary = getAutomationMachineStatusSummary(machine);
@@ -18,19 +15,16 @@ function AutomationMachineRow({ machine, location, onSelectPlan, onOpenMachine }
       >
         <span className="automation-machine-name-line">
           <strong>{machine.assetName}</strong>
-          <AutomationIndicatorDots
-            indicators={machine.plans}
-            maxVisible={4}
-            compact
-            onSelectPlan={(plan) => onSelectPlan(plan, machine)}
-          />
+          <AutomationIndicatorDots indicators={machine.plans} maxVisible={4} compact onSelectPlan={(plan) => onSelectPlan(plan, machine)} />
         </span>
         <small>
           {machine.assetType || "Ativo"}
           {machine.operatingSystem ? ` • ${machine.operatingSystem}` : ""}
           {machine.loggedUser ? ` • Usuário: ${machine.loggedUser}` : ""}
         </small>
-        <span>{location.groupName} • {location.segmentName}</span>
+        <span>
+          {location.groupName} • {location.segmentName}
+        </span>
       </button>
       <div className="automation-machine-status">
         <span className={`pill ${statusSummary.errorCount ? "danger" : statusSummary.activeCount ? "ok" : "muted"}`}>
@@ -51,11 +45,7 @@ function AutomationMachineRow({ machine, location, onSelectPlan, onOpenMachine }
   );
 }
 
-export default function AutomationMachineList({
-  groups,
-  onSelectPlan,
-  onOpenMachine
-}) {
+export default function AutomationMachineList({ groups, onSelectPlan, onOpenMachine }) {
   return (
     <div className="automation-management-groups">
       {groups.map((group) => (
@@ -63,7 +53,9 @@ export default function AutomationMachineList({
           <header>
             <div>
               <small>{group.tabName}</small>
-              <strong>{group.groupName} • {group.segmentName}</strong>
+              <strong>
+                {group.groupName} • {group.segmentName}
+              </strong>
               <span>{group.machines.length} máquina(s) com automação neste segmento</span>
             </div>
           </header>

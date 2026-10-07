@@ -40,10 +40,7 @@ export function validatePublicSupportForm(form, { businessMode }) {
   if (businessMode && !form.contactInfo.trim()) {
     return "Informe um contato para abrir o chamado.";
   }
-  if (
-    businessMode &&
-    (!form.environmentName.trim() || normalizeText(form.environmentName) === "nao identificado")
-  ) {
+  if (businessMode && (!form.environmentName.trim() || normalizeText(form.environmentName) === "nao identificado")) {
     return "No modo Business, selecione um cliente para abrir a Ordem de Serviço.";
   }
   return "";

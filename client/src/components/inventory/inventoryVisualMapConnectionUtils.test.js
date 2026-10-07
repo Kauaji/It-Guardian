@@ -50,7 +50,7 @@ describe("getQuickLayerState", () => {
 describe("getConnectionTypeLabel", () => {
   it("retorna o label cadastrado para tipos conhecidos de infraestrutura e eletrica", () => {
     expect(getConnectionTypeLabel("network_cable")).toBe("Cabo de rede");
-    expect(getConnectionTypeLabel("power_line")).toBe("Linha eletrica");
+    expect(getConnectionTypeLabel("power_line")).toBe("Linha elétrica");
     expect(getConnectionTypeLabel("ups_line")).toBe("Linha nobreak");
   });
 
@@ -58,10 +58,10 @@ describe("getConnectionTypeLabel", () => {
     expect(getConnectionTypeLabel("tipo_inexistente")).toBe("tipo_inexistente");
   });
 
-  it("retorna 'Conexao' quando o tipo e ausente", () => {
-    expect(getConnectionTypeLabel(undefined)).toBe("Conexao");
-    expect(getConnectionTypeLabel(null)).toBe("Conexao");
-    expect(getConnectionTypeLabel("")).toBe("Conexao");
+  it("retorna 'Conexão' quando o tipo e ausente", () => {
+    expect(getConnectionTypeLabel(undefined)).toBe("Conexão");
+    expect(getConnectionTypeLabel(null)).toBe("Conexão");
+    expect(getConnectionTypeLabel("")).toBe("Conexão");
   });
 });
 

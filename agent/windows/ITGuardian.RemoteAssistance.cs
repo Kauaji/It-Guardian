@@ -122,6 +122,14 @@ namespace ITGuardian.Windows
         public string key { get; set; }
         public string monitorId { get; set; }
         public bool enabled { get; set; }
+        // rustdesk_set_password / rustdesk_clear_password (ver RustdeskController).
+        public string password { get; set; }
+        public int ttlSeconds { get; set; }
+    }
+
+    internal sealed class RustdeskIdReportPayload
+    {
+        public string rustdeskId { get; set; }
     }
 
     internal sealed class LocalBrokerRequest
@@ -392,7 +400,10 @@ namespace ITGuardian.Windows
             {
                 if (!process.HasExited) process.Kill();
             }
-            catch { }
+            catch (Exception killError)
+            {
+                Log.BestEffort("encerrar o processo auxiliar de WebRTC da sessao " + sessionId, killError, Log.LevelWarn);
+            }
         }
 
         private object Pending()
@@ -493,7 +504,10 @@ namespace ITGuardian.Windows
                     wake.Connect(250);
                 }
             }
-            catch { }
+            catch (Exception wakeError)
+            {
+                Log.BestEffort("acordar o canal local de assistencia remota (pipe)", wakeError);
+            }
         }
     }
 
@@ -585,10 +599,11 @@ namespace ITGuardian.Windows
                     form.Activate();
                 }
             }
-            catch
+            catch (Exception foregroundError)
             {
                 // Falha ao forcar o foco nao pode derrubar o formulario: ele
                 // continua visivel (TopMost) mesmo se nao vier para frente.
+                Log.BestEffort("forcar o formulario de consentimento para o primeiro plano", foregroundError);
                 form.Activate();
             }
         }
@@ -664,7 +679,14 @@ namespace ITGuardian.Windows
         protected override void OnShown(EventArgs e)
         {
             base.OnShown(e);
-            try { SystemSounds.Exclamation.Play(); } catch { }
+            try
+            {
+                SystemSounds.Exclamation.Play();
+            }
+            catch (Exception soundError)
+            {
+                Log.BestEffort("tocar o aviso sonoro do consentimento", soundError);
+            }
             ForegroundHelper.ForceToForeground(this);
         }
 
@@ -891,7 +913,10 @@ namespace ITGuardian.Windows
             {
                 RemoteAssistancePendingSession pending = null;
                 try { pending = LocalRemoteAssistanceClient.Call<RemoteAssistancePendingSession>("pending", null, null); }
-                catch { }
+                catch (Exception pendingError)
+                {
+                    Log.BestEffort("consultar solicitacao pendente no canal local", pendingError);
+                }
                 uiContext.Post(delegate(object state)
                 {
                     polling = false;
@@ -935,8 +960,9 @@ namespace ITGuardian.Windows
                     selectedMonitorId = primary
                 });
             }
-            catch
+            catch (Exception answerError)
             {
+                Log.BestEffort("responder a solicitacao de assistencia remota", answerError, Log.LevelWarn);
                 MessageBox.Show(
                     "Nao foi possivel responder a solicitacao. Tente novamente pelo IT Guardian.",
                     "IT Guardian",
@@ -993,8 +1019,9 @@ namespace ITGuardian.Windows
                         uiContext.Post(delegate { AppendChatMessages(single); }, null);
                     }
                 }
-                catch
+                catch (Exception chatError)
                 {
+                    Log.BestEffort("enviar mensagem de chat da assistencia remota", chatError, Log.LevelWarn);
                     uiContext.Post(delegate
                     {
                         if (chatForm != null) chatForm.ShowError("Nao foi possivel enviar a mensagem.");
@@ -1086,6 +1113,13 @@ namespace ITGuardian.Windows
                     // existir nesta instalacao (ainda nao atualizada) ou nao
                     // conseguir iniciar, o broker registra um aviso e a
                     // sessao continua no transporte JPEG de sempre.
+                    // Transporte RustDesk: o video e o controle acontecem inteiramente
+                    // fora do IT Guardian, pelo cliente nativo conectado com a senha
+                    // aplicada via comando "rustdesk_set_password" (ApplyCommands). Esta
+                    // thread continua viva so para detectar o fim da sessao e tratar
+                    // chat -- nunca captura nem envia tela por este transporte.
+                    bool useRustdesk = string.Equals(commands.transport, "rustdesk", StringComparison.OrdinalIgnoreCase);
+
                     bool useWebrtc = string.Equals(commands.transport, "webrtc", StringComparison.OrdinalIgnoreCase);
                     if (useWebrtc && !webrtcRequested)
                     {
@@ -1109,12 +1143,13 @@ namespace ITGuardian.Windows
                     // ja foi solicitado com sucesso num ciclo anterior, ou a
                     // chamada acima acabou de pedir para iniciar -- nos dois
                     // casos ele e quem fica responsavel pelo video.
-                    if (!useWebrtc && !capturePaused) CaptureAndSendFrame();
+                    if (!useWebrtc && !useRustdesk && !capturePaused) CaptureAndSendFrame();
                     consecutiveFailures = 0;
                 }
-                catch
+                catch (Exception loopError)
                 {
                     consecutiveFailures++;
+                    Log.BestEffort("ciclo de captura/transporte da assistencia remota (falha " + consecutiveFailures + " seguida)", loopError, Log.LevelWarn);
                     if (consecutiveFailures >= 8)
                     {
                         StopOnUiThread();
@@ -1185,6 +1220,16 @@ namespace ITGuardian.Windows
                     selectedMonitorId = command.monitorId;
                     continue;
                 }
+                if (command.type == "rustdesk_set_password")
+                {
+                    RustdeskController.SetSessionPassword(command.password, command.ttlSeconds);
+                    continue;
+                }
+                if (command.type == "rustdesk_clear_password")
+                {
+                    RustdeskController.ClearSessionPassword();
+                    continue;
+                }
                 if (response.controlEnabled) RemoteInput.Apply(command, selectedMonitorId);
             }
         }
@@ -1198,7 +1243,10 @@ namespace ITGuardian.Windows
                 ThreadPool.QueueUserWorkItem(delegate
                 {
                     try { LocalRemoteAssistanceClient.Call<object>("end", sessionId, null); }
-                    catch { }
+                    catch (Exception endError)
+                    {
+                        Log.BestEffort("encerrar a sessao " + sessionId + " no canal local", endError);
+                    }
                 });
             }
             ResetUi();
@@ -1218,6 +1266,9 @@ namespace ITGuardian.Windows
             qualityHint = null;
             capturePaused = false;
             webrtcRequested = false;
+            // Defesa em profundidade alem do TTL/comando de revogacao: o fim
+            // local da sessao (por qualquer motivo) tambem derruba a senha.
+            if (RustdeskController.HasActiveSessionPassword) RustdeskController.ClearSessionPassword();
             RemoteInput.SetInputBlocked(false);
             trayIcon.Text = "IT Guardian ativo";
             if (indicator != null)

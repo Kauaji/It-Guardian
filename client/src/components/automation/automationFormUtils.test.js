@@ -166,20 +166,14 @@ describe("validateAutomationPlanDraft", () => {
   });
 
   it("acusa erro quando custom_days tem um intervalo fora do intervalo 1-365", () => {
-    const tooLow = validateAutomationPlanDraft(
-      validPlanDraft({ recurrenceType: "custom_days", recurrenceIntervalDays: 0 })
-    );
-    const tooHigh = validateAutomationPlanDraft(
-      validPlanDraft({ recurrenceType: "custom_days", recurrenceIntervalDays: 400 })
-    );
+    const tooLow = validateAutomationPlanDraft(validPlanDraft({ recurrenceType: "custom_days", recurrenceIntervalDays: 0 }));
+    const tooHigh = validateAutomationPlanDraft(validPlanDraft({ recurrenceType: "custom_days", recurrenceIntervalDays: 400 }));
     expect(tooLow.recurrenceIntervalDays).toBeDefined();
     expect(tooHigh.recurrenceIntervalDays).toBeDefined();
   });
 
   it("aceita custom_days com um intervalo valido", () => {
-    const errors = validateAutomationPlanDraft(
-      validPlanDraft({ recurrenceType: "custom_days", recurrenceIntervalDays: 10 })
-    );
+    const errors = validateAutomationPlanDraft(validPlanDraft({ recurrenceType: "custom_days", recurrenceIntervalDays: 10 }));
     expect(errors.recurrenceIntervalDays).toBeUndefined();
   });
 
@@ -210,9 +204,7 @@ describe("validateAutomationOverrideDraft", () => {
   });
 
   it("acusa erro quando custom_days tem um intervalo fora do intervalo 1-365", () => {
-    const errors = validateAutomationOverrideDraft(
-      validOverrideDraft({ recurrenceType: "custom_days", recurrenceIntervalDays: 400 })
-    );
+    const errors = validateAutomationOverrideDraft(validOverrideDraft({ recurrenceType: "custom_days", recurrenceIntervalDays: 400 }));
     expect(errors.recurrenceIntervalDays).toBeDefined();
   });
 

@@ -41,12 +41,18 @@ test("fetchServiceOrdersSla nao inventa tempo medio quando nenhuma OS tem os doi
 });
 
 test("status com nomes iguais preservam IDs distintos para selecao sem ambiguidade", async () => {
-  const result = await fetchServiceOrdersByStatus({}, fakeCtx({
-    serviceOrders: [order({ status: "waiting_a" }), order({ id: "os-2", status: "waiting_b" })],
-    serviceOrderSettings: {
-      statuses: [{ id: "waiting_a", name: "Aguardando" }, { id: "waiting_b", name: "Aguardando" }]
-    }
-  }));
+  const result = await fetchServiceOrdersByStatus(
+    {},
+    fakeCtx({
+      serviceOrders: [order({ status: "waiting_a" }), order({ id: "os-2", status: "waiting_b" })],
+      serviceOrderSettings: {
+        statuses: [
+          { id: "waiting_a", name: "Aguardando" },
+          { id: "waiting_b", name: "Aguardando" }
+        ]
+      }
+    })
+  );
   assert.deepEqual(result.rows, [
     { status: "waiting_a", label: "Aguardando", count: 1 },
     { status: "waiting_b", label: "Aguardando", count: 1 }
@@ -56,10 +62,7 @@ test("status com nomes iguais preservam IDs distintos para selecao sem ambiguida
 test("fetchServiceOrdersSla calcula o tempo medio de resolucao real quando ha OS finalizadas", async () => {
   const createdAt = new Date(Date.now() - 120 * 60000).toISOString();
   const closedAt = new Date().toISOString();
-  const result = await fetchServiceOrdersSla(
-    {},
-    fakeCtx({ serviceOrders: [order({ status: "closed", createdAt, closedAt })] })
-  );
+  const result = await fetchServiceOrdersSla({}, fakeCtx({ serviceOrders: [order({ status: "closed", createdAt, closedAt })] }));
   assert.ok(result.averageResolutionMinutes >= 119 && result.averageResolutionMinutes <= 121);
 });
 
@@ -67,10 +70,7 @@ test("fetchServiceOrdersOverdue so lista OS abertas com slaDueAt real no passado
   const overdueOrder = order({ id: "os-overdue", status: "open", slaDueAt: new Date(Date.now() - 60 * 60000).toISOString() });
   const onTrackOrder = order({ id: "os-on-track", status: "open", slaDueAt: new Date(Date.now() + 60 * 60000).toISOString() });
   const noSlaOrder = order({ id: "os-no-sla", status: "open" });
-  const result = await fetchServiceOrdersOverdue(
-    {},
-    fakeCtx({ serviceOrders: [overdueOrder, onTrackOrder, noSlaOrder] })
-  );
+  const result = await fetchServiceOrdersOverdue({}, fakeCtx({ serviceOrders: [overdueOrder, onTrackOrder, noSlaOrder] }));
   assert.equal(result.total, 1);
   assert.equal(result.rows.length, 1);
   assert.equal(result.rows[0].id, "os-overdue");

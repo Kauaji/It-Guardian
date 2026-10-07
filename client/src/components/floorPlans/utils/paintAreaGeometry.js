@@ -9,7 +9,9 @@ export function cellKey(column, row) {
 }
 
 export function parseCellKey(key) {
-  const [column, row] = String(key || "0:0").split(":").map(Number);
+  const [column, row] = String(key || "0:0")
+    .split(":")
+    .map(Number);
   return { column, row };
 }
 
@@ -92,25 +94,39 @@ export function getPaintRuns(cells = []) {
     rows.get(row).push(column);
   });
   const runs = [];
-  [...rows.entries()].sort(([left], [right]) => left - right).forEach(([row, columns]) => {
-    const sorted = [...new Set(columns)].sort((left, right) => left - right);
-    let startColumn = sorted[0];
-    let endColumn = sorted[0];
-    sorted.slice(1).forEach((column) => {
-      if (column === endColumn + 1) {
+  [...rows.entries()]
+    .sort(([left], [right]) => left - right)
+    .forEach(([row, columns]) => {
+      const sorted = [...new Set(columns)].sort((left, right) => left - right);
+      let startColumn = sorted[0];
+      let endColumn = sorted[0];
+      sorted.slice(1).forEach((column) => {
+        if (column === endColumn + 1) {
+          endColumn = column;
+          return;
+        }
+        runs.push({ row, startColumn, endColumn });
+        startColumn = column;
         endColumn = column;
-        return;
-      }
-      runs.push({ row, startColumn, endColumn });
-      startColumn = column;
-      endColumn = column;
+      });
+      if (startColumn !== undefined) runs.push({ row, startColumn, endColumn });
     });
-    if (startColumn !== undefined) runs.push({ row, startColumn, endColumn });
-  });
   return runs;
 }
 
-export function createPaintAreaZone({ id, planId, floorId, areaType, name, color, cells, cellSize = DEFAULT_CELL_SIZE, groupId = null, segmentId = null, parentAreaId = null }) {
+export function createPaintAreaZone({
+  id,
+  planId,
+  floorId,
+  areaType,
+  name,
+  color,
+  cells,
+  cellSize = DEFAULT_CELL_SIZE,
+  groupId = null,
+  segmentId = null,
+  parentAreaId = null
+}) {
   const normalizedCells = uniqueCells(cells);
   return {
     id,
@@ -138,9 +154,11 @@ export function createPaintAreaZone({ id, planId, floorId, areaType, name, color
 }
 
 export function findPaintAreaAtPoint(zones = [], point, areaType = null) {
-  return zones.find((zone) => {
-    if (!isPaintAreaZone(zone) || (areaType && zone.zoneType !== areaType)) return false;
-    const size = getPaintCellSize(zone);
-    return getPaintCells(zone).includes(cellKey(Math.floor(point.x / size), Math.floor(point.y / size)));
-  }) || null;
+  return (
+    zones.find((zone) => {
+      if (!isPaintAreaZone(zone) || (areaType && zone.zoneType !== areaType)) return false;
+      const size = getPaintCellSize(zone);
+      return getPaintCells(zone).includes(cellKey(Math.floor(point.x / size), Math.floor(point.y / size)));
+    }) || null
+  );
 }

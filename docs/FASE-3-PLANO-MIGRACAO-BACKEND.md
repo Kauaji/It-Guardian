@@ -1,5 +1,7 @@
 # Fase 3 - Plano de Migracao para Backend
 
+> **Documento histórico.** Descreve o estado do projeto numa data passada e pode estar desatualizado; a fonte da verdade é o código e os documentos listados em [docs/README.md](README.md).
+
 Plano tecnico baseado na auditoria da Fase 3. Este documento nao implementa
 migracao e nao altera funcionalidades. Ele organiza a ordem segura para mover
 regras importantes do IT Guardian para o backend.

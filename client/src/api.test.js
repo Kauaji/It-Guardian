@@ -20,20 +20,14 @@ describe("configuração pública da API", () => {
   });
 
   it("usa a API da mesma origem quando um build público recebe localhost", () => {
-    expect(resolveApiBaseUrl({ configuredUrl: "http://localhost:4000", isDev: false })).toBe(
-      "/api"
-    );
+    expect(resolveApiBaseUrl({ configuredUrl: "http://localhost:4000", isDev: false })).toBe("/api");
   });
 
   it("preserva localhost durante o desenvolvimento", () => {
-    expect(resolveApiBaseUrl({ configuredUrl: "http://localhost:4000", isDev: true })).toBe(
-      "http://localhost:4000"
-    );
+    expect(resolveApiBaseUrl({ configuredUrl: "http://localhost:4000", isDev: true })).toBe("http://localhost:4000");
   });
 
   it("aceita uma API pública configurada", () => {
-    expect(
-      resolveApiBaseUrl({ configuredUrl: "https://api.itguardian.example", isDev: false })
-    ).toBe("https://api.itguardian.example");
+    expect(resolveApiBaseUrl({ configuredUrl: "https://api.itguardian.example", isDev: false })).toBe("https://api.itguardian.example");
   });
 });

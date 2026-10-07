@@ -6,7 +6,8 @@ export const DEFAULT_INVENTORY_TAB_ID = "tab-default";
 export const DEFAULT_INVENTORY_TAB_NAME = "Novo ambiente";
 export const DEFAULT_INVENTORY_TAB_COLOR = "#2563eb";
 
-function normalizeColor(color) { return /^#[0-9a-f]{6}$/i.test(color || "") ? color : DEFAULT_INVENTORY_TAB_COLOR;
+function normalizeColor(color) {
+  return /^#[0-9a-f]{6}$/i.test(color || "") ? color : DEFAULT_INVENTORY_TAB_COLOR;
 }
 
 function normalizeName(name) {
@@ -107,12 +108,7 @@ export async function createInventoryTab({ id, name, color, sortOrder, userId })
       VALUES ($1, $2, $3, $4, TRUE, $5)
       RETURNING id, name, color, sort_order, active, is_default, created_at, updated_at
     `,
-    [id ? String(id) : randomUUID(),
-      cleanName,
-      normalizeColor(color),
-      normalizeSortOrder(sortOrder, await nextSortOrder()),
-      userId
-    ]
+    [id ? String(id) : randomUUID(), cleanName, normalizeColor(color), normalizeSortOrder(sortOrder, await nextSortOrder()), userId]
   );
 
   return fromRow(result.rows[0]);
@@ -229,7 +225,8 @@ async function nextSortOrder() {
   return Number(result.rows[0].next_order || 0);
 }
 
-async function compactSortOrder() { const tabs = await listInventoryTabs({ includeInactive: true });
+async function compactSortOrder() {
+  const tabs = await listInventoryTabs({ includeInactive: true });
   await Promise.all(
     tabs.map((tab, index) =>
       query(
@@ -305,6 +302,14 @@ async function assertTabHasNoInventory(id) {
 }
 
 function fromRow(row) {
-  return { id: row.id, name: row.name, color: row.color || DEFAULT_INVENTORY_TAB_COLOR, order: Number(row.sort_order || 0), active: row.active !== false, isDefault: Boolean(row.is_default), createdAt: row.created_at, updatedAt: row.updated_at
+  return {
+    id: row.id,
+    name: row.name,
+    color: row.color || DEFAULT_INVENTORY_TAB_COLOR,
+    order: Number(row.sort_order || 0),
+    active: row.active !== false,
+    isDefault: Boolean(row.is_default),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
   };
 }

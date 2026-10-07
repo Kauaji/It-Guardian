@@ -3,15 +3,18 @@ import { useCallback, useState } from "react";
 export default function useUnsavedChanges(isDirty) {
   const [pendingAction, setPendingAction] = useState(null);
 
-  const requestAction = useCallback((action) => {
-    if (!isDirty) {
-      action();
-      return true;
-    }
+  const requestAction = useCallback(
+    (action) => {
+      if (!isDirty) {
+        action();
+        return true;
+      }
 
-    setPendingAction(() => action);
-    return false;
-  }, [isDirty]);
+      setPendingAction(() => action);
+      return false;
+    },
+    [isDirty]
+  );
 
   const continueEditing = useCallback(() => {
     setPendingAction(null);
@@ -30,4 +33,3 @@ export default function useUnsavedChanges(isDirty) {
     discardChanges
   };
 }
-

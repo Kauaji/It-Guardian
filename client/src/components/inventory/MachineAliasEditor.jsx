@@ -23,12 +23,21 @@ export default function MachineAliasEditor({ alias, originalName, onSave }) {
           value={value}
           onChange={(event) => setValue(event.target.value)}
           placeholder="Nome fantasia"
+          aria-label="Nome fantasia"
           autoFocus
         />
         <button type="button" onClick={save} title="Salvar nome fantasia" disabled={saving}>
           <Save size={14} />
         </button>
-        <button type="button" onClick={() => { setValue(alias || ""); setEditing(false); }} title="Cancelar" disabled={saving}>
+        <button
+          type="button"
+          onClick={() => {
+            setValue(alias || "");
+            setEditing(false);
+          }}
+          title="Cancelar"
+          disabled={saving}
+        >
           <X size={14} />
         </button>
       </div>

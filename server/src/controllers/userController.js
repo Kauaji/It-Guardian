@@ -1,8 +1,10 @@
+import { adminResetMfa } from "../services/mfaService.js";
 import {
   changeUserRole,
   createManagedUser,
   deactivateManagedUser,
   listAllUsers,
+  resetUserPasswordByAdmin,
   updateUserAccessById,
   updateUserPermissionsById
 } from "../services/userService.js";
@@ -56,6 +58,23 @@ export async function removeManaged(req, res, next) {
   try {
     const user = await deactivateManagedUser(req.params.id, req.user);
     res.json({ user });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function resetPassword(req, res, next) {
+  try {
+    res.json(await resetUserPasswordByAdmin(req.params.id, req.user));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function resetMfa(req, res, next) {
+  try {
+    await adminResetMfa(req.params.id, req.user, { ip: req.ip, userAgent: req.get("user-agent") || null });
+    res.status(204).end();
   } catch (error) {
     next(error);
   }

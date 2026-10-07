@@ -130,9 +130,7 @@ export function summarizeGroup(group, segments, devicesBySegment) {
 export function buildHierarchyTree({ groups = [], segments = [], devices = [] }) {
   const eligibleSegments = segments.filter(isTopologySegmentEligible);
   const eligibleSegmentIds = new Set(eligibleSegments.map((segment) => segment.id));
-  const devicesBySegment = groupDevicesBySegment(
-    devices.filter((device) => eligibleSegmentIds.has(device.segmentId))
-  );
+  const devicesBySegment = groupDevicesBySegment(devices.filter((device) => eligibleSegmentIds.has(device.segmentId)));
   const groupIds = new Set(groups.map((group) => group.id));
   const groupSummaries = groups.map((group) => summarizeGroup(group, eligibleSegments, devicesBySegment));
   const ungroupedSegments = eligibleSegments
@@ -145,13 +143,11 @@ export function buildHierarchyTree({ groups = [], segments = [], devices = [] })
     // Kept only as an empty compatibility field; operational queues are not
     // topology segments, and no inventory record is changed by this filter.
     maintenanceSegments: [],
-    tabStatus: computeTabStatus([
-      ...groupSummaries.map((group) => group.status),
-      ...ungroupedSegments.map((segment) => segment.status)
-    ]),
+    tabStatus: computeTabStatus([...groupSummaries.map((group) => group.status), ...ungroupedSegments.map((segment) => segment.status)]),
     groupCount: groupSummaries.length,
     segmentCount: groupSummaries.reduce((total, group) => total + group.segmentCount, 0) + ungroupedSegments.length,
-    deviceCount: groupSummaries.reduce((total, group) => total + group.deviceCount, 0)
-      + ungroupedSegments.reduce((total, segment) => total + segment.deviceCount, 0)
+    deviceCount:
+      groupSummaries.reduce((total, group) => total + group.deviceCount, 0) +
+      ungroupedSegments.reduce((total, segment) => total + segment.deviceCount, 0)
   };
 }

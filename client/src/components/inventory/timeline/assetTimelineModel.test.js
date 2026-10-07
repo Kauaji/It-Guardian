@@ -89,9 +89,7 @@ describe("groupTimelineEventsByDay", () => {
 describe("mergeObservationsIntoEvents", () => {
   it("converte observacoes em eventos de categoria observation e reordena por data", () => {
     const events = [makeEvent({ id: "1", occurredAt: "2026-01-05T00:00:00.000Z" })];
-    const observations = [
-      { id: "obs-1", text: "Trocado o cabo de rede", user: "Joao", createdAt: "2026-01-12T00:00:00.000Z" }
-    ];
+    const observations = [{ id: "obs-1", text: "Trocado o cabo de rede", user: "Joao", createdAt: "2026-01-12T00:00:00.000Z" }];
 
     const merged = mergeObservationsIntoEvents(events, observations);
 

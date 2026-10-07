@@ -4,11 +4,7 @@ import { getHostAlertsWithAcknowledgements } from "./alertService.js";
 import { listAssetHistory } from "../repositories/assetHistoryRepository.js";
 import { findDeviceMetadata, listDeviceMetadataMap } from "../repositories/deviceMetadataRepository.js";
 import { findManualAssetById, listManualAssets } from "../repositories/manualAssetRepository.js";
-import {
-  DEFAULT_SEGMENT_ID,
-  DEFAULT_SEGMENT_NAME,
-  listDeviceSegmentMap
-} from "../repositories/segmentRepository.js";
+import { DEFAULT_SEGMENT_ID, DEFAULT_SEGMENT_NAME, listDeviceSegmentMap } from "../repositories/segmentRepository.js";
 import { listAutomationIndicatorsByAssetIds } from "../repositories/automationIndicatorRepository.js";
 import { findAgentAssetById, listAgentAssets } from "../repositories/agentRepository.js";
 
@@ -24,12 +20,14 @@ export function deriveContactStatus(status, lastContactAt, now = Date.now()) {
 }
 
 function normalizeStatus(status) {
-  return {
-    online: "Online",
-    offline: "Offline",
-    problem: "Erro",
-    unknown: "Sem dados"
-  }[status] || status;
+  return (
+    {
+      online: "Online",
+      offline: "Offline",
+      problem: "Erro",
+      unknown: "Sem dados"
+    }[status] || status
+  );
 }
 
 function inferAssetType(host, inventory) {
@@ -60,20 +58,13 @@ function uniqueSources(...sources) {
 
 function sourceCollections(host, inventory) {
   return {
-    ...(host && host.source !== "ocs"
-      ? { zabbix: host.collectedAt || host.lastSeenAt || null }
-      : {}),
-    ...(inventory
-      ? { ocs: inventory.collectedAt || inventory.lastInventoryAt || null }
-      : {})
+    ...(host && host.source !== "ocs" ? { zabbix: host.collectedAt || host.lastSeenAt || null } : {}),
+    ...(inventory ? { ocs: inventory.collectedAt || inventory.lastInventoryAt || null } : {})
   };
 }
 
 function sourceConflicts(host, inventory) {
-  return [
-    ...(host?.sourceConflicts || []),
-    ...(inventory?.sourceConflicts || [])
-  ];
+  return [...(host?.sourceConflicts || []), ...(inventory?.sourceConflicts || [])];
 }
 
 function buildInventoryOnlyHost(inventory) {
@@ -144,9 +135,7 @@ function buildManualDevice(asset, segment, metadata) {
     metrics: null,
     lastPingAt,
     pingMessage:
-      status === "online"
-        ? "Ativo respondeu ao ultimo ping."
-        : "Nao respondeu ao ping. Verifique se o IP mudou ou configure reserva DHCP.",
+      status === "online" ? "Ativo respondeu ao ultimo ping." : "Nao respondeu ao ping. Verifique se o IP mudou ou configure reserva DHCP.",
     history: [
       { time: "08:00", status },
       { time: "09:00", status },
@@ -182,14 +171,9 @@ function agentStatus(asset) {
 
   const configuredMinutes = Number(process.env.AGENT_OFFLINE_AFTER_MINUTES || 10);
   const legacySeconds = Number(process.env.AGENT_OFFLINE_AFTER_SECONDS || 0);
-  const configuredThreshold = Math.max(
-    60,
-    legacySeconds > 0 ? legacySeconds : configuredMinutes * 60
-  );
+  const configuredThreshold = Math.max(60, legacySeconds > 0 ? legacySeconds : configuredMinutes * 60);
   const thresholdSeconds = Math.max(configuredThreshold, Number(asset.intervalSeconds || 60) * 3);
-  const connectionStatus = Date.now() - new Date(asset.lastSeenAt).getTime() <= thresholdSeconds * 1000
-    ? "online"
-    : "offline";
+  const connectionStatus = Date.now() - new Date(asset.lastSeenAt).getTime() <= thresholdSeconds * 1000 ? "online" : "offline";
   return deriveContactStatus(connectionStatus, asset.lastSeenAt);
 }
 
@@ -197,9 +181,7 @@ function buildAgentDevice(asset, segment, metadata) {
   const details = asset.inventoryDetails || {};
   const status = agentStatus(asset);
   const ramUsedPercent =
-    asset.memoryTotalBytes > 0 && asset.memoryUsedBytes != null
-      ? Math.round((asset.memoryUsedBytes / asset.memoryTotalBytes) * 100)
-      : null;
+    asset.memoryTotalBytes > 0 && asset.memoryUsedBytes != null ? Math.round((asset.memoryUsedBytes / asset.memoryTotalBytes) * 100) : null;
   const diskUsedPercent =
     asset.diskTotalBytes > 0 && asset.diskFreeBytes != null
       ? Math.round(((asset.diskTotalBytes - asset.diskFreeBytes) / asset.diskTotalBytes) * 100)
@@ -242,9 +224,7 @@ function buildAgentDevice(asset, segment, metadata) {
       architecture: asset.osArchitecture,
       cpuModel: asset.cpuModel,
       cpuCores: details.cpuCores ?? null,
-      ramGb: asset.memoryTotalBytes == null
-        ? null
-        : Math.round((asset.memoryTotalBytes / 1024 ** 3) * 10) / 10,
+      ramGb: asset.memoryTotalBytes == null ? null : Math.round((asset.memoryTotalBytes / 1024 ** 3) * 10) / 10,
       memoryHealth: details.memoryHealth || null,
       cpuDetails: details.cpu || {},
       memoryModules: details.memoryHealth?.moduleDetails || [],
@@ -253,21 +233,22 @@ function buildAgentDevice(asset, segment, metadata) {
       networkAdapters: Array.isArray(details.networkAdapters) ? details.networkAdapters : [],
       battery: details.battery || null,
       licenses: details.licenses || {},
-      officeVersion: [details.office?.name, details.office?.version, details.office?.architecture]
-        .filter(Boolean)
-        .join(" ") || null,
-      disks: Array.isArray(details.disks) && details.disks.length
-        ? details.disks
-        : asset.diskTotalBytes == null
-          ? []
-          : [{
-              label: "Disco do sistema",
-              name: "Disco do sistema",
-              totalBytes: asset.diskTotalBytes,
-              freeBytes: asset.diskFreeBytes,
-              sizeGb: Math.round((asset.diskTotalBytes / 1024 ** 3) * 10) / 10,
-              type: "Nao identificado"
-            }],
+      officeVersion: [details.office?.name, details.office?.version, details.office?.architecture].filter(Boolean).join(" ") || null,
+      disks:
+        Array.isArray(details.disks) && details.disks.length
+          ? details.disks
+          : asset.diskTotalBytes == null
+            ? []
+            : [
+                {
+                  label: "Disco do sistema",
+                  name: "Disco do sistema",
+                  totalBytes: asset.diskTotalBytes,
+                  freeBytes: asset.diskFreeBytes,
+                  sizeGb: Math.round((asset.diskTotalBytes / 1024 ** 3) * 10) / 10,
+                  type: "Nao identificado"
+                }
+              ],
       peripherals: Array.isArray(details.peripherals) ? details.peripherals : [],
       changeHistory: [],
       software: Array.isArray(details.software) ? details.software : [],
@@ -287,10 +268,7 @@ function mergeAgentDevice(baseDevice, agentDevice) {
       ...(baseDevice.sourceCollections || {}),
       ...(agentDevice.sourceCollections || {})
     },
-    sourceConflicts: [
-      ...(baseDevice.sourceConflicts || []),
-      ...(agentDevice.sourceConflicts || [])
-    ],
+    sourceConflicts: [...(baseDevice.sourceConflicts || []), ...(agentDevice.sourceConflicts || [])],
     upstreamSource: baseDevice.source,
     assetType: baseDevice.assetType || agentDevice.assetType,
     type: baseDevice.type || agentDevice.type,
@@ -300,12 +278,8 @@ function mergeAgentDevice(baseDevice, agentDevice) {
     hardware: {
       ...baseDevice.hardware,
       ...agentDevice.hardware,
-      peripherals: baseDevice.hardware?.peripherals?.length
-        ? baseDevice.hardware.peripherals
-        : agentDevice.hardware?.peripherals || [],
-      software: baseDevice.hardware?.software?.length
-        ? baseDevice.hardware.software
-        : agentDevice.hardware?.software || []
+      peripherals: baseDevice.hardware?.peripherals?.length ? baseDevice.hardware.peripherals : agentDevice.hardware?.peripherals || [],
+      software: baseDevice.hardware?.software?.length ? baseDevice.hardware.software : agentDevice.hardware?.software || []
     }
   };
 }
@@ -322,9 +296,7 @@ export async function listDevices({ search = "", status = "" }) {
   const term = search.trim().toLowerCase();
 
   const hostIds = new Set(hosts.map((host) => String(host.id)));
-  const inventoryOnlyHosts = inventory
-    .filter((item) => !hostIds.has(String(item.hostId)))
-    .map(buildInventoryOnlyHost);
+  const inventoryOnlyHosts = inventory.filter((item) => !hostIds.has(String(item.hostId))).map(buildInventoryOnlyHost);
   const monitoredHosts = [...hosts, ...inventoryOnlyHosts];
 
   const baseDevices = [
@@ -375,10 +347,11 @@ export async function listDevices({ search = "", status = "" }) {
         device.agent?.environment,
         device.agent?.group,
         ...(device.dataSources || [])
-      ].filter(Boolean).join(" ").toLowerCase();
-      const matchesSearch =
-        !term ||
-        searchable.includes(term);
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      const matchesSearch = !term || searchable.includes(term);
 
       const matchesStatus = !status || device.status === status;
       return matchesSearch && matchesStatus;
@@ -402,9 +375,7 @@ export async function getDeviceDetails(id) {
     if (metadata?.removedAt) return null;
 
     const hostDevice = enrichDevice(host, inventory, deviceSegments.get(host.id), metadata);
-    const device = agentAsset
-      ? mergeAgentDevice(hostDevice, buildAgentDevice(agentAsset, deviceSegments.get(id), metadata))
-      : hostDevice;
+    const device = agentAsset ? mergeAgentDevice(hostDevice, buildAgentDevice(agentAsset, deviceSegments.get(id), metadata)) : hostDevice;
     return {
       ...device,
       automationIndicators,
@@ -419,12 +390,8 @@ export async function getDeviceDetails(id) {
     return null;
   }
 
-  const baseDevice = manualAsset
-    ? buildManualDevice(manualAsset, deviceSegments.get(manualAsset.id), metadata)
-    : null;
-  const device = agentAsset
-    ? mergeAgentDevice(baseDevice, buildAgentDevice(agentAsset, deviceSegments.get(id), metadata))
-    : baseDevice;
+  const baseDevice = manualAsset ? buildManualDevice(manualAsset, deviceSegments.get(manualAsset.id), metadata) : null;
+  const device = agentAsset ? mergeAgentDevice(baseDevice, buildAgentDevice(agentAsset, deviceSegments.get(id), metadata)) : baseDevice;
 
   return {
     ...device,
