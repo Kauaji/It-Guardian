@@ -216,7 +216,8 @@ describe("lista e navegacao de plantas", () => {
     const { container } = await openEditor({ editing: false });
     expect(api.fetchFloorPlans).toHaveBeenCalledWith("tok", "tab-1");
     expect(api.fetchFloorPlan).toHaveBeenCalledWith("tok", "plan-1");
-    expect(window.location.pathname).toBe("/plantas/plan-1");
+    // A URL e sincronizada em um useEffect (passivo): pode rodar depois do commit que mostra o editor.
+    await waitFor(() => expect(window.location.pathname).toBe("/plantas/plan-1"));
     expect(screen.queryByRole("navigation", { name: "Catálogo da planta" })).toBeNull();
     expect(screen.getByRole("button", { name: "Editar planta" })).toBeInTheDocument();
     expect(container.querySelector(".floor-plan-editor-layout.view-only")).toBeInTheDocument();
@@ -224,7 +225,7 @@ describe("lista e navegacao de plantas", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Editar planta" }));
     expect(await screen.findByRole("navigation", { name: "Catálogo da planta" })).toBeInTheDocument();
-    expect(window.location.pathname).toBe("/plantas/plan-1/editor");
+    await waitFor(() => expect(window.location.pathname).toBe("/plantas/plan-1/editor"));
     expect(container.querySelector(".floor-plan-editor-layout.editing")).toBeInTheDocument();
   });
 
@@ -258,7 +259,7 @@ describe("lista e navegacao de plantas", () => {
       })
     );
     expect(notify).toHaveBeenCalledWith("Planta criada.", "ok");
-    expect(window.location.pathname).toBe("/plantas/plan-1/editor");
+    await waitFor(() => expect(window.location.pathname).toBe("/plantas/plan-1/editor"));
   });
 
   it("filtra a lista, duplica e exclui plantas", async () => {
