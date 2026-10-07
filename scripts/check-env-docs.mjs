@@ -2,8 +2,9 @@
 // (como `NOME=` ou em comentario `# NOME`). Variavel nova sem documentacao quebra o CI.
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sourceDir = path.join(root, "server", "src");
 const examplePath = path.join(root, "server", ".env.example");
 

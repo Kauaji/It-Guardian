@@ -5,9 +5,10 @@
 //  4. cada job tem runs-on ou uses.
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { parse } from "yaml";
 
-const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const errors = [];
 const rootScripts = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")).scripts || {};
 

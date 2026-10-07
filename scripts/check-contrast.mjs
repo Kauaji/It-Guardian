@@ -11,10 +11,11 @@
 // Uso: node scripts/check-contrast.mjs [--verbose]
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import process from "node:process";
 import { composite, contrastRatio, readVariableBlocks, resolveColor, toHex } from "./lib/contrast.mjs";
 
-const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const tokensFile = process.env.CONTRAST_TOKENS_FILE || path.join(root, "client", "src", "styles", "tokens.css");
 const tokensCss = fs.readFileSync(tokensFile, "utf8");
 const light = readVariableBlocks(tokensCss, /^:root$/);
