@@ -20,7 +20,7 @@ COPY shared ./shared
 WORKDIR /app/client
 RUN npm run build
 
-FROM nginx:1.27-alpine
+FROM nginx:1.31-alpine
 
 COPY client/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/client/dist /usr/share/nginx/html
