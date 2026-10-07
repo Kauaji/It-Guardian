@@ -4,8 +4,10 @@
 
 1. **Esquema legado congelado** (`server/src/schema/legacy/*`): o que existia antes das migrações numeradas
    (~250 DDLs, 11 módulos por domínio). Roda **uma vez por banco**; ao terminar grava o marcador
-   `000-legacy-schema-frozen` em `schema_migrations` e as próximas partidas o pulam. Um advisory lock impede duas
-   instâncias frias de executarem DDL ao mesmo tempo.
+   `000-legacy-schema-frozen` em `schema_migrations` e as próximas partidas o pulam. Todo o DDL é idempotente (`IF NOT EXISTS`), então
+   partidas frias simultâneas podem executá-lo sem risco. Não se segura conexão dedicada nem lock durante a execução: em
+   serverless (Vercel) o pool tem **uma** conexão e isso trava até o timeout (regressão coberta por
+   `single-connection-pool.test.mjs`).
 2. **Migrações numeradas** (`server/src/migrations/NNN-nome.js`, registradas em `migrations/index.js`): aplicadas em
    ordem, cada uma dentro da transação do runner com advisory lock; o id fica em `schema_migrations`.
 

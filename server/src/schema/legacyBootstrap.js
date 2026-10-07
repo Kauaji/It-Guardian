@@ -1,5 +1,4 @@
-import { withConnection, query } from "../database.js";
-import { resolveDatabaseConfig } from "../config/environment.js";
+import { query } from "../database.js";
 import { logger } from "../lib/logger.js";
 import { runLegacySchema } from "./legacy/index.js";
 
@@ -10,7 +9,6 @@ import { runLegacySchema } from "./legacy/index.js";
  * congelado, mudancas novas de esquema entram como migracao numerada.
  */
 export const LEGACY_SCHEMA_MARKER = "000-legacy-schema-frozen";
-const LEGACY_LOCK_KEY = 813_724_600;
 
 export async function ensureMigrationsTable(db = query) {
   // O pg-mem recusa `CREATE TABLE IF NOT EXISTS` sobre tabela existente; checar antes serve aos dois motores.
@@ -35,20 +33,12 @@ export async function initializeDatabase() {
   await ensureMigrationsTable();
   if (await isLegacySchemaApplied()) return { skipped: true };
 
-  const postgres = resolveDatabaseConfig().mode === "postgres";
-  // Varias instancias frias subindo juntas nao devem disputar DDL: o lock
-  // fica numa conexao dedicada (so serve de mutex) enquanto o trabalho usa o pool.
-  return withConnection(async (db) => {
-    if (postgres) await db("SELECT pg_advisory_lock($1)", [LEGACY_LOCK_KEY]);
-    try {
-      if (await isLegacySchemaApplied()) return { skipped: true };
-      const startedAt = Date.now();
-      await runLegacySchema();
-      await query("INSERT INTO schema_migrations (id) VALUES ($1) ON CONFLICT (id) DO NOTHING", [LEGACY_SCHEMA_MARKER]);
-      logger.info("legacy_schema_applied", { durationMs: Date.now() - startedAt });
-      return { skipped: false };
-    } finally {
-      if (postgres) await db("SELECT pg_advisory_unlock($1)", [LEGACY_LOCK_KEY]);
-    }
-  });
+  // ATENCAO: nao segurar uma conexao dedicada (advisory lock) enquanto o esquema roda: em serverless (Vercel) o pool
+  // tem UMA conexao, e o esquema usa o pool -- isso trava ate estourar o timeout de conexao. O DDL legado e idempotente
+  // (IF NOT EXISTS), entao partidas frias simultaneas podem executa-lo sem risco; so a primeira grava o marcador.
+  const startedAt = Date.now();
+  await runLegacySchema();
+  await query("INSERT INTO schema_migrations (id) VALUES ($1) ON CONFLICT (id) DO NOTHING", [LEGACY_SCHEMA_MARKER]);
+  logger.info("legacy_schema_applied", { durationMs: Date.now() - startedAt });
+  return { skipped: false };
 }

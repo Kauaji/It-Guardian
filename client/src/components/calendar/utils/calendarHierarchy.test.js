@@ -24,7 +24,7 @@ describe("calendarHierarchy", () => {
   it("normaliza nomes sem acento e identifica segmento de manutenção", () => {
     expect(normalizedName("  Manutenção ")).toBe("manutencao");
     expect(normalizedName()).toBe("");
-    expect(isMaintenanceSegment({ name: "MANUTENÇÃO" })).toBe(true);
+    expect(isMaintenanceSegment({ name: "MANUTEN\u00c7\u00c3O" })).toBe(true);
     expect(isMaintenanceSegment(undefined)).toBe(false);
   });
 
