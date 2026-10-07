@@ -169,7 +169,7 @@ jobs:
           Get-Content dist/release-manifest.json
           Write-Host "Publique version/url/sha256/signature nas variaveis AGENT_LATEST_VERSION, AGENT_LATEST_VERSION_URL, AGENT_LATEST_VERSION_SHA256 e AGENT_LATEST_VERSION_SIGNATURE do servidor, DEPOIS de hospedar dist/ITGuardian.exe na URL acima."
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: itguardian-windows-agent
           path: dist/
