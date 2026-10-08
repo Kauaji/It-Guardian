@@ -13,9 +13,9 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  NODE_ENV: test
-  JWT_SECRET: ci-only-secret-with-at-least-32-characters
+# Atencao: NAO defina NODE_ENV no nivel do workflow. Com NODE_ENV=test o `vite build` empacota o React em
+# modo desenvolvimento (+60 kB gzip) e o check:bundle estoura. NODE_ENV/JWT_SECRET ficam so nos jobs/passos
+# de teste que precisam deles (server e test:e2e).
 
 jobs:
   static:
@@ -62,6 +62,8 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
+      NODE_ENV: test
+      JWT_SECRET: ci-only-secret-with-at-least-32-characters
       # Cada arquivo de teste cria o proprio banco isolado quando TEST_PG_ADMIN_URL existe (ver ADR 0006).
       TEST_PG_ADMIN_URL: ${{ matrix.db == 'postgres' && 'postgres://itguardian:itguardian@127.0.0.1:5432/postgres' || '' }}
     steps:
@@ -118,6 +120,9 @@ jobs:
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+        env:
+          NODE_ENV: test
+          JWT_SECRET: ci-only-secret-with-at-least-32-characters
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

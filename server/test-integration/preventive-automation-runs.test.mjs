@@ -210,14 +210,19 @@ test("preparo recusa plano inativo, inexistente, com script inativo ou maquina s
 });
 
 test("processamento de vencidos prepara so as agendas vencidas e reagenda", async () => {
+  const dueAt = new Date(Date.now() - 2 * 3600 * 1000);
+  // O horario preferido do plano acompanha o vencimento (em UTC). Um vencimento fora do horario preferido
+  // (padrao 08:00 America/Sao_Paulo) faz a "proxima ocorrencia" cair em hoje, as vezes ja no passado: o teste
+  // falhava so entre 08:00 e 10:00 de Brasilia.
   const plan = await createPlan({
     name: "Plano com agenda vencida",
     scopeType: "asset_list",
     assetIds: ["rn-a1", "rn-a2"],
     recurrenceType: "weekly",
+    preferredTime: dueAt.toISOString().slice(11, 16),
+    timezone: "UTC",
     indicatorColor: "#0a1b31"
   });
-  const dueAt = new Date(Date.now() - 2 * 3600 * 1000);
   await fx.setScheduleNextRun(plan.id, "rn-a1", dueAt.toISOString());
 
   const due = await repository.listDuePreventiveAutomationPlans(new Date());

@@ -15,9 +15,10 @@
 // Uso: node scripts/check-ui-accents.mjs
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import process from "node:process";
 
-const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const srcDir = path.join(root, "client", "src");
 
 // termo sem acento -> forma correta. Lista curada: so entram palavras que NAO existem sem acento em
@@ -193,4 +194,4 @@ function main() {
   console.log(`check-ui-accents: OK. ${files.length} arquivos de client/src verificados, ${Object.keys(TERMS).length} termos na lista.`);
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname)) main();
+if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url))) main();

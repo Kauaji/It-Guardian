@@ -1,0 +1,17 @@
+# Fim de linha LF em todo texto, em qualquer sistema. O CI roda em Linux e o Prettier
+# exige LF (.prettierrc.json: endOfLine "lf"); sem isto, o Git no Windows (autocrlf)
+# grava CRLF na copia local e format:check / testes de hash falham so na maquina do dev.
+* text=auto eol=lf
+
+# Binarios: nunca converter.
+*.glb binary
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.zip binary
+*.exe binary
+*.dll binary
