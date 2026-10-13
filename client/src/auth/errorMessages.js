@@ -16,6 +16,10 @@ export const identityMessages = {
   MFA_ALREADY_ENABLED: "A verificação em duas etapas já está ativa.",
   MFA_NOT_ENABLED: "A verificação em duas etapas não está ativa.",
   MFA_SETUP_NOT_STARTED: "A configuração expirou. Comece de novo.",
+  RESET_TOKEN_INVALID: "Este link de redefinição é inválido ou expirou. Peça um novo link.",
+  INVALID_EMAIL: "Informe um e-mail válido.",
+  MAIL_NOT_CONFIGURED: "O envio de e-mail não está configurado neste servidor. Use a senha temporária.",
+  MAIL_SEND_FAILED: "Não foi possível enviar o e-mail agora. Tente novamente em instantes.",
   NETWORK_ERROR: "Não foi possível conectar ao servidor. Verifique a conexão e tente novamente."
 };
 

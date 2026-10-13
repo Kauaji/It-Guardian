@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Copy, KeyRound, ShieldOff, TriangleAlert } from "lucide-react";
+import { Copy, KeyRound, Mail, ShieldOff, TriangleAlert } from "lucide-react";
 import { adminResetMfa, adminResetPassword } from "../../api/identityApi.js";
+import { adminSendResetLink, fetchAuthOptions } from "../../api/passwordRecoveryApi.js";
 import { copyText } from "../../auth/clipboard.js";
 import { describeIdentityError } from "../../auth/errorMessages.js";
 import FormMessage from "../auth/FormMessage.jsx";
@@ -84,8 +85,32 @@ export default function UserSecurityActions({ token, target, currentUserId, disa
   const [dialog, setDialog] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [mailEnabled, setMailEnabled] = useState(false);
+
+  // So oferece o envio por e-mail quando o servidor tem SMTP configurado.
+  useEffect(() => {
+    let active = true;
+    Promise.resolve(fetchAuthOptions())
+      .then((options) => active && setMailEnabled(Boolean(options?.passwordReset?.enabled)))
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   if (!target || target.id === currentUserId) return null;
+
+  async function sendLink() {
+    setBusy(true);
+    try {
+      await adminSendResetLink(token, target.id);
+      notify(`Link de redefinição enviado para ${target.email}.`, "ok");
+    } catch (failure) {
+      notify(describeIdentityError(failure), "danger");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   function close() {
     setDialog(null);
@@ -122,6 +147,17 @@ export default function UserSecurityActions({ token, target, currentUserId, disa
       >
         <KeyRound size={14} aria-hidden="true" /> Redefinir senha
       </button>
+      {mailEnabled && (
+        <button
+          type="button"
+          className="secondary-action compact-action"
+          disabled={disabled || busy}
+          onClick={sendLink}
+          aria-label={`Enviar link de redefinição para ${target.name}`}
+        >
+          <Mail size={14} aria-hidden="true" /> Enviar link por e-mail
+        </button>
+      )}
       {target.mfaEnabled && (
         <button
           type="button"

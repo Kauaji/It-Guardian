@@ -3,17 +3,20 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import * as identity from "../api/identityApi.js";
+import * as recovery from "../api/passwordRecoveryApi.js";
 import { generateQrDataUrl } from "../auth/qrCode.js";
 import { copyText } from "../auth/clipboard.js";
 import AccountSecurityPage from "../components/auth/AccountSecurityPage.jsx";
 import AuthScreen from "../components/auth/AuthScreen.jsx";
 import ForcedPasswordChange from "../components/auth/ForcedPasswordChange.jsx";
+import ResetPasswordPage from "../components/auth/ResetPasswordPage.jsx";
 import MfaEnrollmentGate from "../components/auth/MfaEnrollmentGate.jsx";
 import UserMenu from "../components/auth/UserMenu.jsx";
 import { baseUser, renderWithSession } from "../test/identityHarness.jsx";
 import { expectNoAxeViolations } from "../test/axe.js";
 
 vi.mock("../api/identityApi.js");
+vi.mock("../api/passwordRecoveryApi.js");
 vi.mock("../auth/qrCode.js");
 vi.mock("../auth/clipboard.js");
 
@@ -49,6 +52,56 @@ describe("telas de identidade: axe WCAG 2.1 A/AA", () => {
   it("login", async () => {
     render(<AuthScreen onAuth={vi.fn()} notify={vi.fn()} />);
     await screen.findByLabelText("E-mail");
+    await expectNoAxeViolations();
+  });
+
+  it("esqueci minha senha (formulario, confirmacao e servidor sem e-mail)", async () => {
+    recovery.fetchAuthOptions.mockResolvedValue({ passwordReset: { enabled: true } });
+    recovery.requestPasswordReset.mockResolvedValue({ message: "ok" });
+    const user = userEvent.setup();
+    render(<AuthScreen onAuth={vi.fn()} notify={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: "Esqueci minha senha" }));
+    const emailField = await screen.findByLabelText("E-mail");
+    await user.clear(emailField); // em dev a tela vem preenchida com o e-mail demo
+    await user.type(emailField, "ana@empresa.com");
+    await expectNoAxeViolations();
+
+    await user.click(screen.getByRole("button", { name: "Enviar link de redefinição" }));
+    await screen.findByRole("heading", { name: "Verifique seu e-mail" });
+    await expectNoAxeViolations();
+
+    cleanup();
+    recovery.fetchAuthOptions.mockResolvedValue({ passwordReset: { enabled: false } });
+    render(<AuthScreen onAuth={vi.fn()} notify={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: "Esqueci minha senha" }));
+    await screen.findByText(/não está disponível neste servidor/);
+    await expectNoAxeViolations();
+  });
+
+  it("redefinir senha pelo link do e-mail (formulario, erro e link invalido)", async () => {
+    window.history.replaceState(null, "", "/redefinir-senha#token=" + "C".repeat(43));
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <ResetPasswordPage />
+      </MemoryRouter>
+    );
+    await screen.findByRole("heading", { name: "Escolha uma nova senha" });
+    await expectNoAxeViolations();
+
+    await user.type(screen.getByLabelText("Nova senha"), "curta");
+    await user.click(screen.getByRole("button", { name: "Salvar nova senha" }));
+    await screen.findByRole("alert");
+    await expectNoAxeViolations();
+
+    cleanup();
+    window.history.replaceState(null, "", "/redefinir-senha");
+    render(
+      <MemoryRouter>
+        <ResetPasswordPage />
+      </MemoryRouter>
+    );
+    await screen.findByRole("heading", { name: "Link inválido" });
     await expectNoAxeViolations();
   });
 

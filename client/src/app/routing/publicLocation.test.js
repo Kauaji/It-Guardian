@@ -38,4 +38,9 @@ describe("parsePublicLocation", () => {
     expect(parsePublicLocation({ pathname: "/abrir-chamado/extra" }).kind).toBeNull();
     expect(parsePublicLocation()).toMatchObject({ kind: null });
   });
+
+  it("reconhece a pagina de redefinicao de senha (link do e-mail)", () => {
+    expect(parsePublicLocation({ pathname: "/redefinir-senha" })).toMatchObject({ kind: "passwordReset", isPasswordReset: true });
+    expect(parsePublicLocation({ pathname: "/login" })).toMatchObject({ kind: null, isPasswordReset: false });
+  });
 });

@@ -2,10 +2,12 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as identity from "../../api/identityApi.js";
+import * as recovery from "../../api/passwordRecoveryApi.js";
 import { apiError } from "../../test/identityHarness.jsx";
 import AuthScreen from "./AuthScreen.jsx";
 
 vi.mock("../../api/identityApi.js");
+vi.mock("../../api/passwordRecoveryApi.js");
 
 const session = { user: { id: "u1", name: "Ana" }, token: "tok" };
 let onAuth;
@@ -252,5 +254,25 @@ describe("cadastro", () => {
     identity.register.mockRejectedValueOnce(apiError("SETUP_TOKEN_INVALID", 403));
     await user.click(screen.getByRole("button", { name: "Criar conta" }));
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Token de configuração inicial inválido."));
+  });
+});
+
+describe("esqueci minha senha", () => {
+  it("o link abre a recuperacao (so no modo login) e o botao Voltar retorna ao login", async () => {
+    recovery.fetchAuthOptions.mockResolvedValue({ passwordReset: { enabled: true } });
+    const user = setup();
+
+    await user.click(screen.getByRole("button", { name: "Esqueci minha senha" }));
+    expect(await screen.findByRole("heading", { name: "Recuperar senha" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Acessar painel" })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Voltar" }));
+    expect(await screen.findByRole("button", { name: "Acessar painel" })).toBeInTheDocument();
+  });
+
+  it("no cadastro do primeiro administrador o link nao aparece", async () => {
+    const user = setup();
+    await user.click(screen.getByRole("button", { name: "Cadastro" }));
+    expect(screen.queryByRole("button", { name: "Esqueci minha senha" })).toBeNull();
   });
 });

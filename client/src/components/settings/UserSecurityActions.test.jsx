@@ -2,11 +2,13 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as identity from "../../api/identityApi.js";
+import * as recovery from "../../api/passwordRecoveryApi.js";
 import { copyText } from "../../auth/clipboard.js";
 import { apiError } from "../../test/identityHarness.jsx";
 import UserSecurityActions from "./UserSecurityActions.jsx";
 
 vi.mock("../../api/identityApi.js");
+vi.mock("../../api/passwordRecoveryApi.js");
 vi.mock("../../auth/clipboard.js");
 
 const target = { id: "u2", name: "Bruno", email: "bruno@empresa.com", mfaEnabled: true };
@@ -99,5 +101,36 @@ describe("UserSecurityActions", () => {
     mount({ target: { ...target, mfaEnabled: false }, disabled: true });
     expect(screen.queryByRole("button", { name: /Redefinir MFA/ })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Redefinir senha/ })).toBeDisabled();
+  });
+});
+
+describe("UserSecurityActions: enviar link por e-mail", () => {
+  it("so aparece quando o servidor tem e-mail configurado e envia o link ao clicar", async () => {
+    recovery.fetchAuthOptions.mockResolvedValue({ passwordReset: { enabled: true } });
+    recovery.adminSendResetLink.mockResolvedValue({ sent: true });
+    const user = mount();
+
+    const button = await screen.findByRole("button", { name: "Enviar link de redefinição para Bruno" });
+    await user.click(button);
+
+    await waitFor(() => expect(recovery.adminSendResetLink).toHaveBeenCalledWith("tok-1", "u2"));
+    expect(notify).toHaveBeenCalledWith("Link de redefinição enviado para bruno@empresa.com.", "ok");
+  });
+
+  it("sem e-mail configurado o botao nao existe (a senha temporaria continua disponivel)", async () => {
+    recovery.fetchAuthOptions.mockResolvedValue({ passwordReset: { enabled: false } });
+    mount();
+    expect(await screen.findByRole("button", { name: "Redefinir senha de Bruno" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Enviar link de redefinição/ })).toBeNull();
+  });
+
+  it("falha no envio avisa o administrador sem fingir sucesso", async () => {
+    recovery.fetchAuthOptions.mockResolvedValue({ passwordReset: { enabled: true } });
+    recovery.adminSendResetLink.mockRejectedValue(apiError("MAIL_SEND_FAILED", 409, "Não foi possível enviar o e-mail agora."));
+    const user = mount();
+    await user.click(await screen.findByRole("button", { name: "Enviar link de redefinição para Bruno" }));
+    await waitFor(() =>
+      expect(notify).toHaveBeenCalledWith("Não foi possível enviar o e-mail agora. Tente novamente em instantes.", "danger")
+    );
   });
 });

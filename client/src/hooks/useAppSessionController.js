@@ -5,11 +5,12 @@ import { applyStoredGeneralPreferences, clearRuntimeAppearancePreferences } from
 
 const themeKey = "it_guardian_theme";
 
-export function useAppSessionController({ isPublicSupportPath, assetId }) {
+export function useAppSessionController({ isPublicSupportPath, assetId, isPasswordReset = false }) {
+  const skipSession = isPublicSupportPath || Boolean(assetId) || isPasswordReset;
   const initialAuthSession = useMemo(() => readAuthSession(), []);
   const [token, setToken] = useState(initialAuthSession.token);
   const [user, setUser] = useState(initialAuthSession.user);
-  const [authLoading, setAuthLoading] = useState(!isPublicSupportPath && !assetId);
+  const [authLoading, setAuthLoading] = useState(!skipSession);
   const [toast, setToast] = useState({ message: "", tone: "ok" });
   const [theme, setTheme] = useState(() => localStorage.getItem(themeKey) || "light");
 
@@ -40,7 +41,7 @@ export function useAppSessionController({ isPublicSupportPath, assetId }) {
   }, []);
 
   useEffect(() => {
-    if (isPublicSupportPath || assetId) {
+    if (skipSession) {
       setAuthLoading(false);
       return undefined;
     }
@@ -66,7 +67,7 @@ export function useAppSessionController({ isPublicSupportPath, assetId }) {
     return () => {
       active = false;
     };
-  }, [assetId, isPublicSupportPath]);
+  }, [skipSession]);
 
   useEffect(() => {
     if (isPublicSupportPath || !token || !user) {
