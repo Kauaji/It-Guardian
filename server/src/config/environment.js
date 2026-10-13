@@ -162,6 +162,27 @@ export function getAuthConfig(env = process.env) {
   };
 }
 
+/**
+ * Saida de e-mail (recuperacao de senha). Sem `SMTP_HOST` + `MAIL_FROM` o envio fica desligado e a tela
+ * "Esqueci minha senha" cai para a redefinicao feita por um administrador.
+ * @param {Env} [env]
+ */
+export function getMailConfig(env = process.env) {
+  const port = boundedInteger(env.SMTP_PORT, 587, 1, 65535);
+  const explicitSecure = String(env.SMTP_SECURE ?? "").trim();
+  return {
+    host: String(env.SMTP_HOST || "").trim(),
+    port,
+    // Porta 465 e TLS implicito; 587/25 usam STARTTLS (nodemailer negocia sozinho).
+    secure: explicitSecure ? isTruthyEnv(explicitSecure) : port === 465,
+    user: String(env.SMTP_USER || "").trim(),
+    password: String(env.SMTP_PASSWORD || ""),
+    from: String(env.MAIL_FROM || "").trim(),
+    devLog: isTruthyEnv(env.MAIL_DEV_LOG),
+    testRuntime: env.NODE_ENV === "test"
+  };
+}
+
 export function getFrontendUrl() {
   if (process.env.FRONTEND_URL) return process.env.FRONTEND_URL.replace(/\/$/, "");
   if (process.env.CLIENT_ORIGIN) return process.env.CLIENT_ORIGIN.replace(/\/$/, "");

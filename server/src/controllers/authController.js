@@ -7,6 +7,7 @@ import {
   registerFirstAdmin
 } from "../services/authService.js";
 import { endSessionOnLogout } from "../services/logoutService.js";
+import { getPasswordResetOptions, requestPasswordReset, resetPasswordWithToken } from "../services/passwordRecoveryService.js";
 import { beginMfaSetup, confirmMfaSetup, disableMfa, getMfaStatus, regenerateRecoveryCodes } from "../services/mfaService.js";
 import { listUserSessions, revokeSession, rotateSessionTokenIfNeeded } from "../services/sessionService.js";
 
@@ -49,6 +50,26 @@ export async function login(req, res, next) {
 export async function loginMfa(req, res, next) {
   try {
     sendSession(res, 200, await completeMfaLogin(req.body || {}, contextOf(req)));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export function authOptions(_req, res) {
+  res.json(getPasswordResetOptions());
+}
+
+export async function forgotPassword(req, res, next) {
+  try {
+    res.status(202).json(await requestPasswordReset(req.body?.email, contextOf(req)));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function resetPasswordByToken(req, res, next) {
+  try {
+    res.json(await resetPasswordWithToken(req.body || {}, contextOf(req)));
   } catch (error) {
     next(error);
   }

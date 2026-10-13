@@ -1,4 +1,5 @@
 import { adminResetMfa } from "../services/mfaService.js";
+import { sendResetLinkByAdmin } from "../services/passwordRecoveryService.js";
 import {
   changeUserRole,
   createManagedUser,
@@ -66,6 +67,14 @@ export async function removeManaged(req, res, next) {
 export async function resetPassword(req, res, next) {
   try {
     res.json(await resetUserPasswordByAdmin(req.params.id, req.user));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function sendResetLink(req, res, next) {
+  try {
+    res.json(await sendResetLinkByAdmin(req.params.id, req.user, { ip: req.ip, userAgent: req.get("user-agent") || null }));
   } catch (error) {
     next(error);
   }

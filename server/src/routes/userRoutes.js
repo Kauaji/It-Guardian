@@ -5,6 +5,7 @@ import {
   removeManaged,
   resetMfa,
   resetPassword,
+  sendResetLink,
   updateAccess,
   updatePermissions,
   updateRole
@@ -20,6 +21,7 @@ router.patch("/:id/permissions", updatePermissions);
 router.patch("/:id", updateAccess);
 router.patch("/:id/role", updateRole);
 router.post("/:id/reset-password", resetPassword);
+router.post("/:id/send-reset-link", sendResetLink);
 router.post("/:id/mfa/reset", resetMfa);
 router.delete("/:id", removeManaged);
 

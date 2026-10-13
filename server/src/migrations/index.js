@@ -37,6 +37,7 @@ import { migration032PhysicalHardwareFilter } from "./032-physical-hardware-filt
 import { migration033PhysicalComponentRefinement } from "./033-physical-component-refinement.js";
 import { migration034RustdeskTransport } from "./034-rustdesk-transport.js";
 import { migration035IdentityHardening } from "./035-identity-hardening.js";
+import { migration036AuthActionTokens } from "./036-auth-action-tokens.js";
 
 export const migrations = [
   migration001RuntimeFoundation,
@@ -74,7 +75,8 @@ export const migrations = [
   migration032PhysicalHardwareFilter,
   migration033PhysicalComponentRefinement,
   migration034RustdeskTransport,
-  migration035IdentityHardening
+  migration035IdentityHardening,
+  migration036AuthActionTokens
 ];
 
 /**

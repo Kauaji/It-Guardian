@@ -86,6 +86,12 @@ async function purgeAll(db, config, now) {
     where: "absolute_expires_at < $1 OR (revoked_at IS NOT NULL AND revoked_at < $1)",
     params: [daysAgo(config.authSessionDays, now)]
   });
+  // Links de e-mail (redefinicao de senha): vencidos ha mais de 7 dias, usados ou nao.
+  await purge("authActionTokens", {
+    table: "auth_action_tokens",
+    where: "expires_at < $1",
+    params: [daysAgo(7, now)]
+  });
   // So tokens de reautenticacao nunca usados: os usados ficam referenciados pela auditoria da assistencia remota.
   await purge("reauthTokens", {
     table: "security_reauthentications",

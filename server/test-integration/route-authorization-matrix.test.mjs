@@ -36,6 +36,10 @@ const publicRoutes = new Map([
   ["GET /metrics", [404]], // sem METRICS_TOKEN a rota nao existe
   ["POST /api/auth/login", [400, 401]],
   ["POST /api/auth/login/mfa", [401]],
+  // Recuperacao de senha: anonima por definicao (quem esqueceu a senha nao tem sessao).
+  ["GET /api/auth/options", [200]],
+  ["POST /api/auth/password/forgot", [400]],
+  ["POST /api/auth/password/reset", [400]],
   ["POST /api/auth/register", [400, 403]],
   ["GET /api/public/support-options", [200]],
   ["GET /api/public/machine-context", [400, 404]],

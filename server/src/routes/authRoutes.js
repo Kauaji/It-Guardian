@@ -1,6 +1,8 @@
 import { Router } from "express";
 import {
+  authOptions,
   changePassword,
+  forgotPassword,
   login,
   loginMfa,
   logout,
@@ -11,12 +13,13 @@ import {
   mfaSetup,
   mfaStatus,
   register,
+  resetPasswordByToken,
   revokeOneSession,
   revokeOtherSessions,
   sessions
 } from "../controllers/authController.js";
 import { requireAuth } from "../middleware/authMiddleware.js";
-import { authRateLimiter, createRateLimiter } from "../middleware/rateLimitMiddleware.js";
+import { authRateLimiter, createRateLimiter, passwordResetRateLimiter } from "../middleware/rateLimitMiddleware.js";
 
 const router = Router();
 
@@ -37,6 +40,9 @@ const sensitiveActionLimiter = createRateLimiter({
 router.post("/register", authRateLimiter, register);
 router.post("/login", authRateLimiter, login);
 router.post("/login/mfa", mfaRateLimiter, loginMfa);
+router.get("/options", authOptions);
+router.post("/password/forgot", passwordResetRateLimiter, forgotPassword);
+router.post("/password/reset", passwordResetRateLimiter, resetPasswordByToken);
 router.get("/me", requireAuth, me);
 router.post("/logout", requireAuth, logout);
 router.post("/password", requireAuth, sensitiveActionLimiter, changePassword);

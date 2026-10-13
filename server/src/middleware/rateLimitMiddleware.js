@@ -153,3 +153,11 @@ export const authRateLimiter = createRateLimiter({
       .toLowerCase()}`,
   name: "auth"
 });
+
+// Recuperacao de senha: limite por IP (independente do e-mail digitado), para nao servir de metralhadora de e-mails.
+export const passwordResetRateLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: positiveInteger(process.env.AUTH_RATE_LIMIT_MAX, 12),
+  keyGenerator: (req) => `${req.ip}:password-reset`,
+  name: "auth-password-reset"
+});
