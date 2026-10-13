@@ -1,6 +1,6 @@
 # Identidade e sessão
 
-Modelo ponta a ponta de autenticação do IT Guardian: login, sessões, bloqueio, política de senha, MFA (TOTP), recuperação, redefinição por administrador e como o cliente (React) reage a cada situação. Tudo aqui foi conferido no código; os arquivos de referência estão em cada seção.
+Modelo ponta a ponta de autenticação do IT Guardian: login, sessões, bloqueio, política de senha, MFA (TOTP), recuperação de senha por e-mail, redefinição por administrador e como o cliente (React) reage a cada situação. Tudo aqui foi conferido no código; os arquivos de referência estão em cada seção.
 
 ## Visão geral
 
@@ -96,6 +96,34 @@ Com `MFA_REQUIRED_FOR_ADMINS=true`, administrador sem MFA recebe **403 `MFA_ENRO
 - Perdeu o aparelho: entre com um **código de recuperação** (cada um funciona uma vez; consumo é registrado na auditoria `auth_recovery_code_used`) e gere novos códigos em "Segurança da conta".
 - Perdeu aparelho **e** códigos: um administrador usa "Redefinir MFA" (abaixo).
 
+## Recuperação de senha por e-mail
+
+Disponível quando o servidor tem e-mail configurado (`SMTP_HOST` + `MAIL_FROM`, ver [OPERATIONS.md](OPERATIONS.md)). Decisão e riscos em
+[ADR 0008](adr/0008-recuperacao-de-senha-por-email.md). Código: `services/passwordRecoveryService.js`, `services/mailService.js`,
+`repositories/actionTokenRepository.js`, `domain/actionToken.js`, `domain/accountEmails.js`; cliente: `ForgotPasswordPanel.jsx`, `ResetPasswordPage.jsx`.
+
+| Endpoint (públicos) | Função |
+| --- | --- |
+| `GET /api/auth/options` | `{ passwordReset: { enabled } }`: a tela só oferece o formulário se o e-mail estiver configurado. |
+| `POST /api/auth/password/forgot { email }` | Sempre `202` com a mesma mensagem (conta existente, inativa, inexistente ou e-mail desligado). `400 INVALID_EMAIL` só para formato inválido. |
+| `POST /api/auth/password/reset { token, newPassword }` | `200 { ok: true }`. `400 RESET_TOKEN_INVALID` (expirado, usado, desconhecido ou malformado: sempre a mesma resposta), `400 WEAK_PASSWORD`, `400 PASSWORD_REUSED`. |
+| `POST /api/users/:id/send-reset-link` (admin) | Envia o link a um usuário. `409 MAIL_NOT_CONFIGURED`, `409 USER_INACTIVE`, `409 MAIL_SEND_FAILED`. |
+
+Regras que importam:
+
+- **Token**: 256 bits, aparece só no e-mail; o banco (`auth_action_tokens`) guarda o SHA-256. Vale `PASSWORD_RESET_TTL_MINUTES` (30 por padrão),
+  é de **uso único** (consumo atômico) e um pedido novo invalida o anterior.
+- **Link**: `{FRONTEND_URL}/redefinir-senha#token=…`. A URL base vem da configuração (nunca de cabeçalhos da requisição) e o token fica no fragmento,
+  que o navegador não envia ao servidor; a página o remove da barra de endereços ao abrir.
+- **Limites**: por IP (`AUTH_RATE_LIMIT_MAX` em 15 min) e 3 links por conta por hora (acima disso a resposta continua neutra, mas nada é enviado).
+- **Ao redefinir**: aplica a política de senha **antes** de gastar o link (senha fraca não queima o token), recusa reuso da senha atual, grava, revoga **todas** as sessões,
+  limpa o bloqueio e envia um aviso "sua senha foi alterada" (sem link). **Não abre sessão e não desliga o MFA**: quem tem segundo fator segue precisando dele no login.
+- **Auditoria** (sem registrar o token): `auth_password_reset_requested` (com `delivered`/`throttled`), `auth_password_reset_completed`, `auth_password_reset_failed`, `auth_password_reset_sent_by_admin`.
+- **Retenção**: links vencidos há mais de 7 dias são apagados pelo job de retenção.
+
+Na interface: o link **Esqueci minha senha** (só no modo login) abre o painel de recuperação; a página `/redefinir-senha` é pública (não restaura sessão). Ambos carregam
+sob demanda. Para o administrador, a lista de usuários ganha **Enviar link por e-mail** (aparece só com e-mail configurado), ao lado de **Redefinir senha** (senha temporária).
+
 ## Redefinição assistida por administrador
 
 Rotas exigem administrador (`requireAdmin` em `server/src/routes/userRoutes.js`):
@@ -132,6 +160,10 @@ Na tela, o campo "Token de configuração inicial" é opcional (exigido só em p
 | `DB_SSL`, `DB_SSL_MODE`, `DB_SSL_CA` | `auto` | TLS do banco: `DB_SSL=false` desliga; `DB_SSL_MODE=verify` verifica certificado; `no-verify` aceita qualquer; `auto` verifica quando há `DB_SSL_CA` ou o provedor usa CA pública, senão segue sem verificar e **avisa** no boot e em `/health/ready`. |
 | `RETENTION_AUTH_SESSION_DAYS` | 30 | Retenção de sessões encerradas. |
 | `CLIENT_ORIGIN` | — | Origem permitida (CORS/CSRF por origem). |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM` | vazio / 587 | Canal de e-mail. Sem `SMTP_HOST` + `MAIL_FROM` a recuperação por e-mail fica desligada. |
+| `FRONTEND_URL` | — | Base do link enviado por e-mail (também usada no CORS). |
+| `PASSWORD_RESET_TTL_MINUTES` | 30 | Validade do link de redefinição (10 a 120). |
+| `MAIL_DEV_LOG` | false | Só desenvolvimento: imprime o e-mail no console. Ignorado em produção. |
 
 ## Como o cliente reage a cada código de erro
 
@@ -148,6 +180,8 @@ Os erros trazem `body.code` estável. O cliente lê esse código em `client/src/
 | `CURRENT_PASSWORD_INVALID` (401) | senha atual errada na troca, ou senha errada ao desativar MFA/regerar códigos | Mensagem no formulário e foco no campo da senha. **Não** derruba a sessão. |
 | `PASSWORD_REUSED` (400) | nova senha igual à atual | "A nova senha precisa ser diferente da atual." |
 | `WEAK_PASSWORD` (400) | política violada | Lista as regras devolvidas pelo servidor (`details`). |
+| `RESET_TOKEN_INVALID` (400) | link de redefinição expirado, usado ou malformado | Troca para a tela "Link inválido" com botão "Pedir um novo link". |
+| `INVALID_EMAIL` (400) | e-mail com formato inválido no "esqueci minha senha" | "Informe um e-mail válido." |
 | `SETUP_DISABLED` / `SETUP_TOKEN_INVALID` (403) | cadastro inicial em produção | Mensagens específicas no formulário de cadastro. |
 | `MFA_REQUIRED` (403) | admin tentando desativar MFA obrigatório | O botão "Desativar" nem aparece para admins quando `requiredForAdmins`; o código é tratado por precaução. |
 | `SESSION_INVALID` / `AUTH_REQUIRED` (401) | sessão expirada, revogada, versão trocada | Evento `it-guardian:auth-expired`: o app volta ao `/login` guardando o destino e mostra "Sua sessão expirou. Entre novamente." Só dispara com sessão ativa (um 401 atrasado depois de sair é ignorado), e 401 de credencial nunca derruba a sessão: sem loops. |
@@ -161,7 +195,7 @@ Telas e rotas do cliente:
 
 ## Limitações conhecidas
 
-- **Não existe "esqueci minha senha" por e-mail**: não há canal de e-mail confiável. O fluxo é a **redefinição assistida por um administrador** (senha temporária + troca obrigatória). Se o único administrador perde a senha, é preciso usar `npm run seed:admin`/intervenção no servidor.
+- **A recuperação por e-mail depende de SMTP configurado.** Sem ele o fluxo é a redefinição assistida por um administrador (senha temporária); se o único administrador perde a senha e não há e-mail, é preciso `npm run seed:admin`/intervenção no servidor.
 - Perda simultânea de aparelho e códigos de recuperação exige um administrador (ou, para o único admin, acesso ao servidor).
 - O `apiFetch` genérico (`client/src/api.js`) ainda não repassa `code`; chamadas fora de `identityApi` que recebem 403 de conta restrita aparecem só como erro de mensagem. O app evita isso bloqueando antes (`AccountGate` decide por `mustChangePassword` e por `/auth/mfa/status`). Recomenda-se, quando o módulo de API for consolidado, fazer `apiFetch` publicar `code` e disparar `it-guardian:account-restricted`.
 - O medidor de força no cliente é ilustrativo; quem decide é o servidor.
@@ -172,4 +206,5 @@ Telas e rotas do cliente:
 
 - Servidor: `server/test-integration/auth-identity.test.mjs` cobre todos os fluxos e formatos de resposta.
 - Cliente: `client/src/api/identityApi.test.js`, `client/src/auth/*.test.js`, `client/src/components/auth/*.test.jsx`, `client/src/components/settings/UserSecurityActions.test.jsx`, `client/src/App.identity.test.jsx`.
+- Recuperação de senha: `server/test-integration/password-recovery.test.mjs`, `server/src/domain/actionToken.test.mjs`, `accountEmails.test.mjs`, `client/src/components/auth/ForgotPasswordPanel.test.jsx`, `ResetPasswordPage.test.jsx`, `client/src/api/passwordRecoveryApi.test.js`, `client/src/App.passwordReset.test.jsx` e os casos axe em `client/src/a11y/identity.a11y.test.jsx`.
 - E2E: `tests/e2e/identity.spec.js` (login do admin demo e página de segurança).

@@ -168,8 +168,8 @@ function generateTemporaryPassword(length = 16) {
 /**
  * Redefinicao assistida: o administrador gera uma senha temporaria (mostrada
  * uma unica vez), todas as sessoes da pessoa caem e a troca vira obrigatoria
- * no proximo acesso. Nao existe "esqueci minha senha" por e-mail porque o
- * sistema nao tem canal de e-mail confiavel configurado.
+ * no proximo acesso. E o caminho para servidores SEM e-mail configurado; com SMTP
+ * a pessoa pode pedir o proprio link (ver passwordRecoveryService.js).
  */
 export async function resetUserPasswordByAdmin(id, actingUser) {
   const target = await findUserById(id);

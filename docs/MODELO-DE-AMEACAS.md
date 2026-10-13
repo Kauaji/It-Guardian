@@ -28,6 +28,9 @@ build ↔ artefatos distribuídos (Authenticode opcional, SBOM, assinatura de re
 | Força bruta / credential stuffing no login | Política de senha (≥12, lista de senhas comuns), bcrypt custo 12, bloqueio progressivo por conta, limitador por IP, comparação em tempo constante, MFA TOTP (obrigatório para admins por configuração) | Ataque distribuído lento contra senha fraca sem MFA; mitigado ligando `MFA_REQUIRED_FOR_ADMINS` |
 | Roubo de token de sessão | Cookie `HttpOnly`/`Secure`/`SameSite`, prefixo `__Host-` em produção, sessão revogável, rotação, vida absoluta, token fora da URL (WebSocket autentica por cookie) | XSS ou malware no navegador do usuário |
 | Falsificação de JWT | HS256 fixado (`alg` não negociável), `sid`/`ver`/`typ` validados no banco, segredo ≥32 chars | Vazamento do `JWT_SECRET` |
+| Tomada de conta pela recuperação de senha | Link de 256 bits de uso único (só o hash no banco), validade de 30 min, consumo atômico, novo pedido invalida o anterior, senha validada pela mesma política, todas as sessões revogadas, aviso por e-mail, **MFA não é removido**, limite por IP e por conta | Quem controla a caixa de e-mail e o segundo fator |
+| Enumeração de contas pelo "esqueci minha senha" | Resposta `202` idêntica em todos os casos, piso de tempo de resposta, auditoria interna distingue | Diferença residual de tempo muito pequena |
+| Link apontando para site do atacante (Host forjado) | URL base só da configuração (`FRONTEND_URL`), token no fragmento `#` | Configuração incorreta de `FRONTEND_URL` |
 | Agente falso | Token de enrollment de 256 bits (só o hash fica no banco), revogável, limite de taxa por token | Roubo do token da máquina |
 | Servidor falso diante do agente | HTTPS; atualizações e jobs **assinados** (chaves públicas fixadas no agente) | Servidor falso sem as chaves privadas não executa nada no agente |
 

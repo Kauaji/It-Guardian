@@ -43,6 +43,28 @@ As migracoes executam em uma unica transacao e usam um advisory lock transaciona
 - Bearer token continua aceito para clientes de API e agentes autorizados.
 - Tokens legados em `localStorage` e `sessionStorage` sao removidos pelo frontend.
 
+## E-mail (recuperacao de senha)
+
+"Esqueci minha senha" so funciona com e-mail configurado. Defina no ambiente do servidor (Vercel: Settings > Environment
+Variables; Docker/Windows: `server/.env`) e reimplante:
+
+| Variavel | Exemplo | Observacao |
+| --- | --- | --- |
+| `SMTP_HOST` | `smtp.office365.com` | Obrigatoria para ligar o envio |
+| `SMTP_PORT` | `587` | 587 = STARTTLS (padrao), 465 = TLS implicito |
+| `SMTP_USER` / `SMTP_PASSWORD` | conta de servico | Use senha de aplicativo/credencial propria, nunca a de uma pessoa |
+| `MAIL_FROM` | `IT Guardian <nao-responda@suaempresa.com.br>` | Obrigatoria. O dominio precisa ter SPF/DKIM, senao cai no spam |
+| `FRONTEND_URL` | `https://itguardian.suaempresa.com.br` | Base do link do e-mail. **Confira**: um valor errado quebra o link |
+| `PASSWORD_RESET_TTL_MINUTES` | `30` | Validade do link (10 a 120) |
+
+Provedores comuns: Microsoft 365 (`smtp.office365.com:587`, habilitar "SMTP AUTH" na caixa), Google Workspace
+(`smtp.gmail.com:587` com senha de app), ou um servico transacional (Brevo, SendGrid, Mailgun via SMTP). Sem `SMTP_HOST` +
+`MAIL_FROM` a funcao fica desligada (a tela de login orienta falar com um administrador) e nada e enviado.
+
+Para testar: peca o link na tela de login com um e-mail de teste cadastrado. Falhas de envio ficam no log como
+`password_reset_mail_failed` e na auditoria (`auth_password_reset_requested` com `delivered: false`); o requerente nunca ve o motivo.
+Em desenvolvimento, `MAIL_DEV_LOG=true` imprime o e-mail (com o link) no console quando nao ha SMTP; e ignorado em producao.
+
 ## Preferencias do usuario
 
 Preferencias persistentes do inventario usam `/api/preferences` e a tabela `user_preferences`. O armazenamento local e apenas cache de contingencia; o backend e a fonte da verdade.

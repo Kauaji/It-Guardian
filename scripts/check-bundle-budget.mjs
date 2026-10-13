@@ -8,8 +8,12 @@
 // Calibrados em 2026-10 contra o build atual com ~10% de folga:
 //
 //   medido hoje                              limite
-//   index-*.js (entrada)        116,2        117   (pedido original: 130; reajustado de 116 em 2026-10: o dashboard
-//                                                    inteiro mora na entrada e dividir WidgetCategoryChart custou ~0,3 kB)
+//   index-*.js (entrada)        116,9        118   (pedido original: 130; reajustado de 116 para 117 em 2026-10: o dashboard
+//                                                    inteiro mora na entrada e dividir WidgetCategoryChart custou ~0,3 kB;
+//                                                    de 117 para 118 na recuperacao de senha por e-mail: o link "Esqueci minha
+//                                                    senha", a deteccao da rota publica /redefinir-senha e as mensagens de erro
+//                                                    ficam na entrada (+0,7 kB) porque a tela de login e a primeira pintura de
+//                                                    quem nao tem sessao. As telas em si sao lazy, ~1,3 kB cada)
 //   vendor.js (react, router...) 104,0       115
 //   vendor-charts (recharts)      90,5       100   (pedido original: 110)
 //   vendor-three                 166,4       183   (pedido original: 190)
@@ -28,7 +32,7 @@ import zlib from "node:zlib";
 const KB = 1000;
 
 const BUDGET_KB = {
-  entry: 117,
+  entry: 118,
   initialVendor: 115,
   initialTotal: 372,
   lazyChunk: 60,

@@ -17,5 +17,5 @@ contra replay de código. Técnicos ligam-se a usuários por `technicians.user_i
 ## Consequências
 - (+) Revogação real, auditoria de sessões, política de senha e MFA exigíveis.
 - (−) Uma leitura de banco por requisição autenticada (mitigada pelo índice por PK e pelo pool).
-- (−) Sem canal de e-mail, não há "esqueci minha senha": o reset é assistido por administrador.
+- (−) Na época, sem canal de e-mail, o reset era só assistido por administrador (hoje há recuperação por e-mail: [0008](0008-recuperacao-de-senha-por-email.md)).
 Detalhes operacionais: [IDENTIDADE-E-SESSAO.md](../IDENTIDADE-E-SESSAO.md).

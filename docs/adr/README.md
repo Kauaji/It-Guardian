@@ -12,3 +12,4 @@ ADR novo que substitua o antigo (marque o antigo como *Substituído por*).
 | [0005](0005-camadas-do-backend.md) | Camadas do backend (domínio / repositório / serviço) verificadas no CI | Aceito |
 | [0006](0006-testes-em-dois-bancos.md) | Suíte de integração em pg-mem e PostgreSQL real | Aceito |
 | [0007](0007-csp-sem-recursos-externos.md) | CSP estrita: nenhum recurso externo no cliente | Aceito |
+| [0008](0008-recuperacao-de-senha-por-email.md) | Recuperação de senha por e-mail com link de uso único | Aceito |

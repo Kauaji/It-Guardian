@@ -8,7 +8,7 @@ listado aqui.
 
 ## Arquitetura e decisões
 - [ARCHITECTURE.md](ARCHITECTURE.md) — visão geral, camadas do backend, frontend, hospedagem.
-- [adr/](adr/README.md) — decisões de arquitetura (sessões, migrações, assinatura do agente, RustDesk, camadas, testes, CSP).
+- [adr/](adr/README.md) — decisões de arquitetura (sessões, migrações, assinatura do agente, RustDesk, camadas, testes, CSP, recuperação de senha).
 - [MIGRACOES.md](MIGRACOES.md) — esquema legado congelado, migrações somente-avante, `MIGRATIONS_MODE`, `db:migrate`.
 - [QUALIDADE-SISTEMA.md](QUALIDADE-SISTEMA.md) — critérios de qualidade e verificações automáticas.
 - [FRONTEND-DESIGN-SYSTEM.md](FRONTEND-DESIGN-SYSTEM.md) — tokens, componentes e padrões visuais.
@@ -17,7 +17,7 @@ listado aqui.
 
 ## Segurança
 - [MODELO-DE-AMEACAS.md](MODELO-DE-AMEACAS.md) — STRIDE, controles e riscos residuais.
-- [IDENTIDADE-E-SESSAO.md](IDENTIDADE-E-SESSAO.md) — sessões, MFA, senha, bloqueio, reset por administrador.
+- [IDENTIDADE-E-SESSAO.md](IDENTIDADE-E-SESSAO.md) — sessões, MFA, senha, bloqueio, recuperação por e-mail, reset por administrador.
 - [SEGURANCA-DO-AGENTE.md](SEGURANCA-DO-AGENTE.md) — confiança do agente, assinatura de jobs e atualizações.
 - [SCRIPTS-MANUTENCAO-SEGURANCA.md](SCRIPTS-MANUTENCAO-SEGURANCA.md) — scripts de manutenção, aprovação e execução.
 
